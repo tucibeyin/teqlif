@@ -26,6 +26,8 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
 
   List<Map<String, dynamic>> _userResults = [];
+  List<Map<String, dynamic>> _listingResults = [];
+  bool _isSemanticSearch = false;
   bool _searching = false;
   bool _hasQuery = false;
 
@@ -73,12 +75,14 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         _hasQuery = false;
         _userResults = [];
+        _listingResults = [];
+        _isSemanticSearch = false;
       });
       return;
     }
     setState(() => _hasQuery = true);
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () => _searchUsers(q));
+    _debounce = Timer(const Duration(milliseconds: 500), () => _search(q));
   }
 
   Future<void> _loadExplore() async {
@@ -174,29 +178,52 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  Future<void> _searchUsers(String q) async {
+  // Kullanıcı + ilan aramasını paralel olarak başlatır; 500ms debounce'tan tetiklenir.
+  Future<void> _search(String q) async {
     setState(() => _searching = true);
     try {
       final token = await StorageService.getToken();
       final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/search/users').replace(queryParameters: {'q': q}),
-        headers: headers,
-      );
+      final qParam = {'q': q};
+
+      final results = await Future.wait([
+        http.get(
+          Uri.parse('$kBaseUrl/search/users').replace(queryParameters: qParam),
+          headers: headers,
+        ),
+        http.get(
+          Uri.parse('$kBaseUrl/search/listings').replace(queryParameters: qParam),
+          headers: headers,
+        ),
+      ]);
       if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as List;
-        setState(() {
-          _userResults = data.cast<Map<String, dynamic>>();
-          _searching = false;
-        });
-      } else {
-        setState(() => _searching = false);
+
+      final usersResp = results[0];
+      final listingsResp = results[1];
+
+      final users = usersResp.statusCode == 200
+          ? (jsonDecode(usersResp.body) as List).cast<Map<String, dynamic>>()
+          : <Map<String, dynamic>>[];
+
+      var listings = <Map<String, dynamic>>[];
+      var isSemantic = false;
+      if (listingsResp.statusCode == 200) {
+        final data = jsonDecode(listingsResp.body) as Map<String, dynamic>;
+        listings = (data['listings'] as List).cast<Map<String, dynamic>>();
+        isSemantic = data['search_type'] == 'semantic';
       }
+
+      setState(() {
+        _userResults = users;
+        _listingResults = listings;
+        _isSemanticSearch = isSemantic;
+        _searching = false;
+      });
     } catch (_) {
       if (mounted) setState(() => _searching = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -213,7 +240,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 key: const Key('search_input_arama'),
                 controller: _controller,
                 decoration: InputDecoration(
-                  hintText: l.searchUserHint,
+                  hintText: 'Yapay zeka ile arayın (Örn: Vintage bir saat)',
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _hasQuery
                       ? IconButton(
@@ -246,56 +273,171 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_searching) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
-    if (_userResults.isEmpty) {
+    final hasUsers = _userResults.isNotEmpty;
+    final hasListings = _listingResults.isNotEmpty;
+
+    if (!hasUsers && !hasListings) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.person_search_outlined, size: 56, color: Color(0xFFD1D5DB)),
+            const Icon(Icons.search_off_outlined, size: 56, color: Color(0xFFD1D5DB)),
             const SizedBox(height: 12),
             Text(l.searchNoUser, style: const TextStyle(color: Color(0xFF6B7280))),
           ],
         ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _userResults.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (ctx, i) {
-        final u = _userResults[i];
-        final imgRaw = u['profile_image_url'] as String?;
-        final img = imgRaw != null && imgRaw.isNotEmpty ? imgUrl(imgRaw) : null;
-        return ListTile(
-          leading: CircleAvatar(
-            radius: 22,
-            backgroundColor: kPrimary,
-            backgroundImage: img != null ? NetworkImage(img) : null,
-            child: img == null
-                ? Text(
-                    (u['full_name'] as String? ?? '?')[0].toUpperCase(),
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w600),
-                  )
-                : null,
-          ),
-          title: Text(
-            u['full_name'] as String? ?? '',
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-          subtitle: Text(
-            '@${u['username']}',
-            style: const TextStyle(color: kPrimary, fontSize: 12),
-          ),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  PublicProfileScreen(username: u['username'] as String),
+
+    return CustomScrollView(
+      slivers: [
+        // ── Akıllı Sonuçlar rozeti ──────────────────────────────────────────
+        if (_isSemanticSearch)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: kPrimary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: kPrimary.withValues(alpha: 0.30)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome_rounded, color: kPrimary, size: 14),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Akıllı Sonuçlar',
+                          style: TextStyle(
+                            color: kPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        );
-      },
+
+        // ── Kullanıcı sonuçları ─────────────────────────────────────────────
+        if (hasUsers) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(
+                'Kullanıcılar',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13,
+                    color: Color(0xFF6B7280)),
+              ),
+            ),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (ctx, i) {
+                final u = _userResults[i];
+                final imgRaw = u['profile_image_url'] as String?;
+                final img = imgRaw != null && imgRaw.isNotEmpty ? imgUrl(imgRaw) : null;
+                return Column(
+                  children: [
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: kPrimary,
+                        backgroundImage: img != null ? NetworkImage(img) : null,
+                        child: img == null
+                            ? Text(
+                                (u['full_name'] as String? ?? '?')[0].toUpperCase(),
+                                style: const TextStyle(
+                                    color: Colors.white, fontWeight: FontWeight.w600),
+                              )
+                            : null,
+                      ),
+                      title: Text(
+                        u['full_name'] as String? ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        '@${u['username']}',
+                        style: const TextStyle(color: kPrimary, fontSize: 12),
+                      ),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              PublicProfileScreen(username: u['username'] as String),
+                        ),
+                      ),
+                    ),
+                    if (i < _userResults.length - 1)
+                      const Divider(height: 1, indent: 72),
+                  ],
+                );
+              },
+              childCount: _userResults.length,
+            ),
+          ),
+        ],
+
+        // ── İlan sonuçları ──────────────────────────────────────────────────
+        if (hasListings) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+              child: Row(
+                children: [
+                  Text(
+                    'İlanlar',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13,
+                        color: Color(0xFF6B7280)),
+                  ),
+                  if (_isSemanticSearch) ...[
+                    const SizedBox(width: 6),
+                    Icon(Icons.auto_awesome_rounded, size: 13, color: kPrimary),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 2,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) {
+                  final listing = _listingResults[i];
+                  return _ListingTile(
+                    listing: listing,
+                    onTap: () {
+                      final id = listing['id'] as int?;
+                      if (id != null && _isLoggedIn) _trackInteraction(id);
+                      Navigator.push(
+                        ctx,
+                        MaterialPageRoute(
+                          builder: (_) => ListingDetailScreen(listing: listing),
+                        ),
+                      );
+                    },
+                  );
+                },
+                childCount: _listingResults.length,
+              ),
+            ),
+          ),
+        ],
+
+        const SliverToBoxAdapter(child: SizedBox(height: 20)),
+      ],
     );
   }
 

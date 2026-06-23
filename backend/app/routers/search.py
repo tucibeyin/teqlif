@@ -1,8 +1,9 @@
+import asyncio
 import json
 from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, or_, func, text as sa_text
 
 from app.database import get_db
 from app.models.user import User
@@ -11,6 +12,7 @@ from app.models.stream import LiveStream
 from app.models.block import UserBlock
 from app.models.user_interest import UserInterest
 from app.utils.auth import bearer_scheme, decode_token
+from app.services.ml_service import generate_embedding
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
@@ -238,3 +240,122 @@ async def search_all(
     streams = [_stream_dict(s) for s in streams_result.scalars().all()]
 
     return {"users": users, "listings": listings, "streams": streams}
+
+
+# ── Anlamsal İlan Arama ────────────────────────────────────────────────────────
+
+@router.get("/listings")
+async def search_listings(
+    q: str = "",
+    offset: int = 0,
+    current_user_id: Optional[int] = Depends(_optional_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    İlan arama — üç mod:
+      1. Kısa sorgu (≤2 karakter):  ILIKE metin eşleştirme
+      2. Uzun sorgu (≥3 kelime):    pgvector cosine distance (semantic)
+      3. Orta uzunluk:              PostgreSQL FTS websearch_to_tsquery
+
+    Yanıt: {"listings": [...], "search_type": "semantic" | "text"}
+    """
+    q = q.strip()
+    if not q:
+        return {"listings": [], "search_type": "text"}
+
+    words = q.split()
+
+    # ── 1. Çok kısa → ILIKE ────────────────────────────────────────────────────
+    if len(q) <= 2:
+        term = f"%{q}%"
+        stmt = (
+            select(Listing, User)
+            .join(User, User.id == Listing.user_id)
+            .where(
+                Listing.is_active == True,  # noqa: E712
+                Listing.is_deleted == False,  # noqa: E712
+                or_(Listing.title.ilike(term), Listing.description.ilike(term)),
+            )
+            .order_by(Listing.created_at.desc())
+            .offset(offset)
+            .limit(12)
+        )
+        if current_user_id:
+            stmt = _block_filters(stmt, Listing.user_id, current_user_id)
+        result = await db.execute(stmt)
+        listings = [_listing_dict(l, u) for l, u in result.all()]
+        return {"listings": listings, "search_type": "text"}
+
+    # ── 2. Uzun sorgu (≥3 kelime) → Semantic / pgvector ───────────────────────
+    if len(words) >= 3:
+        loop = asyncio.get_running_loop()
+        vector: list[float] = await loop.run_in_executor(None, generate_embedding, q)
+        vec_str = "[" + ",".join(f"{v:.8f}" for v in vector) + "]"
+
+        block_clause = ""
+        params: dict = {"vec": vec_str, "offset": offset, "threshold": 0.6}
+        if current_user_id:
+            block_clause = """
+                AND l.user_id NOT IN (
+                    SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
+                )
+                AND l.user_id NOT IN (
+                    SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
+                )
+            """
+            params["uid"] = current_user_id
+
+        raw = sa_text(f"""
+            SELECT
+                l.id, l.title, l.price, l.category, l.location,
+                l.image_url, l.image_urls, l.created_at,
+                u.id AS uid, u.username, u.full_name
+            FROM listings l
+            JOIN users u ON u.id = l.user_id
+            WHERE l.is_active = TRUE
+              AND l.is_deleted = FALSE
+              AND l.embedding IS NOT NULL
+              AND (l.embedding <=> :vec::vector) < :threshold
+              {block_clause}
+            ORDER BY (l.embedding <=> :vec::vector)
+            LIMIT 12 OFFSET :offset
+        """)
+        result = await db.execute(raw, params)
+        rows = result.fetchall()
+        listings = [
+            {
+                "id": row[0],
+                "title": row[1],
+                "price": row[2],
+                "category": row[3],
+                "location": row[4],
+                "image_url": row[5],
+                "image_urls": json.loads(row[6]) if row[6] else [],
+                "created_at": row[7].isoformat() if row[7] else None,
+                "user": {"id": row[8], "username": row[9], "full_name": row[10]},
+            }
+            for row in rows
+        ]
+        return {"listings": listings, "search_type": "semantic"}
+
+    # ── 3. Orta uzunluk → FTS ─────────────────────────────────────────────────
+    ts_q = _sanitize_ts_query(q)
+    tsquery = func.websearch_to_tsquery("turkish", ts_q)
+    rank = func.ts_rank(Listing.search_vector, tsquery)
+    stmt = (
+        select(Listing, User, rank.label("rank"))
+        .join(User, User.id == Listing.user_id)
+        .where(
+            Listing.is_active == True,  # noqa: E712
+            Listing.is_deleted == False,  # noqa: E712
+            Listing.search_vector.op("@@")(tsquery),
+        )
+        .order_by(rank.desc())
+        .offset(offset)
+        .limit(12)
+    )
+    if current_user_id:
+        stmt = _block_filters(stmt, Listing.user_id, current_user_id)
+    result = await db.execute(stmt)
+    listings = [_listing_dict(l, u) for l, u, _r in result.all()]
+    return {"listings": listings, "search_type": "text"}
