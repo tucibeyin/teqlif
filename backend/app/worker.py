@@ -291,6 +291,24 @@ async def flush_interactions_to_db(ctx: dict) -> None:
             "[Worker] flush_interactions_to_db tamamlandı | kayıt=%d", len(rows)
         )
 
+        # Listing etkileşimi olan her kullanıcı için preference_embedding'i güncelle
+        # _job_id ile deduplication — aynı kullanıcı için çakışan job'lar atlanır
+        listing_user_ids = {
+            r["user_id"]
+            for r in rows
+            if r["user_id"] is not None and r["item_type"] == "listing"
+        }
+        if listing_user_ids:
+            from app.core.task_queue import get_pool
+            pool = get_pool()
+            if pool:
+                for uid in listing_user_ids:
+                    await pool.enqueue_job(
+                        "update_user_preference_embedding",
+                        uid,
+                        _job_id=f"pref_emb:{uid}",
+                    )
+
     except Exception as exc:
         logger.error(
             "[Worker] flush_interactions_to_db başarısız | %s", str(exc), exc_info=True
@@ -500,6 +518,100 @@ async def compute_user_interests_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: Kullanıcı Tercih Embedding'i Güncelle ──────────────────────────────
+
+async def update_user_preference_embedding(ctx: dict, user_id: int) -> None:
+    """
+    Belirtilen kullanıcının son 50 ilan etkileşiminden ağırlıklı ortalama vektör
+    hesaplar ve User.preference_embedding kolonuna yazar.
+
+    Ağırlık:
+      - duration_seconds (maks 60s'e kırpılır) → uzun izleme = güçlü sinyal
+      - interaction_type: 'offer' × 5, 'click' × 2, diğer × 1
+      - Hiç embeddingsi olmayan ilanlar atlanır
+    """
+    try:
+        import numpy as np
+        from sqlalchemy import select
+        from sqlalchemy import update as sa_update
+        from app.database import AsyncSessionLocal
+        from app.models.analytics import UserInteraction
+        from app.models.listing import Listing
+        from app.models.user import User
+
+        async with AsyncSessionLocal() as db:
+            interactions = list(await db.scalars(
+                select(UserInteraction)
+                .where(
+                    UserInteraction.user_id == user_id,
+                    UserInteraction.item_type == "listing",
+                )
+                .order_by(
+                    UserInteraction.duration_seconds.desc().nullslast(),
+                    UserInteraction.created_at.desc(),
+                )
+                .limit(50)
+            ))
+
+            if not interactions:
+                return
+
+            item_ids = [i.item_id for i in interactions]
+            emb_rows = await db.execute(
+                select(Listing.id, Listing.embedding)
+                .where(Listing.id.in_(item_ids), Listing.embedding.isnot(None))
+            )
+            emb_map = {r.id: r.embedding for r in emb_rows}
+
+            if not emb_map:
+                return
+
+            vecs, ws = [], []
+            for inter in interactions:
+                emb = emb_map.get(inter.item_id)
+                if emb is None:
+                    continue
+                w = min(float(inter.duration_seconds or 1.0), 60.0)
+                if inter.interaction_type == "offer":
+                    w *= 5.0
+                elif inter.interaction_type == "click":
+                    w *= 2.0
+                vecs.append(np.array(emb, dtype=np.float32))
+                ws.append(max(w, 0.1))
+
+            if not vecs:
+                return
+
+            ws_arr = np.array(ws, dtype=np.float32)
+            ws_arr /= ws_arr.sum()
+            mean_vec = np.average(vecs, axis=0, weights=ws_arr)
+            norm = np.linalg.norm(mean_vec)
+            if norm > 0:
+                mean_vec = mean_vec / norm
+
+            await db.execute(
+                sa_update(User)
+                .where(User.id == user_id)
+                .values(preference_embedding=mean_vec.tolist())
+            )
+            await db.commit()
+
+        logger.info("[Worker] preference_embedding güncellendi | user_id=%d", user_id)
+
+        # For-you feed cache'ini temizle
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        await redis.delete(f"feed:foryou:{user_id}")
+
+    except Exception as exc:
+        logger.error(
+            "[Worker] update_user_preference_embedding başarısız | user_id=%d | %s",
+            user_id, str(exc), exc_info=True,
+        )
+        capture_exception(exc)
+        raise
+
+
 # ── Task: İlan Embedding Üretimi ─────────────────────────────────────────────
 
 async def generate_listing_embedding_task(ctx: dict, listing_id: int) -> None:
@@ -601,6 +713,7 @@ class WorkerSettings:
         cleanup_old_impressions_task,
         generate_listing_embedding_task,
         flush_interactions_to_db,
+        update_user_preference_embedding,
     ]
 
     cron_jobs = [

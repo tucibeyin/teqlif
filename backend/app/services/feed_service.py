@@ -278,6 +278,88 @@ async def _mark_impressions(user_id: int, listing_ids: list[int], db: AsyncSessi
     await db.commit()
 
 
+# ── For-You Feed (pgvector cosine distance) ──────────────────────────────────
+
+FORYOU_CACHE_TTL = 300    # 5 dakika
+FORYOU_POOL_SIZE = 100    # Önceden hesaplanan ID havuzu
+
+
+async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dict]:
+    """
+    Embedding tabanlı 'Sana Özel' akışı.
+
+    - user.preference_embedding yoksa → cold start (popüler ilanlar)
+    - varsa → pgvector cosine distance ile en yakın ilanlar
+    - Tüm ID havuzu Redis'te 5 dk önbelleklenir; sayfalama Redis'ten yapılır
+    """
+    cache_key = f"feed:foryou:{user_id}"
+    redis = await get_redis()
+
+    cached = await redis.get(cache_key)
+    if cached:
+        all_ids = json.loads(cached)
+    else:
+        all_ids = await _compute_foryou_ids(user_id, db, limit=FORYOU_POOL_SIZE)
+        if all_ids:
+            await redis.setex(cache_key, FORYOU_CACHE_TTL, json.dumps(all_ids))
+
+    start = page * PAGE_SIZE
+    listing_ids = all_ids[start: start + PAGE_SIZE]
+
+    if not listing_ids:
+        return []
+
+    rows_result = await db.execute(
+        select(Listing, User)
+        .join(User, User.id == Listing.user_id)
+        .where(
+            Listing.id.in_(listing_ids),
+            Listing.is_active == True,  # noqa: E712
+            Listing.is_deleted == False,  # noqa: E712
+        )
+    )
+    rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
+    counts, liked_set = await LikeService.batch_listing_likes(db, listing_ids, user_id)
+
+    result = []
+    for lid in listing_ids:
+        if lid not in rows:
+            continue
+        listing, user = rows[lid]
+        result.append(_row_dict(listing, user, counts.get(lid, 0), lid in liked_set))
+
+    return result
+
+
+async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> list[int]:
+    """
+    Kullanıcının preference_embedding'ine en yakın ilan ID'lerini döndürür.
+    Embedding yoksa popüler ilanlar döner (cold start).
+    """
+    user = await db.scalar(select(User).where(User.id == user_id))
+
+    if user is None or user.preference_embedding is None:
+        return await _popular_feed(0, limit, db)
+
+    vec_str = "[" + ",".join(f"{x:.8f}" for x in user.preference_embedding) + "]"
+
+    result = await db.execute(
+        text("""
+            SELECT id
+            FROM listings
+            WHERE is_active = TRUE
+              AND is_deleted = FALSE
+              AND embedding IS NOT NULL
+              AND user_id != :uid
+            ORDER BY embedding <=> :vec::vector
+            LIMIT :lim
+        """),
+        {"uid": user_id, "vec": vec_str, "lim": limit},
+    )
+    ids = [r.id for r in result]
+    return ids if ids else await _popular_feed(0, limit, db)
+
+
 # ── Cache invalidation ────────────────────────────────────────────────────────
 
 async def invalidate_user_feed_cache(user_id: int) -> None:
