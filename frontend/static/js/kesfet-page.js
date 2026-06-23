@@ -62,11 +62,17 @@
             ? `<img src="${esc(img)}" alt="${esc(l.title)}" loading="lazy" onerror="this.style.display='none'">`
             : `<div class="listing-tile-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
         const priceHtml = price ? `<div class="listing-tile-price">${esc(price)}</div>` : '';
+        const sponsoredHtml = l.is_sponsored
+            ? '<span style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.62);color:#fff;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:5px;pointer-events:none;z-index:1;">Sponsorlu</span>'
+            : '';
         return `<a class="listing-tile feed-card"
             href="/ilan/${l.id}"
             data-listing-id="${l.id}"
-            data-category="${esc(l.category || '')}">
+            data-campaign-id="${l.campaign_id || ''}"
+            data-category="${esc(l.category || '')}"
+            style="position:relative;">
             ${imgHtml}
+            ${sponsoredHtml}
             ${priceHtml}
         </a>`;
     }
@@ -160,6 +166,18 @@
         _scrollObserver.observe(sentinel);
     }
 
+    /* ── Sponsorlu ilan tıklama takibi ────────────────────── */
+    function initAdClickTracking() {
+        var grid = document.getElementById('personalizedGrid');
+        if (!grid) return;
+        grid.addEventListener('click', function (e) {
+            var card = e.target.closest('[data-campaign-id]');
+            if (!card || !card.dataset.campaignId) return;
+            // Fire-and-forget — navigasyonu bloklamaz
+            apiFetch('/ads/click/' + card.dataset.campaignId, { method: 'POST' }).catch(function () {});
+        });
+    }
+
     /* ── Başlat ──────────────────────────────────────────────── */
     function init() {
         // Auth hazır olmadan önce getToken çağrılırsa null döner;
@@ -177,6 +195,7 @@
 
         setupInfiniteScroll();
         loadPage();
+        initAdClickTracking();
     }
 
     if (document.readyState === 'loading') {

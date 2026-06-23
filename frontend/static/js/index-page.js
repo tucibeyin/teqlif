@@ -898,12 +898,13 @@
         list.innerHTML = _filteredListings.map((l, idx) => {
             const ad = (idx > 0 && idx % 5 === 0) ? _adCardHtml : '';
             return ad + `
-            <div class="listing-item" data-listing-id="${l.id}" style="cursor:pointer">
+            <div class="listing-item" data-listing-id="${l.id}" data-campaign-id="${l.campaign_id || ''}" style="cursor:pointer">
                 <div class="listing-img" style="position:relative;">
                     ${l.image_url
                 ? `<img src="${escHtml(l.image_url)}" style="width:100%;height:100%;object-fit:cover;">`
                 : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`
             }
+                    ${l.is_sponsored ? '<span class="sponsored-badge" style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.62);color:#fff;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:5px;pointer-events:none;">Sponsorlu</span>' : ''}
                     <button class="tile-like-chip" id="like-listing-${l.id}"
                             data-like-listing="${l.id}"
                             title="Beğen">
@@ -1109,7 +1110,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (likeBtn) { e.stopPropagation(); toggleListingLike(Number(likeBtn.dataset.likeListing), likeBtn); return; }
         // Listing card
         var item = e.target.closest('[data-listing-id]');
-        if (item) window.location.href = '/ilan/' + item.dataset.listingId;
+        if (item) {
+            var cid = item.dataset.campaignId;
+            if (cid) apiFetch('/ads/click/' + cid, { method: 'POST' }).catch(function () {});
+            window.location.href = '/ilan/' + item.dataset.listingId;
+        }
     });
 
     // Story tray — event delegation (CSP: no inline onclick)

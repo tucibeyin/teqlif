@@ -327,6 +327,9 @@
                                        ${_isActive ? '✓ Aktif — Pasife Al' : '✕ Pasif — Aktif Yap'}
                                    </button>
                                    <button class="btn-delete" id="deleteBtn">İlanı Sil</button>
+                                   ${data.campaign_id
+                                       ? `<button class="btn-boost-report" id="adReportBtn">📊 Reklam Performansını Gör</button>`
+                                       : `<button class="btn-boost" id="boostBtn">🔥 İlanı Öne Çıkar</button>`}
                                    <div style="display:flex;align-items:center;gap:6px;padding:.5rem 0;color:#e53e3e;font-size:.9rem;">
                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="#e53e3e" stroke="#e53e3e" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                                        <span>${_likesCount} beğeni</span>
@@ -458,6 +461,10 @@
                     }).catch(function () { window.prompt('Linki kopyala:', shareUrl); });
                 }
             });
+            var boostBtnEl = document.getElementById('boostBtn');
+            if (boostBtnEl) boostBtnEl.addEventListener('click', boostListing);
+            var adReportBtnEl = document.getElementById('adReportBtn');
+            if (adReportBtnEl) adReportBtnEl.addEventListener('click', function () { openAdReportModal(data.campaign_id); });
             var offerBtnEl = document.getElementById('offerBtn');
             if (offerBtnEl) offerBtnEl.addEventListener('click', submitOffer);
             var offerInputEl = document.getElementById('offerInput');
@@ -476,6 +483,88 @@
                     <h2>İlan bulunamadı</h2>
                     <p><a href="/">Ana sayfaya dön</a></p>
                 </div>`;
+        }
+    }
+
+    /* ── Reklam: Öne Çıkar + Performans ── */
+
+    function fmtTL(val) {
+        if (val == null || val < 0) return '—';
+        return Number(val).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+    }
+
+    async function boostListing() {
+        if (!confirm('İlanınızı 100 ₺ bütçe ve 1 ₺ TBM (Tıklama Başı Maliyet) ile öne çıkarmak istiyor musunuz?')) return;
+        var btn = document.getElementById('boostBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'İşleniyor…'; }
+        try {
+            var result = await apiFetch('/ads/campaigns', {
+                method: 'POST',
+                body: JSON.stringify({ listing_id: listingId, total_budget: 100.0, cpc_bid: 1.0 })
+            });
+            // Butonu "Performansı Gör"e çevir
+            if (btn) {
+                var newCampaignId = result.id;
+                btn.id = 'adReportBtn';
+                btn.className = 'btn-boost-report';
+                btn.textContent = '📊 Reklam Performansını Gör';
+                btn.disabled = false;
+                btn.addEventListener('click', function () { openAdReportModal(newCampaignId); });
+            }
+            alert('🔥 İlanınız öne çıkarıldı!');
+        } catch (e) {
+            if (btn) { btn.disabled = false; btn.textContent = '🔥 İlanı Öne Çıkar'; }
+            alert((e && e.error && e.error.message) || 'Kampanya başlatılamadı.');
+        }
+    }
+
+    async function openAdReportModal(campaignId) {
+        var modal = document.getElementById('adReportModal');
+        var content = document.getElementById('adReportContent');
+        if (!modal || !content) return;
+        content.innerHTML = '<div class="ad-report-loading">Yükleniyor…</div>';
+        modal.classList.add('open');
+        try {
+            var r = await apiFetch('/ads/campaigns/' + campaignId + '/report');
+            var ctr = typeof r.ctr === 'number' ? r.ctr.toFixed(2).replace('.', ',') : '0,00';
+            var spentPct = r.total_budget > 0
+                ? Math.min(100, (r.spent_budget / r.total_budget) * 100).toFixed(1)
+                : 0;
+            var statusMap = { active: 'Aktif', completed: 'Tamamlandı', paused: 'Duraklatıldı' };
+            content.innerHTML = `
+                <div class="ad-status-chip ${r.status}">● ${statusMap[r.status] || r.status}</div>
+                <div class="ad-metric-grid">
+                    <div class="ad-metric-card">
+                        <div class="ad-metric-icon" style="background:#ede9fe;color:#7c3aed;">👁</div>
+                        <div class="ad-metric-value">${(r.impressions || 0).toLocaleString('tr-TR')}</div>
+                        <div class="ad-metric-label">Gösterim</div>
+                    </div>
+                    <div class="ad-metric-card">
+                        <div class="ad-metric-icon" style="background:#d1fae5;color:#059669;">🖱</div>
+                        <div class="ad-metric-value">${(r.clicks || 0).toLocaleString('tr-TR')}</div>
+                        <div class="ad-metric-label">Tıklama</div>
+                    </div>
+                    <div class="ad-metric-card">
+                        <div class="ad-metric-icon" style="background:#fef3c7;color:#d97706;font-weight:800;font-size:.85rem;">%</div>
+                        <div class="ad-metric-value">%${ctr}</div>
+                        <div class="ad-metric-label">Tıklama Oranı (CTR)</div>
+                    </div>
+                    <div class="ad-metric-card">
+                        <div class="ad-metric-icon" style="background:#fee2e2;color:#dc2626;font-weight:800;font-size:.85rem;">₺</div>
+                        <div class="ad-metric-value">${fmtTL(r.spent_budget)}</div>
+                        <div class="ad-metric-label">Harcanan Bütçe</div>
+                    </div>
+                </div>
+                <div class="ad-budget-bar-wrap">
+                    <div style="display:flex;justify-content:space-between;font-size:.8rem;color:#6b7280;margin-bottom:.35rem;">
+                        <span>Harcanan: ${fmtTL(r.spent_budget)}</span>
+                        <span>Toplam: ${fmtTL(r.total_budget)}</span>
+                    </div>
+                    <div class="ad-budget-bar"><div class="ad-budget-bar-fill" style="width:${spentPct}%"></div></div>
+                    <div style="font-size:.78rem;color:#6b7280;margin-top:.3rem;text-align:right;">Kalan: ${fmtTL(r.remaining_budget)}</div>
+                </div>`;
+        } catch (e) {
+            content.innerHTML = '<div style="color:#dc2626;text-align:center;padding:1.2rem;font-size:.9rem;">Rapor yüklenemedi.</div>';
         }
     }
 
@@ -716,6 +805,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var btnCancelDelete = document.getElementById('btnCancelDelete');
     if (btnCancelDelete) btnCancelDelete.addEventListener('click', closeDeleteModal);
+
+    var btnCloseAdReport = document.getElementById('btnCloseAdReport');
+    if (btnCloseAdReport) btnCloseAdReport.addEventListener('click', function () {
+        document.getElementById('adReportModal').classList.remove('open');
+    });
+    var adReportBackdrop = document.getElementById('adReportModal');
+    if (adReportBackdrop) adReportBackdrop.addEventListener('click', function (e) {
+        if (e.target === adReportBackdrop) adReportBackdrop.classList.remove('open');
+    });
     var deleteSendBtn = document.getElementById('deleteSendBtn');
     if (deleteSendBtn) deleteSendBtn.addEventListener('click', confirmDelete);
 

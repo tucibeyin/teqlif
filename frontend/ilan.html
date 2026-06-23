@@ -607,6 +607,128 @@
             border-color: #fca5a5;
         }
 
+        /* ── Sponsorlu Rozeti ── */
+        .sponsored-badge {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            background: rgba(0,0,0,.62);
+            color: #fff;
+            font-size: .68rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 5px;
+            pointer-events: none;
+            letter-spacing: .2px;
+        }
+
+        /* ── İlanı Öne Çıkar / Performans Butonları ── */
+        .btn-boost {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: .65rem 1rem;
+            border-radius: 9px;
+            border: none;
+            background: linear-gradient(135deg,#f97316,#ea580c);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: .5rem;
+            transition: opacity .15s;
+        }
+        .btn-boost:hover { opacity: .88; }
+        .btn-boost:disabled { opacity: .55; cursor: default; }
+
+        .btn-boost-report {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: .65rem 1rem;
+            border-radius: 9px;
+            border: none;
+            background: linear-gradient(135deg,#6366f1,#4f46e5);
+            color: #fff;
+            font-size: .9rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: .5rem;
+            transition: opacity .15s;
+        }
+        .btn-boost-report:hover { opacity: .88; }
+
+        /* ── Ad Report Modal İçeriği ── */
+        .ad-status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: .78rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: .9rem;
+        }
+        .ad-status-chip.active   { background:#d1fae5; color:#065f46; }
+        .ad-status-chip.completed{ background:#ede9fe; color:#4c1d95; }
+        .ad-status-chip.paused   { background:#fef3c7; color:#92400e; }
+
+        .ad-metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .6rem;
+            margin-bottom: .9rem;
+        }
+        .ad-metric-card {
+            background: #f8fafc;
+            border: 1.5px solid #f1f5f9;
+            border-radius: 11px;
+            padding: .85rem .9rem;
+        }
+        .ad-metric-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .95rem;
+            margin-bottom: .45rem;
+        }
+        .ad-metric-value {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #111827;
+            line-height: 1.1;
+        }
+        .ad-metric-label {
+            font-size: .72rem;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+        .ad-budget-bar {
+            height: 7px;
+            background: #f1f5f9;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .ad-budget-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg,#f97316,#dc2626);
+            border-radius: 4px;
+            transition: width .4s;
+        }
+        .ad-report-loading {
+            text-align: center;
+            padding: 1.5rem;
+            color: #6b7280;
+            font-size: .9rem;
+        }
+
         /* ── Modal ── */
         .modal-backdrop {
             display: none;
@@ -826,6 +948,17 @@
                 <button class="btn-cancel" id="btnCancelReport" data-track-id="ilan-modal-btn-sikayet-vazgec">Vazgeç</button>
                 <button class="btn-send" id="reportSendBtn" data-track-id="ilan-modal-btn-sikayet-gonder">Gönder</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Reklam Performans Modal -->
+    <div class="modal-backdrop" id="adReportModal">
+        <div class="modal-box" style="max-width:480px;width:94%;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                <h3 style="margin:0;font-size:1rem;">📊 Reklam Performansı</h3>
+                <button id="btnCloseAdReport" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:#9ca3af;padding:0 2px;">✕</button>
+            </div>
+            <div id="adReportContent"></div>
         </div>
     </div>
 
