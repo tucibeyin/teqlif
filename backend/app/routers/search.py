@@ -9,6 +9,7 @@ from app.models.user import User
 from app.models.listing import Listing
 from app.models.stream import LiveStream
 from app.models.block import UserBlock
+from app.models.user_interest import UserInterest
 from app.utils.auth import bearer_scheme, decode_token
 
 router = APIRouter(prefix="/api/search", tags=["search"])
@@ -112,29 +113,55 @@ async def explore(
     current_user_id: Optional[int] = Depends(_optional_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Varsayılan keşfet sayfası: son ilanlar (12) + aktif yayınlar (4)."""
-    # İlanlar
-    listing_q = (
-        select(Listing, User)
-        .join(User, User.id == Listing.user_id)
-        .where(Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
-        .order_by(Listing.created_at.desc())
-        .limit(12)
-    )
-    listings_result = await db.execute(listing_q)
-    listings = [_listing_dict(l, u) for l, u in listings_result.all()]
+    """
+    Keşfet sayfası verisi.
 
-    # Aktif yayınlar
-    stream_q = (
-        select(LiveStream)
-        .where(LiveStream.is_live == True)  # noqa: E712
-        .order_by(LiveStream.started_at.desc())
-        .limit(4)
-    )
+    Misafir: son ilanlar (20) + tüm aktif yayınlar (görüntüleyici sayısına göre)
+    Giriş yapmış: ilanlar yok (frontend /api/feed kullanır) +
+                  aktif yayınlar (kullanıcının kategori ilgisine göre sıralı)
+    """
+    # ── Canlı Yayınlar ───────────────────────────────────────────────────────
     if current_user_id:
+        # Kişiselleştirilmiş: kullanıcının ilgi kategorisine uyan yayınlar önce
+        stream_q = (
+            select(LiveStream, func.coalesce(UserInterest.score, 0.0).label("cat_score"))
+            .outerjoin(
+                UserInterest,
+                (UserInterest.user_id == current_user_id)
+                & (UserInterest.category == LiveStream.category),
+            )
+            .where(LiveStream.is_live == True)  # noqa: E712
+            .order_by(
+                func.coalesce(UserInterest.score, 0.0).desc(),
+                LiveStream.started_at.desc(),
+            )
+            .limit(10)
+        )
         stream_q = _block_filters(stream_q, LiveStream.host_id, current_user_id)
-    streams_result = await db.execute(stream_q)
-    streams = [_stream_dict(s) for s in streams_result.scalars().all()]
+        streams_result = await db.execute(stream_q)
+        streams = [_stream_dict(s) for s, _ in streams_result.all()]
+        listings = []  # Giriş yapan için ilanlar /api/feed'den gelir
+    else:
+        # Misafir: tüm yayınlar, en yeni önce
+        stream_q = (
+            select(LiveStream)
+            .where(LiveStream.is_live == True)  # noqa: E712
+            .order_by(LiveStream.started_at.desc())
+            .limit(10)
+        )
+        streams_result = await db.execute(stream_q)
+        streams = [_stream_dict(s) for s in streams_result.scalars().all()]
+
+        # Misafir için ilanlar: en yeni 20
+        listing_q = (
+            select(Listing, User)
+            .join(User, User.id == Listing.user_id)
+            .where(Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
+            .order_by(Listing.created_at.desc())
+            .limit(20)
+        )
+        listings_result = await db.execute(listing_q)
+        listings = [_listing_dict(l, u) for l, u in listings_result.all()]
 
     return {"listings": listings, "streams": streams}
 

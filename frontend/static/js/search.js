@@ -91,14 +91,25 @@
 
     function renderExplore(data) {
         exploreLoading.style.display = 'none';
-        const { streams = [] } = data;
+        const { listings = [], streams = [] } = data;
 
         if (streams.length > 0) {
             streamsScroll.innerHTML = streams.map(streamCardHtml).join('');
             streamsSection.style.display = 'block';
         }
 
-        // listingsSection gizli — kişiselleştirilmiş feed (kesfet-page.js) kullanılır
+        const isGuest = !Auth.getToken();
+        if (isGuest && listings.length > 0) {
+            // Misafir: ilanları göster
+            listingsGrid.innerHTML = listings.map(listingTileHtml).join('');
+            listingsSection.style.display = 'block';
+        }
+        // Giriş yapmış: ilanlar kesfet-page.js tarafından /api/feed ile yüklenir
+
+        if (streams.length === 0 && (isGuest ? listings.length === 0 : true)) {
+            // Giriş yapmışsa kesfet-page.js boş durumu kendisi yönetir
+            if (isGuest) exploreEmpty.style.display = 'block';
+        }
     }
 
     /* ── Toast bildirimi ──────────────────────────────────────── */

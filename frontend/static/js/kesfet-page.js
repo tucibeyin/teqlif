@@ -162,9 +162,18 @@
 
     /* ── Başlat ──────────────────────────────────────────────── */
     function init() {
-        // exploreLoading'i gizle (search.js kendi yönetir ama çakışmasın)
-        const exploreLoading = document.getElementById('exploreLoading');
-        if (exploreLoading) exploreLoading.style.display = 'none';
+        // Auth hazır olmadan önce getToken çağrılırsa null döner;
+        // Auth.getToken() synchronous olduğu için burada güvenli.
+        const isLoggedIn = typeof Auth !== 'undefined' && !!Auth.getToken();
+
+        if (!isLoggedIn) {
+            // Misafir: search.js her şeyi yönetir, bizim yapacak bir şeyimiz yok
+            return;
+        }
+
+        // Giriş yapmış: kişiselleştirilmiş ilan feed'ini başlat
+        const feedSection = document.getElementById('personalizedFeedSection');
+        if (feedSection) feedSection.style.display = 'block';
 
         setupInfiniteScroll();
         loadPage();
@@ -173,6 +182,7 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
-        init();
+        // auth.js'nin token'ı yüklemesi için kısa gecikme
+        setTimeout(init, 50);
     }
 })();
