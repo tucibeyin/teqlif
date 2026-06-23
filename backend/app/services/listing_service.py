@@ -20,6 +20,7 @@ from sqlalchemy import select
 from app.models.listing import Listing
 from app.models.listing_offer import ListingOffer
 from app.models.user import User
+from app.models.ad_campaign import AdCampaign
 from app.services.like_service import LikeService
 from app.schemas.stream import VALID_CATEGORIES
 from app.core.exceptions import (
@@ -127,8 +128,24 @@ class ListingService:
         counts, liked_set = await LikeService.batch_listing_likes(
             self.db, listing_ids, current_user.id
         )
+        campaign_map: dict[int, int] = {}
+        if listing_ids:
+            camp_result = await self.db.execute(
+                select(AdCampaign.listing_id, AdCampaign.id)
+                .where(
+                    AdCampaign.listing_id.in_(listing_ids),
+                    AdCampaign.status.in_(["active", "paused"]),
+                )
+            )
+            for lid, cid in camp_result.all():
+                campaign_map.setdefault(lid, cid)
         return [
-            _row_dict(listing, user, counts.get(listing.id, 0), listing.id in liked_set)
+            _row_dict(
+                listing, user,
+                counts.get(listing.id, 0), listing.id in liked_set,
+                is_sponsored=listing.id in campaign_map,
+                campaign_id=campaign_map.get(listing.id),
+            )
             for listing, user in rows
         ]
 
@@ -148,7 +165,21 @@ class ListingService:
         counts, liked_set = await LikeService.batch_listing_likes(
             self.db, [listing.id], current_user_id
         )
-        return _row_dict(listing, user, counts.get(listing.id, 0), listing.id in liked_set)
+        camp_result = await self.db.execute(
+            select(AdCampaign.id)
+            .where(
+                AdCampaign.listing_id == listing.id,
+                AdCampaign.status.in_(["active", "paused"]),
+            )
+            .limit(1)
+        )
+        campaign_id = camp_result.scalar_one_or_none()
+        return _row_dict(
+            listing, user,
+            counts.get(listing.id, 0), listing.id in liked_set,
+            is_sponsored=campaign_id is not None,
+            campaign_id=campaign_id,
+        )
 
     # ── İlan Oluştur ─────────────────────────────────────────────────────────
     async def create_listing(self, payload: dict, current_user: User) -> dict:
