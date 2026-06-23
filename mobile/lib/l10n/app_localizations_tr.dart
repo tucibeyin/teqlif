@@ -27,6 +27,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get navProfile => 'Profilim';
 
   @override
+  String get navForYou => 'Sana Özel';
   String get navSettings => 'Ayarlar';
 
   @override

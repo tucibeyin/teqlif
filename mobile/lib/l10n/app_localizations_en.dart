@@ -27,6 +27,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navProfile => 'Profile';
 
   @override
+  String get navForYou => 'For You';
+
+  @override
   String get navSettings => 'Settings';
 
   @override
