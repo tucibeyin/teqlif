@@ -56,6 +56,7 @@ import app.models.like  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
+from app.routers import feed
 from prometheus_fastapi_instrumentator import Instrumentator
 
 logger = setup_logging()
@@ -315,6 +316,7 @@ app.include_router(admin_data.router)
 app.include_router(moderation.router)
 app.include_router(analytics.router)
 app.include_router(stories.router)
+app.include_router(feed.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):

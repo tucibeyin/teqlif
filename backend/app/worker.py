@@ -232,6 +232,228 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: Kullanıcı İlgi Skorlarını Güncelle ─────────────────────────────────
+
+async def compute_user_interests_task(ctx: dict) -> None:
+    """
+    Her 15 dakikada çalışır; son 30 günün analytics_events + like/favorite/message
+    sinyallerinden kullanıcı başına kategori ilgi skorlarını hesaplar ve
+    user_interests tablosunu günceller. Redis interests:{uid} cache'ini invalidate eder.
+
+    Ağırlıklar:
+      mesaj gönderdi   × 10
+      favoriledi       × 5
+      beğendi          × 3
+      foto kaydırdı    × 2
+      uzun izledi      × 2  (dwell_seconds >= 10)
+      video %80 izledi × 3
+      video %30 izledi × 1
+      kısa baktı       × 1  (dwell_seconds < 10)
+      atladı           × -1
+
+    Zaman ağırlığı:
+      son 7 gün   → 1.0×
+      7-14 gün    → 0.7×
+      14-30 gün   → 0.4×
+
+    Skor normalize edilir → [0, 1]
+    """
+    try:
+        from sqlalchemy import text
+        from app.database import AsyncSessionLocal
+        from app.utils.redis_client import get_redis
+
+        async with AsyncSessionLocal() as db:
+            # Tüm aktif kullanıcılar için skor hesapla
+            # Sadece son 30 günde sinyal veren kullanıcıları işle
+            result = await db.execute(text("""
+                WITH time_weight AS (
+                    SELECT
+                        user_id,
+                        event_metadata->>'category' AS category,
+                        event_type,
+                        (event_metadata->>'dwell_seconds')::float AS dwell_sec,
+                        (event_metadata->>'watch_pct')::float AS watch_pct,
+                        (event_metadata->>'swipe_count')::int AS swipe_count,
+                        CASE
+                            WHEN created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                            WHEN created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                            ELSE 0.4
+                        END AS time_w
+                    FROM analytics_events
+                    WHERE user_id IS NOT NULL
+                      AND created_at > NOW() - INTERVAL '30 days'
+                      AND event_type IN (
+                          'listing_view', 'listing_skip',
+                          'listing_photo_swipe', 'listing_video_watch'
+                      )
+                      AND event_metadata->>'category' IS NOT NULL
+                ),
+                analytics_scores AS (
+                    SELECT
+                        user_id,
+                        category,
+                        SUM(time_w * CASE
+                            WHEN event_type = 'listing_skip'  THEN -1.0
+                            WHEN event_type = 'listing_photo_swipe' THEN 2.0 * COALESCE(swipe_count, 1)
+                            WHEN event_type = 'listing_video_watch' AND watch_pct >= 80 THEN 3.0
+                            WHEN event_type = 'listing_video_watch' AND watch_pct >= 30 THEN 1.0
+                            WHEN event_type = 'listing_view' AND dwell_sec >= 10 THEN 2.0
+                            WHEN event_type = 'listing_view' THEN 1.0
+                            ELSE 0.0
+                        END) AS raw_score
+                    FROM time_weight
+                    GROUP BY user_id, category
+                ),
+                like_scores AS (
+                    SELECT
+                        ll.user_id,
+                        l.category,
+                        SUM(
+                            CASE
+                                WHEN ll.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN ll.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * 3.0
+                        ) AS raw_score
+                    FROM listing_likes ll
+                    INNER JOIN listings l ON l.id = ll.listing_id
+                    WHERE ll.created_at > NOW() - INTERVAL '30 days'
+                      AND l.category IS NOT NULL
+                    GROUP BY ll.user_id, l.category
+                ),
+                fav_scores AS (
+                    SELECT
+                        f.user_id,
+                        l.category,
+                        SUM(
+                            CASE
+                                WHEN f.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN f.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * 5.0
+                        ) AS raw_score
+                    FROM favorites f
+                    INNER JOIN listings l ON l.id = f.listing_id
+                    WHERE f.created_at > NOW() - INTERVAL '30 days'
+                      AND l.category IS NOT NULL
+                    GROUP BY f.user_id, l.category
+                ),
+                msg_scores AS (
+                    SELECT
+                        dm.sender_id AS user_id,
+                        l.category,
+                        SUM(
+                            CASE
+                                WHEN dm.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN dm.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * 10.0
+                        ) AS raw_score
+                    FROM direct_messages dm
+                    INNER JOIN listings l ON l.id = dm.listing_id
+                    WHERE dm.created_at > NOW() - INTERVAL '30 days'
+                      AND l.category IS NOT NULL
+                    GROUP BY dm.sender_id, l.category
+                ),
+                combined AS (
+                    SELECT user_id, category, raw_score FROM analytics_scores WHERE raw_score > 0
+                    UNION ALL
+                    SELECT user_id, category, raw_score FROM like_scores
+                    UNION ALL
+                    SELECT user_id, category, raw_score FROM fav_scores
+                    UNION ALL
+                    SELECT user_id, category, raw_score FROM msg_scores
+                ),
+                summed AS (
+                    SELECT user_id, category, SUM(raw_score) AS total_score
+                    FROM combined
+                    GROUP BY user_id, category
+                ),
+                normalized AS (
+                    SELECT
+                        user_id,
+                        category,
+                        total_score,
+                        total_score / NULLIF(MAX(total_score) OVER (PARTITION BY user_id), 0) AS score
+                    FROM summed
+                )
+                SELECT user_id, category, GREATEST(score, 0) AS score,
+                       total_score AS raw
+                FROM normalized
+                WHERE score IS NOT NULL
+            """))
+
+            rows = result.all()
+            if not rows:
+                logger.info("[Worker] compute_user_interests: sinyal yok, atlanıyor")
+                return
+
+            # Toplu upsert
+            upsert_sql = text("""
+                INSERT INTO user_interests (user_id, category, score, raw_signals, updated_at)
+                VALUES (:uid, :cat, :score, :raw, NOW())
+                ON CONFLICT (user_id, category)
+                DO UPDATE SET score = EXCLUDED.score,
+                              raw_signals = EXCLUDED.raw_signals,
+                              updated_at = NOW()
+            """)
+
+            updated_users = set()
+            for row in rows:
+                await db.execute(upsert_sql, {
+                    "uid": row.user_id,
+                    "cat": row.category,
+                    "score": float(row.score),
+                    "raw": {"raw_total": float(row.raw)},
+                })
+                updated_users.add(row.user_id)
+
+            await db.commit()
+
+            # Redis cache invalidation
+            redis = await get_redis()
+            for uid in updated_users:
+                await redis.delete(f"interests:{uid}")
+                # Feed cache'lerini de temizle (pattern delete)
+                feed_keys = await redis.keys(f"feed:{uid}:*")
+                if feed_keys:
+                    await redis.delete(*feed_keys)
+
+            logger.info(
+                "[Worker] compute_user_interests tamamlandı | kullanıcı=%d | kayıt=%d",
+                len(updated_users), len(rows)
+            )
+
+    except Exception as exc:
+        logger.error(
+            "[Worker] compute_user_interests başarısız | %s", str(exc), exc_info=True
+        )
+        capture_exception(exc)
+        raise
+
+
+# ── Task: Eski İmpressionları Temizle ────────────────────────────────────────
+
+async def cleanup_old_impressions_task(ctx: dict) -> None:
+    """Her gün 05:00'da çalışır; 30 günden eski listing_impressions kayıtlarını siler."""
+    try:
+        from sqlalchemy import text
+        from app.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                text("DELETE FROM listing_impressions WHERE seen_at < NOW() - INTERVAL '30 days'")
+            )
+            await db.commit()
+            logger.info(
+                "[Worker] Impression cleanup tamamlandı | silinen=%d", result.rowcount
+            )
+    except Exception as exc:
+        logger.error("[Worker] Impression cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
 class WorkerSettings:
@@ -252,6 +474,8 @@ class WorkerSettings:
         cleanup_old_analytics_task,
         cleanup_old_stream_likes_task,
         cleanup_hidden_messages_task,
+        compute_user_interests_task,
+        cleanup_old_impressions_task,
     ]
 
     cron_jobs = [
@@ -265,6 +489,10 @@ class WorkerSettings:
         cron(cleanup_old_notifications_task, hour=3, minute=0),
         # Her Pazartesi 04:00 — eski analitik verilerini temizle
         cron(cleanup_old_analytics_task, weekday=0, hour=4, minute=0),
+        # Her 15 dakikada kullanıcı ilgi skorlarını güncelle
+        cron(compute_user_interests_task, minute={0, 15, 30, 45}),
+        # Her gün 05:00 — eski listing impressionlarını temizle
+        cron(cleanup_old_impressions_task, hour=5, minute=0),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

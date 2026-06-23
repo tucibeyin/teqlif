@@ -24,10 +24,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _listings = [];
   bool _loading = true;
+  bool _loadingMore = false;
+  bool _feedExhausted = false;
+  int _feedPage = 0;
+  final String _feedSeed = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
   String? _error;
   String? _selectedCategory;
   String? _selectedCity;
   List<String> _cities = [];
+  final ScrollController _scrollCtrl = ScrollController();
 
   static const _categoryMeta = [
     {'slug': 'elektronik', 'icon': Icons.devices_outlined},
@@ -60,14 +65,58 @@ class _HomeScreenState extends State<HomeScreen> {
     CityService.getCities().then((c) {
       if (mounted) setState(() => _cities = c);
     });
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 300) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || _feedExhausted || _hasFilter) return;
+    setState(() => _loadingMore = true);
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) { setState(() => _loadingMore = false); return; }
+      final uri = Uri.parse('$kBaseUrl/feed').replace(
+        queryParameters: {'page': (_feedPage + 1).toString(), 'seed': _feedSeed},
+      );
+      final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final more = jsonDecode(resp.body) as List;
+        if (more.isEmpty) {
+          setState(() { _feedExhausted = true; _loadingMore = false; });
+        } else {
+          setState(() {
+            _listings = [..._listings, ...more];
+            _feedPage++;
+            _loadingMore = false;
+          });
+        }
+      } else {
+        setState(() => _loadingMore = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   Future<void> _load() async {
     _error = null;
-    final hasFilter = _selectedCategory != null || _selectedCity != null;
+    _feedPage = 0;
+    _feedExhausted = false;
 
     // ── A: Kasa kontrolü (yalnızca filtresiz istek için) ──────────────────
-    if (!hasFilter) {
+    if (!_hasFilter) {
       final cached = await StorageService.getCachedData(StorageService.cacheFeed);
       if (cached != null && mounted) {
         setState(() { _listings = cached as List; _loading = false; });
@@ -80,12 +129,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // ── B: Arka planda API ─────────────────────────────────────────────────
     try {
-      final params = <String, String>{};
-      if (_selectedCategory != null) params['category'] = _selectedCategory!;
-      if (_selectedCity != null) params['location'] = _selectedCity!;
-      final uri = Uri.parse('$kBaseUrl/listings')
-          .replace(queryParameters: params.isEmpty ? null : params);
       final token = await StorageService.getToken();
+      final Uri uri;
+
+      if (!_hasFilter && token != null) {
+        // Giriş yapmış, filtre yok → kişiselleştirilmiş feed
+        uri = Uri.parse('$kBaseUrl/feed').replace(
+          queryParameters: {'page': '0', 'seed': _feedSeed},
+        );
+      } else {
+        // Filtre var veya misafir → standart listing endpoint
+        final params = <String, String>{};
+        if (_selectedCategory != null) params['category'] = _selectedCategory!;
+        if (_selectedCity != null) params['location'] = _selectedCity!;
+        uri = Uri.parse('$kBaseUrl/listings')
+            .replace(queryParameters: params.isEmpty ? null : params);
+      }
+
       final resp = await http.get(
         uri,
         headers: token != null ? {'Authorization': 'Bearer $token'} : null,
@@ -94,12 +154,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (resp.statusCode == 200) {
         final fresh = jsonDecode(resp.body) as List;
         // ── C: Başarı → filtresizse kasa güncelle ────────────────────────
-        if (!hasFilter) {
+        if (!_hasFilter) {
           await StorageService.cacheData(StorageService.cacheFeed, fresh);
         }
         if (mounted) setState(() { _listings = fresh; _loading = false; });
       } else {
-        // HTTP hata → kasa varsa yut, yoksa hata göster
         if (_listings.isEmpty && mounted) {
           final l = AppLocalizations.of(context)!;
           setState(() { _error = l.errorListingsLoad; _loading = false; });
@@ -108,7 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      // ── D: Bağlantı hatası ────────────────────────────────────────────
       debugPrint('[HomeScreen] API hatası: $e');
       if (_listings.isEmpty && mounted) {
         final l = AppLocalizations.of(context)!;
@@ -233,6 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: CustomScrollView(
+          controller: _scrollCtrl,
           slivers: [
             // ── AppBar ──────────────────────────────────────────────
             SliverAppBar(
@@ -566,6 +625,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     childCount: _listings.length,
                   ),
+                ),
+              ),
+            // ── Sonsuz scroll yükleniyor göstergesi ─────────────────
+            if (_loadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
               ),
           ],

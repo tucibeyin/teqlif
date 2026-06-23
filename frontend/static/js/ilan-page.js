@@ -10,6 +10,8 @@
     let _urls = [];
     let _videoUrl = null;
     let _cur = 0;
+    let _dwellStart = Date.now();
+    let _listingCategory = null;
     let _isFavorited = false;
     let _isActive = true;
     let _isLiked = false;
@@ -45,10 +47,30 @@
     /* ── Gallery ── */
     function _mediaTotal() { return _urls.length + (_videoUrl ? 1 : 0); }
 
+    let _swipeCount = 0;
+    let _swipeTimer = null;
+
+    function _trackSwipe() {
+        _swipeCount++;
+        clearTimeout(_swipeTimer);
+        _swipeTimer = setTimeout(() => {
+            if (_swipeCount >= 1 && _listingCategory !== null && typeof window.teqlifTrackEvent === 'function') {
+                window.teqlifTrackEvent('listing_photo_swipe', {
+                    listing_id: listingId,
+                    category: _listingCategory,
+                    swipe_count: _swipeCount,
+                });
+            }
+            _swipeCount = 0;
+        }, 2000);
+    }
+
     function goTo(idx) {
         const total = _mediaTotal();
         if (!total) return;
+        const prevCur = _cur;
         _cur = (idx + total) % total;
+        if (_cur !== prevCur && _cur !== 0) _trackSwipe();
         document.querySelectorAll('.gallery-main .gallery-item').forEach((el, i) => {
             const active = i === _cur;
             el.classList.toggle('active', active);
@@ -242,6 +264,9 @@
                 }
             });
 
+            _listingCategory = data.category || '';
+            _dwellStart = Date.now();
+
             const catLabel = CAT[data.category] || data.category || '';
             const initials = (data.user.full_name || data.user.username || '?')[0].toUpperCase();
             const me = Auth.getUser();
@@ -373,7 +398,33 @@
                 var _overlay = document.getElementById('galleryVideoOverlay');
                 galleryVideoEl.addEventListener('play',  function () { if (_overlay) _overlay.style.opacity = '0'; });
                 galleryVideoEl.addEventListener('pause', function () { if (_overlay) _overlay.style.opacity = '1'; });
-                galleryVideoEl.addEventListener('ended', function () { if (_overlay) _overlay.style.opacity = '1'; });
+                galleryVideoEl.addEventListener('ended', function () {
+                    if (_overlay) _overlay.style.opacity = '1';
+                    if (_listingCategory !== null && typeof window.teqlifTrackEvent === 'function') {
+                        window.teqlifTrackEvent('listing_video_watch', {
+                            listing_id: listingId,
+                            category: _listingCategory,
+                            watch_pct: 100,
+                        });
+                    }
+                });
+                galleryVideoEl.addEventListener('timeupdate', function () {
+                    if (!galleryVideoEl.duration || _listingCategory === null) return;
+                    var pct = Math.round(galleryVideoEl.currentTime / galleryVideoEl.duration * 100);
+                    if ((pct === 30 || pct === 50 || pct === 80) && !galleryVideoEl._trackedPct) {
+                        galleryVideoEl._trackedPct = pct;
+                        if (typeof window.teqlifTrackEvent === 'function') {
+                            window.teqlifTrackEvent('listing_video_watch', {
+                                listing_id: listingId,
+                                category: _listingCategory,
+                                watch_pct: pct,
+                            });
+                        }
+                    }
+                    if (pct > (galleryVideoEl._trackedPct || 0) + 5) {
+                        galleryVideoEl._trackedPct = null; // sonraki milestone'ı takip et
+                    }
+                });
             }
             var galleryPrevEl = document.getElementById('galleryPrev');
             if (galleryPrevEl) galleryPrevEl.addEventListener('click', function (e) { e.stopPropagation(); goTo(_cur - 1); });
@@ -632,6 +683,22 @@
     }
 
     load();
+
+    // Dwell time tracking — sayfa gizlenince veya kapatılınca gönder
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden' && _listingCategory !== null && typeof window.teqlifTrackEvent === 'function') {
+            const dwell = Math.round((Date.now() - _dwellStart) / 1000);
+            if (dwell >= 1) {
+                window.teqlifTrackEvent('listing_view', {
+                    listing_id: listingId,
+                    category: _listingCategory,
+                    dwell_seconds: dwell,
+                });
+            }
+        } else if (document.visibilityState === 'visible') {
+            _dwellStart = Date.now();
+        }
+    });
 
 // ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
 document.addEventListener('DOMContentLoaded', function () {

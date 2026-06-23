@@ -34,6 +34,8 @@ import app.models.analytics  # noqa: F401
 import app.models.purchase  # noqa: F401
 import app.models.story  # noqa: F401
 import app.models.like  # noqa: F401
+import app.models.user_interest  # noqa: F401
+import app.models.listing_impression  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
