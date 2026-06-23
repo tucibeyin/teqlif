@@ -327,7 +327,7 @@ async def price_estimate(
 
     # 2. Benzer satılmış ilanları bul (auction winner'ı olan = satıldı)
     q = sql_text("""
-        WITH similar AS (
+        WITH nearby AS (
             SELECT
                 a.start_price,
                 a.final_price,
@@ -348,7 +348,7 @@ async def price_estimate(
             AVG(final_price)                                         AS avg_final,
             MIN(final_price)                                         AS min_final,
             MAX(final_price)                                         AS max_final
-        FROM similar
+        FROM nearby
     """)
 
     result = await db.execute(q, {"emb": emb_str})
