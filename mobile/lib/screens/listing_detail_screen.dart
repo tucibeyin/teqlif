@@ -37,6 +37,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   int? _myUserId;
   bool _isFavorited = false;
   bool _isActive = true;
+  int? _campaignId;
 
   // Video player
   String? _videoUrl;
@@ -74,6 +75,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
     _isLiked = widget.listing['is_liked'] as bool? ?? false;
     _videoUrl = widget.listing['video_url'] as String?;
+    _campaignId = widget.listing['campaign_id'] as int?;
     if (_videoUrl != null) {
       _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(imgUrl(_videoUrl!)));
       _videoCtrl!.initialize().then((_) {
@@ -125,8 +127,29 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       final listingUserId = (widget.listing['user'] as Map?)?['id'];
       if (listingUserId != _myUserId) {
         _loadFavoriteStatus(token);
+      } else {
+        // İlanın sahibiyiz — taze kampanya durumunu çek
+        _refreshCampaignStatus(token);
       }
     }
+  }
+
+  Future<void> _refreshCampaignStatus(String token) async {
+    final id = widget.listing['id'];
+    if (id == null) return;
+    try {
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/$id'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final freshId = data['campaign_id'] as int?;
+        if (freshId != _campaignId) {
+          setState(() => _campaignId = freshId);
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _toggleLike() async {
@@ -441,7 +464,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   void _openAdReport(BuildContext context) {
-    final campaignId = widget.listing['campaign_id'] as int?;
+    final campaignId = _campaignId;
     if (campaignId == null) return;
     Navigator.push(
       context,
@@ -510,7 +533,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         // Butonu hemen "Performansı Gör"e çevir — yeniden açmaya gerek yok
         setState(() {
-          widget.listing['campaign_id'] = data['id'];
+          _campaignId = data['id'] as int?;
+          widget.listing['campaign_id'] = _campaignId;
           widget.listing['is_sponsored'] = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1033,7 +1057,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           ? SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: listing['campaign_id'] != null
+                child: _campaignId != null
                     ? ElevatedButton.icon(
                         onPressed: () => _openAdReport(context),
                         icon: const Text('📊', style: TextStyle(fontSize: 16)),
