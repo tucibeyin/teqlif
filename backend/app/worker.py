@@ -725,6 +725,21 @@ async def cleanup_old_impressions_task(ctx: dict) -> None:
         raise
 
 
+async def calculate_user_budgets_task(ctx: dict) -> None:
+    """
+    Her gece 02:00'da çalışır.
+    ClickHouse'daki son 7 günün etkileşim verisinden her kullanıcı için
+    p90 price_point değerini hesaplar ve PostgreSQL User.max_budget'ı günceller.
+    """
+    try:
+        from app.services.analytics_processor import calculate_user_budgets
+        updated = await calculate_user_budgets()
+        logger.info("[Worker] calculate_user_budgets_task tamamlandı | güncellenen=%d", updated)
+    except Exception as exc:
+        logger.error("[Worker] calculate_user_budgets_task başarısız | %s", str(exc), exc_info=True)
+        # ClickHouse erişilemezse sessizce geçilebilir (kritik değil)
+
+
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
 class WorkerSettings:
@@ -750,6 +765,7 @@ class WorkerSettings:
         generate_listing_embedding_task,
         flush_interactions_to_db,
         update_user_preference_embedding,
+        calculate_user_budgets_task,
     ]
 
     cron_jobs = [
@@ -757,6 +773,8 @@ class WorkerSettings:
         cron(cleanup_expired_stories_task, minute=0),
         # Her gün 01:00 — eski stream kalplerini temizle
         cron(cleanup_old_stream_likes_task, hour=1, minute=0),
+        # Her gün 02:00 — ClickHouse'dan kullanıcı bütçe tavanlarını hesapla
+        cron(calculate_user_budgets_task, hour=2, minute=0),
         # Her gün 02:30 — gizlenmiş mesajları temizle
         cron(cleanup_hidden_messages_task, hour=2, minute=30),
         # Her gün 03:00 — eski bildirimleri temizle

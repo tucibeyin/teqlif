@@ -290,6 +290,7 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
 
     - user.preference_embedding yoksa → cold start (popüler ilanlar)
     - varsa → pgvector cosine distance ile en yakın ilanlar
+    - user.max_budget varsa price <= max_budget * 1.2 filtresi uygulanır
     - Tüm ID havuzu Redis'te 5 dk önbelleklenir; sayfalama Redis'ten yapılır
     """
     cache_key = f"feed:foryou:{user_id}"
@@ -334,7 +335,9 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
 async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> list[int]:
     """
     Kullanıcının preference_embedding'ine en yakın ilan ID'lerini döndürür.
-    Embedding yoksa popüler ilanlar döner (cold start).
+    - Embedding yoksa popüler ilanlar döner (cold start).
+    - user.max_budget varsa: price <= max_budget * 1.2 filtresi uygulanır.
+      (Bütçenin %20 üstüne kadar tolerans — kullanıcıyı tamamen kesmez.)
     """
     user = await db.scalar(select(User).where(User.id == user_id))
 
@@ -343,18 +346,26 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
 
     vec_str = "[" + ",".join(f"{x:.8f}" for x in user.preference_embedding) + "]"
 
+    # Bütçe filtresi — max_budget NULL ise WHERE koşulu eklenmez
+    budget_clause = ""
+    params: dict = {"uid": user_id, "vec": vec_str, "lim": limit}
+    if user.max_budget is not None:
+        budget_clause = "AND (price IS NULL OR price <= :price_ceiling)"
+        params["price_ceiling"] = user.max_budget * 1.2
+
     result = await db.execute(
-        text("""
+        text(f"""
             SELECT id
             FROM listings
             WHERE is_active = TRUE
               AND is_deleted = FALSE
               AND embedding IS NOT NULL
               AND user_id != :uid
+              {budget_clause}
             ORDER BY embedding <=> :vec::vector
             LIMIT :lim
         """),
-        {"uid": user_id, "vec": vec_str, "lim": limit},
+        params,
     )
     ids = [r.id for r in result]
     return ids if ids else await _popular_feed(0, limit, db)
