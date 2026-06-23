@@ -144,6 +144,8 @@
                 initAuction(streamId, isHost);
             } else {
                 document.getElementById('auctionPanel').style.display = 'none';
+                const bidsSection = document.querySelector('.bids-section');
+                if (bidsSection) bidsSection.style.display = 'none';
             }
 
             // Sohbeti başlat
