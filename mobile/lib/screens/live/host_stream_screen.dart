@@ -11,6 +11,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/stream_service.dart';
+import 'seller_report_screen.dart';
 import '../../utils/price_formatter.dart';
 import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
@@ -380,7 +381,17 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
     await _room?.disconnect();
     if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      // Yayın analiz ekranına yönlendir; geri tuşu ana sayfaya döner
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SellerReportScreen(
+            streamId: widget.streamToken.streamId,
+            streamTitle: widget.title,
+          ),
+        ),
+        (route) => route.isFirst,
+      );
     }
   }
 

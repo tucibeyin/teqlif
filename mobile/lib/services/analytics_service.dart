@@ -58,6 +58,25 @@ class AnalyticsService {
     }
   }
 
+  /// Yayın sonu satıcı raporu → `GET /api/analytics/seller-report/{streamId}`
+  static Future<Map<String, dynamic>?> getSellerReport(int streamId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/seller-report/$streamId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Mobil etkileşim sinyali → `/api/analytics/interaction`. Fire-and-forget.
   static Future<void> logInteraction({
     required int itemId,

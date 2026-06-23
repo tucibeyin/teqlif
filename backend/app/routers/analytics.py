@@ -1,14 +1,18 @@
 import json
 import logging
-from fastapi import APIRouter, Depends, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, Dict, Optional
 
 from app.database import get_db
 from app.models.analytics import AnalyticsEvent
+from app.models.auction import Auction
+from app.models.stream import LiveStream
+from app.models.user import User
 from app.schemas.analytics import AnalyticsEventCreate
-from app.utils.auth import decode_token
+from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
@@ -112,3 +116,151 @@ async def track_interaction(
         logger.error("[ANALYTICS] Redis rpush başarısız: %s", exc)
 
     return {"status": "queued"}
+
+
+# ── Satıcı Yayın Raporu ───────────────────────────────────────────────────────
+
+def _build_recommendation(avg_budget: float | None, hesitation_count: int, unique_users: int) -> str:
+    """
+    Metriklere göre kişiselleştirilmiş öneri metni üretir.
+    Kural tabanlı 'makul AI' — harici API gerektirmez.
+    """
+    if avg_budget is None or avg_budget <= 0:
+        if hesitation_count > 5:
+            return (
+                f"Bugün {hesitation_count} izleyici teklif vermekle ilgilendi ama tereddüt etti. "
+                "Bir dahaki yayında daha düşük başlangıç fiyatıyla başlayarak ilgiyi satışa dönüştürebilirsiniz."
+            )
+        return (
+            "Henüz yeterli bütçe verisi yok. Yayınlarınızı düzenli tutarak "
+            "kitle profili oluştururken fiyat aralıklarını deneyebilirsiniz."
+        )
+
+    budget_fmt = f"{int(avg_budget):,}".replace(",", ".")
+
+    if hesitation_count >= 10:
+        low = int(avg_budget * 0.7)
+        low_fmt = f"{low:,}".replace(",", ".")
+        return (
+            f"İzleyicilerinizin ortalama bütçesi {budget_fmt} TL. "
+            f"Bugün {hesitation_count} kişi teklif vermek istedi ama vazgeçti — "
+            f"bir dahaki yayında {low_fmt} TL gibi düşük başlangıç fiyatları deneyerek "
+            "bu kararsız kitleyi satışa çevirebilirsiniz."
+        )
+    elif hesitation_count >= 3:
+        return (
+            f"İzleyicilerinizin ortalama bütçesi {budget_fmt} TL. "
+            f"{hesitation_count} izleyici tekliften vazgeçti — "
+            "ürün açıklamalarını ve fiyat adımlarını netleştirerek dönüşüm oranınızı artırabilirsiniz."
+        )
+    elif unique_users >= 10:
+        high = int(avg_budget * 1.15)
+        high_fmt = f"{high:,}".replace(",", ".")
+        return (
+            f"İzleyicilerinizin ortalama bütçesi {budget_fmt} TL. "
+            f"Kitle profiliniz güçlü görünüyor. Bir dahaki yayında "
+            f"{high_fmt} TL'ye kadar premium ürünler sunarak geliri artırabilirsiniz."
+        )
+    else:
+        return (
+            f"İzleyicilerinizin ortalama bütçesi {budget_fmt} TL. "
+            "Bu fiyat bandında ürünler getirerek satışlarınızı artırabilirsiniz."
+        )
+
+
+@router.get("/seller-report/{stream_id}")
+async def get_seller_report(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Yayın sonu satıcı analiz raporu.
+
+    Yalnızca yayının host'u erişebilir.
+    ClickHouse'dan o yayının açık artırma ilanlarına ait metrikler çekilir:
+      - unique_viewers: etkileşimde bulunan tekil kullanıcı sayısı
+      - avg_budget: ortalama price_point (TL)
+      - hesitation_count: 'bid_hesitation' event sayısı
+      - stream_duration_minutes: yayın süresi
+      - recommendation: kural tabanlı öneri metni
+    """
+    # ── 1. Yayını getir ve host doğrula ──────────────────────────────────────
+    stream = await db.scalar(select(LiveStream).where(LiveStream.id == stream_id))
+    if stream is None:
+        raise HTTPException(status_code=404, detail="Yayın bulunamadı")
+    if stream.host_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bu rapora erişim yetkiniz yok")
+
+    # Yayın süresi (dakika)
+    from datetime import datetime, timezone
+    ended = stream.ended_at or datetime.now(timezone.utc)
+    duration_minutes = max(0, int((ended - stream.started_at).total_seconds() / 60))
+
+    # ── 2. Bu yayındaki açık artırma ilan ID'lerini çek ──────────────────────
+    auction_rows = await db.execute(
+        select(Auction.listing_id).where(
+            Auction.stream_id == stream_id,
+            Auction.listing_id.isnot(None),
+        )
+    )
+    listing_ids = [row[0] for row in auction_rows.fetchall() if row[0] is not None]
+
+    # ── 3. ClickHouse sorgusu ─────────────────────────────────────────────────
+    unique_viewers = 0
+    avg_budget: float | None = None
+    hesitation_count = 0
+
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+
+        if listing_ids:
+            ids_str = ", ".join(str(i) for i in listing_ids)
+            ts_start = stream.started_at.strftime("%Y-%m-%d %H:%M:%S")
+            ts_end = ended.strftime("%Y-%m-%d %H:%M:%S")
+
+            result = await ch.query(f"""
+                SELECT
+                    countDistinct(user_id)                          AS unique_viewers,
+                    avgIf(price_point, price_point > 0)             AS avg_budget,
+                    countIf(event_type = 'bid_hesitation')          AS hesitation_count
+                FROM user_events
+                WHERE item_id IN ({ids_str})
+                  AND item_type = 'listing'
+                  AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+            """)
+            row = result.result_rows[0] if result.result_rows else (0, None, 0)
+            unique_viewers = int(row[0] or 0)
+            avg_budget = float(row[1]) if row[1] else None
+            hesitation_count = int(row[2] or 0)
+        else:
+            # Açık artırma ilanı yoksa sadece 'view'/'dwell' sinyallerini kullan
+            ts_start = stream.started_at.strftime("%Y-%m-%d %H:%M:%S")
+            ts_end = ended.strftime("%Y-%m-%d %H:%M:%S")
+            result = await ch.query(f"""
+                SELECT countDistinct(user_id), avgIf(price_point, price_point > 0), 0
+                FROM user_events
+                WHERE item_type = 'stream'
+                  AND item_id = {stream_id}
+                  AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+            """)
+            row = result.result_rows[0] if result.result_rows else (0, None, 0)
+            unique_viewers = int(row[0] or 0)
+            avg_budget = float(row[1]) if row[1] else None
+
+    except Exception as ch_exc:
+        logger.warning("[SellerReport] ClickHouse sorgusu başarısız: %s", ch_exc)
+
+    # ── 4. Öneri metni ────────────────────────────────────────────────────────
+    recommendation = _build_recommendation(avg_budget, hesitation_count, unique_viewers)
+
+    return {
+        "stream_id": stream_id,
+        "stream_title": stream.title,
+        "duration_minutes": duration_minutes,
+        "unique_viewers": unique_viewers,
+        "avg_budget": round(avg_budget, 2) if avg_budget else None,
+        "hesitation_count": hesitation_count,
+        "recommendation": recommendation,
+    }
