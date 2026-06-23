@@ -78,7 +78,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     _connect();
-    _loadBidHistory();
+    if (widget.streamToken.category != 'sohbet') _loadBidHistory();
   }
 
   @override
@@ -703,7 +703,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             ),
 
           // ── Teklif Listesi — her zaman en üstte (alt panelin üstüne gelince tıklanabilir kalsın) ──
-          if (live && _bidGroups.isNotEmpty)
+          if (live && _bidGroups.isNotEmpty && widget.streamToken.category != 'sohbet')
             Positioned(
               top: _bidsPanelTop!,
               right: 0,
