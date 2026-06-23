@@ -63,6 +63,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       if (data['type'] == 'message' && data['sender_id'] != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToDirectChat(data));
       }
+      // Kişiselleştirilmiş yayın bildirimine tıklanınca direkt yayına git
+      if (data['type'] == 'smart_auction_alert' && data['stream_id'] != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToLiveStream(data));
+      }
     });
     _authFailedSub = AuthService.authFailedStream.stream.listen((_) => _handleAuthFailed());
     _badgeRefreshSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) {
@@ -70,10 +74,22 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     });
     // Deep link dinleyici — warm/hot start + cold start tüketimi
     _deepLinkSub = DeepLinkService.uriStream.listen(_handleDeepLink);
-    // Cold-start: Splash'in yakaladığı bekleyen link varsa uygula
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Cold-start URL deep link
       final pending = DeepLinkService.consumePending();
       if (pending != null) _handleDeepLink(pending);
+
+      // Cold-start FCM bildirim (uygulama kapalıyken tıklama)
+      final pendingNotif = PushNotificationService.consumePendingNavigation();
+      if (pendingNotif != null) {
+        if (pendingNotif['type'] == 'smart_auction_alert' &&
+            pendingNotif['stream_id'] != null) {
+          _navigateToLiveStream(pendingNotif);
+        } else if (pendingNotif['type'] == 'message' &&
+            pendingNotif['sender_id'] != null) {
+          _navigateToDirectChat(pendingNotif);
+        }
+      }
     });
   }
 
@@ -132,6 +148,21 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   /// Mesaj FCM bildirimine tıklanınca direkt DirectChatScreen'e git.
+  /// FCM 'smart_auction_alert' bildirimine tıklanınca doğrudan yayına gider.
+  /// Back stack: [MainScreen → SwipeLiveScreen] — geri tuşu MainScreen'e döner.
+  void _navigateToLiveStream(Map<String, dynamic> data) {
+    if (!mounted) return;
+    final streamId = int.tryParse(data['stream_id']?.toString() ?? '');
+    if (streamId == null) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => SwipeLiveScreen.single(streamId: streamId),
+      ),
+      // MainScreen (isFirst) kalır; araya giren diğer ekranları temizle
+      (route) => route.isFirst,
+    );
+  }
+
   void _navigateToDirectChat(Map<String, dynamic> data) {
     if (!mounted) return;
     final senderId = int.tryParse(data['sender_id']?.toString() ?? '');

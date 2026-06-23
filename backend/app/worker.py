@@ -850,10 +850,11 @@ async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
                 await push_notification(
                     user_id=user_row.id,
                     notif={
-                        "type": "stream_started",
+                        "type": "smart_auction_alert",
                         "title": "Tam sana göre bir yayın başladı! 🎯",
                         "body": notif_body,
                         "related_id": stream_id,
+                        "stream_id": stream_id,       # FCM data: deep link için
                         "sender_image_url": thumbnail or "",
                     },
                     pref_key="smart_alert",

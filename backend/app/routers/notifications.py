@@ -70,12 +70,14 @@ async def push_notification(user_id: int, notif: dict, pref_key: str | None = No
             ) or 0
             badge = unread_notifs + unread_msgs
 
-            # Ek data payload: sender bilgisi ve profil fotoğrafı
+            # Ek data payload: sender bilgisi, profil fotoğrafı ve opsiyonel stream_id
             extra_data: dict[str, str] = {}
             if notif.get("related_id") is not None:
                 extra_data["sender_id"] = str(notif["related_id"])
             if notif.get("sender_username"):
                 extra_data["sender_username"] = str(notif["sender_username"])
+            if notif.get("stream_id") is not None:
+                extra_data["stream_id"] = str(notif["stream_id"])
 
             image_url: str | None = notif.get("sender_image_url")
             if image_url and not image_url.startswith("http"):

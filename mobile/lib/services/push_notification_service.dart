@@ -23,6 +23,19 @@ class PushNotificationService {
   static final StreamController<void> badgeRefreshNeeded =
       StreamController<void>.broadcast();
 
+  /// Uygulama tamamen kapalıyken (cold-start) tıklanan bildirimin verisi.
+  /// MainScreen.initState()'de consumePendingNavigation() ile tüketilir.
+  /// Broadcast stream cold-start'ta MainScreen henüz dinlemediğinden
+  /// bu pending mekanizması kullanılır.
+  static Map<String, dynamic>? _pendingNavData;
+
+  /// Cold-start pending bildirim verisini döndürür ve temizler.
+  static Map<String, dynamic>? consumePendingNavigation() {
+    final data = _pendingNavData;
+    _pendingNavData = null;
+    return data;
+  }
+
   /// main() içinde çağrılmalı — Firebase hazır olduktan hemen sonra.
   /// Background handler + foreground presentation options + mesaj dinleyicileri.
   /// Token almaz; kullanıcı girişi gerekmez.
@@ -42,15 +55,18 @@ class PushNotificationService {
       notificationStream.add(msg.data);
     });
 
+    // Arka planda (background) tıklama — MainScreen zaten dinliyor
     FirebaseMessaging.onMessageOpenedApp.listen((msg) {
       notificationStream.add(msg.data);
     });
 
+    // Cold-start: uygulama kapalıyken tıklama — MainScreen henüz dinlemiyor
+    // → pending'e yaz, MainScreen.initState() tüketir
     final initial = await _messaging.getInitialMessage();
-    if (initial != null) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        notificationStream.add(initial.data);
-      });
+    if (initial != null && initial.data.isNotEmpty) {
+      _pendingNavData = initial.data;
+      // notificationStream'e de ekle: badge refresh ve diğer dinleyiciler için
+      Future.microtask(() => notificationStream.add(initial.data));
     }
   }
 
