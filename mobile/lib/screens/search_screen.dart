@@ -297,6 +297,7 @@ class _SearchScreenState extends State<SearchScreen> {
       onRefresh: _loadExplore,
       child: CustomScrollView(
         controller: _scrollCtrl,
+        physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           // ── Canlı Yayınlar ────────────────────────────────────────
           if (_exploreStreams.isNotEmpty) ...[
