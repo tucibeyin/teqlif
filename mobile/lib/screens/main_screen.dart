@@ -17,7 +17,6 @@ import 'public_profile_screen.dart';
 import 'search_screen.dart';
 import 'live/live_list_screen.dart';
 import 'live/swipe_live_screen.dart';
-import 'feed/for_you_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/offline_banner.dart';
 
@@ -49,7 +48,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _screens = [
       const LiveListScreen(),
       const HomeScreen(),
-      const ForYouScreen(),
       const SearchScreen(),
       const MessagesScreen(),
       const ProfileScreen(),
@@ -127,7 +125,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void _onNavTap(int index) {
     setState(() => _currentIndex = index);
     // Mesajlar tabına geçince listeyi ve badge'i güncelle
-    if (index == 4) {
+    if (index == 3) {
       PushNotificationService.notificationStream.add({});
       Future.delayed(const Duration(milliseconds: 300), _refreshBadges);
     }
@@ -314,11 +312,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             icon: const Icon(Icons.grid_view_outlined),
             activeIcon: const Icon(Icons.grid_view),
             label: l.navListings,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.auto_awesome_outlined),
-            activeIcon: const Icon(Icons.auto_awesome),
-            label: l.navForYou,
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.search_outlined),

@@ -33,11 +33,17 @@ class _SearchScreenState extends State<SearchScreen> {
   List<dynamic> _exploreListings = [];
   List<StreamOut> _exploreStreams = [];
   bool _exploreLoading = true;
+  bool _isLoggedIn = false;
+  int _forYouPage = 0;
+  bool _forYouExhausted = false;
+  bool _forYouLoadingMore = false;
+  final ScrollController _scrollCtrl = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onQueryChanged);
+    _scrollCtrl.addListener(_onScroll);
     _loadExplore();
   }
 
@@ -46,7 +52,16 @@ class _SearchScreenState extends State<SearchScreen> {
     _controller.removeListener(_onQueryChanged);
     _controller.dispose();
     _debounce?.cancel();
+    _scrollCtrl.removeListener(_onScroll);
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 300) {
+      _loadMoreForYou();
+    }
   }
 
   void _onQueryChanged() {
@@ -64,27 +79,88 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _loadExplore() async {
-    setState(() => _exploreLoading = true);
+    setState(() {
+      _exploreLoading = true;
+      _exploreListings = [];
+      _forYouPage = 0;
+      _forYouExhausted = false;
+    });
     try {
       final token = await StorageService.getToken();
-      final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
-      final listingsFuture = http.get(Uri.parse('$kBaseUrl/listings'), headers: headers);
-      final streamsFuture = StreamService.getActiveStreams();
+      final loggedIn = token != null;
+      final headers = loggedIn ? {'Authorization': 'Bearer $token'} : <String, String>{};
 
-      final listingsResp = await listingsFuture;
+      final streamsFuture = StreamService.getActiveStreams();
+      final listingsFuture = loggedIn
+          ? http.get(Uri.parse('$kBaseUrl/feed/for-you?page=0'), headers: headers)
+          : http.get(Uri.parse('$kBaseUrl/listings'), headers: headers);
+
       final streams = await streamsFuture;
+      final listingsResp = await listingsFuture;
 
       if (!mounted) return;
       setState(() {
-        if (listingsResp.statusCode == 200) {
-          _exploreListings = (jsonDecode(listingsResp.body) as List).take(12).toList();
-        }
+        _isLoggedIn = loggedIn;
         _exploreStreams = streams.take(4).toList();
+        if (listingsResp.statusCode == 200) {
+          final data = jsonDecode(listingsResp.body) as List;
+          _exploreListings = data;
+          if (loggedIn) {
+            _forYouPage = 1;
+            if (data.length < 20) _forYouExhausted = true;
+          }
+        }
         _exploreLoading = false;
       });
     } catch (_) {
       if (mounted) setState(() => _exploreLoading = false);
     }
+  }
+
+  Future<void> _loadMoreForYou() async {
+    if (!_isLoggedIn || _forYouExhausted || _forYouLoadingMore || _hasQuery) return;
+    setState(() => _forYouLoadingMore = true);
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/feed/for-you?page=$_forYouPage'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() {
+          _exploreListings.addAll(data);
+          _forYouPage++;
+          if (data.length < 20) _forYouExhausted = true;
+        });
+      } else {
+        setState(() => _forYouExhausted = true);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _forYouExhausted = false);
+    } finally {
+      if (mounted) setState(() => _forYouLoadingMore = false);
+    }
+  }
+
+  void _trackInteraction(int itemId) {
+    StorageService.getToken().then((token) {
+      if (token == null) return;
+      http.post(
+        Uri.parse('$kBaseUrl/analytics/interaction'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'item_id': itemId,
+          'item_type': 'listing',
+          'interaction_type': 'click',
+        }),
+      ).catchError((_) {});
+    });
   }
 
   Future<void> _searchUsers(String q) async {
@@ -220,6 +296,7 @@ class _SearchScreenState extends State<SearchScreen> {
       color: kPrimary,
       onRefresh: _loadExplore,
       child: CustomScrollView(
+        controller: _scrollCtrl,
         slivers: [
           // ── Canlı Yayınlar ────────────────────────────────────────
           if (_exploreStreams.isNotEmpty) ...[
@@ -261,14 +338,22 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
           ],
-          // ── Son İlanlar ──────────────────────────────────────────
+          // ── Sana Özel / Son İlanlar ──────────────────────────────
           if (_exploreListings.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  l.homeRecentListings,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                child: Row(
+                  children: [
+                    if (_isLoggedIn)
+                      const Icon(Icons.auto_awesome, color: kPrimary, size: 16),
+                    if (_isLoggedIn) const SizedBox(width: 6),
+                    Text(
+                      _isLoggedIn ? 'Sana Özel' : l.homeRecentListings,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -286,18 +371,31 @@ class _SearchScreenState extends State<SearchScreen> {
                         _exploreListings[i] as Map<String, dynamic>;
                     return _ListingTile(
                       listing: listing,
-                      onTap: () => Navigator.push(
-                        ctx,
-                        MaterialPageRoute(
-                          builder: (_) => ListingDetailScreen(listing: listing),
-                        ),
-                      ),
+                      onTap: () {
+                        final id = listing['id'] as int?;
+                        if (id != null && _isLoggedIn) _trackInteraction(id);
+                        Navigator.push(
+                          ctx,
+                          MaterialPageRoute(
+                            builder: (_) => ListingDetailScreen(listing: listing),
+                          ),
+                        );
+                      },
                     );
                   },
                   childCount: _exploreListings.length,
                 ),
               ),
             ),
+            if (_forYouLoadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: CircularProgressIndicator(color: kPrimary, strokeWidth: 2),
+                  ),
+                ),
+              ),
           ],
           // ── Boş durum ────────────────────────────────────────────
           if (_exploreStreams.isEmpty && _exploreListings.isEmpty)
@@ -306,11 +404,21 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.explore_outlined, size: 56,
-                        color: Color(0xFFD1D5DB)),
+                    Icon(
+                      _isLoggedIn
+                          ? Icons.auto_awesome_outlined
+                          : Icons.explore_outlined,
+                      size: 56,
+                      color: const Color(0xFFD1D5DB),
+                    ),
                     const SizedBox(height: 12),
-                    Text(l.searchNoContent,
-                        style: const TextStyle(color: Color(0xFF6B7280))),
+                    Text(
+                      _isLoggedIn
+                          ? 'Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!'
+                          : l.searchNoContent,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFF6B7280)),
+                    ),
                   ],
                 ),
               ),
