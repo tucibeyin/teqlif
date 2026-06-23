@@ -292,6 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: _load,
         child: CustomScrollView(
           controller: _scrollCtrl,
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             // ── AppBar ──────────────────────────────────────────────
             SliverAppBar(
