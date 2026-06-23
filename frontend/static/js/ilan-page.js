@@ -62,6 +62,8 @@
         if (counterEl) counterEl.textContent = `${_cur + 1} / ${total}`;
         const mainEl = document.getElementById('galleryMain');
         if (mainEl) mainEl.style.cursor = (_videoUrl && _cur === 0) ? 'default' : 'zoom-in';
+        const overlayEl = document.getElementById('galleryVideoOverlay');
+        if (overlayEl) overlayEl.style.display = (_videoUrl && _cur === 0) ? '' : 'none';
     }
 
     /* ── Lightbox ── */
@@ -113,6 +115,11 @@
         let items = '';
         if (videoUrl) {
             items += `<video src="${esc(videoUrl)}" class="gallery-item active" preload="metadata" playsinline controls id="galleryVideo"></video>`;
+            items += `<div id="galleryVideoOverlay" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:1;transition:opacity .2s">
+                <div style="background:rgba(0,0,0,.45);border-radius:50%;width:60px;height:60px;display:flex;align-items:center;justify-content:center">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+            </div>`;
         }
         items += urls.map((u, i) =>
             `<img src="${u}" class="gallery-item${!videoUrl && i === 0 ? ' active' : ''}" alt="Fotoğraf ${i + 1}" loading="lazy">`
@@ -360,6 +367,13 @@
             if (galleryMainEl) {
                 galleryMainEl.addEventListener('click', function () { openLb(_cur); });
                 galleryMainEl.addEventListener('dblclick', function (e) { e.stopPropagation(); toggleListingLike(); });
+            }
+            var galleryVideoEl = document.getElementById('galleryVideo');
+            if (galleryVideoEl) {
+                var _overlay = document.getElementById('galleryVideoOverlay');
+                galleryVideoEl.addEventListener('play',  function () { if (_overlay) _overlay.style.opacity = '0'; });
+                galleryVideoEl.addEventListener('pause', function () { if (_overlay) _overlay.style.opacity = '1'; });
+                galleryVideoEl.addEventListener('ended', function () { if (_overlay) _overlay.style.opacity = '1'; });
             }
             var galleryPrevEl = document.getElementById('galleryPrev');
             if (galleryPrevEl) galleryPrevEl.addEventListener('click', function (e) { e.stopPropagation(); goTo(_cur - 1); });
