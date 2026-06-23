@@ -232,6 +232,73 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: Redis Interaction Kuyruğunu DB'ye Yaz ──────────────────────────────
+
+async def flush_interactions_to_db(ctx: dict) -> None:
+    """
+    Her 5 dakikada çalışır; Redis'teki interaction_queue kuyruğunu
+    toplu okur ve user_interactions tablosuna bulk-insert yapar.
+
+    Atomic kuyruk tüketimi için LRANGE + DEL yerine pipeline kullanılır.
+    """
+    import json
+    from datetime import datetime, timezone
+    from app.database import AsyncSessionLocal
+    from app.utils.redis_client import get_redis
+
+    QUEUE_KEY = "interaction_queue"
+    BATCH_LIMIT = 2000
+
+    try:
+        redis = await get_redis()
+
+        # Kuyruğu atomik olarak al ve sıfırla
+        async with redis.pipeline(transaction=True) as pipe:
+            await pipe.lrange(QUEUE_KEY, 0, BATCH_LIMIT - 1)
+            await pipe.ltrim(QUEUE_KEY, BATCH_LIMIT, -1)
+            results = await pipe.execute()
+
+        raw_items: list[str] = results[0]
+        if not raw_items:
+            return
+
+        now = datetime.now(timezone.utc)
+        rows = []
+        for item in raw_items:
+            try:
+                data = json.loads(item)
+                rows.append({
+                    "user_id": data.get("user_id"),
+                    "item_id": int(data["item_id"]),
+                    "item_type": str(data["item_type"])[:20],
+                    "interaction_type": str(data["interaction_type"])[:30],
+                    "duration_seconds": float(data["duration_seconds"]) if data.get("duration_seconds") is not None else None,
+                    "created_at": now,
+                })
+            except Exception:
+                continue
+
+        if not rows:
+            return
+
+        from sqlalchemy import insert as sa_insert
+        from app.models.analytics import UserInteraction
+        async with AsyncSessionLocal() as db:
+            await db.execute(sa_insert(UserInteraction), rows)
+            await db.commit()
+
+        logger.info(
+            "[Worker] flush_interactions_to_db tamamlandı | kayıt=%d", len(rows)
+        )
+
+    except Exception as exc:
+        logger.error(
+            "[Worker] flush_interactions_to_db başarısız | %s", str(exc), exc_info=True
+        )
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Kullanıcı İlgi Skorlarını Güncelle ─────────────────────────────────
 
 async def compute_user_interests_task(ctx: dict) -> None:
@@ -533,6 +600,7 @@ class WorkerSettings:
         compute_user_interests_task,
         cleanup_old_impressions_task,
         generate_listing_embedding_task,
+        flush_interactions_to_db,
     ]
 
     cron_jobs = [
@@ -550,6 +618,8 @@ class WorkerSettings:
         cron(compute_user_interests_task, minute={0, 15, 30, 45}),
         # Her gün 05:00 — eski listing impressionlarını temizle
         cron(cleanup_old_impressions_task, hour=5, minute=0),
+        # Her 5 dakikada Redis interaction kuyruğunu DB'ye yaz
+        cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
