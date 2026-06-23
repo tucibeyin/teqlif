@@ -145,10 +145,17 @@ class _SellerReportScreenState extends State<SellerReportScreen>
   Widget _buildReport() {
     final r = _report!;
     final uniqueViewers = r['unique_viewers'] as int? ?? 0;
+    final peakViewers = r['peak_viewers'] as int? ?? 0;
     final avgBudget = r['avg_budget'];
     final hesitations = r['hesitation_count'] as int? ?? 0;
     final duration = r['duration_minutes'] as int? ?? 0;
     final recommendation = r['recommendation'] as String? ?? '';
+    final auctionSummary = r['auction_summary'] as Map<String, dynamic>? ?? {};
+    final totalAuctions = auctionSummary['total_auctions'] as int? ?? 0;
+    final successfulAuctions = auctionSummary['successful_auctions'] as int? ?? 0;
+    final totalBids = auctionSummary['total_bids'] as int? ?? 0;
+    final totalRevenue = (auctionSummary['total_revenue'] as num?)?.toDouble() ?? 0.0;
+    final auctionItems = auctionSummary['items'] as List<dynamic>? ?? [];
 
     return FadeTransition(
       opacity: _fadeAnim,
@@ -165,23 +172,22 @@ class _SellerReportScreenState extends State<SellerReportScreen>
             sliver: SliverGrid(
               delegate: SliverChildListDelegate([
                 _MetricCard(
+                  icon: Icons.visibility_outlined,
+                  label: 'Zirve\nİzleyici',
+                  value: '$peakViewers',
+                  color: const Color(0xFF6366F1),
+                ),
+                _MetricCard(
                   icon: Icons.people_outline_rounded,
                   label: 'Etkileşimli\nİzleyici',
                   value: '$uniqueViewers',
-                  color: const Color(0xFF6366F1),
+                  color: const Color(0xFF8B5CF6),
                 ),
                 _MetricCard(
                   icon: Icons.account_balance_wallet_outlined,
                   label: 'Ortalama\nKitle Bütçesi',
                   value: _fmtBudget(avgBudget),
                   color: const Color(0xFF10B981),
-                ),
-                _MetricCard(
-                  icon: Icons.touch_app_outlined,
-                  label: 'Kararsız\nKalan Teklifler',
-                  value: '$hesitations',
-                  color: const Color(0xFFF59E0B),
-                  hint: hesitations > 0 ? 'Dönüştürülebilir fırsat' : null,
                 ),
                 _MetricCard(
                   icon: Icons.timer_outlined,
@@ -199,26 +205,101 @@ class _SellerReportScreenState extends State<SellerReportScreen>
             ),
           ),
 
-          // ── AI Tavsiye kartı ───────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _InsightCard(text: recommendation),
+          // ── Açık Artırma Özeti (sadece auction varsa) ─────────────────────
+          if (totalAuctions > 0) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                child: _SectionHeader(
+                  icon: Icons.gavel_rounded,
+                  label: 'AÇIK ARTIRMA ÖZETİ',
+                  color: const Color(0xFFF97316),
+                ),
+              ),
             ),
-          ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              sliver: SliverGrid(
+                delegate: SliverChildListDelegate([
+                  _MetricCard(
+                    icon: Icons.gavel_rounded,
+                    label: 'Toplam\nArtırma',
+                    value: '$totalAuctions',
+                    color: const Color(0xFFF97316),
+                  ),
+                  _MetricCard(
+                    icon: Icons.check_circle_outline_rounded,
+                    label: 'Satılan\nÜrün',
+                    value: '$successfulAuctions',
+                    color: const Color(0xFF22C55E),
+                  ),
+                  _MetricCard(
+                    icon: Icons.price_change_outlined,
+                    label: 'Toplam\nTeklif',
+                    value: '$totalBids',
+                    color: const Color(0xFF06B6D4),
+                  ),
+                  _MetricCard(
+                    icon: Icons.payments_outlined,
+                    label: 'Toplam\nHasılat',
+                    value: _fmtBudget(totalRevenue > 0 ? totalRevenue : null),
+                    color: const Color(0xFF10B981),
+                  ),
+                ]),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 1.35,
+                ),
+              ),
+            ),
+
+            // ── Ürün listesi ──────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Column(
+                  children: auctionItems.map<Widget>((item) {
+                    final m = item as Map<String, dynamic>;
+                    return _AuctionItemRow(
+                      itemName: m['item_name'] as String? ?? '—',
+                      startPrice: (m['start_price'] as num?)?.toDouble() ?? 0,
+                      finalPrice: (m['final_price'] as num?)?.toDouble(),
+                      winner: m['winner_username'] as String?,
+                      bidCount: m['bid_count'] as int? ?? 0,
+                      isBoughtItNow: m['is_bought_it_now'] as bool? ?? false,
+                      durationMinutes: m['duration_minutes'] as int? ?? 0,
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+
+          // ── Kararsız teklif (küçük, sadece > 0 ise) ──────────────────────
+          if (hesitations > 0)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: _HesitationHint(count: hesitations),
+              ),
+            ),
+
+          // ── AI Tavsiye kartı ───────────────────────────────────────────────
+          if (recommendation.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: _InsightCard(text: recommendation),
+              ),
+            ),
 
           // ── Aksiyon butonları ──────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
-              child: Column(
-                children: [
-                  _PrimaryButton(
-                    label: 'Ana Sayfaya Dön',
-                    onTap: _goHome,
-                  ),
-                ],
-              ),
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+              child: _PrimaryButton(label: 'Ana Sayfaya Dön', onTap: _goHome),
             ),
           ),
         ],
@@ -441,6 +522,205 @@ class _InsightCard extends StatelessWidget {
               color: Color(0xFFCBD5E1),
               fontSize: 14,
               height: 1.55,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Section Header ───────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  const _SectionHeader({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 14),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Auction Item Row ──────────────────────────────────────────────────────────
+
+class _AuctionItemRow extends StatelessWidget {
+  final String itemName;
+  final double startPrice;
+  final double? finalPrice;
+  final String? winner;
+  final int bidCount;
+  final bool isBoughtItNow;
+  final int durationMinutes;
+
+  const _AuctionItemRow({
+    required this.itemName,
+    required this.startPrice,
+    required this.finalPrice,
+    required this.winner,
+    required this.bidCount,
+    required this.isBoughtItNow,
+    required this.durationMinutes,
+  });
+
+  String _fmt(double? v) {
+    if (v == null || v <= 0) return '—';
+    final s = v.toInt().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()} ₺';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sold = winner != null;
+    final accent = sold ? const Color(0xFF22C55E) : const Color(0xFF475569);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  itemName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  sold ? (isBoughtItNow ? '⚡ Hemen Al' : '✅ Satıldı') : '❌ Satılmadı',
+                  style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _InfoChip(label: 'Başl.', value: _fmt(startPrice), color: const Color(0xFF64748B)),
+              const SizedBox(width: 8),
+              if (sold) _InfoChip(label: 'Satış', value: _fmt(finalPrice), color: const Color(0xFF22C55E)),
+              const SizedBox(width: 8),
+              _InfoChip(label: 'Teklif', value: '$bidCount', color: const Color(0xFF06B6D4)),
+              const Spacer(),
+              if (durationMinutes > 0)
+                Text(
+                  '${durationMinutes}dk',
+                  style: const TextStyle(color: Color(0xFF475569), fontSize: 11),
+                ),
+            ],
+          ),
+          if (sold && winner != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.emoji_events_rounded, color: Color(0xFFFBBF24), size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  '@$winner',
+                  style: const TextStyle(
+                    color: Color(0xFFFBBF24),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _InfoChip({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFF475569), fontSize: 10)),
+        Text(value, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+}
+
+// ── Hesitation Hint ───────────────────────────────────────────────────────────
+
+class _HesitationHint extends StatelessWidget {
+  final int count;
+  const _HesitationHint({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.touch_app_outlined, color: Color(0xFFF59E0B), size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '$count kararsız teklif — bu izleyiciler fiyat noktasına yakın ama dönüştüremedik.',
+              style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 12, height: 1.4),
             ),
           ),
         ],

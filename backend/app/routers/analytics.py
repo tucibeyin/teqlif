@@ -197,14 +197,42 @@ async def get_seller_report(
     ended = stream.ended_at or datetime.now(timezone.utc)
     duration_minutes = max(0, int((ended - stream.started_at).total_seconds() / 60))
 
-    # ── 2. Bu yayındaki açık artırma ilan ID'lerini çek ──────────────────────
-    auction_rows = await db.execute(
-        select(Auction.listing_id).where(
-            Auction.stream_id == stream_id,
-            Auction.listing_id.isnot(None),
-        )
+    # ── 2. Bu yayındaki tüm açık artırmaları çek ─────────────────────────────
+    auctions_result = await db.execute(
+        select(Auction).where(Auction.stream_id == stream_id).order_by(Auction.started_at)
     )
-    listing_ids = [row[0] for row in auction_rows.fetchall() if row[0] is not None]
+    auctions = auctions_result.scalars().all()
+
+    listing_ids = [a.listing_id for a in auctions if a.listing_id is not None]
+
+    # Açık artırma özeti
+    successful = [a for a in auctions if a.winner_username is not None]
+    total_revenue = sum(a.final_price or 0 for a in successful)
+    total_bids = sum(a.bid_count for a in auctions)
+
+    auction_items = []
+    for a in auctions:
+        dur = 0
+        if a.ended_at and a.started_at:
+            dur = max(0, int((a.ended_at - a.started_at).total_seconds() / 60))
+        auction_items.append({
+            "item_name": a.item_name,
+            "start_price": a.start_price,
+            "final_price": a.final_price,
+            "winner_username": a.winner_username,
+            "bid_count": a.bid_count,
+            "is_bought_it_now": a.is_bought_it_now,
+            "duration_minutes": dur,
+            "sold": a.winner_username is not None,
+        })
+
+    auction_summary = {
+        "total_auctions": len(auctions),
+        "successful_auctions": len(successful),
+        "total_bids": total_bids,
+        "total_revenue": round(total_revenue, 2),
+        "items": auction_items,
+    }
 
     # ── 3. ClickHouse sorgusu ─────────────────────────────────────────────────
     unique_viewers = 0
@@ -259,8 +287,10 @@ async def get_seller_report(
         "stream_id": stream_id,
         "stream_title": stream.title,
         "duration_minutes": duration_minutes,
+        "peak_viewers": stream.viewer_count,
         "unique_viewers": unique_viewers,
         "avg_budget": round(avg_budget, 2) if avg_budget else None,
         "hesitation_count": hesitation_count,
         "recommendation": recommendation,
+        "auction_summary": auction_summary,
     }

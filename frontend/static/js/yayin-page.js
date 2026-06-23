@@ -2,6 +2,11 @@
     const streamIdParam = parseInt(params.get('id'));
     const isHostParam = params.get('host') === '1';
 
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
     // Mobil ziyaretçilere "Uygulamada Aç" banner'ı göster
     if (streamIdParam && typeof teqlifAppRedirect === 'function') {
         teqlifAppRedirect('yayin/' + streamIdParam);
@@ -243,8 +248,83 @@
         Chat.disconnect();
         await disconnectRoom();
         Stream.clear();
-        window.location.href = '/';
+        await _showStreamReport(streamId);
     });
+
+    async function _showStreamReport(sid) {
+        const modal = document.getElementById('streamReportModal');
+        if (!modal) { window.location.href = '/'; return; }
+        modal.style.display = 'flex';
+
+        try {
+            const r = await apiFetch('/analytics/seller-report/' + sid);
+            _renderStreamReport(r);
+        } catch (_) {
+            window.location.href = '/';
+        }
+    }
+
+    function _fmtMoney(v) {
+        if (!v || v <= 0) return '—';
+        return Math.round(v).toLocaleString('tr-TR') + ' ₺';
+    }
+    function _fmtDur(m) {
+        if (!m || m < 1) return '< 1 dk';
+        const h = Math.floor(m / 60), min = m % 60;
+        return h > 0 ? h + 'sa ' + min + 'dk' : min + ' dk';
+    }
+
+    function _metricBox(icon, label, value, color) {
+        return `<div style="background:#0f172a;padding:16px 12px;text-align:center;">
+            <div style="font-size:1.4rem;margin-bottom:2px;">${icon}</div>
+            <div style="color:${color};font-size:1.1rem;font-weight:800;">${value}</div>
+            <div style="color:#64748b;font-size:.7rem;margin-top:2px;">${label}</div>
+        </div>`;
+    }
+
+    function _renderStreamReport(r) {
+        document.getElementById('reportTitle').textContent = r.stream_title || 'Yayın';
+        document.getElementById('reportDuration').textContent = 'Süre: ' + _fmtDur(r.duration_minutes);
+
+        document.getElementById('reportMetrics').innerHTML =
+            _metricBox('👁', 'Zirve İzleyici', r.peak_viewers ?? 0, '#818cf8') +
+            _metricBox('👥', 'Etkileşimli', r.unique_viewers ?? 0, '#a78bfa') +
+            _metricBox('⏱', 'Süre', _fmtDur(r.duration_minutes), '#60a5fa');
+
+        const as = r.auction_summary;
+        if (as && as.total_auctions > 0) {
+            document.getElementById('reportAuctionSection').style.display = 'block';
+            document.getElementById('reportAuctionStats').innerHTML =
+                _metricBox('🔨', 'Toplam Artırma', as.total_auctions, '#f97316') +
+                _metricBox('✅', 'Satılan', as.successful_auctions, '#22c55e') +
+                _metricBox('💬', 'Toplam Teklif', as.total_bids, '#06b6d4') +
+                _metricBox('💰', 'Hasılat', _fmtMoney(as.total_revenue), '#10b981');
+
+            document.getElementById('reportAuctionItems').innerHTML = (as.items || []).map(function (item) {
+                const sold = !!item.winner_username;
+                const accent = sold ? '#22c55e' : '#475569';
+                const badge = sold ? (item.is_bought_it_now ? '⚡ Hemen Al' : '✅ Satıldı') : '❌ Satılmadı';
+                return `<div style="background:#111827;border:1px solid ${accent}33;border-radius:10px;padding:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="color:#f1f5f9;font-size:.83rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${escHtml(item.item_name)}</span>
+                        <span style="color:${accent};font-size:.7rem;font-weight:700;background:${accent}18;padding:2px 8px;border-radius:5px;white-space:nowrap;">${badge}</span>
+                    </div>
+                    <div style="display:flex;gap:16px;font-size:.75rem;">
+                        <span style="color:#64748b;">Başl: <b style="color:#94a3b8;">${_fmtMoney(item.start_price)}</b></span>
+                        ${sold ? `<span style="color:#64748b;">Satış: <b style="color:#22c55e;">${_fmtMoney(item.final_price)}</b></span>` : ''}
+                        <span style="color:#64748b;">Teklif: <b style="color:#06b6d4;">${item.bid_count}</b></span>
+                        ${item.duration_minutes > 0 ? `<span style="color:#475569;">${item.duration_minutes}dk</span>` : ''}
+                    </div>
+                    ${sold ? `<div style="margin-top:6px;font-size:.75rem;color:#fbbf24;">🏆 @${escHtml(item.winner_username)}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        if (r.recommendation) {
+            document.getElementById('reportInsight').style.display = 'block';
+            document.getElementById('reportInsightText').textContent = r.recommendation;
+        }
+    }
 
     // Mikrofon Kapat/Aç (Host)
     document.getElementById('btnToggleMic').addEventListener('click', async () => {
