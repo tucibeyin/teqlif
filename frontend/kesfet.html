@@ -428,39 +428,6 @@
             color: var(--text-muted);
         }
 
-        /* ── Feed sekme çubuğu ── */
-        #feedTabs {
-            display: none;
-            align-items: center;
-            gap: 0.25rem;
-            margin-bottom: 1.25rem;
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 0.25rem;
-            box-shadow: var(--shadow);
-        }
-
-        .feed-tab {
-            flex: 1;
-            text-align: center;
-            padding: 0.55rem 1rem;
-            border-radius: 9px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: background 0.15s, color 0.15s;
-            user-select: none;
-        }
-
-        .feed-tab:hover { color: var(--text); }
-
-        .feed-tab-active {
-            background: var(--primary);
-            color: #fff !important;
-        }
-
         /* ── Sonsuz scroll sentinel ── */
         #feedSentinel {
             display: none;
@@ -564,21 +531,15 @@
                 <div class="streams-scroll" id="streamsScroll"></div>
             </div>
 
-            <!-- Feed sekme çubuğu (giriş yapmış kullanıcılara gösterilir) -->
-            <div id="feedTabs">
-                <div class="feed-tab feed-tab-active" id="tabPersonalized">Sana Özel</div>
-                <div class="feed-tab" id="tabAll">Tümü</div>
-            </div>
-
-            <!-- Kişiselleştirilmiş feed (Sana Özel sekmesi) -->
-            <div id="personalizedFeedSection" style="display:none;">
+            <!-- Kişiselleştirilmiş feed -->
+            <div id="personalizedFeedSection">
                 <div class="listings-grid" id="personalizedGrid"></div>
                 <div id="feedSentinel">
                     <div class="spinner"></div>
                 </div>
             </div>
 
-            <!-- Son İlanlar (Tümü sekmesi) -->
+            <!-- Tümü (search.js popüler içerik için kullanır, gizli) -->
             <div id="listingsSection" style="display:none;">
                 <div class="listings-grid" id="listingsGrid"></div>
             </div>
@@ -670,7 +631,7 @@
     <script src="/static/js/analytics.js"></script>
     <script src="/static/js/feed-tracker.js"></script>
     <script src="/static/js/search.js"></script>
-    <script src="/static/js/kesfet-page.js?v=1"></script>
+    <script src="/static/js/kesfet-page.js?v=2"></script>
 </body>
 
 </html>

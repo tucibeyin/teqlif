@@ -91,25 +91,14 @@
 
     function renderExplore(data) {
         exploreLoading.style.display = 'none';
-        const { listings = [], streams = [] } = data;
+        const { streams = [] } = data;
 
         if (streams.length > 0) {
             streamsScroll.innerHTML = streams.map(streamCardHtml).join('');
             streamsSection.style.display = 'block';
         }
 
-        if (listings.length > 0) {
-            listingsGrid.innerHTML = listings.map((l, idx) => {
-                const ad = (idx > 0 && idx % 5 === 0) ? adCardHtml() : '';
-                return ad + listingTileHtml(l);
-            }).join('');
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
-            listingsSection.style.display = 'block';
-        }
-
-        if (streams.length === 0 && listings.length === 0) {
-            exploreEmpty.style.display = 'block';
-        }
+        // listingsSection gizli — kişiselleştirilmiş feed (kesfet-page.js) kullanılır
     }
 
     /* ── Toast bildirimi ──────────────────────────────────────── */

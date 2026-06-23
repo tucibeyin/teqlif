@@ -1,10 +1,11 @@
 /**
- * kesfet-page.js — Kişiselleştirilmiş feed (Sana Özel sekmesi)
+ * kesfet-page.js — Kişiselleştirilmiş feed
  *
- * Bağımlılıklar:
- *   main.js → apiFetch
- *   auth.js → Auth
- *   feed-tracker.js → FeedTracker
+ * Her zaman /api/feed endpoint'ini kullanır.
+ * Giriş yapanlar → kategori ilgisine göre sıralı içerik
+ * Misafirler → son 30 günün en popüler ilanları
+ *
+ * Bağımlılıklar: main.js → apiFetch, analytics.js → teqlifTrackEvent
  */
 (function () {
     'use strict';
@@ -19,15 +20,8 @@
     let _page = 0;
     let _loading = false;
     let _exhausted = false;
-    let _observer = null;
-    let _trackerObserver = null;
-    let _activeTab = null;  // 'personalized' | 'all'
-
-    const GRID_ID     = 'personalizedGrid';
-    const SECTION_ID  = 'personalizedFeedSection';
-    const SENTINEL_ID = 'feedSentinel';
-    const TAB_PERSONAL_ID = 'tabPersonalized';
-    const TAB_ALL_ID      = 'tabAll';
+    let _scrollObserver = null;
+    const _timers = new Map();  // listing_id → { t, cat } (skip/impression ölçümü)
 
     /* ── Yardımcılar ──────────────────────────────────────────── */
     function esc(s) {
@@ -53,15 +47,21 @@
         return l.image_url || null;
     }
 
+    function track(eventType, metadata) {
+        if (localStorage.getItem('teqlif_cookie_consent') !== 'accepted') return;
+        if (typeof window.teqlifTrackEvent === 'function') {
+            window.teqlifTrackEvent(eventType, metadata);
+        }
+    }
+
     /* ── İlan kartı HTML ─────────────────────────────────────── */
-    function feedCardHtml(l) {
+    function cardHtml(l) {
         const img = firstImage(l);
         const price = fmtPrice(l.price);
         const imgHtml = img
             ? `<img src="${esc(img)}" alt="${esc(l.title)}" loading="lazy" onerror="this.style.display='none'">`
             : `<div class="listing-tile-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
         const priceHtml = price ? `<div class="listing-tile-price">${esc(price)}</div>` : '';
-
         return `<a class="listing-tile feed-card"
             href="/ilan/${l.id}"
             data-listing-id="${l.id}"
@@ -71,18 +71,43 @@
         </a>`;
     }
 
+    /* ── Sinyal: skip / impression ────────────────────────────── */
+    function observeCards(grid) {
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const el = entry.target;
+                const lid = parseInt(el.dataset.listingId, 10);
+                const cat = el.dataset.category || '';
+                if (entry.isIntersecting) {
+                    _timers.set(lid, { t: Date.now(), cat });
+                } else {
+                    const info = _timers.get(lid);
+                    if (!info) return;
+                    const elapsed = Date.now() - info.t;
+                    _timers.delete(lid);
+                    track(elapsed < 1500 ? 'listing_skip' : 'feed_impression',
+                          { listing_id: lid, category: info.cat });
+                }
+            });
+        }, { threshold: 0.5 });
+
+        grid.querySelectorAll('.feed-card:not([data-obs])').forEach(c => {
+            c.dataset.obs = '1';
+            cardObserver.observe(c);
+        });
+    }
+
     /* ── Bir sayfa yükle ──────────────────────────────────────── */
     async function loadPage() {
         if (_loading || _exhausted) return;
         _loading = true;
 
-        const sentinel = document.getElementById(SENTINEL_ID);
+        const sentinel = document.getElementById('feedSentinel');
         if (sentinel) sentinel.style.display = 'block';
 
         try {
             const items = await apiFetch(`/feed?page=${_page}&seed=${_seed}`);
-
-            const grid = document.getElementById(GRID_ID);
+            const grid = document.getElementById('personalizedGrid');
             if (!grid) return;
 
             if (!items || items.length === 0) {
@@ -92,24 +117,11 @@
                 return;
             }
 
-            const fragment = document.createDocumentFragment();
-            items.forEach(l => {
-                const tmp = document.createElement('div');
-                tmp.innerHTML = feedCardHtml(l);
-                const card = tmp.firstElementChild;
-                fragment.appendChild(card);
-            });
-            grid.appendChild(fragment);
+            const tmp = document.createElement('div');
+            tmp.innerHTML = items.map(cardHtml).join('');
+            while (tmp.firstChild) grid.appendChild(tmp.firstChild);
 
-            // FeedTracker: yeni kartları gözlemle
-            if (window.FeedTracker) {
-                if (_trackerObserver) {
-                    grid.querySelectorAll('.feed-card:not([data-observed])').forEach(card => {
-                        card.dataset.observed = '1';
-                        _trackerObserver.observe(card);
-                    });
-                }
-            }
+            observeCards(grid);
 
             _page++;
             if (items.length < 20) {
@@ -127,129 +139,40 @@
 
     /* ── Boş durum ───────────────────────────────────────────── */
     function showEmpty() {
-        const section = document.getElementById(SECTION_ID);
-        if (!section) return;
-        const existing = section.querySelector('.feed-empty');
-        if (existing) return;
-        const empty = document.createElement('div');
-        empty.className = 'feed-empty empty-state';
-        empty.innerHTML = `
+        const section = document.getElementById('personalizedFeedSection');
+        if (!section || section.querySelector('.feed-empty')) return;
+        const el = document.createElement('div');
+        el.className = 'feed-empty empty-state';
+        el.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <p>Henüz gösterilecek ilan yok.<br>İlanları beğen ve favorile, sana özel ilanlar burada görünür.</p>`;
-        section.appendChild(empty);
+            <p>Henüz gösterilecek ilan yok.</p>`;
+        section.appendChild(el);
     }
 
-    /* ── Sonsuz scroll kurulumu ──────────────────────────────── */
+    /* ── Sonsuz scroll ───────────────────────────────────────── */
     function setupInfiniteScroll() {
-        const sentinel = document.getElementById(SENTINEL_ID);
-        if (!sentinel || _observer) return;
-
-        _observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) loadPage();
-        }, { rootMargin: '300px' });
-
-        _observer.observe(sentinel);
+        const sentinel = document.getElementById('feedSentinel');
+        if (!sentinel || _scrollObserver) return;
+        _scrollObserver = new IntersectionObserver(
+            (entries) => { if (entries[0].isIntersecting) loadPage(); },
+            { rootMargin: '300px' }
+        );
+        _scrollObserver.observe(sentinel);
     }
 
-    /* ── FeedTracker IntersectionObserver ────────────────────── */
-    function setupTracker() {
-        if (!window.FeedTracker) return;
-        const grid = document.getElementById(GRID_ID);
-        if (!grid) return;
+    /* ── Başlat ──────────────────────────────────────────────── */
+    function init() {
+        // exploreLoading'i gizle (search.js kendi yönetir ama çakışmasın)
+        const exploreLoading = document.getElementById('exploreLoading');
+        if (exploreLoading) exploreLoading.style.display = 'none';
 
-        _trackerObserver = new IntersectionObserver((entries) => {
-            const SKIP_MS = 1500;
-            const _timers = setupTracker._timers || (setupTracker._timers = new Map());
-
-            entries.forEach(entry => {
-                const el = entry.target;
-                const lid = parseInt(el.dataset.listingId, 10);
-                const cat = el.dataset.category || '';
-
-                if (entry.isIntersecting) {
-                    _timers.set(lid, { t: Date.now(), cat });
-                } else {
-                    const info = _timers.get(lid);
-                    if (!info) return;
-                    const elapsed = Date.now() - info.t;
-                    _timers.delete(lid);
-                    const eventType = elapsed < SKIP_MS ? 'listing_skip' : 'feed_impression';
-                    if (typeof window.teqlifTrackEvent === 'function') {
-                        window.teqlifTrackEvent(eventType, { listing_id: lid, category: cat });
-                    }
-                }
-            });
-        }, { threshold: 0.5 });
+        setupInfiniteScroll();
+        loadPage();
     }
 
-    /* ── Sekme geçişleri ─────────────────────────────────────── */
-    function switchTab(tab) {
-        if (_activeTab === tab) return;
-        _activeTab = tab;
-
-        const tabPersonal = document.getElementById(TAB_PERSONAL_ID);
-        const tabAll      = document.getElementById(TAB_ALL_ID);
-        const feedSection = document.getElementById(SECTION_ID);
-        const listSection = document.getElementById('listingsSection');
-
-        if (tab === 'personalized') {
-            tabPersonal?.classList.add('feed-tab-active');
-            tabAll?.classList.remove('feed-tab-active');
-            if (feedSection) feedSection.style.display = 'block';
-            if (listSection) listSection.style.display = 'none';
-
-            // İlk yükleme
-            const grid = document.getElementById(GRID_ID);
-            if (grid && grid.children.length === 0 && !_exhausted) {
-                setupTracker();
-                setupInfiniteScroll();
-                loadPage();
-            }
-        } else {
-            tabPersonal?.classList.remove('feed-tab-active');
-            tabAll?.classList.add('feed-tab-active');
-            if (feedSection) feedSection.style.display = 'none';
-            if (listSection) listSection.style.display = 'block';
-        }
-    }
-
-    /* ── Sekme başlatma ──────────────────────────────────────── */
-    function initTabs() {
-        const tabPersonal = document.getElementById(TAB_PERSONAL_ID);
-        const tabAll      = document.getElementById(TAB_ALL_ID);
-        const feedTabs    = document.getElementById('feedTabs');
-
-        if (!feedTabs) return;
-
-        tabPersonal?.addEventListener('click', () => switchTab('personalized'));
-        tabAll?.addEventListener('click', () => switchTab('all'));
-
-        // Giriş yapmış kullanıcıya "Sana Özel" varsayılan
-        const isLoggedIn = !!Auth.getToken();
-        if (isLoggedIn) {
-            feedTabs.style.display = 'flex';
-            switchTab('personalized');
-        } else {
-            // Misafir: tab'ları gösterme, sadece "Tümü" (mevcut davranış)
-            feedTabs.style.display = 'none';
-            _activeTab = 'all';
-        }
-    }
-
-    /* ── Sayfa yüklendiğinde ─────────────────────────────────── */
-    // search.js'deki loadExplore() zaten streams + listingsGrid'i doldurur.
-    // Biz sadece tab mantığını ekliyoruz.
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initTabs);
+        document.addEventListener('DOMContentLoaded', init);
     } else {
-        initTabs();
+        init();
     }
-
-    // Auth.onReady yoksa küçük bir gecikmeyle bekle
-    if (typeof Auth !== 'undefined' && typeof Auth.onReady === 'function') {
-        Auth.onReady(initTabs);
-    } else {
-        setTimeout(initTabs, 150);
-    }
-
 })();
