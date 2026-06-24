@@ -489,6 +489,8 @@ class _ListingGridItem extends StatelessWidget {
     final imageUrl = _raw != null ? imgUrl(_raw) : null;
     final price = _fmt(listing['price']);
 
+    final isSponsored = listing['is_sponsored'] == true;
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -532,6 +534,27 @@ class _ListingGridItem extends StatelessWidget {
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          if (isSponsored)
+            Positioned(
+              top: 5,
+              left: 5,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD700),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'Sponsorlu',
+                  style: TextStyle(
+                    color: Color(0xFF7c5700),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .2,
+                  ),
                 ),
               ),
             ),
