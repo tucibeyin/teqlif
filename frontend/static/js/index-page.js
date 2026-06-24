@@ -164,7 +164,7 @@
         const myInitial = myName.charAt(0).toUpperCase() || '?';
         const myPhotoRaw = me?.profile_image_thumb_url ?? me?.profile_image_url ?? null;
         const myPhotoUrl = myPhotoRaw
-            ? (myPhotoRaw.startsWith('http') ? myPhotoRaw : '/api' + myPhotoRaw)
+            ? (myPhotoRaw.startsWith('http') || myPhotoRaw.startsWith('/uploads') ? myPhotoRaw : '/api' + myPhotoRaw)
             : null;
 
         const hasMyStories = myItems.length > 0;
@@ -183,7 +183,7 @@
                         <div class="story-ring-inner" id="myStoryInner">
                             ${myPhotoUrl
                                 ? `<img class="story-avatar" src="${myPhotoUrl}" alt="${myName}"
-                                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                                        data-fallback-initials="${myInitial}"
                                         loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
                                    <div class="story-avatar-initials" style="display:none">${myInitial}</div>`
                                 : `<div class="story-avatar-initials">${myInitial}</div>`}
@@ -201,7 +201,7 @@
             const initial  = username.charAt(0).toUpperCase() || '?';
             const rawUrl   = g.user?.profile_image_thumb_url ?? g.user?.profile_image_url ?? null;
             const profileImgUrl = rawUrl
-                ? (rawUrl.startsWith('http') ? rawUrl : '/api' + rawUrl)
+                ? (rawUrl.startsWith('http') || rawUrl.startsWith('/uploads') ? rawUrl : '/api' + rawUrl)
                 : null;
 
             const liveItem = Array.isArray(g.items)
@@ -262,6 +262,15 @@
 
         tray.innerHTML = myStoryHtml + groupsHtml;
         wrapper.style.display = 'block';
+
+        // Foto 404 olursa initials'a geç (CSP-uyumlu, onerror= inline yok)
+        tray.querySelectorAll('img[data-fallback-initials]').forEach(img => {
+            img.addEventListener('error', function () {
+                this.style.display = 'none';
+                const sib = this.nextElementSibling;
+                if (sib) sib.style.display = 'flex';
+            });
+        });
 
         // Kendi hikayeleri ayrı grup olarak viewer state'e ekle
         if (hasMyStories) {
