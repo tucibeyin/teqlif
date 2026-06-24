@@ -619,7 +619,7 @@ async def pro_insights(
         bid_rows = await db.execute(sql_text("""
             SELECT COUNT(*) AS total_bids
             FROM bids b
-            JOIN auctions a ON a.id = b.auction_id
+            JOIN auctions a ON a.stream_id = b.stream_id
             JOIN listings l ON l.id = a.listing_id
             WHERE l.user_id = :uid AND b.created_at >= :d30
         """), {"uid": uid, "d30": d30})
@@ -811,7 +811,7 @@ async def pro_insights(
                    COUNT(b.id) AS bid_count
             FROM live_streams ls
             LEFT JOIN auctions a ON a.stream_id = ls.id
-            LEFT JOIN bids b ON b.auction_id = a.id
+            LEFT JOIN bids b ON b.stream_id = a.stream_id
             WHERE ls.host_id = :uid AND ls.is_live = false AND ls.ended_at IS NOT NULL
             GROUP BY ls.id, ls.title, ls.viewer_count, ls.started_at, ls.ended_at
             ORDER BY ls.viewer_count DESC, bid_count DESC
