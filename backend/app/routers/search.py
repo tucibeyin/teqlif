@@ -3,7 +3,7 @@ import json
 from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func, text as sa_text
+from sqlalchemy import select, or_, and_, func, text as sa_text
 
 from app.database import get_db
 from app.models.user import User
@@ -427,19 +427,31 @@ async def search_listings(
         ]
         return {"listings": listings, "search_type": "semantic"}
 
-    # ── 3. Orta uzunluk → FTS (+ ILIKE fallback) ─────────────────────────────
+    # ── 3. Orta uzunluk → FTS + NULL-search_vector ILIKE birlikte ───────────
     ts_q = _sanitize_ts_query(q)
+    term = f"%{ts_q}%"
     tsquery = func.websearch_to_tsquery("turkish", ts_q)
     rank = func.ts_rank(Listing.search_vector, tsquery)
     stmt = (
-        select(Listing, User, rank.label("rank"))
+        select(Listing, User, func.coalesce(rank, 0.0).label("rank"))
         .join(User, User.id == Listing.user_id)
         .where(
             Listing.is_active == True,  # noqa: E712
             Listing.is_deleted == False,  # noqa: E712
-            Listing.search_vector.op("@@")(tsquery),
+            or_(
+                # search_vector dolu → FTS eşleşmesi
+                Listing.search_vector.op("@@")(tsquery),
+                # search_vector NULL → başlık/açıklama ILIKE ile kapsama al
+                and_(
+                    Listing.search_vector.is_(None),
+                    or_(
+                        Listing.title.ilike(term),
+                        Listing.description.ilike(term),
+                    ),
+                ),
+            ),
         )
-        .order_by(rank.desc())
+        .order_by(func.coalesce(rank, 0.0).desc())
         .offset(offset)
         .limit(12)
     )
@@ -447,25 +459,4 @@ async def search_listings(
         stmt = _block_filters(stmt, Listing.user_id, current_user_id)
     result = await db.execute(stmt)
     listings = [_listing_dict(l, u) for l, u, _r in result.all()]
-
-    # FTS sonuç bulamazsa ILIKE ile dene (search_vector NULL olan eski ilanlar için)
-    if not listings:
-        term = f"%{q}%"
-        fb_stmt = (
-            select(Listing, User)
-            .join(User, User.id == Listing.user_id)
-            .where(
-                Listing.is_active == True,  # noqa: E712
-                Listing.is_deleted == False,  # noqa: E712
-                or_(Listing.title.ilike(term), Listing.description.ilike(term)),
-            )
-            .order_by(Listing.created_at.desc())
-            .offset(offset)
-            .limit(12)
-        )
-        if current_user_id:
-            fb_stmt = _block_filters(fb_stmt, Listing.user_id, current_user_id)
-        fb_result = await db.execute(fb_stmt)
-        listings = [_listing_dict(l, u) for l, u in fb_result.all()]
-
     return {"listings": listings, "search_type": "text"}
