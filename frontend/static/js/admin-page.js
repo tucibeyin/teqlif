@@ -27,6 +27,14 @@ async function verifyPassword() {
 }
 function adminLogout() { sessionStorage.removeItem("teqlif_admin_session"); location.reload(); }
 
+// Sadece 401/403 → logout; diğer hatalar (404, 500) → null döner, UI sessizce görmezden gelir
+async function adminFetch(url, opts) {
+    const res = await fetch(url, { headers: getAuthHeaders(), ...opts });
+    if (res.status === 401 || res.status === 403) { adminLogout(); return null; }
+    if (!res.ok) return null;
+    return res;
+}
+
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
 function showFinalStep() {
     document.getElementById("auth-container").classList.add("hidden");
@@ -73,8 +81,8 @@ function filterTable(inputId, tbodyId) {
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 async function loadDashboard() {
-    const res = await fetch('/api/admin-data/dashboard', { headers: getAuthHeaders() });
-    if (!res.ok) return adminLogout();
+    const res = await adminFetch('/api/admin-data/dashboard');
+    if (!res) return;
     const d = await res.json();
 
     document.getElementById('kpiTotal').textContent = d.total_users.toLocaleString('tr-TR');
@@ -102,8 +110,8 @@ async function loadDashboard() {
 
 // ── KULLANICILAR ──────────────────────────────────────────────────────────────
 async function loadUsers() {
-    const res = await fetch('/api/admin-data/users/recent?limit=50', { headers: getAuthHeaders() });
-    if (!res.ok) return adminLogout();
+    const res = await adminFetch('/api/admin-data/users/recent?limit=50');
+    if (!res) return;
     const data = await res.json();
     document.getElementById("user-table-body").innerHTML = data.map(u => `
         <tr>
@@ -194,8 +202,8 @@ async function deleteUser(id, username) {
 
 // ── TUCi EKONOMİSİ ───────────────────────────────────────────────────────────
 async function loadTuci() {
-    const res = await fetch('/api/admin-data/tuci/summary?limit=100', { headers: getAuthHeaders() });
-    if (!res.ok) return;
+    const res = await adminFetch('/api/admin-data/tuci/summary?limit=100');
+    if (!res) return;
     const d = await res.json();
 
     document.getElementById('tuciCirculation').textContent = d.total_circulation.toLocaleString('tr-TR') + ' T';
@@ -243,8 +251,8 @@ async function submitAirdrop() {
 
 // ── REKLAM KAMPANYALARI ───────────────────────────────────────────────────────
 async function loadCampaigns() {
-    const res = await fetch('/api/admin-data/ad-campaigns', { headers: getAuthHeaders() });
-    if (!res.ok) return;
+    const res = await adminFetch('/api/admin-data/ad-campaigns');
+    if (!res) return;
     const data = await res.json();
     const STATUS_COLORS = { active: '#10b981', paused: '#f59e0b', exhausted: '#ef4444' };
     document.getElementById('campaign-table-body').innerHTML = data.length === 0
@@ -275,8 +283,8 @@ async function pauseCampaign(id) {
 
 // ── AKTİF YAYINLAR ───────────────────────────────────────────────────────────
 async function loadStreams() {
-    const res = await fetch('/api/admin-data/streams/active', { headers: getAuthHeaders() });
-    if (!res.ok) return;
+    const res = await adminFetch('/api/admin-data/streams/active');
+    if (!res) return;
     const data = await res.json();
     document.getElementById("stream-table-body").innerHTML = data.length === 0
         ? '<tr><td colspan="7" style="text-align:center;">Aktif yayın yok.</td></tr>'
@@ -301,8 +309,8 @@ async function endStream(id) {
 
 // ── YAYIN GEÇMİŞİ ────────────────────────────────────────────────────────────
 async function loadStreamHistory() {
-    const res = await fetch('/api/admin-data/streams/history?limit=50', { headers: getAuthHeaders() });
-    if (!res.ok) return;
+    const res = await adminFetch('/api/admin-data/streams/history?limit=50');
+    if (!res) return;
     const data = await res.json();
     document.getElementById('stream-history-table-body').innerHTML = data.length === 0
         ? '<tr><td colspan="7" style="text-align:center;">Yayın geçmişi yok.</td></tr>'
@@ -321,8 +329,8 @@ async function loadStreamHistory() {
 
 // ── İLAN DENETİMİ ────────────────────────────────────────────────────────────
 async function loadListings() {
-    const res = await fetch('/api/admin-data/listings?limit=50', { headers: getAuthHeaders() });
-    if (!res.ok) return;
+    const res = await adminFetch('/api/admin-data/listings?limit=50');
+    if (!res) return;
     const data = await res.json();
     document.getElementById("listing-table-body").innerHTML = data.length === 0
         ? '<tr><td colspan="6" style="text-align:center;">İlan bulunamadı.</td></tr>'
@@ -346,8 +354,8 @@ async function deleteListing(id) {
 
 // ── ŞİKAYETLER ───────────────────────────────────────────────────────────────
 async function loadReports() {
-    const res = await fetch('/api/admin-data/reports?limit=50', { headers: getAuthHeaders() });
-    if (!res.ok) return;
+    const res = await adminFetch('/api/admin-data/reports?limit=50');
+    if (!res) return;
     const data = await res.json();
     document.getElementById("report-table-body").innerHTML = data.length === 0
         ? '<tr><td colspan="6" style="text-align:center;">Şikayet bulunamadı.</td></tr>'
@@ -390,8 +398,8 @@ async function sendPush() {
 
 // ── ANALİTİK ─────────────────────────────────────────────────────────────────
 async function loadAnalytics() {
-    const res = await fetch('/api/admin-data/analytics/summary', { headers: getAuthHeaders() });
-    if (!res.ok) return;
+    const res = await adminFetch('/api/admin-data/analytics/summary');
+    if (!res) return;
     const data = await res.json();
 
     document.getElementById("analytics-total").textContent = data.total_events.toLocaleString('tr-TR');

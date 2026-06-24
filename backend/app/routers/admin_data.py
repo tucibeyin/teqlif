@@ -70,7 +70,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
     )).scalar() or 0
 
     pending_reports = (await db.execute(
-        select(func.count(Report.id)).where(Report.status == "pending")
+        select(func.count(Report.id))
     )).scalar() or 0
 
     total_tuci = (await db.execute(select(func.coalesce(func.sum(User.tuci_balance), 0)))).scalar() or 0
