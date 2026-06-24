@@ -347,6 +347,7 @@
                 html += `
                     <div class="listing-square" data-listing-id="${l.id}">
                         ${imgHtml}
+                        ${l.is_sponsored ? '<span class="listing-sponsored-badge">Sponsorlu</span>' : ''}
                         <div class="listing-square-overlay">
                             ${price ? `<div class="listing-square-price">${escHtml(price)}</div>` : ''}
                             <div class="listing-square-title">${escHtml(l.title)}</div>
