@@ -223,10 +223,16 @@ class StreamService:
                 ),
             )
         )
-        if result.scalar_one_or_none():
-            await release_action_lock(uid, "stream_start")
-            logger.warning("[STREAMS] Zaten aktif/beklemedeki yayın var | user_id=%s", uid)
-            raise BadRequestException("Zaten aktif bir yayınınız var")
+        existing = result.scalar_one_or_none()
+        if existing:
+            if existing.is_live:
+                await release_action_lock(uid, "stream_start")
+                logger.warning("[STREAMS] Zaten aktif yayın var | user_id=%s stream_id=%s", uid, existing.id)
+                raise BadRequestException("Zaten aktif bir yayınınız var")
+            # Beklemedeki ghost kayıt — LiveKit bağlantısı kurulamadan kalmış, temizle
+            logger.info("[STREAMS] Ghost pending stream temizlendi | user_id=%s stream_id=%s", uid, existing.id)
+            await self.db.delete(existing)
+            await self.db.commit()
 
         room_name = f"{_ROOM_NAME_PREFIX}_{uid}_{uuid.uuid4().hex[:_ROOM_UUID_LENGTH]}"
         stream = LiveStream(
