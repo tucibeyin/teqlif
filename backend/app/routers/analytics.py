@@ -15,9 +15,10 @@ from app.models.purchase import Purchase
 from app.models.stream import LiveStream
 from app.models.tuci_transaction import TuciTransaction
 from app.models.user import User
-from app.schemas.analytics import AnalyticsEventCreate
+from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch
 from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
+from app.database_clickhouse import get_clickhouse_client
 
 AI_PRICE_ESTIMATE_COST = 5  # TUCi
 
@@ -920,3 +921,45 @@ async def pro_insights(
         "peak_hours": peak_hours,
         "tips": tips,
     }
+
+
+# ── Feed Telemetri ────────────────────────────────────────────────────────────
+
+@router.post("/feed-events", status_code=204)
+async def ingest_feed_events(
+    batch: FeedEventBatch,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Video ilan akışındaki kullanıcı davranışlarını (skip/impression/click +
+    dwell_time_ms) tek bir batch insert ile feed_analytics tablosuna yazar.
+    Boş liste sessizce kabul edilir. ClickHouse kapalıysa graceful degradation.
+    """
+    if not batch.events:
+        return
+
+    try:
+        ch = await get_clickhouse_client()
+    except Exception as exc:
+        logger.warning("[feed-events] ClickHouse bağlantı hatası, olaylar atlandı: %s", exc)
+        return
+
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    uid = str(current_user.id)
+
+    rows = [
+        [now, uid, e.listing_id, e.event_type, e.dwell_time_ms]
+        for e in batch.events
+    ]
+
+    try:
+        await ch.insert(
+            "feed_analytics",
+            rows,
+            column_names=["timestamp", "user_id", "listing_id", "event_type", "dwell_time_ms"],
+        )
+        logger.debug("[feed-events] %d olay yazıldı | user_id=%s", len(rows), uid)
+    except Exception as exc:
+        logger.error("[feed-events] ClickHouse insert hatası: %s", exc, exc_info=True)

@@ -39,6 +39,20 @@ ORDER BY (timestamp, item_id)
 SETTINGS index_granularity = 8192
 """
 
+_CREATE_FEED_ANALYTICS_TABLE = """
+CREATE TABLE IF NOT EXISTS feed_analytics
+(
+    timestamp      DateTime,
+    user_id        String,
+    listing_id     String,
+    event_type     LowCardinality(String),
+    dwell_time_ms  UInt32
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(timestamp)
+ORDER BY (listing_id, event_type, timestamp)
+"""
+
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
@@ -74,7 +88,8 @@ async def init_clickhouse() -> None:
             send_receive_timeout=30,
         )
         await _client.command(_CREATE_USER_EVENTS_TABLE)
-        logger.info("[ClickHouse] Bağlantı kuruldu, user_events tablosu hazır.")
+        await _client.command(_CREATE_FEED_ANALYTICS_TABLE)
+        logger.info("[ClickHouse] Bağlantı kuruldu, tablolar hazır.")
     except Exception as exc:
         logger.warning(
             "[ClickHouse] Başlatma başarısız — servis kapalı olabilir. "

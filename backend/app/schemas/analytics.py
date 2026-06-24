@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Literal
 from pydantic import BaseModel, Field
 
 class AnalyticsEventCreate(BaseModel):
@@ -9,3 +9,13 @@ class AnalyticsEventCreate(BaseModel):
     os: Optional[str] = None
     browser: Optional[str] = None
     event_metadata: Optional[Dict[str, Any]] = None
+
+
+class FeedEventCreate(BaseModel):
+    listing_id: str = Field(..., max_length=64)
+    event_type: Literal["skip", "impression", "click"]
+    dwell_time_ms: int = Field(default=0, ge=0)
+
+
+class FeedEventBatch(BaseModel):
+    events: List[FeedEventCreate] = Field(..., max_length=500)
