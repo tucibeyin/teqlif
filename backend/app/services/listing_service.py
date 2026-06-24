@@ -250,6 +250,19 @@ class ListingService:
         await release_action_lock(uid, "listing_create")
         logger.info("[LISTINGS] İlan oluşturuldu | user_id=%s listing_id=%s", uid, listing.id)
 
+        # search_vector doldur (FTS için)
+        try:
+            from sqlalchemy import text as _text
+            await self.db.execute(_text("""
+                UPDATE listings SET search_vector =
+                    to_tsvector('turkish',
+                        coalesce(title, '') || ' ' || coalesce(description, ''))
+                WHERE id = :lid
+            """), {"lid": listing.id})
+            await self.db.commit()
+        except Exception:
+            pass
+
         # Takipçilere new_listing bildirimi (non-blocking, fire-and-forget)
         # Follower ID'leri commit sonrası burada çekiliyor; background task session'a dokunmuyor.
         import asyncio as _asyncio
