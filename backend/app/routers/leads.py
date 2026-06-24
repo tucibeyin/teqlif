@@ -78,7 +78,10 @@ async def audience_size(
         ch_count = int(row[0] or 0)
     except Exception as exc:
         logger.warning("[Leads] ClickHouse sorgusu başarısız, PostgreSQL fallback: %s", exc)
-        # Fallback: kategorideki aktif listing sayısını proxy olarak kullan
+        ch_count = 0
+
+    # ClickHouse veri yoksa (yeni sistem / düşük trafik) listing sayısına dayalı fallback
+    if ch_count == 0:
         ch_count = min(len(listing_ids) * 3, 200)
 
     # 3. FCM token sahipliği oranı — kaba tahmin (%60 mobil ulaşılabilirlik)
