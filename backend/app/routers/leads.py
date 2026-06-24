@@ -14,9 +14,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.models.listing import Listing
 from app.models.user import User
+from app.models.tuci_transaction import TuciTransaction
 from app.utils.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -119,12 +120,12 @@ async def send_blast(
     Ücretlendirme: max_budget üzerinden kontrol edilir;
     gerçek payment entegrasyonu için ayrı bir wallet servisi bağlanmalıdır.
     """
-    # ── Bütçe kontrolü ───────────────────────────────────────────────────────
-    seller_budget = current_user.max_budget or 0.0
-    if seller_budget < body.estimated_cost:
+    # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
+    tuci_cost = int(body.estimated_cost)  # tahmini maliyet TUCi olarak
+    if current_user.tuci_balance < tuci_cost:
         raise HTTPException(
             status_code=402,
-            detail=f"Yetersiz bütçe. Mevcut: {seller_budget:.2f} ₺, Gerekli: {body.estimated_cost:.2f} ₺",
+            detail=f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {tuci_cost} TUCi",
         )
 
     # ── Kategorideki listing ID'leri ─────────────────────────────────────────
@@ -223,15 +224,20 @@ async def send_blast(
         current_user.id, sent, body.estimated_cost,
     )
 
-    # ── Bütçeyi düş ──────────────────────────────────────────────────────────
+    # ── TUCi düş + işlem logla ───────────────────────────────────────────────
     await db.execute(
-        sql_text("UPDATE users SET max_budget = GREATEST(0, max_budget - :cost) WHERE id = :uid"),
-        {"cost": body.estimated_cost, "uid": current_user.id},
+        sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+        {"cost": tuci_cost, "uid": current_user.id},
     )
+    db.add(TuciTransaction(
+        user_id=current_user.id,
+        amount=-tuci_cost,
+        transaction_type="spend_lead_gen",
+    ))
     await db.commit()
 
     return {
         "sent": sent,
-        "spent": body.estimated_cost,
+        "spent": tuci_cost,
         "message": f"{sent} kişiye bildirim gönderildi.",
     }

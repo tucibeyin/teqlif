@@ -13,10 +13,13 @@ from app.models.auction import Auction
 from app.models.listing import Listing
 from app.models.purchase import Purchase
 from app.models.stream import LiveStream
+from app.models.tuci_transaction import TuciTransaction
 from app.models.user import User
 from app.schemas.analytics import AnalyticsEventCreate
 from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
+
+AI_PRICE_ESTIMATE_COST = 5  # TUCi
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -315,8 +318,15 @@ async def price_estimate(
 ):
     """
     Başlık + açıklama metninden embedding üretir, pgvector ile satılmış benzer
-    ilanları bulur ve istatistiksel fiyat tahmini üretir.
+    ilanları bulur ve istatistiksel fiyat tahmini üretir. Sabit 5 TUCi harcar.
     """
+    # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
+    if current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Yetersiz TUCi bakiyesi. Gerekli: {AI_PRICE_ESTIMATE_COST} TUCi, Mevcut: {current_user.tuci_balance} TUCi",
+        )
+
     from app.services.ml_service import generate_embedding
 
     # 1. CPU-blocking embedding işini executor'da çalıştır
@@ -400,6 +410,18 @@ async def price_estimate(
             "satış hızınızı artırabilir."
         )
 
+    # ── TUCi düş + logla ─────────────────────────────────────────────────────
+    await db.execute(
+        sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+        {"cost": AI_PRICE_ESTIMATE_COST, "uid": current_user.id},
+    )
+    db.add(TuciTransaction(
+        user_id=current_user.id,
+        amount=-AI_PRICE_ESTIMATE_COST,
+        transaction_type="spend_ai",
+    ))
+    await db.commit()
+
     return {
         "found_similar": cnt,
         "suggested_start_price": suggested_start,
@@ -408,6 +430,7 @@ async def price_estimate(
         "max_close_price": max_close,
         "confidence": confidence,
         "advice": advice,
+        "tuci_spent": AI_PRICE_ESTIMATE_COST,
     }
 
 

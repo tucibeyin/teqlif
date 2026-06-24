@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any, Optional
-from sqlalchemy import String, Boolean, DateTime, Float, JSON, func
+from sqlalchemy import String, Boolean, DateTime, Float, Integer, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
 
@@ -29,3 +29,4 @@ class User(Base):
     # 90. yüzdelik fiyat tavanı — ClickHouse'daki son 7 gün etkileşim verisinden hesaplanır
     max_budget: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    tuci_balance: Mapped[int] = mapped_column(Integer, default=100, nullable=False, server_default="100")

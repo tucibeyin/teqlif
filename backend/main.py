@@ -19,7 +19,7 @@ from app.core.logger import capture_exception
 from app.routers import auth, streams, webhooks, auction, chat, moderation, stories
 from app.services.auction_service import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
-from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics, leads
+from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics, leads, wallet
 from app.security.middleware import security_headers, SecurityMiddleware
 from app.security.sanitizer import InputSanitizationMiddleware
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
@@ -52,6 +52,7 @@ import app.models.block  # noqa: F401 — tablo kaydı için
 import app.models.analytics  # noqa: F401 — tablo kaydı için
 import app.models.listing_offer  # noqa: F401 — tablo kaydı için
 import app.models.story  # noqa: F401 — tablo kaydı için
+import app.models.tuci_transaction  # noqa: F401 — tablo kaydı için
 import app.models.like  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
@@ -324,6 +325,7 @@ app.include_router(analytics.router)
 app.include_router(stories.router)
 app.include_router(feed.router)
 app.include_router(ads.router)
+app.include_router(wallet.router)
 app.include_router(leads.router)
 
 # Upload klasörü varsa static olarak sun

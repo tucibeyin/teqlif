@@ -28,6 +28,7 @@ import 'market_trends_screen.dart';
 import 'pro_insights_screen.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
+import '../services/wallet_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -40,6 +41,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _user;
   List<dynamic> _listings = [];
   bool _loading = true;
+  int? _tuciBalance;
+  List<dynamic> _tuciHistory = [];
 
   @override
   void initState() {
@@ -47,6 +50,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _load().catchError((e) {
       LoggerService.instance.warning('ProfileScreen', 'Beklenmedik hata: $e');
       if (mounted) setState(() => _loading = false);
+    });
+    _loadWallet();
+  }
+
+  Future<void> _loadWallet() async {
+    final data = await WalletService.getBalance();
+    if (!mounted || data == null) return;
+    setState(() {
+      _tuciBalance = data['balance'] as int?;
+      _tuciHistory = data['transactions'] as List? ?? [];
     });
   }
 
@@ -196,6 +209,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             SliverToBoxAdapter(
               child: Column(
                 children: [
+                  // ── TUCi Cüzdan Kartı ──────────────────────────────────
+                  _TuciWalletCard(
+                    balance: _tuciBalance,
+                    history: _tuciHistory,
+                  ),
                   // ── Profil başlık bölümü ──
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -1765,5 +1783,219 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
         color: const Color(0xFFF3F4F6),
         child: const Icon(Icons.image_outlined, color: Color(0xFFD1D5DB)),
       );
+}
+
+// ── TUCi Cüzdan Kartı ───────────────────────────────────────────────────────
+
+class _TuciWalletCard extends StatelessWidget {
+  final int? balance;
+  final List<dynamic> history;
+
+  const _TuciWalletCard({required this.balance, required this.history});
+
+  void _openSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _TuciWalletSheet(balance: balance ?? 0, history: history),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _openSheet(context),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFFFA500)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFFD700).withValues(alpha: 0.45),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Text('T', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'TUCi Cüzdan',
+                    style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 2),
+                  balance == null
+                      ? const SizedBox(
+                          width: 80, height: 20,
+                          child: LinearProgressIndicator(color: Colors.white54, backgroundColor: Colors.white24),
+                        )
+                      : Text(
+                          '$balance TUCi',
+                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                        ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white70, size: 26),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TuciWalletSheet extends StatelessWidget {
+  final int balance;
+  final List<dynamic> history;
+
+  const _TuciWalletSheet({required this.balance, required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Tutamaç
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 20),
+          // Bakiye
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFFFA500)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFD700).withValues(alpha: 0.35),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                const Text('Güncel Bakiye', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 6),
+                Text(
+                  '$balance TUCi',
+                  style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Son işlemler
+          if (history.isNotEmpty) ...[
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Son İşlemler', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+            ),
+            const SizedBox(height: 8),
+            ...history.map((t) {
+              final amount = t['amount'] as int? ?? 0;
+              final label = t['label'] as String? ?? t['transaction_type'] as String? ?? '';
+              final isPositive = amount > 0;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34, height: 34,
+                      decoration: BoxDecoration(
+                        color: isPositive ? Colors.green.shade50 : Colors.red.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isPositive ? Icons.add_rounded : Icons.remove_rounded,
+                        color: isPositive ? Colors.green : Colors.red,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(label, style: const TextStyle(fontSize: 13)),
+                    ),
+                    Text(
+                      '${isPositive ? '+' : ''}$amount TUCi',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+          // Satın Al butonu
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Ödeme altyapısı yakında aktif edilecek. Şimdilik hediye bakiyenizi kullanabilirsiniz!'),
+                    backgroundColor: Color(0xFFB8860B),
+                    behavior: SnackBarBehavior.floating,
+                    duration: Duration(seconds: 4),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('TUCi Satın Al'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD700),
+                foregroundColor: Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                elevation: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
