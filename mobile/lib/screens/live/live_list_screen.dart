@@ -214,7 +214,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                                 ),
                               ),
                               Text(
-                                'Bildirim gönder — ${audienceCost.toStringAsFixed(0)} ₺',
+                                'Bildirim gönder — ${audienceCost.toInt()} TUCi',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: kPrimary.withValues(alpha: 0.7),
@@ -981,7 +981,7 @@ class _BlastPaymentSheetState extends State<_BlastPaymentSheet> {
                   _InfoRow(
                     icon: Icons.receipt_long_outlined,
                     label: 'Toplam Tutar',
-                    value: '${widget.audienceCost.toStringAsFixed(2)} ₺',
+                    value: '${widget.audienceCost.toInt()} TUCi',
                     color: const Color(0xFFEF4444),
                     bold: true,
                   ),
@@ -1057,7 +1057,7 @@ class _BlastPaymentSheetState extends State<_BlastPaymentSheet> {
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.bolt, size: 20),
                 label: Text(
-                  _sending ? 'İşleniyor...' : 'Ödemeyi Tamamla — ${widget.audienceCost.toStringAsFixed(2)} ₺',
+                  _sending ? 'İşleniyor...' : 'Gönder — ${widget.audienceCost.toInt()} TUCi',
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
