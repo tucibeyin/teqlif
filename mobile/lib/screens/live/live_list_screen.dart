@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../core/app_exception.dart';
 import '../../models/stream.dart';
+import '../../services/analytics_service.dart';
 import '../../services/captcha_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
@@ -104,6 +106,22 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     final titleController = TextEditingController();
     String? selectedCategory;
     String? errorText;
+    int audienceSize = 0;
+    double audienceCost = 0.0;
+    bool audienceLoading = false;
+    Timer? debounceTimer;
+
+    Future<void> fetchAudience(String title, String? category, void Function(void Function()) setS) async {
+      if (title.length < 3 || category == null) {
+        setS(() { audienceSize = 0; audienceCost = 0.0; audienceLoading = false; });
+        return;
+      }
+      setS(() { audienceLoading = true; });
+      final result = await AnalyticsService.getAudienceSize(title: title, category: category);
+      final size = (result?['audience_size'] as num?)?.toInt() ?? 0;
+      final cost = (result?['estimated_cost'] as num?)?.toDouble() ?? 0.0;
+      setS(() { audienceSize = size; audienceCost = cost; audienceLoading = false; });
+    }
 
     final result = await showDialog<(String, String)?>(
       context: context,
@@ -124,6 +142,12 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                   labelText: l.liveStreamTitleLabel,
                   border: const OutlineInputBorder(),
                 ),
+                onChanged: (v) {
+                  debounceTimer?.cancel();
+                  debounceTimer = Timer(const Duration(milliseconds: 800), () {
+                    fetchAudience(v.trim(), selectedCategory, setStateDialog);
+                  });
+                },
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -137,8 +161,48 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 items: categories
                     .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                     .toList(),
-                onChanged: (v) => setStateDialog(() => selectedCategory = v),
+                onChanged: (v) {
+                  setStateDialog(() => selectedCategory = v);
+                  debounceTimer?.cancel();
+                  fetchAudience(titleController.text.trim(), v, setStateDialog);
+                },
               ),
+              if (audienceLoading) ...[
+                const SizedBox(height: 12),
+                const Row(
+                  children: [
+                    SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                    SizedBox(width: 8),
+                    Text('Kitle hesaplanıyor...', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ] else if (audienceSize > 0) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: kPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: kPrimary.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🎯', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '$audienceSize Hazır Alıcı Bekliyor (${audienceCost.toStringAsFixed(0)} ₺)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: kPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (errorText != null) ...[
                 const SizedBox(height: 8),
                 Text(errorText!, style: const TextStyle(color: Colors.red, fontSize: 12)),
@@ -148,7 +212,10 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
           actions: [
             TextButton(
               key: const Key('live_dialog_btn_iptal'),
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () {
+                debounceTimer?.cancel();
+                Navigator.pop(ctx);
+              },
               child: Text(l.btnCancel),
             ),
             ElevatedButton(
@@ -169,6 +236,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                   setStateDialog(() => errorText = l.liveCategoryRequired);
                   return;
                 }
+                debounceTimer?.cancel();
                 Navigator.pop(ctx, (t, selectedCategory!));
               },
               child: Text(l.liveStartBtn, style: const TextStyle(color: Colors.white)),
