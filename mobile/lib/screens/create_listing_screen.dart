@@ -485,7 +485,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
       // Güvenlik doğrulaması: görünmez Turnstile challenge
       if (!mounted) return;
-      final captchaToken = await CaptchaService.getToken(context);
+      final captchaToken = await CaptchaService.getToken();
       if (!mounted) return;
 
       await apiCall(

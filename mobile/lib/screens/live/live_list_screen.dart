@@ -291,7 +291,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     );
 
     // Güvenlik doğrulaması: görünmez Turnstile challenge
-    final captchaToken = await CaptchaService.getToken(context);
+    final captchaToken = await CaptchaService.getToken();
     if (!mounted) return;
 
     try {

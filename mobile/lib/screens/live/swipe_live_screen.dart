@@ -83,18 +83,24 @@ class SwipeLiveScreen extends StatefulWidget {
 class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   late final PageController _pageCtrl;
   int _currentPage = 0;
-  List<_FeedItem> _feed = [];
+
+  // Sonsuz swipe: canlı yayınlar sabit, ilanlar büyüyen havuzdan beslenir
+  late final List<StreamOut> _liveItems;
+  final List<Map<String, dynamic>> _listingPool = [];
+  bool _fetchingListings = false;
+
+  // Her K canlı yayın arasına 1 ilan
+  static const int _livePerListing = 2;
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
-    _currentPage = widget.initialIndex;
-    _pageCtrl = PageController(initialPage: widget.initialIndex);
-    // Feed'i sadece canlı yayınlarla başlat, arka planda listing videolarını çek
-    _feed = widget.streams.map<_FeedItem>((s) => _LiveItem(s)).toList();
-    _loadListingVideos();
+    _liveItems = widget.streams;
+    _currentPage = _pageForLiveIndex(widget.initialIndex);
+    _pageCtrl = PageController(initialPage: _currentPage);
+    _loadListingFeed();
   }
 
   @override
@@ -105,13 +111,44 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     super.dispose();
   }
 
-  Future<void> _loadListingVideos() async {
-    // Tek yayın modunda (single) listing video ekleme
-    if (widget.streams.length <= 1) return;
+  /// initialIndex numaralı canlı yayının hangi PageView sayfasında olduğunu hesaplar.
+  int _pageForLiveIndex(int liveIdx) {
+    final group = liveIdx ~/ _livePerListing;
+    final pos = liveIdx % _livePerListing;
+    return group * (_livePerListing + 1) + pos;
+  }
+
+  /// Sayfa indeksine göre hangi feed öğesinin gösterileceğini hesaplar.
+  _FeedItem _itemAt(int pageIndex) {
+    final group = pageIndex ~/ (_livePerListing + 1);
+    final posInGroup = pageIndex % (_livePerListing + 1);
+    final isListingSlot = posInGroup == _livePerListing;
+
+    if (isListingSlot && _listingPool.isNotEmpty) {
+      return _ListingItem(_listingPool[group % _listingPool.length]);
+    } else {
+      final livePos = isListingSlot ? 0 : posInGroup;
+      final liveIdx = (group * _livePerListing + livePos) % _liveItems.length;
+      return _LiveItem(_liveItems[liveIdx]);
+    }
+  }
+
+  void _onPageChanged(int page) {
+    setState(() => _currentPage = page);
+    // Her 9 sayfada bir (3 döngü) yeni ilanlar çek
+    if (page > 0 && page % ((_livePerListing + 1) * 3) == 0) {
+      _loadListingFeed();
+    }
+  }
+
+  Future<void> _loadListingFeed() async {
+    // Tek yayın modunda listing ekleme
+    if (_liveItems.length <= 1 || _fetchingListings) return;
+    _fetchingListings = true;
     try {
       final token = await StorageService.getToken();
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/video-feed?limit=5'),
+        Uri.parse('$kBaseUrl/listings/swipe-feed?limit=10'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -120,28 +157,14 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       if (resp.statusCode != 200) return;
       final List<dynamic> raw = jsonDecode(resp.body) as List<dynamic>;
       if (raw.isEmpty || !mounted) return;
-      final listings = raw.cast<Map<String, dynamic>>();
-
-      // Başlangıç konumundan SONRA, her 2 yayın arasına 1 ilan videosu ekle
-      final items = <_FeedItem>[];
-      int listIdx = 0;
-      for (int i = 0; i < widget.streams.length; i++) {
-        items.add(_LiveItem(widget.streams[i]));
-        if (i >= widget.initialIndex && (i - widget.initialIndex + 1) % 2 == 0 && listIdx < listings.length) {
-          items.add(_ListingItem(listings[listIdx++]));
-        }
-      }
+      // Havuza yeni ilanlar ekle (setState ile rebuild tetiklenir)
       if (mounted) {
-        setState(() => _feed = items);
-        // iOS BouncingScrollPhysics feed değişiminde kayabilir — frame sonrası yerine kilitle
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _pageCtrl.hasClients) {
-            _pageCtrl.jumpToPage(_currentPage);
-          }
-        });
+        setState(() => _listingPool.addAll(raw.cast<Map<String, dynamic>>()));
       }
     } catch (_) {
-      // Listing video yükleme başarısız olursa feed aynen devam eder
+      // Listing feed yükleme başarısız olursa sadece canlı yayınlar gösterilir
+    } finally {
+      _fetchingListings = false;
     }
   }
 
@@ -153,20 +176,21 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       body: PageView.builder(
         controller: _pageCtrl,
         scrollDirection: Axis.vertical,
-        physics: const PageScrollPhysics(), // iOS BouncingScrollPhysics'i devre dışı bırakır
-        onPageChanged: (i) => setState(() => _currentPage = i),
-        itemCount: _feed.length,
+        physics: const PageScrollPhysics(),
+        onPageChanged: _onPageChanged,
+        // itemCount: null → sonsuz scroll
+        itemCount: _liveItems.length <= 1 ? 1 : null,
         itemBuilder: (_, i) {
-          final item = _feed[i];
+          final item = _itemAt(i);
           return switch (item) {
             _LiveItem(:final stream) => _SwipeLivePage(
-                key: ValueKey('live_${stream.id}'),
+                key: ValueKey('live_${stream.id}_$i'),
                 stream: stream,
                 isActive: i == _currentPage,
-                isLast: i == _feed.length - 1,
+                isLast: false,
               ),
             _ListingItem(:final listing) => _ListingVideoPage(
-                key: ValueKey('listing_${listing['id']}'),
+                key: ValueKey('listing_${listing['id']}_$i'),
                 listing: listing,
                 isActive: i == _currentPage,
               ),
@@ -1232,7 +1256,6 @@ class _ListingVideoPage extends StatefulWidget {
 class _ListingVideoPageState extends State<_ListingVideoPage> {
   VideoPlayerController? _ctrl;
   bool _initialized = false;
-  bool _showIcon = false;
 
   final Stopwatch _stopwatch = Stopwatch();
   bool _eventLogged = false;
@@ -1265,7 +1288,11 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
 
   Future<void> _initVideo() async {
     final videoUrl = widget.listing['video_url'] as String?;
-    if (videoUrl == null || videoUrl.isEmpty) return;
+    if (videoUrl == null || videoUrl.isEmpty) {
+      // Video yok — fotoğraf direkt gösterilecek, spinner'a gerek yok
+      if (mounted) setState(() => _initialized = true);
+      return;
+    }
     _ctrl = VideoPlayerController.networkUrl(Uri.parse(imgUrl(videoUrl)));
     await _ctrl!.initialize();
     _ctrl!.setLooping(true);
@@ -1291,19 +1318,6 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
     _stopAndLog();
     _ctrl?.dispose();
     super.dispose();
-  }
-
-  void _togglePlay() {
-    if (_ctrl == null || !_initialized) return;
-    if (_ctrl!.value.isPlaying) {
-      _ctrl!.pause();
-    } else {
-      _ctrl!.play();
-    }
-    setState(() => _showIcon = true);
-    Future.delayed(const Duration(milliseconds: 700), () {
-      if (mounted) setState(() => _showIcon = false);
-    });
   }
 
   void _goToListing() {
@@ -1343,7 +1357,7 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
     final botPad = MediaQuery.of(context).padding.bottom;
 
     return GestureDetector(
-      onTap: _togglePlay,
+      onTap: _goToListing,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -1365,25 +1379,6 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
           // ── Yüklenme göstergesi ───────────────────────────────────────────
           if (!_initialized)
             const Center(child: CircularProgressIndicator(color: kPrimary)),
-
-          // ── Oynat/duraklat ikonu ──────────────────────────────────────────
-          if (_showIcon)
-            Center(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Colors.black54,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  (_ctrl?.value.isPlaying ?? false)
-                      ? Icons.play_arrow_rounded
-                      : Icons.pause_rounded,
-                  color: Colors.white,
-                  size: 40,
-                ),
-              ),
-            ),
 
           // ── İLAN rozeti (sol üst) ─────────────────────────────────────────
           Positioned(
