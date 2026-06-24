@@ -50,6 +50,25 @@ async def start_stream(
     return await StreamService(db).start(data, current_user, background_tasks)
 
 
+@router.post("/{stream_id}/confirm-live", status_code=status.HTTP_200_OK)
+async def confirm_live(
+    stream_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await StreamService(db).confirm_live(stream_id, current_user, background_tasks)
+
+
+@router.delete("/{stream_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_stream(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await StreamService(db).cancel_pending(stream_id, current_user)
+
+
 @router.post("/{stream_id}/end", status_code=status.HTTP_200_OK)
 async def end_stream(
     stream_id: int,

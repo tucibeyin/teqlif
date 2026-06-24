@@ -88,6 +88,26 @@ class StreamService {
     );
   }
 
+  /// LiveKit bağlantısı kurulduktan sonra çağrılır — yayını canlıya alır ve bildirimleri tetikler.
+  static Future<void> confirmLive(int streamId) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/streams/$streamId/confirm-live'),
+        headers: await _headers(),
+      ),
+    );
+  }
+
+  /// LiveKit bağlantısı kurulamazsa çağrılır — pending kaydı siler.
+  static Future<void> cancelStream(int streamId) async {
+    try {
+      await http.delete(
+        Uri.parse('$kBaseUrl/streams/$streamId/cancel'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
+
   static Future<JoinTokenOut> joinStream(int streamId) async {
     final body = await apiCall(
       () async => http.post(Uri.parse('$kBaseUrl/streams/$streamId/join'), headers: await _headers()),

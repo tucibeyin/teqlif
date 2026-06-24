@@ -38,13 +38,17 @@ const _kTrackPollMaxAttempts          = 50;   // max kontrol sayısı (= 5 saniy
 class HostStreamScreen extends StatefulWidget {
   final StreamTokenOut streamToken;
   final String title;
-  final bool blastAlreadySent;
+  /// Kullanıcı blast özelliğini onayladı ama henüz gönderilmedi.
+  /// LiveKit bağlantısı kurulunca confirmLive'dan sonra blast gönderilir.
+  final bool blastApproved;
+  final double blastCost;
 
   const HostStreamScreen({
     super.key,
     required this.streamToken,
     required this.title,
-    this.blastAlreadySent = false,
+    this.blastApproved = false,
+    this.blastCost = 0,
   });
 
   @override
@@ -93,7 +97,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     WakelockPlus.enable();
     _connect();
     if (widget.streamToken.category != 'sohbet') _loadBidHistory();
-    if (!widget.blastAlreadySent) _loadAudienceSize();
+    if (!widget.blastApproved) _loadAudienceSize();
   }
 
   void _showGiftHud(String sender, String giftName, int cost) {
@@ -221,6 +225,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     final micStatus = await Permission.microphone.request();
 
     if (camStatus.isDenied || micStatus.isDenied) {
+      // Kamera/mikrofon izni yok — pending yayın kaydını temizle
+      StreamService.cancelStream(widget.streamToken.streamId).ignore();
       if (mounted) {
         final l = AppLocalizations.of(context)!;
         setState(() {
@@ -278,6 +284,19 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         }
       }
 
+      // LiveKit bağlantısı başarılı — yayını canlıya al ve bildirimleri gönder
+      await StreamService.confirmLive(widget.streamToken.streamId);
+
+      // Blast onaylandıysa şimdi gönder (LiveKit bağlantısı kesinleşti)
+      if (widget.blastApproved) {
+        AnalyticsService.sendLeadBlast(
+          title: widget.title,
+          category: widget.streamToken.category,
+          estimatedCost: widget.blastCost.toInt(),
+          streamId: widget.streamToken.streamId,
+        ).ignore();
+      }
+
       // _room set edilince live = true → UI hemen görünür.
       // _localVideoTrack null ise LiveVideoPlayer siyah gösterir,
       // LocalTrackPublishedEvent veya _pollForTrack track'i set eder.
@@ -292,6 +311,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       // Yayın başladıktan 5 saniye sonra otomatik kapak fotoğrafı çek
       _thumbTimer = Timer(const Duration(seconds: _kThumbnailInitialDelaySeconds), _autoCaptureThumbnail);
     } catch (e, st) {
+      // Bağlantı başarısız — pending kaydı temizle
+      StreamService.cancelStream(widget.streamToken.streamId).ignore();
       ClientLogger.report(
         tag: 'HostConnect',
         message: 'LiveKit bağlantısı kurulamadı',
@@ -302,10 +323,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           'stream_id': widget.streamToken.streamId,
         },
       );
-      setState(() {
-        _error = 'Bağlantı hatası: ${e.toString()}';
-        _connecting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = 'Bağlantı hatası: ${e.toString()}';
+          _connecting = false;
+        });
+      }
     }
   }
 

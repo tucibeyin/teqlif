@@ -303,23 +303,14 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       if (!mounted) return;
       Navigator.pop(context); // loading dialog kapat
 
-      // Blast onaylandıysa stream_id ile bildirim gönder
-      if (blastApproved) {
-        AnalyticsService.sendLeadBlast(
-          title: title,
-          category: category,
-          estimatedCost: blastCost,
-          streamId: streamToken.streamId,
-        ).ignore();
-      }
-
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => HostStreamScreen(
             streamToken: streamToken,
             title: title,
-            blastAlreadySent: blastApproved,
+            blastApproved: blastApproved,
+            blastCost: blastCost.toDouble(),
           ),
         ),
       ).then((_) => _load());

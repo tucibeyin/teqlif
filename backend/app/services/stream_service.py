@@ -24,7 +24,7 @@ import aiohttp
 from fastapi import BackgroundTasks, UploadFile
 from livekit.api.room_service import RoomService, DeleteRoomRequest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_, and_
 
 from app.database import AsyncSessionLocal
 from app.models.user import User
@@ -209,15 +209,23 @@ class StreamService:
             logger.warning("[STREAMS] Çift istek engellendi | user_id=%s", uid)
             raise ConflictException("Yayın başlatma isteğiniz zaten işleniyor. Lütfen bekleyin.")
 
+        # Aktif VEYA son 3 dakikada oluşturulmuş beklemedeki yayın kontrolü
+        recent_threshold = datetime.now(timezone.utc) - timedelta(minutes=3)
         result = await self.db.execute(
             select(LiveStream).where(
                 LiveStream.host_id == uid,
-                LiveStream.is_live == True,  # noqa: E712
+                or_(
+                    LiveStream.is_live == True,  # noqa: E712
+                    and_(
+                        LiveStream.is_live == False,  # noqa: E712
+                        LiveStream.started_at >= recent_threshold,
+                    ),
+                ),
             )
         )
         if result.scalar_one_or_none():
             await release_action_lock(uid, "stream_start")
-            logger.warning("[STREAMS] Zaten aktif yayın var | user_id=%s", uid)
+            logger.warning("[STREAMS] Zaten aktif/beklemedeki yayın var | user_id=%s", uid)
             raise BadRequestException("Zaten aktif bir yayınınız var")
 
         room_name = f"{_ROOM_NAME_PREFIX}_{uid}_{uuid.uuid4().hex[:_ROOM_UUID_LENGTH]}"
@@ -226,6 +234,7 @@ class StreamService:
             title=data.title,
             category=data.category,
             host_id=uid,
+            is_live=False,   # LiveKit bağlantısı kurulana kadar gizli
         )
         self.db.add(stream)
         try:
@@ -245,23 +254,10 @@ class StreamService:
         await release_action_lock(uid, "stream_start")
 
         token = make_livekit_token(room_name, user, can_publish=True)
-        logger.info("[STREAMS] Yayın başlatıldı | stream_id=%s user_id=%s room=%s",
+        logger.info("[STREAMS] Yayın hazırlandı (beklemede) | stream_id=%s user_id=%s room=%s",
                     stream.id, uid, room_name)
 
-        background_tasks.add_task(
-            notify_followers_task,
-            user_id=uid,
-            username=user.username,
-            stream_title=stream.title,
-            stream_id=stream.id,
-        )
-
-        # Akıllı kitle bildirimi — ARQ worker'a kuyruğa alınır (web process'i bloklamaz)
-        pool = get_pool()
-        if pool:
-            await pool.enqueue_job("send_smart_auction_alerts", stream.id)
-        else:
-            logger.warning("[STREAMS] ARQ pool yok — send_smart_auction_alerts kuyruğa alınamadı")
+        # Bildirimler confirm_live() içinde gönderilir — LiveKit bağlantısı başarıyla kurulduktan sonra
 
         return StreamTokenOut(
             stream_id=stream.id,
@@ -270,6 +266,68 @@ class StreamService:
             token=token,
             category=data.category,
         )
+
+    # ── Yayını Canlıya Al ────────────────────────────────────────────────────
+    async def confirm_live(
+        self,
+        stream_id: int,
+        user: User,
+        background_tasks: BackgroundTasks,
+    ) -> dict:
+        """LiveKit bağlantısı kurulduktan sonra çağrılır. is_live=True yapar ve bildirimleri gönderir."""
+        result = await self.db.execute(
+            select(LiveStream).where(
+                LiveStream.id == stream_id,
+                LiveStream.host_id == user.id,
+                LiveStream.is_live == False,  # noqa: E712
+            )
+        )
+        stream = result.scalar_one_or_none()
+        if not stream:
+            raise NotFoundException("Beklemedeki yayın bulunamadı")
+
+        stream.is_live = True
+        await self.db.commit()
+
+        background_tasks.add_task(
+            notify_followers_task,
+            user_id=user.id,
+            username=user.username,
+            stream_title=stream.title,
+            stream_id=stream.id,
+        )
+        pool = get_pool()
+        if pool:
+            await pool.enqueue_job("send_smart_auction_alerts", stream.id)
+        else:
+            logger.warning("[STREAMS] ARQ pool yok — send_smart_auction_alerts kuyruğa alınamadı")
+
+        logger.info("[STREAMS] Yayın canlıya alındı | stream_id=%s user_id=%s", stream.id, user.id)
+        return {"ok": True}
+
+    # ── Beklemedeki Yayını İptal Et ───────────────────────────────────────────
+    async def cancel_pending(self, stream_id: int, user: User) -> None:
+        """LiveKit bağlantısı kurulamazsa çağrılır. Pending kaydı siler, iz bırakmaz."""
+        result = await self.db.execute(
+            select(LiveStream).where(
+                LiveStream.id == stream_id,
+                LiveStream.host_id == user.id,
+                LiveStream.is_live == False,  # noqa: E712
+            )
+        )
+        stream = result.scalar_one_or_none()
+        if not stream:
+            return  # Zaten silinmiş, sorun yok
+
+        await self.db.delete(stream)
+        await self.db.commit()
+
+        # Rate limit sayacını sıfırla — bağlanamayan yayın limiti tüketmemeli
+        redis = await get_redis()
+        if redis:
+            await redis.delete(f"act_rate:{user.id}:stream_start")
+
+        logger.info("[STREAMS] Beklemedeki yayın iptal edildi | stream_id=%s user_id=%s", stream_id, user.id)
 
     # ── Yayın Sonlandır ──────────────────────────────────────────────────────
     async def end(self, stream_id: int, user: User) -> dict:
