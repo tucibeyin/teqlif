@@ -27,6 +27,7 @@ import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/viewer_top_bar.dart';
 import '../public_profile_screen.dart';
 import '../listing_detail_screen.dart';
+import '../../services/feed_telemetry_service.dart';
 
 // ── Feed item tipleri ────────────────────────────────────────────────────────
 
@@ -1233,9 +1234,32 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
   bool _initialized = false;
   bool _showIcon = false;
 
+  final Stopwatch _stopwatch = Stopwatch();
+  bool _eventLogged = false;
+
+  void _startWatch() {
+    _stopwatch.reset();
+    _stopwatch.start();
+    _eventLogged = false;
+  }
+
+  void _stopAndLog() {
+    if (!_stopwatch.isRunning || _eventLogged) return;
+    _stopwatch.stop();
+    _eventLogged = true;
+    final ms = _stopwatch.elapsedMilliseconds;
+    final lid = (widget.listing['id'] ?? '').toString();
+    FeedTelemetryService.instance.logEvent(
+      listingId: lid,
+      eventType: ms < 2000 ? 'skip' : 'impression',
+      dwellTimeMs: ms,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    if (widget.isActive) _startWatch();
     _initVideo();
   }
 
@@ -1255,13 +1279,16 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
       _ctrl?.play();
+      _startWatch();
     } else if (!widget.isActive && old.isActive) {
       _ctrl?.pause();
+      _stopAndLog();
     }
   }
 
   @override
   void dispose() {
+    _stopAndLog();
     _ctrl?.dispose();
     super.dispose();
   }
@@ -1280,6 +1307,11 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
   }
 
   void _goToListing() {
+    FeedTelemetryService.instance.logEvent(
+      listingId: (widget.listing['id'] ?? '').toString(),
+      eventType: 'click',
+      dwellTimeMs: _stopwatch.elapsedMilliseconds,
+    );
     Navigator.push(
       context,
       MaterialPageRoute(
