@@ -19,7 +19,6 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinTokenOut
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
-from app.security.captcha import verify_captcha_token
 from app.services.stream_service import StreamService
 from app.services.like_service import LikeService
 
@@ -47,7 +46,6 @@ async def start_stream(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _captcha: None = Depends(verify_captcha_token),
 ):
     return await StreamService(db).start(data, current_user, background_tasks)
 

@@ -18,7 +18,6 @@ from fastapi_cache.decorator import cache
 from app.database import get_db
 from app.models.user import User
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
-from app.security.captcha import verify_captcha_token
 from app.services.listing_service import ListingService
 from app.services.like_service import LikeService
 from app.schemas.listing import ListingOfferCreate
@@ -79,7 +78,6 @@ async def create_listing(
     payload: dict,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    _captcha: None = Depends(verify_captcha_token),
 ):
     result = await ListingService(db).create_listing(payload, current_user)
     pool = get_pool()
