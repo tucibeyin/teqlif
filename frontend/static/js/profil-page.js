@@ -230,6 +230,9 @@
         inner.innerHTML = `
             ${isOwn ? `
             <div class="profile-settings-row">
+                <a href="/user_panel.html" class="btn-settings" title="TUCi Cüzdan">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 11h.01"/><path d="M2 11h20"/></svg>
+                </a>
                 <a href="/hesabim.html" class="btn-settings" title="Ayarlar">
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
                 </a>
@@ -255,15 +258,6 @@
                 </div>
             </div>
             ${actionsHtml}
-            ${isOwn ? `
-            <a href="/user_panel.html" class="tuci-wallet-strip">
-                <span class="tuci-wallet-strip-coin">T</span>
-                <span class="tuci-wallet-strip-info">
-                    <span class="tuci-wallet-strip-label">TUCi Cüzdan</span>
-                    <span class="tuci-wallet-strip-balance">${user.tuci_balance ?? '—'} TUCi</span>
-                </span>
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </a>` : ''}
             <div class="listings-section" id="listingsSection">
                 <div class="listings-title">İlanları (–)</div>
                 <div class="profile-loading" style="padding-top:1rem;">Yükleniyor...</div>

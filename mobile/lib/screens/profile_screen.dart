@@ -170,6 +170,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _openWalletSheet() {
+    _loadWallet();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _TuciWalletSheet(
+        balance: _tuciBalance ?? 0,
+        history: _tuciHistory,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Yerel önbellekte hiç veri yoksa (ilk kurulum) tam ekran spinner
@@ -189,6 +202,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.account_balance_wallet_outlined),
+          onPressed: _openWalletSheet,
+        ),
         title: Text(
           '@$username',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -209,12 +226,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             SliverToBoxAdapter(
               child: Column(
                 children: [
-                  // ── TUCi Cüzdan Kartı ──────────────────────────────────
-                  _TuciWalletCard(
-                    balance: _tuciBalance,
-                    history: _tuciHistory,
-                    onRefresh: _loadWallet,
-                  ),
                   // ── Profil başlık bölümü ──
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
