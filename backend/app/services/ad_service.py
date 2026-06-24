@@ -75,10 +75,34 @@ async def load_active_campaigns_to_redis() -> int:
     return len(campaigns)
 
 
+async def _reload_campaign_to_redis(campaign_id: int) -> Optional[float]:
+    """
+    Tek bir kampanyayı PostgreSQL'den okuyup Redis'e yükler.
+    Döndürür: cpc_bid (başarılıysa) veya None (kampanya yoksa/bitişse).
+    """
+    async with AsyncSessionLocal() as db:
+        campaign = await db.scalar(
+            select(AdCampaign).where(
+                AdCampaign.id == campaign_id,
+                AdCampaign.status == "active",
+            )
+        )
+    if not campaign:
+        return None
+    remaining = max(0.0, campaign.total_budget - campaign.spent_budget)
+    redis = await get_redis()
+    pipe = redis.pipeline()
+    pipe.set(_BUDGET_KEY.format(campaign_id), f"{remaining:.6f}")
+    pipe.set(_CPC_KEY.format(campaign_id), f"{campaign.cpc_bid:.6f}")
+    await pipe.execute()
+    logger.info("[AdService] Kampanya Redis'e yeniden yüklendi: id=%d remaining=%.2f", campaign_id, remaining)
+    return campaign.cpc_bid
+
+
 async def record_ad_click(campaign_id: int, user_id: int) -> bool:
     """
     Bir reklam tıklamasını kaydeder:
-      1. Redis'ten cpc_bid'i okur.
+      1. Redis'ten cpc_bid'i okur; key yoksa PostgreSQL'den yeniden yükler.
       2. Lua script ile bütçeden atomik olarak düşer.
       3. Bütçe ≤ 0 ise:
            - PostgreSQL'de kampanya status='completed', spent_budget=total_budget
@@ -92,14 +116,18 @@ async def record_ad_click(campaign_id: int, user_id: int) -> bool:
     budget_key = _BUDGET_KEY.format(campaign_id)
     cpc_key = _CPC_KEY.format(campaign_id)
 
-    # cpc_bid'i Redis'ten oku (load_active_campaigns_to_redis tarafından doldurulmuş)
+    # cpc_bid'i Redis'ten oku; key yoksa PostgreSQL'den sıcak yükle
     cpc_str: Optional[str] = await redis.get(cpc_key)
     if cpc_str is None:
         logger.warning(
-            "[AdService] cpc key Redis'te yok — kampanya yüklenmemiş ya da tamamlanmış: %d",
+            "[AdService] cpc key Redis'te yok — PostgreSQL'den yeniden yükleniyor: %d",
             campaign_id,
         )
-        return False
+        reloaded_cpc = await _reload_campaign_to_redis(campaign_id)
+        if reloaded_cpc is None:
+            logger.warning("[AdService] Kampanya aktif değil ya da bulunamadı: %d", campaign_id)
+            return False
+        cpc_str = f"{reloaded_cpc:.6f}"
 
     cpc_bid = float(cpc_str)
 
@@ -115,6 +143,22 @@ async def record_ad_click(campaign_id: int, user_id: int) -> bool:
         return False
 
     new_budget = float(result)
+
+    # Her tıklamada spent_budget'ı PostgreSQL'e yansıt (fire-and-forget)
+    async def _sync_spent() -> None:
+        try:
+            async with AsyncSessionLocal() as db:
+                await db.execute(
+                    update(AdCampaign)
+                    .where(AdCampaign.id == campaign_id, AdCampaign.status == "active")
+                    .values(spent_budget=AdCampaign.spent_budget + cpc_bid)
+                )
+                await db.commit()
+        except Exception as exc:
+            logger.warning("[AdService] spent_budget DB sync başarısız: campaign=%d %s", campaign_id, exc)
+
+    import asyncio
+    asyncio.create_task(_sync_spent())
 
     if new_budget <= 0:
         # Bütçe tükendi — PostgreSQL'de kampanyayı tamamla
