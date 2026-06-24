@@ -255,6 +255,15 @@
                 </div>
             </div>
             ${actionsHtml}
+            ${isOwn ? `
+            <a href="/user_panel.html" class="tuci-wallet-strip">
+                <span class="tuci-wallet-strip-coin">T</span>
+                <span class="tuci-wallet-strip-info">
+                    <span class="tuci-wallet-strip-label">TUCi Cüzdan</span>
+                    <span class="tuci-wallet-strip-balance">${user.tuci_balance ?? '—'} TUCi</span>
+                </span>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </a>` : ''}
             <div class="listings-section" id="listingsSection">
                 <div class="listings-title">İlanları (–)</div>
                 <div class="profile-loading" style="padding-top:1rem;">Yükleniyor...</div>
