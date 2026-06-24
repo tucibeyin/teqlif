@@ -246,7 +246,7 @@ class _UpgradeBanner extends StatelessWidget {
           GestureDetector(
             onTap: () => launchUrl(
               Uri.parse('https://www.teqlif.com/pro-plan.html'),
-              mode: LaunchMode.externalApplication,
+              mode: LaunchMode.inAppWebView,
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
@@ -428,7 +428,7 @@ class _UpgradeSheet extends StatelessWidget {
                   Navigator.pop(context);
                   launchUrl(
                     Uri.parse('https://www.teqlif.com/pro-plan.html'),
-                    mode: LaunchMode.externalApplication,
+                    mode: LaunchMode.inAppWebView,
                   );
                 },
                 style: ElevatedButton.styleFrom(

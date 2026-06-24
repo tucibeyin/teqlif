@@ -326,7 +326,7 @@ class _FeedStatsScreenState extends State<FeedStatsScreen> {
                         child: ElevatedButton(
                           onPressed: () => launchUrl(
                             Uri.parse('https://www.teqlif.com/pro-plan.html'),
-                            mode: LaunchMode.externalApplication,
+                            mode: LaunchMode.inAppWebView,
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,

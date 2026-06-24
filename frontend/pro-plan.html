@@ -527,8 +527,8 @@
 
     <!-- ── Fiyat Periyodu Seçici ─────────────────────────────────── -->
     <div class="plan-toggle">
-        <button class="toggle-btn active" id="btnMonthly" onclick="setPlan('monthly')">Aylık</button>
-        <button class="toggle-btn" id="btnYearly" onclick="setPlan('yearly')">
+        <button class="toggle-btn active" id="btnMonthly">Aylık</button>
+        <button class="toggle-btn" id="btnYearly">
             Yıllık
             <span class="save-badge">2 ay bedava</span>
         </button>
@@ -695,7 +695,8 @@
             }
         }
 
-        window.setPlan = setPlan;
+        document.getElementById('btnMonthly').addEventListener('click', function () { setPlan('monthly'); });
+        document.getElementById('btnYearly').addEventListener('click', function () { setPlan('yearly'); });
 
         document.getElementById('btnPro').addEventListener('click', function () {
             toast.classList.add('show');

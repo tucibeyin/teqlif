@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/analytics_service.dart';
@@ -247,11 +248,9 @@ class _MarketTrendsScreenState extends State<MarketTrendsScreen> {
   }
 
   void _showUpgradeInfo(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Pro abonelik yakında! Bildirim almak için hesabınızı takipte tutun.'),
-        duration: Duration(seconds: 3),
-      ),
+    launchUrl(
+      Uri.parse('https://www.teqlif.com/pro-plan.html'),
+      mode: LaunchMode.inAppWebView,
     );
   }
 }
