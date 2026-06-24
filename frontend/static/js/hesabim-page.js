@@ -12,6 +12,18 @@
         document.getElementById('menuSupport').style.display = '';
         document.getElementById('menuDanger').style.display = '';
 
+        // Feed Performansı bölümü
+        const feedSection = document.getElementById('feedPerfSection');
+        if (feedSection) {
+            feedSection.style.display = '';
+            if (u.is_premium) {
+                document.getElementById('feedPerfContent').style.display = '';
+                loadFeedStats(7);
+            } else {
+                document.getElementById('feedPerfGuard').style.display = '';
+            }
+        }
+
         const initial = (u.full_name || u.username || '?')[0].toUpperCase();
         const avatarEl = document.getElementById('avatarEl');
         const initialEl = document.getElementById('avatarInitial');
@@ -388,3 +400,73 @@ document.addEventListener('DOMContentLoaded', function () {
     var btnClosePassModal = document.getElementById('btnClosePassModal');
     if (btnClosePassModal) btnClosePassModal.addEventListener('click', function () { closeModal('passModal'); });
 });
+
+// ── Feed Performansı ──────────────────────────────────────────────────────────
+
+async function loadFeedStats(days) {
+    // Aktif filtre butonunu güncelle
+    ['feedDays7', 'feedDays30'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        const active = (id === 'feedDays' + days);
+        btn.style.background = active ? 'var(--color-primary)' : 'var(--surface)';
+        btn.style.color = active ? '#fff' : 'var(--text)';
+    });
+
+    document.getElementById('feedTable').innerHTML =
+        '<div style="padding:10px 14px;color:var(--text-muted);text-align:center;">Yükleniyor...</div>';
+
+    let data;
+    try {
+        data = await apiFetch('/analytics/my-feed-stats?days=' + days);
+    } catch (err) {
+        document.getElementById('feedTable').innerHTML =
+            '<div style="padding:10px 14px;color:#f87171;text-align:center;">Veri yüklenemedi</div>';
+        return;
+    }
+
+    const t = data.totals;
+    document.getElementById('feedTotalImp').textContent = t.impressions.toLocaleString('tr-TR');
+    document.getElementById('feedTotalCtr').textContent = '%' + t.ctr.toFixed(1);
+    const dwell = t.avg_dwell_ms >= 1000
+        ? (t.avg_dwell_ms / 1000).toFixed(1) + 's'
+        : t.avg_dwell_ms + 'ms';
+    document.getElementById('feedTotalDwell').textContent = dwell;
+
+    const stats = data.stats;
+    if (!stats.length) {
+        document.getElementById('feedTable').innerHTML =
+            '<div style="padding:16px;color:var(--text-muted);text-align:center;">Bu dönemde henüz veri yok.</div>';
+        return;
+    }
+
+    const rows = stats.map(s => {
+        const dwellStr = s.avg_dwell_ms >= 1000
+            ? (s.avg_dwell_ms / 1000).toFixed(1) + 's'
+            : s.avg_dwell_ms + 'ms';
+        return `<tr>
+            <td style="padding:10px 14px;border-bottom:1px solid var(--border);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(s.title || s.listing_id)}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid var(--border);text-align:center;">${s.impressions.toLocaleString('tr-TR')}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid var(--border);text-align:center;">%${s.ctr.toFixed(1)}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid var(--border);text-align:center;">${dwellStr}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('feedTable').innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+            <thead>
+                <tr style="color:var(--text-muted);font-size:.7rem;">
+                    <th style="padding:8px 14px;text-align:left;font-weight:600;">İlan</th>
+                    <th style="padding:8px 8px;text-align:center;font-weight:600;">👁</th>
+                    <th style="padding:8px 8px;text-align:center;font-weight:600;">CTR</th>
+                    <th style="padding:8px 8px;text-align:center;font-weight:600;">⏱</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}

@@ -1,11 +1,11 @@
 import json
 import logging
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 from app.database import get_db
 from app.models.analytics import AnalyticsEvent
@@ -963,3 +963,82 @@ async def ingest_feed_events(
         logger.debug("[feed-events] %d olay yazıldı | user_id=%s", len(rows), uid)
     except Exception as exc:
         logger.error("[feed-events] ClickHouse insert hatası: %s", exc, exc_info=True)
+
+
+# ── Feed Performans İstatistikleri (Pro) ──────────────────────────────────────
+
+@router.get("/my-feed-stats")
+async def my_feed_stats(
+    days: int = Query(default=7, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Pro satıcıya özel feed performans istatistikleri.
+    Kullanıcının kendi ilanlarının impression/click/skip/CTR/dwell verilerini döndürür.
+    """
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+
+    # Kullanıcının aktif ilan ID'lerini al
+    result = await db.execute(
+        select(Listing.id, Listing.title).where(
+            Listing.user_id == current_user.id,
+            Listing.is_deleted == False,  # noqa: E712
+        )
+    )
+    listings = result.fetchall()
+    if not listings:
+        return {"stats": [], "totals": {"impressions": 0, "clicks": 0, "skips": 0, "ctr": 0.0, "avg_dwell_ms": 0}}
+
+    listing_map = {str(r.id): r.title for r in listings}
+    listing_ids = list(listing_map.keys())
+
+    # ClickHouse'dan feed istatistiklerini çek
+    try:
+        ch = await get_clickhouse_client()
+        placeholders = ", ".join(f"'{lid}'" for lid in listing_ids)
+        query = f"""
+            SELECT
+                listing_id,
+                countIf(event_type = 'impression')                              AS impressions,
+                countIf(event_type = 'click')                                   AS clicks,
+                countIf(event_type = 'skip')                                    AS skips,
+                if(impressions > 0, round(clicks / impressions * 100, 1), 0)   AS ctr,
+                round(avgIf(dwell_time_ms, event_type IN ('impression','skip')), 0) AS avg_dwell_ms
+            FROM feed_analytics
+            WHERE timestamp >= now() - INTERVAL {days} DAY
+              AND listing_id IN ({placeholders})
+            GROUP BY listing_id
+            ORDER BY impressions DESC
+        """
+        rows = await ch.query(query)
+        stats: List[Dict] = []
+        for row in rows.result_rows:
+            lid, impressions, clicks, skips, ctr, avg_dwell = row
+            stats.append({
+                "listing_id": lid,
+                "title": listing_map.get(lid, "—"),
+                "impressions": impressions,
+                "clicks": clicks,
+                "skips": skips,
+                "ctr": float(ctr),
+                "avg_dwell_ms": int(avg_dwell),
+            })
+    except Exception as exc:
+        logger.error("[my-feed-stats] ClickHouse sorgu hatası: %s", exc, exc_info=True)
+        return {"stats": [], "totals": {"impressions": 0, "clicks": 0, "skips": 0, "ctr": 0.0, "avg_dwell_ms": 0}}
+
+    total_imp = sum(s["impressions"] for s in stats)
+    total_clk = sum(s["clicks"] for s in stats)
+    total_skp = sum(s["skips"] for s in stats)
+    return {
+        "stats": stats,
+        "totals": {
+            "impressions": total_imp,
+            "clicks": total_clk,
+            "skips": total_skp,
+            "ctr": round(total_clk / total_imp * 100, 1) if total_imp > 0 else 0.0,
+            "avg_dwell_ms": round(sum(s["avg_dwell_ms"] for s in stats) / len(stats)) if stats else 0,
+        },
+    }

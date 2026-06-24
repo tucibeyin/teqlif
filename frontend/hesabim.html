@@ -385,6 +385,64 @@
             </a>
         </div>
 
+        <!-- ── Feed Performansı (Pro) ───────────────────────────────── -->
+        <div id="feedPerfSection" style="display:none;margin-bottom:8px;">
+            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:0 4px 8px;">📊 Feed Performansı</div>
+
+            <!-- Non-pro overlay -->
+            <div id="feedPerfGuard" style="display:none;position:relative;border-radius:16px;overflow:hidden;">
+                <div style="filter:blur(4px);pointer-events:none;padding:16px;background:var(--surface);border-radius:16px;">
+                    <div style="display:flex;gap:10px;margin-bottom:10px;">
+                        <div style="flex:1;background:var(--bg);border-radius:10px;padding:14px;text-align:center;">
+                            <div style="font-size:1.4rem;font-weight:800;">—</div>
+                            <div style="font-size:.7rem;color:var(--text-muted);margin-top:2px;">İzlenme</div>
+                        </div>
+                        <div style="flex:1;background:var(--bg);border-radius:10px;padding:14px;text-align:center;">
+                            <div style="font-size:1.4rem;font-weight:800;">—</div>
+                            <div style="font-size:.7rem;color:var(--text-muted);margin-top:2px;">CTR</div>
+                        </div>
+                        <div style="flex:1;background:var(--bg);border-radius:10px;padding:14px;text-align:center;">
+                            <div style="font-size:1.4rem;font-weight:800;">—</div>
+                            <div style="font-size:.7rem;color:var(--text-muted);margin-top:2px;">Ort. Süre</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.45);border-radius:16px;gap:10px;">
+                    <span style="font-size:1.5rem;">👑</span>
+                    <span style="color:#FFD700;font-weight:700;font-size:.95rem;">Pro özelliği</span>
+                    <a href="/pro-plan.html" style="background:linear-gradient(135deg,#B8860B,#FFD700);color:#000;font-weight:700;font-size:.8rem;padding:.45rem 1.2rem;border-radius:50px;text-decoration:none;">Pro'ya Geç</a>
+                </div>
+            </div>
+
+            <!-- Pro içerik -->
+            <div id="feedPerfContent" style="display:none;">
+                <div style="display:flex;gap:6px;margin-bottom:12px;">
+                    <button id="feedDays7" onclick="loadFeedStats(7)"
+                        style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--color-primary);color:#fff;font-weight:600;font-size:.78rem;cursor:pointer;">Son 7 Gün</button>
+                    <button id="feedDays30" onclick="loadFeedStats(30)"
+                        style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:600;font-size:.78rem;cursor:pointer;">Son 30 Gün</button>
+                </div>
+                <div id="feedSummaryCards" style="display:flex;gap:10px;margin-bottom:12px;">
+                    <div style="flex:1;background:var(--surface);border-radius:10px;padding:14px;text-align:center;">
+                        <div id="feedTotalImp" style="font-size:1.4rem;font-weight:800;">—</div>
+                        <div style="font-size:.7rem;color:var(--text-muted);margin-top:2px;">👁 İzlenme</div>
+                    </div>
+                    <div style="flex:1;background:var(--surface);border-radius:10px;padding:14px;text-align:center;">
+                        <div id="feedTotalCtr" style="font-size:1.4rem;font-weight:800;">—</div>
+                        <div style="font-size:.7rem;color:var(--text-muted);margin-top:2px;">🖱 CTR</div>
+                    </div>
+                    <div style="flex:1;background:var(--surface);border-radius:10px;padding:14px;text-align:center;">
+                        <div id="feedTotalDwell" style="font-size:1.4rem;font-weight:800;">—</div>
+                        <div style="font-size:.7rem;color:var(--text-muted);margin-top:2px;">⏱ Ort. Süre</div>
+                    </div>
+                </div>
+                <div id="feedTable" style="background:var(--surface);border-radius:12px;overflow:hidden;font-size:.8rem;">
+                    <div style="padding:10px 14px;color:var(--text-muted);text-align:center;">Yükleniyor...</div>
+                </div>
+            </div>
+        </div>
+        <!-- ── Feed Performansı sonu ──────────────────────────────────── -->
+
         <div class="menu-section" id="menuWallet" style="display:none;">
             <div class="menu-section-title">Cüzdan</div>
             <a href="/user_panel.html" class="menu-item">
@@ -624,7 +682,7 @@
 
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js?v=2"></script>
-    <script src="/static/js/hesabim-page.js?v=1"></script>
+    <script src="/static/js/hesabim-page.js?v=2"></script>
 </body>
 
 </html>
