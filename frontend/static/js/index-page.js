@@ -185,7 +185,7 @@
             const username = g.user?.username ?? '';
             const initial  = username.charAt(0).toUpperCase() || '?';
             const rawUrl   = g.user?.profile_image_thumb_url ?? g.user?.profile_image_url ?? null;
-            const imgUrl   = rawUrl
+            const profileImgUrl = rawUrl
                 ? (rawUrl.startsWith('http') ? rawUrl : '/api' + rawUrl)
                 : null;
 
@@ -194,6 +194,12 @@
                 : null;
             const hasLive  = !!liveItem;
             const hasVideo = Array.isArray(g.items) && g.items.some(i => i.story_type === 'video' || i.story_type === 'image');
+
+            // Canlı yayında stream thumbnail'ini öncelikli göster
+            const streamThumb = hasLive && liveItem.thumbnail_url
+                ? (liveItem.thumbnail_url.startsWith('http') ? liveItem.thumbnail_url : '/api' + liveItem.thumbnail_url)
+                : null;
+            const imgUrl = streamThumb || profileImgUrl;
 
             const ringStyle = hasLive
                 ? 'background:linear-gradient(135deg,#ff4136 0%,#ff851b 100%)'

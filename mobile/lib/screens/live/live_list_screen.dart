@@ -123,7 +123,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       setS(() { audienceSize = size; audienceCost = cost; audienceLoading = false; });
     }
 
-    final result = await showDialog<(String, String)?>(
+    final result = await showDialog<(String, String, bool, int)?>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
@@ -180,14 +180,20 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 const SizedBox(height: 12),
                 InkWell(
                   borderRadius: BorderRadius.circular(8),
-                  onTap: () => _showBlastPaymentSheet(
-                    ctx,
-                    title: titleController.text.trim(),
-                    category: selectedCategory!,
-                    audienceSize: audienceSize,
-                    audienceCost: audienceCost,
-                    onBlastSent: () => setStateDialog(() { audienceSize = 0; audienceCost = 0.0; }),
-                  ),
+                  onTap: () async {
+                    final t = titleController.text.trim();
+                    if (t.isEmpty) { setStateDialog(() => errorText = l.liveStreamTitleRequired); return; }
+                    if (t.length < 3) { setStateDialog(() => errorText = l.liveStreamTitleMin); return; }
+                    if (selectedCategory == null) { setStateDialog(() => errorText = l.liveCategoryRequired); return; }
+                    final confirmed = await _showBlastConfirm(
+                      ctx,
+                      audienceSize: audienceSize,
+                      audienceCost: audienceCost.toInt(),
+                    );
+                    if (confirmed == true && ctx.mounted) {
+                      Navigator.pop(ctx, (t, selectedCategory!, true, audienceCost.toInt()));
+                    }
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
@@ -206,7 +212,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '$audienceSize Hazır Alıcı Bekliyor!',
+                                '$audienceSize Hazır Alıcıya Bildirim Gönder!',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -214,7 +220,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                                 ),
                               ),
                               Text(
-                                'Bildirim gönder — ${audienceCost.toInt()} TUCi',
+                                'Yayın başladığında push bildirim • ${audienceCost.toInt()} TUCi',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: kPrimary.withValues(alpha: 0.7),
@@ -249,23 +255,16 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
               onPressed: () {
                 final t = titleController.text.trim();
-                if (t.isEmpty) {
-                  setStateDialog(() => errorText = l.liveStreamTitleRequired);
-                  return;
-                }
-                if (t.length < 3) {
-                  setStateDialog(
-                      () => errorText = l.liveStreamTitleMin);
-                  return;
-                }
-                if (selectedCategory == null) {
-                  setStateDialog(() => errorText = l.liveCategoryRequired);
-                  return;
-                }
+                if (t.isEmpty) { setStateDialog(() => errorText = l.liveStreamTitleRequired); return; }
+                if (t.length < 3) { setStateDialog(() => errorText = l.liveStreamTitleMin); return; }
+                if (selectedCategory == null) { setStateDialog(() => errorText = l.liveCategoryRequired); return; }
                 debounceTimer?.cancel();
-                Navigator.pop(ctx, (t, selectedCategory!));
+                Navigator.pop(ctx, (t, selectedCategory!, false, 0));
               },
-              child: Text(l.liveStartBtn, style: const TextStyle(color: Colors.white)),
+              child: Text(
+                audienceSize > 0 ? 'Normal Başlat' : l.liveStartBtn,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -273,7 +272,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     );
 
     if (result == null) return;
-    final (title, category) = result;
+    final (title, category, blastApproved, blastCost) = result;
 
     if (!mounted) return;
 
@@ -302,10 +301,25 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       );
       if (!mounted) return;
       Navigator.pop(context); // loading dialog kapat
+
+      // Blast onaylandıysa stream_id ile bildirim gönder
+      if (blastApproved) {
+        AnalyticsService.sendLeadBlast(
+          title: title,
+          category: category,
+          estimatedCost: blastCost,
+          streamId: streamToken.streamId,
+        ).ignore();
+      }
+
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => HostStreamScreen(streamToken: streamToken, title: title),
+          builder: (_) => HostStreamScreen(
+            streamToken: streamToken,
+            title: title,
+            blastAlreadySent: blastApproved,
+          ),
         ),
       ).then((_) => _load());
     } on AppException catch (e) {
@@ -320,24 +334,52 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     }
   }
 
-  Future<void> _showBlastPaymentSheet(
+  Future<bool?> _showBlastConfirm(
     BuildContext ctx, {
-    required String title,
-    required String category,
     required int audienceSize,
-    required double audienceCost,
-    required VoidCallback onBlastSent,
-  }) async {
-    await showModalBottomSheet(
+    required int audienceCost,
+  }) {
+    return showDialog<bool>(
       context: ctx,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _BlastPaymentSheet(
-        title: title,
-        category: category,
-        audienceSize: audienceSize,
-        audienceCost: audienceCost,
-        onBlastSent: onBlastSent,
+      builder: (dlgCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('🎯 Kitleyi Davet Et', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: kPrimary.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: kPrimary.withValues(alpha: 0.25)),
+              ),
+              child: Column(
+                children: [
+                  _InfoRow(icon: Icons.people_alt_outlined, label: 'Hedef Kitle', value: '$audienceSize kişi', color: kPrimary),
+                  const SizedBox(height: 10),
+                  _InfoRow(icon: Icons.notifications_active_outlined, label: 'Bildirim', value: 'Push + Yayın linki', color: const Color(0xFF3B82F6)),
+                  const SizedBox(height: 10),
+                  _InfoRow(icon: Icons.account_balance_wallet_outlined, label: 'TUCi Maliyeti', value: '$audienceCost TUCi', color: const Color(0xFFB8860B), bold: true),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Yayın başladığında bildirim otomatik gönderilir.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: const Text('Vazgeç')),
+          FilledButton(
+            onPressed: () => Navigator.pop(dlgCtx, true),
+            style: FilledButton.styleFrom(backgroundColor: kPrimary),
+            child: const Text('Onayla ve Başlat'),
+          ),
+        ],
       ),
     );
   }
@@ -823,258 +865,6 @@ class _StreamGridTile extends StatelessWidget {
 
 }
 
-// ── Blast Ödeme Bottom Sheet ──────────────────────────────────────────────────
-
-class _BlastPaymentSheet extends StatefulWidget {
-  final String title;
-  final String category;
-  final int audienceSize;
-  final double audienceCost;
-  final VoidCallback onBlastSent;
-
-  const _BlastPaymentSheet({
-    required this.title,
-    required this.category,
-    required this.audienceSize,
-    required this.audienceCost,
-    required this.onBlastSent,
-  });
-
-  @override
-  State<_BlastPaymentSheet> createState() => _BlastPaymentSheetState();
-}
-
-class _BlastPaymentSheetState extends State<_BlastPaymentSheet> {
-  bool _sending = false;
-  bool _success = false;
-
-  Future<void> _handlePayment() async {
-    setState(() => _sending = true);
-    // Demo ödeme: kısa bekleme + başarı animasyonu
-    await Future.delayed(const Duration(milliseconds: 1400));
-
-    // Gerçek API'yi dene, başarısız olursa demo olarak devam et
-    try {
-      await AnalyticsService.sendLeadBlast(
-        title: widget.title,
-        category: widget.category,
-        estimatedCost: widget.audienceCost.toInt(),
-      );
-    } catch (_) {}
-
-    if (!mounted) return;
-    setState(() { _sending = false; _success = true; });
-    await Future.delayed(const Duration(milliseconds: 1600));
-    if (!mounted) return;
-    widget.onBlastSent();
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('🎯 ${widget.audienceSize} kişiye bildirim gönderildi!'),
-        backgroundColor: const Color(0xFF22C55E),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
-    final subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final cardBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Tutamak çubuğu ─────────────────────────────────────────────
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: subColor.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-
-          if (_success) ...[
-            // ── Başarı ekranı ───────────────────────────────────────────
-            Center(
-              child: Column(
-                children: [
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 72, height: 72,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF22C55E).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_circle_outline, color: Color(0xFF22C55E), size: 44),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Ödeme Başarılı!',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${widget.audienceSize} hazır alıcıya bildirim gönderiliyor.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: subColor, height: 1.4),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ] else ...[
-            // ── Başlık ─────────────────────────────────────────────────
-            Text(
-              '🎯 Hazır Alıcılara Ulaş',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '"${widget.title}" ilanın için bildirim kampanyası',
-              style: TextStyle(fontSize: 13, color: subColor),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 20),
-
-            // ── Özet kartı ─────────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
-              ),
-              child: Column(
-                children: [
-                  _InfoRow(
-                    icon: Icons.people_alt_outlined,
-                    label: 'Hedef Kitle',
-                    value: '${widget.audienceSize} kişi',
-                    color: kPrimary,
-                  ),
-                  const SizedBox(height: 12),
-                  _InfoRow(
-                    icon: Icons.notifications_active_outlined,
-                    label: 'Bildirim Türü',
-                    value: 'Push Bildirimi',
-                    color: const Color(0xFF3B82F6),
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(color: subColor.withValues(alpha: 0.15), height: 1),
-                  const SizedBox(height: 12),
-                  _InfoRow(
-                    icon: Icons.receipt_long_outlined,
-                    label: 'Toplam Tutar',
-                    value: '${widget.audienceCost.toInt()} TUCi',
-                    color: const Color(0xFFEF4444),
-                    bold: true,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // ── Demo ödeme yöntemi ─────────────────────────────────────
-            Text(
-              'Ödeme Yöntemi',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: subColor),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: subColor.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44, height: 30,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1A56DB), Color(0xFF1E40AF)],
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Center(
-                      child: Text('VISA', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '**** **** **** 4242',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor, letterSpacing: 1),
-                        ),
-                        Text('Demo Kart · 12/28', style: TextStyle(fontSize: 11, color: subColor)),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF22C55E).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text('DEMO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF22C55E))),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // ── Ödeme butonu ───────────────────────────────────────────
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _sending ? null : _handlePayment,
-                style: FilledButton.styleFrom(
-                  backgroundColor: kPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: _sending
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.bolt, size: 20),
-                label: Text(
-                  _sending ? 'İşleniyor...' : 'Gönder — ${widget.audienceCost.toInt()} TUCi',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Center(
-              child: Text(
-                'Demo mod — gerçek ödeme alınmaz',
-                style: TextStyle(fontSize: 11, color: subColor.withValues(alpha: 0.6)),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
 
 class _InfoRow extends StatelessWidget {
   final IconData icon;

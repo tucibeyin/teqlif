@@ -244,6 +244,7 @@ class StoryService:
                         id=stream.id,
                         story_type="live_redirect",
                         stream_id=stream.id,
+                        thumbnail_url=stream.thumbnail_url,
                     )
                 )
 

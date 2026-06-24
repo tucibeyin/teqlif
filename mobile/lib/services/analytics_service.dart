@@ -90,6 +90,7 @@ class AnalyticsService {
     required String category,
     required int estimatedCost,
     int? listingId,
+    int? streamId,
   }) async {
     try {
       final token = await StorageService.getToken();
@@ -105,6 +106,7 @@ class AnalyticsService {
           'category': category,
           'estimated_cost': estimatedCost,
           if (listingId != null) 'listing_id': listingId,
+          if (streamId != null) 'stream_id': streamId,
         }),
       );
       if (resp.statusCode == 202) {

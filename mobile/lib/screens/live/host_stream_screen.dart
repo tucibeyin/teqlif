@@ -36,11 +36,13 @@ const _kTrackPollMaxAttempts          = 50;   // max kontrol sayısı (= 5 saniy
 class HostStreamScreen extends StatefulWidget {
   final StreamTokenOut streamToken;
   final String title;
+  final bool blastAlreadySent;
 
   const HostStreamScreen({
     super.key,
     required this.streamToken,
     required this.title,
+    this.blastAlreadySent = false,
   });
 
   @override
@@ -87,7 +89,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     WakelockPlus.enable();
     _connect();
     if (widget.streamToken.category != 'sohbet') _loadBidHistory();
-    _loadAudienceSize();
+    if (!widget.blastAlreadySent) _loadAudienceSize();
   }
 
   void _showWhaleHud(String username, String tier) {

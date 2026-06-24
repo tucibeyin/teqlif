@@ -101,6 +101,7 @@ class BlastRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     category: str = Field(default="")
     listing_id: int | None = Field(default=None)
+    stream_id: int | None = Field(default=None)
     estimated_cost: int = Field(gt=0)
 
 
@@ -195,7 +196,12 @@ async def send_blast(
     # ── Firebase toplu push (fire-and-forget) ─────────────────────────────────
     from app.services.firebase_service import send_push, InvalidFCMTokenError
 
-    listing_url = f"/ilan/{body.listing_id}" if body.listing_id else "/home"
+    if body.stream_id:
+        listing_url = f"/yayin?id={body.stream_id}"
+    elif body.listing_id:
+        listing_url = f"/ilan/{body.listing_id}"
+    else:
+        listing_url = "/home"
 
     async def _send_one(token: str) -> None:
         try:
