@@ -170,19 +170,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _openWalletSheet() {
-    _loadWallet();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => _TuciWalletSheet(
-        balance: _tuciBalance ?? 0,
-        history: _tuciHistory,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     // Yerel önbellekte hiç veri yoksa (ilk kurulum) tam ekran spinner
@@ -202,9 +189,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.account_balance_wallet_outlined),
-          onPressed: _openWalletSheet,
+        leading: GestureDetector(
+          onTap: () {
+            _loadWallet();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => WalletScreen(
+                  initialBalance: _tuciBalance,
+                  initialHistory: _tuciHistory,
+                ),
+              ),
+            );
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.account_balance_wallet_outlined, size: 22),
+              if (_tuciBalance != null)
+                Text(
+                  '$_tuciBalance T',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFB8860B),
+                    height: 1.1,
+                  ),
+                ),
+            ],
+          ),
         ),
         title: Text(
           '@$username',
@@ -2016,14 +2029,8 @@ class _TuciWalletSheet extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Ödeme altyapısı yakında aktif edilecek. Şimdilik hediye bakiyenizi kullanabilirsiniz!'),
-                    backgroundColor: Color(0xFFB8860B),
-                    behavior: SnackBarBehavior.floating,
-                    duration: Duration(seconds: 4),
-                  ),
-                );
+                final uri = Uri.parse('https://www.teqlif.com/user_panel.html');
+                launchUrl(uri, mode: LaunchMode.externalApplication);
               },
               icon: const Icon(Icons.add_rounded),
               label: const Text('TUCi Satın Al'),
@@ -2035,6 +2042,296 @@ class _TuciWalletSheet extends StatelessWidget {
                 textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 elevation: 0,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Tam Cüzdan Ekranı ────────────────────────────────────────────────────────
+
+class WalletScreen extends StatefulWidget {
+  final int? initialBalance;
+  final List<dynamic> initialHistory;
+
+  const WalletScreen({
+    super.key,
+    this.initialBalance,
+    this.initialHistory = const [],
+  });
+
+  @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends State<WalletScreen> {
+  int? _balance;
+  List<dynamic> _txns = [];
+  bool _loading = false;
+
+  static const _typeLabels = {
+    'airdrop':        'Hoş geldin hediyesi',
+    'spend_lead_gen': 'Sıcak Talep blast',
+    'spend_ai':       'Yapay Zeka fiyatlama',
+    'web_topup':      'Web yükleme',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _balance = widget.initialBalance;
+    _txns = List.from(widget.initialHistory);
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final data = await WalletService.getBalance(limit: 50);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (data != null) {
+        _balance = data['balance'] as int?;
+        _txns = data['transactions'] as List? ?? [];
+      }
+    });
+  }
+
+  // Harcama özeti: spend_* türlerini topla
+  Map<String, int> get _spendingSummary {
+    final map = <String, int>{};
+    for (final t in _txns) {
+      final type = t['transaction_type'] as String? ?? '';
+      final amount = (t['amount'] as int? ?? 0).abs();
+      if (type.startsWith('spend_')) {
+        map[type] = (map[type] ?? 0) + amount;
+      }
+    }
+    return map;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = _spendingSummary;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('TUCi Cüzdanım', style: TextStyle(fontWeight: FontWeight.w700)),
+        surfaceTintColor: Colors.transparent,
+        actions: [
+          IconButton(
+            icon: _loading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.refresh_rounded),
+            onPressed: _loading ? null : _load,
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+          children: [
+            const SizedBox(height: 16),
+
+            // ── Bakiye kartı ──────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFFFA500)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFFD700).withValues(alpha: 0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const Text('Güncel Bakiye',
+                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Text(
+                    _balance != null ? '$_balance TUCi' : '—',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 38,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: .5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ── Harcama özeti ─────────────────────────────────────────
+            if (summary.isNotEmpty) ...[
+              const Text('Harcama Özeti',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              const SizedBox(height: 10),
+              ...summary.entries.map((e) => _SummaryRow(
+                    label: _typeLabels[e.key] ?? e.key,
+                    amount: e.value,
+                  )),
+              const SizedBox(height: 20),
+            ],
+
+            // ── İşlem geçmişi ─────────────────────────────────────────
+            if (_txns.isNotEmpty) ...[
+              const Text('İşlem Geçmişi',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              const SizedBox(height: 10),
+              ..._txns.map((t) {
+                final amount = t['amount'] as int? ?? 0;
+                final label = _typeLabels[t['transaction_type']] ??
+                    (t['label'] as String? ?? '');
+                final isPos = amount > 0;
+                final dateStr = t['created_at'] as String? ?? '';
+                String formattedDate = '';
+                try {
+                  final d = DateTime.parse(dateStr).toLocal();
+                  formattedDate =
+                      '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}  ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+                } catch (_) {}
+                return _TxnRow(
+                  label: label,
+                  amount: amount,
+                  isPositive: isPos,
+                  date: formattedDate,
+                );
+              }),
+              const SizedBox(height: 24),
+            ] else if (!_loading) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Text('Henüz işlem yok.',
+                    style: TextStyle(color: Colors.grey)),
+              ),
+            ],
+
+            // ── Satın Al butonu ───────────────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  final uri = Uri.parse('https://www.teqlif.com/user_panel.html');
+                  launchUrl(uri, mode: LaunchMode.externalApplication);
+                },
+                icon: const Icon(Icons.open_in_browser_rounded),
+                label: const Text('Web\'den TUCi Yükle'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFD700),
+                  foregroundColor: Colors.black87,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  textStyle: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 15),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  final String label;
+  final int amount;
+  const _SummaryRow({required this.label, required this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Container(
+            width: 8, height: 8,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFD700),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(label,
+                style: const TextStyle(fontSize: 13, color: Colors.black87)),
+          ),
+          Text('$amount TUCi',
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFB8860B))),
+        ],
+      ),
+    );
+  }
+}
+
+class _TxnRow extends StatelessWidget {
+  final String label;
+  final int amount;
+  final bool isPositive;
+  final String date;
+  const _TxnRow(
+      {required this.label,
+      required this.amount,
+      required this.isPositive,
+      required this.date});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: isPositive ? Colors.green.shade50 : Colors.red.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isPositive ? Icons.add_rounded : Icons.remove_rounded,
+              color: isPositive ? Colors.green : Colors.red,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500)),
+                if (date.isNotEmpty)
+                  Text(date,
+                      style:
+                          const TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+          ),
+          Text(
+            '${isPositive ? '+' : ''}$amount TUCi',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
             ),
           ),
         ],

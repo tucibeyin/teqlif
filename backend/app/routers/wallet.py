@@ -54,14 +54,16 @@ async def topup_manual(
 
 @router.get("/balance")
 async def get_balance(
+    limit: int = 5,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    limit = max(1, min(limit, 100))
     result = await db.execute(
         select(TuciTransaction)
         .where(TuciTransaction.user_id == current_user.id)
         .order_by(desc(TuciTransaction.created_at))
-        .limit(5)
+        .limit(limit)
     )
     txns = result.scalars().all()
     return {

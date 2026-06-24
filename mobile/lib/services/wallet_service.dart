@@ -4,12 +4,12 @@ import '../config/api.dart';
 import '../services/storage_service.dart';
 
 class WalletService {
-  static Future<Map<String, dynamic>?> getBalance() async {
+  static Future<Map<String, dynamic>?> getBalance({int limit = 5}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/wallet/balance'),
+        Uri.parse('$kBaseUrl/wallet/balance?limit=$limit'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {

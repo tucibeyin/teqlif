@@ -672,6 +672,33 @@
             stroke-linejoin: round;
         }
 
+        /* ── Wallet icon button ───────────────────────────────────────── */
+        .btn-wallet {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            padding: 4px 6px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: var(--text-muted, #6b7280);
+            transition: background 0.15s, color 0.15s;
+            min-width: 36px;
+        }
+        .btn-wallet:hover { background: #fefce8; color: #B8860B; }
+        .btn-wallet svg {
+            width: 22px; height: 22px;
+            fill: none; stroke: currentColor;
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+        }
+        .btn-wallet-amount {
+            font-size: .58rem;
+            font-weight: 700;
+            color: #B8860B;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
         /* ── Edit profile modal ───────────────────────────────────────── */
         .ep-backdrop {
             display: none;
@@ -881,7 +908,7 @@
 
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
-    <script src="/static/js/profil-page.js?v=5"></script>
+    <script src="/static/js/profil-page.js?v=6"></script>
 </body>
 
 </html>
