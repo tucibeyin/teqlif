@@ -65,6 +65,7 @@
             renderProfile(user, isOwn, isFollowing, loggedIn, isBlocked);
             loadListings(user.id);
             loadRatingSummary(user.id);
+            if (isOwn) loadWalletBadge();
         } catch (e) {
             inner.innerHTML = `<div class="profile-not-found"><p>Kullanıcı bulunamadı.</p></div>`;
         }
@@ -705,6 +706,19 @@
             closeEditProfileModal(null);
         }
     });
+
+    async function loadWalletBadge() {
+        const badge = document.getElementById('walletAmountBadge');
+        if (!badge || !Auth.getToken()) return;
+        try {
+            const res = await fetch('/api/wallet/balance', {
+                headers: { 'Authorization': 'Bearer ' + Auth.getToken() },
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            badge.textContent = data.balance + ' T';
+        } catch (_) {}
+    }
 
     loadProfile();
 
