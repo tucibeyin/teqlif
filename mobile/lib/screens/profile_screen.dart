@@ -24,6 +24,7 @@ import '../utils/error_helper.dart';
 import '../widgets/shimmer_loading.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
+import 'feed_stats_screen.dart';
 import 'market_trends_screen.dart';
 import 'pro_insights_screen.dart';
 import 'notification_settings_screen.dart';
@@ -916,6 +917,18 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     passCtrl.dispose();
   }
 
+  Widget _proBadge() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFB800),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: const Text(
+          'PRO',
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -961,17 +974,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 label: 'Pro Analitik Paneli',
                 trailing: widget.user?['is_premium'] == true
                     ? null
-                    : Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFB800),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'PRO',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
-                        ),
-                      ),
+                    : _proBadge(),
                 onTap: () {
                   if (widget.user?['is_premium'] == true) {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()));
@@ -981,6 +984,19 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     ));
                   }
                 },
+              ),
+              _SettingsTile(
+                icon: Icons.bar_chart_outlined,
+                label: 'Feed Performansı',
+                trailing: widget.user?['is_premium'] == true ? null : _proBadge(),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FeedStatsScreen(
+                      isPremium: widget.user?['is_premium'] == true,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
