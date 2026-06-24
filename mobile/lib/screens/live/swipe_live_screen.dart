@@ -130,7 +130,15 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
           items.add(_ListingItem(listings[listIdx++]));
         }
       }
-      if (mounted) setState(() => _feed = items);
+      if (mounted) {
+        setState(() => _feed = items);
+        // iOS BouncingScrollPhysics feed değişiminde kayabilir — frame sonrası yerine kilitle
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _pageCtrl.hasClients) {
+            _pageCtrl.jumpToPage(_currentPage);
+          }
+        });
+      }
     } catch (_) {
       // Listing video yükleme başarısız olursa feed aynen devam eder
     }
@@ -144,6 +152,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       body: PageView.builder(
         controller: _pageCtrl,
         scrollDirection: Axis.vertical,
+        physics: const PageScrollPhysics(), // iOS BouncingScrollPhysics'i devre dışı bırakır
         onPageChanged: (i) => setState(() => _currentPage = i),
         itemCount: _feed.length,
         itemBuilder: (_, i) {
