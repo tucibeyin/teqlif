@@ -7,6 +7,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/stream.dart';
+import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
 import '../services/stream_service.dart';
 import 'public_profile_screen.dart';
@@ -200,9 +201,13 @@ class _SearchScreenState extends State<SearchScreen> {
         return;
       }
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final listingResults = (data['listings'] as List).cast<Map<String, dynamic>>();
+      final resultCount = listingResults.length +
+          (data['users'] as List).length +
+          (data['streams'] as List).length;
       setState(() {
         _userResults = (data['users'] as List).cast<Map<String, dynamic>>();
-        _listingResults = (data['listings'] as List).cast<Map<String, dynamic>>();
+        _listingResults = listingResults;
         _streamResults = (data['streams'] as List)
             .map((s) => StreamOut.fromJson(s as Map<String, dynamic>))
             .toList();
@@ -210,6 +215,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _showAllUsers = false;
         _searching = false;
       });
+      AnalyticsService.trackSearch(query: q, resultCount: resultCount);
     } catch (_) {
       if (mounted && myToken == _searchToken) setState(() => _searching = false);
     }

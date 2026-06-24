@@ -42,7 +42,9 @@ class _LiveItem extends _FeedItem {
 
 class _ListingItem extends _FeedItem {
   final Map<String, dynamic> listing;
-  const _ListingItem(this.listing);
+  final int slotIndex;
+  final String streamCategory;
+  const _ListingItem(this.listing, {this.slotIndex = 0, this.streamCategory = ''});
 }
 
 // ── SwipeLiveScreen ──────────────────────────────────────────────────────────
@@ -125,7 +127,14 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     final isListingSlot = posInGroup == _livePerListing;
 
     if (isListingSlot && _listingPool.isNotEmpty) {
-      return _ListingItem(_listingPool[group % _listingPool.length]);
+      // Önceki live stream'in kategorisini context olarak al
+      final prevLiveIdx = (group * _livePerListing) % _liveItems.length;
+      final prevCategory = _liveItems[prevLiveIdx].category;
+      return _ListingItem(
+        _listingPool[group % _listingPool.length],
+        slotIndex: pageIndex,
+        streamCategory: prevCategory,
+      );
     } else {
       final livePos = isListingSlot ? 0 : posInGroup;
       final liveIdx = (group * _livePerListing + livePos) % _liveItems.length;
@@ -189,10 +198,13 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 isActive: i == _currentPage,
                 isLast: false,
               ),
-            _ListingItem(:final listing) => _ListingVideoPage(
+            _ListingItem(:final listing, :final slotIndex, :final streamCategory) =>
+              _ListingVideoPage(
                 key: ValueKey('listing_${listing['id']}_$i'),
                 listing: listing,
                 isActive: i == _currentPage,
+                slotIndex: slotIndex,
+                streamCategory: streamCategory,
               ),
           };
         },
@@ -1242,11 +1254,15 @@ class _GiftSheetState extends State<_GiftSheet> {
 class _ListingVideoPage extends StatefulWidget {
   final Map<String, dynamic> listing;
   final bool isActive;
+  final int slotIndex;
+  final String streamCategory;
 
   const _ListingVideoPage({
     super.key,
     required this.listing,
     required this.isActive,
+    this.slotIndex = 0,
+    this.streamCategory = '',
   });
 
   @override
@@ -1272,10 +1288,15 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
     _eventLogged = true;
     final ms = _stopwatch.elapsedMilliseconds;
     final lid = (widget.listing['id'] ?? '').toString();
+    final hasVideo = (widget.listing['video_url'] as String?) != null &&
+        (widget.listing['video_url'] as String).isNotEmpty;
     FeedTelemetryService.instance.logEvent(
       listingId: lid,
       eventType: ms < 2000 ? 'skip' : 'impression',
       dwellTimeMs: ms,
+      contentType: hasVideo ? 'video' : 'photo',
+      slotIndex: widget.slotIndex,
+      streamCategory: widget.streamCategory,
     );
   }
 
@@ -1321,10 +1342,15 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
   }
 
   void _goToListing() {
+    final hasVideo = (widget.listing['video_url'] as String?) != null &&
+        (widget.listing['video_url'] as String).isNotEmpty;
     FeedTelemetryService.instance.logEvent(
       listingId: (widget.listing['id'] ?? '').toString(),
       eventType: 'click',
       dwellTimeMs: _stopwatch.elapsedMilliseconds,
+      contentType: hasVideo ? 'video' : 'photo',
+      slotIndex: widget.slotIndex,
+      streamCategory: widget.streamCategory,
     );
     Navigator.push(
       context,

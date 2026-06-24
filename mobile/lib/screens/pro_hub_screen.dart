@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../services/analytics_service.dart';
+import 'demand_radar_screen.dart';
 import 'feed_stats_screen.dart';
+import 'gallery_stats_screen.dart';
 import 'market_trends_screen.dart';
 import 'pro_insights_screen.dart';
+import 'video_performance_screen.dart';
+import 'video_roi_screen.dart';
 
 class ProHubScreen extends StatefulWidget {
   final bool isPremium;
@@ -88,12 +92,56 @@ class _ProHubScreenState extends State<ProHubScreen> {
             icon: Icons.bar_chart_outlined,
             iconColor: const Color(0xFFF59E0B),
             title: 'Feed Performansı',
-            description: 'Video ilanlarınızın izlenme, CTR ve dwell süresi',
+            description: 'İlanlarınızın izlenme, CTR ve dwell süresi',
             isPremium: isPremium,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => FeedStatsScreen(isPremium: isPremium)),
             ),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.play_circle_outline,
+            iconColor: const Color(0xFF6366F1),
+            title: 'Video ROI',
+            description: 'Video vs fotoğraf ilan CTR karşılaştırması',
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => VideoRoiScreen(isPremium: isPremium)))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.photo_library_outlined,
+            iconColor: const Color(0xFFEC4899),
+            title: 'Galeri Analizi',
+            description: 'Kullanıcılar kaç fotoğrafınıza bakıyor?',
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => GalleryStatsScreen(isPremium: isPremium)))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.videocam_outlined,
+            iconColor: const Color(0xFFEF4444),
+            title: 'Video Performansı',
+            description: 'Video tamamlanma oranı ve tam izlenme yüzdesi',
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPerformanceScreen(isPremium: isPremium)))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.radar_outlined,
+            iconColor: const Color(0xFFF59E0B),
+            title: 'Talep Radar',
+            description: 'Platform\'da en çok aranan ürünler ve kategoriler',
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => DemandRadarScreen(isPremium: isPremium)))
+                : () => _showUpgrade(context),
           ),
 
           // ── Blast Kredi Kartı ──────────────────────────────────────────────

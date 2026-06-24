@@ -44,11 +44,17 @@ class FeedTelemetryService with WidgetsBindingObserver {
     required String listingId,
     required String eventType,
     required int dwellTimeMs,
+    String contentType = 'video',
+    int slotIndex = 0,
+    String streamCategory = '',
   }) {
     _eventQueue.add({
       'listing_id': listingId,
       'event_type': eventType,
       'dwell_time_ms': dwellTimeMs,
+      'content_type': contentType,
+      'slot_index': slotIndex,
+      'stream_category': streamCategory,
     });
     if (_eventQueue.length >= _flushThreshold) {
       flush();

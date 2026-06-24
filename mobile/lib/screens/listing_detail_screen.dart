@@ -61,6 +61,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   // Dwell süresi ölçümü
   late final DateTime _enteredAt;
 
+  // Galeri + video analytics
+  int _maxPhotoReached = 0;
+
   @override
   void initState() {
     super.initState();
@@ -280,6 +283,31 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         durationSeconds: durationSec,
         pricePoint: pricePoint,
       );
+    }
+    // Photo swipe depth
+    if (listingId != null && _maxPhotoReached > 0) {
+      AnalyticsService.logInteraction(
+        itemId: listingId,
+        itemType: 'listing',
+        interactionType: 'listing_photo_swipe',
+        durationSeconds: _maxPhotoReached.toDouble(),
+      );
+    }
+    // Video completion
+    if (listingId != null && _videoCtrl != null && _videoInitialized) {
+      final dur = _videoCtrl!.value.duration.inMilliseconds;
+      if (dur > 0) {
+        final pos = _videoCtrl!.value.position.inMilliseconds;
+        final pct = (pos / dur).clamp(0.0, 1.0);
+        if (pct > 0.01) {
+          AnalyticsService.logInteraction(
+            itemId: listingId,
+            itemType: 'listing',
+            interactionType: 'listing_video_watch',
+            durationSeconds: pct,
+          );
+        }
+      }
     }
     _heartAnimCtrl?.stop();
     _heartAnimCtrl?.dispose();
@@ -1193,6 +1221,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             onPageChanged: (i) {
               setState(() => _currentImg = i);
               if (hasVideo && i != 0) _videoCtrl?.pause();
+              if (i > _maxPhotoReached) _maxPhotoReached = i;
             },
             itemBuilder: (context, i) {
               if (hasVideo && i == 0) {

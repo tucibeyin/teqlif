@@ -15,7 +15,7 @@ from app.models.purchase import Purchase
 from app.models.stream import LiveStream
 from app.models.tuci_transaction import TuciTransaction
 from app.models.user import User
-from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch
+from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch, SearchEventCreate
 from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
 from app.database_clickhouse import get_clickhouse_client
@@ -954,7 +954,8 @@ async def ingest_feed_events(
     uid = str(current_user.id)
 
     rows = [
-        [now, uid, e.listing_id, e.event_type, e.dwell_time_ms]
+        [now, uid, e.listing_id, e.event_type, e.dwell_time_ms,
+         e.content_type, e.slot_index, e.stream_category]
         for e in batch.events
     ]
 
@@ -962,7 +963,8 @@ async def ingest_feed_events(
         await ch.insert(
             "feed_analytics",
             rows,
-            column_names=["timestamp", "user_id", "listing_id", "event_type", "dwell_time_ms"],
+            column_names=["timestamp", "user_id", "listing_id", "event_type", "dwell_time_ms",
+                          "content_type", "slot_index", "stream_category"],
         )
         logger.debug("[feed-events] %d olay yazıldı | user_id=%s", len(rows), uid)
     except Exception as exc:
@@ -1046,3 +1048,301 @@ async def my_feed_stats(
             "avg_dwell_ms": round(sum(s["avg_dwell_ms"] for s in stats) / len(stats)) if stats else 0,
         },
     }
+
+
+# ── Arama Olayı Kayıt ─────────────────────────────────────────────────────────
+
+@router.post("/track-search", status_code=204)
+async def track_search(
+    body: SearchEventCreate,
+    request: Request,
+):
+    """Arama sorgularını search_events tablosuna yazar (Talep Radar için)."""
+    user_id = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            user_id = decode_token(auth_header.split(" ")[1])
+        except Exception:
+            pass
+
+    try:
+        from datetime import datetime, timezone
+        ch = await get_clickhouse_client()
+        now = datetime.now(timezone.utc)
+        await ch.insert(
+            "search_events",
+            [[now, user_id, body.query.strip(), body.category, body.result_count]],
+            column_names=["timestamp", "user_id", "query", "category", "result_count"],
+        )
+    except Exception as exc:
+        logger.warning("[track-search] ClickHouse insert başarısız: %s", exc)
+
+
+# ── Video ROI (video vs fotoğraf CTR) ─────────────────────────────────────────
+
+@router.get("/video-roi")
+async def video_roi(
+    days: int = Query(default=30, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Pro: Kullanıcının video ilanları ile fotoğraf ilanlarının CTR karşılaştırması.
+    content_type='video' vs 'photo' segmentinde impression/click/CTR ayrımı.
+    """
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+
+    result = await db.execute(
+        select(Listing.id, Listing.title, Listing.video_url).where(
+            Listing.user_id == current_user.id,
+            Listing.is_deleted == False,  # noqa: E712
+        )
+    )
+    listings = result.fetchall()
+    if not listings:
+        return {"video": {}, "photo": {}, "by_listing": []}
+
+    listing_map = {str(r.id): {"title": r.title, "has_video": bool(r.video_url)} for r in listings}
+    listing_ids = list(listing_map.keys())
+
+    try:
+        ch = await get_clickhouse_client()
+        placeholders = ", ".join(f"'{lid}'" for lid in listing_ids)
+        rows = await ch.query(f"""
+            SELECT
+                content_type,
+                countIf(event_type = 'impression')                            AS impressions,
+                countIf(event_type = 'click')                                 AS clicks,
+                if(impressions > 0, round(clicks / impressions * 100, 1), 0) AS ctr,
+                round(avgIf(dwell_time_ms, event_type IN ('impression','skip')), 0) AS avg_dwell_ms
+            FROM feed_analytics
+            WHERE timestamp >= now() - INTERVAL {days} DAY
+              AND listing_id IN ({placeholders})
+            GROUP BY content_type
+        """)
+        segment: dict[str, dict] = {}
+        for row in rows.result_rows:
+            ct, imp, clk, ctr, dwell = row
+            segment[ct] = {"impressions": imp, "clicks": clk, "ctr": float(ctr), "avg_dwell_ms": int(dwell)}
+
+        per_listing = await ch.query(f"""
+            SELECT
+                listing_id,
+                content_type,
+                countIf(event_type = 'impression')                            AS impressions,
+                countIf(event_type = 'click')                                 AS clicks,
+                if(impressions > 0, round(clicks / impressions * 100, 1), 0) AS ctr
+            FROM feed_analytics
+            WHERE timestamp >= now() - INTERVAL {days} DAY
+              AND listing_id IN ({placeholders})
+            GROUP BY listing_id, content_type
+            ORDER BY impressions DESC
+            LIMIT 20
+        """)
+        by_listing = []
+        for row in per_listing.result_rows:
+            lid, ct, imp, clk, ctr = row
+            info = listing_map.get(lid, {})
+            by_listing.append({
+                "listing_id": lid,
+                "title": info.get("title", "—"),
+                "content_type": ct,
+                "impressions": imp,
+                "clicks": clk,
+                "ctr": float(ctr),
+            })
+    except Exception as exc:
+        logger.error("[video-roi] ClickHouse sorgu hatası: %s", exc, exc_info=True)
+        return {"video": {}, "photo": {}, "by_listing": []}
+
+    return {
+        "video": segment.get("video", {"impressions": 0, "clicks": 0, "ctr": 0.0, "avg_dwell_ms": 0}),
+        "photo": segment.get("photo", {"impressions": 0, "clicks": 0, "ctr": 0.0, "avg_dwell_ms": 0}),
+        "by_listing": by_listing,
+    }
+
+
+# ── Galeri Analizi (fotoğraf swipe derinliği) ─────────────────────────────────
+
+@router.get("/gallery-stats")
+async def gallery_stats(
+    days: int = Query(default=30, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Pro: İlan galerisinde kullanıcıların kaç fotoğrafa kadar ilerlediği.
+    user_events tablosundaki listing_photo_swipe olayları kullanılır;
+    duration_seconds alanı max_page_reached değerini taşır.
+    """
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+
+    result = await db.execute(
+        select(Listing.id, Listing.title).where(
+            Listing.user_id == current_user.id,
+            Listing.is_deleted == False,  # noqa: E712
+        )
+    )
+    listings = result.fetchall()
+    if not listings:
+        return {"stats": []}
+
+    listing_map = {r.id: r.title for r in listings}
+    listing_ids = [r.id for r in listings]
+
+    try:
+        ch = await get_clickhouse_client()
+        ids_str = ", ".join(str(i) for i in listing_ids)
+        rows = await ch.query(f"""
+            SELECT
+                item_id,
+                COUNT(*)                                  AS views,
+                round(avg(duration_seconds), 1)           AS avg_swipe_depth,
+                max(duration_seconds)                     AS max_swipe_depth
+            FROM user_events
+            WHERE item_type = 'listing'
+              AND event_type = 'listing_photo_swipe'
+              AND item_id IN ({ids_str})
+              AND timestamp >= now() - INTERVAL {days} DAY
+            GROUP BY item_id
+            ORDER BY avg_swipe_depth DESC
+            LIMIT 20
+        """)
+        stats = []
+        for row in rows.result_rows:
+            lid, views, avg_depth, max_depth = row
+            stats.append({
+                "listing_id": lid,
+                "title": listing_map.get(int(lid), "—"),
+                "views": int(views),
+                "avg_swipe_depth": float(avg_depth or 0),
+                "max_swipe_depth": int(max_depth or 0),
+            })
+    except Exception as exc:
+        logger.error("[gallery-stats] ClickHouse sorgu hatası: %s", exc, exc_info=True)
+        return {"stats": []}
+
+    return {"stats": stats}
+
+
+# ── Video Performansı (tamamlanma oranı) ──────────────────────────────────────
+
+@router.get("/video-performance")
+async def video_performance(
+    days: int = Query(default=30, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Pro: İlan videolarının ortalama tamamlanma yüzdesi ve tam izlenme oranı.
+    user_events tablosundaki listing_video_watch olayları kullanılır;
+    duration_seconds alanı watch_pct (0.0–1.0) değerini taşır.
+    """
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+
+    result = await db.execute(
+        select(Listing.id, Listing.title).where(
+            Listing.user_id == current_user.id,
+            Listing.is_deleted == False,  # noqa: E712
+            Listing.video_url.isnot(None),
+        )
+    )
+    listings = result.fetchall()
+    if not listings:
+        return {"stats": []}
+
+    listing_map = {r.id: r.title for r in listings}
+    listing_ids = [r.id for r in listings]
+
+    try:
+        ch = await get_clickhouse_client()
+        ids_str = ", ".join(str(i) for i in listing_ids)
+        rows = await ch.query(f"""
+            SELECT
+                item_id,
+                COUNT(*)                                              AS play_count,
+                round(avg(duration_seconds) * 100, 1)                AS avg_completion_pct,
+                countIf(duration_seconds >= 0.8) / COUNT(*) * 100    AS full_watch_rate
+            FROM user_events
+            WHERE item_type = 'listing'
+              AND event_type = 'listing_video_watch'
+              AND item_id IN ({ids_str})
+              AND timestamp >= now() - INTERVAL {days} DAY
+            GROUP BY item_id
+            ORDER BY avg_completion_pct DESC
+            LIMIT 20
+        """)
+        stats = []
+        for row in rows.result_rows:
+            lid, plays, avg_pct, full_rate = row
+            stats.append({
+                "listing_id": lid,
+                "title": listing_map.get(int(lid), "—"),
+                "play_count": int(plays),
+                "avg_completion_pct": float(avg_pct or 0),
+                "full_watch_rate_pct": round(float(full_rate or 0), 1),
+            })
+    except Exception as exc:
+        logger.error("[video-performance] ClickHouse sorgu hatası: %s", exc, exc_info=True)
+        return {"stats": []}
+
+    return {"stats": stats}
+
+
+# ── Talep Radar (arama trendleri) ─────────────────────────────────────────────
+
+@router.get("/demand-radar")
+async def demand_radar(
+    days: int = Query(default=7, ge=1, le=30),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Pro: Platform genelindeki arama trendleri.
+    En çok aranan kelimeler ve kategori bazlı arama hacmi.
+    """
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+
+    try:
+        ch = await get_clickhouse_client()
+
+        top_queries = await ch.query(f"""
+            SELECT query, COUNT(*) AS cnt
+            FROM search_events
+            WHERE timestamp >= now() - INTERVAL {days} DAY
+              AND length(query) >= 2
+            GROUP BY query
+            ORDER BY cnt DESC
+            LIMIT 20
+        """)
+
+        by_category = await ch.query(f"""
+            SELECT category, COUNT(*) AS cnt
+            FROM search_events
+            WHERE timestamp >= now() - INTERVAL {days} DAY
+              AND category != ''
+            GROUP BY category
+            ORDER BY cnt DESC
+            LIMIT 10
+        """)
+
+        daily_volume = await ch.query(f"""
+            SELECT toDate(timestamp) AS day, COUNT(*) AS cnt
+            FROM search_events
+            WHERE timestamp >= now() - INTERVAL {days} DAY
+            GROUP BY day
+            ORDER BY day
+        """)
+
+        return {
+            "top_queries": [{"query": r[0], "count": int(r[1])} for r in top_queries.result_rows],
+            "by_category": [{"category": r[0] or "diğer", "count": int(r[1])} for r in by_category.result_rows],
+            "daily_volume": [{"day": str(r[0]), "count": int(r[1])} for r in daily_volume.result_rows],
+        }
+    except Exception as exc:
+        logger.error("[demand-radar] ClickHouse sorgu hatası: %s", exc, exc_info=True)
+        return {"top_queries": [], "by_category": [], "daily_volume": []}

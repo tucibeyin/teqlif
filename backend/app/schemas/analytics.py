@@ -15,7 +15,16 @@ class FeedEventCreate(BaseModel):
     listing_id: str = Field(..., max_length=64)
     event_type: Literal["skip", "impression", "click"]
     dwell_time_ms: int = Field(default=0, ge=0)
+    content_type: Literal["video", "photo"] = "video"
+    slot_index: int = Field(default=0, ge=0)
+    stream_category: str = Field(default="", max_length=64)
 
 
 class FeedEventBatch(BaseModel):
     events: List[FeedEventCreate] = Field(..., max_length=500)
+
+
+class SearchEventCreate(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500)
+    category: str = Field(default="", max_length=64)
+    result_count: int = Field(default=0, ge=0)

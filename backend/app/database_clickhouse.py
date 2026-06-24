@@ -42,15 +42,38 @@ SETTINGS index_granularity = 8192
 _CREATE_FEED_ANALYTICS_TABLE = """
 CREATE TABLE IF NOT EXISTS feed_analytics
 (
-    timestamp      DateTime,
-    user_id        String,
-    listing_id     String,
-    event_type     LowCardinality(String),
-    dwell_time_ms  UInt32
+    timestamp        DateTime,
+    user_id          String,
+    listing_id       String,
+    event_type       LowCardinality(String),
+    dwell_time_ms    UInt32,
+    content_type     LowCardinality(String) DEFAULT '',
+    slot_index       UInt32 DEFAULT 0,
+    stream_category  LowCardinality(String) DEFAULT ''
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (listing_id, event_type, timestamp)
+"""
+
+_ALTER_FEED_ANALYTICS = [
+    "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS content_type LowCardinality(String) DEFAULT ''",
+    "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS slot_index UInt32 DEFAULT 0",
+    "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS stream_category LowCardinality(String) DEFAULT ''",
+]
+
+_CREATE_SEARCH_EVENTS_TABLE = """
+CREATE TABLE IF NOT EXISTS search_events
+(
+    timestamp    DateTime,
+    user_id      Nullable(UInt32),
+    query        String,
+    category     LowCardinality(String) DEFAULT '',
+    result_count UInt32 DEFAULT 0
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(timestamp)
+ORDER BY (category, timestamp)
 """
 
 
@@ -89,6 +112,9 @@ async def init_clickhouse() -> None:
         )
         await _client.command(_CREATE_USER_EVENTS_TABLE)
         await _client.command(_CREATE_FEED_ANALYTICS_TABLE)
+        for stmt in _ALTER_FEED_ANALYTICS:
+            await _client.command(stmt)
+        await _client.command(_CREATE_SEARCH_EVENTS_TABLE)
         logger.info("[ClickHouse] Bağlantı kuruldu, tablolar hazır.")
     except Exception as exc:
         logger.warning(

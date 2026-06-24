@@ -262,6 +262,32 @@ class AnalyticsService {
     } catch (_) {}
   }
 
+  /// Arama sorgusu → `/api/analytics/track-search`. Fire-and-forget.
+  static Future<void> trackSearch({
+    required String query,
+    String category = '',
+    int resultCount = 0,
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+      http
+          .post(
+            Uri.parse('$kBaseUrl/analytics/track-search'),
+            headers: headers,
+            body: jsonEncode({
+              'query': query,
+              'category': category,
+              'result_count': resultCount,
+            }),
+          )
+          .catchError((_) => http.Response('', 500));
+    } catch (_) {}
+  }
+
   static Future<Map<String, dynamic>?> getCampaignReport(int campaignId) async {
     try {
       final token = await StorageService.getToken();
@@ -311,6 +337,58 @@ class AnalyticsService {
           )
           .catchError((_) => http.Response('', 500));
     } catch (_) {}
+  }
+
+  static Future<Map<String, dynamic>?> getVideoRoi({int days = 30}) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/video-roi?days=$days'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> getGalleryStats({int days = 30}) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/gallery-stats?days=$days'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> getVideoPerformance({int days = 30}) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/video-performance?days=$days'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> getDemandRadar({int days = 7}) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/demand-radar?days=$days'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
   }
 
   static Future<void> trackEvent(String eventType, [Map<String, dynamic>? metadata]) async {
