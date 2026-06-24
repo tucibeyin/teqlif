@@ -5,28 +5,56 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.security.validation import SQLInjectionProtection, SecureInputValidator
 from app.security.logging import SecurityLogger, RequestSanitizer
 from app.security.middleware import is_ip_blocked
+from app.utils.redis_client import get_redis
 
 security_logger = SecurityLogger()
+
+_RL_WINDOW  = 60     # saniye
+_RL_LIMIT   = 120    # istek/pencere — aşınca auto-ban
+_RL_BAN_TTL = 86400  # 24 saat
 
 
 class InputSanitizationMiddleware(BaseHTTPMiddleware):
     """Middleware to sanitize and validate all inputs"""
-    
+
     async def dispatch(self, request: Request, call_next):
         # Skip for static files
         if request.url.path.startswith('/static'):
             return await call_next(request)
-        
+
+        # Skip health check (uptime monitors)
+        if request.url.path == '/api/health':
+            return await call_next(request)
+
         # Get client IP
         client_ip = RequestSanitizer.get_client_ip(request)
-        
+
         # Check if IP is blocked
         if await is_ip_blocked(client_ip):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Your IP has been temporarily blocked"
             )
-        
+
+        # Redis rate limiter — 120 istek/dakika aşılırsa 24 saat auto-ban
+        try:
+            redis = await get_redis()
+            rl_key = f"rl:{client_ip}"
+            count = await redis.incr(rl_key)
+            if count == 1:
+                await redis.expire(rl_key, _RL_WINDOW)
+            if count > _RL_LIMIT:
+                await redis.setex(f"blocked:{client_ip}", _RL_BAN_TTL, "1")
+                security_logger.injection_attempt(client_ip, f"rate_limit:{count}req/min")
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Too many requests"
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # Redis geçici olarak erişilemezse isteği geçir
+
         # Check for SQL injection in query params
         for key, value in request.query_params.items():
             if SQLInjectionProtection.has_sql(str(value)):
@@ -35,7 +63,7 @@ class InputSanitizationMiddleware(BaseHTTPMiddleware):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid input detected"
                 )
-        
+
         # Process request
         response = await call_next(request)
         return response
