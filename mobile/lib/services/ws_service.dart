@@ -34,6 +34,7 @@ class WsService {
   static Timer? _pingTimer;
   static Timer? _reconnectTimer;
   static bool _shouldStay = false;
+  static bool _connecting = false;
   static StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   // Lifecycle dinleyicisi tanımlamaları
@@ -120,8 +121,13 @@ class WsService {
   }
 
   static Future<void> _connect() async {
+    if (_connecting || _channel != null) return;
+    _connecting = true;
     final token = await StorageService.getToken();
-    if (token == null) return;
+    if (token == null || _channel != null) {
+      _connecting = false;
+      return;
+    }
 
     final wsBase = kBaseUrl
         .replaceFirst('https://', 'wss://')
@@ -164,8 +170,10 @@ class WsService {
 
       // Dinleyicilere "bağlandı" sinyali — DirectChatScreen kaçırılan mesajları çeker
       messageStream.add({'type': 'connected'});
+      _connecting = false;
       debugPrint('[WS] Bağlandı');
     } catch (_) {
+      _connecting = false;
       _channel = null;
       _scheduleReconnect();
     }
@@ -176,10 +184,14 @@ class WsService {
     _pingTimer?.cancel();
     _channelSub?.cancel();
     _channel = null;
+    _connecting = false;
     debugPrint('[WS] Bağlantı kesildi (code: $closeCode)');
     if (!_shouldStay) return;
     if (closeCode == 4001) {
       _refreshAndReconnect();
+    } else if (closeCode == 4008) {
+      // Sunucu session limitini aştı — 15 sn bekle, döngüden kaç
+      _scheduleReconnect(delay: const Duration(seconds: 15));
     } else {
       _scheduleReconnect();
     }
@@ -196,14 +208,14 @@ class WsService {
     }
   }
 
-  static void _scheduleReconnect() {
+  static void _scheduleReconnect({Duration delay = const Duration(seconds: 3)}) {
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 3), () async {
-      if (!_shouldStay) return;
+    _reconnectTimer = Timer(delay, () async {
+      if (!_shouldStay || _channel != null) return;
       final results = await Connectivity().checkConnectivity();
       if (results.contains(ConnectivityResult.none)) {
         debugPrint('[WS] (Bekleme) İnternet yok, bağlantı tetiklenmeyecek.');
-        return; // Dinleyici zaten geldiğinde _connect() çağıracak
+        return;
       }
       _connect();
     });

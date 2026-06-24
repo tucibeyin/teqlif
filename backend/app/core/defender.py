@@ -48,8 +48,8 @@ _GLOBAL_IP_LIMIT   = 300   # Bir dakikada IP başına max istek
 _GLOBAL_IP_WINDOW  = 60    # saniye — fixed-window boyutu
 _IP_BLOCK_TTL      = 600   # saniye (10 dk) — limit aşılınca blok süresi
 
-MAX_CONCURRENT_SESSIONS = 5  # Kullanıcı başına max eş zamanlı WS bağlantısı
-                               # (telefon + tablet + web = 3; 2 buffer)
+MAX_CONCURRENT_SESSIONS = 8  # Kullanıcı başına max eş zamanlı WS bağlantısı
+                               # (telefon + tablet + web = 3; 5 buffer)
 _SESSION_KEY_PREFIX = "sess:"
 _SESSION_TTL        = 7200  # 2 saat — zombie-bağlantı güvenlik ağı
 
