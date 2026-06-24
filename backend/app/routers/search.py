@@ -317,8 +317,8 @@ async def search_all(
         term = f"%{ts_q}%"
         prefix_q = _build_prefix_tsquery(ts_q)
         tsquery = func.to_tsquery("turkish", prefix_q) if prefix_q else None
-        rank = func.ts_rank(Listing.search_vector, tsquery) if tsquery else func.cast(0, func.Float)
-        fts_cond = Listing.search_vector.op("@@")(tsquery) if tsquery else False
+        rank = func.ts_rank(Listing.search_vector, tsquery) if tsquery is not None else func.cast(0, func.Float)
+        fts_cond = Listing.search_vector.op("@@")(tsquery) if tsquery is not None else False
         listing_q = (
             select(Listing, User, func.coalesce(rank, 0.0).label("rank"))
             .join(User, User.id == Listing.user_id)
