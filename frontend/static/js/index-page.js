@@ -141,25 +141,31 @@
         const wrapper = document.getElementById('storyTrayWrapper');
         const tray    = document.getElementById('storyTray');
 
-        const me      = Auth.getUser();
+        // ── Kendi hikayeleri + takip edilen gruplar + güncel profil (paralel) ─────
+        let myItems = [], groups = [], freshMe = null;
+        try {
+            [myItems, groups, freshMe] = await Promise.all([
+                apiFetch('/stories/mine').then(r => r?.items ?? []).catch(() => []),
+                apiFetch('/stories/following').then(r => Array.isArray(r) ? r : []).catch(() => []),
+                Auth.me().catch(() => null),
+            ]);
+        } catch (err) {
+            console.error('[StoryTray] Yükleme hatası:', err);
+            if (window.Sentry) Sentry.captureException(err);
+        }
+
+        // Güncel kullanıcı verisini localStorage'a yaz (profil fotosu değişmişse)
+        if (freshMe) {
+            try { localStorage.setItem('teqlif_user', JSON.stringify(freshMe)); } catch (_) {}
+        }
+
+        const me      = freshMe ?? Auth.getUser();
         const myName  = me?.username ?? '';
         const myInitial = myName.charAt(0).toUpperCase() || '?';
         const myPhotoRaw = me?.profile_image_thumb_url ?? me?.profile_image_url ?? null;
         const myPhotoUrl = myPhotoRaw
             ? (myPhotoRaw.startsWith('http') ? myPhotoRaw : '/api' + myPhotoRaw)
             : null;
-
-        // ── Kendi hikayeleri + takip edilen gruplar (paralel) ─────
-        let myItems = [], groups = [];
-        try {
-            [myItems, groups] = await Promise.all([
-                apiFetch('/stories/mine').then(r => r?.items ?? []).catch(() => []),
-                apiFetch('/stories/following').then(r => Array.isArray(r) ? r : []).catch(() => []),
-            ]);
-        } catch (err) {
-            console.error('[StoryTray] Yükleme hatası:', err);
-            if (window.Sentry) Sentry.captureException(err);
-        }
 
         const hasMyStories = myItems.length > 0;
 
