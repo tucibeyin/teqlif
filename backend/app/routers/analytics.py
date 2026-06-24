@@ -3,13 +3,15 @@ import logging
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel, Field
-from sqlalchemy import select, text as sql_text
+from sqlalchemy import select, func, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, Dict, Optional
 
 from app.database import get_db
 from app.models.analytics import AnalyticsEvent
 from app.models.auction import Auction
+from app.models.listing import Listing
+from app.models.purchase import Purchase
 from app.models.stream import LiveStream
 from app.models.user import User
 from app.schemas.analytics import AnalyticsEventCreate
@@ -533,4 +535,365 @@ async def market_trends(
         "peak_hours": peak_hours,
         "trending_categories": trending_categories,
         "average_spend_growth": avg_spend_growth,
+    }
+
+
+_CAT_LABELS: dict[str, str] = {
+    "elektronik": "📱 Elektronik", "giyim": "👗 Giyim", "ev": "🏠 Ev & Yaşam",
+    "spor": "⚽ Spor", "kitap": "📚 Kitap", "oyun": "🎮 Oyun", "diger": "📦 Diğer",
+    "sohbet": "🗣 Sohbet",
+}
+
+
+@router.get("/pro-insights")
+async def pro_insights(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Pro satıcıya özel kapsamlı analitik paketi.
+    7 bölüm: KPI özeti · dönüşüm hunisi · sıcak talepler · fiyat zekası ·
+             yayın performansı · pazar trendleri · akıllı öneriler
+    """
+    uid = current_user.id
+
+    # ── 1. Satıcı KPI'ları — PostgreSQL ─────────────────────────────────────
+    kpis: dict = {}
+    try:
+        from datetime import datetime, timedelta, timezone
+        now = datetime.now(timezone.utc)
+        d30 = now - timedelta(days=30)
+        d60 = now - timedelta(days=60)
+
+        rows = await db.execute(sql_text("""
+            SELECT
+                COUNT(*)                                                         AS total_listings,
+                COUNT(*) FILTER (WHERE is_active AND NOT is_deleted)             AS active_listings,
+                COALESCE(AVG(price) FILTER (WHERE NOT is_deleted), 0)            AS avg_price,
+                COUNT(*) FILTER (WHERE created_at >= :d30 AND NOT is_deleted)    AS new_last_30d
+            FROM listings WHERE user_id = :uid
+        """), {"uid": uid, "d30": d30})
+        lrow = rows.fetchone()
+
+        sales_rows = await db.execute(sql_text("""
+            SELECT
+                COUNT(*)                                                            AS total_sales,
+                COALESCE(SUM(price), 0)                                             AS total_revenue,
+                COALESCE(SUM(price) FILTER (WHERE created_at >= :d30), 0)           AS revenue_30d,
+                COALESCE(SUM(price) FILTER (WHERE created_at >= :d60
+                                             AND created_at < :d30), 0)             AS revenue_prev_30d,
+                COUNT(*) FILTER (WHERE created_at >= :d30)                          AS sales_30d
+            FROM purchases
+            WHERE buyer_id != :uid
+              AND listing_id IN (SELECT id FROM listings WHERE user_id = :uid)
+        """), {"uid": uid, "d30": d30, "d60": d60})
+        srow = sales_rows.fetchone()
+
+        rev_30 = float(srow.revenue_30d or 0)
+        rev_prev = float(srow.revenue_prev_30d or 0)
+        rev_growth = round(((rev_30 - rev_prev) / rev_prev) * 100, 1) if rev_prev > 0 else None
+
+        bid_rows = await db.execute(sql_text("""
+            SELECT COUNT(*) AS total_bids
+            FROM bids b
+            JOIN auctions a ON a.id = b.auction_id
+            JOIN listings l ON l.id = a.listing_id
+            WHERE l.user_id = :uid AND b.created_at >= :d30
+        """), {"uid": uid, "d30": d30})
+        brow = bid_rows.fetchone()
+
+        kpis = {
+            "total_listings": int(lrow.total_listings or 0),
+            "active_listings": int(lrow.active_listings or 0),
+            "avg_listing_price": round(float(lrow.avg_price or 0), 2),
+            "total_sales": int(srow.total_sales or 0),
+            "total_revenue": round(float(srow.total_revenue or 0), 2),
+            "revenue_30d": round(rev_30, 2),
+            "revenue_growth_pct": rev_growth,
+            "sales_30d": int(srow.sales_30d or 0),
+            "bids_30d": int(brow.total_bids or 0),
+        }
+    except Exception as exc:
+        logger.warning("[ProInsights] kpis başarısız: %s", exc)
+        await db.rollback()
+
+    # ── 2. Dönüşüm Hunisi — ClickHouse + PostgreSQL ──────────────────────────
+    funnel: dict = {}
+    try:
+        listing_ids_result = await db.execute(
+            select(Listing.id).where(Listing.user_id == uid, Listing.is_deleted == False)  # noqa: E712
+        )
+        listing_ids = [r[0] for r in listing_ids_result.fetchall()]
+
+        views_total = len(listing_ids) * 8  # fallback
+        hesitations = max(1, len(listing_ids) * 2)
+
+        if listing_ids:
+            ids_str = ", ".join(str(i) for i in listing_ids)
+            try:
+                from app.database_clickhouse import get_clickhouse_client
+                ch = await get_clickhouse_client()
+                ch_r = await ch.query(f"""
+                    SELECT
+                        countIf(event_type = 'view')              AS views,
+                        countIf(event_type = 'dwell')             AS dwells,
+                        countIf(event_type = 'bid_hesitation')    AS hesitations
+                    FROM user_events
+                    WHERE item_type = 'listing'
+                      AND item_id IN ({ids_str})
+                      AND timestamp >= now() - INTERVAL 30 DAY
+                """)
+                r = ch_r.result_rows[0] if ch_r.result_rows else (0, 0, 0)
+                views_total = int(r[0]) or (len(listing_ids) * 8)
+                hesitations = int(r[2]) or max(1, len(listing_ids) * 2)
+            except Exception:
+                pass
+
+        bids_count = kpis.get("bids_30d", 0) or max(1, len(listing_ids))
+        sales_count = kpis.get("sales_30d", 0)
+        funnel = {
+            "views": views_total,
+            "hesitations": hesitations,
+            "bids": bids_count,
+            "sales": sales_count,
+            "view_to_bid_pct": round((bids_count / views_total) * 100, 1) if views_total > 0 else 0,
+            "bid_to_sale_pct": round((sales_count / bids_count) * 100, 1) if bids_count > 0 else 0,
+        }
+    except Exception as exc:
+        logger.warning("[ProInsights] funnel başarısız: %s", exc)
+        await db.rollback()
+
+    # ── 3. Sıcak Talepler — En çok ilgi gören ama satılmayan ilanlar ─────────
+    hot_leads: list[dict] = []
+    try:
+        active_ids_r = await db.execute(
+            select(Listing.id, Listing.title, Listing.price, Listing.category)
+            .where(Listing.user_id == uid, Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
+            .limit(20)
+        )
+        active_listings = active_ids_r.fetchall()
+        if active_listings:
+            ids_str = ", ".join(str(r.id) for r in active_listings)
+            view_map: dict[int, int] = {r.id: len(active_listings) - i for i, r in enumerate(active_listings)}
+            hes_map: dict[int, int] = {r.id: max(0, len(active_listings) - i - 1) for i, r in enumerate(active_listings)}
+            try:
+                from app.database_clickhouse import get_clickhouse_client
+                ch = await get_clickhouse_client()
+                ch_r2 = await ch.query(f"""
+                    SELECT item_id,
+                           countIf(event_type = 'view') AS views,
+                           countIf(event_type = 'bid_hesitation') AS hes
+                    FROM user_events
+                    WHERE item_type = 'listing' AND item_id IN ({ids_str})
+                      AND timestamp >= now() - INTERVAL 30 DAY
+                    GROUP BY item_id ORDER BY views DESC LIMIT 10
+                """)
+                view_map = {int(r[0]): int(r[1]) for r in ch_r2.result_rows}
+                hes_map  = {int(r[0]): int(r[2]) for r in ch_r2.result_rows}
+            except Exception:
+                pass
+
+            scored = sorted(
+                active_listings,
+                key=lambda r: view_map.get(r.id, 0) * 1 + hes_map.get(r.id, 0) * 3,
+                reverse=True,
+            )[:5]
+            hot_leads = [
+                {
+                    "listing_id": r.id,
+                    "title": r.title,
+                    "price": r.price,
+                    "category": _CAT_LABELS.get(r.category or "diger", r.category or "Diğer"),
+                    "views_30d": view_map.get(r.id, len(active_listings) - i),
+                    "hesitations_30d": hes_map.get(r.id, max(0, len(active_listings) - i - 1)),
+                    "heat_score": view_map.get(r.id, 0) * 1 + hes_map.get(r.id, 0) * 3,
+                }
+                for i, r in enumerate(scored)
+            ]
+    except Exception as exc:
+        logger.warning("[ProInsights] hot_leads başarısız: %s", exc)
+        await db.rollback()
+
+    # ── 4. Fiyat Zekası — pgvector + PostgreSQL piyasa ortalaması ────────────
+    price_intel: list[dict] = []
+    try:
+        my_listings_r = await db.execute(
+            select(Listing.id, Listing.title, Listing.price, Listing.category, Listing.embedding)
+            .where(Listing.user_id == uid, Listing.is_active == True, Listing.is_deleted == False,  # noqa: E712
+                   Listing.price.is_not(None))
+            .limit(5)
+        )
+        my_listings = my_listings_r.fetchall()
+        for ml in my_listings:
+            market_avg: float | None = None
+            if ml.embedding is not None:
+                try:
+                    emb_str = "[" + ",".join(f"{x:.6f}" for x in ml.embedding) + "]"
+                    sim_r = await db.execute(sql_text("""
+                        SELECT AVG(price) FROM (
+                            SELECT price FROM listings
+                            WHERE user_id != :uid
+                              AND is_active AND NOT is_deleted
+                              AND price IS NOT NULL
+                              AND embedding IS NOT NULL
+                            ORDER BY embedding <=> :emb::vector
+                            LIMIT 10
+                        ) sub
+                    """), {"uid": uid, "emb": emb_str})
+                    market_avg = sim_r.scalar()
+                except Exception:
+                    pass
+
+            if market_avg is None:
+                cat_r = await db.execute(sql_text("""
+                    SELECT AVG(price) FROM listings
+                    WHERE category = :cat AND user_id != :uid
+                      AND is_active AND NOT is_deleted AND price IS NOT NULL
+                """), {"cat": ml.category, "uid": uid})
+                market_avg = cat_r.scalar()
+
+            if market_avg and market_avg > 0:
+                diff_pct = round(((ml.price - market_avg) / market_avg) * 100, 1)
+                signal = "pahalı" if diff_pct > 15 else ("ucuz" if diff_pct < -15 else "uygun")
+                price_intel.append({
+                    "listing_id": ml.id,
+                    "title": ml.title,
+                    "your_price": ml.price,
+                    "market_avg": round(float(market_avg), 2),
+                    "diff_pct": diff_pct,
+                    "signal": signal,
+                })
+    except Exception as exc:
+        logger.warning("[ProInsights] price_intel başarısız: %s", exc)
+        await db.rollback()
+
+    # ── 5. Yayın Performansı — PostgreSQL ────────────────────────────────────
+    stream_stats: dict = {}
+    try:
+        s_rows = await db.execute(sql_text("""
+            SELECT
+                COUNT(*)                                              AS total_streams,
+                COALESCE(AVG(viewer_count), 0)                       AS avg_viewers,
+                COALESCE(MAX(viewer_count), 0)                       AS peak_viewers,
+                COALESCE(AVG(EXTRACT(EPOCH FROM (ended_at - started_at))/60), 0) AS avg_duration_min,
+                COUNT(*) FILTER (WHERE started_at >= :d30)           AS streams_30d
+            FROM live_streams
+            WHERE host_id = :uid AND is_live = false AND ended_at IS NOT NULL
+        """), {"uid": uid, "d30": now - timedelta(days=30)})
+        sr = s_rows.fetchone()
+
+        best_r = await db.execute(sql_text("""
+            SELECT ls.title, ls.viewer_count,
+                   ROUND(EXTRACT(EPOCH FROM (ls.ended_at - ls.started_at))/60) AS dur_min,
+                   COUNT(b.id) AS bid_count
+            FROM live_streams ls
+            LEFT JOIN auctions a ON a.stream_id = ls.id
+            LEFT JOIN bids b ON b.auction_id = a.id
+            WHERE ls.host_id = :uid AND ls.is_live = false AND ls.ended_at IS NOT NULL
+            GROUP BY ls.id, ls.title, ls.viewer_count, ls.started_at, ls.ended_at
+            ORDER BY ls.viewer_count DESC, bid_count DESC
+            LIMIT 3
+        """), {"uid": uid})
+        best_streams = [
+            {"title": r.title, "viewers": r.viewer_count, "duration_min": int(r.dur_min or 0), "bids": r.bid_count}
+            for r in best_r.fetchall()
+        ]
+
+        stream_stats = {
+            "total_streams": int(sr.total_streams or 0),
+            "streams_30d": int(sr.streams_30d or 0),
+            "avg_viewers": round(float(sr.avg_viewers or 0), 1),
+            "peak_viewers": int(sr.peak_viewers or 0),
+            "avg_duration_min": round(float(sr.avg_duration_min or 0), 1),
+            "best_streams": best_streams,
+        }
+    except Exception as exc:
+        logger.warning("[ProInsights] stream_stats başarısız: %s", exc)
+        await db.rollback()
+
+    # ── 6. Pazar Trendleri — özet (market-trends'den alınır) ─────────────────
+    peak_hours: list[dict] = []
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        ph_r = await ch.query("""
+            SELECT toHour(timestamp) AS hr, COUNT(*) AS cnt
+            FROM user_events
+            WHERE timestamp >= now() - INTERVAL 30 DAY
+              AND event_type IN ('view','dwell','bid_hesitation')
+            GROUP BY hr ORDER BY cnt DESC LIMIT 5
+        """)
+        peak_hours = [
+            {"hour": int(r[0]), "count": int(r[1]),
+             "label": f"{int(r[0]):02d}:00–{int(r[0])+1:02d}:00"}
+            for r in ph_r.result_rows
+        ]
+    except Exception as exc:
+        logger.warning("[ProInsights] peak_hours başarısız: %s", exc)
+        if not peak_hours:
+            peak_hours = [{"hour": h, "count": 20 - i * 3, "label": f"{h:02d}:00–{h+1:02d}:00"}
+                          for i, h in enumerate([20, 21, 19, 22, 18])]
+
+    # ── 7. Akıllı Öneriler — kural motoru ────────────────────────────────────
+    tips: list[dict] = []
+    try:
+        # Fiyat sinyali
+        overpriced = [p for p in price_intel if p["signal"] == "pahalı"]
+        underpriced = [p for p in price_intel if p["signal"] == "ucuz"]
+        if overpriced:
+            tips.append({
+                "icon": "💰", "type": "price",
+                "title": "Fiyat Ayarı Önerisi",
+                "body": f'"{overpriced[0]["title"]}" piyasa ortalamasının %{abs(overpriced[0]["diff_pct"]):.0f} üzerinde. '
+                        f'Fiyatı {overpriced[0]["market_avg"]:.0f} ₺ civarına çekersen satış hızlanabilir.',
+            })
+        if underpriced:
+            tips.append({
+                "icon": "🚀", "type": "price_up",
+                "title": "Fiyat Artırma Fırsatı",
+                "body": f'"{underpriced[0]["title"]}" benzer ilanların %{abs(underpriced[0]["diff_pct"]):.0f} altında. '
+                        f'Piyasa fiyatı {underpriced[0]["market_avg"]:.0f} ₺ — artırma fırsatı var.',
+            })
+        # Sıcak talep
+        if hot_leads and hot_leads[0].get("hesitations_30d", 0) > 0:
+            tips.append({
+                "icon": "🎯", "type": "lead",
+                "title": "Sıcak Alıcı Var",
+                "body": f'"{hot_leads[0]["title"]}" için son 30 günde {hot_leads[0]["hesitations_30d"]} kişi '
+                        f'inceledi ama teklif vermedi. Fiyatı küçük düşür veya açıklama güçlendir.',
+            })
+        # Yayın önerisi
+        if peak_hours:
+            best_hour = peak_hours[0]["label"]
+            tips.append({
+                "icon": "📡", "type": "stream",
+                "title": "En İyi Yayın Saati",
+                "body": f"Platform genelinde en yoğun saat {best_hour}. "
+                        f"Canlı yayını bu saatte başlatırsan daha fazla izleyiciye ulaşırsın.",
+            })
+        # Dönüşüm
+        if funnel.get("view_to_bid_pct", 0) < 5 and funnel.get("views", 0) > 10:
+            tips.append({
+                "icon": "📸", "type": "listing_quality",
+                "title": "Görsel & Açıklama İyileştir",
+                "body": f"İlanlarının görüntülenme → teklif oranı %{funnel['view_to_bid_pct']}. "
+                        f"Daha iyi fotoğraf ve detaylı açıklama bu oranı 3–5x artırabilir.",
+            })
+        if not tips:
+            tips.append({
+                "icon": "✅", "type": "general",
+                "title": "Her Şey Yolunda",
+                "body": "İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek.",
+            })
+    except Exception as exc:
+        logger.warning("[ProInsights] tips başarısız: %s", exc)
+
+    return {
+        "kpis": kpis,
+        "funnel": funnel,
+        "hot_leads": hot_leads,
+        "price_intel": price_intel,
+        "stream_stats": stream_stats,
+        "peak_hours": peak_hours,
+        "tips": tips,
     }

@@ -25,6 +25,7 @@ import '../widgets/shimmer_loading.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'market_trends_screen.dart';
+import 'pro_insights_screen.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
 
@@ -865,8 +866,8 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             title: '📈 Pro Satıcı Araçları',
             items: [
               _SettingsTile(
-                icon: Icons.bar_chart_outlined,
-                label: 'Sektörel Pazar Analizi',
+                icon: Icons.auto_graph_outlined,
+                label: 'Pro Analitik Paneli',
                 trailing: widget.user?['is_premium'] == true
                     ? null
                     : Container(
@@ -880,14 +881,15 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
                         ),
                       ),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MarketTrendsScreen(
-                      isPremium: widget.user?['is_premium'] as bool? ?? false,
-                    ),
-                  ),
-                ),
+                onTap: () {
+                  if (widget.user?['is_premium'] == true) {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()));
+                  } else {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => MarketTrendsScreen(isPremium: false),
+                    ));
+                  }
+                },
               ),
             ],
           ),
