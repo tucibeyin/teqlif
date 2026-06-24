@@ -9,6 +9,7 @@ import '../../core/app_exception.dart';
 import '../../models/stream.dart';
 import '../../services/analytics_service.dart';
 import '../../services/captcha_service.dart';
+import '../../services/client_logger.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/category_service.dart';
@@ -322,14 +323,28 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
           ),
         ),
       ).then((_) => _load());
-    } on AppException catch (e) {
+    } on AppException catch (e, st) {
       if (!mounted) return;
       Navigator.pop(context); // loading dialog kapat
+      ClientLogger.report(
+        tag: 'StartStream',
+        message: 'startStream AppException | code=${e.code} status=${e.statusCode}',
+        error: e,
+        stackTrace: st,
+        details: {'title': title, 'category': category},
+      );
       final ll = AppLocalizations.of(context)!;
       final msg = _mapCaptchaError(e, ll);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-    } catch (e) {
+    } catch (e, st) {
       if (mounted) Navigator.pop(context); // loading dialog kapat
+      ClientLogger.report(
+        tag: 'StartStream',
+        message: 'startStream beklenmeyen hata',
+        error: e,
+        stackTrace: st,
+        details: {'title': title, 'category': category},
+      );
       showErrorSnackbar(context, e);
     }
   }

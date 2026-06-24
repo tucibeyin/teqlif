@@ -24,6 +24,7 @@ import '../../widgets/live/gift_hud.dart';
 import '../../widgets/live/host_top_bar.dart';
 import '../../widgets/live/live_video_player.dart';
 import '../../core/logger_service.dart';
+import '../../services/client_logger.dart';
 import '../../l10n/app_localizations.dart';
 
 final _log = LoggerService.instance;
@@ -290,7 +291,17 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       if (foundTrack == null) _waitForTrack();
       // Yayın başladıktan 5 saniye sonra otomatik kapak fotoğrafı çek
       _thumbTimer = Timer(const Duration(seconds: _kThumbnailInitialDelaySeconds), _autoCaptureThumbnail);
-    } catch (e) {
+    } catch (e, st) {
+      ClientLogger.report(
+        tag: 'HostConnect',
+        message: 'LiveKit bağlantısı kurulamadı',
+        error: e,
+        stackTrace: st,
+        details: {
+          'livekit_url': widget.streamToken.livekitUrl,
+          'stream_id': widget.streamToken.streamId,
+        },
+      );
       setState(() {
         _error = 'Bağlantı hatası: ${e.toString()}';
         _connecting = false;
