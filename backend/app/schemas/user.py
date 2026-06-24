@@ -49,6 +49,7 @@ class UserOut(BaseModel):
     profile_image_url: Optional[str] = None
     profile_image_thumb_url: Optional[str] = None
     created_at: datetime
+    is_premium: bool = False
 
     model_config = {"from_attributes": True}
 

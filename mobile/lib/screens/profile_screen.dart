@@ -24,6 +24,7 @@ import '../utils/error_helper.dart';
 import '../widgets/shimmer_loading.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
+import 'market_trends_screen.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
 
@@ -151,7 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _openSettings() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const _SettingsScreen()),
+      MaterialPageRoute(builder: (_) => _SettingsScreen(user: _user)),
     );
   }
 
@@ -507,7 +508,9 @@ class _ListingGridItem extends StatelessWidget {
 // ── Ayarlar ekranı ────────────────────────────────────────────────────────────
 
 class _SettingsScreen extends ConsumerStatefulWidget {
-  const _SettingsScreen();
+  final Map<String, dynamic>? user;
+
+  const _SettingsScreen({this.user});
 
   @override
   ConsumerState<_SettingsScreen> createState() => _SettingsScreenState();
@@ -857,6 +860,38 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       body: ListView(
         children: [
           const SizedBox(height: 8),
+          // ── Pro Araçlar ───────────────────────────────────────────────────
+          _SettingsSection(
+            title: '📈 Pro Satıcı Araçları',
+            items: [
+              _SettingsTile(
+                icon: Icons.bar_chart_outlined,
+                label: 'Sektörel Pazar Analizi',
+                trailing: widget.user?['is_premium'] == true
+                    ? null
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFB800),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'PRO',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                        ),
+                      ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MarketTrendsScreen(
+                      isPremium: widget.user?['is_premium'] as bool? ?? false,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           _SettingsSection(
             title: l.profileMyListings,
             items: [
@@ -1078,15 +1113,21 @@ class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _SettingsTile(
-      {required this.icon, required this.label, required this.onTap});
+  final Widget? trailing;
+
+  const _SettingsTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: AppColors.iconColor(context)),
       title: Text(label, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
-      trailing: Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
+      trailing: trailing ?? Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
       onTap: onTap,
     );
   }

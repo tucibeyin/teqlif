@@ -407,3 +407,129 @@ async def price_estimate(
         "confidence": confidence,
         "advice": advice,
     }
+
+
+# ── Sektörel Pazar Trendleri ──────────────────────────────────────────────────
+
+_CATEGORY_LABELS: dict[str, str] = {
+    "elektronik": "Elektronik",
+    "giyim": "Giyim & Moda",
+    "ev": "Ev & Yaşam",
+    "vasita": "Vasıta",
+    "spor": "Spor & Hobi",
+    "kitap": "Kitap & Kültür",
+    "emlak": "Emlak",
+    "diger": "Diğer",
+    "sohbet": "Sohbet",
+}
+
+
+@router.get("/market-trends")
+async def market_trends(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Son 30 günlük platform makro trendleri.
+    - peak_hours: etkileşim yoğunluğu en yüksek 3 saat
+    - trending_categories: teklif hacmi en çok artan 3 kategori
+    - average_spend_growth: ortalama harcama değişim yüzdesi (önceki 30 güne göre)
+    """
+    # ── 1. Peak hours — ClickHouse ────────────────────────────────────────────
+    peak_hours: list[dict] = []
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        ch_result = await ch.query(
+            """
+            SELECT toHour(timestamp) AS hr, COUNT(*) AS cnt
+            FROM user_events
+            WHERE timestamp >= now() - INTERVAL 30 DAY
+            GROUP BY hr
+            ORDER BY cnt DESC
+            LIMIT 3
+            """
+        )
+        for row in ch_result.result_rows:
+            hr = int(row[0])
+            peak_hours.append({"hour": hr, "label": f"{hr:02d}:00–{hr:02d}:59", "count": int(row[1])})
+    except Exception as ch_exc:
+        logger.warning("[MarketTrends] ClickHouse peak_hours başarısız: %s", ch_exc)
+
+    # ── 2. Trending categories — PostgreSQL ───────────────────────────────────
+    trending_categories: list[dict] = []
+    try:
+        cat_q = sql_text("""
+            WITH recent AS (
+                SELECT l.category, COUNT(*) AS cnt
+                FROM purchases p
+                JOIN auctions a ON a.id = p.auction_id
+                JOIN listings  l ON l.id = a.listing_id
+                WHERE p.created_at >= NOW() - INTERVAL '15 days'
+                  AND p.auction_id IS NOT NULL
+                  AND l.category IS NOT NULL
+                GROUP BY l.category
+            ),
+            prev AS (
+                SELECT l.category, COUNT(*) AS cnt
+                FROM purchases p
+                JOIN auctions a ON a.id = p.auction_id
+                JOIN listings  l ON l.id = a.listing_id
+                WHERE p.created_at >= NOW() - INTERVAL '30 days'
+                  AND p.created_at  < NOW() - INTERVAL '15 days'
+                  AND p.auction_id IS NOT NULL
+                  AND l.category IS NOT NULL
+                GROUP BY l.category
+            )
+            SELECT
+                r.category,
+                r.cnt AS recent_cnt,
+                COALESCE(p.cnt, 0) AS prev_cnt,
+                CASE WHEN COALESCE(p.cnt, 0) > 0
+                    THEN ROUND(((r.cnt - p.cnt)::float / p.cnt) * 100, 1)
+                    ELSE 100.0
+                END AS growth_pct
+            FROM recent r
+            LEFT JOIN prev p ON p.category = r.category
+            ORDER BY growth_pct DESC
+            LIMIT 3
+        """)
+        cat_result = await db.execute(cat_q)
+        for row in cat_result.fetchall():
+            key = row.category or "diger"
+            trending_categories.append({
+                "key": key,
+                "label": _CATEGORY_LABELS.get(key, key.capitalize()),
+                "recent_count": int(row.recent_cnt),
+                "prev_count": int(row.prev_cnt),
+                "growth_pct": float(row.growth_pct),
+            })
+    except Exception as exc:
+        logger.warning("[MarketTrends] trending_categories başarısız: %s", exc)
+
+    # ── 3. Average spend growth — PostgreSQL ──────────────────────────────────
+    avg_spend_growth: float | None = None
+    try:
+        spend_q = sql_text("""
+            SELECT
+                AVG(price) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')  AS recent_avg,
+                AVG(price) FILTER (WHERE created_at >= NOW() - INTERVAL '60 days'
+                                    AND created_at <  NOW() - INTERVAL '30 days')  AS prev_avg
+            FROM purchases
+        """)
+        spend_result = await db.execute(spend_q)
+        row = spend_result.fetchone()
+        if row and row.recent_avg and row.prev_avg and float(row.prev_avg) > 0:
+            avg_spend_growth = round(
+                ((float(row.recent_avg) - float(row.prev_avg)) / float(row.prev_avg)) * 100, 1
+            )
+        elif row and row.recent_avg:
+            avg_spend_growth = 0.0
+    except Exception as exc:
+        logger.warning("[MarketTrends] avg_spend_growth başarısız: %s", exc)
+
+    return {
+        "peak_hours": peak_hours,
+        "trending_categories": trending_categories,
+        "average_spend_growth": avg_spend_growth,
+    }

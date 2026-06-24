@@ -147,6 +147,25 @@ class AnalyticsService {
     return null;
   }
 
+  /// Sektörel pazar trendleri → `GET /api/analytics/market-trends`
+  static Future<Map<String, dynamic>?> getMarketTrends() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/market-trends'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Yayın sonu satıcı raporu → `GET /api/analytics/seller-report/{streamId}`
   static Future<Map<String, dynamic>?> getSellerReport(int streamId) async {
     try {
