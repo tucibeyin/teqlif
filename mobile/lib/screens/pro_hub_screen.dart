@@ -1,17 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../services/analytics_service.dart';
 import 'feed_stats_screen.dart';
 import 'market_trends_screen.dart';
 import 'pro_insights_screen.dart';
 
-class ProHubScreen extends StatelessWidget {
+class ProHubScreen extends StatefulWidget {
   final bool isPremium;
 
   const ProHubScreen({super.key, required this.isPremium});
 
   @override
+  State<ProHubScreen> createState() => _ProHubScreenState();
+}
+
+class _ProHubScreenState extends State<ProHubScreen> {
+  Map<String, dynamic>? _credits;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCredits();
+  }
+
+  Future<void> _loadCredits() async {
+    final data = await AnalyticsService.getBlastCredits();
+    if (mounted) setState(() => _credits = data);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isPremium = widget.isPremium;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -75,6 +95,22 @@ class ProHubScreen extends StatelessWidget {
               MaterialPageRoute(builder: (_) => FeedStatsScreen(isPremium: isPremium)),
             ),
           ),
+
+          // ── Blast Kredi Kartı ──────────────────────────────────────────────
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 12),
+            child: Text(
+              'Kitle Davet Kredisi',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary(context),
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+          _BlastCreditCard(credits: _credits, isPremium: isPremium),
 
           if (!isPremium) ...[
             const SizedBox(height: 28),
@@ -412,6 +448,117 @@ class _UpgradeSheet extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Vazgeç', style: TextStyle(color: AppColors.textSecondary(context))),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Blast Kredi Kartı ──────────────────────────────────────────────────────────
+
+class _BlastCreditCard extends StatelessWidget {
+  final Map<String, dynamic>? credits;
+  final bool isPremium;
+
+  const _BlastCreditCard({required this.credits, required this.isPremium});
+
+  @override
+  Widget build(BuildContext context) {
+    final used      = credits?['used']      as int? ?? 0;
+    final limit     = credits?['limit']     as int? ?? (isPremium ? 20 : 3);
+    final remaining = credits?['remaining'] as int? ?? (isPremium ? 20 : 3);
+    final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
+
+    final Color barColor = remaining == 0
+        ? const Color(0xFFEF4444)
+        : remaining <= limit ~/ 4
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF22C55E);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.campaign_outlined, color: Color(0xFF8B5CF6), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bu Ay Kalan Hak',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                    ),
+                    const SizedBox(height: 2),
+                    RichText(
+                      text: TextSpan(
+                        style: TextStyle(color: AppColors.textPrimary(context)),
+                        children: [
+                          TextSpan(
+                            text: '$remaining',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: barColor,
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' / $limit',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isPremium)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFB800),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('PRO: 20/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: AppColors.border(context),
+              valueColor: AlwaysStoppedAnimation<Color>(barColor),
+              minHeight: 6,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            remaining == 0
+                ? 'Bu ay blast krediniz doldu. Yeni ayda yenilenir.'
+                : '$used blast kullandınız, $remaining hakkınız kaldı.',
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
           ),
         ],
       ),

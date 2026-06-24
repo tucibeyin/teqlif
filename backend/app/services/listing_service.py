@@ -63,6 +63,7 @@ def _row_dict(
         "is_liked": is_liked,
         "is_sponsored": is_sponsored,
         "campaign_id": campaign_id,
+        "seller_is_premium": user.is_premium,
     }
 
 
@@ -98,7 +99,7 @@ class ListingService:
             q = q.where(Listing.category == category)
         if location:
             q = q.where(Listing.location == location)
-        q = q.order_by(Listing.created_at.desc())
+        q = q.order_by(User.is_premium.desc(), Listing.created_at.desc())
         result = await self.db.execute(q)
         rows = result.all()
 

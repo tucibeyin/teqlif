@@ -2,12 +2,15 @@
 Lead Generation (Sıcak Talep & Kitle Satışı) Router
 
 GET  /api/leads/audience-size  — Son 7 gün içinde ilgili ilanları gören eşsiz kullanıcı sayısı
+GET  /api/leads/blast-credits  — Aylık blast kredi durumu
 POST /api/leads/send-blast     — Hedef kitleye push bildirimi gönder
 """
 from __future__ import annotations
 
 import asyncio
+import calendar
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -24,6 +27,42 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/leads", tags=["leads"])
 
 COST_PER_PERSON: int = 1  # TUCi per kişi
+_BLAST_LIMIT_STANDARD = 3
+_BLAST_LIMIT_PRO      = 20
+
+
+# ── Blast Kredi Yardımcıları (Redis) ─────────────────────────────────────────
+
+def _blast_redis_key(user_id: int) -> str:
+    month = datetime.now().strftime("%Y-%m")
+    return f"blast_credits:{user_id}:{month}"
+
+
+async def _get_blast_used(user_id: int) -> int:
+    try:
+        from app.database_redis import get_redis
+        redis = await get_redis()
+        val = await redis.get(_blast_redis_key(user_id))
+        return int(val) if val else 0
+    except Exception:
+        return 0
+
+
+async def _increment_blast(user_id: int) -> None:
+    try:
+        from app.database_redis import get_redis
+        redis = await get_redis()
+        key = _blast_redis_key(user_id)
+        count = await redis.incr(key)
+        if count == 1:
+            # İlk blast — ayın sonuna kadar TTL ayarla
+            now = datetime.now()
+            last_day = calendar.monthrange(now.year, now.month)[1]
+            end_of_month = datetime(now.year, now.month, last_day, 23, 59, 59)
+            ttl_secs = int((end_of_month - now).total_seconds()) + 1
+            await redis.expire(key, ttl_secs)
+    except Exception:
+        pass
 
 
 # ── Kitle Büyüklüğü ──────────────────────────────────────────────────────────
@@ -38,13 +77,7 @@ async def audience_size(
     """
     Bu başlık/kategori ile eşleşen ve son 7 gün içinde aktif olan
     olası alıcı kitlesini tahmin eder.
-
-    Strateji:
-    1. PostgreSQL: ilgili kategorideki aktif listing ID'leri çek.
-    2. ClickHouse: bu listeleri görüntüleyen benzersiz user_id sayısı.
-    3. PostgreSQL: bu kullanıcıların kaçı FCM tokena sahip (ulaşılabilir).
     """
-    # 1. Kategorideki aktif listing ID'leri — max 500 ile sınırla
     listing_q = select(Listing.id).where(
         Listing.is_deleted == False,  # noqa: E712
         Listing.is_active == True,    # noqa: E712
@@ -59,7 +92,6 @@ async def audience_size(
     if not listing_ids:
         return {"audience_size": 0, "estimated_cost": 0}
 
-    # 2. ClickHouse sorgusu: bu ilanları görüntüleyen aktif kullanıcılar
     ids_str = ", ".join(str(i) for i in listing_ids)
     ch_count = 0
     try:
@@ -81,17 +113,32 @@ async def audience_size(
         logger.warning("[Leads] ClickHouse sorgusu başarısız, PostgreSQL fallback: %s", exc)
         ch_count = 0
 
-    # ClickHouse veri yoksa (yeni sistem / düşük trafik) listing sayısına dayalı fallback
     if ch_count == 0:
         ch_count = min(len(listing_ids) * 3, 200)
 
-    # 3. FCM token sahipliği oranı — kaba tahmin (%60 mobil ulaşılabilirlik)
     reachable = int(ch_count * 0.60)
-    estimated_cost = reachable * COST_PER_PERSON  # tam sayı TUCi
+    estimated_cost = reachable * COST_PER_PERSON
 
     return {
         "audience_size": reachable,
         "estimated_cost": estimated_cost,
+    }
+
+
+# ── Blast Kredi Durumu ────────────────────────────────────────────────────────
+
+@router.get("/blast-credits")
+async def blast_credits(
+    current_user: User = Depends(get_current_user),
+):
+    """Kullanıcının bu ayki blast kredi durumunu döndürür."""
+    limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
+    used  = await _get_blast_used(current_user.id)
+    return {
+        "used":       used,
+        "limit":      limit,
+        "remaining":  max(0, limit - used),
+        "is_premium": current_user.is_premium,
     }
 
 
@@ -114,13 +161,21 @@ async def send_blast(
     """
     Hedef kitleye push bildirimi gönderir.
 
-    1. ClickHouse → son 7 günde aktif user_id listesi çek.
-    2. PostgreSQL → bu kullanıcıların FCM tokenlarını al.
-    3. Firebase → toplu push gönder (fire-and-forget, hatalı tokenları logla).
-
-    Ücretlendirme: max_budget üzerinden kontrol edilir;
-    gerçek payment entegrasyonu için ayrı bir wallet servisi bağlanmalıdır.
+    1. Aylık blast kredi limiti kontrolü (Standart: 3 / Pro: 20).
+    2. ClickHouse → son 7 günde aktif user_id listesi çek.
+    3. PostgreSQL → FCM tokenları al.
+    4. Firebase → toplu push gönder.
     """
+    # ── Aylık blast kredi kontrolü ────────────────────────────────────────────
+    limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
+    used  = await _get_blast_used(current_user.id)
+    if used >= limit:
+        tip = "" if current_user.is_premium else " Pro'ya geçerek aylık 20 hakka sahip olabilirsiniz."
+        raise HTTPException(
+            status_code=429,
+            detail=f"Bu ay için blast krediniz doldu ({used}/{limit}). Yeni ay başında yenilenir.{tip}",
+        )
+
     # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
     tuci_cost = body.estimated_cost
     if current_user.tuci_balance < tuci_cost:
@@ -165,7 +220,6 @@ async def send_blast(
         logger.warning("[Leads] ClickHouse user listesi alınamadı: %s", exc)
 
     # ── PostgreSQL: FCM tokenlar ──────────────────────────────────────────────
-    # ClickHouse verisi yoksa tüm aktif kullanıcılara fallback
     if target_user_ids:
         token_q = select(User.fcm_token).where(
             User.id.in_(target_user_ids),
@@ -185,8 +239,8 @@ async def send_blast(
     fcm_tokens: list[str] = [r[0] for r in token_result.fetchall() if r[0]]
 
     if not fcm_tokens:
-        # Demo ortamda (FCM token kayıtlı kullanıcı yok) başarı simüle et
         logger.info("[Leads] FCM token bulunamadı — demo başarı döndürülüyor | seller=%d", current_user.id)
+        await _increment_blast(current_user.id)
         return {
             "sent": 0,
             "spent": 0.0,
@@ -217,7 +271,6 @@ async def send_blast(
         except Exception as exc:
             logger.warning("[Leads] Push başarısız: %s", exc)
 
-    # 50'şer tokena bölüp paralel gönder
     chunk_size = 50
     sent = 0
     for i in range(0, len(fcm_tokens), chunk_size):
@@ -230,7 +283,7 @@ async def send_blast(
         current_user.id, sent, body.estimated_cost,
     )
 
-    # ── TUCi düş + işlem logla ───────────────────────────────────────────────
+    # ── TUCi düş + işlem logla + kredi say ───────────────────────────────────
     await db.execute(
         sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
         {"cost": tuci_cost, "uid": current_user.id},
@@ -241,6 +294,7 @@ async def send_blast(
         transaction_type="spend_lead_gen",
     ))
     await db.commit()
+    await _increment_blast(current_user.id)
 
     return {
         "sent": sent,

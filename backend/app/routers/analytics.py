@@ -319,10 +319,11 @@ async def price_estimate(
 ):
     """
     Başlık + açıklama metninden embedding üretir, pgvector ile satılmış benzer
-    ilanları bulur ve istatistiksel fiyat tahmini üretir. Sabit 5 TUCi harcar.
+    ilanları bulur ve istatistiksel fiyat tahmini üretir.
+    Pro kullanıcılar ücretsiz; standart kullanıcılar 5 TUCi harcar.
     """
-    # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
-    if current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
+    # ── TUCi bakiye kontrolü (Pro'ya gerek yok) ──────────────────────────────
+    if not current_user.is_premium and current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
         raise HTTPException(
             status_code=402,
             detail=f"Yetersiz TUCi bakiyesi. Gerekli: {AI_PRICE_ESTIMATE_COST} TUCi, Mevcut: {current_user.tuci_balance} TUCi",
@@ -411,17 +412,20 @@ async def price_estimate(
             "satış hızınızı artırabilir."
         )
 
-    # ── TUCi düş + logla ─────────────────────────────────────────────────────
-    await db.execute(
-        sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-        {"cost": AI_PRICE_ESTIMATE_COST, "uid": current_user.id},
-    )
-    db.add(TuciTransaction(
-        user_id=current_user.id,
-        amount=-AI_PRICE_ESTIMATE_COST,
-        transaction_type="spend_ai",
-    ))
-    await db.commit()
+    # ── TUCi düş + logla (Pro kullanıcılar ücretsiz) ─────────────────────────
+    tuci_spent = 0
+    if not current_user.is_premium:
+        await db.execute(
+            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            {"cost": AI_PRICE_ESTIMATE_COST, "uid": current_user.id},
+        )
+        db.add(TuciTransaction(
+            user_id=current_user.id,
+            amount=-AI_PRICE_ESTIMATE_COST,
+            transaction_type="spend_ai",
+        ))
+        await db.commit()
+        tuci_spent = AI_PRICE_ESTIMATE_COST
 
     return {
         "found_similar": cnt,
@@ -431,7 +435,7 @@ async def price_estimate(
         "max_close_price": max_close,
         "confidence": confidence,
         "advice": advice,
-        "tuci_spent": AI_PRICE_ESTIMATE_COST,
+        "tuci_spent": tuci_spent,
     }
 
 

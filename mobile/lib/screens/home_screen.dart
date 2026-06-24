@@ -935,6 +935,24 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard> {
                         ),
                       ),
                     ),
+                  if (widget.listing['seller_is_premium'] == true)
+                    Positioned(
+                      top: 5,
+                      right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFB8860B), Color(0xFFFFD700)],
+                          ),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text(
+                          '👑',
+                          style: TextStyle(fontSize: 9),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

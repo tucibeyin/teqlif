@@ -316,12 +316,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          fullName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              fullName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                            if (_user?['is_premium'] == true) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFB8860B), Color(0xFFFFD700)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  '👑 PRO',
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         if (email.isNotEmpty)
                           Text(
