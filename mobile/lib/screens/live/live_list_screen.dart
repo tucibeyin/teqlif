@@ -858,7 +858,7 @@ class _BlastPaymentSheetState extends State<_BlastPaymentSheet> {
       await AnalyticsService.sendLeadBlast(
         title: widget.title,
         category: widget.category,
-        estimatedCost: widget.audienceCost,
+        estimatedCost: widget.audienceCost.toInt(),
       );
     } catch (_) {}
 
