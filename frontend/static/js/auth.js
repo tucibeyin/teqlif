@@ -146,8 +146,8 @@ function _updateNavBadge(count) {
     }
 }
 
-// Nav'ı kullanıcı durumuna göre güncelle
-(function updateNav() {
+// Nav'ı kullanıcı durumuna göre güncelle — DOM hazır olunca çalışır
+function updateNav() {
     const user = Auth.getUser();
     const navLinks = document.querySelector('.nav-links');
     if (!navLinks) return;
@@ -202,4 +202,10 @@ function _updateNavBadge(count) {
         getUnreadCount().then(_updateNavBadge);
         setInterval(() => getUnreadCount().then(_updateNavBadge), 60000);
     }
-})();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateNav);
+} else {
+    updateNav();
+}
