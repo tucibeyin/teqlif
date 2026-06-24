@@ -327,9 +327,10 @@ async def search_all(
                 Listing.is_deleted == False,  # noqa: E712
                 or_(
                     fts_cond,
+                    # search_vector NULL → sadece başlık ILIKE (description gürültü yaratır)
                     and_(
                         Listing.search_vector.is_(None),
-                        or_(Listing.title.ilike(term), Listing.description.ilike(term)),
+                        Listing.title.ilike(term),
                     ),
                 ),
             )
@@ -464,13 +465,10 @@ async def search_listings(
             or_(
                 # search_vector dolu → FTS eşleşmesi
                 Listing.search_vector.op("@@")(tsquery),
-                # search_vector NULL → başlık/açıklama ILIKE ile kapsama al
+                # search_vector NULL → sadece başlık ILIKE (description gürültü yaratır)
                 and_(
                     Listing.search_vector.is_(None),
-                    or_(
-                        Listing.title.ilike(term),
-                        Listing.description.ilike(term),
-                    ),
+                    Listing.title.ilike(term),
                 ),
             ),
         )
