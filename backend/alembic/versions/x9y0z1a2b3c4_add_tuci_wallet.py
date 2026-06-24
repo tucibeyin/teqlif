@@ -14,25 +14,33 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "users",
-        sa.Column("tuci_balance", sa.Integer(), nullable=False, server_default="100"),
-    )
-    op.create_table(
-        "tuci_transactions",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("amount", sa.Integer(), nullable=False),
-        sa.Column("transaction_type", sa.String(50), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index("ix_tuci_transactions_user_id", "tuci_transactions", ["user_id"])
+    conn = op.get_bind()
+
+    # tuci_balance kolonu yoksa ekle
+    has_col = conn.execute(sa.text(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_name='users' AND column_name='tuci_balance'"
+    )).fetchone()
+    if not has_col:
+        op.add_column(
+            "users",
+            sa.Column("tuci_balance", sa.Integer(), nullable=False, server_default="100"),
+        )
+
+    # tuci_transactions tablosu yoksa oluştur
+    conn.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS tuci_transactions (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            amount INTEGER NOT NULL,
+            transaction_type VARCHAR(50) NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """))
+    conn.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS ix_tuci_transactions_user_id "
+        "ON tuci_transactions (user_id)"
+    ))
 
 
 def downgrade() -> None:
