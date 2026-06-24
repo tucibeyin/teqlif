@@ -136,7 +136,9 @@ class SQLInjectionProtection:
     def has_sql(cls, val: str) -> bool:
         if not val:
             return False
-        return any(kw in val.upper() for kw in cls.SQL_KW)
+        upper = val.upper()
+        # Word boundary: "EXECUTIVE" içindeki "EXEC" gibi false positive'leri önler
+        return any(re.search(r'\b' + kw + r'\b', upper) for kw in cls.SQL_KW)
 
     @classmethod
     def sanitize_like(cls, val: str) -> str:

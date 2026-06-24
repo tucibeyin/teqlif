@@ -228,6 +228,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     Hiçbir handler'ın yakalamadığı beklenmedik hataları loglar ve
     Sentry'e iletir. Kullanıcıya hiçbir zaman iç detay sızdırılmaz.
     """
+    # Middleware'den yükselen HTTPException'lar: beklenen iş mantığı hataları,
+    # bug değil — Sentry'ye gönderme, mevcut HTTP handler'a yönlendir.
+    if isinstance(exc, HTTPException):
+        return await http_exception_handler(request, exc)
+
     logger.error(
         "Beklenmedik hata: %s %s | %s",
         request.method,
