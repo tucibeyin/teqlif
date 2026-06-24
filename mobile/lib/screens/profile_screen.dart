@@ -24,9 +24,7 @@ import '../utils/error_helper.dart';
 import '../widgets/shimmer_loading.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
-import 'feed_stats_screen.dart';
-import 'market_trends_screen.dart';
-import 'pro_insights_screen.dart';
+import 'pro_hub_screen.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
 import '../services/wallet_service.dart';
@@ -917,18 +915,6 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     passCtrl.dispose();
   }
 
-  Widget _proBadge() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFB800),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: const Text(
-          'PRO',
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
-        ),
-      );
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -944,57 +930,31 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           _SettingsSection(
             title: '📈 Pro Satıcı Araçları',
             items: [
-              // Pro'ya geç — web sitesine yönlendir (ödeme web üzerinden)
-              if (widget.user?['is_premium'] != true)
-                _SettingsTile(
-                  icon: Icons.workspace_premium_outlined,
-                  iconColor: const Color(0xFFB8860B),
-                  label: '👑 Pro\'ya Geç',
-                  labelColor: const Color(0xFFB8860B),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFB8860B), Color(0xFFFFD700)],
-                      ),
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: const Text(
-                      'YENİ',
-                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.black),
-                    ),
-                  ),
-                  onTap: () {
-                    final uri = Uri.parse('https://www.teqlif.com/pro-plan.html');
-                    launchUrl(uri, mode: LaunchMode.externalApplication);
-                  },
-                ),
               _SettingsTile(
-                icon: Icons.auto_graph_outlined,
-                label: 'Pro Analitik Paneli',
+                icon: Icons.workspace_premium_outlined,
+                iconColor: const Color(0xFFB8860B),
+                label: widget.user?['is_premium'] == true ? '👑 Pro Araçları' : '👑 Pro Araçları',
                 trailing: widget.user?['is_premium'] == true
-                    ? null
-                    : _proBadge(),
-                onTap: () {
-                  if (widget.user?['is_premium'] == true) {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()));
-                  } else {
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => MarketTrendsScreen(isPremium: false),
-                    ));
-                  }
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.bar_chart_outlined,
-                label: 'Feed Performansı',
-                trailing: widget.user?['is_premium'] == true ? null : _proBadge(),
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Color(0xFF1E1B4B), Color(0xFF4338CA)]),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text('AKTİF', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Color(0xFFB8860B), Color(0xFFFFD700)]),
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        child: const Text('PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.black)),
+                      ),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => FeedStatsScreen(
-                      isPremium: widget.user?['is_premium'] == true,
-                    ),
+                    builder: (_) => ProHubScreen(isPremium: widget.user?['is_premium'] == true),
                   ),
                 ),
               ),
