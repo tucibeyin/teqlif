@@ -141,6 +141,8 @@
             });
 
             if (isHost) {
+                // LiveKit bağlantısı kuruldu — yayını canlıya al, bildirimleri gönder
+                try { await Stream.confirmLive(streamId); } catch (e) { console.warn('[yayin] confirmLive hatası:', e); }
                 showVideo();
                 setStatus('Yayın canlı. İzleyiciler sizi görebilir.');
                 _scheduleThumbCapture(streamId);
@@ -166,6 +168,8 @@
 
         } catch (err) {
             console.error(err);
+            // Host bağlanamadıysa pending kaydı temizle
+            if (isHost && streamId) { Stream.cancelStream(streamId).catch(() => {}); }
             setStatus('Bağlantı kurulamadı: ' + (err.error?.message || err.message || 'Bilinmeyen hata'), true);
             connectingOverlay.innerHTML = `<span style="color:#f87171">Bağlantı hatası</span>`;
         }

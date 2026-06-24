@@ -44,6 +44,14 @@ const Stream = (() => {
         await apiFetch(`/streams/${streamId}/end`, { method: 'POST' });
     }
 
+    async function confirmLive(streamId) {
+        await apiFetch(`/streams/${streamId}/confirm-live`, { method: 'POST' });
+    }
+
+    async function cancelStream(streamId) {
+        try { await apiFetch(`/streams/${streamId}/cancel`, { method: 'DELETE' }); } catch (_) {}
+    }
+
     async function leaveStream(streamId) {
         await apiFetch(`/streams/${streamId}/leave`, { method: 'DELETE' });
     }
@@ -106,7 +114,7 @@ const Stream = (() => {
         await apiFetch(`/streams/${streamId}/cohost/leave`, { method: 'POST' });
     }
 
-    return { save, load, clear, startStream, joinStream, endStream, leaveStream, inviteCoHost, acceptCoHostInvite, removeCoHost, leaveCoHost };
+    return { save, load, clear, startStream, joinStream, endStream, confirmLive, cancelStream, leaveStream, inviteCoHost, acceptCoHostInvite, removeCoHost, leaveCoHost };
 })();
 
 
