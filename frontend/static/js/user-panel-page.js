@@ -3,17 +3,6 @@ if (!Auth.getToken()) {
     window.location.href = '/giris.html?next=' + encodeURIComponent(window.location.pathname);
 }
 
-let selectedAmount = 500;
-
-document.querySelectorAll('.pkg-card').forEach(card => {
-    card.addEventListener('click', function () {
-        document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('selected'));
-        this.classList.add('selected');
-        selectedAmount = parseInt(this.dataset.amount, 10);
-    });
-});
-
-document.getElementById('btn-topup').addEventListener('click', doTopup);
 
 function showToast(msg, color) {
     const t = document.getElementById('toast');

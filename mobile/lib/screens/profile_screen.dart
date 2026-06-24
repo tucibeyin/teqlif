@@ -2050,16 +2050,14 @@ class _TuciWalletSheet extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                final uri = Uri.parse('https://www.teqlif.com/user_panel.html');
-                launchUrl(uri, mode: LaunchMode.externalApplication);
-              },
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('TUCi Satın Al'),
+              onPressed: null,
+              icon: const Icon(Icons.schedule_rounded),
+              label: const Text('TUCi Satın Alma Yakında'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFD700),
-                foregroundColor: Colors.black87,
+                backgroundColor: const Color(0xFFFEF3C7),
+                foregroundColor: const Color(0xFF92400E),
+                disabledBackgroundColor: const Color(0xFFFEF3C7),
+                disabledForegroundColor: const Color(0xFF92400E),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
@@ -2242,26 +2240,34 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
             ],
 
-            // ── Satın Al butonu ───────────────────────────────────────
-            SizedBox(
+            // ── Yakında bildirimi ─────────────────────────────────────
+            Container(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  final uri = Uri.parse('https://www.teqlif.com/user_panel.html');
-                  launchUrl(uri, mode: LaunchMode.externalApplication);
-                },
-                icon: const Icon(Icons.open_in_browser_rounded),
-                label: const Text('Web\'den TUCi Yükle'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFD700),
-                  foregroundColor: Colors.black87,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  textStyle: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15),
-                  elevation: 0,
-                ),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  const Text('🔔', style: TextStyle(fontSize: 28)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'TUCi Satın Alma Yakında!',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: Color(0xFF92400E),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Color(0xFF78350F), height: 1.5),
+                  ),
+                ],
               ),
             ),
           ],

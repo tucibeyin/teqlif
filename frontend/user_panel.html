@@ -183,6 +183,29 @@
             to   { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
 
+        /* ── Yakında bildirimi ────────────────────────────────────── */
+        .coming-soon-box {
+            background: #fffbeb;
+            border: 1.5px solid #fde68a;
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            text-align: center;
+            margin-bottom: 1.75rem;
+        }
+        .coming-soon-icon { font-size: 1.75rem; margin-bottom: .5rem; }
+        .coming-soon-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #92400e;
+            margin: 0 0 .4rem;
+        }
+        .coming-soon-desc {
+            font-size: .82rem;
+            color: #78350f;
+            margin: 0;
+            line-height: 1.5;
+        }
+
         @media (max-width: 480px) {
             .packages { grid-template-columns: repeat(3, 1fr); gap: .5rem; }
             .pkg-amount { font-size: 1.3rem; }
@@ -203,30 +226,36 @@
         </div>
     </div>
 
-    <!-- Paket seçimi -->
-    <p class="section-title">Paket Seç</p>
-    <div class="packages">
-        <div class="pkg-card" data-amount="100">
+    <!-- Yakında bildirimi -->
+    <div class="coming-soon-box">
+        <div class="coming-soon-icon">🔔</div>
+        <p class="coming-soon-title">TUCi Satın Alma Yakında!</p>
+        <p class="coming-soon-desc">
+            Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara <strong>100 TUCi başlangıç bakiyesi</strong> tanımlandı.
+            Satın alma özelliği aktif olduğunda buradan bildirim alacaksınız.
+        </p>
+    </div>
+
+    <!-- Paket önizleme (devre dışı) -->
+    <p class="section-title" style="color:#9ca3af">Yakında Gelecek Paketler</p>
+    <div class="packages" style="opacity:.45;pointer-events:none">
+        <div class="pkg-card">
             <div class="pkg-amount">100</div>
             <div class="pkg-unit">TUCi</div>
             <div class="pkg-price">₺9,99</div>
         </div>
-        <div class="pkg-card selected" data-amount="500">
+        <div class="pkg-card">
             <span class="pkg-popular">⭐ Popüler</span>
             <div class="pkg-amount">500</div>
             <div class="pkg-unit">TUCi</div>
             <div class="pkg-price">₺39,99</div>
         </div>
-        <div class="pkg-card" data-amount="1000">
+        <div class="pkg-card">
             <div class="pkg-amount">1000</div>
             <div class="pkg-unit">TUCi</div>
             <div class="pkg-price">₺69,99</div>
         </div>
     </div>
-
-    <button id="btn-topup">
-        💳 Öde ve Yükle
-    </button>
 
     <!-- İşlem geçmişi -->
     <div class="txn-list">
