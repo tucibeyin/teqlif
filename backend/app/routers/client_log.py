@@ -62,14 +62,14 @@ async def _rate_check(request: Request) -> bool:
         return True
 
 
-@router.post("", status_code=204)
+@router.post("")
 async def client_log(
     entry:   ClientLogEntry,
     request: Request,
     user_id: Optional[int] = Depends(_optional_user_id),
-) -> None:
+) -> dict:
     if not await _rate_check(request):
-        return  # Rate limit aşıldı — sessizce yut
+        return {"ok": True}
 
     ip       = request.client.host if request.client else "?"
     platform = entry.platform or "?"
@@ -88,3 +88,5 @@ async def client_log(
 
     if entry.details:
         logger.warning("[CLIENT_LOG] details | tag=%s | %s", entry.tag, entry.details)
+
+    return {"ok": True}
