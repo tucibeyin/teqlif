@@ -256,7 +256,10 @@
         clearInterval(_thumbInterval);
         try {
             await Stream.endStream(streamId);
-        } catch (_) { }
+        } catch (e) {
+            console.error('[yayin] endStream hatası | streamId:', streamId, e);
+            if (window.Sentry) Sentry.captureException(e);
+        }
         Chat.disconnect();
         await disconnectRoom();
         Stream.clear();
