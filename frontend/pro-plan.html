@@ -9,52 +9,44 @@
     <link rel="stylesheet" href="/static/css/main.css">
     <script src="/static/js/auth.js?v=3"></script>
     <style>
-        /* ── Tokens ──────────────────────────────────────────────────── */
         :root {
             --pri:         #06b6d4;
             --pri-dark:    #0891b2;
             --pri-light:   #22d3ee;
-            --pri-dim:     rgba(6,182,212,.12);
+            --pri-dim:     rgba(6,182,212,.10);
             --pro-bg:      #00141a;
             --surface:     #111118;
-            --surface-2:   #16161e;
-            --border-dark: #2a2a35;
-            --border-pri:  rgba(6,182,212,.35);
+            --border-dark: #252530;
+            --border-pri:  rgba(6,182,212,.30);
             --text-main:   #f0f0f0;
-            --text-dim:    #8b8b9a;
+            --text-dim:    #7a7a8a;
             --green:       #4ade80;
             --red:         #f87171;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; background: #090909; color: var(--text-main); }
 
-        html, body {
-            height: 100%;
-            background: #090909;
-            color: var(--text-main);
-            font-family: inherit;
-        }
-
-        /* ── Nav ─────────────────────────────────────────────────────── */
+        /* ── Nav ──────────────────────────────────────────────── */
         nav {
-            background: rgba(9,9,9,.92) !important;
+            background: rgba(9,9,9,.95) !important;
             border-bottom: 1px solid var(--border-dark) !important;
             backdrop-filter: blur(14px) !important;
         }
-        nav .logo               { color: var(--pri) !important; }
-        nav .nav-links a        { color: #b0b0b0 !important; }
-        nav .nav-links a:hover  { color: var(--pri) !important; background: var(--pri-dim) !important; }
-        nav .btn-nav            { background: linear-gradient(135deg, var(--pri-dark), var(--pri)) !important; color:#000 !important; border:none !important; }
+        nav .logo              { color: var(--pri) !important; }
+        nav .nav-links a       { color: #b0b0b0 !important; }
+        nav .nav-links a:hover { color: var(--pri) !important; background: var(--pri-dim) !important; }
+        nav .btn-nav           { background: linear-gradient(135deg, var(--pri-dark), var(--pri)) !important; color:#000 !important; border:none !important; }
 
-        /* ── Page layout ─────────────────────────────────────────────── */
+        /* ── Layout ────────────────────────────────────────────── */
         .page-wrap {
             min-height: calc(100dvh - 56px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px 20px 24px;
-            gap: 18px;
+            padding: 18px 20px 20px;
+            gap: 16px;
             position: relative;
             overflow: hidden;
         }
@@ -63,209 +55,236 @@
             content: '';
             position: absolute;
             inset: 0;
-            background:
-                radial-gradient(ellipse 60% 40% at 50% 20%, rgba(6,182,212,.07) 0%, transparent 60%),
-                radial-gradient(ellipse 30% 30% at 15% 80%, rgba(8,145,178,.04) 0%, transparent 55%),
-                radial-gradient(ellipse 30% 30% at 85% 80%, rgba(6,182,212,.04) 0%, transparent 55%);
+            background: radial-gradient(ellipse 55% 40% at 50% 15%, rgba(6,182,212,.06) 0%, transparent 60%);
             pointer-events: none;
         }
 
-        /* ── Compact header ──────────────────────────────────────────── */
-        .page-header { text-align: center; position: relative; }
+        /* ── Header ────────────────────────────────────────────── */
+        .page-header { text-align: center; }
 
         .hero-badge {
             display: inline-flex;
             align-items: center;
-            gap: .4rem;
+            gap: .35rem;
             background: var(--pri-dim);
             border: 1px solid var(--border-pri);
             border-radius: 50px;
-            padding: .3rem .9rem;
-            font-size: .7rem;
+            padding: .28rem .85rem;
+            font-size: .68rem;
             font-weight: 700;
             letter-spacing: .1em;
             text-transform: uppercase;
             color: var(--pri);
-            margin-bottom: .6rem;
+            margin-bottom: .5rem;
         }
 
         .page-header h1 {
-            font-size: clamp(1.4rem, 3.5vw, 2rem);
+            font-size: clamp(1.3rem, 3vw, 1.8rem);
             font-weight: 900;
             line-height: 1.15;
-            background: linear-gradient(135deg, #fff 15%, var(--pri-light) 60%, var(--pri) 100%);
+            background: linear-gradient(135deg, #fff 10%, var(--pri-light) 55%, var(--pri) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: .35rem;
+            margin-bottom: .28rem;
         }
 
-        .page-header p { font-size: .85rem; color: var(--text-dim); }
+        .page-header p { font-size: .82rem; color: var(--text-dim); }
 
-        /* ── Toggle ──────────────────────────────────────────────────── */
+        /* ── Toggle ────────────────────────────────────────────── */
         .plan-toggle {
             display: flex;
             background: var(--surface);
             border: 1px solid var(--border-dark);
             border-radius: 50px;
-            padding: .25rem;
+            padding: .22rem;
         }
 
         .toggle-btn {
             background: none;
             border: none;
             color: var(--text-dim);
-            font-size: .82rem;
+            font-size: .8rem;
             font-weight: 600;
-            padding: .45rem 1.2rem;
+            padding: .4rem 1.1rem;
             border-radius: 50px;
             cursor: pointer;
-            transition: background .2s, color .2s;
+            transition: background .18s, color .18s;
             display: flex;
             align-items: center;
-            gap: .45rem;
+            gap: .4rem;
             white-space: nowrap;
         }
 
-        .toggle-btn.active {
-            background: linear-gradient(135deg, var(--pri-dark), var(--pri));
-            color: #000;
-        }
+        .toggle-btn.active { background: linear-gradient(135deg, var(--pri-dark), var(--pri)); color: #000; }
 
         .save-badge {
-            background: rgba(74,222,128,.15);
+            background: rgba(74,222,128,.14);
             color: var(--green);
-            font-size: .6rem;
+            font-size: .58rem;
             font-weight: 800;
-            padding: .12rem .48rem;
+            padding: .1rem .45rem;
             border-radius: 50px;
-            border: 1px solid rgba(74,222,128,.28);
+            border: 1px solid rgba(74,222,128,.25);
         }
 
-        .toggle-btn.active .save-badge {
-            background: rgba(0,0,0,.15);
-            color: #000;
-            border-color: rgba(0,0,0,.18);
-        }
+        .toggle-btn.active .save-badge { background: rgba(0,0,0,.14); color: #000; border-color: rgba(0,0,0,.16); }
 
-        /* ── Plan cards grid ─────────────────────────────────────────── */
-        .plans-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
+        /* ── Comparison table ──────────────────────────────────── */
+        .ctable-wrap {
             width: 100%;
-            max-width: 820px;
-            position: relative;
-        }
-
-        .plan-card {
-            background: var(--surface);
+            max-width: 720px;
+            border-radius: 16px;
+            overflow: hidden;
             border: 1px solid var(--border-dark);
-            border-radius: 18px;
-            padding: 20px 22px 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
+        }
+
+        .ctable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        /* Column widths */
+        .ctable .col-feat { width: 46%; }
+        .ctable .col-std  { width: 27%; }
+        .ctable .col-pro  { width: 27%; }
+
+        /* ── thead ─────────────────────────────────────────────── */
+        .ctable thead th {
+            padding: .7rem 1rem;
+            font-size: .78rem;
+            font-weight: 700;
+            text-align: center;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-dark);
+        }
+
+        .th-feat { text-align: left !important; color: var(--text-dim); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+
+        .th-std  { color: var(--text-dim); border-left: 1px solid var(--border-dark); }
+
+        .th-pro  {
+            color: var(--pri);
+            background: var(--pro-bg) !important;
+            border-left: 1px solid var(--border-pri);
             position: relative;
         }
 
-        .plan-card.pro {
-            background: var(--pro-bg);
-            border: 2px solid var(--pri-dark);
-            box-shadow: 0 0 32px rgba(6,182,212,.08);
-        }
-
-        .rec-pill {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
+        .pro-rec-pill {
+            display: inline-block;
             background: linear-gradient(135deg, var(--pri-dark), var(--pri));
             color: #000;
-            font-size: .65rem;
+            font-size: .58rem;
             font-weight: 900;
-            letter-spacing: .08em;
+            letter-spacing: .07em;
             text-transform: uppercase;
-            padding: .22rem .85rem;
+            padding: .12rem .6rem;
             border-radius: 50px;
-            white-space: nowrap;
+            margin-right: .4rem;
+            vertical-align: middle;
         }
 
-        .card-head { display: flex; flex-direction: column; gap: 4px; }
+        /* ── tbody ─────────────────────────────────────────────── */
+        .ctable tbody tr { transition: background .12s; }
 
-        .plan-name { font-size: 1rem; font-weight: 800; color: var(--text-main); }
-        .plan-card.pro .plan-name { color: var(--pri); }
+        .ctable tbody tr:hover td { background-color: rgba(255,255,255,.025) !important; }
 
-        .plan-price { font-size: 1.55rem; font-weight: 900; color: var(--pri); line-height: 1; }
-        .plan-card.standard .plan-price { color: var(--text-main); font-size: 1.3rem; }
-
-        .plan-sub-price { font-size: .72rem; color: var(--text-dim); min-height: .9rem; }
-
-        /* Feature list */
-        .feat-list { list-style: none; display: flex; flex-direction: column; flex: 1; }
-
-        .feat-list li {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: .38rem 0;
-            border-bottom: 1px solid rgba(255,255,255,.05);
+        .ctable tbody td {
+            padding: .45rem 1rem;
             font-size: .8rem;
-            gap: 8px;
+            border-bottom: 1px solid var(--border-dark);
+            vertical-align: middle;
         }
 
-        .feat-list li:last-child { border-bottom: none; }
+        .ctable tbody tr:last-child td { border-bottom: none; }
 
-        .feat-name  { color: var(--text-dim); flex: 1; }
-        .feat-val   { font-weight: 700; white-space: nowrap; font-size: .78rem; }
-        .feat-val.ok  { color: var(--green); }
-        .feat-val.no  { color: var(--red); opacity: .7; }
-        .feat-val.dim { color: var(--text-dim); }
-        .feat-val.hi  { color: var(--pri); }
+        .td-feat {
+            background: var(--surface);
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .td-std {
+            background: #0e0e14;
+            text-align: center;
+            color: var(--text-dim);
+            border-left: 1px solid var(--border-dark);
+        }
+
+        .td-pro {
+            background: var(--pro-bg);
+            text-align: center;
+            border-left: 1px solid var(--border-pri);
+            font-weight: 600;
+        }
+
+        /* Value styles */
+        .v-ok  { color: var(--green); }
+        .v-no  { color: var(--red); opacity: .65; }
+        .v-hi  { color: var(--pri); font-weight: 700; }
+        .v-dim { color: var(--text-dim); }
+
+        /* Highlight row */
+        .row-hi .td-feat { background: rgba(6,182,212,.04); }
+        .row-hi .td-pro  { background: rgba(6,182,212,.08); }
+
+        /* ── tfoot — price + CTA ───────────────────────────────── */
+        .ctable tfoot td {
+            padding: .65rem 1rem;
+            background: var(--surface);
+            border-top: 1px solid var(--border-dark);
+        }
+
+        .tfoot-std { background: #0e0e14 !important; text-align: center; border-left: 1px solid var(--border-dark); }
+        .tfoot-pro { background: var(--pro-bg) !important; text-align: center; border-left: 1px solid var(--border-pri); }
+
+        /* Price row */
+        .price-label { font-size: .68rem; color: var(--text-dim); margin-bottom: .15rem; }
+        .price-val   { font-size: 1.35rem; font-weight: 900; color: var(--pri); line-height: 1.1; }
+        .price-sub   { font-size: .65rem; color: var(--text-dim); margin-top: .12rem; min-height: .8rem; }
+        .price-free  { font-size: 1.1rem; font-weight: 800; color: var(--text-dim); }
 
         /* Buttons */
-        .btn-pro {
-            width: 100%;
-            background: linear-gradient(135deg, var(--pri-dark) 0%, var(--pri) 60%, var(--pri-light) 100%);
-            color: #000;
-            font-weight: 800;
-            font-size: .88rem;
-            padding: .75rem 1rem;
-            border-radius: 50px;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 0 16px rgba(6,182,212,.28), 0 3px 10px rgba(0,0,0,.4);
-            animation: pulse-pri 2.4s ease-in-out infinite;
-            transition: transform .15s, box-shadow .15s;
-        }
-
-        .btn-pro:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 0 28px rgba(6,182,212,.55), 0 6px 20px rgba(0,0,0,.5);
-            animation-play-state: paused;
-        }
-
-        .btn-standard {
+        .btn-free {
             width: 100%;
             background: none;
             color: var(--text-dim);
+            font-size: .78rem;
             font-weight: 600;
-            font-size: .84rem;
-            padding: .7rem 1rem;
+            padding: .55rem .5rem;
             border-radius: 50px;
             border: 1px solid var(--border-dark);
             cursor: pointer;
-            transition: border-color .2s, color .2s;
+            transition: border-color .15s, color .15s;
         }
+        .btn-free:hover { border-color: var(--text-dim); color: var(--text-main); }
 
-        .btn-standard:hover { border-color: var(--text-dim); color: var(--text-main); }
+        .btn-pro {
+            width: 100%;
+            background: linear-gradient(135deg, var(--pri-dark), var(--pri) 60%, var(--pri-light));
+            color: #000;
+            font-size: .82rem;
+            font-weight: 800;
+            padding: .6rem .5rem;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 14px rgba(6,182,212,.25);
+            animation: pulse-pri 2.4s ease-in-out infinite;
+            transition: transform .14s, box-shadow .14s;
+        }
+        .btn-pro:hover {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 0 24px rgba(6,182,212,.5);
+            animation-play-state: paused;
+        }
 
         @keyframes pulse-pri {
-            0%,100% { box-shadow: 0 0 16px rgba(6,182,212,.28), 0 3px 10px rgba(0,0,0,.4); }
-            50%      { box-shadow: 0 0 30px rgba(6,182,212,.55), 0 6px 18px rgba(0,0,0,.5); }
+            0%,100% { box-shadow: 0 0 14px rgba(6,182,212,.25); }
+            50%      { box-shadow: 0 0 26px rgba(6,182,212,.5);  }
         }
 
-        /* ── Toast ───────────────────────────────────────────────────── */
+        /* ── Toast ─────────────────────────────────────────────── */
         .pro-toast {
             position: fixed;
             bottom: 2rem;
@@ -274,28 +293,27 @@
             background: #00131a;
             border: 1px solid var(--pri-dark);
             border-radius: 14px;
-            padding: 1rem 1.4rem;
+            padding: .9rem 1.3rem;
             display: flex;
             align-items: flex-start;
-            gap: .75rem;
-            box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 20px rgba(6,182,212,.1);
+            gap: .7rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 18px rgba(6,182,212,.1);
             z-index: 9999;
             transition: transform .4s cubic-bezier(.34,1.46,.64,1);
-            max-width: min(420px, 90vw);
+            max-width: min(400px, 90vw);
             pointer-events: none;
         }
+        .pro-toast.show        { transform: translateX(-50%) translateY(0); pointer-events: auto; }
+        .pro-toast-icon        { font-size: 1.3rem; flex-shrink: 0; }
+        .pro-toast-title       { font-size: .85rem; font-weight: 700; color: var(--pri); margin-bottom: .18rem; }
+        .pro-toast-sub         { font-size: .74rem; color: var(--text-dim); line-height: 1.5; }
 
-        .pro-toast.show { transform: translateX(-50%) translateY(0); pointer-events: auto; }
-        .pro-toast-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: .05rem; }
-        .pro-toast-title { font-size: .88rem; font-weight: 700; color: var(--pri); margin-bottom: .2rem; }
-        .pro-toast-sub   { font-size: .76rem; color: var(--text-dim); line-height: 1.5; }
-
-        /* ── Mobile ──────────────────────────────────────────────────── */
-        @media (max-width: 640px) {
-            .plans-grid     { grid-template-columns: 1fr; max-width: 400px; }
-            .plan-card.standard { order: 2; }
-            .plan-card.pro      { order: 1; }
-            .page-header h1 { font-size: 1.35rem; }
+        /* ── Mobile ─────────────────────────────────────────────── */
+        @media (max-width: 560px) {
+            .ctable-wrap { border-radius: 12px; }
+            .ctable tbody td, .ctable tfoot td, .ctable thead th { padding: .4rem .65rem; font-size: .74rem; }
+            .price-val { font-size: 1.1rem; }
+            .page-header h1 { font-size: 1.2rem; }
         }
     </style>
 </head>
@@ -324,54 +342,89 @@
     <div class="plan-toggle">
         <button class="toggle-btn active" id="btnMonthly">Aylık</button>
         <button class="toggle-btn" id="btnYearly">
-            Yıllık
-            <span class="save-badge">2 ay bedava</span>
+            Yıllık <span class="save-badge">2 ay bedava</span>
         </button>
     </div>
 
-    <div class="plans-grid">
-
-        <!-- Standart -->
-        <div class="plan-card standard">
-            <div class="card-head">
-                <div class="plan-name">Standart</div>
-                <div class="plan-price">Ücretsiz</div>
-                <div class="plan-sub-price">Temel özelliklerle başlayın</div>
-            </div>
-            <ul class="feat-list">
-                <li><span class="feat-name">💛 Hediye Geliri</span><span class="feat-val dim">%70</span></li>
-                <li><span class="feat-name">📊 Analitik</span><span class="feat-val no">Kilitli 🔒</span></li>
-                <li><span class="feat-name">🤖 AI Fiyat Danışmanı</span><span class="feat-val dim">Ücretli</span></li>
-                <li><span class="feat-name">🐋 Balina Radarı</span><span class="feat-val no">✘</span></li>
-                <li><span class="feat-name">⭐ İlan Önceliği</span><span class="feat-val no">✘</span></li>
-                <li><span class="feat-name">👑 Pro Rozeti</span><span class="feat-val no">✘</span></li>
-                <li><span class="feat-name">📣 Blast Kredisi</span><span class="feat-val dim">3 / ay</span></li>
-                <li><span class="feat-name">💬 Destek</span><span class="feat-val dim">Standart</span></li>
-            </ul>
-            <button class="btn-standard" onclick="window.location.href='/'">Ücretsiz Devam Et</button>
-        </div>
-
-        <!-- Pro -->
-        <div class="plan-card pro">
-            <div class="rec-pill">Önerilen</div>
-            <div class="card-head">
-                <div class="plan-name">👑 Pro</div>
-                <div class="plan-price" id="planPrice">500 TUCi / ay</div>
-                <div class="plan-sub-price" id="planSubPrice"></div>
-            </div>
-            <ul class="feat-list">
-                <li><span class="feat-name">💛 Hediye Geliri</span><span class="feat-val hi">🔥 %95</span></li>
-                <li><span class="feat-name">📊 Analitik</span><span class="feat-val ok">✔ Sınırsız</span></li>
-                <li><span class="feat-name">🤖 AI Fiyat Danışmanı</span><span class="feat-val ok">⚡ Ücretsiz</span></li>
-                <li><span class="feat-name">🐋 Balina Radarı</span><span class="feat-val ok">✔ Aktif</span></li>
-                <li><span class="feat-name">⭐ İlan Önceliği</span><span class="feat-val ok">✔ Otomatik</span></li>
-                <li><span class="feat-name">👑 Pro Rozeti</span><span class="feat-val ok">✔ Profilde</span></li>
-                <li><span class="feat-name">📣 Blast Kredisi</span><span class="feat-val ok">✔ 20 / ay</span></li>
-                <li><span class="feat-name">💬 Destek</span><span class="feat-val ok">⚡ Öncelikli</span></li>
-            </ul>
-            <button class="btn-pro" id="btnPro">Hemen Pro Ol 👑</button>
-        </div>
-
+    <div class="ctable-wrap">
+        <table class="ctable">
+            <colgroup>
+                <col class="col-feat">
+                <col class="col-std">
+                <col class="col-pro">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="th-feat">Özellik</th>
+                    <th class="th-std">Standart</th>
+                    <th class="th-pro"><span class="pro-rec-pill">Önerilen</span>👑 Pro</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row-hi">
+                    <td class="td-feat">💛 Canlı Yayın Hediye Geliri</td>
+                    <td class="td-std"><span class="v-dim">%70</span></td>
+                    <td class="td-pro"><span class="v-hi">🔥 %95</span></td>
+                </tr>
+                <tr>
+                    <td class="td-feat">📊 Pazar Trendleri &amp; Analitik</td>
+                    <td class="td-std"><span class="v-no">🔒 Kilitli</span></td>
+                    <td class="td-pro"><span class="v-ok">✔ Sınırsız</span></td>
+                </tr>
+                <tr>
+                    <td class="td-feat">🤖 Yapay Zeka Fiyat Danışmanı</td>
+                    <td class="td-std"><span class="v-dim">Ücretli</span></td>
+                    <td class="td-pro"><span class="v-ok">⚡ Ücretsiz</span></td>
+                </tr>
+                <tr>
+                    <td class="td-feat">🐋 Balina (VIP) Alıcı Radarı</td>
+                    <td class="td-std"><span class="v-no">✘ Yok</span></td>
+                    <td class="td-pro"><span class="v-ok">✔ Aktif</span></td>
+                </tr>
+                <tr>
+                    <td class="td-feat">⭐ Öne Çıkarılmış İlan Önceliği</td>
+                    <td class="td-std"><span class="v-no">✘ Yok</span></td>
+                    <td class="td-pro"><span class="v-ok">✔ Otomatik</span></td>
+                </tr>
+                <tr>
+                    <td class="td-feat">👑 Pro Kullanıcı Rozeti</td>
+                    <td class="td-std"><span class="v-no">✘ Yok</span></td>
+                    <td class="td-pro"><span class="v-ok">✔ Profilde</span></td>
+                </tr>
+                <tr>
+                    <td class="td-feat">📣 Kitle Blast Kredisi</td>
+                    <td class="td-std"><span class="v-dim">3 / ay</span></td>
+                    <td class="td-pro"><span class="v-ok">✔ 20 / ay</span></td>
+                </tr>
+                <tr>
+                    <td class="td-feat">💬 Müşteri Desteği</td>
+                    <td class="td-std"><span class="v-dim">Standart</span></td>
+                    <td class="td-pro"><span class="v-ok">⚡ Öncelikli</span></td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="td-feat" style="padding:.6rem 1rem .3rem;"></td>
+                    <td class="tfoot-std" style="padding:.6rem 1rem .3rem;">
+                        <div class="price-free">Ücretsiz</div>
+                    </td>
+                    <td class="tfoot-pro" style="padding:.6rem 1rem .3rem;">
+                        <div class="price-label" id="planPeriodLabel">Aylık</div>
+                        <div class="price-val" id="planPrice">₺500</div>
+                        <div class="price-sub" id="planSubPrice"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="td-feat" style="padding:.3rem 1rem .75rem;border-bottom:none;"></td>
+                    <td class="tfoot-std" style="padding:.3rem 1rem .75rem;border-bottom:none;">
+                        <button class="btn-free" onclick="window.location.href='/'">Ücretsiz Devam Et</button>
+                    </td>
+                    <td class="tfoot-pro" style="padding:.3rem 1rem .75rem;border-bottom:none;">
+                        <button class="btn-pro" id="btnPro">Hemen Pro Ol 👑</button>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
     </div>
 
 </div>
@@ -385,6 +438,6 @@
 </div>
 
 <script src="/static/js/main.js"></script>
-<script src="/static/js/pro-plan.js?v=2"></script>
+<script src="/static/js/pro-plan.js?v=3"></script>
 </body>
 </html>

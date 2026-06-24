@@ -8,13 +8,17 @@
         document.getElementById('btnMonthly').classList.toggle('active', !isYearly);
         document.getElementById('btnYearly').classList.toggle('active', isYearly);
 
+        var periodEl   = document.getElementById('planPeriodLabel');
         var priceEl    = document.getElementById('planPrice');
         var subPriceEl = document.getElementById('planSubPrice');
+
         if (isYearly) {
-            priceEl.textContent    = '4.800 TUCi / yıl';
-            subPriceEl.textContent = '≈ 400 TUCi/ay · 2 ay bedava';
+            if (periodEl)   periodEl.textContent   = 'Yıllık';
+            priceEl.textContent    = '₺4.800';
+            subPriceEl.textContent = '≈ ₺400/ay · 2 ay bedava';
         } else {
-            priceEl.textContent    = '500 TUCi / ay';
+            if (periodEl)   periodEl.textContent   = 'Aylık';
+            priceEl.textContent    = '₺500';
             subPriceEl.textContent = '';
         }
     }
