@@ -24,6 +24,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   Timer? _debounce;
+  int _searchToken = 0; // her yeni arama için artar; eski yanıtlar görmezden gelinir
 
   List<Map<String, dynamic>> _userResults = [];
   List<Map<String, dynamic>> _listingResults = [];
@@ -184,6 +185,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   // /search/all → kullanıcı + ilan + canlı yayın; tek çağrı; 500ms debounce.
   Future<void> _search(String q) async {
+    final myToken = ++_searchToken; // bu request'in token'ı
     setState(() => _searching = true);
     try {
       final token = await StorageService.getToken();
@@ -192,7 +194,7 @@ class _SearchScreenState extends State<SearchScreen> {
         Uri.parse('$kBaseUrl/search/all').replace(queryParameters: {'q': q}),
         headers: headers,
       );
-      if (!mounted) return;
+      if (!mounted || myToken != _searchToken) return; // eski yanıt, görmezden gel
       if (resp.statusCode != 200) {
         setState(() => _searching = false);
         return;
@@ -209,7 +211,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _searching = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _searching = false);
+      if (mounted && myToken == _searchToken) setState(() => _searching = false);
     }
   }
 
