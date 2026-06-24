@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,8 +19,17 @@ router = APIRouter(prefix="/api/search", tags=["search"])
 
 
 def _sanitize_ts_query(q: str) -> str:
-    """Fazla boşlukları temizler. websearch_to_tsquery AND/OR/NOT semantiğini kendisi yönetir."""
     return " ".join(q.split())
+
+
+def _build_prefix_tsquery(q: str) -> str:
+    """Her kelimeye :* ekler — to_tsquery ile prefix (as-you-type) arama sağlar."""
+    # to_tsquery için özel karakterleri temizle
+    safe = re.sub(r"[&|!():<>@*\\]", " ", q)
+    words = [w for w in safe.split() if w]
+    if not words:
+        return ""
+    return " & ".join(f"{w}:*" for w in words)
 
 
 async def _optional_user_id(
@@ -302,19 +312,28 @@ async def search_all(
         ]
 
     else:
-        # Orta uzunluk → FTS
+        # Orta uzunluk → prefix FTS + NULL-search_vector ILIKE
         ts_q = _sanitize_ts_query(q)
-        tsquery = func.websearch_to_tsquery("turkish", ts_q)
-        rank = func.ts_rank(Listing.search_vector, tsquery)
+        term = f"%{ts_q}%"
+        prefix_q = _build_prefix_tsquery(ts_q)
+        tsquery = func.to_tsquery("turkish", prefix_q) if prefix_q else None
+        rank = func.ts_rank(Listing.search_vector, tsquery) if tsquery else func.cast(0, func.Float)
+        fts_cond = Listing.search_vector.op("@@")(tsquery) if tsquery else False
         listing_q = (
-            select(Listing, User, rank.label("rank"))
+            select(Listing, User, func.coalesce(rank, 0.0).label("rank"))
             .join(User, User.id == Listing.user_id)
             .where(
                 Listing.is_active == True,  # noqa: E712
                 Listing.is_deleted == False,  # noqa: E712
-                Listing.search_vector.op("@@")(tsquery),
+                or_(
+                    fts_cond,
+                    and_(
+                        Listing.search_vector.is_(None),
+                        or_(Listing.title.ilike(term), Listing.description.ilike(term)),
+                    ),
+                ),
             )
-            .order_by(rank.desc())
+            .order_by(func.coalesce(rank, 0.0).desc())
             .offset(offset)
             .limit(12)
         )
@@ -427,10 +446,14 @@ async def search_listings(
         ]
         return {"listings": listings, "search_type": "semantic"}
 
-    # ── 3. Orta uzunluk → FTS + NULL-search_vector ILIKE birlikte ───────────
+    # ── 3. Orta uzunluk → prefix FTS + NULL-search_vector ILIKE birlikte ────
     ts_q = _sanitize_ts_query(q)
     term = f"%{ts_q}%"
-    tsquery = func.websearch_to_tsquery("turkish", ts_q)
+    prefix_q = _build_prefix_tsquery(ts_q)
+    if not prefix_q:
+        return {"listings": [], "search_type": "text"}
+    # to_tsquery + :* → "çam:*" her "çam" ile başlayan lexeme'i bulur
+    tsquery = func.to_tsquery("turkish", prefix_q)
     rank = func.ts_rank(Listing.search_vector, tsquery)
     stmt = (
         select(Listing, User, func.coalesce(rank, 0.0).label("rank"))
