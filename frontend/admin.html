@@ -17,6 +17,8 @@
             --admin-text: #f1f5f9;
         }
 
+        * { box-sizing: border-box; }
+
         body {
             background-color: var(--admin-bg);
             color: var(--admin-text);
@@ -28,9 +30,7 @@
             align-items: center;
         }
 
-        .hidden {
-            display: none !important;
-        }
+        .hidden { display: none !important; }
 
         .container {
             background: var(--admin-card);
@@ -41,8 +41,7 @@
             min-width: 350px;
         }
 
-        input,
-        select {
+        input, select {
             width: 100%;
             padding: 0.85rem;
             margin: 0.6rem 0 1.2rem 0;
@@ -65,18 +64,15 @@
             transition: opacity 0.2s;
             font-size: 1rem;
         }
-
-        button:hover {
-            opacity: 0.8;
-        }
+        button:hover { opacity: 0.8; }
 
         #admin-content {
             width: 95vw;
-            max-width: 1400px;
+            max-width: 1500px;
             display: grid;
-            grid-template-columns: 250px 1fr;
-            gap: 2rem;
-            padding: 2rem 0;
+            grid-template-columns: 220px 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem 0;
             align-items: start;
             height: 100vh;
             box-sizing: border-box;
@@ -85,33 +81,23 @@
         .sidebar {
             background: var(--admin-card);
             border-radius: 1rem;
-            padding: 2rem;
+            padding: 1.5rem;
             border: 1px solid var(--admin-border);
             position: sticky;
-            top: 2rem;
+            top: 1.5rem;
         }
-
-        .sidebar h2 {
-            color: var(--admin-primary);
-            margin-top: 0;
-            font-size: 1.5rem;
-            margin-bottom: 2rem;
-        }
+        .sidebar h2 { color: var(--admin-primary); margin-top: 0; font-size: 1.2rem; margin-bottom: 1.5rem; }
 
         .nav-item {
-            padding: 1rem;
+            padding: 0.75rem 1rem;
             cursor: pointer;
             border-radius: 0.5rem;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.3rem;
             color: #94a3b8;
             transition: all 0.2s;
+            font-size: 0.9rem;
         }
-
-        .nav-item:hover,
-        .nav-item.active {
-            background: #334155;
-            color: white;
-        }
+        .nav-item:hover, .nav-item.active { background: #334155; color: white; }
 
         .main-panel {
             background: var(--admin-card);
@@ -120,7 +106,7 @@
             border: 1px solid var(--admin-border);
             display: flex;
             flex-direction: column;
-            max-height: calc(100vh - 4rem);
+            max-height: calc(100vh - 3rem);
         }
 
         .header-bar {
@@ -130,36 +116,22 @@
             margin-bottom: 1.5rem;
             flex-shrink: 0;
         }
+        .header-bar h1 { margin: 0; color: white; font-size: 1.8rem; }
 
-        .header-bar h1 {
-            margin: 0;
-            color: white;
-            font-size: 2rem;
-        }
-
-        /* Arama Kutusu ve Buton Grubu */
-        .header-actions {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
+        .header-actions { display: flex; gap: 0.75rem; align-items: center; }
 
         .search-box {
-            padding: 0.6rem 1rem;
+            padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             border: 1px solid var(--admin-border);
             background: var(--admin-bg);
             color: white;
-            width: 250px;
+            width: 220px;
             font-size: 0.9rem;
             margin: 0 !important;
         }
+        .search-box::placeholder { color: #64748b; }
 
-        .search-box::placeholder {
-            color: #64748b;
-        }
-
-        /* Tablo ve Scroll Ayarları */
         .table-container {
             background: var(--admin-card);
             border-radius: 0.5rem;
@@ -170,112 +142,107 @@
             max-height: 100%;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.95rem;
-            position: relative;
-        }
-
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; position: relative; }
         thead th {
-            position: sticky;
-            top: 0;
-            background: var(--admin-bg);
-            z-index: 10;
-            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
-            padding: 1.2rem;
+            position: sticky; top: 0;
+            background: var(--admin-bg); z-index: 10;
+            box-shadow: 0 2px 2px -1px rgba(0,0,0,0.4);
+            padding: 1rem;
+            white-space: nowrap;
         }
+        tbody td { padding: 0.9rem 1rem; border-bottom: 1px solid var(--admin-border); }
+        tbody tr:hover { background: #334155; }
 
-        tbody td {
-            padding: 1.2rem;
-            border-bottom: 1px solid var(--admin-border);
-        }
-
-        tbody tr:hover {
-            background: #334155;
-        }
-
-        /* Linkler ve Etiketler */
-        .admin-link {
-            color: #38bdf8;
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.2s;
-        }
-
-        .admin-link:hover {
-            color: white;
-            text-decoration: underline;
-        }
+        .admin-link { color: #38bdf8; text-decoration: none; font-weight: 600; }
+        .admin-link:hover { color: white; text-decoration: underline; }
 
         .action-btn {
             background: #3b82f6;
-            padding: 0.5rem 0.8rem;
-            font-size: 0.85rem;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.8rem;
             width: auto;
-            margin-right: 0.5rem;
+            margin-right: 0.3rem;
             border-radius: 0.3rem;
         }
 
         .status-pill {
-            padding: 0.3rem 0.6rem;
+            padding: 0.25rem 0.55rem;
             border-radius: 1rem;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: bold;
         }
 
-        /* Modal Ayarları */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+        /* Dashboard KPI grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-shrink: 0;
+        }
+        .kpi-card {
+            background: var(--admin-bg);
+            border: 1px solid var(--admin-border);
+            border-radius: 0.75rem;
+            padding: 1.2rem;
+            text-align: center;
+        }
+        .kpi-label { font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.4rem; }
+        .kpi-value { font-size: 2rem; font-weight: 800; color: white; }
+        .kpi-value.green { color: var(--admin-primary); }
+        .kpi-value.red { color: var(--admin-danger); }
+        .kpi-value.amber { color: var(--admin-warn); }
+        .kpi-value.blue { color: #38bdf8; }
+
+        /* Mini bar chart */
+        .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 60px; margin-top: 0.5rem; }
+        .bar-chart .bar {
+            flex: 1;
+            background: var(--admin-primary);
+            border-radius: 3px 3px 0 0;
+            min-height: 4px;
+            position: relative;
+        }
+        .bar-chart .bar:hover::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            font-size: 0.65rem;
+            padding: 2px 5px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
         }
 
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
+        }
         .modal-content {
             background: var(--admin-card);
-            padding: 2.5rem;
-            border-radius: 1rem;
-            width: 90%;
-            max-width: 450px;
-            position: relative;
-            border: 1px solid var(--admin-border);
+            padding: 2.5rem; border-radius: 1rem;
+            width: 90%; max-width: 460px;
+            position: relative; border: 1px solid var(--admin-border);
+            max-height: 90vh; overflow-y: auto;
         }
-
         .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: transparent;
-            color: white;
-            width: auto;
-            padding: 0;
-            font-size: 1.5rem;
+            position: absolute; top: 1rem; right: 1rem;
+            background: transparent; color: white; width: auto; padding: 0; font-size: 1.5rem;
         }
-
-        .divider {
-            border-top: 1px solid var(--admin-border);
-            margin: 2rem 0;
-        }
-
-        label {
-            text-align: left;
-            display: block;
-            font-size: 0.9rem;
-            color: #94a3b8;
-        }
+        .divider { border-top: 1px solid var(--admin-border); margin: 1.5rem 0; }
+        label { text-align: left; display: block; font-size: 0.85rem; color: #94a3b8; }
     </style>
 </head>
 
 <body>
 
+    <!-- AUTH -->
     <div class="container" id="auth-container">
         <div id="step-google">
             <h3>Teqlif Back-Office (1/2)</h3>
@@ -288,29 +255,58 @@
         </div>
     </div>
 
+    <!-- ADMIN CONTENT -->
     <div id="admin-content" class="hidden">
         <aside class="sidebar">
-            <h2>Teqlif Admin</h2>
-            <div class="nav-item active" id="navUsers">👥 Kullanıcı Yönetimi</div>
-            <div class="nav-item" id="navStreams">🎥 Canlı Yayınlar</div>
+            <h2>⚡ Teqlif Admin</h2>
+            <div class="nav-item active" id="navDashboard">📊 Dashboard</div>
+            <div class="nav-item" id="navUsers">👥 Kullanıcılar</div>
+            <div class="nav-item" id="navTuci">💰 TUCi Ekonomisi</div>
+            <div class="nav-item" id="navCampaigns">📢 Reklam Kampanyaları</div>
+            <div class="nav-item" id="navStreams">🔴 Aktif Yayınlar</div>
+            <div class="nav-item" id="navStreamHistory">📺 Yayın Geçmişi</div>
             <div class="nav-item" id="navListings">📦 İlan Denetimi</div>
-            <div class="nav-item" id="navReports">🚩 Şikayetler (Reports)</div>
-            <div class="nav-item" id="navAnalytics">📊 Ziyaretçi İstatistikleri</div>
+            <div class="nav-item" id="navReports">🚩 Şikayetler</div>
+            <div class="nav-item" id="navPush">🔔 Bildirim Gönder</div>
+            <div class="nav-item" id="navAnalytics">📈 Analitik</div>
             <div class="divider"></div>
             <button id="btnAdminLogout" style="background: var(--admin-danger);">Güvenli Çıkış</button>
         </aside>
 
         <main class="main-panel">
-            <div id="panel-users" class="panel-content" style="display: flex; flex-direction: column; height: 100%;">
+
+            <!-- DASHBOARD -->
+            <div id="panel-dashboard" class="panel-content" style="display:flex;flex-direction:column;height:100%;overflow-y:auto;">
                 <div class="header-bar">
-                    <h1>Kullanıcı Yönetimi</h1>
+                    <h1>Dashboard</h1>
+                    <button id="btnLoadDashboard" style="width:auto;background:#3b82f6;">🔄 Yenile</button>
+                </div>
+                <div class="kpi-grid" id="kpiGrid">
+                    <div class="kpi-card"><div class="kpi-label">Toplam Kullanıcı</div><div class="kpi-value blue" id="kpiTotal">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Aktif Kullanıcı</div><div class="kpi-value green" id="kpiActive">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Yasaklı</div><div class="kpi-value red" id="kpiBanned">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Bugün Kayıt</div><div class="kpi-value amber" id="kpiToday">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Aktif İlan</div><div class="kpi-value blue" id="kpiListings">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Aktif Yayın</div><div class="kpi-value red" id="kpiStreams">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Bekleyen Şikayet</div><div class="kpi-value amber" id="kpiReports">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">TUCi Dolaşımda</div><div class="kpi-value amber" id="kpiTuci">—</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Bugün Harcanan TUCi</div><div class="kpi-value red" id="kpiTuciSpent">—</div></div>
+                </div>
+                <div style="background:var(--admin-bg);border:1px solid var(--admin-border);border-radius:0.75rem;padding:1.2rem;flex-shrink:0;">
+                    <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:0.5rem;">Son 7 Gün Kayıt</div>
+                    <div class="bar-chart" id="growthChart"></div>
+                    <div id="growthLabels" style="display:flex;gap:4px;margin-top:4px;font-size:0.6rem;color:#64748b;"></div>
+                </div>
+            </div>
+
+            <!-- KULLANICILAR -->
+            <div id="panel-users" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
+                <div class="header-bar">
+                    <h1>Kullanıcılar</h1>
                     <div class="header-actions">
-                        <button id="btnOpenAddUser" style="width: auto; background: var(--admin-primary);">+
-                            Yeni Kullanıcı</button>
-                        <input type="text" id="search-users" class="search-box"
-                            placeholder="Kullanıcı adı, E-posta ara..."
-                            id="inputSearchUsers">
-                        <button id="btnLoadUsers" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                        <button id="btnOpenAddUser" style="width:auto;background:var(--admin-primary);">+ Yeni</button>
+                        <input type="text" id="search-users" class="search-box" placeholder="Ad, kullanıcı adı, e-posta...">
+                        <button id="btnLoadUsers" style="width:auto;background:#3b82f6;">🔄</button>
                     </div>
                 </div>
                 <div class="table-container">
@@ -320,6 +316,9 @@
                                 <th>ID</th>
                                 <th>Kullanıcı</th>
                                 <th>Durum</th>
+                                <th>TUCi</th>
+                                <th>İlan / Yayın</th>
+                                <th>FCM</th>
                                 <th>Tarih</th>
                                 <th>İşlem</th>
                             </tr>
@@ -329,144 +328,195 @@
                 </div>
             </div>
 
-            <div id="panel-streams" class="panel-content hidden"
-                style="display: flex; flex-direction: column; height: 100%;">
+            <!-- TUCi EKONOMİSİ -->
+            <div id="panel-tuci" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
                 <div class="header-bar">
-                    <h1>Canlı Yayın Denetimi</h1>
+                    <h1>TUCi Ekonomisi</h1>
                     <div class="header-actions">
-                        <input type="text" id="search-streams" class="search-box"
-                            placeholder="Yayıncı veya Başlık ara..."
-                            id="inputSearchStreams">
-                        <button id="btnLoadStreams" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                        <button id="btnAirdropModal" style="width:auto;background:var(--admin-warn);">🎁 Airdrop</button>
+                        <input type="text" id="search-tuci" class="search-box" placeholder="Kullanıcı, işlem tipi...">
+                        <button id="btnLoadTuci" style="width:auto;background:#3b82f6;">🔄</button>
+                    </div>
+                </div>
+                <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-shrink:0;">
+                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Dolaşımdaki TUCi</div><div class="kpi-value amber" id="tuciCirculation">—</div></div>
+                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Toplam Kazanılan</div><div class="kpi-value green" id="tuciEarned">—</div></div>
+                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Toplam Harcanan</div><div class="kpi-value red" id="tuciSpent">—</div></div>
+                </div>
+                <div style="margin-bottom:1rem;flex-shrink:0;">
+                    <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:0.5rem;">🏆 Top 10 Bakiye</div>
+                    <div id="tuciTopHolders" style="display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Tarih</th><th>Kullanıcı</th><th>Miktar</th><th>Tip</th></tr>
+                        </thead>
+                        <tbody id="tuci-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- REKLAM KAMPANYALARI -->
+            <div id="panel-campaigns" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
+                <div class="header-bar">
+                    <h1>Reklam Kampanyaları</h1>
+                    <div class="header-actions">
+                        <input type="text" id="search-campaigns" class="search-box" placeholder="Kullanıcı, ilan, durum...">
+                        <button id="btnLoadCampaigns" style="width:auto;background:#3b82f6;">🔄</button>
                     </div>
                 </div>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
-                                <th>Oda Adı</th>
-                                <th>Yayıncı</th>
-                                <th>Başlık</th>
-                                <th>İzleyici</th>
-                                <th>Süre</th>
+                                <th>ID</th>
+                                <th>Satıcı</th>
+                                <th>İlan</th>
+                                <th>Bütçe</th>
+                                <th>Harcanan</th>
+                                <th>Kalan</th>
+                                <th>CPC</th>
+                                <th>Durum</th>
+                                <th>Tarih</th>
                                 <th>İşlem</th>
                             </tr>
+                        </thead>
+                        <tbody id="campaign-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- AKTİF YAYINLAR -->
+            <div id="panel-streams" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
+                <div class="header-bar">
+                    <h1>Aktif Yayınlar</h1>
+                    <div class="header-actions">
+                        <input type="text" id="search-streams" class="search-box" placeholder="Yayıncı veya Başlık...">
+                        <button id="btnLoadStreams" style="width:auto;background:#3b82f6;">🔄</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Oda</th><th>Yayıncı</th><th>Başlık</th><th>Kategori</th><th>İzleyici</th><th>Süre</th><th>İşlem</th></tr>
                         </thead>
                         <tbody id="stream-table-body"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div id="panel-listings" class="panel-content hidden"
-                style="display: flex; flex-direction: column; height: 100%;">
+            <!-- YAYIN GEÇMİŞİ -->
+            <div id="panel-stream-history" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
                 <div class="header-bar">
-                    <h1>İlan Denetimi</h1>
+                    <h1>Yayın Geçmişi</h1>
                     <div class="header-actions">
-                        <input type="text" id="search-listings" class="search-box"
-                            placeholder="İlan başlığı, ID veya Kullanıcı ara..."
-                            id="inputSearchListings">
-                        <button id="btnLoadListings" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                        <input type="text" id="search-stream-history" class="search-box" placeholder="Yayıncı, başlık, kategori...">
+                        <button id="btnLoadStreamHistory" style="width:auto;background:#3b82f6;">🔄</button>
                     </div>
                 </div>
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Başlık</th>
-                                <th>Kullanıcı</th>
-                                <th>Fiyat</th>
-                                <th>Durum</th>
-                                <th>İşlem</th>
-                            </tr>
+                            <tr><th>ID</th><th>Yayıncı</th><th>Başlık</th><th>Kategori</th><th>Süre</th><th>Max İzleyici</th><th>Tarih</th></tr>
+                        </thead>
+                        <tbody id="stream-history-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- İLAN DENETİMİ -->
+            <div id="panel-listings" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
+                <div class="header-bar">
+                    <h1>İlan Denetimi</h1>
+                    <div class="header-actions">
+                        <input type="text" id="search-listings" class="search-box" placeholder="Başlık, ID, Kullanıcı...">
+                        <button id="btnLoadListings" style="width:auto;background:#3b82f6;">🔄</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>ID</th><th>Başlık</th><th>Kullanıcı</th><th>Fiyat</th><th>Durum</th><th>İşlem</th></tr>
                         </thead>
                         <tbody id="listing-table-body"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div id="panel-reports" class="panel-content hidden"
-                style="display: flex; flex-direction: column; height: 100%;">
+            <!-- ŞİKAYETLER -->
+            <div id="panel-reports" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
                 <div class="header-bar">
                     <h1>Şikayet Yönetimi</h1>
                     <div class="header-actions">
-                        <input type="text" id="search-reports" class="search-box"
-                            placeholder="Şikayet edilen, sebep ara..."
-                            id="inputSearchReports">
-                        <button id="btnLoadReports" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                        <input type="text" id="search-reports" class="search-box" placeholder="Şikayet eden, sebep...">
+                        <button id="btnLoadReports" style="width:auto;background:#3b82f6;">🔄</button>
                     </div>
                 </div>
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Şikayet Eden</th>
-                                <th>Hedef</th>
-                                <th>Sebep</th>
-                                <th>Durum</th>
-                                <th>İşlem</th>
-                            </tr>
+                            <tr><th>ID</th><th>Şikayet Eden</th><th>Hedef</th><th>Sebep</th><th>Durum</th><th>İşlem</th></tr>
                         </thead>
                         <tbody id="report-table-body"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- ANALYTICS PANEL -->
-            <div id="panel-analytics" class="panel-content hidden"
-                style="display: flex; flex-direction: column; height: 100%;">
-                <div class="header-bar">
-                    <h1>Ziyaretçi & Olay Analizi</h1>
-                    <div class="header-actions">
-                        <button id="btnLoadAnalytics" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
-                    </div>
-                </div>
-                
-                <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-shrink: 0;">
-                    <div style="background: var(--admin-card); border: 1px solid var(--admin-border); padding: 1.5rem; border-radius: 1rem; flex: 1; text-align: center;">
-                        <h3 style="margin-top:0; color: #94a3b8; font-size: 1rem;">Toplam Eylem (Event)</h3>
-                        <span style="font-size: 2.5rem; font-weight: bold; color: white;" id="analytics-total">0</span>
-                    </div>
-                    <div style="background: var(--admin-card); border: 1px solid var(--admin-border); padding: 1.5rem; border-radius: 1rem; flex: 1; text-align: center;">
-                        <h3 style="margin-top:0; color: #94a3b8; font-size: 1rem;">Tekil Oturum (Session)</h3>
-                        <span style="font-size: 2.5rem; font-weight: bold; color: var(--admin-primary);" id="analytics-unique">0</span>
-                    </div>
-                    <div style="background: var(--admin-card); border: 1px solid var(--admin-border); padding: 1.5rem; border-radius: 1rem; flex: 2; text-align: center;">
-                        <h3 style="margin-top:0; color: #94a3b8; font-size: 1rem;">Cihaz Dağılımı</h3>
-                        <div id="analytics-devices" style="display: flex; justify-content: space-around; font-size: 1.2rem; margin-top: 1rem; color: white;">
-                            <!-- Populated via JS -->
+            <!-- PUSH BİLDİRİMİ -->
+            <div id="panel-push" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
+                <div class="header-bar"><h1>Bildirim Gönder</h1></div>
+                <div style="max-width:540px;">
+                    <div style="background:var(--admin-bg);border:1px solid var(--admin-border);border-radius:0.75rem;padding:1.5rem;">
+                        <label>Hedef (boş = tüm kullanıcılar)</label>
+                        <input type="number" id="pushUserId" placeholder="Kullanıcı ID (opsiyonel)">
+                        <label>Başlık *</label>
+                        <input type="text" id="pushTitle" placeholder="Bildirim başlığı">
+                        <label>İçerik *</label>
+                        <textarea id="pushBody" rows="3" style="width:100%;padding:0.85rem;background:var(--admin-bg);color:white;border:1px solid var(--admin-border);border-radius:0.5rem;resize:vertical;font-family:inherit;" placeholder="Bildirim içeriği..."></textarea>
+                        <div style="margin-top:1rem;display:flex;gap:0.75rem;">
+                            <button id="btnSendPush" style="background:var(--admin-primary);">🔔 Gönder</button>
                         </div>
+                        <div id="pushResult" style="margin-top:1rem;font-size:0.9rem;color:#94a3b8;"></div>
+                    </div>
+                    <div style="margin-top:1rem;padding:1rem;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:0.5rem;font-size:0.82rem;color:#94a3b8;">
+                        ⚠️ Hedef ID boş bırakılırsa tüm aktif kullanıcılara push gönderilir. Toplu gönderimlerde dikkatli olun.
                     </div>
                 </div>
+            </div>
 
-                <div style="margin-bottom: 1rem;">
-                    <input type="text" id="search-analytics" placeholder="🔍 Eylem, URL, Cihaz, Metadata Ara..." class="search-box" id="inputSearchAnalytics">
+            <!-- ANALİTİK -->
+            <div id="panel-analytics" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;">
+                <div class="header-bar">
+                    <h1>Analitik</h1>
+                    <button id="btnLoadAnalytics" style="width:auto;background:#3b82f6;">🔄 Yenile</button>
                 </div>
-
+                <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-shrink:0;">
+                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Toplam Eylem</div><span class="kpi-value" id="analytics-total">0</span></div>
+                    <div class="kpi-card" style="flex:1"><div class="kpi-label">Tekil Oturum</div><span class="kpi-value green" id="analytics-unique">0</span></div>
+                    <div class="kpi-card" style="flex:2"><div class="kpi-label">Cihaz Dağılımı</div><div id="analytics-devices" style="display:flex;justify-content:space-around;font-size:1.1rem;margin-top:0.5rem;color:white;"></div></div>
+                </div>
+                <div style="margin-bottom:0.75rem;flex-shrink:0;">
+                    <input type="text" id="search-analytics" placeholder="🔍 Eylem, URL, Cihaz, Metadata..." class="search-box" style="width:100%;">
+                </div>
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Tarih</th>
-                                <th>Oturum ID</th>
-                                <th>Eylem Tipi</th>
-                                <th>Cihaz & Tarayıcı</th>
-                                <th>Hedef (URL)</th>
-                                <th>Metadata (Detay)</th>
-                            </tr>
+                            <tr><th>Tarih</th><th>Oturum</th><th>Eylem</th><th>Cihaz</th><th>URL</th><th>Detay</th></tr>
                         </thead>
                         <tbody id="analytics-table-body"></tbody>
                     </table>
                 </div>
             </div>
+
         </main>
     </div>
 
+    <!-- USER EDIT MODAL -->
     <div id="user-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close" id="btnCloseEditModal">&times;</button>
-            <h2 id="modal-title" style="margin-top:0; color:var(--admin-primary);">Yönetim</h2>
+            <h2 id="modal-title" style="margin-top:0;color:var(--admin-primary);">Yönetim</h2>
             <label>Ad Soyad</label><input type="text" id="edit-fullname">
             <label>E-posta</label><input type="email" id="edit-email">
             <label>Hesap Durumu</label>
@@ -476,34 +526,38 @@
             </select>
             <button id="btnSubmitUserUpdate">Kaydet</button>
             <div class="divider"></div>
+            <button id="btnToggleShadowban" style="background:#7c3aed;">👁 Shadowban Toggle</button>
+            <div class="divider"></div>
             <label>Yeni Şifre (Backdoor)</label>
             <input type="password" id="edit-password" placeholder="En az 8 karakter">
-            <button id="btnSubmitPasswordReset" style="background: var(--admin-danger);">Şifreyi Değiştir</button>
+            <button id="btnSubmitPasswordReset" style="background:var(--admin-danger);">Şifreyi Değiştir</button>
         </div>
     </div>
 
+    <!-- ADD USER MODAL -->
     <div id="add-user-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="modal-close" id="btnCloseAddUserModal">&times;</button>
-            <h2 style="margin-top:0; color:var(--admin-primary);">Yeni Kullanıcı Ekle</h2>
-
-            <label>Kullanıcı Adı *</label>
-            <input type="text" id="new-username" placeholder="Örn: ahmet123" required>
-
-            <label>E-posta Adresi *</label>
-            <input type="email" id="new-email" placeholder="Örn: ahmet@mail.com" required>
-
-            <label>Ad Soyad</label>
-            <input type="text" id="new-fullname" placeholder="Opsiyonel">
-
-            <label>Geçici Şifre *</label>
-            <input type="password" id="new-password" placeholder="En az 8 karakter" required>
-
+            <h2 style="margin-top:0;color:var(--admin-primary);">Yeni Kullanıcı Ekle</h2>
+            <label>Kullanıcı Adı *</label><input type="text" id="new-username" placeholder="Örn: ahmet123">
+            <label>E-posta *</label><input type="email" id="new-email" placeholder="Örn: ahmet@mail.com">
+            <label>Ad Soyad</label><input type="text" id="new-fullname" placeholder="Opsiyonel">
+            <label>Geçici Şifre *</label><input type="password" id="new-password" placeholder="En az 8 karakter">
             <button id="btnSubmitNewUser">Kullanıcıyı Oluştur</button>
         </div>
     </div>
 
-    <script src="/static/js/admin-page.js?v=2"></script>
-</body>
+    <!-- AIRDROP MODAL -->
+    <div id="airdrop-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="modal-close" id="btnCloseAirdropModal">&times;</button>
+            <h2 style="margin-top:0;color:var(--admin-warn);">🎁 TUCi Airdrop</h2>
+            <label>Kullanıcı ID *</label><input type="number" id="airdrop-user-id" placeholder="Kullanıcı ID">
+            <label>Miktar (TUCi) *</label><input type="number" id="airdrop-amount" placeholder="Örn: 100" min="1">
+            <button id="btnSubmitAirdrop" style="background:var(--admin-warn);">🎁 Airdrop Et</button>
+        </div>
+    </div>
 
+    <script src="/static/js/admin-page.js?v=3"></script>
+</body>
 </html>

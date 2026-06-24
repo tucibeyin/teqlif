@@ -1,15 +1,17 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func, cast, Date
 from typing import List, Optional
-from pydantic import BaseModel
-from datetime import datetime, timezone
+from pydantic import BaseModel, Field
+from datetime import datetime, timezone, timedelta
 
 from app.database import get_db
 from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.listing import Listing
 from app.models.report import Report
+from app.models.tuci_transaction import TuciTransaction
+from app.models.ad_campaign import AdCampaign
 from app.schemas.user import UserOut
 from app.utils.auth import get_current_user, hash_password
 from app.config import settings
@@ -46,12 +48,104 @@ class AdminUserCreate(BaseModel):
     full_name: Optional[str] = None
 
 # ==========================================
+# 0. DASHBOARD
+# ==========================================
+@router.get("/dashboard")
+async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    today = datetime.now(timezone.utc).date()
+
+    total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
+    active_users = (await db.execute(select(func.count(User.id)).where(User.is_active == True))).scalar() or 0  # noqa: E712
+    banned_users = (await db.execute(select(func.count(User.id)).where(User.is_active == False))).scalar() or 0  # noqa: E712
+    today_users = (await db.execute(
+        select(func.count(User.id)).where(cast(User.created_at, Date) == today)
+    )).scalar() or 0
+
+    active_listings = (await db.execute(
+        select(func.count(Listing.id)).where(Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
+    )).scalar() or 0
+
+    active_streams = (await db.execute(
+        select(func.count(LiveStream.id)).where(LiveStream.is_live == True)  # noqa: E712
+    )).scalar() or 0
+
+    pending_reports = (await db.execute(
+        select(func.count(Report.id)).where(Report.status == "pending")
+    )).scalar() or 0
+
+    total_tuci = (await db.execute(select(func.coalesce(func.sum(User.tuci_balance), 0)))).scalar() or 0
+
+    today_tuci_spent = (await db.execute(
+        select(func.coalesce(func.sum(TuciTransaction.amount), 0))
+        .where(
+            TuciTransaction.amount < 0,
+            cast(TuciTransaction.created_at, Date) == today,
+        )
+    )).scalar() or 0
+
+    # Son 7 gün günlük kayıt — growth chart için
+    growth = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        count = (await db.execute(
+            select(func.count(User.id)).where(cast(User.created_at, Date) == day)
+        )).scalar() or 0
+        growth.append({"date": str(day), "count": count})
+
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "banned_users": banned_users,
+        "today_users": today_users,
+        "active_listings": active_listings,
+        "active_streams": active_streams,
+        "pending_reports": pending_reports,
+        "total_tuci_circulation": total_tuci,
+        "today_tuci_spent": abs(today_tuci_spent),
+        "user_growth_7d": growth,
+    }
+
+
+# ==========================================
 # 1. KULLANICI YÖNETİMİ
 # ==========================================
-@router.get("/users/recent", response_model=List[UserOut])
+@router.get("/users/recent")
 async def get_recent_users(limit: int = 50, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     result = await db.execute(select(User).order_by(desc(User.created_at)).limit(limit))
-    return result.scalars().all()
+    users = result.scalars().all()
+
+    # listing ve stream sayılarını batch ile çek
+    user_ids = [u.id for u in users]
+    listing_counts_res = await db.execute(
+        select(Listing.user_id, func.count(Listing.id))
+        .where(Listing.user_id.in_(user_ids), Listing.is_deleted == False)  # noqa: E712
+        .group_by(Listing.user_id)
+    )
+    listing_counts = dict(listing_counts_res.all())
+
+    stream_counts_res = await db.execute(
+        select(LiveStream.host_id, func.count(LiveStream.id))
+        .where(LiveStream.host_id.in_(user_ids))
+        .group_by(LiveStream.host_id)
+    )
+    stream_counts = dict(stream_counts_res.all())
+
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "full_name": u.full_name,
+            "is_active": u.is_active,
+            "is_shadowbanned": u.is_shadowbanned,
+            "tuci_balance": u.tuci_balance,
+            "fcm_token": bool(u.fcm_token),
+            "created_at": u.created_at,
+            "listing_count": listing_counts.get(u.id, 0),
+            "stream_count": stream_counts.get(u.id, 0),
+        }
+        for u in users
+    ]
 
 @router.patch("/users/{user_id}")
 async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
@@ -275,9 +369,182 @@ async def delete_user(
         )
 
 # ==========================================
-# 5. ANALİTİK VE ZİYARETÇİ VERİLERİ
+# 5. TUCi EKONOMİSİ
 # ==========================================
-from sqlalchemy import func
+class TuciAirdropRequest(BaseModel):
+    user_id: int
+    amount: int = Field(gt=0)
+    note: str = ""
+
+@router.get("/tuci/summary")
+async def get_tuci_summary(limit: int = 100, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    total_circulation = (await db.execute(
+        select(func.coalesce(func.sum(User.tuci_balance), 0))
+    )).scalar() or 0
+
+    total_spent = abs((await db.execute(
+        select(func.coalesce(func.sum(TuciTransaction.amount), 0))
+        .where(TuciTransaction.amount < 0)
+    )).scalar() or 0)
+
+    total_earned = (await db.execute(
+        select(func.coalesce(func.sum(TuciTransaction.amount), 0))
+        .where(TuciTransaction.amount > 0)
+    )).scalar() or 0
+
+    # Top 10 balance
+    top_res = await db.execute(
+        select(User.id, User.username, User.tuci_balance)
+        .order_by(desc(User.tuci_balance))
+        .limit(10)
+    )
+    top_holders = [{"user_id": r[0], "username": r[1], "balance": r[2]} for r in top_res.all()]
+
+    # Recent transactions
+    tx_res = await db.execute(
+        select(TuciTransaction, User.username)
+        .join(User, User.id == TuciTransaction.user_id)
+        .order_by(desc(TuciTransaction.created_at))
+        .limit(limit)
+    )
+    transactions = [
+        {
+            "id": tx.id,
+            "username": username,
+            "user_id": tx.user_id,
+            "amount": tx.amount,
+            "transaction_type": tx.transaction_type,
+            "created_at": tx.created_at,
+        }
+        for tx, username in tx_res.all()
+    ]
+
+    return {
+        "total_circulation": total_circulation,
+        "total_spent": total_spent,
+        "total_earned": total_earned,
+        "top_holders": top_holders,
+        "transactions": transactions,
+    }
+
+@router.post("/tuci/airdrop")
+async def admin_tuci_airdrop(data: TuciAirdropRequest, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    user = await db.get(User, data.user_id)
+    if not user:
+        raise NotFoundException("Kullanıcı bulunamadı")
+    user.tuci_balance += data.amount
+    tx = TuciTransaction(user_id=data.user_id, amount=data.amount, transaction_type="airdrop")
+    db.add(tx)
+    await db.commit()
+    logger.info("[ADMIN] TUCi airdrop | user=%s | amount=%s | admin=%s", user.username, data.amount, admin.email)
+    return {"message": f"{user.username} kullanıcısına {data.amount} TUCi airdrop edildi.", "new_balance": user.tuci_balance}
+
+
+# ==========================================
+# 6. REKLAM KAMPANYALARI
+# ==========================================
+@router.get("/ad-campaigns")
+async def get_ad_campaigns(db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    res = await db.execute(
+        select(AdCampaign, User.username, Listing.title)
+        .join(User, User.id == AdCampaign.seller_id)
+        .join(Listing, Listing.id == AdCampaign.listing_id)
+        .order_by(desc(AdCampaign.created_at))
+        .limit(100)
+    )
+    return [
+        {
+            "id": c.id,
+            "username": username,
+            "listing_title": listing_title,
+            "listing_id": c.listing_id,
+            "total_budget": c.total_budget,
+            "spent_budget": c.spent_budget,
+            "remaining": c.total_budget - c.spent_budget,
+            "cpc_bid": c.cpc_bid,
+            "status": c.status,
+            "created_at": c.created_at,
+        }
+        for c, username, listing_title in res.all()
+    ]
+
+@router.post("/ad-campaigns/{campaign_id}/pause")
+async def admin_pause_campaign(campaign_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    campaign = await db.get(AdCampaign, campaign_id)
+    if not campaign:
+        raise NotFoundException("Kampanya bulunamadı")
+    campaign.status = "paused" if campaign.status == "active" else "active"
+    await db.commit()
+    return {"message": f"Kampanya durumu → {campaign.status}", "status": campaign.status}
+
+
+# ==========================================
+# 7. YAYIN GEÇMİŞİ
+# ==========================================
+@router.get("/streams/history")
+async def get_stream_history(limit: int = 50, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    res = await db.execute(
+        select(LiveStream, User.username)
+        .join(User, User.id == LiveStream.host_id)
+        .where(LiveStream.is_live == False)  # noqa: E712
+        .order_by(desc(LiveStream.started_at))
+        .limit(limit)
+    )
+    rows = []
+    for stream, username in res.all():
+        duration_min = None
+        if stream.started_at and stream.ended_at:
+            diff = stream.ended_at - stream.started_at
+            duration_min = int(diff.total_seconds() / 60)
+        rows.append({
+            "id": stream.id,
+            "title": stream.title,
+            "category": stream.category,
+            "host_username": username,
+            "started_at": stream.started_at,
+            "ended_at": stream.ended_at,
+            "duration_min": duration_min,
+            "viewer_count": stream.viewer_count,
+        })
+    return rows
+
+
+# ==========================================
+# 8. TOPLU PUSH BİLDİRİMİ
+# ==========================================
+class PushRequest(BaseModel):
+    title: str
+    body: str
+    user_id: Optional[int] = None  # None = tüm kullanıcılar
+
+@router.post("/push/send")
+async def admin_send_push(data: PushRequest, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    from app.services.firebase_service import send_push
+
+    if data.user_id:
+        user = await db.get(User, data.user_id)
+        if not user or not user.fcm_token:
+            raise BadRequestException("Kullanıcı bulunamadı veya FCM token yok")
+        await send_push(token=user.fcm_token, title=data.title, body=data.body, notif_type="admin_broadcast")
+        logger.info("[ADMIN] Push gönderildi | user=%s | admin=%s", user.username, admin.email)
+        return {"sent": 1}
+    else:
+        res = await db.execute(select(User.fcm_token).where(User.fcm_token.isnot(None), User.is_active == True))  # noqa: E712
+        tokens = [r[0] for r in res.all() if r[0]]
+        sent = 0
+        for token in tokens:
+            try:
+                await send_push(token=token, title=data.title, body=data.body, notif_type="admin_broadcast")
+                sent += 1
+            except Exception:
+                pass
+        logger.info("[ADMIN] Toplu push | sent=%s/%s | admin=%s", sent, len(tokens), admin.email)
+        return {"sent": sent, "total_tokens": len(tokens)}
+
+
+# ==========================================
+# 9. ANALİTİK VE ZİYARETÇİ VERİLERİ
+# ==========================================
 from app.models.analytics import AnalyticsEvent
 
 @router.get("/analytics/summary")
