@@ -488,8 +488,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           children: [
             const Text('Kampanya planı:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             const SizedBox(height: 10),
-            const _BoostRow(icon: Icons.account_balance_wallet_outlined, label: 'Toplam Bütçe', value: '100 ₺'),
-            const _BoostRow(icon: Icons.ads_click, label: 'Tıklama Başı Maliyet', value: '1 ₺'),
+            const _BoostRow(icon: Icons.account_balance_wallet_outlined, label: 'Toplam Bütçe', value: '100 TUCi'),
+            const _BoostRow(icon: Icons.ads_click, label: 'Tıklama Başı Maliyet', value: '1 TUCi'),
             const _BoostRow(icon: Icons.touch_app_outlined, label: 'Tahmini Tıklama', value: '~100 tıklama'),
             const SizedBox(height: 12),
             Text(
@@ -524,8 +524,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         },
         body: jsonEncode({
           'listing_id': widget.listing['id'],
-          'total_budget': 100.0,
-          'cpc_bid': 1.0,
+          'total_budget': 100,
+          'cpc_bid': 1,
         }),
       );
       if (!mounted) return;
@@ -544,8 +544,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           ),
         );
       } else {
-        final msg = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] ?? 'Kampanya başlatılamadı.';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg.toString())));
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        final msg = body['detail'] ?? 'Kampanya başlatılamadı.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(msg.toString()),
+          backgroundColor: resp.statusCode == 402 ? const Color(0xFFDC2626) : null,
+        ));
       }
     } catch (_) {
       if (mounted) {

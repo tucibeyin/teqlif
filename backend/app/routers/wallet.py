@@ -11,10 +11,11 @@ from app.utils.auth import get_current_user
 router = APIRouter(prefix="/api/wallet", tags=["wallet"])
 
 _TYPE_LABELS = {
-    "airdrop":        "Hoş geldin hediyesi",
-    "spend_lead_gen": "Sıcak Talep blast",
-    "spend_ai":       "Yapay Zeka fiyatlama",
-    "web_topup":      "Web yükleme",
+    "airdrop":            "Hoş geldin hediyesi",
+    "spend_lead_gen":     "Sıcak Talep bildirimi",
+    "spend_ad_campaign":  "İlan sponsorluğu",
+    "spend_ai":           "Yapay Zeka fiyatlama",
+    "web_topup":          "Web yükleme",
 }
 
 

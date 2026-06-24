@@ -15,9 +15,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from sqlalchemy import text as sql_text
+
 from app.database import get_db
 from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
+from app.models.tuci_transaction import TuciTransaction
 from app.models.user import User
 from app.utils.auth import bearer_scheme, decode_token, get_current_user
 
@@ -30,8 +33,8 @@ router = APIRouter(prefix="/api/ads", tags=["ads"])
 
 class CampaignCreate(BaseModel):
     listing_id: int
-    total_budget: float = Field(gt=0)
-    cpc_bid: float = Field(gt=0)
+    total_budget: int = Field(gt=0)
+    cpc_bid: int = Field(gt=0)
 
 
 # ── Kampanya Oluştur ──────────────────────────────────────────────────────────
@@ -60,15 +63,34 @@ async def create_campaign(
     if not listing:
         raise HTTPException(status_code=404, detail="İlan bulunamadı veya size ait değil")
 
+    # TUCi bakiye kontrolü — kampanya bütçesi peşin düşülür
+    if current_user.tuci_balance < body.total_budget:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {body.total_budget} TUCi",
+        )
+
     campaign = AdCampaign(
         listing_id=body.listing_id,
         seller_id=current_user.id,
         total_budget=body.total_budget,
-        spent_budget=0.0,
+        spent_budget=0,
         cpc_bid=body.cpc_bid,
         status="active",
     )
     db.add(campaign)
+
+    # TUCi düş + işlem logla
+    await db.execute(
+        sql_text("UPDATE users SET tuci_balance = tuci_balance - :cost WHERE id = :uid"),
+        {"cost": body.total_budget, "uid": current_user.id},
+    )
+    db.add(TuciTransaction(
+        user_id=current_user.id,
+        amount=-body.total_budget,
+        transaction_type="spend_ad_campaign",
+    ))
+
     await db.commit()
     await db.refresh(campaign)
 
@@ -80,7 +102,7 @@ async def create_campaign(
         logger.warning("[Ads] Redis yükleme atlandı: %s", exc)
 
     logger.info(
-        "[Ads] Yeni kampanya oluşturuldu | id=%d listing_id=%d seller_id=%d budget=%.2f",
+        "[Ads] Yeni kampanya oluşturuldu | id=%d listing_id=%d seller_id=%d budget=%d TUCi",
         campaign.id, body.listing_id, current_user.id, body.total_budget,
     )
     return {

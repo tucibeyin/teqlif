@@ -88,7 +88,7 @@ class AnalyticsService {
   static Future<Map<String, dynamic>?> sendLeadBlast({
     required String title,
     required String category,
-    required double estimatedCost,
+    required int estimatedCost,
     int? listingId,
   }) async {
     try {

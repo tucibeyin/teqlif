@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, String, func
+from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -9,7 +9,7 @@ from app.database import Base
 
 class AdCampaign(Base):
     """
-    Reklam kampanyası.
+    Reklam kampanyası. Bütçe ve tıklama maliyeti TUCi (tam sayı) cinsinden.
 
     status değerleri:
       active    — yayında, tıklama kabul ediyor
@@ -29,9 +29,9 @@ class AdCampaign(Base):
     seller_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    total_budget: Mapped[float] = mapped_column(Float, nullable=False)
-    spent_budget: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    cpc_bid: Mapped[float] = mapped_column(Float, nullable=False)
+    total_budget: Mapped[int] = mapped_column(Integer, nullable=False)
+    spent_budget: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cpc_bid: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="active", index=True
     )

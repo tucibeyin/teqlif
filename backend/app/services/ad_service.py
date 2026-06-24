@@ -2,8 +2,8 @@
 Ad Service — yerel reklam ağı bütçe yönetimi.
 
 Redis, PostgreSQL arasındaki köprüdür:
-  - ad_campaign_budget:{id}  → kalan bütçe (TL, float string)
-  - ad_campaign_cpc:{id}     → tıklama maliyeti (TL, float string)
+  - ad_campaign_budget:{id}  → kalan bütçe (TUCi, integer string)
+  - ad_campaign_cpc:{id}     → tıklama maliyeti (TUCi, integer string)
 
 Race-condition önleme:
   Bütçe düşme işlemi bir Lua script'i ile atomik olarak yapılır.
@@ -28,17 +28,17 @@ logger = logging.getLogger(__name__)
 _BUDGET_KEY = "ad_campaign_budget:{}"
 _CPC_KEY = "ad_campaign_cpc:{}"
 
-# Lua script: atomik check-and-decrement.
+# Lua script: atomik check-and-decrement (TUCi, integer).
 # Döndürdüğü değer:
-#   nil        → key yok (kampanya Redis'te kayıtlı değil)
-#   yeni float → düşme başarılı (negatife geçmiş olabilir — caller kontrol eder)
+#   nil    → key yok (kampanya Redis'te kayıtlı değil)
+#   yeni int string → düşme başarılı (negatife geçmiş olabilir — caller kontrol eder)
 _DEDUCT_SCRIPT = """
 local current = tonumber(redis.call('GET', KEYS[1]))
 if not current then return nil end
 local bid = tonumber(ARGV[1])
-local new_val = current - bid
-redis.call('SET', KEYS[1], string.format('%.6f', new_val))
-return string.format('%.6f', new_val)
+local new_val = math.floor(current - bid)
+redis.call('SET', KEYS[1], tostring(new_val))
+return tostring(new_val)
 """
 
 
@@ -66,16 +66,16 @@ async def load_active_campaigns_to_redis() -> int:
     redis = await get_redis()
     pipe = redis.pipeline()
     for c in campaigns:
-        remaining = max(0.0, c.total_budget - c.spent_budget)
-        pipe.set(_BUDGET_KEY.format(c.id), f"{remaining:.6f}")
-        pipe.set(_CPC_KEY.format(c.id), f"{c.cpc_bid:.6f}")
+        remaining = max(0, c.total_budget - c.spent_budget)
+        pipe.set(_BUDGET_KEY.format(c.id), str(remaining))
+        pipe.set(_CPC_KEY.format(c.id), str(c.cpc_bid))
     await pipe.execute()
 
     logger.info("[AdService] %d kampanya Redis'e yüklendi.", len(campaigns))
     return len(campaigns)
 
 
-async def _reload_campaign_to_redis(campaign_id: int) -> Optional[float]:
+async def _reload_campaign_to_redis(campaign_id: int) -> Optional[int]:
     """
     Tek bir kampanyayı PostgreSQL'den okuyup Redis'e yükler.
     Döndürür: cpc_bid (başarılıysa) veya None (kampanya yoksa/bitişse).
@@ -89,13 +89,13 @@ async def _reload_campaign_to_redis(campaign_id: int) -> Optional[float]:
         )
     if not campaign:
         return None
-    remaining = max(0.0, campaign.total_budget - campaign.spent_budget)
+    remaining = max(0, campaign.total_budget - campaign.spent_budget)
     redis = await get_redis()
     pipe = redis.pipeline()
-    pipe.set(_BUDGET_KEY.format(campaign_id), f"{remaining:.6f}")
-    pipe.set(_CPC_KEY.format(campaign_id), f"{campaign.cpc_bid:.6f}")
+    pipe.set(_BUDGET_KEY.format(campaign_id), str(remaining))
+    pipe.set(_CPC_KEY.format(campaign_id), str(campaign.cpc_bid))
     await pipe.execute()
-    logger.info("[AdService] Kampanya Redis'e yeniden yüklendi: id=%d remaining=%.2f", campaign_id, remaining)
+    logger.info("[AdService] Kampanya Redis'e yeniden yüklendi: id=%d remaining=%d TUCi", campaign_id, remaining)
     return campaign.cpc_bid
 
 
@@ -127,13 +127,13 @@ async def record_ad_click(campaign_id: int, user_id: int) -> bool:
         if reloaded_cpc is None:
             logger.warning("[AdService] Kampanya aktif değil ya da bulunamadı: %d", campaign_id)
             return False
-        cpc_str = f"{reloaded_cpc:.6f}"
+        cpc_str = str(reloaded_cpc)
 
-    cpc_bid = float(cpc_str)
+    cpc_bid = int(cpc_str)
 
     # Atomik bütçe düşme
     deduct = redis.register_script(_DEDUCT_SCRIPT)
-    result = await deduct(keys=[budget_key], args=[f"{cpc_bid:.6f}"])
+    result = await deduct(keys=[budget_key], args=[str(cpc_bid)])
 
     if result is None:
         # budget key yok — kampanya belki daha önce tamamlandı
@@ -142,7 +142,7 @@ async def record_ad_click(campaign_id: int, user_id: int) -> bool:
         )
         return False
 
-    new_budget = float(result)
+    new_budget = int(result)
 
     # Her tıklamada spent_budget'ı PostgreSQL'e yansıt (fire-and-forget)
     async def _sync_spent() -> None:
@@ -245,11 +245,11 @@ async def resume_campaign(campaign_id: int, seller_id: int) -> bool:
             select(AdCampaign).where(AdCampaign.id == campaign_id)
         )
     if campaign:
-        remaining = max(0.0, campaign.total_budget - campaign.spent_budget)
+        remaining = max(0, campaign.total_budget - campaign.spent_budget)
         redis = await get_redis()
         pipe = redis.pipeline()
-        pipe.set(_BUDGET_KEY.format(campaign_id), f"{remaining:.6f}")
-        pipe.set(_CPC_KEY.format(campaign_id), f"{campaign.cpc_bid:.6f}")
+        pipe.set(_BUDGET_KEY.format(campaign_id), str(remaining))
+        pipe.set(_CPC_KEY.format(campaign_id), str(campaign.cpc_bid))
         await pipe.execute()
 
     return True

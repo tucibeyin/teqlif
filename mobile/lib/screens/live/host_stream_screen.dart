@@ -114,8 +114,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     );
     if (!mounted || result == null) return;
     final size = result['audience_size'] as int? ?? 0;
-    final cost = (result['estimated_cost'] as num?)?.toDouble() ?? 0.0;
-    if (size > 0) setState(() { _audienceSize = size; _audienceCost = cost; });
+    final cost = (result['estimated_cost'] as num?)?.toInt() ?? 0;
+    if (size > 0) setState(() { _audienceSize = size; _audienceCost = cost.toDouble(); });
   }
 
   Future<void> _sendLeadBlast() async {
@@ -126,7 +126,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Bildirim Gönder', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
         content: Text(
-          '$_audienceSize hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: ${_audienceCost.toStringAsFixed(2)} ₺',
+          '$_audienceSize hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: ${_audienceCost.toInt()} TUCi',
           style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
         ),
         actions: [
@@ -149,7 +149,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       final result = await AnalyticsService.sendLeadBlast(
         title: widget.title,
         category: widget.streamToken.category,
-        estimatedCost: _audienceCost,
+        estimatedCost: _audienceCost.toInt(),
       );
       if (!mounted) return;
       if (result != null && result['error'] == null) {

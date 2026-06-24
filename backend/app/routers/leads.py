@@ -23,7 +23,7 @@ from app.utils.auth import get_current_user
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/leads", tags=["leads"])
 
-COST_PER_PERSON: float = 0.50  # TL
+COST_PER_PERSON: int = 1  # TUCi per kişi
 
 
 # ── Kitle Büyüklüğü ──────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ async def audience_size(
     listing_ids: list[int] = [row[0] for row in result.fetchall()]
 
     if not listing_ids:
-        return {"audience_size": 0, "estimated_cost": 0.0}
+        return {"audience_size": 0, "estimated_cost": 0}
 
     # 2. ClickHouse sorgusu: bu ilanları görüntüleyen aktif kullanıcılar
     ids_str = ", ".join(str(i) for i in listing_ids)
@@ -87,7 +87,7 @@ async def audience_size(
 
     # 3. FCM token sahipliği oranı — kaba tahmin (%60 mobil ulaşılabilirlik)
     reachable = int(ch_count * 0.60)
-    estimated_cost = round(reachable * COST_PER_PERSON, 2)
+    estimated_cost = reachable * COST_PER_PERSON  # tam sayı TUCi
 
     return {
         "audience_size": reachable,
@@ -101,7 +101,7 @@ class BlastRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     category: str = Field(default="")
     listing_id: int | None = Field(default=None)
-    estimated_cost: float = Field(gt=0)
+    estimated_cost: int = Field(gt=0)
 
 
 @router.post("/send-blast", status_code=202)
@@ -121,7 +121,7 @@ async def send_blast(
     gerçek payment entegrasyonu için ayrı bir wallet servisi bağlanmalıdır.
     """
     # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
-    tuci_cost = int(body.estimated_cost)  # tahmini maliyet TUCi olarak
+    tuci_cost = body.estimated_cost
     if current_user.tuci_balance < tuci_cost:
         raise HTTPException(
             status_code=402,
@@ -220,7 +220,7 @@ async def send_blast(
         sent += len(chunk)
 
     logger.info(
-        "[Leads] Blast gönderildi | seller=%d | tokens=%d | cost=%.2f",
+        "[Leads] Blast gönderildi | seller=%d | tokens=%d | cost=%d TUCi",
         current_user.id, sent, body.estimated_cost,
     )
 
