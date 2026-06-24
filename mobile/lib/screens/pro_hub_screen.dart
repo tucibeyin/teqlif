@@ -169,7 +169,7 @@ class _ProStatusCard extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 28),
+            child: const Icon(Icons.workspace_premium, color: Color(0xFF06B6D4), size: 28),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -223,7 +223,7 @@ class _UpgradeBanner extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.lock_outline, color: Color(0xFFFFD700), size: 26),
+            child: const Icon(Icons.lock_outline, color: Color(0xFF06B6D4), size: 26),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -251,7 +251,7 @@ class _UpgradeBanner extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFD700),
+                color: const Color(0xFF06B6D4),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Text(
@@ -420,7 +420,7 @@ class _UpgradeSheet extends StatelessWidget {
             width: double.infinity,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFB8860B), Color(0xFFFFD700)]),
+                gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: ElevatedButton(
@@ -439,7 +439,7 @@ class _UpgradeSheet extends StatelessWidget {
                 ),
                 child: const Text(
                   '👑 Pro\'ya Geç',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.black),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white),
                 ),
               ),
             ),

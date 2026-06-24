@@ -3,485 +3,299 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teqlif Pro — Satışlarınızı Katlayın</title>
-    <meta name="description" content="Teqlif Pro ile daha az komisyon ödeyin, VIP alıcıları tespit edin ve satışlarınızı katlayın.">
+    <title>teqlif Pro — Planlar</title>
+    <meta name="description" content="teqlif Pro ile daha fazla kazanın, verilerle karar alın ve platformun tüm gücünü açın.">
     <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
     <link rel="stylesheet" href="/static/css/main.css">
     <script src="/static/js/auth.js?v=2"></script>
     <style>
-        /* ── Dark theme tokens ─────────────────────────────────────── */
+        /* ── Tokens ──────────────────────────────────────────────────── */
         :root {
-            --gold:        #FFD700;
-            --gold-dark:   #B8860B;
-            --gold-dim:    rgba(255,215,0,.15);
-            --pro-bg:      #0c0b00;
+            --pri:         #06b6d4;
+            --pri-dark:    #0891b2;
+            --pri-light:   #22d3ee;
+            --pri-dim:     rgba(6,182,212,.12);
+            --pro-bg:      #00141a;
             --surface:     #111118;
-            --surface-2:   #18181f;
+            --surface-2:   #16161e;
             --border-dark: #2a2a35;
+            --border-pri:  rgba(6,182,212,.35);
             --text-main:   #f0f0f0;
             --text-dim:    #8b8b9a;
+            --green:       #4ade80;
+            --red:         #f87171;
         }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         html, body {
+            height: 100%;
             background: #090909;
             color: var(--text-main);
+            font-family: inherit;
         }
 
-        /* ── Nav dark override ─────────────────────────────────────── */
+        /* ── Nav ─────────────────────────────────────────────────────── */
         nav {
-            background: rgba(9,9,9,.9) !important;
+            background: rgba(9,9,9,.92) !important;
             border-bottom: 1px solid var(--border-dark) !important;
             backdrop-filter: blur(14px) !important;
         }
-        nav .logo           { color: var(--gold) !important; }
-        nav .nav-links a    { color: #b0b0b0 !important; }
-        nav .nav-links a:hover { color: var(--gold) !important; background: rgba(255,215,0,.08) !important; }
-        nav .btn-nav        { background: linear-gradient(135deg,var(--gold-dark),var(--gold)) !important; color:#000 !important; border:none !important; }
-        nav .btn-nav:hover  { opacity:.9; }
+        nav .logo               { color: var(--pri) !important; }
+        nav .nav-links a        { color: #b0b0b0 !important; }
+        nav .nav-links a:hover  { color: var(--pri) !important; background: var(--pri-dim) !important; }
+        nav .btn-nav            { background: linear-gradient(135deg, var(--pri-dark), var(--pri)) !important; color:#000 !important; border:none !important; }
 
-        /* ── Hero ──────────────────────────────────────────────────── */
-        .hero {
-            min-height: 88vh;
+        /* ── Page layout ─────────────────────────────────────────────── */
+        .page-wrap {
+            min-height: calc(100dvh - 56px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            text-align: center;
-            padding: 7rem 1.5rem 5rem;
+            padding: 20px 20px 24px;
+            gap: 18px;
             position: relative;
             overflow: hidden;
         }
 
-        .hero::before {
+        .page-wrap::before {
             content: '';
             position: absolute;
             inset: 0;
             background:
-                radial-gradient(ellipse 70% 50% at 50% 35%, rgba(255,215,0,.10) 0%, transparent 65%),
-                radial-gradient(ellipse 40% 30% at 25% 70%, rgba(255,140,0,.05) 0%, transparent 60%),
-                radial-gradient(ellipse 40% 30% at 75% 70%, rgba(255,215,0,.05) 0%, transparent 60%);
+                radial-gradient(ellipse 60% 40% at 50% 20%, rgba(6,182,212,.07) 0%, transparent 60%),
+                radial-gradient(ellipse 30% 30% at 15% 80%, rgba(8,145,178,.04) 0%, transparent 55%),
+                radial-gradient(ellipse 30% 30% at 85% 80%, rgba(6,182,212,.04) 0%, transparent 55%);
             pointer-events: none;
         }
+
+        /* ── Compact header ──────────────────────────────────────────── */
+        .page-header { text-align: center; position: relative; }
 
         .hero-badge {
             display: inline-flex;
             align-items: center;
-            gap: .45rem;
-            background: rgba(255,215,0,.1);
-            border: 1px solid rgba(255,215,0,.3);
+            gap: .4rem;
+            background: var(--pri-dim);
+            border: 1px solid var(--border-pri);
             border-radius: 50px;
-            padding: .38rem 1.1rem;
-            font-size: .75rem;
+            padding: .3rem .9rem;
+            font-size: .7rem;
             font-weight: 700;
             letter-spacing: .1em;
             text-transform: uppercase;
-            color: var(--gold);
-            margin-bottom: 2rem;
-        }
-
-        .hero h1 {
-            font-size: clamp(2rem, 6vw, 3.8rem);
-            font-weight: 900;
-            line-height: 1.12;
-            margin-bottom: 1.25rem;
-            background: linear-gradient(135deg, #fff 10%, var(--gold) 55%, #FFA500 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero p {
-            font-size: clamp(.95rem, 2.2vw, 1.15rem);
-            color: var(--text-dim);
-            max-width: 520px;
-            line-height: 1.7;
-            margin-bottom: 3rem;
-        }
-
-        .hero-stats {
-            display: flex;
-            gap: 3rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .hero-stat-num {
-            font-size: 2.1rem;
-            font-weight: 900;
-            color: var(--gold);
-            line-height: 1;
-        }
-
-        .hero-stat-label {
-            font-size: .75rem;
-            color: var(--text-dim);
-            margin-top: .35rem;
-            letter-spacing: .04em;
-        }
-
-        /* ── Section wrapper ───────────────────────────────────────── */
-        .section-wrap {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 0 1.5rem 7rem;
-        }
-
-        .eyebrow {
-            text-align: center;
-            font-size: .72rem;
-            font-weight: 700;
-            letter-spacing: .14em;
-            text-transform: uppercase;
-            color: var(--gold);
+            color: var(--pri);
             margin-bottom: .6rem;
         }
 
-        .section-title {
-            text-align: center;
-            font-size: clamp(1.35rem, 3vw, 1.85rem);
-            font-weight: 800;
-            color: var(--text-main);
-            margin-bottom: 2.75rem;
-        }
-
-        /* ── Pricing table ─────────────────────────────────────────── */
-        .ptable {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        /* Header cells */
-        .ptable thead th {
-            padding: 1.6rem 1.25rem;
-            text-align: center;
-            vertical-align: top;
-        }
-
-        .th-feature {
-            width: 42%;
-            text-align: left !important;
-            background: var(--surface);
-            color: var(--text-dim);
-            font-size: .78rem;
-            font-weight: 600;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            border-radius: 16px 0 0 0;
-            border-bottom: 1px solid var(--border-dark);
-        }
-
-        .th-standard {
-            width: 29%;
-            background: var(--surface-2);
-            border-left: 1px solid var(--border-dark);
-            border-bottom: 1px solid var(--border-dark);
-            color: var(--text-dim);
-            font-size: .9rem;
-            font-weight: 700;
-        }
-
-        .th-pro {
-            width: 29%;
-            background: var(--pro-bg);
-            border-top: 2px solid var(--gold);
-            border-left: 2px solid var(--gold-dark);
-            border-right: 2px solid var(--gold-dark);
-            border-bottom: 1px solid var(--gold-dark);
-            border-radius: 0 16px 0 0;
-        }
-
-        .th-pro-inner {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: .45rem;
-            color: var(--gold);
-            font-size: 1rem;
-            font-weight: 800;
-        }
-
-        .pro-pill {
-            display: inline-block;
-            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-            color: #000;
-            font-size: .6rem;
+        .page-header h1 {
+            font-size: clamp(1.4rem, 3.5vw, 2rem);
             font-weight: 900;
-            letter-spacing: .1em;
-            text-transform: uppercase;
-            padding: .22rem .75rem;
-            border-radius: 50px;
-        }
-
-        /* Body rows */
-        .ptable tbody tr {
-            transition: background .15s;
-        }
-
-        .ptable tbody tr:hover .td-feature,
-        .ptable tbody tr:hover .td-standard,
-        .ptable tbody tr:hover .td-pro {
-            background-color: rgba(255,215,0,.04);
-        }
-
-        .ptable td {
-            padding: .95rem 1.25rem;
-            font-size: .875rem;
-            border-bottom: 1px solid var(--border-dark);
-            vertical-align: middle;
-        }
-
-        .td-feature {
-            background: var(--surface);
-            color: var(--text-main);
-            font-weight: 500;
-        }
-
-        .feat-sub {
-            display: block;
-            font-size: .72rem;
-            color: var(--text-dim);
-            font-weight: 400;
-            margin-top: .18rem;
-        }
-
-        .td-standard {
-            background: var(--surface-2);
-            text-align: center;
-            color: var(--text-dim);
-            border-left: 1px solid var(--border-dark);
-        }
-
-        .td-pro {
-            background: rgba(12,11,0,.7);
-            text-align: center;
-            border-left: 2px solid var(--gold-dark);
-            border-right: 2px solid var(--gold-dark);
-            font-weight: 600;
-            color: #FFF9C4;
-        }
-
-        /* Highlight row (gift revenue) */
-        .row-highlight .td-feature { background: rgba(255,215,0,.05); }
-        .row-highlight .td-standard { background: rgba(255,215,0,.03); }
-        .row-highlight .td-pro { background: rgba(255,215,0,.1); }
-
-        .pro-highlight {
-            color: var(--gold) !important;
-            font-size: 1rem;
-        }
-
-        .icon-ok   { color: #4ade80; }
-        .icon-no   { color: #f87171; }
-        .icon-lock { color: var(--text-dim); }
-
-        /* Footer / CTA row */
-        .ptable tfoot td {
-            padding: 1.6rem 1.25rem;
-            border-top: 1px solid var(--border-dark);
-        }
-
-        .tfoot-feature {
-            background: var(--surface);
-            border-radius: 0 0 0 16px;
-        }
-
-        .tfoot-standard {
-            background: var(--surface-2);
-            text-align: center;
-            border-left: 1px solid var(--border-dark);
-            color: var(--text-dim);
-            font-size: .85rem;
-        }
-
-        .tfoot-pro {
-            background: var(--pro-bg);
-            text-align: center;
-            border-left: 2px solid var(--gold-dark);
-            border-right: 2px solid var(--gold-dark);
-            border-bottom: 2px solid var(--gold-dark);
-            border-radius: 0 0 16px 0;
-        }
-
-        .tfoot-price-label {
-            font-size: .72rem;
-            color: var(--text-dim);
+            line-height: 1.15;
+            background: linear-gradient(135deg, #fff 15%, var(--pri-light) 60%, var(--pri) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: .35rem;
         }
 
-        .tfoot-price {
-            font-size: 1.6rem;
-            font-weight: 900;
-            color: var(--gold);
-            margin-bottom: 1rem;
-            line-height: 1;
-        }
+        .page-header p { font-size: .85rem; color: var(--text-dim); }
 
-        .tfoot-price span {
-            font-size: .75rem;
-            font-weight: 500;
-            color: var(--text-dim);
-        }
-
-        /* ── CTA button ────────────────────────────────────────────── */
-        .btn-pro {
-            display: inline-block;
-            width: 100%;
-            background: linear-gradient(135deg, #8a6000 0%, var(--gold) 50%, #FFA500 100%);
-            color: #000;
-            font-weight: 800;
-            font-size: .9rem;
-            padding: .85rem 1rem;
-            border-radius: 50px;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 0 18px rgba(255,215,0,.35), 0 4px 14px rgba(0,0,0,.4);
-            animation: pulse-gold 2.4s ease-in-out infinite;
-            transition: transform .18s, box-shadow .18s;
-        }
-
-        .btn-pro:hover {
-            transform: translateY(-2px) scale(1.03);
-            box-shadow: 0 0 32px rgba(255,215,0,.6), 0 8px 24px rgba(0,0,0,.5);
-            animation-play-state: paused;
-        }
-
-        .btn-pro:active { transform: scale(.97); }
-
-        @keyframes pulse-gold {
-            0%,100% { box-shadow: 0 0 18px rgba(255,215,0,.35), 0 4px 14px rgba(0,0,0,.4); }
-            50%      { box-shadow: 0 0 36px rgba(255,215,0,.65), 0 8px 22px rgba(0,0,0,.5); }
-        }
-
-        /* ── Toast ─────────────────────────────────────────────────── */
-        .pro-toast {
-            position: fixed;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%) translateY(140%);
-            background: #130f00;
-            border: 1px solid var(--gold-dark);
-            border-radius: 14px;
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: flex-start;
-            gap: .85rem;
-            box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 20px rgba(255,215,0,.15);
-            z-index: 9999;
-            transition: transform .42s cubic-bezier(.34,1.46,.64,1);
-            max-width: min(480px, 90vw);
-            pointer-events: none;
-        }
-
-        .pro-toast.show {
-            transform: translateX(-50%) translateY(0);
-            pointer-events: auto;
-        }
-
-        .pro-toast-icon { font-size: 1.5rem; flex-shrink: 0; margin-top: .05rem; }
-
-        .pro-toast-title {
-            font-size: .9rem;
-            font-weight: 700;
-            color: var(--gold);
-            margin-bottom: .22rem;
-        }
-
-        .pro-toast-sub {
-            font-size: .78rem;
-            color: var(--text-dim);
-            line-height: 1.5;
-        }
-
-        /* ── Footer dark override ──────────────────────────────────── */
-        footer {
-            background: #050505 !important;
-            border-top: 1px solid var(--border-dark) !important;
-        }
-
-        footer .logo                { color: var(--gold) !important; }
-        .footer-social a            { color: var(--text-dim) !important; }
-        .footer-social a:hover      { color: var(--gold) !important; }
-        .footer-links a             { color: var(--text-dim) !important; }
-        .footer-links a:hover       { color: var(--gold) !important; }
-        .footer-bottom              { color: var(--text-dim) !important; border-top-color: #1a1a1a !important; }
-        .footer-app-link            { background: #1a1a1a !important; color: #ccc !important; }
-        .footer-app-link:hover      { background: #222 !important; }
-
-        /* ── Plan Toggle ───────────────────────────────────────────── */
+        /* ── Toggle ──────────────────────────────────────────────────── */
         .plan-toggle {
             display: flex;
-            justify-content: center;
-            margin-bottom: 2.25rem;
             background: var(--surface);
             border: 1px solid var(--border-dark);
             border-radius: 50px;
-            padding: .3rem;
-            width: fit-content;
-            margin-left: auto;
-            margin-right: auto;
+            padding: .25rem;
         }
 
         .toggle-btn {
-            position: relative;
             background: none;
             border: none;
             color: var(--text-dim);
-            font-size: .85rem;
+            font-size: .82rem;
             font-weight: 600;
-            padding: .55rem 1.5rem;
+            padding: .45rem 1.2rem;
             border-radius: 50px;
             cursor: pointer;
             transition: background .2s, color .2s;
             display: flex;
             align-items: center;
-            gap: .5rem;
+            gap: .45rem;
+            white-space: nowrap;
         }
 
         .toggle-btn.active {
-            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            background: linear-gradient(135deg, var(--pri-dark), var(--pri));
             color: #000;
         }
 
         .save-badge {
-            background: rgba(74,222,128,.18);
-            color: #4ade80;
-            font-size: .62rem;
+            background: rgba(74,222,128,.15);
+            color: var(--green);
+            font-size: .6rem;
             font-weight: 800;
-            padding: .15rem .55rem;
+            padding: .12rem .48rem;
             border-radius: 50px;
-            border: 1px solid rgba(74,222,128,.3);
-            letter-spacing: .04em;
+            border: 1px solid rgba(74,222,128,.28);
         }
 
         .toggle-btn.active .save-badge {
-            background: rgba(0,0,0,.18);
+            background: rgba(0,0,0,.15);
             color: #000;
-            border-color: rgba(0,0,0,.2);
+            border-color: rgba(0,0,0,.18);
         }
 
-        .tfoot-sub-price {
-            font-size: .72rem;
+        /* ── Plan cards grid ─────────────────────────────────────────── */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            width: 100%;
+            max-width: 820px;
+            position: relative;
+        }
+
+        .plan-card {
+            background: var(--surface);
+            border: 1px solid var(--border-dark);
+            border-radius: 18px;
+            padding: 20px 22px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            position: relative;
+        }
+
+        .plan-card.pro {
+            background: var(--pro-bg);
+            border: 2px solid var(--pri-dark);
+            box-shadow: 0 0 32px rgba(6,182,212,.08);
+        }
+
+        .rec-pill {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--pri-dark), var(--pri));
+            color: #000;
+            font-size: .65rem;
+            font-weight: 900;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            padding: .22rem .85rem;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
+        .card-head { display: flex; flex-direction: column; gap: 4px; }
+
+        .plan-name { font-size: 1rem; font-weight: 800; color: var(--text-main); }
+        .plan-card.pro .plan-name { color: var(--pri); }
+
+        .plan-price { font-size: 1.55rem; font-weight: 900; color: var(--pri); line-height: 1; }
+        .plan-card.standard .plan-price { color: var(--text-main); font-size: 1.3rem; }
+
+        .plan-sub-price { font-size: .72rem; color: var(--text-dim); min-height: .9rem; }
+
+        /* Feature list */
+        .feat-list { list-style: none; display: flex; flex-direction: column; flex: 1; }
+
+        .feat-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .38rem 0;
+            border-bottom: 1px solid rgba(255,255,255,.05);
+            font-size: .8rem;
+            gap: 8px;
+        }
+
+        .feat-list li:last-child { border-bottom: none; }
+
+        .feat-name  { color: var(--text-dim); flex: 1; }
+        .feat-val   { font-weight: 700; white-space: nowrap; font-size: .78rem; }
+        .feat-val.ok  { color: var(--green); }
+        .feat-val.no  { color: var(--red); opacity: .7; }
+        .feat-val.dim { color: var(--text-dim); }
+        .feat-val.hi  { color: var(--pri); }
+
+        /* Buttons */
+        .btn-pro {
+            width: 100%;
+            background: linear-gradient(135deg, var(--pri-dark) 0%, var(--pri) 60%, var(--pri-light) 100%);
+            color: #000;
+            font-weight: 800;
+            font-size: .88rem;
+            padding: .75rem 1rem;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 16px rgba(6,182,212,.28), 0 3px 10px rgba(0,0,0,.4);
+            animation: pulse-pri 2.4s ease-in-out infinite;
+            transition: transform .15s, box-shadow .15s;
+        }
+
+        .btn-pro:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 0 28px rgba(6,182,212,.55), 0 6px 20px rgba(0,0,0,.5);
+            animation-play-state: paused;
+        }
+
+        .btn-standard {
+            width: 100%;
+            background: none;
             color: var(--text-dim);
-            margin-bottom: .6rem;
-            min-height: 1rem;
-            transition: opacity .2s;
+            font-weight: 600;
+            font-size: .84rem;
+            padding: .7rem 1rem;
+            border-radius: 50px;
+            border: 1px solid var(--border-dark);
+            cursor: pointer;
+            transition: border-color .2s, color .2s;
         }
 
-        /* ── Responsive ────────────────────────────────────────────── */
-        @media (max-width: 600px) {
-            .ptable thead th,
-            .ptable td,
-            .ptable tfoot td {
-                padding: .75rem .65rem;
-                font-size: .78rem;
-            }
-            .feat-sub { display: none; }
-            .hero-stats { gap: 1.75rem; }
-            .th-feature { border-radius: 10px 0 0 0; }
-            .th-pro     { border-radius: 0 10px 0 0; }
-            .tfoot-feature { border-radius: 0 0 0 10px; }
-            .tfoot-pro     { border-radius: 0 0 10px 0; }
+        .btn-standard:hover { border-color: var(--text-dim); color: var(--text-main); }
+
+        @keyframes pulse-pri {
+            0%,100% { box-shadow: 0 0 16px rgba(6,182,212,.28), 0 3px 10px rgba(0,0,0,.4); }
+            50%      { box-shadow: 0 0 30px rgba(6,182,212,.55), 0 6px 18px rgba(0,0,0,.5); }
+        }
+
+        /* ── Toast ───────────────────────────────────────────────────── */
+        .pro-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(140%);
+            background: #00131a;
+            border: 1px solid var(--pri-dark);
+            border-radius: 14px;
+            padding: 1rem 1.4rem;
+            display: flex;
+            align-items: flex-start;
+            gap: .75rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 20px rgba(6,182,212,.1);
+            z-index: 9999;
+            transition: transform .4s cubic-bezier(.34,1.46,.64,1);
+            max-width: min(420px, 90vw);
+            pointer-events: none;
+        }
+
+        .pro-toast.show { transform: translateX(-50%) translateY(0); pointer-events: auto; }
+        .pro-toast-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: .05rem; }
+        .pro-toast-title { font-size: .88rem; font-weight: 700; color: var(--pri); margin-bottom: .2rem; }
+        .pro-toast-sub   { font-size: .76rem; color: var(--text-dim); line-height: 1.5; }
+
+        /* ── Mobile ──────────────────────────────────────────────────── */
+        @media (max-width: 640px) {
+            .plans-grid     { grid-template-columns: 1fr; max-width: 400px; }
+            .plan-card.standard { order: 2; }
+            .plan-card.pro      { order: 1; }
+            .page-header h1 { font-size: 1.35rem; }
         }
     </style>
 </head>
@@ -499,33 +313,14 @@
     </div>
 </nav>
 
-<!-- ── Hero ──────────────────────────────────────────────────────── -->
-<section class="hero">
-    <div class="hero-badge">👑 Teqlif Pro</div>
-    <h1>Pro'nun Farkını<br>Hemen Yaşa</h1>
-    <p>Daha fazla kazanın, verilerle karar alın ve platformun tüm gücünü kilidini açın.</p>
-    <div class="hero-stats">
-        <div>
-            <div class="hero-stat-num">%95</div>
-            <div class="hero-stat-label">Hediye Geliriniz</div>
-        </div>
-        <div>
-            <div class="hero-stat-num">∞</div>
-            <div class="hero-stat-label">Analitik Erişimi</div>
-        </div>
-        <div>
-            <div class="hero-stat-num">🐋</div>
-            <div class="hero-stat-label">VIP Alıcı Radarı</div>
-        </div>
+<div class="page-wrap">
+
+    <div class="page-header">
+        <div class="hero-badge">👑 teqlif Pro</div>
+        <h1>Pro'nun Farkını Hemen Yaşa</h1>
+        <p>Daha fazla kazan, verilerle karar al, platformun tüm gücünü aç.</p>
     </div>
-</section>
 
-<!-- ── Comparison table ───────────────────────────────────────────── -->
-<section class="section-wrap">
-    <p class="eyebrow">Plan Karşılaştırması</p>
-    <h2 class="section-title">Hangi plan size göre?</h2>
-
-    <!-- ── Fiyat Periyodu Seçici ─────────────────────────────────── -->
     <div class="plan-toggle">
         <button class="toggle-btn active" id="btnMonthly">Aylık</button>
         <button class="toggle-btn" id="btnYearly">
@@ -534,103 +329,53 @@
         </button>
     </div>
 
-    <table class="ptable">
-        <thead>
-            <tr>
-                <th class="th-feature">Özellik</th>
-                <th class="th-standard">Standart</th>
-                <th class="th-pro">
-                    <div class="th-pro-inner">
-                        <span class="pro-pill">Önerilen</span>
-                        👑 Pro
-                    </div>
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr class="row-highlight">
-                <td class="td-feature">
-                    💛 Canlı Yayın Hediye Geliri
-                    <span class="feat-sub">Yayında aldığınız hediyelerin size kalan payı</span>
-                </td>
-                <td class="td-standard">%70 Sizin</td>
-                <td class="td-pro pro-highlight">🔥 %95 Sizin <span style="font-size:.7rem;font-weight:700;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.4);border-radius:50px;padding:.1rem .5rem;vertical-align:middle;">Sektörün En İyisi!</span></td>
-            </tr>
-            <tr>
-                <td class="td-feature">
-                    📊 Pazar Trendleri ve Analitik
-                    <span class="feat-sub">Hangi kategoriler yükseliyor, rakipler ne yapıyor</span>
-                </td>
-                <td class="td-standard"><span class="icon-lock">🔒</span> Kilitli</td>
-                <td class="td-pro"><span class="icon-ok">✔</span> Sınırsız Erişim</td>
-            </tr>
-            <tr>
-                <td class="td-feature">
-                    🤖 Yapay Zeka Fiyat Danışmanı
-                    <span class="feat-sub">Ürününüz için AI destekli optimum fiyat önerisi</span>
-                </td>
-                <td class="td-standard">💰 Kullanım Başına Ücretli</td>
-                <td class="td-pro">⚡ Öncelikli Erişim</td>
-            </tr>
-            <tr>
-                <td class="td-feature">
-                    🐋 Balina (VIP) Radarı
-                    <span class="feat-sub">Yüksek bütçeli alıcıları canlı yayında görün</span>
-                </td>
-                <td class="td-standard"><span class="icon-no">✘</span> Yok</td>
-                <td class="td-pro">🐋 Canlı Yayında Aktif</td>
-            </tr>
-            <tr>
-                <td class="td-feature">
-                    ⭐ Öne Çıkarılmış İlan Önceliği
-                    <span class="feat-sub">İlanlarınız üst sıralarda ve öncelikli listelenir</span>
-                </td>
-                <td class="td-standard"><span class="icon-no">✘</span> Yok</td>
-                <td class="td-pro"><span class="icon-ok">✔</span> Otomatik</td>
-            </tr>
-            <tr>
-                <td class="td-feature">
-                    👑 Pro Kullanıcı Rozeti
-                    <span class="feat-sub">Profil ve ilanlarda görünen özel Pro rozeti</span>
-                </td>
-                <td class="td-standard"><span class="icon-no">✘</span> Yok</td>
-                <td class="td-pro"><span class="icon-ok">✔</span> Profilde Görünür</td>
-            </tr>
-            <tr>
-                <td class="td-feature">
-                    📣 Kitle Davet Kredisi
-                    <span class="feat-sub">Yayın öncesi potansiyel alıcılara bildirim gönderin</span>
-                </td>
-                <td class="td-standard">Aylık 3 Hak</td>
-                <td class="td-pro"><span class="icon-ok">✔</span> Aylık 20 Hak</td>
-            </tr>
-            <tr>
-                <td class="td-feature">
-                    💬 Müşteri Desteği
-                    <span class="feat-sub">Sorunlarınızın çözüm hızı</span>
-                </td>
-                <td class="td-standard">Standart</td>
-                <td class="td-pro">⚡ Öncelikli</td>
-            </tr>
-        </tbody>
-        <tfoot>
-            <tr>
-                <td class="tfoot-feature"></td>
-                <td class="tfoot-standard">Ücretsiz</td>
-                <td class="tfoot-pro">
-                    <div class="tfoot-price-label" id="planPeriodLabel">Aylık</div>
-                    <div class="tfoot-price" id="planPrice">500 TUCi</div>
-                    <div class="tfoot-sub-price" id="planSubPrice"></div>
-                    <button class="btn-pro" id="btnPro">
-                        Hemen Pro Olun 👑
-                    </button>
-                </td>
-            </tr>
-        </tfoot>
-    </table>
-</section>
+    <div class="plans-grid">
 
-<!-- ── Toast ──────────────────────────────────────────────────────── -->
+        <!-- Standart -->
+        <div class="plan-card standard">
+            <div class="card-head">
+                <div class="plan-name">Standart</div>
+                <div class="plan-price">Ücretsiz</div>
+                <div class="plan-sub-price">Temel özelliklerle başlayın</div>
+            </div>
+            <ul class="feat-list">
+                <li><span class="feat-name">💛 Hediye Geliri</span><span class="feat-val dim">%70</span></li>
+                <li><span class="feat-name">📊 Analitik</span><span class="feat-val no">Kilitli 🔒</span></li>
+                <li><span class="feat-name">🤖 AI Fiyat Danışmanı</span><span class="feat-val dim">Ücretli</span></li>
+                <li><span class="feat-name">🐋 Balina Radarı</span><span class="feat-val no">✘</span></li>
+                <li><span class="feat-name">⭐ İlan Önceliği</span><span class="feat-val no">✘</span></li>
+                <li><span class="feat-name">👑 Pro Rozeti</span><span class="feat-val no">✘</span></li>
+                <li><span class="feat-name">📣 Blast Kredisi</span><span class="feat-val dim">3 / ay</span></li>
+                <li><span class="feat-name">💬 Destek</span><span class="feat-val dim">Standart</span></li>
+            </ul>
+            <button class="btn-standard" onclick="window.location.href='/'">Ücretsiz Devam Et</button>
+        </div>
+
+        <!-- Pro -->
+        <div class="plan-card pro">
+            <div class="rec-pill">Önerilen</div>
+            <div class="card-head">
+                <div class="plan-name">👑 Pro</div>
+                <div class="plan-price" id="planPrice">500 TUCi / ay</div>
+                <div class="plan-sub-price" id="planSubPrice"></div>
+            </div>
+            <ul class="feat-list">
+                <li><span class="feat-name">💛 Hediye Geliri</span><span class="feat-val hi">🔥 %95</span></li>
+                <li><span class="feat-name">📊 Analitik</span><span class="feat-val ok">✔ Sınırsız</span></li>
+                <li><span class="feat-name">🤖 AI Fiyat Danışmanı</span><span class="feat-val ok">⚡ Ücretsiz</span></li>
+                <li><span class="feat-name">🐋 Balina Radarı</span><span class="feat-val ok">✔ Aktif</span></li>
+                <li><span class="feat-name">⭐ İlan Önceliği</span><span class="feat-val ok">✔ Otomatik</span></li>
+                <li><span class="feat-name">👑 Pro Rozeti</span><span class="feat-val ok">✔ Profilde</span></li>
+                <li><span class="feat-name">📣 Blast Kredisi</span><span class="feat-val ok">✔ 20 / ay</span></li>
+                <li><span class="feat-name">💬 Destek</span><span class="feat-val ok">⚡ Öncelikli</span></li>
+            </ul>
+            <button class="btn-pro" id="btnPro">Hemen Pro Ol 👑</button>
+        </div>
+
+    </div>
+
+</div>
+
 <div class="pro-toast" id="proToast">
     <div class="pro-toast-icon">⚙️</div>
     <div>
@@ -639,39 +384,7 @@
     </div>
 </div>
 
-<!-- ── Footer ─────────────────────────────────────────────────────── -->
-<footer>
-    <div class="footer-content">
-        <div class="footer-brand">
-            <a href="/" class="logo">teqlif</a>
-            <div class="footer-social">
-                <a href="https://www.instagram.com/teqlifcom/" target="_blank" title="Instagram">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
-                </a>
-                <a href="https://x.com/teqlif" target="_blank" title="X (Twitter)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l11.733 16h4.267l-11.733-16zM4 20l6.768-6.768m2.464-2.464l6.768-6.768"></path></svg>
-                </a>
-                <a href="https://www.facebook.com/profile.php?id=61578477205115" target="_blank" title="Facebook">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
-                </a>
-            </div>
-        </div>
-        <div class="footer-links">
-            <a href="/support.html">Yardım Merkezi</a>
-            <a href="/gizlilik-politikasi.html">Gizlilik Politikası</a>
-            <a href="/kullanim-sartlari.html">Kullanım Şartları</a>
-            <a href="https://apps.apple.com/tr/app/teqlif/id6759490205" class="footer-app-link" target="_blank">
-                <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;margin-right:8px;"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.1 2.48-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .76-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.36 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                App Store
-            </a>
-        </div>
-    </div>
-    <div class="footer-bottom">
-        &copy; 2026 teqlif. Tüm hakları saklıdır.
-    </div>
-</footer>
-
 <script src="/static/js/main.js"></script>
-<script src="/static/js/pro-plan.js?v=1"></script>
+<script src="/static/js/pro-plan.js?v=2"></script>
 </body>
 </html>

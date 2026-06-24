@@ -331,13 +331,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFB8860B), Color(0xFFFFD700)],
+                                    colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
                                   ),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: const Text(
                                   '👑 PRO',
-                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black),
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
                                 ),
                               ),
                             ],
@@ -952,7 +952,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             items: [
               _SettingsTile(
                 icon: Icons.workspace_premium_outlined,
-                iconColor: const Color(0xFFB8860B),
+                iconColor: const Color(0xFF06B6D4),
                 label: widget.user?['is_premium'] == true ? '👑 Pro Araçları' : '👑 Pro Araçları',
                 trailing: widget.user?['is_premium'] == true
                     ? Container(
@@ -966,10 +966,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     : Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [Color(0xFFB8860B), Color(0xFFFFD700)]),
+                          gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
                           borderRadius: BorderRadius.circular(50),
                         ),
-                        child: const Text('PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.black)),
+                        child: const Text('PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
                       ),
                 onTap: () => Navigator.push(
                   context,

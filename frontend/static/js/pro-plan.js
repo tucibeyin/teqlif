@@ -1,21 +1,20 @@
 (function () {
-    var toast  = document.getElementById('proToast');
-    var timer  = null;
+    var toast = document.getElementById('proToast');
+    var timer = null;
 
     function setPlan(type) {
         var isYearly = type === 'yearly';
 
         document.getElementById('btnMonthly').classList.toggle('active', !isYearly);
         document.getElementById('btnYearly').classList.toggle('active', isYearly);
-        document.getElementById('planPeriodLabel').textContent = isYearly ? 'Yıllık' : 'Aylık';
 
         var priceEl    = document.getElementById('planPrice');
         var subPriceEl = document.getElementById('planSubPrice');
         if (isYearly) {
-            priceEl.textContent    = '4.800 TUCi';
+            priceEl.textContent    = '4.800 TUCi / yıl';
             subPriceEl.textContent = '≈ 400 TUCi/ay · 2 ay bedava';
         } else {
-            priceEl.textContent    = '500 TUCi';
+            priceEl.textContent    = '500 TUCi / ay';
             subPriceEl.textContent = '';
         }
     }
