@@ -92,16 +92,20 @@ async def send_gift(
             detail=f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {body.cost} TUCi",
         )
 
+    # Platform komisyonu: Pro yayıncı %95, Standart %70 alır
+    commission_rate = 0.95 if receiver.is_premium else 0.70
+    host_share = int(body.cost * commission_rate)
+
     await db.execute(
         sql_text("UPDATE users SET tuci_balance = tuci_balance - :cost WHERE id = :uid"),
         {"cost": body.cost, "uid": current_user.id},
     )
     await db.execute(
-        sql_text("UPDATE users SET tuci_balance = tuci_balance + :cost WHERE id = :uid"),
-        {"cost": body.cost, "uid": receiver.id},
+        sql_text("UPDATE users SET tuci_balance = tuci_balance + :share WHERE id = :uid"),
+        {"share": host_share, "uid": receiver.id},
     )
-    db.add(TuciTransaction(user_id=current_user.id, amount=-body.cost, transaction_type="send_gift"))
-    db.add(TuciTransaction(user_id=receiver.id,    amount=body.cost,  transaction_type="receive_gift"))
+    db.add(TuciTransaction(user_id=current_user.id, amount=-body.cost,   transaction_type="send_gift"))
+    db.add(TuciTransaction(user_id=receiver.id,    amount=host_share,    transaction_type="receive_gift"))
     await db.commit()
 
     await publish_chat(body.stream_id, {
