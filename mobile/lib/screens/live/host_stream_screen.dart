@@ -20,6 +20,7 @@ import '../../widgets/chat_panel.dart';
 import '../../services/moderation_service.dart';
 import '../../services/auction_service.dart';
 import '../../widgets/live/floating_hearts.dart';
+import '../../widgets/live/gift_hud.dart';
 import '../../widgets/live/host_top_bar.dart';
 import '../../widgets/live/live_video_player.dart';
 import '../../core/logger_service.dart';
@@ -81,6 +82,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   // Balina Radarı HUD
   OverlayEntry? _whaleHudEntry;
   Timer? _whaleHudTimer;
+  OverlayEntry? _giftHudEntry;
+  Timer? _giftHudTimer;
 
   @override
   void initState() {
@@ -90,6 +93,22 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     _connect();
     if (widget.streamToken.category != 'sohbet') _loadBidHistory();
     if (!widget.blastAlreadySent) _loadAudienceSize();
+  }
+
+  void _showGiftHud(String sender, String giftName, int cost) {
+    if (!mounted) return;
+    _giftHudTimer?.cancel();
+    _giftHudEntry?.remove();
+    _giftHudEntry = null;
+    final overlay = Overlay.of(context);
+    _giftHudEntry = OverlayEntry(
+      builder: (_) => GiftHud(sender: sender, giftName: giftName, cost: cost),
+    );
+    overlay.insert(_giftHudEntry!);
+    _giftHudTimer = Timer(const Duration(seconds: 4), () {
+      _giftHudEntry?.remove();
+      _giftHudEntry = null;
+    });
   }
 
   void _showWhaleHud(String username, String tier) {
@@ -187,6 +206,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     _thumbTimer?.cancel();
     _whaleHudTimer?.cancel();
     _whaleHudEntry?.remove();
+    _giftHudTimer?.cancel();
+    _giftHudEntry?.remove();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _listener?.dispose();
@@ -662,6 +683,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       onCoHostRemoved: (_) =>
                           setState(() => _coHostUsername = null),
                       onWhaleAlert: _showWhaleHud,
+                      onGift: _showGiftHud,
                       pinAtBottom: true,
                       pinDismissible: true,
                     ),

@@ -13,6 +13,8 @@ import '../../core/app_exception.dart';
 import '../../core/logger_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
+import '../../services/wallet_service.dart';
+import '../../widgets/live/gift_hud.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/auction_panel.dart';
 import '../../l10n/app_localizations.dart';
@@ -145,6 +147,9 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   bool _leftStream = false;
   // Kazanan konfetisi
   late ConfettiController _confettiController;
+  // Hediye HUD overlay
+  OverlayEntry? _giftHudEntry;
+  Timer? _giftHudTimer;
 
   @override
   void initState() {
@@ -166,8 +171,47 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   @override
   void dispose() {
     _confettiController.dispose();
+    _giftHudTimer?.cancel();
+    _giftHudEntry?.remove();
     _deactivateSync();
     super.dispose();
+  }
+
+  void _showGiftHud(String sender, String giftName, int cost) {
+    if (!mounted) return;
+    _giftHudTimer?.cancel();
+    _giftHudEntry?.remove();
+    _giftHudEntry = null;
+    final overlay = Overlay.of(context);
+    _giftHudEntry = OverlayEntry(
+      builder: (_) => GiftHud(sender: sender, giftName: giftName, cost: cost),
+    );
+    overlay.insert(_giftHudEntry!);
+    _giftHudTimer = Timer(const Duration(seconds: 4), () {
+      _giftHudEntry?.remove();
+      _giftHudEntry = null;
+    });
+  }
+
+  Future<void> _showGiftSheet() async {
+    final hostUsername = _resolvedHostUsername ?? widget.stream.host.username;
+    if (hostUsername.isEmpty) return;
+
+    const gifts = [
+      ('🔥 Ateş', 10),
+      ('💎 Elmas', 50),
+      ('👑 Kral Tacı', 100),
+    ];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _GiftSheet(
+        streamId: widget.stream.id,
+        receiverUsername: hostUsername,
+        gifts: gifts,
+      ),
+    );
   }
 
   void _onAuctionWon() {
@@ -857,22 +901,44 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                       }
                     },
                     pinAtBottom: true,
-                    trailingAction: GestureDetector(
-                      onTap: _onHeartTap,
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white30, width: 1.5),
+                    onGift: _showGiftHud,
+                    trailingAction: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: _showGiftSheet,
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white30, width: 1.5),
+                            ),
+                            child: const Center(
+                              child: Text('🎁', style: TextStyle(fontSize: 18)),
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.favorite,
-                          color: Color(0xFFFF4081),
-                          size: 20,
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: _onHeartTap,
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white30, width: 1.5),
+                            ),
+                            child: const Icon(
+                              Icons.favorite,
+                              color: Color(0xFFFF4081),
+                              size: 20,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                   if ((_token?.category ?? widget.stream.category) != 'sohbet')
@@ -924,5 +990,148 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
           child: Icon(Icons.videocam_rounded, color: Colors.white10, size: 56),
         ),
       );
+}
+
+// ── Hediye Seçim Paneli ───────────────────────────────────────────────────────
+
+class _GiftSheet extends StatefulWidget {
+  final int streamId;
+  final String receiverUsername;
+  final List<(String, int)> gifts;
+
+  const _GiftSheet({
+    required this.streamId,
+    required this.receiverUsername,
+    required this.gifts,
+  });
+
+  @override
+  State<_GiftSheet> createState() => _GiftSheetState();
+}
+
+class _GiftSheetState extends State<_GiftSheet> {
+  bool _sending = false;
+
+  Future<void> _send(String giftName, int cost) async {
+    if (_sending) return;
+    setState(() => _sending = true);
+    final result = await WalletService.sendGift(
+      streamId: widget.streamId,
+      receiverUsername: widget.receiverUsername,
+      giftName: giftName,
+      cost: cost,
+    );
+    if (!mounted) return;
+    setState(() => _sending = false);
+    if (result['ok'] == true) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$giftName gönderildi! 🎉'),
+          backgroundColor: const Color(0xFF6D28D9),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error'] as String? ?? 'Hata oluştu.'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final botPad = MediaQuery.of(context).padding.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, botPad + 16),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E293B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const Text(
+            '🎁 Hediye Gönder',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (_sending)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
+            )
+          else
+            Row(
+              children: widget.gifts.map((g) {
+                final (name, cost) = g;
+                final emoji = name.split(' ').first;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: GestureDetector(
+                      onTap: () => _send(name, cost),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF312E81), Color(0xFF1E1B4B)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(emoji, style: const TextStyle(fontSize: 32)),
+                            const SizedBox(height: 6),
+                            Text(
+                              name.contains(' ') ? name.substring(name.indexOf(' ') + 1) : name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$cost TUCi',
+                              style: const TextStyle(
+                                color: Color(0xFFA78BFA),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
 }
 

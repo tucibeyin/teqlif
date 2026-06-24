@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, text as sql_text
 
 from app.database import get_db
 from app.models.user import User
 from app.models.tuci_transaction import TuciTransaction
+from app.services.chat_service import publish_chat
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/wallet", tags=["wallet"])
@@ -16,11 +17,20 @@ _TYPE_LABELS = {
     "spend_ad_campaign":  "İlan sponsorluğu",
     "spend_ai":           "Yapay Zeka fiyatlama",
     "web_topup":          "Web yükleme",
+    "send_gift":          "Canlı hediye gönderildi",
+    "receive_gift":       "Canlı hediye alındı",
 }
 
 
 class TopupRequest(BaseModel):
     amount: int = Field(gt=0, le=10000)
+
+
+class GiftRequest(BaseModel):
+    stream_id: int
+    receiver_username: str
+    gift_name: str
+    cost: int = Field(gt=0, le=1000)
 
 
 @router.post("/topup-manual", status_code=503)
@@ -61,3 +71,45 @@ async def get_balance(
             for t in txns
         ],
     }
+
+
+@router.post("/send-gift")
+async def send_gift(
+    body: GiftRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.username == body.receiver_username))
+    receiver = result.scalar_one_or_none()
+    if receiver is None:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+    if receiver.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Kendinize hediye gönderemezsiniz.")
+
+    if current_user.tuci_balance < body.cost:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {body.cost} TUCi",
+        )
+
+    await db.execute(
+        sql_text("UPDATE users SET tuci_balance = tuci_balance - :cost WHERE id = :uid"),
+        {"cost": body.cost, "uid": current_user.id},
+    )
+    await db.execute(
+        sql_text("UPDATE users SET tuci_balance = tuci_balance + :cost WHERE id = :uid"),
+        {"cost": body.cost, "uid": receiver.id},
+    )
+    db.add(TuciTransaction(user_id=current_user.id, amount=-body.cost, transaction_type="send_gift"))
+    db.add(TuciTransaction(user_id=receiver.id,    amount=body.cost,  transaction_type="receive_gift"))
+    await db.commit()
+
+    await publish_chat(body.stream_id, {
+        "type": "gift",
+        "sender": current_user.username,
+        "gift_name": body.gift_name,
+        "cost": body.cost,
+    })
+
+    await db.refresh(current_user)
+    return {"ok": True, "new_balance": current_user.tuci_balance}

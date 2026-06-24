@@ -182,6 +182,9 @@ class ChatPanel extends StatefulWidget {
   /// Sadece host alır — yüksek harcamalı kullanıcı yayına katıldığında tetiklenir.
   final void Function(String username, String tier)? onWhaleAlert;
 
+  /// Birisi hediye gönderdiğinde tüm odaya gelir.
+  final void Function(String sender, String giftName, int cost)? onGift;
+
   /// true ise pin banner mesaj input'unun altında gösterilir (host ekranı için).
   final bool pinAtBottom;
 
@@ -214,6 +217,7 @@ class ChatPanel extends StatefulWidget {
     this.onCoHostRemoved,
     this.onCoHostAccepted,
     this.onWhaleAlert,
+    this.onGift,
   });
 
   @override
@@ -445,6 +449,11 @@ class ChatPanelState extends State<ChatPanel> {
               final username = json['username'] as String? ?? '';
               final tier = json['tier'] as String? ?? 'VIP';
               _eventType = 'whale_alert:$username:$tier';
+            } else if (json['type'] == 'gift') {
+              final sender   = json['sender'] as String? ?? '';
+              final giftName = json['gift_name'] as String? ?? '';
+              final cost     = (json['cost'] as num?)?.toInt() ?? 0;
+              _eventType = 'gift:$sender:$giftName:$cost';
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -516,6 +525,16 @@ class ChatPanelState extends State<ChatPanel> {
             final username = colon >= 0 ? rest.substring(0, colon) : rest;
             final tier     = colon >= 0 ? rest.substring(colon + 1) : 'VIP';
             widget.onWhaleAlert?.call(username, tier);
+          }
+          if (_eventType != null && _eventType!.startsWith('gift:')) {
+            final rest        = _eventType!.substring('gift:'.length);
+            final firstColon  = rest.indexOf(':');
+            final sender      = firstColon >= 0 ? rest.substring(0, firstColon) : rest;
+            final remainder   = firstColon >= 0 ? rest.substring(firstColon + 1) : '';
+            final lastColon   = remainder.lastIndexOf(':');
+            final giftName    = lastColon >= 0 ? remainder.substring(0, lastColon) : remainder;
+            final cost        = lastColon >= 0 ? int.tryParse(remainder.substring(lastColon + 1)) ?? 0 : 0;
+            widget.onGift?.call(sender, giftName, cost);
           }
       },
     );

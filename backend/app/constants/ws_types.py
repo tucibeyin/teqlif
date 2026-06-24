@@ -41,3 +41,6 @@ AUCTION_ENDED_BY_BUY_IT_NOW  = "auction_ended_by_buy_it_now"
 
 # ── Balina Radarı ─────────────────────────────────────────────────────────────
 WHALE_ALERT = "WHALE_ALERT"  # Sadece yayın sahibine (host) gönderilir
+
+# ── Canlı Hediye ──────────────────────────────────────────────────────────────
+GIFT = "gift"  # Tüm odaya broadcast — gönderen, gift_name, cost
