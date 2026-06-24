@@ -11,6 +11,7 @@ import '../services/storage_service.dart';
 class AnalyticsService {
   static String? _sessionId;
   static bool? _consentAccepted;
+  static final Set<int> _impressedCampaigns = {};
 
   static String _generateUUID() {
     final random = Random();
@@ -250,6 +251,8 @@ class AnalyticsService {
   }
 
   static Future<void> trackAdImpression(int campaignId) async {
+    if (_impressedCampaigns.contains(campaignId)) return;
+    _impressedCampaigns.add(campaignId);
     try {
       final token = await StorageService.getToken();
       http

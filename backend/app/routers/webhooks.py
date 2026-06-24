@@ -17,6 +17,11 @@ router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 _receiver = WebhookReceiver(TokenVerifier(settings.livekit_api_key, settings.livekit_api_secret))
 
 
+@router.get("/livekit", include_in_schema=False)
+async def livekit_webhook_probe():
+    return {"status": "ok"}
+
+
 @router.post("/livekit", include_in_schema=False)
 async def livekit_webhook(request: Request):
     body = await request.body()

@@ -486,7 +486,7 @@ async def market_trends(
                 r.cnt AS recent_cnt,
                 COALESCE(p.cnt, 0) AS prev_cnt,
                 CASE WHEN COALESCE(p.cnt, 0) > 0
-                    THEN ROUND(((r.cnt - p.cnt)::float / p.cnt) * 100, 1)
+                    THEN ROUND(((((r.cnt - p.cnt)::float / p.cnt) * 100))::numeric, 1)
                     ELSE 100.0
                 END AS growth_pct
             FROM recent r
@@ -506,6 +506,7 @@ async def market_trends(
             })
     except Exception as exc:
         logger.warning("[MarketTrends] trending_categories başarısız: %s", exc)
+        await db.rollback()
 
     # ── 3. Average spend growth — PostgreSQL ──────────────────────────────────
     avg_spend_growth: float | None = None
