@@ -101,6 +101,8 @@
                 const cams = devices.filter(d => d.kind === 'videoinput');
                 if (cams.length > 1) document.getElementById('btnSwitchCamera').style.display = '';
             }).catch(() => {});
+            // Kitleyi Davet Et (blast) — audience_size > 0 ise butonu aktif et
+            _initBlast(info.title || '', info.category || '');
         } else {
             document.getElementById('btnLeave').style.display = '';
             // Kalp butonu sadece izleyicide görünür
@@ -1841,4 +1843,63 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var lmArrowR = document.getElementById('lmArrowR');
     if (lmArrowR) lmArrowR.addEventListener('click', function () { lmSlide(1); });
+
+    // ── Kitleyi Davet Et (Lead Blast) ──────────────────────────────────────────
+
+    async function _initBlast(title, category) {
+        const btn = document.getElementById('btnBlast');
+        if (!btn) return;
+        try {
+            const qs = new URLSearchParams({ title: title || 'Canlı Yayın' });
+            if (category) qs.set('category', category);
+            const data = await apiFetch('/leads/audience-size?' + qs);
+            if (!data || !data.audience_size) return;
+            btn.style.display = '';
+            btn.dataset.audienceSize = data.audience_size;
+            btn.dataset.estimatedCost = data.estimated_cost;
+            btn.title = `${data.audience_size} kişiye ulaşılabilir`;
+        } catch (_) {}
+
+        btn.addEventListener('click', async function () {
+            const size = parseInt(btn.dataset.audienceSize || '0');
+            const cost = parseInt(btn.dataset.estimatedCost || '0');
+            if (!size) return;
+
+            if (!confirm(`${size} hazır alıcıya bildirim gönderilecek.\nToplam ücret: ${cost} TUCi\n\nOnaylıyor musunuz?`)) return;
+
+            btn.disabled = true;
+            btn.textContent = '📣 Gönderiliyor…';
+            try {
+                const result = await apiFetch('/leads/send-blast', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title: title || 'Canlı Yayın',
+                        category: category || '',
+                        estimated_cost: cost,
+                    }),
+                });
+                const sent = (result && result.sent) || size;
+                _blastToast(`🎯 ${sent} kişiye bildirim gönderildi!`, '#059669');
+                btn.style.display = 'none';
+            } catch (e) {
+                _blastToast((e && e.detail) || 'Bildirim gönderilemedi.', '#dc2626');
+                btn.disabled = false;
+                btn.textContent = '📣 Kitleyi Davet Et';
+            }
+        });
+    }
+
+    function _blastToast(msg, bg) {
+        const t = document.createElement('div');
+        t.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(12px);background:${bg};color:#fff;padding:10px 20px;border-radius:10px;font-size:.85rem;font-weight:600;z-index:9999;opacity:0;transition:all .3s;white-space:nowrap;`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)'; });
+        setTimeout(() => {
+            t.style.opacity = '0';
+            t.style.transform = 'translateX(-50%) translateY(12px)';
+            setTimeout(() => t.remove(), 300);
+        }, 4000);
+    }
+
 });
