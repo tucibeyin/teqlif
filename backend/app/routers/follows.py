@@ -61,6 +61,7 @@ async def follow_user(
             "title": f"@{current_user.username} seni takip etmeye başladı",
             "body": None,
             "related_id": current_user.id,
+            "sender_username": current_user.username,
         },
         pref_key="follows",
     ))

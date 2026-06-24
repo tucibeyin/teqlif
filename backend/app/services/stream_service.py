@@ -162,6 +162,7 @@ async def notify_followers_task(
                         "title": f"@{username} canlı yayın açtı",
                         "body": stream_title or None,
                         "related_id": stream_id,
+                        "stream_id": stream_id,
                     },
                     pref_key="stream_started",
                 ))

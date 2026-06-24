@@ -110,7 +110,7 @@ async def push_notification(
             ) or 0
             badge = unread_notifs + unread_msgs
 
-            # Ek data payload: sender bilgisi, profil fotoğrafı ve opsiyonel stream_id
+            # Ek data payload: deep link için gerekli tüm alanlar
             extra_data: dict[str, str] = {}
             if notif.get("related_id") is not None:
                 extra_data["sender_id"] = str(notif["related_id"])
@@ -118,6 +118,8 @@ async def push_notification(
                 extra_data["sender_username"] = str(notif["sender_username"])
             if notif.get("stream_id") is not None:
                 extra_data["stream_id"] = str(notif["stream_id"])
+            if notif.get("listing_id") is not None:
+                extra_data["listing_id"] = str(notif["listing_id"])
 
             image_url: str | None = notif.get("sender_image_url")
             if image_url and not image_url.startswith("http"):

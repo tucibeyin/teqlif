@@ -586,6 +586,7 @@ class AuctionService:
                     "title": f"@{user.username} teklif verdi",
                     "body": f"{prev_item_name} — ₺{data.amount:,.0f}" if prev_item_name else f"₺{data.amount:,.0f}",
                     "related_id": stream_id,
+                    "stream_id": stream_id,
                 },
                 pref_key="new_bid",
                 amount=float(data.amount),
@@ -601,6 +602,7 @@ class AuctionService:
                         "title": "Teklifiniz geçildi!",
                         "body": f"{prev_item_name} — yeni teklif: ₺{data.amount:,.0f}" if prev_item_name else f"Yeni teklif: ₺{data.amount:,.0f}",
                         "related_id": stream_id,
+                        "stream_id": stream_id,
                     },
                     pref_key="outbid",
                 ))
@@ -777,6 +779,7 @@ class AuctionService:
                     "title": "🛒 Hemen Al tamamlandı!",
                     "body": f"{item_name} — {fmt_price(bin_price)}",
                     "related_id": listing_id or stream_id,
+                    **({"listing_id": listing_id} if listing_id else {"stream_id": stream_id}),
                 },
                 pref_key="auction_won",
             )
@@ -954,6 +957,7 @@ class AuctionService:
                         "title": "🏆 Teklifiniz kabul edildi!",
                         "body": f"{item_name} — {fmt_price(final_price)}",
                         "related_id": listing_id or stream_id,
+                        **({"listing_id": listing_id} if listing_id else {"stream_id": stream_id}),
                     },
                     pref_key="auction_won",
                 )

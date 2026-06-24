@@ -282,6 +282,7 @@ class ListingService:
             "title": f"@{current_user.username} yeni ilan ekledi",
             "body": listing.title or None,
             "related_id": listing.id,
+            "listing_id": listing.id,
         }
 
         async def _notify_followers():

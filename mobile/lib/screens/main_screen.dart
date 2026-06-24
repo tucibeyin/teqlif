@@ -59,13 +59,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _fcmSub = FirebaseMessaging.onMessage.listen((_) => _refreshBadges());
     _notifStreamSub = PushNotificationService.notificationStream.stream.listen((data) {
       _refreshBadges();
-      // FCM mesaj bildirimine tıklanınca direkt konuşmaya git
-      if (data['type'] == 'message' && data['sender_id'] != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToDirectChat(data));
-      }
-      // Kişiselleştirilmiş yayın bildirimine tıklanınca direkt yayına git
-      if (data['type'] == 'smart_auction_alert' && data['stream_id'] != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToLiveStream(data));
+      if (data['type'] != null && (data['type'] as String).isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotifNavigation(data));
       }
     });
     _authFailedSub = AuthService.authFailedStream.stream.listen((_) => _handleAuthFailed());
@@ -81,14 +76,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
       // Cold-start FCM bildirim (uygulama kapalıyken tıklama)
       final pendingNotif = PushNotificationService.consumePendingNavigation();
-      if (pendingNotif != null) {
-        if (pendingNotif['type'] == 'smart_auction_alert' &&
-            pendingNotif['stream_id'] != null) {
-          _navigateToLiveStream(pendingNotif);
-        } else if (pendingNotif['type'] == 'message' &&
-            pendingNotif['sender_id'] != null) {
-          _navigateToDirectChat(pendingNotif);
-        }
+      if (pendingNotif != null && (pendingNotif['type'] as String? ?? '').isNotEmpty) {
+        _handleNotifNavigation(pendingNotif);
       }
     });
   }
@@ -147,20 +136,60 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Mesaj FCM bildirimine tıklanınca direkt DirectChatScreen'e git.
-  /// FCM 'smart_auction_alert' bildirimine tıklanınca doğrudan yayına gider.
-  /// Back stack: [MainScreen → SwipeLiveScreen] — geri tuşu MainScreen'e döner.
-  void _navigateToLiveStream(Map<String, dynamic> data) {
+  /// FCM bildirim datasını parse edip ilgili ekrana yönlendirir.
+  /// Hem cold-start hem warm/background start için kullanılır.
+  void _handleNotifNavigation(Map<String, dynamic> data) {
     if (!mounted) return;
-    final streamId = int.tryParse(data['stream_id']?.toString() ?? '');
-    if (streamId == null) return;
+    final type = data['type'] as String? ?? '';
+    switch (type) {
+      case 'stream_started':
+      case 'new_bid':
+      case 'outbid':
+      case 'smart_auction_alert':
+        // stream_id varsa onu kullan; yoksa sender_id'ye (eski bildirimler) düş
+        final sid = int.tryParse(data['stream_id']?.toString() ?? '') ??
+            int.tryParse(data['sender_id']?.toString() ?? '');
+        if (sid != null) _navigateToLiveStream(sid);
+        break;
+      case 'new_listing':
+      case 'auction_won':
+        final lid = int.tryParse(data['listing_id']?.toString() ?? '') ??
+            int.tryParse(data['sender_id']?.toString() ?? '');
+        if (lid != null) _navigateToListing(lid);
+        break;
+      case 'message':
+        final senderId = int.tryParse(data['sender_id']?.toString() ?? '');
+        if (senderId != null) _navigateToDirectChat(data);
+        break;
+      case 'follow':
+        final username = data['sender_username'] as String? ?? '';
+        if (username.isNotEmpty) _navigateToProfile(username);
+        break;
+    }
+  }
+
+  void _navigateToLiveStream(int streamId) {
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (_) => SwipeLiveScreen.single(streamId: streamId),
       ),
-      // MainScreen (isFirst) kalır; araya giren diğer ekranları temizle
       (route) => route.isFirst,
     );
+  }
+
+  void _navigateToListing(int listingId) {
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => ListingDeepLinkLoader(listingId: listingId),
+    ));
+  }
+
+  void _navigateToProfile(String username) {
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => PublicProfileScreen(username: username),
+    ));
   }
 
   void _navigateToDirectChat(Map<String, dynamic> data) {
