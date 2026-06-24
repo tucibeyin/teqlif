@@ -159,6 +159,14 @@ function _updateNavBadge(count) {
         kesfetA.style.cssText = 'padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem;';
         kesfetA.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Keşfet';
 
+        const walletA = document.createElement('a');
+        walletA.href = '/user_panel.html';
+        walletA.title = 'TUCi Cüzdanım';
+        walletA.style.cssText = 'display:inline-flex;align-items:center;gap:0.35rem;padding:0.35rem 0.85rem;font-size:0.85rem;font-weight:700;color:#92400e;background:#fffbeb;border:1.5px solid #fbbf24;border-radius:20px;text-decoration:none;transition:background .15s,box-shadow .15s;white-space:nowrap;';
+        walletA.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4"/><path d="M20 12h-5a2 2 0 0 0 0 4h5"/></svg><span id="navWalletLabel">Cüzdan</span>';
+        walletA.addEventListener('mouseenter', () => { walletA.style.background = '#fef3c7'; walletA.style.boxShadow = '0 2px 8px rgba(251,191,36,.35)'; });
+        walletA.addEventListener('mouseleave', () => { walletA.style.background = '#fffbeb'; walletA.style.boxShadow = ''; });
+
         const mesajlarA = document.createElement('a');
         mesajlarA.href = '/mesajlar.html';
         mesajlarA.style.cssText = 'padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;position:relative;';
@@ -180,7 +188,16 @@ function _updateNavBadge(count) {
         cikisA.addEventListener('click', (e) => { e.preventDefault(); Auth.logout(); });
 
         navLinks.innerHTML = '';
-        navLinks.append(kesfetA, mesajlarA, profilA, cikisA);
+        navLinks.append(kesfetA, walletA, mesajlarA, profilA, cikisA);
+
+        // Bakiyeyi asenkron yükle — bağımsız hata yakalanır, nav'ı bloklamaz
+        fetch('/api/wallet/balance', { headers: { 'Authorization': 'Bearer ' + Auth.getToken() } })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                const lbl = document.getElementById('navWalletLabel');
+                if (lbl && data && data.balance != null) lbl.textContent = `Cüzdan · ${data.balance} T`;
+            })
+            .catch(() => {});
 
         getUnreadCount().then(_updateNavBadge);
         setInterval(() => getUnreadCount().then(_updateNavBadge), 60000);
