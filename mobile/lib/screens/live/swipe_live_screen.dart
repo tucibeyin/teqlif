@@ -681,15 +681,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     final room = _room;
     _room = null;
     _token = null;
-    if (!_leftStream) {
-      _leftStream = true;
-      try {
-        await StreamService.leaveStream(widget.stream.id);
-      } catch (e) {
-        LoggerService.instance.warning('SwipeLivePage._deactivate', 'leaveStream başarısız: $e');
-      }
-    }
-    await room?.disconnect();
+    // Sesi/videoyu hemen kes — network çağrısını bekletme
+    room?.disconnect();
     if (mounted) {
       setState(() {
         _remoteVideoTrack = null;
@@ -697,6 +690,13 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
         _localVideoTrack = null;
         _hostParticipantSid = null;
         _isSelfCoHost = false;
+      });
+    }
+    // Backend'e ayrılma bildirimi fire-and-forget
+    if (!_leftStream) {
+      _leftStream = true;
+      StreamService.leaveStream(widget.stream.id).catchError((e) {
+        LoggerService.instance.warning('SwipeLivePage._deactivate', 'leaveStream başarısız: $e');
       });
     }
   }
@@ -1342,6 +1342,8 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
   }
 
   void _goToListing() {
+    // Detay ekranı açılmadan önce videoyu durdur
+    _ctrl?.pause();
     final hasVideo = (widget.listing['video_url'] as String?) != null &&
         (widget.listing['video_url'] as String).isNotEmpty;
     FeedTelemetryService.instance.logEvent(
@@ -1357,7 +1359,10 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
       MaterialPageRoute(
         builder: (_) => ListingDetailScreen(listing: widget.listing),
       ),
-    );
+    ).then((_) {
+      // Kullanıcı geri döndüğünde ve hâlâ aktif sayfadaysak devam et
+      if (mounted && widget.isActive) _ctrl?.play();
+    });
   }
 
   String _formatPrice(dynamic price) {
