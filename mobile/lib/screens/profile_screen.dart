@@ -213,6 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _TuciWalletCard(
                     balance: _tuciBalance,
                     history: _tuciHistory,
+                    onRefresh: _loadWallet,
                   ),
                   // ── Profil başlık bölümü ──
                   Padding(
@@ -1787,25 +1788,43 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
 
 // ── TUCi Cüzdan Kartı ───────────────────────────────────────────────────────
 
-class _TuciWalletCard extends StatelessWidget {
+class _TuciWalletCard extends StatefulWidget {
   final int? balance;
   final List<dynamic> history;
+  final Future<void> Function() onRefresh;
 
-  const _TuciWalletCard({required this.balance, required this.history});
+  const _TuciWalletCard({
+    required this.balance,
+    required this.history,
+    required this.onRefresh,
+  });
 
-  void _openSheet(BuildContext context) {
+  @override
+  State<_TuciWalletCard> createState() => _TuciWalletCardState();
+}
+
+class _TuciWalletCardState extends State<_TuciWalletCard> {
+  bool _refreshing = false;
+
+  void _openSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _TuciWalletSheet(balance: balance ?? 0, history: history),
+      builder: (_) => _TuciWalletSheet(balance: widget.balance ?? 0, history: widget.history),
     );
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() => _refreshing = true);
+    await widget.onRefresh();
+    if (mounted) setState(() => _refreshing = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _openSheet(context),
+      onTap: _openSheet,
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
         decoration: BoxDecoration(
@@ -1847,16 +1866,30 @@ class _TuciWalletCard extends StatelessWidget {
                     style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 2),
-                  balance == null
+                  widget.balance == null
                       ? const SizedBox(
                           width: 80, height: 20,
                           child: LinearProgressIndicator(color: Colors.white54, backgroundColor: Colors.white24),
                         )
                       : Text(
-                          '$balance TUCi',
+                          '${widget.balance} TUCi',
                           style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 0.5),
                         ),
                 ],
+              ),
+            ),
+            // Yenile ikonu
+            GestureDetector(
+              onTap: _handleRefresh,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _refreshing
+                    ? const SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(color: Colors.white70, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded, color: Colors.white70, size: 22),
               ),
             ),
             const Icon(Icons.chevron_right_rounded, color: Colors.white70, size: 26),

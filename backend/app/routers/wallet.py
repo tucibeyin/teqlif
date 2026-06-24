@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, text as sql_text
 
 from app.database import get_db
 from app.models.user import User
@@ -10,10 +11,45 @@ from app.utils.auth import get_current_user
 router = APIRouter(prefix="/api/wallet", tags=["wallet"])
 
 _TYPE_LABELS = {
-    "airdrop":       "Hoş geldin hediyesi",
+    "airdrop":        "Hoş geldin hediyesi",
     "spend_lead_gen": "Sıcak Talep blast",
-    "spend_ai":      "Yapay Zeka fiyatlama",
+    "spend_ai":       "Yapay Zeka fiyatlama",
+    "web_topup":      "Web yükleme",
 }
+
+
+class TopupRequest(BaseModel):
+    amount: int = Field(gt=0, le=10000)
+
+
+@router.post("/topup-manual", status_code=200)
+async def topup_manual(
+    body: TopupRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Kullanıcının kendi hesabına TUCi yükler (web paneli üzerinden).
+    Admin ise herhangi bir kullanıcıya yükleyebilir — şimdilik kendi hesabına.
+    """
+    await db.execute(
+        sql_text("UPDATE users SET tuci_balance = tuci_balance + :amt WHERE id = :uid"),
+        {"amt": body.amount, "uid": current_user.id},
+    )
+    db.add(TuciTransaction(
+        user_id=current_user.id,
+        amount=body.amount,
+        transaction_type="web_topup",
+    ))
+    await db.commit()
+
+    # Güncel bakiyeyi döndür
+    refreshed = await db.execute(
+        sql_text("SELECT tuci_balance FROM users WHERE id = :uid"),
+        {"uid": current_user.id},
+    )
+    new_balance = refreshed.scalar()
+    return {"balance": new_balance, "added": body.amount}
 
 
 @router.get("/balance")
