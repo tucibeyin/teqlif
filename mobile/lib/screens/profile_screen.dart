@@ -948,7 +948,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           const SizedBox(height: 8),
           // ── Pro Araçlar ───────────────────────────────────────────────────
           _SettingsSection(
-            title: '📈 Pro Satıcı Araçları',
+            title: '📈 Pro Araçları',
             items: [
               _SettingsTile(
                 icon: Icons.workspace_premium_outlined,

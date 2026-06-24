@@ -50,7 +50,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 2, bottom: 12),
             child: Text(
-              'Satıcı Araçları',
+              'Pro Araçları',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -177,7 +177,7 @@ class _ProStatusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '👑 Pro Satıcı',
+                  '👑 Pro Kullanıcı',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -402,7 +402,7 @@ class _UpgradeSheet extends StatelessWidget {
           const Icon(Icons.workspace_premium, size: 48, color: Color(0xFFFFB800)),
           const SizedBox(height: 12),
           Text(
-            'Pro Satıcı Özelliği',
+            'Pro Özelliği',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,

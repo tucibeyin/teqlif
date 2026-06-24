@@ -171,7 +171,7 @@ class _MarketTrendsScreenState extends State<MarketTrendsScreen> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Pro Satıcı Özelliği',
+                      'Pro Özelliği',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -180,7 +180,7 @@ class _MarketTrendsScreenState extends State<MarketTrendsScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Sektörel pazar analizi verileri yalnızca\nPro Satıcılar için erişilebilirdir.',
+                      'Sektörel pazar analizi verileri yalnızca\nPro kullanıcılar için erişilebilirdir.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,

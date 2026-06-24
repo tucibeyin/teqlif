@@ -287,7 +287,7 @@ class _FeedStatsScreenState extends State<FeedStatsScreen> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Pro Satıcı Özelliği',
+                      'Pro Özelliği',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -296,7 +296,7 @@ class _FeedStatsScreenState extends State<FeedStatsScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Video ilanlarınızın feed performansı\nyalnızca Pro Satıcılar için görünür.',
+                      'Video ilanlarınızın feed performansı\nyalnızca Pro kullanıcılar için görünür.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,

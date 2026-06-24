@@ -408,6 +408,66 @@
         .footer-app-link            { background: #1a1a1a !important; color: #ccc !important; }
         .footer-app-link:hover      { background: #222 !important; }
 
+        /* ── Plan Toggle ───────────────────────────────────────────── */
+        .plan-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border-dark);
+            border-radius: 50px;
+            padding: .3rem;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .toggle-btn {
+            position: relative;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: .85rem;
+            font-weight: 600;
+            padding: .55rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background .2s, color .2s;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .toggle-btn.active {
+            background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+            color: #000;
+        }
+
+        .save-badge {
+            background: rgba(74,222,128,.18);
+            color: #4ade80;
+            font-size: .62rem;
+            font-weight: 800;
+            padding: .15rem .55rem;
+            border-radius: 50px;
+            border: 1px solid rgba(74,222,128,.3);
+            letter-spacing: .04em;
+        }
+
+        .toggle-btn.active .save-badge {
+            background: rgba(0,0,0,.18);
+            color: #000;
+            border-color: rgba(0,0,0,.2);
+        }
+
+        .tfoot-sub-price {
+            font-size: .72rem;
+            color: var(--text-dim);
+            margin-bottom: .6rem;
+            min-height: 1rem;
+            transition: opacity .2s;
+        }
+
         /* ── Responsive ────────────────────────────────────────────── */
         @media (max-width: 600px) {
             .ptable thead th,
@@ -442,12 +502,12 @@
 <!-- ── Hero ──────────────────────────────────────────────────────── -->
 <section class="hero">
     <div class="hero-badge">👑 Teqlif Pro</div>
-    <h1>Teqlif Pro ile<br>Satışlarınızı Katlayın</h1>
-    <p>Verinin gücünü kullanın, daha az komisyon ödeyin ve VIP alıcıları anında tespit edin.</p>
+    <h1>Pro'nun Farkını<br>Hemen Yaşa</h1>
+    <p>Daha fazla kazanın, verilerle karar alın ve platformun tüm gücünü kilidini açın.</p>
     <div class="hero-stats">
         <div>
-            <div class="hero-stat-num">%80</div>
-            <div class="hero-stat-label">Hediye Geliri Sizin</div>
+            <div class="hero-stat-num">%95</div>
+            <div class="hero-stat-label">Hediye Geliriniz</div>
         </div>
         <div>
             <div class="hero-stat-num">∞</div>
@@ -465,15 +525,24 @@
     <p class="eyebrow">Plan Karşılaştırması</p>
     <h2 class="section-title">Hangi plan size göre?</h2>
 
+    <!-- ── Fiyat Periyodu Seçici ─────────────────────────────────── -->
+    <div class="plan-toggle">
+        <button class="toggle-btn active" id="btnMonthly" onclick="setPlan('monthly')">Aylık</button>
+        <button class="toggle-btn" id="btnYearly" onclick="setPlan('yearly')">
+            Yıllık
+            <span class="save-badge">2 ay bedava</span>
+        </button>
+    </div>
+
     <table class="ptable">
         <thead>
             <tr>
                 <th class="th-feature">Özellik</th>
-                <th class="th-standard">Standart Satıcı</th>
+                <th class="th-standard">Standart</th>
                 <th class="th-pro">
                     <div class="th-pro-inner">
                         <span class="pro-pill">Önerilen</span>
-                        👑 Pro Satıcı
+                        👑 Pro
                     </div>
                 </th>
             </tr>
@@ -521,8 +590,8 @@
             </tr>
             <tr>
                 <td class="td-feature">
-                    🛡 Pro Satıcı Rozeti
-                    <span class="feat-sub">Profil ve ilanlarda görünen güven rozeti</span>
+                    👑 Pro Kullanıcı Rozeti
+                    <span class="feat-sub">Profil ve ilanlarda görünen özel Pro rozeti</span>
                 </td>
                 <td class="td-standard"><span class="icon-no">✘</span> Yok</td>
                 <td class="td-pro"><span class="icon-ok">✔</span> Profilde Görünür</td>
@@ -549,8 +618,9 @@
                 <td class="tfoot-feature"></td>
                 <td class="tfoot-standard">Ücretsiz</td>
                 <td class="tfoot-pro">
-                    <div class="tfoot-price-label">Aylık</div>
-                    <div class="tfoot-price">500 <span>TUCi</span></div>
+                    <div class="tfoot-price-label" id="planPeriodLabel">Aylık</div>
+                    <div class="tfoot-price" id="planPrice">500 <span>TUCi</span></div>
+                    <div class="tfoot-sub-price" id="planSubPrice"></div>
                     <button class="btn-pro" id="btnPro">
                         Hemen Pro Olun 👑
                     </button>
@@ -604,8 +674,28 @@
 <script src="/static/js/main.js"></script>
 <script>
     (function () {
+        var currentPlan = 'monthly';
         var toast = document.getElementById('proToast');
         var timer = null;
+
+        function setPlan(type) {
+            currentPlan = type;
+            var isYearly = type === 'yearly';
+
+            document.getElementById('btnMonthly').classList.toggle('active', !isYearly);
+            document.getElementById('btnYearly').classList.toggle('active', isYearly);
+            document.getElementById('planPeriodLabel').textContent = isYearly ? 'Yıllık' : 'Aylık';
+
+            if (isYearly) {
+                document.getElementById('planPrice').innerHTML = '4.800 <span>TUCi</span>';
+                document.getElementById('planSubPrice').textContent = '≈ 400 TUCi/ay · 2 ay bedava';
+            } else {
+                document.getElementById('planPrice').innerHTML = '500 <span>TUCi</span>';
+                document.getElementById('planSubPrice').textContent = '';
+            }
+        }
+
+        window.setPlan = setPlan;
 
         document.getElementById('btnPro').addEventListener('click', function () {
             toast.classList.add('show');
