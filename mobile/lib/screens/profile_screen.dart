@@ -931,6 +931,31 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           _SettingsSection(
             title: '📈 Pro Satıcı Araçları',
             items: [
+              // Pro'ya geç — web sitesine yönlendir (ödeme web üzerinden)
+              if (widget.user?['is_premium'] != true)
+                _SettingsTile(
+                  icon: Icons.workspace_premium_outlined,
+                  iconColor: const Color(0xFFB8860B),
+                  label: '👑 Pro\'ya Geç',
+                  labelColor: const Color(0xFFB8860B),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFB8860B), Color(0xFFFFD700)],
+                      ),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: const Text(
+                      'YENİ',
+                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.black),
+                    ),
+                  ),
+                  onTap: () {
+                    final uri = Uri.parse('https://www.teqlif.com/pro-plan.html');
+                    launchUrl(uri, mode: LaunchMode.externalApplication);
+                  },
+                ),
               _SettingsTile(
                 icon: Icons.auto_graph_outlined,
                 label: 'Pro Analitik Paneli',
@@ -1182,19 +1207,23 @@ class _SettingsTile extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final Widget? trailing;
+  final Color? iconColor;
+  final Color? labelColor;
 
   const _SettingsTile({
     required this.icon,
     required this.label,
     required this.onTap,
     this.trailing,
+    this.iconColor,
+    this.labelColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.iconColor(context)),
-      title: Text(label, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
+      leading: Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
+      title: Text(label, style: TextStyle(fontSize: 14, color: labelColor ?? AppColors.textPrimary(context))),
       trailing: trailing ?? Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
       onTap: onTap,
     );
