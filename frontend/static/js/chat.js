@@ -26,8 +26,9 @@ const Chat = (() => {
     let _onCoHostRemoved  = null;
     let _onCoHostAccepted = null;
     let _myUserId         = null;
+    let _onGift           = null;
 
-    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted, onHostPin, onStreamLike, onCoHostInvite, onCoHostRemoved, onCoHostAccepted, myUserId } = {}) {
+    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted, onHostPin, onStreamLike, onCoHostInvite, onCoHostRemoved, onCoHostAccepted, myUserId, onGift } = {}) {
         _streamId = streamId;
         _onStreamEnded   = onStreamEnded   || null;
         _onViewerCount   = onViewerCount   || null;
@@ -43,6 +44,7 @@ const Chat = (() => {
         _onCoHostRemoved  = onCoHostRemoved  || null;
         _onCoHostAccepted = onCoHostAccepted || null;
         _myUserId         = myUserId         || null;
+        _onGift           = onGift           || null;
         _connectWS();
     }
 
@@ -116,6 +118,8 @@ const Chat = (() => {
                     if (_onCoHostRemoved) _onCoHostRemoved(msg.target_username || '');
                 } else if (msg.type === 'cohost_accepted') {
                     if (_onCoHostAccepted) _onCoHostAccepted(msg.username || '');
+                } else if (msg.type === 'gift') {
+                    if (_onGift) _onGift(msg);
                 }
             } catch (err) {
                 console.warn('[Chat] Mesaj parse hatası:', err);
@@ -305,6 +309,6 @@ const Chat = (() => {
         if (_ws) { try { _ws.close(); } catch (_) {} _ws = null; }
     }
 
-    return { connect, sendMessage, sendPin, disconnect, setUsernameTap };
+    return { connect, sendMessage, sendPin, disconnect, setUsernameTap, setGiftHandler: (fn) => { _onGift = fn || null; } };
 
 })();

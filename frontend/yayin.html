@@ -1309,6 +1309,102 @@
         /* Kullanıcı adlarına cursor pointer (host için) */
         .bid-user.clickable { cursor: pointer; }
         .bid-user.clickable:hover { text-decoration: underline; }
+
+        /* ── Hediye Overlay (video üzeri) ──────────────────────────────── */
+        #gift-overlay {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 25;
+            display: none;
+            min-width: 220px;
+            max-width: 88%;
+            padding: 12px 18px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #6d28d9 0%, #2563eb 100%);
+            box-shadow: 0 0 28px rgba(109,40,217,.65), 0 4px 24px rgba(0,0,0,.45);
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            white-space: nowrap;
+            pointer-events: none;
+            text-align: center;
+        }
+        #gift-overlay.gift-visible {
+            display: block;
+            animation: giftPop 3.2s cubic-bezier(.22,1,.36,1) forwards;
+        }
+        @keyframes giftPop {
+            0%   { opacity: 0; transform: translateX(-50%) translateY(24px) scale(.82); }
+            14%  { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1.06); }
+            22%  { transform: translateX(-50%) scale(1); }
+            72%  { opacity: 1; transform: translateX(-50%) scale(1); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(.9); }
+        }
+
+        /* ── Hediye Modal ──────────────────────────────────────────────── */
+        #giftModalOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 120;
+            background: rgba(0,0,0,.62);
+            align-items: flex-end;
+            justify-content: center;
+        }
+        #giftModalOverlay.open { display: flex; }
+        #giftModal {
+            background: #1e293b;
+            border-radius: 20px 20px 0 0;
+            padding: 18px 16px 32px;
+            width: 100%;
+            max-width: 480px;
+            animation: slideUp .28s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(60px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        .gift-modal-handle {
+            width: 36px; height: 4px;
+            background: rgba(255,255,255,.2);
+            border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+        .gift-modal-title {
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 18px;
+        }
+        .gift-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .gift-card {
+            background: linear-gradient(145deg,#312e81,#1e1b4b);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 14px;
+            padding: 14px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform .12s, box-shadow .12s;
+        }
+        .gift-card:hover  { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(109,40,217,.4); }
+        .gift-card:active { transform: scale(.96); }
+        .gift-card-emoji  { font-size: 2.1rem; line-height: 1; margin-bottom: 6px; }
+        .gift-card-name   { font-size: .78rem; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+        .gift-card-cost   { font-size: .72rem; font-weight: 700; color: #a78bfa; }
+        #giftModalMsg {
+            text-align: center;
+            min-height: 1.2em;
+            font-size: .8rem;
+            margin-top: 14px;
+            color: #f87171;
+        }
     </style>
 </head>
 
@@ -1374,10 +1470,20 @@
                     </div>
                 </div>
 
+                <!-- Hediye overlay (tüm izleyicilere animasyon) -->
+                <div id="gift-overlay"></div>
+
                 <!-- Kalp butonu (görüntüleyici için sağ alt) -->
                 <button id="streamHeartBtn"
                         style="display:none;position:absolute;bottom:70px;right:16px;z-index:10;background:rgba(0,0,0,.45);border:none;border-radius:50%;width:46px;height:46px;cursor:pointer;align-items:center;justify-content:center;font-size:24px;line-height:1;transition:transform .1s;">
                     ❤️
+                </button>
+
+                <!-- Hediye butonu (görüntüleyici için kalp üstünde) -->
+                <button id="streamGiftBtn"
+                        style="display:none;position:absolute;bottom:122px;right:16px;z-index:10;background:rgba(0,0,0,.45);border:none;border-radius:50%;width:46px;height:46px;cursor:pointer;align-items:center;justify-content:center;font-size:22px;line-height:1;transition:transform .1s;"
+                        title="Hediye Gönder">
+                    🎁
                 </button>
 
             </div><!-- /.video-wrap -->
@@ -1621,7 +1727,7 @@
     <script src="/static/js/confetti.min.js"></script>
     <script src="/static/js/stream.js?v=5"></script>
     <script src="/static/js/auction.js?v=8"></script>
-    <script src="/static/js/chat.js?v=8"></script>
+    <script src="/static/js/chat.js?v=9"></script>
 
     <!-- Host: Hemen Al Talep Onay Modalı -->
     <div id="binRequestModal" style="
@@ -1761,7 +1867,33 @@
         </div>
     </div>
 
-    <script src="/static/js/yayin-page.js?v=11"></script>
+    <!-- ── Hediye Modal ─────────────────────────────────────────────────── -->
+    <div id="giftModalOverlay" role="dialog" aria-modal="true" aria-label="Hediye Gönder">
+        <div id="giftModal">
+            <div class="gift-modal-handle"></div>
+            <div class="gift-modal-title">🎁 Hediye Gönder</div>
+            <div class="gift-cards">
+                <div class="gift-card" data-gift-name="🔥 Ateş" data-gift-cost="10">
+                    <div class="gift-card-emoji">🔥</div>
+                    <div class="gift-card-name">Ateş</div>
+                    <div class="gift-card-cost">10 TUCi</div>
+                </div>
+                <div class="gift-card" data-gift-name="💎 Elmas" data-gift-cost="50">
+                    <div class="gift-card-emoji">💎</div>
+                    <div class="gift-card-name">Elmas</div>
+                    <div class="gift-card-cost">50 TUCi</div>
+                </div>
+                <div class="gift-card" data-gift-name="👑 Kral Tacı" data-gift-cost="100">
+                    <div class="gift-card-emoji">👑</div>
+                    <div class="gift-card-name">Kral Tacı</div>
+                    <div class="gift-card-cost">100 TUCi</div>
+                </div>
+            </div>
+            <div id="giftModalMsg"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/yayin-page.js?v=12"></script>
 </body>
 
 </html>

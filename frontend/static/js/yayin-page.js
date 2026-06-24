@@ -108,6 +108,12 @@
             // Kalp butonu sadece izleyicide görünür
             const _hBtn = document.getElementById('streamHeartBtn');
             if (_hBtn) _hBtn.style.display = 'flex';
+            // Hediye butonu sadece giriş yapmış izleyicilerde görünür
+            if (Auth.getToken()) {
+                const _gBtn = document.getElementById('streamGiftBtn');
+                if (_gBtn) _gBtn.style.display = 'flex';
+                _initGiftModal(streamId, info.host_username || '');
+            }
             // mainVideo daima muted — ses remoteAudio elementi üzerinden çıkar
         }
 
@@ -1675,6 +1681,7 @@
                 onModDemoted:  (msg) => { if (msg.username) _modUsers.delete(msg.username); },
                 onHostPin: _showPinBanner,
                 onStreamLike: () => _spawnFloatingHeart(false),
+                onGift: _showGiftOverlay,
                 onCoHostAccepted: (username) => {
                     _coHostUsername = username;
                     // PiP zaten oluşmuşsa butonu ekle; yoksa onCoHostPip callback'i ekler
@@ -1747,6 +1754,7 @@
                         document.getElementById('videoContainer')?.querySelector('.cohost-pip')?.remove();
                     }
                 },
+                onGift: _showGiftOverlay,
                 myUserId: Auth.getUser()?.id ?? null,
             });
         }
@@ -1773,6 +1781,70 @@
         sendBtn.addEventListener('click', doSend);
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') doSend();
+        });
+    }
+
+    // ── Hediye Overlay (tüm izleyici ve host için) ───────────────────
+    function _showGiftOverlay(msg) {
+        const el = document.getElementById('gift-overlay');
+        if (!el) return;
+        el.textContent = `🎉 ${msg.sender || ''}, ${msg.gift_name || ''} gönderdi!`;
+        el.classList.remove('gift-visible');
+        void el.offsetWidth; // reflow — animasyonu sıfırla
+        el.classList.add('gift-visible');
+        setTimeout(() => el.classList.remove('gift-visible'), 3200);
+    }
+
+    // ── Hediye Modal (izleyici için) ─────────────────────────────────
+    function _initGiftModal(sid, hostUsername) {
+        const overlay = document.getElementById('giftModalOverlay');
+        const msgEl   = document.getElementById('giftModalMsg');
+        const giftBtn = document.getElementById('streamGiftBtn');
+        if (!overlay || !giftBtn || !hostUsername) return;
+
+        giftBtn.addEventListener('click', () => {
+            if (msgEl) msgEl.textContent = '';
+            overlay.classList.add('open');
+        });
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.classList.remove('open');
+        });
+
+        overlay.querySelectorAll('.gift-card').forEach((card) => {
+            card.addEventListener('click', async () => {
+                const giftName = card.dataset.giftName || '';
+                const cost     = parseInt(card.dataset.giftCost, 10) || 0;
+                if (msgEl) msgEl.textContent = '';
+                overlay.querySelectorAll('.gift-card').forEach((c) => { c.style.pointerEvents = 'none'; });
+                try {
+                    const res = await fetch('/api/wallet/send-gift', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${Auth.getToken()}`,
+                        },
+                        body: JSON.stringify({
+                            stream_id: sid,
+                            receiver_username: hostUsername,
+                            gift_name: giftName,
+                            cost,
+                        }),
+                    });
+                    if (res.status === 402) {
+                        if (msgEl) msgEl.textContent = 'Bakiye yetersiz, TUCi yükleyin!';
+                    } else if (!res.ok) {
+                        const errBody = await res.json().catch(() => ({}));
+                        if (msgEl) msgEl.textContent = errBody.detail || 'Bir hata oluştu.';
+                    } else {
+                        overlay.classList.remove('open');
+                    }
+                } catch (_) {
+                    if (msgEl) msgEl.textContent = 'Bağlantı hatası.';
+                } finally {
+                    overlay.querySelectorAll('.gift-card').forEach((c) => { c.style.pointerEvents = ''; });
+                }
+            });
         });
     }
 
