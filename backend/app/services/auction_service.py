@@ -588,6 +588,7 @@ class AuctionService:
                     "related_id": stream_id,
                 },
                 pref_key="new_bid",
+                amount=float(data.amount),
             ))
 
         if prev_bidder_id_str and prev_bidder_id_str != str(user.id):

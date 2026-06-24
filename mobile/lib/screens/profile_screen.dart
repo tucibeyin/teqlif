@@ -1019,7 +1019,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const NotificationSettingsScreen(),
+                    builder: (_) => NotificationSettingsScreen(
+                      isPremium: widget.user?['is_premium'] == true,
+                    ),
                   ),
                 ),
               ),

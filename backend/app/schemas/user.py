@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
 
@@ -86,6 +86,10 @@ DEFAULT_NOTIF_PREFS = {
     "new_bid": True,
     "outbid": True,
     "smart_alert": True,
+    "bid_threshold_tl": 0,
+    "quiet_hours_enabled": False,
+    "quiet_from": "22:00",
+    "quiet_to": "08:00",
 }
 
 
@@ -98,6 +102,10 @@ class NotificationPrefs(BaseModel):
     new_bid: bool = True
     outbid: bool = True
     smart_alert: bool = True
+    bid_threshold_tl: int = Field(default=0, ge=0, le=50000)
+    quiet_hours_enabled: bool = False
+    quiet_from: str = "22:00"
+    quiet_to: str = "08:00"
 
 
 class ChangePasswordConfirm(BaseModel):

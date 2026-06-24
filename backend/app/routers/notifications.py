@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
@@ -22,9 +22,34 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
-async def push_notification(user_id: int, notif: dict, pref_key: str | None = None) -> None:
+def _in_quiet_window(from_str: str, to_str: str) -> bool:
+    """Şu anki İstanbul saatinin sessiz saat aralığında olup olmadığını kontrol eder."""
+    try:
+        istanbul = timezone(timedelta(hours=3))
+        now = datetime.now(istanbul)
+        cur = now.hour * 60 + now.minute
+        fh, fm = map(int, from_str.split(":"))
+        th, tm = map(int, to_str.split(":"))
+        f = fh * 60 + fm
+        t = th * 60 + tm
+        if f < t:
+            return f <= cur < t
+        return cur >= f or cur < t  # gece yarısını aşan aralık (ör. 22:00–08:00)
+    except (ValueError, AttributeError):
+        return False
+
+
+async def push_notification(
+    user_id: int,
+    notif: dict,
+    pref_key: str | None = None,
+    amount: float | None = None,
+) -> None:
     """Save notification to DB and push to all active WS connections for the user."""
     from app.schemas.user import DEFAULT_NOTIF_PREFS
+
+    suppress_push = False  # True → DB'ye yaz ama FCM/WS gönderme
+
     if pref_key:
         async with AsyncSessionLocal() as db:
             user = await db.get(User, user_id)
@@ -33,6 +58,18 @@ async def push_notification(user_id: int, notif: dict, pref_key: str | None = No
                 merged = {**DEFAULT_NOTIF_PREFS, **prefs}
                 if not merged.get(pref_key, True):
                     return
+                # Teklif eşiği: eşik altındaysa bildirimi tamamen atla (DB'ye de yazma)
+                if pref_key == "new_bid" and amount is not None:
+                    threshold = int(merged.get("bid_threshold_tl", 0))
+                    if threshold > 0 and amount < threshold:
+                        return
+                # Sessiz saatler: FCM push'u bastır, DB'ye yaz
+                if merged.get("quiet_hours_enabled", False):
+                    if _in_quiet_window(
+                        str(merged.get("quiet_from", "22:00")),
+                        str(merged.get("quiet_to", "08:00")),
+                    ):
+                        suppress_push = True
 
     async with AsyncSessionLocal() as db:
         n = Notification(
@@ -45,6 +82,9 @@ async def push_notification(user_id: int, notif: dict, pref_key: str | None = No
         db.add(n)
         await db.commit()
         await db.refresh(n)
+
+    if suppress_push:
+        return
 
     # FCM push (always, regardless of WS connection)
     async with AsyncSessionLocal() as db:
