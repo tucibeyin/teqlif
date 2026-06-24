@@ -783,7 +783,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                           style: TextStyle(fontSize: 14)),
                                       const SizedBox(width: 6),
                                       Text(
-                                        '$_audienceSize Hazır Alıcı Bekliyor — Bildirim Gönder (${_audienceCost.toStringAsFixed(0)} ₺)',
+                                        '$_audienceSize Hazır Alıcı Bekliyor — Bildirim Gönder (${_audienceCost.toInt()} TUCi)',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 12,
