@@ -92,7 +92,7 @@ async def _check_whale_status(
 
         tier = "VIP"
         host_topic = f"chat:{stream_id}:u{host_id}"
-        await ws_manager.broadcast_local(host_topic, {
+        await ws_manager.publish("chat_broadcast", host_topic, {
             "type": WS.WHALE_ALERT,
             "username": username,
             "tier": tier,
