@@ -28,3 +28,4 @@ class User(Base):
     preference_embedding: Mapped[Optional[Any]] = mapped_column(Vector(384), nullable=True)
     # 90. yüzdelik fiyat tavanı — ClickHouse'daki son 7 gün etkileşim verisinden hesaplanır
     max_budget: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
