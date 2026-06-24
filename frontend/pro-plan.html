@@ -619,7 +619,7 @@
                 <td class="tfoot-standard">Ücretsiz</td>
                 <td class="tfoot-pro">
                     <div class="tfoot-price-label" id="planPeriodLabel">Aylık</div>
-                    <div class="tfoot-price" id="planPrice">500 <span>TUCi</span></div>
+                    <div class="tfoot-price" id="planPrice">500 TUCi</div>
                     <div class="tfoot-sub-price" id="planSubPrice"></div>
                     <button class="btn-pro" id="btnPro">
                         Hemen Pro Olun 👑
@@ -672,38 +672,6 @@
 </footer>
 
 <script src="/static/js/main.js"></script>
-<script>
-    (function () {
-        var currentPlan = 'monthly';
-        var toast = document.getElementById('proToast');
-        var timer = null;
-
-        function setPlan(type) {
-            currentPlan = type;
-            var isYearly = type === 'yearly';
-
-            document.getElementById('btnMonthly').classList.toggle('active', !isYearly);
-            document.getElementById('btnYearly').classList.toggle('active', isYearly);
-            document.getElementById('planPeriodLabel').textContent = isYearly ? 'Yıllık' : 'Aylık';
-
-            if (isYearly) {
-                document.getElementById('planPrice').innerHTML = '4.800 <span>TUCi</span>';
-                document.getElementById('planSubPrice').textContent = '≈ 400 TUCi/ay · 2 ay bedava';
-            } else {
-                document.getElementById('planPrice').innerHTML = '500 <span>TUCi</span>';
-                document.getElementById('planSubPrice').textContent = '';
-            }
-        }
-
-        document.getElementById('btnMonthly').addEventListener('click', function () { setPlan('monthly'); });
-        document.getElementById('btnYearly').addEventListener('click', function () { setPlan('yearly'); });
-
-        document.getElementById('btnPro').addEventListener('click', function () {
-            toast.classList.add('show');
-            clearTimeout(timer);
-            timer = setTimeout(function () { toast.classList.remove('show'); }, 4500);
-        });
-    })();
-</script>
+<script src="/static/js/pro-plan.js?v=1"></script>
 </body>
 </html>
