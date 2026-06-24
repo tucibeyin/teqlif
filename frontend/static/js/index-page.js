@@ -212,7 +212,7 @@
 
             // Canlı yayında stream thumbnail'ini öncelikli göster
             const streamThumb = hasLive && liveItem.thumbnail_url
-                ? (liveItem.thumbnail_url.startsWith('http') ? liveItem.thumbnail_url : '/api' + liveItem.thumbnail_url)
+                ? (liveItem.thumbnail_url.startsWith('http') || liveItem.thumbnail_url.startsWith('/uploads') ? liveItem.thumbnail_url : '/api' + liveItem.thumbnail_url)
                 : null;
             const imgUrl = streamThumb || profileImgUrl;
 
