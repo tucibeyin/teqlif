@@ -7,6 +7,7 @@
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('profileCard').style.display = '';
         document.getElementById('menuSections').style.display = '';
+        document.getElementById('menuWallet').style.display = '';
         document.getElementById('menuAccount').style.display = '';
         document.getElementById('menuSupport').style.display = '';
         document.getElementById('menuDanger').style.display = '';

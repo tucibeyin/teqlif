@@ -206,25 +206,25 @@
     <!-- Paket seçimi -->
     <p class="section-title">Paket Seç</p>
     <div class="packages">
-        <div class="pkg-card" data-amount="100" onclick="selectPkg(this)">
+        <div class="pkg-card" data-amount="100">
             <div class="pkg-amount">100</div>
             <div class="pkg-unit">TUCi</div>
             <div class="pkg-price">₺9,99</div>
         </div>
-        <div class="pkg-card selected" data-amount="500" onclick="selectPkg(this)">
+        <div class="pkg-card selected" data-amount="500">
             <span class="pkg-popular">⭐ Popüler</span>
             <div class="pkg-amount">500</div>
             <div class="pkg-unit">TUCi</div>
             <div class="pkg-price">₺39,99</div>
         </div>
-        <div class="pkg-card" data-amount="1000" onclick="selectPkg(this)">
+        <div class="pkg-card" data-amount="1000">
             <div class="pkg-amount">1000</div>
             <div class="pkg-unit">TUCi</div>
             <div class="pkg-price">₺69,99</div>
         </div>
     </div>
 
-    <button id="btn-topup" onclick="doTopup()">
+    <button id="btn-topup">
         💳 Öde ve Yükle
     </button>
 
@@ -249,11 +249,15 @@
 
     let selectedAmount = 500;
 
-    function selectPkg(el) {
-        document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('selected'));
-        el.classList.add('selected');
-        selectedAmount = parseInt(el.dataset.amount, 10);
-    }
+    document.querySelectorAll('.pkg-card').forEach(card => {
+        card.addEventListener('click', function () {
+            document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedAmount = parseInt(this.dataset.amount, 10);
+        });
+    });
+
+    document.getElementById('btn-topup').addEventListener('click', doTopup);
 
     function showToast(msg, color) {
         const t = document.getElementById('toast');

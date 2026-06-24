@@ -107,7 +107,7 @@
                 ? `<button
                         id="fmbtn_${u.id}"
                         class="btn-follow-sm ${u.is_following ? 'following' : 'not-following'}"
-                        onclick="toggleModalFollow(${u.id})"
+                        data-action="modal-follow" data-uid="${u.id}"
                     >${u.is_following ? 'Takiptesin' : 'Takip Et'}</button>`
                 : '';
             return `
@@ -120,6 +120,10 @@
                     ${btnHtml}
                 </div>`;
         }).join('');
+
+        body.querySelectorAll('[data-action="modal-follow"]').forEach(btn => {
+            btn.addEventListener('click', () => toggleModalFollow(+btn.dataset.uid));
+        });
     }
 
     async function toggleModalFollow(userId) {
@@ -168,7 +172,7 @@
         if (isOwn) {
             actionsHtml = `
                 <div class="profile-actions">
-                    <button class="btn-profile secondary" onclick="openEditProfileModal()">
+                    <button class="btn-profile secondary" id="editProfileBtn">
                         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         Profili Düzenle
                     </button>
@@ -183,16 +187,16 @@
                 : `<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>`;
             const followLabel = isFollowing ? 'Takip Ediliyor' : 'Takip Et';
             const rateBtn = isFollowing
-                ? `<button class="btn-profile secondary" id="rateBtn" onclick="openRatingFormModal(${user.id})">
+                ? `<button class="btn-profile secondary" id="rateBtn" data-uid="${user.id}">
                         <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z" fill="currentColor" stroke="none"/></svg>
                         <span id="rateBtnLabel">Puan Ver</span>
                     </button>`
                 : '';
             const blockLabel = isBlocked ? 'Engeli Kaldır' : 'Engelle';
-            const blockBtn = `<button class="btn-block ${isBlocked ? 'blocked' : ''}" id="blockBtn" onclick="toggleBlock(${user.id}, ${isBlocked})">${_blockSvg} ${escHtml(blockLabel)}</button>`;
+            const blockBtn = `<button class="btn-block ${isBlocked ? 'blocked' : ''}" id="blockBtn" data-uid="${user.id}" data-blocked="${isBlocked}">${_blockSvg} ${escHtml(blockLabel)}</button>`;
             actionsHtml = `
                 <div class="profile-actions">
-                    <button class="btn-profile ${followBtnClass}" id="followBtn" onclick="toggleFollow(${user.id}, ${isFollowing})">
+                    <button class="btn-profile ${followBtnClass}" id="followBtn" data-uid="${user.id}" data-following="${isFollowing}">
                         ${followIcon}
                         <span id="followLabel">${escHtml(followLabel)}</span>
                     </button>
@@ -217,7 +221,7 @@
             : `<div class="profile-avatar">${escHtml(initial)}</div>`;
 
         const avatarHtml = user.is_live
-            ? `<div class="avatar-live-ring" onclick="goToLiveStream(${user.active_stream_id})" title="Canlı yayını izle">
+            ? `<div class="avatar-live-ring" data-action="live" data-sid="${user.active_stream_id}" title="Canlı yayını izle">
                    ${_innerAvatar}
                    <span class="live-badge">● CANLI</span>
                </div>`
@@ -240,12 +244,12 @@
                     <span class="stat-label">İlanlar</span>
                 </div>
                 <div class="stat-divider"></div>
-                <div class="stat-item clickable" onclick="openFollowModal(${user.id}, 'followers', 'Takipçiler')">
+                <div class="stat-item clickable" data-action="followers" data-uid="${user.id}">
                     <span class="stat-count" id="followerCount">${followerCount}</span>
                     <span class="stat-label">Takipçi</span>
                 </div>
                 <div class="stat-divider"></div>
-                <div class="stat-item clickable" onclick="openFollowModal(${user.id}, 'following', 'Takip Edilenler')">
+                <div class="stat-item clickable" data-action="following" data-uid="${user.id}">
                     <span class="stat-count">${followingCount}</span>
                     <span class="stat-label">Takip</span>
                 </div>
@@ -255,6 +259,35 @@
                 <div class="listings-title">İlanları (–)</div>
                 <div class="profile-loading" style="padding-top:1rem;">Yükleniyor...</div>
             </div>`;
+
+        // ── Wire up dynamically injected buttons (CSP: no inline onclick) ──
+        const editBtn = document.getElementById('editProfileBtn');
+        if (editBtn) editBtn.addEventListener('click', openEditProfileModal);
+
+        const followBtn = document.getElementById('followBtn');
+        if (followBtn) followBtn.addEventListener('click', function () {
+            toggleFollow(+this.dataset.uid, this.dataset.following === 'true');
+        });
+
+        const rateBtnEl = document.getElementById('rateBtn');
+        if (rateBtnEl) rateBtnEl.addEventListener('click', function () {
+            openRatingFormModal(+this.dataset.uid);
+        });
+
+        const blockBtnEl = document.getElementById('blockBtn');
+        if (blockBtnEl) blockBtnEl.addEventListener('click', function () {
+            toggleBlock(this.dataset.blocked === 'true');
+        });
+
+        inner.querySelectorAll('[data-action="live"]').forEach(el => {
+            el.addEventListener('click', () => goToLiveStream(+el.dataset.sid));
+        });
+        inner.querySelectorAll('[data-action="followers"]').forEach(el => {
+            el.addEventListener('click', () => openFollowModal(+el.dataset.uid, 'followers', 'Takipçiler'));
+        });
+        inner.querySelectorAll('[data-action="following"]').forEach(el => {
+            el.addEventListener('click', () => openFollowModal(+el.dataset.uid, 'following', 'Takip Edilenler'));
+        });
 
         const shareProfileBtnEl = document.getElementById('shareProfileBtn');
         if (shareProfileBtnEl) shareProfileBtnEl.addEventListener('click', function () {
@@ -326,7 +359,6 @@
 
     async function toggleFollow(userId, currentlyFollowing) {
         const btn = document.getElementById('followBtn');
-        const label = document.getElementById('followLabel');
         if (!btn) return;
 
         btn.disabled = true;
@@ -340,7 +372,7 @@
                 btn.innerHTML = `
                     <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
                     <span id="followLabel">Takip Et</span>`;
-                btn.setAttribute('onclick', `toggleFollow(${userId}, false)`);
+                btn.dataset.following = 'false';
                 // Update follower count
                 const fc = document.getElementById('followerCount');
                 if (fc) fc.textContent = Math.max(0, parseInt(fc.textContent || '0') - 1);
@@ -351,7 +383,7 @@
                 btn.innerHTML = `
                     <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
                     <span id="followLabel">Takip Ediliyor</span>`;
-                btn.setAttribute('onclick', `toggleFollow(${userId}, true)`);
+                btn.dataset.following = 'true';
                 // Update follower count
                 const fc = document.getElementById('followerCount');
                 if (fc) fc.textContent = parseInt(fc.textContent || '0') + 1;
@@ -392,11 +424,12 @@
             const filled = Math.round(data.average);
             const stars = '★'.repeat(filled) + '☆'.repeat(5 - filled);
             wrap.innerHTML = `
-                <button class="rating-badge" onclick="openRatingsListModal(${userId})" title="Değerlendirmeleri gör">
+                <button class="rating-badge" data-uid="${userId}" title="Değerlendirmeleri gör">
                     <span class="rb-stars">${stars}</span>
                     <span class="rb-avg">${data.average.toFixed(1)}</span>
                     <span class="rb-count">${data.count} puan</span>
                 </button>`;
+            wrap.querySelector('.rating-badge').addEventListener('click', () => openRatingsListModal(userId));
         } catch (_) {
             wrap.innerHTML = '';
         }
@@ -563,7 +596,7 @@
     }
 
     // ── Kullanıcı engelleme ────────────────────────────────────────
-    async function toggleBlock(userId, currentlyBlocked) {
+    async function toggleBlock(currentlyBlocked) {
         const btn = document.getElementById('blockBtn');
         if (!btn) return;
         btn.disabled = true;
@@ -572,12 +605,12 @@
                 await apiFetch(`/users/${encodeURIComponent(username)}/block`, { method: 'DELETE' });
                 btn.className = 'btn-block';
                 btn.innerHTML = `${_blockSvg} Engelle`;
-                btn.setAttribute('onclick', `toggleBlock(${userId}, false)`);
+                btn.dataset.blocked = 'false';
             } else {
                 await apiFetch(`/users/${encodeURIComponent(username)}/block`, { method: 'POST' });
                 btn.className = 'btn-block blocked';
                 btn.innerHTML = `${_blockSvg} Engeli Kaldır`;
-                btn.setAttribute('onclick', `toggleBlock(${userId}, true)`);
+                btn.dataset.blocked = 'true';
             }
         } catch (e) {
             alert((e && e.detail) || 'İşlem gerçekleştirilemedi.');
