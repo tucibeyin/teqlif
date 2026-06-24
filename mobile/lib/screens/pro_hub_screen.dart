@@ -2,13 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../services/analytics_service.dart';
-import 'demand_radar_screen.dart';
-import 'feed_stats_screen.dart';
-import 'gallery_stats_screen.dart';
-import 'market_trends_screen.dart';
+import 'listing_analytics_screen.dart';
+import 'market_intelligence_screen.dart';
 import 'pro_insights_screen.dart';
-import 'video_performance_screen.dart';
-import 'video_roi_screen.dart';
 
 class ProHubScreen extends StatefulWidget {
   final bool isPremium;
@@ -64,12 +60,12 @@ class _ProHubScreenState extends State<ProHubScreen> {
             ),
           ),
 
-          // ── Araç Kartları ──────────────────────────────────────────────────
+          // ── 3 Araç Kartı ──────────────────────────────────────────────────
           _ToolCard(
             icon: Icons.auto_graph_outlined,
             iconColor: const Color(0xFF6366F1),
-            title: 'Pro Analitik Paneli',
-            description: 'Satış, gelir ve alıcı davranış analizleri',
+            title: 'Satış ve Kitle Raporu',
+            description: 'Gelirler, dönüşüm oranları ve sıcak ilanlarınız',
             isPremium: isPremium,
             onTap: isPremium
                 ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()))
@@ -77,71 +73,26 @@ class _ProHubScreenState extends State<ProHubScreen> {
           ),
           const SizedBox(height: 10),
           _ToolCard(
-            icon: Icons.trending_up_outlined,
-            iconColor: const Color(0xFF10B981),
-            title: 'Pazar Trendleri',
-            description: 'Zirve saatler, yükselen kategoriler, büyüme verileri',
-            isPremium: isPremium,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => MarketTrendsScreen(isPremium: isPremium)),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
             icon: Icons.bar_chart_outlined,
+            iconColor: const Color(0xFF10B981),
+            title: 'İlan Analizleri',
+            description: 'Hangi ilanınız kaç kişiye ulaştı, kaçı tıkladı',
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(isPremium: isPremium)))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.insights_outlined,
             iconColor: const Color(0xFFF59E0B),
-            title: 'Feed Performansı',
-            description: 'İlanlarınızın izlenme, CTR ve dwell süresi',
+            title: 'Pazar Bilgisi',
+            description: 'Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor',
             isPremium: isPremium,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => FeedStatsScreen(isPremium: isPremium)),
+              MaterialPageRoute(builder: (_) => MarketIntelligenceScreen(isPremium: isPremium)),
             ),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.play_circle_outline,
-            iconColor: const Color(0xFF6366F1),
-            title: 'Video ROI',
-            description: 'Video vs fotoğraf ilan CTR karşılaştırması',
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => VideoRoiScreen(isPremium: isPremium)))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.photo_library_outlined,
-            iconColor: const Color(0xFFEC4899),
-            title: 'Galeri Analizi',
-            description: 'Kullanıcılar kaç fotoğrafınıza bakıyor?',
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => GalleryStatsScreen(isPremium: isPremium)))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.videocam_outlined,
-            iconColor: const Color(0xFFEF4444),
-            title: 'Video Performansı',
-            description: 'Video tamamlanma oranı ve tam izlenme yüzdesi',
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPerformanceScreen(isPremium: isPremium)))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.radar_outlined,
-            iconColor: const Color(0xFFF59E0B),
-            title: 'Talep Radar',
-            description: 'Platform\'da en çok aranan ürünler ve kategoriler',
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => DemandRadarScreen(isPremium: isPremium)))
-                : () => _showUpgrade(context),
           ),
 
           // ── Blast Kredi Kartı ──────────────────────────────────────────────
@@ -174,10 +125,10 @@ class _ProHubScreenState extends State<ProHubScreen> {
                 ),
               ),
             ),
-            _BenefitRow(icon: Icons.insights_outlined,   text: 'Gerçek zamanlı satış ve izlenme analizleri'),
-            _BenefitRow(icon: Icons.schedule_outlined,   text: 'Sektörün en yoğun alışveriş saatlerini gör'),
-            _BenefitRow(icon: Icons.rocket_launch_outlined, text: 'Yükselen kategorilerde öne geç'),
-            _BenefitRow(icon: Icons.ads_click_outlined,  text: 'İlan bazlı CTR ve seyir süresi takibi'),
+            _BenefitRow(icon: Icons.insights_outlined,      text: 'Satışlarını ve gelirlerin nereye gittiğini gör'),
+            _BenefitRow(icon: Icons.bar_chart_outlined,     text: 'Her ilanına kaç kişi baktı, kaçı tıkladı'),
+            _BenefitRow(icon: Icons.schedule_outlined,      text: 'Alıcıların en aktif olduğu saatleri öğren'),
+            _BenefitRow(icon: Icons.search_outlined,        text: 'İnsanlar ne arıyor — boşluğu doldur, sat'),
           ],
         ],
       ),
