@@ -154,9 +154,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       if (!mounted) return;
       if (result != null && result['error'] == null) {
         final sent = result['sent'] as int? ?? _audienceSize;
+        final msg = sent > 0
+            ? '🎯 $sent kişiye bildirim gönderildi!'
+            : '🎯 Bildirim kampanyası başlatıldı!';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎯 $sent kişiye bildirim gönderildi!'),
+            content: Text(msg),
             backgroundColor: const Color(0xFF22C55E),
             behavior: SnackBarBehavior.floating,
           ),

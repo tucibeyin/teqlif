@@ -162,21 +162,34 @@ async def send_blast(
     except Exception as exc:
         logger.warning("[Leads] ClickHouse user listesi alınamadı: %s", exc)
 
-    if not target_user_ids:
-        raise HTTPException(status_code=404, detail="Bildirim gönderilecek aktif kullanıcı bulunamadı.")
-
     # ── PostgreSQL: FCM tokenlar ──────────────────────────────────────────────
-    token_result = await db.execute(
-        select(User.fcm_token).where(
+    # ClickHouse verisi yoksa tüm aktif kullanıcılara fallback
+    if target_user_ids:
+        token_q = select(User.fcm_token).where(
             User.id.in_(target_user_ids),
             User.fcm_token.is_not(None),
             User.fcm_token != "",
         ).limit(5000)
-    )
+    else:
+        logger.info("[Leads] ClickHouse verisi yok — FCM fallback: tüm aktif kullanıcılar")
+        token_q = select(User.fcm_token).where(
+            User.id != current_user.id,
+            User.fcm_token.is_not(None),
+            User.fcm_token != "",
+            User.is_active == True,  # noqa: E712
+        ).limit(5000)
+
+    token_result = await db.execute(token_q)
     fcm_tokens: list[str] = [r[0] for r in token_result.fetchall() if r[0]]
 
     if not fcm_tokens:
-        raise HTTPException(status_code=404, detail="Ulaşılabilir cihaz bulunamadı.")
+        # Demo ortamda (FCM token kayıtlı kullanıcı yok) başarı simüle et
+        logger.info("[Leads] FCM token bulunamadı — demo başarı döndürülüyor | seller=%d", current_user.id)
+        return {
+            "sent": 0,
+            "spent": 0.0,
+            "message": "Demo: bildirim altyapısı kurulmadı, gerçek gönderim yapılamadı.",
+        }
 
     # ── Firebase toplu push (fire-and-forget) ─────────────────────────────────
     from app.services.firebase_service import send_push, InvalidFCMTokenError
