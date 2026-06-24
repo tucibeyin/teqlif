@@ -144,6 +144,10 @@
         const me      = Auth.getUser();
         const myName  = me?.username ?? '';
         const myInitial = myName.charAt(0).toUpperCase() || '?';
+        const myPhotoRaw = me?.profile_image_thumb_url ?? me?.profile_image_url ?? null;
+        const myPhotoUrl = myPhotoRaw
+            ? (myPhotoRaw.startsWith('http') ? myPhotoRaw : '/api' + myPhotoRaw)
+            : null;
 
         // ── Kendi hikayeleri + takip edilen gruplar (paralel) ─────
         let myItems = [], groups = [];
@@ -171,7 +175,12 @@
                 <div class="story-ring-wrap">
                     <div class="story-ring" style="${myRingStyle}">
                         <div class="story-ring-inner" id="myStoryInner">
-                            <div class="story-avatar-initials">${myInitial}</div>
+                            ${myPhotoUrl
+                                ? `<img class="story-avatar" src="${myPhotoUrl}" alt="${myName}"
+                                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                                        loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+                                   <div class="story-avatar-initials" style="display:none">${myInitial}</div>`
+                                : `<div class="story-avatar-initials">${myInitial}</div>`}
                         </div>
                     </div>
                     <div class="story-add-badge" id="myStoryBadge"
