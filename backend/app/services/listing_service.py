@@ -106,8 +106,24 @@ class ListingService:
         counts, liked_set = await LikeService.batch_listing_likes(
             self.db, listing_ids, current_user_id
         )
+        campaign_map: dict[int, int] = {}
+        if listing_ids:
+            camp_result = await self.db.execute(
+                select(AdCampaign.listing_id, AdCampaign.id)
+                .where(
+                    AdCampaign.listing_id.in_(listing_ids),
+                    AdCampaign.status.in_(["active", "paused"]),
+                )
+            )
+            for lid, cid in camp_result.all():
+                campaign_map.setdefault(lid, cid)
         return [
-            _row_dict(listing, user, counts.get(listing.id, 0), listing.id in liked_set)
+            _row_dict(
+                listing, user,
+                counts.get(listing.id, 0), listing.id in liked_set,
+                is_sponsored=listing.id in campaign_map,
+                campaign_id=campaign_map.get(listing.id),
+            )
             for listing, user in rows
         ]
 
