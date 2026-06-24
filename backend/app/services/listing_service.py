@@ -15,7 +15,7 @@ import json
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.models.listing import Listing
 from app.models.listing_offer import ListingOffer
@@ -389,6 +389,35 @@ class ListingService:
             listing_id, current_user.id, amount,
         )
         return {"id": offer.id, "amount": offer.amount}
+
+    # ── Canlı Yayın Feed — Videolu İlanlar ──────────────────────────────────
+    async def get_video_feed(self, limit: int = 8) -> list:
+        """Videosu olan aktif ilanları rastgele döndürür (canlı yayın swipe feed'i için)."""
+        result = await self.db.execute(
+            select(Listing, User)
+            .join(User, User.id == Listing.user_id)
+            .where(
+                Listing.is_active == True,     # noqa: E712
+                Listing.is_deleted == False,   # noqa: E712
+                Listing.video_url.isnot(None),
+            )
+            .order_by(func.random())
+            .limit(limit)
+        )
+        return [
+            {
+                "id": listing.id,
+                "title": listing.title,
+                "price": listing.price,
+                "category": listing.category,
+                "location": listing.location,
+                "video_url": listing.video_url,
+                "thumbnail_url": listing.thumbnail_url,
+                "image_url": listing.image_url,
+                "user": {"id": user.id, "username": user.username},
+            }
+            for listing, user in result.all()
+        ]
 
     # ── Teklifleri Listele ───────────────────────────────────────────────────
     async def get_listing_offers(self, listing_id: int) -> list:

@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
+import 'package:video_player/video_player.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +26,25 @@ import '../../widgets/live/cohost_mod_sheet.dart';
 import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/viewer_top_bar.dart';
 import '../public_profile_screen.dart';
+import '../listing_detail_screen.dart';
+
+// ── Feed item tipleri ────────────────────────────────────────────────────────
+
+sealed class _FeedItem {
+  const _FeedItem();
+}
+
+class _LiveItem extends _FeedItem {
+  final StreamOut stream;
+  const _LiveItem(this.stream);
+}
+
+class _ListingItem extends _FeedItem {
+  final Map<String, dynamic> listing;
+  const _ListingItem(this.listing);
+}
+
+// ── SwipeLiveScreen ──────────────────────────────────────────────────────────
 
 class SwipeLiveScreen extends StatefulWidget {
   final List<StreamOut> streams;
@@ -60,6 +82,7 @@ class SwipeLiveScreen extends StatefulWidget {
 class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   late final PageController _pageCtrl;
   int _currentPage = 0;
+  List<_FeedItem> _feed = [];
 
   @override
   void initState() {
@@ -68,6 +91,9 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     WakelockPlus.enable();
     _currentPage = widget.initialIndex;
     _pageCtrl = PageController(initialPage: widget.initialIndex);
+    // Feed'i sadece canlı yayınlarla başlat, arka planda listing videolarını çek
+    _feed = widget.streams.map<_FeedItem>((s) => _LiveItem(s)).toList();
+    _loadListingVideos();
   }
 
   @override
@@ -76,6 +102,38 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
+  }
+
+  Future<void> _loadListingVideos() async {
+    // Tek yayın modunda (single) listing video ekleme
+    if (widget.streams.length <= 1) return;
+    try {
+      final token = await StorageService.getToken();
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/video-feed?limit=5'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 5));
+      if (resp.statusCode != 200) return;
+      final List<dynamic> raw = jsonDecode(resp.body) as List<dynamic>;
+      if (raw.isEmpty || !mounted) return;
+      final listings = raw.cast<Map<String, dynamic>>();
+
+      // Başlangıç konumundan SONRA, her 2 yayın arasına 1 ilan videosu ekle
+      final items = <_FeedItem>[];
+      int listIdx = 0;
+      for (int i = 0; i < widget.streams.length; i++) {
+        items.add(_LiveItem(widget.streams[i]));
+        if (i >= widget.initialIndex && (i - widget.initialIndex + 1) % 2 == 0 && listIdx < listings.length) {
+          items.add(_ListingItem(listings[listIdx++]));
+        }
+      }
+      if (mounted) setState(() => _feed = items);
+    } catch (_) {
+      // Listing video yükleme başarısız olursa feed aynen devam eder
+    }
   }
 
   @override
@@ -87,13 +145,23 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         controller: _pageCtrl,
         scrollDirection: Axis.vertical,
         onPageChanged: (i) => setState(() => _currentPage = i),
-        itemCount: widget.streams.length,
-        itemBuilder: (_, i) => _SwipeLivePage(
-          key: ValueKey(widget.streams[i].id),
-          stream: widget.streams[i],
-          isActive: i == _currentPage,
-          isLast: i == widget.streams.length - 1,
-        ),
+        itemCount: _feed.length,
+        itemBuilder: (_, i) {
+          final item = _feed[i];
+          return switch (item) {
+            _LiveItem(:final stream) => _SwipeLivePage(
+                key: ValueKey('live_${stream.id}'),
+                stream: stream,
+                isActive: i == _currentPage,
+                isLast: i == _feed.length - 1,
+              ),
+            _ListingItem(:final listing) => _ListingVideoPage(
+                key: ValueKey('listing_${listing['id']}'),
+                listing: listing,
+                isActive: i == _currentPage,
+              ),
+          };
+        },
       ),
     );
   }
@@ -1135,3 +1203,280 @@ class _GiftSheetState extends State<_GiftSheet> {
   }
 }
 
+// ── İlan Video Sayfası ───────────────────────────────────────────────────────
+
+class _ListingVideoPage extends StatefulWidget {
+  final Map<String, dynamic> listing;
+  final bool isActive;
+
+  const _ListingVideoPage({
+    super.key,
+    required this.listing,
+    required this.isActive,
+  });
+
+  @override
+  State<_ListingVideoPage> createState() => _ListingVideoPageState();
+}
+
+class _ListingVideoPageState extends State<_ListingVideoPage> {
+  VideoPlayerController? _ctrl;
+  bool _initialized = false;
+  bool _showIcon = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initVideo();
+  }
+
+  Future<void> _initVideo() async {
+    final videoUrl = widget.listing['video_url'] as String?;
+    if (videoUrl == null || videoUrl.isEmpty) return;
+    _ctrl = VideoPlayerController.networkUrl(Uri.parse(imgUrl(videoUrl)));
+    await _ctrl!.initialize();
+    _ctrl!.setLooping(true);
+    if (!mounted) return;
+    setState(() => _initialized = true);
+    if (widget.isActive) _ctrl!.play();
+  }
+
+  @override
+  void didUpdateWidget(_ListingVideoPage old) {
+    super.didUpdateWidget(old);
+    if (widget.isActive && !old.isActive) {
+      _ctrl?.play();
+    } else if (!widget.isActive && old.isActive) {
+      _ctrl?.pause();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl?.dispose();
+    super.dispose();
+  }
+
+  void _togglePlay() {
+    if (_ctrl == null || !_initialized) return;
+    if (_ctrl!.value.isPlaying) {
+      _ctrl!.pause();
+    } else {
+      _ctrl!.play();
+    }
+    setState(() => _showIcon = true);
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (mounted) setState(() => _showIcon = false);
+    });
+  }
+
+  void _goToListing() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ListingDetailScreen(listing: widget.listing),
+      ),
+    );
+  }
+
+  String _formatPrice(dynamic price) {
+    if (price == null) return '—';
+    final n = double.tryParse(price.toString());
+    if (n == null) return price.toString();
+    return n == n.truncateToDouble()
+        ? n.truncate().toString()
+        : n.toStringAsFixed(2);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final listing = widget.listing;
+    final title = listing['title']?.toString() ?? '';
+    final price = listing['price'];
+    final category = listing['category']?.toString() ?? '';
+    final location = listing['location']?.toString() ?? '';
+    final username = (listing['user'] as Map<String, dynamic>?)?['username']?.toString() ?? '';
+    final thumbUrl = listing['thumbnail_url']?.toString() ??
+        listing['image_url']?.toString() ?? '';
+    final topPad = MediaQuery.of(context).padding.top;
+    final botPad = MediaQuery.of(context).padding.bottom;
+
+    return GestureDetector(
+      onTap: _togglePlay,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ── Video veya thumbnail ──────────────────────────────────────────
+          if (_initialized && _ctrl != null)
+            FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: _ctrl!.value.size.width,
+                height: _ctrl!.value.size.height,
+                child: VideoPlayer(_ctrl!),
+              ),
+            )
+          else if (thumbUrl.isNotEmpty)
+            CachedNetworkImage(imageUrl: imgUrl(thumbUrl), fit: BoxFit.cover)
+          else
+            const ColoredBox(color: Colors.black),
+
+          // ── Yüklenme göstergesi ───────────────────────────────────────────
+          if (!_initialized)
+            const Center(child: CircularProgressIndicator(color: kPrimary)),
+
+          // ── Oynat/duraklat ikonu ──────────────────────────────────────────
+          if (_showIcon)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  (_ctrl?.value.isPlaying ?? false)
+                      ? Icons.play_arrow_rounded
+                      : Icons.pause_rounded,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ),
+            ),
+
+          // ── İLAN rozeti (sol üst) ─────────────────────────────────────────
+          Positioned(
+            top: topPad + 12,
+            left: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFB8860B),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'İLAN',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .5,
+                ),
+              ),
+            ),
+          ),
+
+          // ── Alt bilgi paneli ──────────────────────────────────────────────
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(16, 40, 16, botPad + 16),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Colors.black87, Colors.transparent],
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Satıcı + kategori
+                  Row(
+                    children: [
+                      const Icon(Icons.person_outline,
+                          color: Colors.white60, size: 14),
+                      const SizedBox(width: 4),
+                      Text('@$username',
+                          style: const TextStyle(
+                              color: Colors.white60, fontSize: 12)),
+                      const Spacer(),
+                      if (category.isNotEmpty)
+                        Text(category,
+                            style: const TextStyle(
+                                color: Colors.white60, fontSize: 11)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  // Başlık
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  // Fiyat + konum
+                  Row(
+                    children: [
+                      Text(
+                        '${_formatPrice(price)} TL',
+                        style: const TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (location.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.location_on_outlined,
+                            color: Colors.white54, size: 13),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            location,
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // İlana Git butonu
+                  GestureDetector(
+                    onTap: _goToListing,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFB8860B), Color(0xFFFFD700)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'İlana Git',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Icon(Icons.arrow_forward_rounded,
+                              color: Colors.white, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

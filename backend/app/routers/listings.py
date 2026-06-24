@@ -57,6 +57,14 @@ async def get_my_listings(
     return await ListingService(db).get_my_listings(current_user, active)
 
 
+@router.get("/video-feed")
+async def get_video_feed(
+    limit: int = 8,
+    db: AsyncSession = Depends(get_db),
+):
+    return await ListingService(db).get_video_feed(limit)
+
+
 @router.get("/{listing_id}")
 async def get_listing(
     listing_id: int,
