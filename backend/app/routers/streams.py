@@ -13,10 +13,12 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, status, BackgroundTasks
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
+from app.models.stream import LiveStream
 from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinTokenOut
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
 from app.services.stream_service import StreamService
@@ -193,3 +195,58 @@ async def get_active_streams(
     db: AsyncSession = Depends(get_db),
 ):
     return await StreamService(db).get_active_streams(current_user_id)
+
+
+@router.get("/{stream_id}/raid-targets")
+async def get_raid_targets(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """
+    Yayın biterken izleyicilere önerilen diğer aktif yayınlar (Raid/Baskın).
+
+    - Biten yayını (stream_id) sonuçlardan dışlar
+    - Sıralama: hype_score DESC → viewer_count DESC
+    - Maksimum 3 yayın döner
+    """
+    from app.core.hype_manager import hype_manager
+    from app.utils.redis_client import get_redis
+
+    result = await db.execute(
+        select(LiveStream)
+        .where(LiveStream.is_live == True, LiveStream.id != stream_id)  # noqa: E712
+    )
+    streams = result.scalars().all()
+
+    if not streams:
+        return []
+
+    # Redis'ten anlık izleyici sayılarını çek
+    redis = await get_redis()
+    viewer_keys = [f"live:viewers:{s.room_name}" for s in streams]
+    raw_counts = await redis.mget(*viewer_keys) if viewer_keys else []
+    viewer_map: dict[int, int] = {}
+    for s, raw in zip(streams, raw_counts):
+        viewer_map[s.id] = int(raw) if raw else s.viewer_count
+
+    # Hype skoru + izleyici sayısına göre sırala
+    def _sort_key(s: LiveStream) -> tuple:
+        return (hype_manager.get_score(s.id), viewer_map.get(s.id, 0))
+
+    top3 = sorted(streams, key=_sort_key, reverse=True)[:3]
+
+    return [
+        {
+            "stream_id": s.id,
+            "room_id": s.id,
+            "room_name": s.room_name,
+            "title": s.title,
+            "host_name": s.host.username if s.host else "",
+            "viewer_count": viewer_map.get(s.id, 0),
+            "hype_score": round(hype_manager.get_score(s.id)),
+            "thumbnail_url": s.thumbnail_url,
+            "category": s.category,
+        }
+        for s in top3
+    ]
