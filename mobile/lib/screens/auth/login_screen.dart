@@ -227,18 +227,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
                 children: [
-                  Icon(Icons.language_outlined,
-                      size: 16, color: AppColors.textSecondary(context)),
-                  const SizedBox(width: 8),
-                  Text(
-                    l.settingsLanguage,
-                    style: TextStyle(
-                        fontSize: 13, color: AppColors.textSecondary(context)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.language_outlined,
+                          size: 14, color: AppColors.textSecondary(context)),
+                      const SizedBox(width: 5),
+                      Text(
+                        l.settingsLanguage,
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary(context)),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(height: 8),
                   SegmentedButton<String>(
                     segments: const [
                       ButtonSegment(value: 'tr', label: Text('TR')),
