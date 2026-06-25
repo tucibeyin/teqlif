@@ -435,7 +435,10 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     } on AppException catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      if (e.statusCode == 403) {
+      if (e.statusCode == 400) {
+        // Kendi yayınına viewer olarak katılma denemesi — sessizce geri dön
+        _leave();
+      } else if (e.statusCode == 403) {
         showErrorSnackbar(context, e);
         setState(() => _streamEnded = true);
       } else {

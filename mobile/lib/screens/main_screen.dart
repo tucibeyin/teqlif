@@ -148,13 +148,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     final type = data['type'] as String? ?? '';
     switch (type) {
       case 'stream_started':
-      case 'new_bid':
       case 'outbid':
       case 'smart_auction_alert':
         // stream_id varsa onu kullan; yoksa sender_id'ye (eski bildirimler) düş
         final sid = int.tryParse(data['stream_id']?.toString() ?? '') ??
             int.tryParse(data['sender_id']?.toString() ?? '');
         if (sid != null) _navigateToLiveStream(sid);
+        break;
+      // new_bid: host'a gider, host zaten HostStreamScreen'de teklifi görür.
+      // Viewer moduna yönlendirme yapmamalı — sadece badge güncellenir.
+      case 'new_bid':
         break;
       case 'new_listing':
       case 'auction_won':
