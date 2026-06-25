@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_exception.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/locale_provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/biometric_service.dart';
 import '../../services/push_notification_service.dart';
@@ -11,14 +13,14 @@ import '../../utils/error_helper.dart';
 import 'register_screen.dart';
 import 'verify_screen.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
@@ -106,117 +108,159 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final currentLocale = ref.watch(localeProvider);
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'teqlif',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: kPrimary,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  l.loginWelcome,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l.loginSubtitle,
-                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
-                ),
-                const SizedBox(height: 28),
-                Form(
-                  key: _formKey,
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextFormField(
-                        key: const Key('login_input_email'),
-                        controller: _emailCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        autocorrect: false,
-                        decoration: InputDecoration(labelText: l.fieldEmail),
-                        validator: (v) =>
-                            v == null || v.isEmpty ? l.fieldEmailHint : null,
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        key: const Key('login_input_password'),
-                        controller: _passCtrl,
-                        obscureText: _obscure,
-                        enableSuggestions: false,
-                        autocorrect: false,
-                        smartDashesType: SmartDashesType.disabled,
-                        smartQuotesType: SmartQuotesType.disabled,
-                        decoration: InputDecoration(
-                          labelText: l.fieldPassword,
-                          suffixIcon: IconButton(
-                            key: const Key('login_btn_password_visibility'),
-                            icon: Icon(_obscure
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
-                          ),
+                      const Text(
+                        'teqlif',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: kPrimary,
+                          letterSpacing: -0.5,
                         ),
-                        validator: (v) =>
-                            v == null || v.isEmpty ? l.fieldPasswordHint : null,
                       ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        key: const Key('login_btn_submit'),
-                        onPressed: _loading ? null : _submit,
-                        child: _loading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
+                      const SizedBox(height: 32),
+                      Text(
+                        l.loginWelcome,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l.loginSubtitle,
+                        style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
+                      ),
+                      const SizedBox(height: 28),
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              key: const Key('login_input_email'),
+                              controller: _emailCtrl,
+                              keyboardType: TextInputType.emailAddress,
+                              autocorrect: false,
+                              decoration: InputDecoration(labelText: l.fieldEmail),
+                              validator: (v) =>
+                                  v == null || v.isEmpty ? l.fieldEmailHint : null,
+                            ),
+                            const SizedBox(height: 14),
+                            TextFormField(
+                              key: const Key('login_input_password'),
+                              controller: _passCtrl,
+                              obscureText: _obscure,
+                              enableSuggestions: false,
+                              autocorrect: false,
+                              smartDashesType: SmartDashesType.disabled,
+                              smartQuotesType: SmartQuotesType.disabled,
+                              decoration: InputDecoration(
+                                labelText: l.fieldPassword,
+                                suffixIcon: IconButton(
+                                  key: const Key('login_btn_password_visibility'),
+                                  icon: Icon(_obscure
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined),
+                                  onPressed: () =>
+                                      setState(() => _obscure = !_obscure),
                                 ),
-                              )
-                            : Text(l.btnLogin),
+                              ),
+                              validator: (v) =>
+                                  v == null || v.isEmpty ? l.fieldPasswordHint : null,
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              key: const Key('login_btn_submit'),
+                              onPressed: _loading ? null : _submit,
+                              child: _loading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(l.btnLogin),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            l.loginNoAccount,
+                            style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
+                          ),
+                          GestureDetector(
+                            key: const Key('login_link_kayit_ol'),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen()),
+                            ),
+                            child: Text(
+                              l.loginRegisterLink,
+                              style: const TextStyle(
+                                color: kPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      l.loginNoAccount,
-                      style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
-                    ),
-                    GestureDetector(
-                      key: const Key('login_link_kayit_ol'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const RegisterScreen()),
-                      ),
-                      child: Text(
-                        l.loginRegisterLink,
-                        style: const TextStyle(
-                          color: kPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.language_outlined,
+                      size: 16, color: AppColors.textSecondary(context)),
+                  const SizedBox(width: 8),
+                  Text(
+                    l.settingsLanguage,
+                    style: TextStyle(
+                        fontSize: 13, color: AppColors.textSecondary(context)),
+                  ),
+                  const SizedBox(width: 12),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'tr', label: Text('TR')),
+                      ButtonSegment(value: 'en', label: Text('EN')),
+                      ButtonSegment(value: 'ar', label: Text('AR')),
+                    ],
+                    selected: {currentLocale.languageCode},
+                    showSelectedIcon: false,
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onSelectionChanged: (selection) {
+                      ref
+                          .read(localeProvider.notifier)
+                          .setLocale(Locale(selection.first));
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
