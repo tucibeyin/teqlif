@@ -140,8 +140,14 @@ async def lifespan(app: FastAPI):
     from app.database import init_extensions
     from app.database_clickhouse import init_clickhouse, close_clickhouse
     await init_extensions()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as _create_all_exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "create_all atlandı (alembic şemayı yönetiyor): %s", _create_all_exc
+        )
     await _seed_categories()
     await _seed_cities()
     await init_clickhouse()
