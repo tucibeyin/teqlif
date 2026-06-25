@@ -97,7 +97,7 @@ async def get_current_user(
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
-    if not user or not user.is_active:
+    if not user or not user.is_active or user.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı")
 
     return user
@@ -121,4 +121,4 @@ async def get_current_user_optional(
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    return user if user and user.is_active else None
+    return user if user and user.is_active and user.deleted_at is None else None

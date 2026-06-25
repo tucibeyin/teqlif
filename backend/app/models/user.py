@@ -32,3 +32,4 @@ class User(Base):
     tuci_balance: Mapped[int] = mapped_column(Integer, default=100, nullable=False, server_default="100")
     bio: Mapped[str | None] = mapped_column(String(150), nullable=True)
     website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)

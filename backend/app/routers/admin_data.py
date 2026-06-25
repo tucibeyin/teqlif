@@ -343,30 +343,51 @@ async def create_user(
     return {"message": f"Kullanıcı @{new_user.username} başarıyla oluşturuldu."}
 
 
-# Kullanıcı Silme (Hard Delete)
+# Kullanıcı Silme (Soft Delete)
 @router.delete("/users/{user_id}")
 async def delete_user(
-    user_id: int, 
-    db: AsyncSession = Depends(get_db), 
-    admin: User = Depends(check_admin_access)
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(check_admin_access),
 ):
     user = await db.get(User, user_id)
     if not user:
         raise NotFoundException("Kullanıcı bulunamadı.")
 
-    # Admin kazara kendini silmesin diye güvenlik kilidi
     if user.email == settings.admin_email:
         raise BadRequestException("Sistem yöneticisi silinemez.")
 
+    if user.deleted_at is not None:
+        raise BadRequestException("Kullanıcı zaten silinmiş.")
+
+    now = datetime.now(timezone.utc)
+
+    # Soft delete: hesabı kapat, token geçersiz kıl
+    user.deleted_at = now
+    user.is_active  = False
+    user.fcm_token  = None   # push bildirimlerini durdur
+
+    # Kullanıcının tüm aktif ilanlarını pasife çek
+    await db.execute(
+        Listing.__table__.update()
+        .where(Listing.user_id == user_id)
+        .values(is_active=False)
+    )
+
+    await db.commit()
+
+    # Redis cache temizle
     try:
-        await db.delete(user)
-        await db.commit()
-        return {"message": "Kullanıcı veritabanından kalıcı olarak silindi."}
-    except IntegrityError:
-        await db.rollback()
-        raise BadRequestException(
-            "Bu kullanıcı silinemez çünkü sisteme kayıtlı ilanları, mesajları veya canlı yayın geçmişi var. Bunun yerine hesabı 'Yasaklı' duruma getirin."
+        redis = await get_redis()
+        await redis.delete(
+            f"interests:{user_id}",
+            f"feed:{user_id}:0",
+            f"shadowban:{user_id}",
         )
+    except Exception:
+        pass
+
+    return {"message": f"Kullanıcı @{user.username} hesabı kapatıldı (soft delete)."}
 
 # ==========================================
 # 5. TUCi EKONOMİSİ
