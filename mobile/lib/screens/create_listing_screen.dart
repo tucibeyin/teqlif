@@ -35,6 +35,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   List<String> _cities = [];
   bool _submitting = false;
   bool _aiLoading = false;
+  bool _isPro = false;
   final List<File> _images = [];
   final _picker = ImagePicker();
   File? _video;
@@ -58,6 +59,23 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     CityService.getCities().then((c) {
       if (mounted) setState(() => _cities = c);
     });
+    _loadProStatus();
+  }
+
+  Future<void> _loadProStatus() async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    try {
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/auth/me'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 5));
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        setState(() => _isPro = data['is_premium'] == true);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -828,7 +846,61 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : Text(l.btnPublishListing),
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(l.btnPublishListing),
+                            const SizedBox(height: 3),
+                            _isPro
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.18),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        Icon(Icons.workspace_premium_rounded,
+                                            size: 11, color: Color(0xFF34D399)),
+                                        SizedBox(width: 3),
+                                        Text(
+                                          'Pro · Ücretsiz',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF34D399),
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.18),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        Text(
+                                          '1 TUCi',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFFFBBF24),
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                          ],
+                        ),
                 ),
               ),
               const SizedBox(height: 24),
