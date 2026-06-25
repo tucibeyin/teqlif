@@ -16,6 +16,7 @@ from arq.connections import RedisSettings
 
 from app.config import settings
 from app.core.logger import get_logger, capture_exception
+from app.tasks.analytics_tasks import process_churn_and_airdrop
 
 logger = get_logger(__name__)
 
@@ -934,6 +935,7 @@ class WorkerSettings:
         calculate_user_budgets_task,
         send_smart_auction_alerts,
         sync_ad_campaigns_task,
+        process_churn_and_airdrop,
     ]
 
     cron_jobs = [
@@ -957,6 +959,8 @@ class WorkerSettings:
         cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
         # Her 10 dakikada PostgreSQL → Redis kampanya bütçe senkronizasyonu
         cron(sync_ad_campaigns_task, minute={0, 10, 20, 30, 40, 50}),
+        # Her gün 03:30 — churn tespiti ve airdrop
+        cron(process_churn_and_airdrop, hour=3, minute=30),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
