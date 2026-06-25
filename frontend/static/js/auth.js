@@ -1,3 +1,7 @@
+// Cached promise for the /auth/init response — shared across Auth and updateNav.
+// Populated on first authenticated page load; reused by Auth.me() and updateNav().
+let _initCtxPromise = null;
+
 const Auth = (() => {
     // Token'lar artık HttpOnly cookie'de; XSS ile okunamaz.
     // Sadece user bilgisi (non-sensitive) localStorage'da tutulur.
@@ -108,10 +112,23 @@ const Auth = (() => {
     }
 
     async function me() {
+        // Reuse the cached init context if available — avoids a redundant /auth/me call.
+        if (_initCtxPromise) {
+            const ctx = await _initCtxPromise.catch(() => null);
+            if (ctx && ctx.user) return ctx.user;
+        }
         return apiFetch('/auth/me');
     }
 
-    return { getToken, getUser, login, register, verify, logout, tryRefresh, me };
+    function getInitContext() {
+        if (!_memToken) return Promise.resolve(null);
+        if (!_initCtxPromise) {
+            _initCtxPromise = apiFetch('/auth/init').catch(() => null);
+        }
+        return _initCtxPromise;
+    }
+
+    return { getToken, getUser, login, register, verify, logout, tryRefresh, me, getInitContext };
 })();
 
 // ── Unread count helper ────────────────────────────────────────────────────────
@@ -190,16 +207,16 @@ function updateNav() {
         navLinks.innerHTML = '';
         navLinks.append(kesfetA, walletA, mesajlarA, profilA, cikisA);
 
-        // Bakiyeyi asenkron yükle — bağımsız hata yakalanır, nav'ı bloklamaz
-        fetch('/api/wallet/balance', { headers: { 'Authorization': 'Bearer ' + Auth.getToken() } })
-            .then(r => r.ok ? r.json() : null)
-            .then(data => {
-                const lbl = document.getElementById('navWalletLabel');
-                if (lbl && data && data.balance != null) lbl.textContent = `Cüzdan · ${data.balance} T`;
-            })
-            .catch(() => {});
+        // Single /auth/init call provides wallet + unread counts — no separate fetches needed.
+        Auth.getInitContext().then(ctx => {
+            if (!ctx) return;
+            const lbl = document.getElementById('navWalletLabel');
+            if (lbl && ctx.wallet_balance != null) lbl.textContent = `Cüzdan · ${ctx.wallet_balance} T`;
+            _updateNavBadge((ctx.notifications_unread || 0) + (ctx.messages_unread || 0));
+            if (ctx.user) localStorage.setItem('teqlif_user', JSON.stringify(ctx.user));
+        }).catch(() => {});
 
-        getUnreadCount().then(_updateNavBadge);
+        // Refresh unread count every 60s (only 2 lightweight calls, not on page load).
         setInterval(() => getUnreadCount().then(_updateNavBadge), 60000);
     }
 }

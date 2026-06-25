@@ -13,7 +13,7 @@ http {
     # ... mevcut ayarlar ...
     
     # Rate limiting - ekleyin
-    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=30r/s;
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=60r/s;
     limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=5r/m;
     limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
 }
@@ -29,7 +29,7 @@ sudo nano /etc/nginx/sites-available/teqlif
 
 ```nginx
 location /api/ {
-    limit_req zone=api_limit burst=50 delay=20;
+    limit_req zone=api_limit burst=200 delay=100;
 
     # ── X-Forwarded-For Spoofing Koruması (ZORUNLU) ──────────────────────
     # İstemcinin gönderebileceği X-Forwarded-For header'ını ezer.

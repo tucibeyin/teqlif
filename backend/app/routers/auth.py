@@ -1,9 +1,10 @@
+import asyncio
 import re
 import secrets
 from typing import Optional
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models.user import User
@@ -168,6 +169,40 @@ async def check_username(username: str = "", exclude_id: int | None = None, db: 
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/init")
+async def init_context(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Single endpoint that returns user + wallet balance + unread counts.
+    Used by the frontend to reduce page-load API calls from 4 to 1."""
+    from app.models.notification import Notification
+    from app.models.message import DirectMessage
+
+    notif_result, msg_result = await asyncio.gather(
+        db.execute(
+            select(func.count()).where(
+                Notification.user_id == current_user.id,
+                Notification.is_read == False,  # noqa: E712
+                Notification.type != "message",
+            )
+        ),
+        db.execute(
+            select(func.count()).where(
+                DirectMessage.receiver_id == current_user.id,
+                DirectMessage.is_read == False,  # noqa: E712
+            )
+        ),
+    )
+
+    return {
+        "user": UserOut.model_validate(current_user),
+        "wallet_balance": current_user.tuci_balance,
+        "notifications_unread": notif_result.scalar_one(),
+        "messages_unread": msg_result.scalar_one(),
+    }
 
 
 @router.patch("/me", response_model=UserOut)

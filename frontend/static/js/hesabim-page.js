@@ -84,8 +84,10 @@
     // Önce localStorage'dan hızlı render
     if (user) renderProfile(user);
 
-    // Sonra API'den taze veri al
-    Auth.me().then(u => renderProfile(u)).catch(() => {
+    // Taze veriyi /auth/init'ten al — updateNav ile aynı isteği paylaşır (sıfır ekstra çağrı).
+    Auth.getInitContext().then(ctx => {
+        if (ctx && ctx.user) renderProfile(ctx.user);
+    }).catch(() => {
         document.getElementById('loadingState').style.display = 'none';
     });
 

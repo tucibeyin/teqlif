@@ -2794,101 +2794,580 @@ abstract class AppLocalizations {
   /// **'< 1 dk'**
   String get reportDurationLess;
 
+  /// No description provided for @proLoadFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Veriler yüklenemedi.'**
   String get proLoadFailed;
+
+  /// No description provided for @proUpgradeTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pro Özelliği'**
   String get proUpgradeTitle;
+
+  /// No description provided for @proUpgradeBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'👑 Pro\'ya Geç'**
   String get proUpgradeBtn;
+
+  /// No description provided for @proHubTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pro Araçları'**
   String get proHubTitle;
+
+  /// No description provided for @proToolSalesTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış ve Kitle Raporu'**
   String get proToolSalesTitle;
+
+  /// No description provided for @proToolSalesDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gelirler, dönüşüm oranları ve sıcak ilanlarınız'**
   String get proToolSalesDesc;
+
+  /// No description provided for @proToolListingsTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan Analizleri'**
   String get proToolListingsTitle;
+
+  /// No description provided for @proToolListingsDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hangi ilanınız kaç kişiye ulaştı, kaçı tıkladı'**
   String get proToolListingsDesc;
+
+  /// No description provided for @proToolMarketTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pazar Bilgisi'**
   String get proToolMarketTitle;
+
+  /// No description provided for @proToolMarketDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor'**
   String get proToolMarketDesc;
+
+  /// No description provided for @proBlastSection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kitle Davet Kredisi'**
   String get proBlastSection;
+
+  /// No description provided for @proBenefitsTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pro\'ya Geçince Ne Kazanırsın?'**
   String get proBenefitsTitle;
+
+  /// No description provided for @proBenefit1.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satışlarını ve gelirlerin nereye gittiğini gör'**
   String get proBenefit1;
+
+  /// No description provided for @proBenefit2.
+  ///
+  /// In tr, this message translates to:
+  /// **'Her ilanına kaç kişi baktı, kaçı tıkladı'**
   String get proBenefit2;
+
+  /// No description provided for @proBenefit3.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcıların en aktif olduğu saatleri öğren'**
   String get proBenefit3;
+
+  /// No description provided for @proBenefit4.
+  ///
+  /// In tr, this message translates to:
+  /// **'İnsanlar ne arıyor — boşluğu doldur, sat'**
   String get proBenefit4;
+
+  /// No description provided for @proStatusTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'👑 Pro Kullanıcı'**
   String get proStatusTitle;
+
+  /// No description provided for @proStatusDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm analitik araçlara erişiminiz aktif'**
   String get proStatusDesc;
+
+  /// No description provided for @proUnlockTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pro araçları kilidi aç'**
   String get proUnlockTitle;
+
+  /// No description provided for @proUnlockDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Verilerle sat, değil tahminle'**
   String get proUnlockDesc;
+
+  /// No description provided for @proUnlockBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pro\'ya Geç'**
   String get proUnlockBtn;
+
+  /// No description provided for @proUpgradeSheetDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu aracı kullanmak için Pro\'ya geçmeniz gerekiyor.'**
   String get proUpgradeSheetDesc;
+
+  /// No description provided for @blastRemainingTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu Ay Kalan Hak'**
   String get blastRemainingTitle;
+
+  /// No description provided for @blastCreditEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ay blast krediniz doldu. Yeni ayda yenilenir.'**
   String get blastCreditEmpty;
+
+  /// No description provided for @blastCreditUsed.
+  ///
+  /// In tr, this message translates to:
+  /// **'{used} blast kullandınız, {remaining} hakkınız kaldı.'**
   String blastCreditUsed(int used, int remaining);
+
+  /// No description provided for @proAnalyticsTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pro Analitik'**
   String get proAnalyticsTitle;
+
+  /// No description provided for @proSectionOverview.
+  ///
+  /// In tr, this message translates to:
+  /// **'📊 Genel Bakış'**
   String get proSectionOverview;
+
+  /// No description provided for @proSectionFunnel.
+  ///
+  /// In tr, this message translates to:
+  /// **'🔽 Dönüşüm Hunisi'**
   String get proSectionFunnel;
+
+  /// No description provided for @proSectionTips.
+  ///
+  /// In tr, this message translates to:
+  /// **'🤖 Akıllı Öneriler'**
   String get proSectionTips;
+
+  /// No description provided for @proSectionHotLeads.
+  ///
+  /// In tr, this message translates to:
+  /// **'🔥 Sıcak Talepler'**
   String get proSectionHotLeads;
+
+  /// No description provided for @proHotLeadsDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'İncelendi ama teklif verilmedi — satın almaya yakın alıcılar'**
   String get proHotLeadsDesc;
+
+  /// No description provided for @proSectionPriceIntel.
+  ///
+  /// In tr, this message translates to:
+  /// **'💎 Fiyat Zekası'**
   String get proSectionPriceIntel;
+
+  /// No description provided for @proPriceIntelDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'ML — benzer ilanlarla karşılaştırma'**
   String get proPriceIntelDesc;
+
+  /// No description provided for @proSectionStreamPerf.
+  ///
+  /// In tr, this message translates to:
+  /// **'📡 Yayın Performansı'**
   String get proSectionStreamPerf;
+
+  /// No description provided for @proSectionPeakHours.
+  ///
+  /// In tr, this message translates to:
+  /// **'⏰ Platform Zirve Saatleri'**
   String get proSectionPeakHours;
+
+  /// No description provided for @proPeakHoursDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son 30 günde en çok etkileşim yaşanan saatler'**
   String get proPeakHoursDesc;
+
+  /// No description provided for @proKpiRevenue30d.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son 30 Gün Gelir'**
   String get proKpiRevenue30d;
+
+  /// No description provided for @proKpiLast30d.
+  ///
+  /// In tr, this message translates to:
+  /// **'son 30 gün'**
   String get proKpiLast30d;
+
+  /// No description provided for @proKpiSales.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Satış'**
   String get proKpiSales;
+
+  /// No description provided for @proKpiBids.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gelen Teklifler'**
   String get proKpiBids;
+
+  /// No description provided for @proKpiActiveListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif İlanlar'**
   String get proKpiActiveListings;
+
+  /// No description provided for @proKpiItemUnit.
+  ///
+  /// In tr, this message translates to:
+  /// **'adet'**
   String get proKpiItemUnit;
+
+  /// No description provided for @proKpiBidUnit.
+  ///
+  /// In tr, this message translates to:
+  /// **'teklif'**
   String get proKpiBidUnit;
+
+  /// No description provided for @proKpiListingUnit.
+  ///
+  /// In tr, this message translates to:
+  /// **'ilan'**
   String get proKpiListingUnit;
+
+  /// No description provided for @proKpiTotalUnit.
+  ///
+  /// In tr, this message translates to:
+  /// **'toplam'**
   String get proKpiTotalUnit;
+
+  /// No description provided for @proFunnelViews.
+  ///
+  /// In tr, this message translates to:
+  /// **'👁 Görüntüleme'**
   String get proFunnelViews;
+
+  /// No description provided for @proFunnelHesitation.
+  ///
+  /// In tr, this message translates to:
+  /// **'🤔 İnceledi (hesitation)'**
   String get proFunnelHesitation;
+
+  /// No description provided for @proFunnelBid.
+  ///
+  /// In tr, this message translates to:
+  /// **'🔨 Teklif'**
   String get proFunnelBid;
+
+  /// No description provided for @proFunnelSale.
+  ///
+  /// In tr, this message translates to:
+  /// **'✅ Satış'**
   String get proFunnelSale;
+
+  /// No description provided for @proFunnelViewToBid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Görüntüleme → Teklif'**
   String get proFunnelViewToBid;
+
+  /// No description provided for @proFunnelBidToSale.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif → Satış'**
   String get proFunnelBidToSale;
+
+  /// No description provided for @priceSignalExpensive.
+  ///
+  /// In tr, this message translates to:
+  /// **'⬆ Pahalı'**
   String get priceSignalExpensive;
+
+  /// No description provided for @priceSignalCheap.
+  ///
+  /// In tr, this message translates to:
+  /// **'⬇ Ucuz'**
   String get priceSignalCheap;
+
+  /// No description provided for @priceSignalFair.
+  ///
+  /// In tr, this message translates to:
+  /// **'✓ Uygun'**
   String get priceSignalFair;
+
+  /// No description provided for @priceYours.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senin Fiyatın'**
   String get priceYours;
+
+  /// No description provided for @priceMarketAvg.
+  ///
+  /// In tr, this message translates to:
+  /// **'Piyasa Ortalaması'**
   String get priceMarketAvg;
+
+  /// No description provided for @priceDiff.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fark'**
   String get priceDiff;
+
+  /// No description provided for @proNoStreams.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz canlı yayın yapılmadı.'**
   String get proNoStreams;
+
+  /// No description provided for @proStreamTotal.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Yayın'**
   String get proStreamTotal;
+
+  /// No description provided for @proStreamThisMonth.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu Ay'**
   String get proStreamThisMonth;
+
+  /// No description provided for @proStreamAvgViewers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ort. İzleyici'**
   String get proStreamAvgViewers;
+
+  /// No description provided for @proStreamPeak.
+  ///
+  /// In tr, this message translates to:
+  /// **'Zirve'**
   String get proStreamPeak;
+
+  /// No description provided for @proStreamAvgDuration.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama yayın süresi: {dur} dakika'**
   String proStreamAvgDuration(String dur);
+
+  /// No description provided for @proEngagements.
+  ///
+  /// In tr, this message translates to:
+  /// **'etk.'**
   String get proEngagements;
+
+  /// No description provided for @marketSearchTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İnsanlar şunları arıyor'**
   String get marketSearchTitle;
+
+  /// No description provided for @marketDayFilter.
+  ///
+  /// In tr, this message translates to:
+  /// **'{days} gün'**
   String marketDayFilter(int days);
+
+  /// No description provided for @marketNoSearchData.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz arama verisi yok. Kullanıcılar arama yaptıkça burada görünecek.'**
   String get marketNoSearchData;
+
+  /// No description provided for @marketCategoryTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hangi kategoride arıyorlar'**
   String get marketCategoryTitle;
+
+  /// No description provided for @marketPeakHoursTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alışveriş en çok bu saatlerde'**
   String get marketPeakHoursTitle;
+
+  /// No description provided for @marketPeakHoursDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanlarınızı bu saatlerde yayınlarsanız daha fazla kişiye ulaşırsınız.'**
   String get marketPeakHoursDesc;
+
+  /// No description provided for @marketNoActivityData.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz yeterli aktivite verisi yok.'**
   String get marketNoActivityData;
+
+  /// No description provided for @marketTrendingTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kategoriler ilgi görüyor'**
   String get marketTrendingTitle;
+
+  /// No description provided for @marketTrendingDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kategorilerde ilan açmak satış şansınızı artırabilir.'**
   String get marketTrendingDesc;
+
+  /// No description provided for @marketGrowthPos.
+  ///
+  /// In tr, this message translates to:
+  /// **'Platform genel büyüme: +{pct}%'**
   String marketGrowthPos(String pct);
+
+  /// No description provided for @marketGrowthNeg.
+  ///
+  /// In tr, this message translates to:
+  /// **'Platform genel düşüş: {pct}%'**
   String marketGrowthNeg(String pct);
+
+  /// No description provided for @marketGrowthSub.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama alışveriş tutarı — önceki 30 güne kıyasla'**
   String get marketGrowthSub;
+
+  /// No description provided for @marketPaywallDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor, hangi kategoriler yükseliyor — hepsini görün.'**
   String get marketPaywallDesc;
+
+  /// No description provided for @listingPerfTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanlarınızın Performansı'**
   String get listingPerfTitle;
+
+  /// No description provided for @listingNoDataTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz veri yok'**
   String get listingNoDataTitle;
+
+  /// No description provided for @listingNoDataDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanlarınız swipe feed\'de gösterime girince buradaki veriler dolmaya başlayacak.'**
   String get listingNoDataDesc;
+
+  /// No description provided for @listingDayFilterN.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son {n} Gün'**
   String listingDayFilterN(int n);
+
+  /// No description provided for @listingTotalViews.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Görüntülenme'**
   String get listingTotalViews;
+
+  /// No description provided for @listingAvgCtr.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama Tıklanma'**
   String get listingAvgCtr;
+
+  /// No description provided for @listingVideoBeatsPhoto.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎬 Videolu ilanlarınız, fotoğraflılara göre {x} kat daha fazla tıklanıyor.'**
   String listingVideoBeatsPhoto(String x);
+
+  /// No description provided for @listingPhotoBeatsVideo.
+  ///
+  /// In tr, this message translates to:
+  /// **'📸 Fotoğraflı ilanlarınız, videolulara göre {x} kat daha fazla tıklanıyor.'**
   String listingPhotoBeatsVideo(String x);
+
+  /// No description provided for @listingMediaEqual.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video ve fotoğraflı ilanlarınız benzer ilgi görüyor.'**
   String get listingMediaEqual;
+
+  /// No description provided for @listingVideoLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Videolu'**
   String get listingVideoLabel;
+
+  /// No description provided for @listingPhotoLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fotoğraflı'**
   String get listingPhotoLabel;
+
+  /// No description provided for @listingWatchRateLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'İzleme oranı'**
   String get listingWatchRateLabel;
+
+  /// No description provided for @listingWatchedPct.
+  ///
+  /// In tr, this message translates to:
+  /// **'%{pct} izlendi'**
   String listingWatchedPct(String pct);
+
+  /// No description provided for @listingGalleryLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Galeri ilgisi'**
   String get listingGalleryLabel;
+
+  /// No description provided for @listingGalleryDeep.
+  ///
+  /// In tr, this message translates to:
+  /// **'{n}. fotoğrafa kadar baktı'**
   String listingGalleryDeep(String n);
+
+  /// No description provided for @listingGalleryShallow.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sadece ilk fotoğrafa baktı'**
   String get listingGalleryShallow;
+
+  /// No description provided for @metricViewed.
+  ///
+  /// In tr, this message translates to:
+  /// **'gördü'**
   String get metricViewed;
+
+  /// No description provided for @metricClicked.
+  ///
+  /// In tr, this message translates to:
+  /// **'tıkladı'**
   String get metricClicked;
+
+  /// No description provided for @listingPaywallDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin.'**
   String get listingPaywallDesc;
 }
 
