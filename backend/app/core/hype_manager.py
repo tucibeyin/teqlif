@@ -33,6 +33,9 @@ _SCORE_MAX                   = 100.0
 _USER_COOLDOWN_SECS          = 10      # kullanıcı başına katkı aralığı
 _CONTRIBUTION_CAP            = 10      # tek mesajdan max katkı (normalizasyon öncesi)
 
+# Auto-Highlights
+_HIGHLIGHT_THRESHOLD         = 90.0   # bu eşiği ilk aşınca video tetikle
+
 
 class HypeManager:
     """Singleton — `from app.core.hype_manager import hype_manager` ile kullanılır."""
@@ -43,6 +46,8 @@ class HypeManager:
         # (stream_id, user_id) → son katkı zamanı (monotonic saniye)
         self._user_ts:        dict[tuple[int, int], float]  = {}
         self._decay_task: asyncio.Task | None               = None
+        # Oda başına sadece 1 highlight — bir kez geçildi mi?
+        self._has_highlighted: set[int]                     = set()
 
     # ── Skor işlemleri ──────────────────────────────────────────────────────────
 
@@ -99,10 +104,23 @@ class HypeManager:
     def mark_alerted(self, stream_id: int) -> None:
         self._last_alert[stream_id] = datetime.now(timezone.utc)
 
+    def should_highlight(self, stream_id: int, new_score: float) -> bool:
+        """
+        Oda için ilk kez 90 barajı aşıldıysa True döner ve flag'i set eder.
+        Sonraki çağrılarda (aynı oda) her zaman False döner.
+        """
+        if new_score < _HIGHLIGHT_THRESHOLD:
+            return False
+        if stream_id in self._has_highlighted:
+            return False
+        self._has_highlighted.add(stream_id)
+        return True
+
     def remove_stream(self, stream_id: int) -> None:
         """Yayın bitince state + kullanıcı kayıtlarını temizle."""
         self._scores.pop(stream_id, None)
         self._last_alert.pop(stream_id, None)
+        self._has_highlighted.discard(stream_id)
         stale = [k for k in self._user_ts if k[0] == stream_id]
         for k in stale:
             del self._user_ts[k]

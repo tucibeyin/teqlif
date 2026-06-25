@@ -31,6 +31,10 @@ class Listing(Base):
     search_vector: Mapped[Optional[Any]] = mapped_column(TSVECTOR, nullable=True)
     embedding: Mapped[Optional[Any]] = mapped_column(Vector(384), nullable=True)
 
+    is_highlight: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    active_room_id: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
     likes: Mapped[list["ListingLike"]] = relationship(  # type: ignore[name-defined]
         "ListingLike", cascade="all, delete-orphan", passive_deletes=True
     )

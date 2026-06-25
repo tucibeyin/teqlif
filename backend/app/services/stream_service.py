@@ -345,8 +345,12 @@ class StreamService:
         await self._mark_stream_ended(stream, stream_id)
         await self._cleanup_redis(stream, stream_id, mod_key)
         await self._cleanup_stream_likes(stream_id)
+        await self._cleanup_highlights(stream_id)
         await self._broadcast_stream_ended(stream_id, _publish_chat)
         await delete_livekit_room(stream.room_name)
+
+        from app.core.hype_manager import hype_manager
+        hype_manager.remove_stream(stream_id)
 
         logger.info("[STREAMS] Yayın sonlandırıldı | stream_id=%s user_id=%s", stream_id, user.id)
         return {"message": "Yayın sonlandırıldı"}
@@ -405,6 +409,33 @@ class StreamService:
             await self.db.commit()
         except Exception:
             logger.warning("[STREAMS] stream_likes temizlenemedi | stream_id=%s",
+                           stream_id, exc_info=True)
+
+    async def _cleanup_highlights(self, stream_id: int) -> None:
+        """Yayın bitince o odaya ait highlight kaydını ve disk dosyasını sil."""
+        import os
+        import pathlib
+        try:
+            from sqlalchemy import text
+            await self.db.execute(
+                text("DELETE FROM listings WHERE active_room_id = :rid AND is_highlight = TRUE"),
+                {"rid": stream_id},
+            )
+            await self.db.commit()
+        except Exception:
+            logger.warning("[STREAMS] Highlight DB temizliği başarısız | stream_id=%s",
+                           stream_id, exc_info=True)
+
+        try:
+            highlight_file = (
+                pathlib.Path(__file__).resolve().parents[2]
+                / "static" / "highlights" / f"highlight_{stream_id}.mp4"
+            )
+            if highlight_file.exists():
+                os.remove(highlight_file)
+                logger.info("[STREAMS] Highlight dosyası silindi | %s", highlight_file)
+        except Exception:
+            logger.warning("[STREAMS] Highlight dosyası silinemedi | stream_id=%s",
                            stream_id, exc_info=True)
 
     async def _broadcast_stream_ended(self, stream_id: int, publish_chat) -> None:

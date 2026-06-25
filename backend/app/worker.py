@@ -16,7 +16,7 @@ from arq.connections import RedisSettings
 
 from app.config import settings
 from app.core.logger import get_logger, capture_exception
-from app.tasks.analytics_tasks import process_churn_and_airdrop
+from app.tasks.analytics_tasks import process_churn_and_airdrop, cleanup_hype_highlights_task
 
 logger = get_logger(__name__)
 
@@ -936,6 +936,7 @@ class WorkerSettings:
         send_smart_auction_alerts,
         sync_ad_campaigns_task,
         process_churn_and_airdrop,
+        cleanup_hype_highlights_task,
     ]
 
     cron_jobs = [
@@ -961,6 +962,8 @@ class WorkerSettings:
         cron(sync_ad_campaigns_task, minute={0, 10, 20, 30, 40, 50}),
         # Her gün 03:30 — churn tespiti ve airdrop
         cron(process_churn_and_airdrop, hour=3, minute=30),
+        # Her saat başında — süresi dolmuş highlight dosya + DB temizliği
+        cron(cleanup_hype_highlights_task, minute=0),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

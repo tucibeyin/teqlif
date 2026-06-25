@@ -126,6 +126,7 @@ async def _handle_ws_message(
     profile_image_url: str | None,
     is_host: bool,
     host_id: int | None = None,
+    room_name: str | None = None,
 ) -> None:
     """Gelen WS payload tipine göre message veya host_pin işleyicisine yönlendirir."""
     msg_type = payload.get("type")
@@ -134,7 +135,7 @@ async def _handle_ws_message(
             websocket=websocket, payload=payload, svc=svc,
             stream_id=stream_id, user_id=user_id, username=username,
             profile_image_url=profile_image_url, is_host=is_host,
-            host_id=host_id,
+            host_id=host_id, room_name=room_name,
         )
     elif msg_type == WS.HOST_PIN and is_host:
         await _handle_host_pin(stream_id=stream_id, payload=payload, username=username)
@@ -151,6 +152,7 @@ async def _handle_chat_message(
     profile_image_url: str | None,
     is_host: bool,
     host_id: int | None = None,
+    room_name: str | None = None,
 ) -> None:
     """Sohbet mesajını işler: mute/shadowban kontrolleri yapılır, broadcast edilir."""
     content = str(payload.get("content", "")).strip()[:_MAX_MESSAGE_CHARS]
@@ -195,6 +197,15 @@ async def _handle_chat_message(
             })
         except Exception as exc:
             logger.warning("[Hype] Broadcast başarısız | stream=%s | %s", stream_id, exc)
+
+        # Auto-Highlight: oda için ilk kez 90 barajı geçildiyse 15s video çek
+        if room_name and host_id and hype_manager.should_highlight(stream_id, new_score):
+            from app.tasks.video_tasks import capture_hype_highlight
+            asyncio.create_task(
+                capture_hype_highlight(room_name, stream_id, host_id),
+                name=f"highlight-{stream_id}",
+            )
+            logger.info("[Highlight] Video görevi tetiklendi | stream_id=%s room=%s", stream_id, room_name)
 
         # Host uyarısı: eşik geçildiyse ve cooldown dolduysa
         if host_id and hype_manager.should_alert(stream_id):
@@ -412,6 +423,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
                     profile_image_url=profile_image_url,
                     is_host=is_host,
                     host_id=host_id,
+                    room_name=room_name,
                 )
             except Exception as exc:
                 logger.warning(
