@@ -380,7 +380,12 @@ async function sendPush() {
     if (!title || !body) { alert("Başlık ve içerik zorunlu."); return; }
 
     const payload = { title, body };
-    if (userId) payload.user_id = parseInt(userId);
+    const userIdTrimmed = userId.trim();
+    if (userIdTrimmed) {
+        const parsed = parseInt(userIdTrimmed, 10);
+        if (isNaN(parsed) || parsed <= 0) { alert("Geçersiz kullanıcı ID. Sayısal bir ID girin ya da boş bırakın."); return; }
+        payload.user_id = parsed;
+    }
 
     const resultEl = document.getElementById('pushResult');
     resultEl.textContent = 'Gönderiliyor…';
