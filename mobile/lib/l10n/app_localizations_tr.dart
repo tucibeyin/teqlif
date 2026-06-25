@@ -1353,7 +1353,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reportBadge => 'YAYIN ANALİZİ';
 
   @override
-  String get reportStreamEndedDesc => 'Yayın sona erdi. Kitle analiziniz aşağıda.';
+  String get reportStreamEndedDesc =>
+      'Yayın sona erdi. Kitle analiziniz aşağıda.';
 
   @override
   String get reportMetricPeakViewers => 'Zirve\nİzleyici';
@@ -1410,8 +1411,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reportChipBids => 'Teklif';
 
   @override
-  String reportHesitation(int count) =>
-      '$count kararsız teklif — bu izleyiciler fiyat noktasına yakın ama dönüştüremedik.';
+  String reportHesitation(int count) {
+    return '$count kararsız teklif — bu izleyiciler fiyat noktasına yakın ama dönüştüremedik.';
+  }
 
   @override
   String get reportSmartInsight => 'Akıllı Öneri';
@@ -1424,4 +1426,197 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get reportDurationLess => '< 1 dk';
+
+  @override
+  String get proLoadFailed => 'Veriler yüklenemedi.';
+  @override
+  String get proUpgradeTitle => 'Pro Özelliği';
+  @override
+  String get proUpgradeBtn => '👑 Pro\'ya Geç';
+  @override
+  String get proHubTitle => 'Pro Araçları';
+  @override
+  String get proToolSalesTitle => 'Satış ve Kitle Raporu';
+  @override
+  String get proToolSalesDesc => 'Gelirler, dönüşüm oranları ve sıcak ilanlarınız';
+  @override
+  String get proToolListingsTitle => 'İlan Analizleri';
+  @override
+  String get proToolListingsDesc => 'Hangi ilanınız kaç kişiye ulaştı, kaçı tıkladı';
+  @override
+  String get proToolMarketTitle => 'Pazar Bilgisi';
+  @override
+  String get proToolMarketDesc => 'Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor';
+  @override
+  String get proBlastSection => 'Kitle Davet Kredisi';
+  @override
+  String get proBenefitsTitle => 'Pro\'ya Geçince Ne Kazanırsın?';
+  @override
+  String get proBenefit1 => 'Satışlarını ve gelirlerin nereye gittiğini gör';
+  @override
+  String get proBenefit2 => 'Her ilanına kaç kişi baktı, kaçı tıkladı';
+  @override
+  String get proBenefit3 => 'Alıcıların en aktif olduğu saatleri öğren';
+  @override
+  String get proBenefit4 => 'İnsanlar ne arıyor — boşluğu doldur, sat';
+  @override
+  String get proStatusTitle => '👑 Pro Kullanıcı';
+  @override
+  String get proStatusDesc => 'Tüm analitik araçlara erişiminiz aktif';
+  @override
+  String get proUnlockTitle => 'Pro araçları kilidi aç';
+  @override
+  String get proUnlockDesc => 'Verilerle sat, değil tahminle';
+  @override
+  String get proUnlockBtn => 'Pro\'ya Geç';
+  @override
+  String get proUpgradeSheetDesc => 'Bu aracı kullanmak için Pro\'ya geçmeniz gerekiyor.';
+  @override
+  String get blastRemainingTitle => 'Bu Ay Kalan Hak';
+  @override
+  String get blastCreditEmpty => 'Bu ay blast krediniz doldu. Yeni ayda yenilenir.';
+  @override
+  String blastCreditUsed(int used, int remaining) => '$used blast kullandınız, $remaining hakkınız kaldı.';
+  @override
+  String get proAnalyticsTitle => 'Pro Analitik';
+  @override
+  String get proSectionOverview => '📊 Genel Bakış';
+  @override
+  String get proSectionFunnel => '🔽 Dönüşüm Hunisi';
+  @override
+  String get proSectionTips => '🤖 Akıllı Öneriler';
+  @override
+  String get proSectionHotLeads => '🔥 Sıcak Talepler';
+  @override
+  String get proHotLeadsDesc => 'İncelendi ama teklif verilmedi — satın almaya yakın alıcılar';
+  @override
+  String get proSectionPriceIntel => '💎 Fiyat Zekası';
+  @override
+  String get proPriceIntelDesc => 'ML — benzer ilanlarla karşılaştırma';
+  @override
+  String get proSectionStreamPerf => '📡 Yayın Performansı';
+  @override
+  String get proSectionPeakHours => '⏰ Platform Zirve Saatleri';
+  @override
+  String get proPeakHoursDesc => 'Son 30 günde en çok etkileşim yaşanan saatler';
+  @override
+  String get proKpiRevenue30d => 'Son 30 Gün Gelir';
+  @override
+  String get proKpiLast30d => 'son 30 gün';
+  @override
+  String get proKpiSales => 'Toplam Satış';
+  @override
+  String get proKpiBids => 'Gelen Teklifler';
+  @override
+  String get proKpiActiveListings => 'Aktif İlanlar';
+  @override
+  String get proKpiItemUnit => 'adet';
+  @override
+  String get proKpiBidUnit => 'teklif';
+  @override
+  String get proKpiListingUnit => 'ilan';
+  @override
+  String get proKpiTotalUnit => 'toplam';
+  @override
+  String get proFunnelViews => '👁 Görüntüleme';
+  @override
+  String get proFunnelHesitation => '🤔 İnceledi (hesitation)';
+  @override
+  String get proFunnelBid => '🔨 Teklif';
+  @override
+  String get proFunnelSale => '✅ Satış';
+  @override
+  String get proFunnelViewToBid => 'Görüntüleme → Teklif';
+  @override
+  String get proFunnelBidToSale => 'Teklif → Satış';
+  @override
+  String get priceSignalExpensive => '⬆ Pahalı';
+  @override
+  String get priceSignalCheap => '⬇ Ucuz';
+  @override
+  String get priceSignalFair => '✓ Uygun';
+  @override
+  String get priceYours => 'Senin Fiyatın';
+  @override
+  String get priceMarketAvg => 'Piyasa Ortalaması';
+  @override
+  String get priceDiff => 'Fark';
+  @override
+  String get proNoStreams => 'Henüz canlı yayın yapılmadı.';
+  @override
+  String get proStreamTotal => 'Toplam Yayın';
+  @override
+  String get proStreamThisMonth => 'Bu Ay';
+  @override
+  String get proStreamAvgViewers => 'Ort. İzleyici';
+  @override
+  String get proStreamPeak => 'Zirve';
+  @override
+  String proStreamAvgDuration(String dur) => 'Ortalama yayın süresi: $dur dakika';
+  @override
+  String get proEngagements => 'etk.';
+  @override
+  String get marketSearchTitle => 'İnsanlar şunları arıyor';
+  @override
+  String marketDayFilter(int days) => '$days gün';
+  @override
+  String get marketNoSearchData => 'Henüz arama verisi yok. Kullanıcılar arama yaptıkça burada görünecek.';
+  @override
+  String get marketCategoryTitle => 'Hangi kategoride arıyorlar';
+  @override
+  String get marketPeakHoursTitle => 'Alışveriş en çok bu saatlerde';
+  @override
+  String get marketPeakHoursDesc => 'İlanlarınızı bu saatlerde yayınlarsanız daha fazla kişiye ulaşırsınız.';
+  @override
+  String get marketNoActivityData => 'Henüz yeterli aktivite verisi yok.';
+  @override
+  String get marketTrendingTitle => 'Bu kategoriler ilgi görüyor';
+  @override
+  String get marketTrendingDesc => 'Bu kategorilerde ilan açmak satış şansınızı artırabilir.';
+  @override
+  String marketGrowthPos(String pct) => 'Platform genel büyüme: +$pct%';
+  @override
+  String marketGrowthNeg(String pct) => 'Platform genel düşüş: $pct%';
+  @override
+  String get marketGrowthSub => 'Ortalama alışveriş tutarı — önceki 30 güne kıyasla';
+  @override
+  String get marketPaywallDesc => 'Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor, hangi kategoriler yükseliyor — hepsini görün.';
+  @override
+  String get listingPerfTitle => 'İlanlarınızın Performansı';
+  @override
+  String get listingNoDataTitle => 'Henüz veri yok';
+  @override
+  String get listingNoDataDesc => 'İlanlarınız swipe feed\'de gösterime girince buradaki veriler dolmaya başlayacak.';
+  @override
+  String listingDayFilterN(int n) => 'Son $n Gün';
+  @override
+  String get listingTotalViews => 'Toplam Görüntülenme';
+  @override
+  String get listingAvgCtr => 'Ortalama Tıklanma';
+  @override
+  String listingVideoBeatsPhoto(String x) => '🎬 Videolu ilanlarınız, fotoğraflılara göre $x kat daha fazla tıklanıyor.';
+  @override
+  String listingPhotoBeatsVideo(String x) => '📸 Fotoğraflı ilanlarınız, videolulara göre $x kat daha fazla tıklanıyor.';
+  @override
+  String get listingMediaEqual => 'Video ve fotoğraflı ilanlarınız benzer ilgi görüyor.';
+  @override
+  String get listingVideoLabel => 'Videolu';
+  @override
+  String get listingPhotoLabel => 'Fotoğraflı';
+  @override
+  String get listingWatchRateLabel => 'İzleme oranı';
+  @override
+  String listingWatchedPct(String pct) => '%$pct izlendi';
+  @override
+  String get listingGalleryLabel => 'Galeri ilgisi';
+  @override
+  String listingGalleryDeep(String n) => '$n. fotoğrafa kadar baktı';
+  @override
+  String get listingGalleryShallow => 'Sadece ilk fotoğrafa baktı';
+  @override
+  String get metricViewed => 'gördü';
+  @override
+  String get metricClicked => 'tıkladı';
+  @override
+  String get listingPaywallDesc => 'Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin.';
 }

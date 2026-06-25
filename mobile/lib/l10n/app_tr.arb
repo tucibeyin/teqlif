@@ -608,5 +608,153 @@
   "reportSmartInsight": "Akıllı Öneri",
   "reportDurationMin": "dk",
   "reportDurationHour": "sa",
-  "reportDurationLess": "< 1 dk"
+  "reportDurationLess": "< 1 dk",
+
+  "proLoadFailed": "Veriler yüklenemedi.",
+  "proUpgradeTitle": "Pro Özelliği",
+  "proUpgradeBtn": "👑 Pro'ya Geç",
+  "proHubTitle": "Pro Araçları",
+  "proToolSalesTitle": "Satış ve Kitle Raporu",
+  "proToolSalesDesc": "Gelirler, dönüşüm oranları ve sıcak ilanlarınız",
+  "proToolListingsTitle": "İlan Analizleri",
+  "proToolListingsDesc": "Hangi ilanınız kaç kişiye ulaştı, kaçı tıkladı",
+  "proToolMarketTitle": "Pazar Bilgisi",
+  "proToolMarketDesc": "Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor",
+  "proBlastSection": "Kitle Davet Kredisi",
+  "proBenefitsTitle": "Pro'ya Geçince Ne Kazanırsın?",
+  "proBenefit1": "Satışlarını ve gelirlerin nereye gittiğini gör",
+  "proBenefit2": "Her ilanına kaç kişi baktı, kaçı tıkladı",
+  "proBenefit3": "Alıcıların en aktif olduğu saatleri öğren",
+  "proBenefit4": "İnsanlar ne arıyor — boşluğu doldur, sat",
+  "proStatusTitle": "👑 Pro Kullanıcı",
+  "proStatusDesc": "Tüm analitik araçlara erişiminiz aktif",
+  "proUnlockTitle": "Pro araçları kilidi aç",
+  "proUnlockDesc": "Verilerle sat, değil tahminle",
+  "proUnlockBtn": "Pro'ya Geç",
+  "proUpgradeSheetDesc": "Bu aracı kullanmak için Pro'ya geçmeniz gerekiyor.",
+  "blastRemainingTitle": "Bu Ay Kalan Hak",
+  "blastCreditEmpty": "Bu ay blast krediniz doldu. Yeni ayda yenilenir.",
+  "blastCreditUsed": "{used} blast kullandınız, {remaining} hakkınız kaldı.",
+  "@blastCreditUsed": {
+    "placeholders": {
+      "used": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "proAnalyticsTitle": "Pro Analitik",
+  "proSectionOverview": "📊 Genel Bakış",
+  "proSectionFunnel": "🔽 Dönüşüm Hunisi",
+  "proSectionTips": "🤖 Akıllı Öneriler",
+  "proSectionHotLeads": "🔥 Sıcak Talepler",
+  "proHotLeadsDesc": "İncelendi ama teklif verilmedi — satın almaya yakın alıcılar",
+  "proSectionPriceIntel": "💎 Fiyat Zekası",
+  "proPriceIntelDesc": "ML — benzer ilanlarla karşılaştırma",
+  "proSectionStreamPerf": "📡 Yayın Performansı",
+  "proSectionPeakHours": "⏰ Platform Zirve Saatleri",
+  "proPeakHoursDesc": "Son 30 günde en çok etkileşim yaşanan saatler",
+  "proKpiRevenue30d": "Son 30 Gün Gelir",
+  "proKpiLast30d": "son 30 gün",
+  "proKpiSales": "Toplam Satış",
+  "proKpiBids": "Gelen Teklifler",
+  "proKpiActiveListings": "Aktif İlanlar",
+  "proKpiItemUnit": "adet",
+  "proKpiBidUnit": "teklif",
+  "proKpiListingUnit": "ilan",
+  "proKpiTotalUnit": "toplam",
+  "proFunnelViews": "👁 Görüntüleme",
+  "proFunnelHesitation": "🤔 İnceledi (hesitation)",
+  "proFunnelBid": "🔨 Teklif",
+  "proFunnelSale": "✅ Satış",
+  "proFunnelViewToBid": "Görüntüleme → Teklif",
+  "proFunnelBidToSale": "Teklif → Satış",
+  "priceSignalExpensive": "⬆ Pahalı",
+  "priceSignalCheap": "⬇ Ucuz",
+  "priceSignalFair": "✓ Uygun",
+  "priceYours": "Senin Fiyatın",
+  "priceMarketAvg": "Piyasa Ortalaması",
+  "priceDiff": "Fark",
+  "proNoStreams": "Henüz canlı yayın yapılmadı.",
+  "proStreamTotal": "Toplam Yayın",
+  "proStreamThisMonth": "Bu Ay",
+  "proStreamAvgViewers": "Ort. İzleyici",
+  "proStreamPeak": "Zirve",
+  "proStreamAvgDuration": "Ortalama yayın süresi: {dur} dakika",
+  "@proStreamAvgDuration": {
+    "placeholders": {
+      "dur": { "type": "String" }
+    }
+  },
+  "proEngagements": "etk.",
+  "marketSearchTitle": "İnsanlar şunları arıyor",
+  "marketDayFilter": "{days} gün",
+  "@marketDayFilter": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "marketNoSearchData": "Henüz arama verisi yok. Kullanıcılar arama yaptıkça burada görünecek.",
+  "marketCategoryTitle": "Hangi kategoride arıyorlar",
+  "marketPeakHoursTitle": "Alışveriş en çok bu saatlerde",
+  "marketPeakHoursDesc": "İlanlarınızı bu saatlerde yayınlarsanız daha fazla kişiye ulaşırsınız.",
+  "marketNoActivityData": "Henüz yeterli aktivite verisi yok.",
+  "marketTrendingTitle": "Bu kategoriler ilgi görüyor",
+  "marketTrendingDesc": "Bu kategorilerde ilan açmak satış şansınızı artırabilir.",
+  "marketGrowthPos": "Platform genel büyüme: +{pct}%",
+  "@marketGrowthPos": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "marketGrowthNeg": "Platform genel düşüş: {pct}%",
+  "@marketGrowthNeg": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "marketGrowthSub": "Ortalama alışveriş tutarı — önceki 30 güne kıyasla",
+  "marketPaywallDesc": "Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor, hangi kategoriler yükseliyor — hepsini görün.",
+  "listingPerfTitle": "İlanlarınızın Performansı",
+  "listingNoDataTitle": "Henüz veri yok",
+  "listingNoDataDesc": "İlanlarınız swipe feed'de gösterime girince buradaki veriler dolmaya başlayacak.",
+  "listingDayFilterN": "Son {n} Gün",
+  "@listingDayFilterN": {
+    "placeholders": {
+      "n": { "type": "int" }
+    }
+  },
+  "listingTotalViews": "Toplam Görüntülenme",
+  "listingAvgCtr": "Ortalama Tıklanma",
+  "listingVideoBeatsPhoto": "🎬 Videolu ilanlarınız, fotoğraflılara göre {x} kat daha fazla tıklanıyor.",
+  "@listingVideoBeatsPhoto": {
+    "placeholders": {
+      "x": { "type": "String" }
+    }
+  },
+  "listingPhotoBeatsVideo": "📸 Fotoğraflı ilanlarınız, videolulara göre {x} kat daha fazla tıklanıyor.",
+  "@listingPhotoBeatsVideo": {
+    "placeholders": {
+      "x": { "type": "String" }
+    }
+  },
+  "listingMediaEqual": "Video ve fotoğraflı ilanlarınız benzer ilgi görüyor.",
+  "listingVideoLabel": "Videolu",
+  "listingPhotoLabel": "Fotoğraflı",
+  "listingWatchRateLabel": "İzleme oranı",
+  "listingWatchedPct": "%{pct} izlendi",
+  "@listingWatchedPct": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "listingGalleryLabel": "Galeri ilgisi",
+  "listingGalleryDeep": "{n}. fotoğrafa kadar baktı",
+  "@listingGalleryDeep": {
+    "placeholders": {
+      "n": { "type": "String" }
+    }
+  },
+  "listingGalleryShallow": "Sadece ilk fotoğrafa baktı",
+  "metricViewed": "gördü",
+  "metricClicked": "tıkladı",
+  "listingPaywallDesc": "Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin."
 }

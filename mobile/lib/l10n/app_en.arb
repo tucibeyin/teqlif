@@ -607,5 +607,153 @@
   "reportSmartInsight": "Smart Insight",
   "reportDurationMin": "min",
   "reportDurationHour": "h",
-  "reportDurationLess": "< 1 min"
+  "reportDurationLess": "< 1 min",
+
+  "proLoadFailed": "Failed to load data.",
+  "proUpgradeTitle": "Pro Feature",
+  "proUpgradeBtn": "👑 Go Pro",
+  "proHubTitle": "Pro Tools",
+  "proToolSalesTitle": "Sales & Audience Report",
+  "proToolSalesDesc": "Revenue, conversion rates and hot listings",
+  "proToolListingsTitle": "Listing Analytics",
+  "proToolListingsDesc": "How many people each listing reached and clicked",
+  "proToolMarketTitle": "Market Intelligence",
+  "proToolMarketDesc": "What buyers search for and when they shop",
+  "proBlastSection": "Audience Invite Credits",
+  "proBenefitsTitle": "What You Get with Pro",
+  "proBenefit1": "See where your sales and revenue are going",
+  "proBenefit2": "How many viewed and clicked each listing",
+  "proBenefit3": "Learn the most active hours for buyers",
+  "proBenefit4": "What people search for — fill the gap, sell",
+  "proStatusTitle": "👑 Pro User",
+  "proStatusDesc": "All analytics tools are active",
+  "proUnlockTitle": "Unlock Pro Tools",
+  "proUnlockDesc": "Sell with data, not guesswork",
+  "proUnlockBtn": "Go Pro",
+  "proUpgradeSheetDesc": "You need to upgrade to Pro to use this tool.",
+  "blastRemainingTitle": "Remaining This Month",
+  "blastCreditEmpty": "Your blast credits are used up for this month. Renewed next month.",
+  "blastCreditUsed": "Used {used} blasts, {remaining} remaining.",
+  "@blastCreditUsed": {
+    "placeholders": {
+      "used": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "proAnalyticsTitle": "Pro Analytics",
+  "proSectionOverview": "📊 Overview",
+  "proSectionFunnel": "🔽 Conversion Funnel",
+  "proSectionTips": "🤖 Smart Suggestions",
+  "proSectionHotLeads": "🔥 Hot Leads",
+  "proHotLeadsDesc": "Viewed but no bid placed — buyers close to buying",
+  "proSectionPriceIntel": "💎 Price Intelligence",
+  "proPriceIntelDesc": "ML — comparison with similar listings",
+  "proSectionStreamPerf": "📡 Stream Performance",
+  "proSectionPeakHours": "⏰ Platform Peak Hours",
+  "proPeakHoursDesc": "Hours with most engagement in the last 30 days",
+  "proKpiRevenue30d": "Last 30-Day Revenue",
+  "proKpiLast30d": "last 30 days",
+  "proKpiSales": "Total Sales",
+  "proKpiBids": "Received Bids",
+  "proKpiActiveListings": "Active Listings",
+  "proKpiItemUnit": "items",
+  "proKpiBidUnit": "bids",
+  "proKpiListingUnit": "listings",
+  "proKpiTotalUnit": "total",
+  "proFunnelViews": "👁 Views",
+  "proFunnelHesitation": "🤔 Inspected (hesitation)",
+  "proFunnelBid": "🔨 Bid",
+  "proFunnelSale": "✅ Sale",
+  "proFunnelViewToBid": "View → Bid",
+  "proFunnelBidToSale": "Bid → Sale",
+  "priceSignalExpensive": "⬆ Expensive",
+  "priceSignalCheap": "⬇ Cheap",
+  "priceSignalFair": "✓ Fair",
+  "priceYours": "Your Price",
+  "priceMarketAvg": "Market Average",
+  "priceDiff": "Diff",
+  "proNoStreams": "No live streams yet.",
+  "proStreamTotal": "Total Streams",
+  "proStreamThisMonth": "This Month",
+  "proStreamAvgViewers": "Avg. Viewers",
+  "proStreamPeak": "Peak",
+  "proStreamAvgDuration": "Avg. stream duration: {dur} min",
+  "@proStreamAvgDuration": {
+    "placeholders": {
+      "dur": { "type": "String" }
+    }
+  },
+  "proEngagements": "eng.",
+  "marketSearchTitle": "People are searching for",
+  "marketDayFilter": "{days} days",
+  "@marketDayFilter": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "marketNoSearchData": "No search data yet. Will appear as users search.",
+  "marketCategoryTitle": "Which categories they search in",
+  "marketPeakHoursTitle": "Shopping peaks at these hours",
+  "marketPeakHoursDesc": "Post your listings at these hours to reach more people.",
+  "marketNoActivityData": "Not enough activity data yet.",
+  "marketTrendingTitle": "These categories are trending",
+  "marketTrendingDesc": "Listing in these categories may increase your chances of selling.",
+  "marketGrowthPos": "Platform overall growth: +{pct}%",
+  "@marketGrowthPos": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "marketGrowthNeg": "Platform overall decline: {pct}%",
+  "@marketGrowthNeg": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "marketGrowthSub": "Avg. purchase amount vs previous 30 days",
+  "marketPaywallDesc": "See what buyers search for, when they shop, and which categories are trending.",
+  "listingPerfTitle": "Your Listings' Performance",
+  "listingNoDataTitle": "No Data Yet",
+  "listingNoDataDesc": "Data will appear once your listings are shown in the feed.",
+  "listingDayFilterN": "Last {n} Days",
+  "@listingDayFilterN": {
+    "placeholders": {
+      "n": { "type": "int" }
+    }
+  },
+  "listingTotalViews": "Total Views",
+  "listingAvgCtr": "Avg. Click Rate",
+  "listingVideoBeatsPhoto": "🎬 Video listings get {x}× more clicks than photo listings.",
+  "@listingVideoBeatsPhoto": {
+    "placeholders": {
+      "x": { "type": "String" }
+    }
+  },
+  "listingPhotoBeatsVideo": "📸 Photo listings get {x}× more clicks than video listings.",
+  "@listingPhotoBeatsVideo": {
+    "placeholders": {
+      "x": { "type": "String" }
+    }
+  },
+  "listingMediaEqual": "Video and photo listings get similar attention.",
+  "listingVideoLabel": "Video",
+  "listingPhotoLabel": "Photo",
+  "listingWatchRateLabel": "Watch rate",
+  "listingWatchedPct": "{pct}% watched",
+  "@listingWatchedPct": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "listingGalleryLabel": "Gallery interest",
+  "listingGalleryDeep": "Scrolled to photo {n}",
+  "@listingGalleryDeep": {
+    "placeholders": {
+      "n": { "type": "String" }
+    }
+  },
+  "listingGalleryShallow": "Viewed only the first photo",
+  "metricViewed": "viewed",
+  "metricClicked": "clicked",
+  "listingPaywallDesc": "Track how many people saw each listing, how many clicked, and how much interest it received."
 }

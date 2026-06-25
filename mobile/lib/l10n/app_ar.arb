@@ -608,5 +608,153 @@
   "reportSmartInsight": "توصية ذكية",
   "reportDurationMin": "د",
   "reportDurationHour": "س",
-  "reportDurationLess": "< 1 د"
+  "reportDurationLess": "< 1 د",
+
+  "proLoadFailed": "فشل تحميل البيانات.",
+  "proUpgradeTitle": "ميزة Pro",
+  "proUpgradeBtn": "👑 الترقية إلى Pro",
+  "proHubTitle": "أدوات Pro",
+  "proToolSalesTitle": "تقرير المبيعات والجمهور",
+  "proToolSalesDesc": "الإيرادات ومعدلات التحويل وإعلاناتك الساخنة",
+  "proToolListingsTitle": "تحليلات الإعلانات",
+  "proToolListingsDesc": "كم شخصاً وصل إليه كل إعلان ونقر عليه",
+  "proToolMarketTitle": "استخبارات السوق",
+  "proToolMarketDesc": "ما يبحث عنه المشترون ومتى يتسوقون",
+  "proBlastSection": "رصيد دعوة الجمهور",
+  "proBenefitsTitle": "ماذا ستحصل مع Pro",
+  "proBenefit1": "شاهد أين تذهب مبيعاتك وإيراداتك",
+  "proBenefit2": "كم شخصاً شاهد ونقر على كل إعلان",
+  "proBenefit3": "تعلم أوقات الذروة للمشترين",
+  "proBenefit4": "ما يبحث عنه الناس — اسد الفجوة وبِع",
+  "proStatusTitle": "👑 مستخدم Pro",
+  "proStatusDesc": "جميع أدوات التحليل نشطة",
+  "proUnlockTitle": "فتح أدوات Pro",
+  "proUnlockDesc": "بِع بالبيانات، لا بالتخمين",
+  "proUnlockBtn": "الترقية إلى Pro",
+  "proUpgradeSheetDesc": "تحتاج إلى الترقية إلى Pro لاستخدام هذه الأداة.",
+  "blastRemainingTitle": "الرصيد المتبقي هذا الشهر",
+  "blastCreditEmpty": "استنفدت رصيدك للبث هذا الشهر. يتجدد الشهر القادم.",
+  "blastCreditUsed": "استخدمت {used} بث، {remaining} متبقٍ.",
+  "@blastCreditUsed": {
+    "placeholders": {
+      "used": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "proAnalyticsTitle": "تحليلات Pro",
+  "proSectionOverview": "📊 نظرة عامة",
+  "proSectionFunnel": "🔽 مسار التحويل",
+  "proSectionTips": "🤖 اقتراحات ذكية",
+  "proSectionHotLeads": "🔥 العملاء المحتملون",
+  "proHotLeadsDesc": "تمت المعاينة بدون عرض — مشترون قريبون من الشراء",
+  "proSectionPriceIntel": "💎 استخبارات الأسعار",
+  "proPriceIntelDesc": "ML — مقارنة مع إعلانات مشابهة",
+  "proSectionStreamPerf": "📡 أداء البث",
+  "proSectionPeakHours": "⏰ ساعات الذروة في المنصة",
+  "proPeakHoursDesc": "الساعات الأكثر تفاعلاً في آخر 30 يوماً",
+  "proKpiRevenue30d": "إيرادات آخر 30 يوماً",
+  "proKpiLast30d": "آخر 30 يوماً",
+  "proKpiSales": "إجمالي المبيعات",
+  "proKpiBids": "العروض الواردة",
+  "proKpiActiveListings": "الإعلانات النشطة",
+  "proKpiItemUnit": "عنصر",
+  "proKpiBidUnit": "عرض",
+  "proKpiListingUnit": "إعلان",
+  "proKpiTotalUnit": "إجمالي",
+  "proFunnelViews": "👁 المشاهدات",
+  "proFunnelHesitation": "🤔 فحص (تردد)",
+  "proFunnelBid": "🔨 عرض",
+  "proFunnelSale": "✅ بيع",
+  "proFunnelViewToBid": "مشاهدة → عرض",
+  "proFunnelBidToSale": "عرض → بيع",
+  "priceSignalExpensive": "⬆ مرتفع",
+  "priceSignalCheap": "⬇ منخفض",
+  "priceSignalFair": "✓ مناسب",
+  "priceYours": "سعرك",
+  "priceMarketAvg": "متوسط السوق",
+  "priceDiff": "الفرق",
+  "proNoStreams": "لا يوجد بث مباشر حتى الآن.",
+  "proStreamTotal": "إجمالي البث",
+  "proStreamThisMonth": "هذا الشهر",
+  "proStreamAvgViewers": "متوسط المشاهدين",
+  "proStreamPeak": "الذروة",
+  "proStreamAvgDuration": "متوسط مدة البث: {dur} دقيقة",
+  "@proStreamAvgDuration": {
+    "placeholders": {
+      "dur": { "type": "String" }
+    }
+  },
+  "proEngagements": "تفاعل",
+  "marketSearchTitle": "ما يبحث عنه الناس",
+  "marketDayFilter": "{days} يوم",
+  "@marketDayFilter": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "marketNoSearchData": "لا توجد بيانات بحث بعد. ستظهر عندما يبحث المستخدمون.",
+  "marketCategoryTitle": "الفئات التي يبحثون فيها",
+  "marketPeakHoursTitle": "التسوق في أوجه في هذه الساعات",
+  "marketPeakHoursDesc": "انشر إعلاناتك في هذه الساعات للوصول إلى المزيد.",
+  "marketNoActivityData": "لا توجد بيانات نشاط كافية بعد.",
+  "marketTrendingTitle": "هذه الفئات تتصاعد",
+  "marketTrendingDesc": "الإعلان في هذه الفئات قد يزيد فرص البيع.",
+  "marketGrowthPos": "النمو العام للمنصة: +{pct}%",
+  "@marketGrowthPos": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "marketGrowthNeg": "التراجع العام للمنصة: {pct}%",
+  "@marketGrowthNeg": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "marketGrowthSub": "متوسط مبلغ الشراء مقارنة بالـ30 يوماً السابقة",
+  "marketPaywallDesc": "شاهد ما يبحث عنه المشترون، ومتى يتسوقون، وأي الفئات ترتفع.",
+  "listingPerfTitle": "أداء إعلاناتك",
+  "listingNoDataTitle": "لا توجد بيانات بعد",
+  "listingNoDataDesc": "ستظهر البيانات حين تُعرض إعلاناتك في الخلاصة.",
+  "listingDayFilterN": "آخر {n} يوماً",
+  "@listingDayFilterN": {
+    "placeholders": {
+      "n": { "type": "int" }
+    }
+  },
+  "listingTotalViews": "إجمالي المشاهدات",
+  "listingAvgCtr": "متوسط معدل النقر",
+  "listingVideoBeatsPhoto": "🎬 إعلانات الفيديو تحصل على {x}× نقرات أكثر من الصور.",
+  "@listingVideoBeatsPhoto": {
+    "placeholders": {
+      "x": { "type": "String" }
+    }
+  },
+  "listingPhotoBeatsVideo": "📸 إعلانات الصور تحصل على {x}× نقرات أكثر من الفيديو.",
+  "@listingPhotoBeatsVideo": {
+    "placeholders": {
+      "x": { "type": "String" }
+    }
+  },
+  "listingMediaEqual": "إعلانات الفيديو والصور تحظى باهتمام مماثل.",
+  "listingVideoLabel": "فيديو",
+  "listingPhotoLabel": "صورة",
+  "listingWatchRateLabel": "معدل المشاهدة",
+  "listingWatchedPct": "تمت مشاهدة {pct}%",
+  "@listingWatchedPct": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "listingGalleryLabel": "اهتمام المعرض",
+  "listingGalleryDeep": "تمرير حتى الصورة {n}",
+  "@listingGalleryDeep": {
+    "placeholders": {
+      "n": { "type": "String" }
+    }
+  },
+  "listingGalleryShallow": "شاهد الصورة الأولى فقط",
+  "metricViewed": "شاهد",
+  "metricClicked": "نقر",
+  "listingPaywallDesc": "تتبع كم شخصاً رأى كل إعلان، وكم نقر، ومدى الاهتمام به."
 }

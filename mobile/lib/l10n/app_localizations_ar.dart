@@ -89,7 +89,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get fieldUsernameSubtitle =>
-      'يمكن استخدام الحروف الصغيرة والأرقام و _ فقط';
+      'يمكن استخدام الحروف الصغيرة والأرقام و _';
 
   @override
   String get fieldCurrentPassword => 'كلمة المرور الحالية';
@@ -463,8 +463,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get errorPhotoUpload => 'تعذّر رفع الصورة. حاول مجدداً.';
 
   @override
-  String get errorCaptchaFailed =>
-      'فشل التحقق الأمني. يرجى المحاولة مجدداً.';
+  String get errorCaptchaFailed => 'فشل التحقق الأمني. يرجى المحاولة مجدداً.';
 
   @override
   String get errorTooFast =>
@@ -480,8 +479,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get dialogDeleteListingTitle => 'حذف الإعلان';
 
   @override
-  String get dialogDeleteListingDesc =>
-      'هل تريد حذف هذا الإعلان نهائياً؟';
+  String get dialogDeleteListingDesc => 'هل تريد حذف هذا الإعلان نهائياً؟';
 
   @override
   String get dialogFaceIdActivateTitle => 'تحقق لتفعيل Face ID';
@@ -522,8 +520,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get msgNoMessages => 'لا توجد رسائل بعد';
 
   @override
-  String get msgNoMessagesDesc =>
-      'عندما تهتم بإعلان ما\nسيظهر هنا';
+  String get msgNoMessagesDesc => 'عندما تهتم بإعلان ما\nسيظهر هنا';
 
   @override
   String get msgSendFailed => 'تعذّر إرسال الرسالة';
@@ -568,7 +565,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get followNoFollowing => 'لا يوجد متابَعون بعد';
 
   @override
-  String get followBtnFollowing => 'تتابعه';
+  String get followBtnFollowing => 'يتابعك';
 
   @override
   String get followBtnFollow => 'متابعة';
@@ -702,8 +699,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notifSettingsNewListingTitle => 'إعلان جديد';
 
   @override
-  String get notifSettingsNewListingDesc =>
-      'عندما يضيف أحد متابَعيك إعلاناً';
+  String get notifSettingsNewListingDesc => 'عندما يضيف أحد متابَعيك إعلاناً';
 
   @override
   String get notifSettingsNewBidTitle => 'عرض جديد';
@@ -715,8 +711,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notifSettingsOutbidTitle => 'تجاوز العرض';
 
   @override
-  String get notifSettingsOutbidDesc =>
-      'عندما يتجاوز أحدهم عرضك في المزاد';
+  String get notifSettingsOutbidDesc => 'عندما يتجاوز أحدهم عرضك في المزاد';
 
   @override
   String get btnOk => 'موافق';
@@ -843,8 +838,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get liveStreamTitleRequired => 'عنوان البث مطلوب';
 
   @override
-  String get liveStreamTitleMin =>
-      'يجب أن يتجاوز عنوان البث 3 أحرف.';
+  String get liveStreamTitleMin => 'يجب أن يتجاوز عنوان البث 3 أحرف.';
 
   @override
   String get liveCategoryRequired => 'اختيار الفئة مطلوب';
@@ -1104,8 +1098,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get auctionInProgressNoBid =>
-      'لا يمكنك تقديم عرض حتى تنتهي العملية.';
+  String get auctionInProgressNoBid => 'لا يمكنك تقديم عرض حتى تنتهي العملية.';
 
   @override
   String get auctionSold => '🛒 مُباع!';
@@ -1124,12 +1117,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get auctionBinRejected =>
-      'تم رفض طلب الشراء الفوري، المزاد مستمر.';
+  String get auctionBinRejected => 'تم رفض طلب الشراء الفوري، المزاد مستمر.';
 
   @override
-  String get auctionBinRejectedOther =>
-      'اكتمل الشراء الفوري، المزاد مستمر.';
+  String get auctionBinRejectedOther => 'اكتمل الشراء الفوري، المزاد مستمر.';
 
   @override
   String get auctionBuyNowBtn => '⚡ اشتر الآن — ';
@@ -1354,8 +1345,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportBadge => 'تحليل البث';
 
   @override
-  String get reportStreamEndedDesc =>
-      'انتهى البث. تحليل جمهورك أدناه.';
+  String get reportStreamEndedDesc => 'انتهى البث. تحليل جمهورك أدناه.';
 
   @override
   String get reportMetricPeakViewers => 'ذروة\nالمشاهدين';
@@ -1412,8 +1402,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportChipBids => 'العروض';
 
   @override
-  String reportHesitation(int count) =>
-      '$count عرض متردد — هؤلاء المشاهدون كانوا قريبين من السعر لكنهم لم يتحولوا.';
+  String reportHesitation(int count) {
+    return '$count عرض متردد — هؤلاء المشاهدون كانوا قريبين من السعر لكنهم لم يتحولوا.';
+  }
 
   @override
   String get reportSmartInsight => 'توصية ذكية';
@@ -1426,4 +1417,197 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportDurationLess => '< 1 د';
+
+  @override
+  String get proLoadFailed => 'فشل تحميل البيانات.';
+  @override
+  String get proUpgradeTitle => 'ميزة Pro';
+  @override
+  String get proUpgradeBtn => '👑 الترقية إلى Pro';
+  @override
+  String get proHubTitle => 'أدوات Pro';
+  @override
+  String get proToolSalesTitle => 'تقرير المبيعات والجمهور';
+  @override
+  String get proToolSalesDesc => 'الإيرادات ومعدلات التحويل وإعلاناتك الساخنة';
+  @override
+  String get proToolListingsTitle => 'تحليلات الإعلانات';
+  @override
+  String get proToolListingsDesc => 'كم شخصاً وصل إليه كل إعلان ونقر عليه';
+  @override
+  String get proToolMarketTitle => 'استخبارات السوق';
+  @override
+  String get proToolMarketDesc => 'ما يبحث عنه المشترون ومتى يتسوقون';
+  @override
+  String get proBlastSection => 'رصيد دعوة الجمهور';
+  @override
+  String get proBenefitsTitle => 'ماذا ستحصل مع Pro';
+  @override
+  String get proBenefit1 => 'شاهد أين تذهب مبيعاتك وإيراداتك';
+  @override
+  String get proBenefit2 => 'كم شخصاً شاهد ونقر على كل إعلان';
+  @override
+  String get proBenefit3 => 'تعلم أوقات الذروة للمشترين';
+  @override
+  String get proBenefit4 => 'ما يبحث عنه الناس — اسد الفجوة وبِع';
+  @override
+  String get proStatusTitle => '👑 مستخدم Pro';
+  @override
+  String get proStatusDesc => 'جميع أدوات التحليل نشطة';
+  @override
+  String get proUnlockTitle => 'فتح أدوات Pro';
+  @override
+  String get proUnlockDesc => 'بِع بالبيانات، لا بالتخمين';
+  @override
+  String get proUnlockBtn => 'الترقية إلى Pro';
+  @override
+  String get proUpgradeSheetDesc => 'تحتاج إلى الترقية إلى Pro لاستخدام هذه الأداة.';
+  @override
+  String get blastRemainingTitle => 'الرصيد المتبقي هذا الشهر';
+  @override
+  String get blastCreditEmpty => 'استنفدت رصيدك للبث هذا الشهر. يتجدد الشهر القادم.';
+  @override
+  String blastCreditUsed(int used, int remaining) => 'استخدمت $used بث، $remaining متبقٍ.';
+  @override
+  String get proAnalyticsTitle => 'تحليلات Pro';
+  @override
+  String get proSectionOverview => '📊 نظرة عامة';
+  @override
+  String get proSectionFunnel => '🔽 مسار التحويل';
+  @override
+  String get proSectionTips => '🤖 اقتراحات ذكية';
+  @override
+  String get proSectionHotLeads => '🔥 العملاء المحتملون';
+  @override
+  String get proHotLeadsDesc => 'تمت المعاينة بدون عرض — مشترون قريبون من الشراء';
+  @override
+  String get proSectionPriceIntel => '💎 استخبارات الأسعار';
+  @override
+  String get proPriceIntelDesc => 'ML — مقارنة مع إعلانات مشابهة';
+  @override
+  String get proSectionStreamPerf => '📡 أداء البث';
+  @override
+  String get proSectionPeakHours => '⏰ ساعات الذروة في المنصة';
+  @override
+  String get proPeakHoursDesc => 'الساعات الأكثر تفاعلاً في آخر 30 يوماً';
+  @override
+  String get proKpiRevenue30d => 'إيرادات آخر 30 يوماً';
+  @override
+  String get proKpiLast30d => 'آخر 30 يوماً';
+  @override
+  String get proKpiSales => 'إجمالي المبيعات';
+  @override
+  String get proKpiBids => 'العروض الواردة';
+  @override
+  String get proKpiActiveListings => 'الإعلانات النشطة';
+  @override
+  String get proKpiItemUnit => 'عنصر';
+  @override
+  String get proKpiBidUnit => 'عرض';
+  @override
+  String get proKpiListingUnit => 'إعلان';
+  @override
+  String get proKpiTotalUnit => 'إجمالي';
+  @override
+  String get proFunnelViews => '👁 المشاهدات';
+  @override
+  String get proFunnelHesitation => '🤔 فحص (تردد)';
+  @override
+  String get proFunnelBid => '🔨 عرض';
+  @override
+  String get proFunnelSale => '✅ بيع';
+  @override
+  String get proFunnelViewToBid => 'مشاهدة → عرض';
+  @override
+  String get proFunnelBidToSale => 'عرض → بيع';
+  @override
+  String get priceSignalExpensive => '⬆ مرتفع';
+  @override
+  String get priceSignalCheap => '⬇ منخفض';
+  @override
+  String get priceSignalFair => '✓ مناسب';
+  @override
+  String get priceYours => 'سعرك';
+  @override
+  String get priceMarketAvg => 'متوسط السوق';
+  @override
+  String get priceDiff => 'الفرق';
+  @override
+  String get proNoStreams => 'لا يوجد بث مباشر حتى الآن.';
+  @override
+  String get proStreamTotal => 'إجمالي البث';
+  @override
+  String get proStreamThisMonth => 'هذا الشهر';
+  @override
+  String get proStreamAvgViewers => 'متوسط المشاهدين';
+  @override
+  String get proStreamPeak => 'الذروة';
+  @override
+  String proStreamAvgDuration(String dur) => 'متوسط مدة البث: $dur دقيقة';
+  @override
+  String get proEngagements => 'تفاعل';
+  @override
+  String get marketSearchTitle => 'ما يبحث عنه الناس';
+  @override
+  String marketDayFilter(int days) => '$days يوم';
+  @override
+  String get marketNoSearchData => 'لا توجد بيانات بحث بعد. ستظهر عندما يبحث المستخدمون.';
+  @override
+  String get marketCategoryTitle => 'الفئات التي يبحثون فيها';
+  @override
+  String get marketPeakHoursTitle => 'التسوق في أوجه في هذه الساعات';
+  @override
+  String get marketPeakHoursDesc => 'انشر إعلاناتك في هذه الساعات للوصول إلى المزيد.';
+  @override
+  String get marketNoActivityData => 'لا توجد بيانات نشاط كافية بعد.';
+  @override
+  String get marketTrendingTitle => 'هذه الفئات تتصاعد';
+  @override
+  String get marketTrendingDesc => 'الإعلان في هذه الفئات قد يزيد فرص البيع.';
+  @override
+  String marketGrowthPos(String pct) => 'النمو العام للمنصة: +$pct%';
+  @override
+  String marketGrowthNeg(String pct) => 'التراجع العام للمنصة: $pct%';
+  @override
+  String get marketGrowthSub => 'متوسط مبلغ الشراء مقارنة بالـ30 يوماً السابقة';
+  @override
+  String get marketPaywallDesc => 'شاهد ما يبحث عنه المشترون، ومتى يتسوقون، وأي الفئات ترتفع.';
+  @override
+  String get listingPerfTitle => 'أداء إعلاناتك';
+  @override
+  String get listingNoDataTitle => 'لا توجد بيانات بعد';
+  @override
+  String get listingNoDataDesc => 'ستظهر البيانات حين تُعرض إعلاناتك في الخلاصة.';
+  @override
+  String listingDayFilterN(int n) => 'آخر $n يوماً';
+  @override
+  String get listingTotalViews => 'إجمالي المشاهدات';
+  @override
+  String get listingAvgCtr => 'متوسط معدل النقر';
+  @override
+  String listingVideoBeatsPhoto(String x) => '🎬 إعلانات الفيديو تحصل على ${x}× نقرات أكثر من الصور.';
+  @override
+  String listingPhotoBeatsVideo(String x) => '📸 إعلانات الصور تحصل على ${x}× نقرات أكثر من الفيديو.';
+  @override
+  String get listingMediaEqual => 'إعلانات الفيديو والصور تحظى باهتمام مماثل.';
+  @override
+  String get listingVideoLabel => 'فيديو';
+  @override
+  String get listingPhotoLabel => 'صورة';
+  @override
+  String get listingWatchRateLabel => 'معدل المشاهدة';
+  @override
+  String listingWatchedPct(String pct) => 'تمت مشاهدة $pct%';
+  @override
+  String get listingGalleryLabel => 'اهتمام المعرض';
+  @override
+  String listingGalleryDeep(String n) => 'تمرير حتى الصورة $n';
+  @override
+  String get listingGalleryShallow => 'شاهد الصورة الأولى فقط';
+  @override
+  String get metricViewed => 'شاهد';
+  @override
+  String get metricClicked => 'نقر';
+  @override
+  String get listingPaywallDesc => 'تتبع كم شخصاً رأى كل إعلان، وكم نقر، ومدى الاهتمام به.';
 }

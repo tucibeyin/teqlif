@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 
 class ListingAnalyticsScreen extends StatefulWidget {
@@ -15,9 +16,8 @@ class ListingAnalyticsScreen extends StatefulWidget {
 class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   int _days = 30;
   bool _loading = true;
-  String? _error;
+  bool _hasError = false;
 
-  // Birleştirilmiş ilan verisi
   List<_ListingMetric> _listings = [];
   double _videoCtr = 0;
   double _photoCtr = 0;
@@ -27,14 +27,16 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.isPremium) _load();
-    else setState(() => _loading = false);
+    if (widget.isPremium) {
+      _load();
+    } else {
+      setState(() => _loading = false);
+    }
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _hasError = false; });
 
-    // 3 kaynaktan paralel veri çek
     final results = await Future.wait([
       AnalyticsService.getVideoRoi(days: _days),
       AnalyticsService.getVideoPerformance(days: _days),
@@ -48,11 +50,10 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
     final gallery   = results[2];
 
     if (roi == null && videoPerf == null && gallery == null) {
-      setState(() { _loading = false; _error = 'Veriler yüklenemedi.'; });
+      setState(() { _loading = false; _hasError = true; });
       return;
     }
 
-    // Hız tabloları: listing_id → metrik
     final videoMap = <String, Map<String, dynamic>>{
       for (final s in (videoPerf?['stats'] as List? ?? []).cast<Map<String, dynamic>>())
         s['listing_id'].toString(): s,
@@ -84,7 +85,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
     setState(() {
       _loading = false;
-      _error = null;
+      _hasError = false;
       _listings = merged;
       _videoCtr = (roi?['video']?['ctr'] as num?)?.toDouble() ?? 0;
       _photoCtr = (roi?['photo']?['ctr'] as num?)?.toDouble() ?? 0;
@@ -95,42 +96,43 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: const Text('İlan Analizleri'),
+        title: Text(l.proToolListingsTitle),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : (_error != null && widget.isPremium)
-              ? _buildError()
+          : (_hasError && widget.isPremium)
+              ? _buildError(l)
               : Stack(
                   children: [
-                    _buildContent(),
-                    if (!widget.isPremium) _buildPaywall(context),
+                    _buildContent(l),
+                    if (!widget.isPremium) _buildPaywall(context, l),
                   ],
                 ),
     );
   }
 
-  Widget _buildError() {
+  Widget _buildError(AppLocalizations l) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textSecondary(context)),
           const SizedBox(height: 12),
-          Text(_error!, style: TextStyle(color: AppColors.textSecondary(context))),
+          Text(l.proLoadFailed, style: TextStyle(color: AppColors.textSecondary(context))),
           const SizedBox(height: 16),
-          TextButton(onPressed: _load, child: const Text('Tekrar Dene')),
+          TextButton(onPressed: _load, child: Text(l.btnRetry)),
         ],
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations l) {
     final totalImp = _videoImp + _photoImp;
     final totalCtr = totalImp > 0
         ? ((_videoCtr * _videoImp + _photoCtr * _photoImp) / totalImp)
@@ -141,23 +143,21 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
-          // ── Gün Filtresi ──────────────────────────────────────────────────
-          _DayFilter(days: _days, onChanged: (d) { setState(() => _days = d); _load(); }),
+          _DayFilter(days: _days, l: l, onChanged: (d) { setState(() => _days = d); _load(); }),
           const SizedBox(height: 16),
 
-          // ── Özet Kartlar ──────────────────────────────────────────────────
           if (_listings.isNotEmpty) ...[
             Row(
               children: [
                 _SummaryTile(
-                  label: 'Toplam Görüntülenme',
+                  label: l.listingTotalViews,
                   value: _fmt(totalImp),
                   icon: Icons.visibility_outlined,
                   color: const Color(0xFF6366F1),
                 ),
                 const SizedBox(width: 10),
                 _SummaryTile(
-                  label: 'Ortalama Tıklanma',
+                  label: l.listingAvgCtr,
                   value: '%${totalCtr.toStringAsFixed(1)}',
                   icon: Icons.ads_click_outlined,
                   color: const Color(0xFF10B981),
@@ -166,13 +166,12 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── Video vs Fotoğraf Karşılaştırması ─────────────────────────
             if (_videoImp > 0 && _photoImp > 0)
-              _ComparisonCard(videoCtr: _videoCtr, photoCtr: _photoCtr),
+              _ComparisonCard(videoCtr: _videoCtr, photoCtr: _photoCtr, l: l),
 
             const SizedBox(height: 20),
             Text(
-              'İlanlarınızın Performansı',
+              l.listingPerfTitle,
               style: TextStyle(
                 fontSize: 14, fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary(context),
@@ -181,21 +180,20 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             const SizedBox(height: 10),
           ],
 
-          // ── İlan Kartları ─────────────────────────────────────────────────
           if (_listings.isEmpty)
             _EmptyState(
               icon: Icons.bar_chart_outlined,
-              title: 'Henüz veri yok',
-              subtitle: 'İlanlarınız swipe feed\'de gösterime girince\nburadaki veriler dolmaya başlayacak.',
+              title: l.listingNoDataTitle,
+              subtitle: l.listingNoDataDesc,
             )
           else
-            ..._listings.map((l) => _ListingCard(metric: l)),
+            ..._listings.map((m) => _ListingCard(metric: m, l: l)),
         ],
       ),
     );
   }
 
-  Widget _buildPaywall(BuildContext context) {
+  Widget _buildPaywall(BuildContext context, AppLocalizations l) {
     return Positioned.fill(
       child: ClipRect(
         child: BackdropFilter(
@@ -223,12 +221,12 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                       child: const Icon(Icons.bar_chart_outlined, color: Colors.white, size: 32),
                     ),
                     const SizedBox(height: 20),
-                    Text('Pro Özelliği',
+                    Text(l.proUpgradeTitle,
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary(context))),
                     const SizedBox(height: 10),
                     Text(
-                      'Her ilanınızın kaç kişiye ulaştığını,\nkaçının tıkladığını ve ne kadar ilgi\ngördüğünü takip edin.',
+                      l.listingPaywallDesc,
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5),
                     ),
@@ -248,8 +246,8 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('👑 Pro\'ya Geç',
-                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
+                          child: Text(l.proUpgradeBtn,
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
                         ),
                       ),
                     ),
@@ -291,8 +289,9 @@ class _ListingMetric {
 
 class _DayFilter extends StatelessWidget {
   final int days;
+  final AppLocalizations l;
   final ValueChanged<int> onChanged;
-  const _DayFilter({required this.days, required this.onChanged});
+  const _DayFilter({required this.days, required this.l, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -312,7 +311,7 @@ class _DayFilter extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: active ? const Color(0xFF6366F1) : AppColors.border(context)),
                 ),
-                child: Text('Son $d Gün',
+                child: Text(l.listingDayFilterN(d),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontWeight: FontWeight.w700, fontSize: 13,
@@ -374,7 +373,8 @@ class _SummaryTile extends StatelessWidget {
 class _ComparisonCard extends StatelessWidget {
   final double videoCtr;
   final double photoCtr;
-  const _ComparisonCard({required this.videoCtr, required this.photoCtr});
+  final AppLocalizations l;
+  const _ComparisonCard({required this.videoCtr, required this.photoCtr, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -382,12 +382,12 @@ class _ComparisonCard extends StatelessWidget {
     if (videoCtr == 0 && photoCtr == 0) return const SizedBox.shrink();
     if (photoCtr > 0 && videoCtr > photoCtr * 1.1) {
       final x = (videoCtr / photoCtr).toStringAsFixed(1);
-      message = '🎬 Videolu ilanlarınız, fotoğraflılara göre $x kat daha fazla tıklanıyor.';
+      message = l.listingVideoBeatsPhoto(x);
     } else if (videoCtr > 0 && photoCtr > videoCtr * 1.1) {
       final x = (photoCtr / videoCtr).toStringAsFixed(1);
-      message = '📸 Fotoğraflı ilanlarınız, videolulara göre $x kat daha fazla tıklanıyor.';
+      message = l.listingPhotoBeatsVideo(x);
     } else {
-      message = 'Video ve fotoğraflı ilanlarınız benzer ilgi görüyor.';
+      message = l.listingMediaEqual;
     }
 
     return Container(
@@ -405,9 +405,9 @@ class _ComparisonCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _SegChip(emoji: '🎬', label: 'Videolu', ctr: videoCtr),
+              _SegChip(emoji: '🎬', label: l.listingVideoLabel, ctr: videoCtr),
               const SizedBox(width: 8),
-              _SegChip(emoji: '📸', label: 'Fotoğraflı', ctr: photoCtr),
+              _SegChip(emoji: '📸', label: l.listingPhotoLabel, ctr: photoCtr),
             ],
           ),
         ],
@@ -438,7 +438,8 @@ class _SegChip extends StatelessWidget {
 
 class _ListingCard extends StatelessWidget {
   final _ListingMetric metric;
-  const _ListingCard({required this.metric});
+  final AppLocalizations l;
+  const _ListingCard({required this.metric, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -452,8 +453,8 @@ class _ListingCard extends StatelessWidget {
     String? extraValue;
     Color extraColor = const Color(0xFF6366F1);
     if (metric.isVideo && metric.completionPct != null) {
-      extraLabel = 'İzleme oranı';
-      extraValue = '%${metric.completionPct!.toStringAsFixed(0)} izlendi';
+      extraLabel = l.listingWatchRateLabel;
+      extraValue = l.listingWatchedPct(metric.completionPct!.toStringAsFixed(0));
       extraColor = metric.completionPct! >= 60
           ? const Color(0xFF22C55E)
           : metric.completionPct! >= 30
@@ -461,10 +462,10 @@ class _ListingCard extends StatelessWidget {
               : const Color(0xFFEF4444);
     } else if (!metric.isVideo && metric.avgPhotoDepth != null) {
       final depth = metric.avgPhotoDepth!;
-      extraLabel = 'Galeri ilgisi';
+      extraLabel = l.listingGalleryLabel;
       extraValue = depth >= 2
-          ? '${depth.toStringAsFixed(0)}. fotoğrafa kadar baktı'
-          : 'Sadece ilk fotoğrafa baktı';
+          ? l.listingGalleryDeep(depth.toStringAsFixed(0))
+          : l.listingGalleryShallow;
       extraColor = depth >= 3
           ? const Color(0xFF22C55E)
           : depth >= 1.5
@@ -483,7 +484,6 @@ class _ListingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Başlık + Tür
           Row(
             children: [
               Expanded(
@@ -496,20 +496,19 @@ class _ListingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          // Metrik satırı
           Row(
             children: [
               _MetricPill(
                 icon: Icons.visibility_outlined,
                 value: _fmtNum(metric.impressions),
-                label: 'gördü',
+                label: l.metricViewed,
                 color: const Color(0xFF6366F1),
               ),
               const SizedBox(width: 8),
               _MetricPill(
                 icon: Icons.ads_click_outlined,
                 value: '%${metric.ctr.toStringAsFixed(1)}',
-                label: 'tıkladı',
+                label: l.metricClicked,
                 color: ctrColor,
               ),
               if (extraValue != null) ...[
@@ -524,7 +523,7 @@ class _ListingCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(extraValue!, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: extraColor)),
+                        Text(extraValue, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: extraColor)),
                         Text(extraLabel!, style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
                       ],
                     ),

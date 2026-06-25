@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import 'listing_analytics_screen.dart';
 import 'market_intelligence_screen.dart';
@@ -31,11 +32,12 @@ class _ProHubScreenState extends State<ProHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final isPremium = widget.isPremium;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: const Text('Pro Araçları'),
+        title: Text(l.proHubTitle),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
@@ -50,7 +52,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 2, bottom: 12),
             child: Text(
-              'Pro Araçları',
+              l.proHubTitle,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -64,8 +66,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
           _ToolCard(
             icon: Icons.auto_graph_outlined,
             iconColor: const Color(0xFF6366F1),
-            title: 'Satış ve Kitle Raporu',
-            description: 'Gelirler, dönüşüm oranları ve sıcak ilanlarınız',
+            title: l.proToolSalesTitle,
+            description: l.proToolSalesDesc,
             isPremium: isPremium,
             onTap: isPremium
                 ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()))
@@ -75,8 +77,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
           _ToolCard(
             icon: Icons.bar_chart_outlined,
             iconColor: const Color(0xFF10B981),
-            title: 'İlan Analizleri',
-            description: 'Hangi ilanınız kaç kişiye ulaştı, kaçı tıkladı',
+            title: l.proToolListingsTitle,
+            description: l.proToolListingsDesc,
             isPremium: isPremium,
             onTap: isPremium
                 ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(isPremium: isPremium)))
@@ -86,8 +88,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
           _ToolCard(
             icon: Icons.insights_outlined,
             iconColor: const Color(0xFFF59E0B),
-            title: 'Pazar Bilgisi',
-            description: 'Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor',
+            title: l.proToolMarketTitle,
+            description: l.proToolMarketDesc,
             isPremium: isPremium,
             onTap: () => Navigator.push(
               context,
@@ -100,7 +102,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
           Padding(
             padding: const EdgeInsets.only(left: 2, bottom: 12),
             child: Text(
-              'Kitle Davet Kredisi',
+              l.proBlastSection,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -116,7 +118,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 2, bottom: 12),
               child: Text(
-                'Pro\'ya Geçince Ne Kazanırsın?',
+                l.proBenefitsTitle,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -125,10 +127,10 @@ class _ProHubScreenState extends State<ProHubScreen> {
                 ),
               ),
             ),
-            _BenefitRow(icon: Icons.insights_outlined,      text: 'Satışlarını ve gelirlerin nereye gittiğini gör'),
-            _BenefitRow(icon: Icons.bar_chart_outlined,     text: 'Her ilanına kaç kişi baktı, kaçı tıkladı'),
-            _BenefitRow(icon: Icons.schedule_outlined,      text: 'Alıcıların en aktif olduğu saatleri öğren'),
-            _BenefitRow(icon: Icons.search_outlined,        text: 'İnsanlar ne arıyor — boşluğu doldur, sat'),
+            _BenefitRow(icon: Icons.insights_outlined,      text: l.proBenefit1),
+            _BenefitRow(icon: Icons.bar_chart_outlined,     text: l.proBenefit2),
+            _BenefitRow(icon: Icons.schedule_outlined,      text: l.proBenefit3),
+            _BenefitRow(icon: Icons.search_outlined,        text: l.proBenefit4),
           ],
         ],
       ),
@@ -149,6 +151,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
 class _ProStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -175,9 +178,9 @@ class _ProStatusCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '👑 Pro Kullanıcı',
-                  style: TextStyle(
+                Text(
+                  l.proStatusTitle,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
@@ -185,7 +188,7 @@ class _ProStatusCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Tüm analitik araçlara erişiminiz aktif',
+                  l.proStatusDesc,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.75),
@@ -203,6 +206,7 @@ class _ProStatusCard extends StatelessWidget {
 class _UpgradeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -229,13 +233,13 @@ class _UpgradeBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Pro araçları kilidi aç',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
+                Text(
+                  l.proUnlockTitle,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Verilerle sat, değil tahminle',
+                  l.proUnlockDesc,
                   style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
                 ),
               ],
@@ -253,9 +257,9 @@ class _UpgradeBanner extends StatelessWidget {
                 color: const Color(0xFF06B6D4),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text(
-                'Pro\'ya Geç',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.black),
+              child: Text(
+                l.proUnlockBtn,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.black),
               ),
             ),
           ),
@@ -380,6 +384,7 @@ class _UpgradeSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card(context),
@@ -401,7 +406,7 @@ class _UpgradeSheet extends StatelessWidget {
           const Icon(Icons.workspace_premium, size: 48, color: Color(0xFFFFB800)),
           const SizedBox(height: 12),
           Text(
-            'Pro Özelliği',
+            l.proUpgradeTitle,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -410,7 +415,7 @@ class _UpgradeSheet extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Bu aracı kullanmak için Pro\'ya geçmeniz gerekiyor.',
+            l.proUpgradeSheetDesc,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5),
           ),
@@ -436,9 +441,9 @@ class _UpgradeSheet extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text(
-                  '👑 Pro\'ya Geç',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white),
+                child: Text(
+                  l.proUpgradeBtn,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white),
                 ),
               ),
             ),
@@ -446,7 +451,7 @@ class _UpgradeSheet extends StatelessWidget {
           const SizedBox(height: 10),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Vazgeç', style: TextStyle(color: AppColors.textSecondary(context))),
+            child: Text(l.btnDismiss, style: TextStyle(color: AppColors.textSecondary(context))),
           ),
         ],
       ),
@@ -464,6 +469,7 @@ class _BlastCreditCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final used      = credits?['used']      as int? ?? 0;
     final limit     = credits?['limit']     as int? ?? (isPremium ? 20 : 3);
     final remaining = credits?['remaining'] as int? ?? (isPremium ? 20 : 3);
@@ -502,7 +508,7 @@ class _BlastCreditCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Bu Ay Kalan Hak',
+                      l.blastRemainingTitle,
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                     ),
                     const SizedBox(height: 2),
@@ -555,8 +561,8 @@ class _BlastCreditCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             remaining == 0
-                ? 'Bu ay blast krediniz doldu. Yeni ayda yenilenir.'
-                : '$used blast kullandınız, $remaining hakkınız kaldı.',
+                ? l.blastCreditEmpty
+                : l.blastCreditUsed(used, remaining),
             style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
           ),
         ],

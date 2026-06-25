@@ -1413,8 +1413,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportChipBids => 'Bids';
 
   @override
-  String reportHesitation(int count) =>
-      '$count hesitant bid(s) — these viewers were close to the price point but didn\'t convert.';
+  String reportHesitation(int count) {
+    return '$count hesitant bid(s) — these viewers were close to the price point but didn\'t convert.';
+  }
 
   @override
   String get reportSmartInsight => 'Smart Insight';
@@ -1427,4 +1428,197 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportDurationLess => '< 1 min';
+
+  @override
+  String get proLoadFailed => 'Failed to load data.';
+  @override
+  String get proUpgradeTitle => 'Pro Feature';
+  @override
+  String get proUpgradeBtn => '👑 Go Pro';
+  @override
+  String get proHubTitle => 'Pro Tools';
+  @override
+  String get proToolSalesTitle => 'Sales & Audience Report';
+  @override
+  String get proToolSalesDesc => 'Revenue, conversion rates and hot listings';
+  @override
+  String get proToolListingsTitle => 'Listing Analytics';
+  @override
+  String get proToolListingsDesc => 'How many people each listing reached and clicked';
+  @override
+  String get proToolMarketTitle => 'Market Intelligence';
+  @override
+  String get proToolMarketDesc => 'What buyers search for and when they shop';
+  @override
+  String get proBlastSection => 'Audience Invite Credits';
+  @override
+  String get proBenefitsTitle => 'What You Get with Pro';
+  @override
+  String get proBenefit1 => 'See where your sales and revenue are going';
+  @override
+  String get proBenefit2 => 'How many viewed and clicked each listing';
+  @override
+  String get proBenefit3 => 'Learn the most active hours for buyers';
+  @override
+  String get proBenefit4 => 'What people search for — fill the gap, sell';
+  @override
+  String get proStatusTitle => '👑 Pro User';
+  @override
+  String get proStatusDesc => 'All analytics tools are active';
+  @override
+  String get proUnlockTitle => 'Unlock Pro Tools';
+  @override
+  String get proUnlockDesc => 'Sell with data, not guesswork';
+  @override
+  String get proUnlockBtn => 'Go Pro';
+  @override
+  String get proUpgradeSheetDesc => 'You need to upgrade to Pro to use this tool.';
+  @override
+  String get blastRemainingTitle => 'Remaining This Month';
+  @override
+  String get blastCreditEmpty => 'Your blast credits are used up for this month. Renewed next month.';
+  @override
+  String blastCreditUsed(int used, int remaining) => 'Used $used blasts, $remaining remaining.';
+  @override
+  String get proAnalyticsTitle => 'Pro Analytics';
+  @override
+  String get proSectionOverview => '📊 Overview';
+  @override
+  String get proSectionFunnel => '🔽 Conversion Funnel';
+  @override
+  String get proSectionTips => '🤖 Smart Suggestions';
+  @override
+  String get proSectionHotLeads => '🔥 Hot Leads';
+  @override
+  String get proHotLeadsDesc => 'Viewed but no bid placed — buyers close to buying';
+  @override
+  String get proSectionPriceIntel => '💎 Price Intelligence';
+  @override
+  String get proPriceIntelDesc => 'ML — comparison with similar listings';
+  @override
+  String get proSectionStreamPerf => '📡 Stream Performance';
+  @override
+  String get proSectionPeakHours => '⏰ Platform Peak Hours';
+  @override
+  String get proPeakHoursDesc => 'Hours with most engagement in the last 30 days';
+  @override
+  String get proKpiRevenue30d => 'Last 30-Day Revenue';
+  @override
+  String get proKpiLast30d => 'last 30 days';
+  @override
+  String get proKpiSales => 'Total Sales';
+  @override
+  String get proKpiBids => 'Received Bids';
+  @override
+  String get proKpiActiveListings => 'Active Listings';
+  @override
+  String get proKpiItemUnit => 'items';
+  @override
+  String get proKpiBidUnit => 'bids';
+  @override
+  String get proKpiListingUnit => 'listings';
+  @override
+  String get proKpiTotalUnit => 'total';
+  @override
+  String get proFunnelViews => '👁 Views';
+  @override
+  String get proFunnelHesitation => '🤔 Inspected (hesitation)';
+  @override
+  String get proFunnelBid => '🔨 Bid';
+  @override
+  String get proFunnelSale => '✅ Sale';
+  @override
+  String get proFunnelViewToBid => 'View → Bid';
+  @override
+  String get proFunnelBidToSale => 'Bid → Sale';
+  @override
+  String get priceSignalExpensive => '⬆ Expensive';
+  @override
+  String get priceSignalCheap => '⬇ Cheap';
+  @override
+  String get priceSignalFair => '✓ Fair';
+  @override
+  String get priceYours => 'Your Price';
+  @override
+  String get priceMarketAvg => 'Market Average';
+  @override
+  String get priceDiff => 'Diff';
+  @override
+  String get proNoStreams => 'No live streams yet.';
+  @override
+  String get proStreamTotal => 'Total Streams';
+  @override
+  String get proStreamThisMonth => 'This Month';
+  @override
+  String get proStreamAvgViewers => 'Avg. Viewers';
+  @override
+  String get proStreamPeak => 'Peak';
+  @override
+  String proStreamAvgDuration(String dur) => 'Avg. stream duration: $dur min';
+  @override
+  String get proEngagements => 'eng.';
+  @override
+  String get marketSearchTitle => 'People are searching for';
+  @override
+  String marketDayFilter(int days) => '$days days';
+  @override
+  String get marketNoSearchData => 'No search data yet. Will appear as users search.';
+  @override
+  String get marketCategoryTitle => 'Which categories they search in';
+  @override
+  String get marketPeakHoursTitle => 'Shopping peaks at these hours';
+  @override
+  String get marketPeakHoursDesc => 'Post your listings at these hours to reach more people.';
+  @override
+  String get marketNoActivityData => 'Not enough activity data yet.';
+  @override
+  String get marketTrendingTitle => 'These categories are trending';
+  @override
+  String get marketTrendingDesc => 'Listing in these categories may increase your chances of selling.';
+  @override
+  String marketGrowthPos(String pct) => 'Platform overall growth: +$pct%';
+  @override
+  String marketGrowthNeg(String pct) => 'Platform overall decline: $pct%';
+  @override
+  String get marketGrowthSub => 'Avg. purchase amount vs previous 30 days';
+  @override
+  String get marketPaywallDesc => 'See what buyers search for, when they shop, and which categories are trending.';
+  @override
+  String get listingPerfTitle => "Your Listings' Performance";
+  @override
+  String get listingNoDataTitle => 'No Data Yet';
+  @override
+  String get listingNoDataDesc => 'Data will appear once your listings are shown in the feed.';
+  @override
+  String listingDayFilterN(int n) => 'Last $n Days';
+  @override
+  String get listingTotalViews => 'Total Views';
+  @override
+  String get listingAvgCtr => 'Avg. Click Rate';
+  @override
+  String listingVideoBeatsPhoto(String x) => '🎬 Video listings get ${x}× more clicks than photo listings.';
+  @override
+  String listingPhotoBeatsVideo(String x) => '📸 Photo listings get ${x}× more clicks than video listings.';
+  @override
+  String get listingMediaEqual => 'Video and photo listings get similar attention.';
+  @override
+  String get listingVideoLabel => 'Video';
+  @override
+  String get listingPhotoLabel => 'Photo';
+  @override
+  String get listingWatchRateLabel => 'Watch rate';
+  @override
+  String listingWatchedPct(String pct) => '$pct% watched';
+  @override
+  String get listingGalleryLabel => 'Gallery interest';
+  @override
+  String listingGalleryDeep(String n) => 'Scrolled to photo $n';
+  @override
+  String get listingGalleryShallow => 'Viewed only the first photo';
+  @override
+  String get metricViewed => 'viewed';
+  @override
+  String get metricClicked => 'clicked';
+  @override
+  String get listingPaywallDesc => 'Track how many people saw each listing, how many clicked, and how much interest it received.';
 }

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 
 class MarketIntelligenceScreen extends StatefulWidget {
@@ -15,10 +16,10 @@ class MarketIntelligenceScreen extends StatefulWidget {
 class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
   int _searchDays = 7;
   bool _loading = true;
-  String? _error;
+  bool _hasError = false;
 
-  Map<String, dynamic>? _trends;    // peak_hours, trending_categories, average_spend_growth
-  Map<String, dynamic>? _demand;    // top_queries, by_category
+  Map<String, dynamic>? _trends;
+  Map<String, dynamic>? _demand;
 
   @override
   void initState() {
@@ -27,7 +28,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _hasError = false; });
 
     final results = await Future.wait([
       AnalyticsService.getMarketTrends(),
@@ -39,13 +40,13 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
     final demand = results[1];
 
     if (trends == null && demand == null) {
-      setState(() { _loading = false; _error = 'Veriler yüklenemedi.'; });
+      setState(() { _loading = false; _hasError = true; });
       return;
     }
 
     setState(() {
       _loading = false;
-      _error = null;
+      _hasError = false;
       _trends = trends;
       _demand = demand;
     });
@@ -58,42 +59,43 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: const Text('Pazar Bilgisi'),
+        title: Text(l.proToolMarketTitle),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? _buildError()
+          : _hasError
+              ? _buildError(l)
               : Stack(
                   children: [
-                    _buildContent(),
-                    if (!widget.isPremium) _buildPaywall(context),
+                    _buildContent(l),
+                    if (!widget.isPremium) _buildPaywall(context, l),
                   ],
                 ),
     );
   }
 
-  Widget _buildError() {
+  Widget _buildError(AppLocalizations l) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textSecondary(context)),
           const SizedBox(height: 12),
-          Text(_error!, style: TextStyle(color: AppColors.textSecondary(context))),
+          Text(l.proLoadFailed, style: TextStyle(color: AppColors.textSecondary(context))),
           const SizedBox(height: 16),
-          TextButton(onPressed: _load, child: const Text('Tekrar Dene')),
+          TextButton(onPressed: _load, child: Text(l.btnRetry)),
         ],
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(AppLocalizations l) {
     final queries     = (_demand?['top_queries']          as List? ?? []).cast<Map<String, dynamic>>();
     final catSearch   = (_demand?['by_category']          as List? ?? []).cast<Map<String, dynamic>>();
     final peakHours   = (_trends?['peak_hours']           as List? ?? []).cast<Map<String, dynamic>>();
@@ -108,23 +110,19 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
-
-          // ── Platform harcama büyümesi ──────────────────────────────────────
           if (growth != null)
-            _GrowthBanner(growth: growth),
+            _GrowthBanner(growth: growth, l: l),
           if (growth != null) const SizedBox(height: 16),
 
-          // ── Arama trendleri ────────────────────────────────────────────────
           Row(
             children: [
               Expanded(
                 child: Text(
-                  'İnsanlar şunları arıyor',
+                  l.marketSearchTitle,
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
                 ),
               ),
-              // Gün filtresi (sadece aramalar için)
-              _SmallDayFilter(days: _searchDays, onChanged: (d) {
+              _SmallDayFilter(days: _searchDays, l: l, onChanged: (d) {
                 setState(() => _searchDays = d);
                 _reloadDemand();
               }),
@@ -133,7 +131,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
           const SizedBox(height: 10),
 
           if (queries.isEmpty)
-            _EmptyHint(text: 'Henüz arama verisi yok. Kullanıcılar arama yaptıkça burada görünecek.')
+            _EmptyHint(text: l.marketNoSearchData)
           else
             Container(
               decoration: BoxDecoration(
@@ -200,11 +198,10 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
               ),
             ),
 
-          // ── Kategori bazlı aramalar ────────────────────────────────────────
           if (catSearch.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text(
-              'Hangi kategoride arıyorlar',
+              l.marketCategoryTitle,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
             ),
             const SizedBox(height: 10),
@@ -242,21 +239,20 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
             ),
           ],
 
-          // ── Alışveriş Saatleri ────────────────────────────────────────────
           const SizedBox(height: 24),
           Text(
-            'Alışveriş en çok bu saatlerde',
+            l.marketPeakHoursTitle,
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
           ),
           const SizedBox(height: 4),
           Text(
-            'İlanlarınızı bu saatlerde yayınlarsanız daha fazla kişiye ulaşırsınız.',
+            l.marketPeakHoursDesc,
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 12),
 
           if (peakHours.isEmpty)
-            _EmptyHint(text: 'Henüz yeterli aktivite verisi yok.')
+            _EmptyHint(text: l.marketNoActivityData)
           else
             Container(
               decoration: BoxDecoration(
@@ -309,16 +305,15 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
               ),
             ),
 
-          // ── Yükselen Kategoriler ──────────────────────────────────────────
           if (trendCats.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text(
-              'Bu kategoriler ilgi görüyor',
+              l.marketTrendingTitle,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
             ),
             const SizedBox(height: 4),
             Text(
-              'Bu kategorilerde ilan açmak satış şansınızı artırabilir.',
+              l.marketTrendingDesc,
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 12),
@@ -368,7 +363,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
     );
   }
 
-  Widget _buildPaywall(BuildContext context) {
+  Widget _buildPaywall(BuildContext context, AppLocalizations l) {
     return Positioned.fill(
       child: ClipRect(
         child: BackdropFilter(
@@ -396,12 +391,12 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
                       child: const Icon(Icons.insights_outlined, color: Colors.white, size: 32),
                     ),
                     const SizedBox(height: 20),
-                    Text('Pro Özelliği',
+                    Text(l.proUpgradeTitle,
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary(context))),
                     const SizedBox(height: 10),
                     Text(
-                      'Alıcılar ne arıyor, hangi saatlerde\nalışveriş yapıyor, hangi kategoriler\nyükseliyor — hepsini görün.',
+                      l.marketPaywallDesc,
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5),
                     ),
@@ -421,8 +416,8 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('👑 Pro\'ya Geç',
-                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
+                          child: Text(l.proUpgradeBtn,
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
                         ),
                       ),
                     ),
@@ -441,7 +436,8 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
 
 class _GrowthBanner extends StatelessWidget {
   final double growth;
-  const _GrowthBanner({required this.growth});
+  final AppLocalizations l;
+  const _GrowthBanner({required this.growth, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -469,8 +465,8 @@ class _GrowthBanner extends StatelessWidget {
               children: [
                 Text(
                   isPos
-                      ? 'Platform genel büyüme: +${growth.toStringAsFixed(1)}%'
-                      : 'Platform genel düşüş: ${growth.toStringAsFixed(1)}%',
+                      ? l.marketGrowthPos(growth.toStringAsFixed(1))
+                      : l.marketGrowthNeg(growth.toStringAsFixed(1)),
                   style: TextStyle(
                     fontSize: 13, fontWeight: FontWeight.w700,
                     color: isPos ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
@@ -478,7 +474,7 @@ class _GrowthBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Ortalama alışveriş tutarı — önceki 30 güne kıyasla',
+                  l.marketGrowthSub,
                   style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
                 ),
               ],
@@ -492,8 +488,9 @@ class _GrowthBanner extends StatelessWidget {
 
 class _SmallDayFilter extends StatelessWidget {
   final int days;
+  final AppLocalizations l;
   final ValueChanged<int> onChanged;
-  const _SmallDayFilter({required this.days, required this.onChanged});
+  const _SmallDayFilter({required this.days, required this.l, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -511,7 +508,7 @@ class _SmallDayFilter extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: active ? const Color(0xFFF59E0B) : AppColors.border(context)),
             ),
-            child: Text('$d gün',
+            child: Text(l.marketDayFilter(d),
                 style: TextStyle(
                     fontSize: 11, fontWeight: FontWeight.w700,
                     color: active ? Colors.white : AppColors.textSecondary(context))),

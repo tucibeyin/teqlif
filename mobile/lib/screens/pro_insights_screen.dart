@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 
 class ProInsightsScreen extends StatefulWidget {
@@ -13,7 +14,7 @@ class ProInsightsScreen extends StatefulWidget {
 class _ProInsightsScreenState extends State<ProInsightsScreen> {
   Map<String, dynamic>? _data;
   bool _loading = true;
-  String? _error;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -22,25 +23,26 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _hasError = false; });
     final result = await AnalyticsService.getProInsights();
     if (mounted) {
       setState(() {
         _data = result;
         _loading = false;
-        _error = result == null ? 'Veriler yüklenemedi.' : null;
+        _hasError = result == null;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         backgroundColor: AppColors.bg(context),
         elevation: 0,
-        title: const Text('Pro Analitik', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(l.proAnalyticsTitle, style: const TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -50,28 +52,28 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? _buildError()
-              : RefreshIndicator(onRefresh: _load, child: _buildBody()),
+          : _hasError
+              ? _buildError(l)
+              : RefreshIndicator(onRefresh: _load, child: _buildBody(l)),
     );
   }
 
-  Widget _buildError() {
+  Widget _buildError(AppLocalizations l) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textSecondary(context)),
           const SizedBox(height: 12),
-          Text(_error!, style: TextStyle(color: AppColors.textSecondary(context))),
+          Text(l.proLoadFailed, style: TextStyle(color: AppColors.textSecondary(context))),
           const SizedBox(height: 16),
-          FilledButton(onPressed: _load, child: const Text('Tekrar Dene')),
+          FilledButton(onPressed: _load, child: Text(l.btnRetry)),
         ],
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l) {
     final kpis        = (_data?['kpis']        as Map<String, dynamic>?) ?? {};
     final funnel      = (_data?['funnel']       as Map<String, dynamic>?) ?? {};
     final hotLeads    = (_data?['hot_leads']    as List?)?.cast<Map<String, dynamic>>() ?? [];
@@ -83,55 +85,55 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
       children: [
-        _SectionLabel('📊 Genel Bakış'),
-        _KpiGrid(kpis: kpis),
+        _SectionLabel(l.proSectionOverview),
+        _KpiGrid(kpis: kpis, l: l),
         const SizedBox(height: 20),
 
-        _SectionLabel('🔽 Dönüşüm Hunisi'),
-        _FunnelCard(funnel: funnel),
+        _SectionLabel(l.proSectionFunnel),
+        _FunnelCard(funnel: funnel, l: l),
         const SizedBox(height: 20),
 
         if (tips.isNotEmpty) ...[
-          _SectionLabel('🤖 Akıllı Öneriler'),
+          _SectionLabel(l.proSectionTips),
           ...tips.map((t) => _TipCard(tip: t)),
           const SizedBox(height: 20),
         ],
 
         if (hotLeads.isNotEmpty) ...[
-          _SectionLabel('🔥 Sıcak Talepler'),
-          _SubLabel('İncelendi ama teklif verilmedi — satın almaya yakın alıcılar'),
-          ...hotLeads.map((l) => _HotLeadRow(lead: l)),
+          _SectionLabel(l.proSectionHotLeads),
+          _SubLabel(l.proHotLeadsDesc),
+          ...hotLeads.map((lead) => _HotLeadRow(lead: lead)),
           const SizedBox(height: 20),
         ],
 
         if (priceIntel.isNotEmpty) ...[
-          _SectionLabel('💎 Fiyat Zekası'),
-          _SubLabel('ML — benzer ilanlarla karşılaştırma'),
-          ...priceIntel.map((p) => _PriceIntelRow(item: p)),
+          _SectionLabel(l.proSectionPriceIntel),
+          _SubLabel(l.proPriceIntelDesc),
+          ...priceIntel.map((p) => _PriceIntelRow(item: p, l: l)),
           const SizedBox(height: 20),
         ],
 
-        _SectionLabel('📡 Yayın Performansı'),
-        _StreamStatsCard(stats: streamStats),
+        _SectionLabel(l.proSectionStreamPerf),
+        _StreamStatsCard(stats: streamStats, l: l),
         const SizedBox(height: 20),
 
         if (peakHours.isNotEmpty) ...[
-          _SectionLabel('⏰ Platform Zirve Saatleri'),
-          _SubLabel('Son 30 günde en çok etkileşim yaşanan saatler'),
-          ..._buildPeakBars(peakHours),
+          _SectionLabel(l.proSectionPeakHours),
+          _SubLabel(l.proPeakHoursDesc),
+          ..._buildPeakBars(peakHours, l),
         ],
       ],
     );
   }
 
-  List<Widget> _buildPeakBars(List<Map<String, dynamic>> hours) {
+  List<Widget> _buildPeakBars(List<Map<String, dynamic>> hours, AppLocalizations l) {
     final maxCount = hours.map((h) => (h['count'] as int? ?? 0)).reduce((a, b) => a > b ? a : b);
     return hours.asMap().entries.map((e) {
       final i = e.key;
       final h = e.value;
       final count = h['count'] as int? ?? 0;
       final ratio = maxCount > 0 ? count / maxCount : 0.0;
-      return _PeakHourBar(label: h['label'] as String, count: count, ratio: ratio, rank: i + 1);
+      return _PeakHourBar(label: h['label'] as String, count: count, ratio: ratio, rank: i + 1, l: l);
     }).toList();
   }
 }
@@ -173,7 +175,8 @@ class _SubLabel extends StatelessWidget {
 
 class _KpiGrid extends StatelessWidget {
   final Map<String, dynamic> kpis;
-  const _KpiGrid({required this.kpis});
+  final AppLocalizations l;
+  const _KpiGrid({required this.kpis, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -198,30 +201,30 @@ class _KpiGrid extends StatelessWidget {
       childAspectRatio: 1.5,
       children: [
         _KpiCard(
-          icon: '💰', label: 'Son 30 Gün Gelir',
+          icon: '💰', label: l.proKpiRevenue30d,
           value: '${_fmt(rev30)} ₺',
           badge: growthStr,
           badgeColor: (revGrowth ?? 0) >= 0 ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
           gradient: const [Color(0xFF0F766E), Color(0xFF0D9488)],
         ),
         _KpiCard(
-          icon: '🛍', label: 'Toplam Satış',
-          value: '${sales30} adet',
-          badge: 'son 30 gün',
+          icon: '🛍', label: l.proKpiSales,
+          value: '$sales30 ${l.proKpiItemUnit}',
+          badge: l.proKpiLast30d,
           badgeColor: const Color(0xFF3B82F6),
           gradient: const [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
         ),
         _KpiCard(
-          icon: '🔨', label: 'Gelen Teklifler',
-          value: '$bids30 teklif',
-          badge: 'son 30 gün',
+          icon: '🔨', label: l.proKpiBids,
+          value: '$bids30 ${l.proKpiBidUnit}',
+          badge: l.proKpiLast30d,
           badgeColor: const Color(0xFFF59E0B),
           gradient: const [Color(0xFFB45309), Color(0xFFF59E0B)],
         ),
         _KpiCard(
-          icon: '📦', label: 'Aktif İlanlar',
-          value: '$activeL ilan',
-          badge: '${_fmt(totalRev)} ₺ toplam',
+          icon: '📦', label: l.proKpiActiveListings,
+          value: '$activeL ${l.proKpiListingUnit}',
+          badge: '${_fmt(totalRev)} ₺ ${l.proKpiTotalUnit}',
           badgeColor: const Color(0xFF8B5CF6),
           gradient: const [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
         ),
@@ -291,11 +294,11 @@ class _KpiCard extends StatelessWidget {
 
 class _FunnelCard extends StatelessWidget {
   final Map<String, dynamic> funnel;
-  const _FunnelCard({required this.funnel});
+  final AppLocalizations l;
+  const _FunnelCard({required this.funnel, required this.l});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = AppColors.card(context);
     final views = funnel['views'] as int? ?? 0;
     final hesitations = funnel['hesitations'] as int? ?? 0;
@@ -310,20 +313,20 @@ class _FunnelCard extends StatelessWidget {
       decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16)),
       child: Column(
         children: [
-          _FunnelRow(label: '👁 Görüntüleme', count: views, maxVal: maxVal, color: const Color(0xFF3B82F6)),
+          _FunnelRow(label: l.proFunnelViews, count: views, maxVal: maxVal, color: const Color(0xFF3B82F6)),
           const SizedBox(height: 8),
-          _FunnelRow(label: '🤔 İnceledi (hesitation)', count: hesitations, maxVal: maxVal, color: const Color(0xFFF59E0B)),
+          _FunnelRow(label: l.proFunnelHesitation, count: hesitations, maxVal: maxVal, color: const Color(0xFFF59E0B)),
           const SizedBox(height: 8),
-          _FunnelRow(label: '🔨 Teklif', count: bids, maxVal: maxVal, color: const Color(0xFF8B5CF6)),
+          _FunnelRow(label: l.proFunnelBid, count: bids, maxVal: maxVal, color: const Color(0xFF8B5CF6)),
           const SizedBox(height: 8),
-          _FunnelRow(label: '✅ Satış', count: sales, maxVal: maxVal, color: const Color(0xFF22C55E)),
+          _FunnelRow(label: l.proFunnelSale, count: sales, maxVal: maxVal, color: const Color(0xFF22C55E)),
           Divider(color: AppColors.border(context), height: 24),
           Row(
             children: [
-              _RateBadge(label: 'Görüntüleme → Teklif', value: '$v2b%',
+              _RateBadge(label: l.proFunnelViewToBid, value: '$v2b%',
                   color: v2b >= 5 ? const Color(0xFF22C55E) : const Color(0xFFF59E0B)),
               const SizedBox(width: 12),
-              _RateBadge(label: 'Teklif → Satış', value: '$b2s%',
+              _RateBadge(label: l.proFunnelBidToSale, value: '$b2s%',
                   color: b2s >= 30 ? const Color(0xFF22C55E) : const Color(0xFFEF4444)),
             ],
           ),
@@ -509,7 +512,8 @@ class _Chip extends StatelessWidget {
 
 class _PriceIntelRow extends StatelessWidget {
   final Map<String, dynamic> item;
-  const _PriceIntelRow({required this.item});
+  final AppLocalizations l;
+  const _PriceIntelRow({required this.item, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -521,7 +525,9 @@ class _PriceIntelRow extends StatelessWidget {
     final sigColor = signal == 'pahalı' ? const Color(0xFFEF4444)
         : signal == 'ucuz' ? const Color(0xFF22C55E)
         : const Color(0xFF3B82F6);
-    final sigLabel = signal == 'pahalı' ? '⬆ Pahalı' : signal == 'ucuz' ? '⬇ Ucuz' : '✓ Uygun';
+    final sigLabel = signal == 'pahalı' ? l.priceSignalExpensive
+        : signal == 'ucuz' ? l.priceSignalCheap
+        : l.priceSignalFair;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -543,11 +549,11 @@ class _PriceIntelRow extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _PriceBox(label: 'Senin Fiyatın', value: '${yourPrice.toStringAsFixed(0)} ₺', color: sigColor)),
+              Expanded(child: _PriceBox(label: l.priceYours, value: '${yourPrice.toStringAsFixed(0)} ₺', color: sigColor)),
               const SizedBox(width: 10),
-              Expanded(child: _PriceBox(label: 'Piyasa Ortalaması', value: '${marketAvg.toStringAsFixed(0)} ₺', color: const Color(0xFF64748B))),
+              Expanded(child: _PriceBox(label: l.priceMarketAvg, value: '${marketAvg.toStringAsFixed(0)} ₺', color: const Color(0xFF64748B))),
               const SizedBox(width: 10),
-              Expanded(child: _PriceBox(label: 'Fark', value: '${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%', color: sigColor)),
+              Expanded(child: _PriceBox(label: l.priceDiff, value: '${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%', color: sigColor)),
             ],
           ),
         ],
@@ -577,7 +583,8 @@ class _PriceBox extends StatelessWidget {
 
 class _StreamStatsCard extends StatelessWidget {
   final Map<String, dynamic> stats;
-  const _StreamStatsCard({required this.stats});
+  final AppLocalizations l;
+  const _StreamStatsCard({required this.stats, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -592,7 +599,7 @@ class _StreamStatsCard extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(color: AppColors.card(context), borderRadius: BorderRadius.circular(16)),
-        child: Center(child: Text('Henüz canlı yayın yapılmadı.', style: TextStyle(color: AppColors.textSecondary(context)))),
+        child: Center(child: Text(l.proNoStreams, style: TextStyle(color: AppColors.textSecondary(context)))),
       );
     }
 
@@ -605,13 +612,13 @@ class _StreamStatsCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _StatBox('$total', 'Toplam Yayın'),
+                  _StatBox(l.proStreamTotal, '$total'),
                   _vDivider(),
-                  _StatBox('$s30', 'Bu Ay'),
+                  _StatBox(l.proStreamThisMonth, '$s30'),
                   _vDivider(),
-                  _StatBox('${avgV.toStringAsFixed(1)}', 'Ort. İzleyici'),
+                  _StatBox(l.proStreamAvgViewers, avgV.toStringAsFixed(1)),
                   _vDivider(),
-                  _StatBox('$peakV', 'Zirve'),
+                  _StatBox(l.proStreamPeak, '$peakV'),
                 ],
               ),
               const SizedBox(height: 12),
@@ -619,7 +626,7 @@ class _StreamStatsCard extends StatelessWidget {
                 children: [
                   const Icon(Icons.timer_outlined, size: 14, color: Color(0xFF64748B)),
                   const SizedBox(width: 6),
-                  Text('Ortalama yayın süresi: ${avgDur.toStringAsFixed(0)} dakika',
+                  Text(l.proStreamAvgDuration(avgDur.toStringAsFixed(0)),
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
                 ],
               ),
@@ -638,8 +645,9 @@ class _StreamStatsCard extends StatelessWidget {
 }
 
 class _StatBox extends StatelessWidget {
-  final String value, label;
-  const _StatBox(this.value, this.label);
+  final String label;
+  final String value;
+  const _StatBox(this.label, this.value);
 
   @override
   Widget build(BuildContext context) {
@@ -685,7 +693,8 @@ class _PeakHourBar extends StatelessWidget {
   final String label;
   final int count, rank;
   final double ratio;
-  const _PeakHourBar({required this.label, required this.count, required this.ratio, required this.rank});
+  final AppLocalizations l;
+  const _PeakHourBar({required this.label, required this.count, required this.ratio, required this.rank, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -717,7 +726,7 @@ class _PeakHourBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Text('$count etk.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
+          Text('$count ${l.proEngagements}', style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
         ],
       ),
     );

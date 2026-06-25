@@ -2476,62 +2476,420 @@ abstract class AppLocalizations {
   /// **'İnternet bağlantısı yok, çevrimdışı moddasınız.'**
   String get offlineBannerMessage;
 
+  /// No description provided for @editProfileBio.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hakkımda'**
   String get editProfileBio;
+
+  /// No description provided for @editProfileBioHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kendin hakkında kısa bir şeyler yaz…'**
   String get editProfileBioHint;
+
+  /// No description provided for @editProfileBioHelper.
+  ///
+  /// In tr, this message translates to:
+  /// **'Maks. 60 karakter'**
   String get editProfileBioHelper;
+
+  /// No description provided for @editProfileLink.
+  ///
+  /// In tr, this message translates to:
+  /// **'Link'**
   String get editProfileLink;
+
+  /// No description provided for @editProfileLinkHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'https://...'**
   String get editProfileLinkHint;
+
+  /// No description provided for @editProfileLinkHelper.
+  ///
+  /// In tr, this message translates to:
+  /// **'https:// ile başlamalı'**
   String get editProfileLinkHelper;
+
+  /// No description provided for @editProfileLinkError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Link http:// veya https:// ile başlamalı'**
   String get editProfileLinkError;
 
+  /// No description provided for @settingsProTools.
+  ///
+  /// In tr, this message translates to:
+  /// **'📈 Pro Araçları'**
   String get settingsProTools;
+
+  /// No description provided for @settingsProActive.
+  ///
+  /// In tr, this message translates to:
+  /// **'AKTİF'**
   String get settingsProActive;
 
+  /// No description provided for @walletTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'TUCi Cüzdanım'**
   String get walletTitle;
+
+  /// No description provided for @walletBalance.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güncel Bakiye'**
   String get walletBalance;
+
+  /// No description provided for @walletRecentTxns.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son İşlemler'**
   String get walletRecentTxns;
+
+  /// No description provided for @walletSpendingSummary.
+  ///
+  /// In tr, this message translates to:
+  /// **'Harcama Özeti'**
   String get walletSpendingSummary;
+
+  /// No description provided for @walletTxnHistory.
+  ///
+  /// In tr, this message translates to:
+  /// **'İşlem Geçmişi'**
   String get walletTxnHistory;
+
+  /// No description provided for @walletNoTxns.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz işlem yok.'**
   String get walletNoTxns;
+
+  /// No description provided for @walletTxnAirdrop.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hoş geldin hediyesi'**
   String get walletTxnAirdrop;
+
+  /// No description provided for @walletTxnReceiveGift.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hediye alındı'**
   String get walletTxnReceiveGift;
+
+  /// No description provided for @walletTxnSpendLeadGen.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sıcak Talep blast'**
   String get walletTxnSpendLeadGen;
+
+  /// No description provided for @walletTxnSpendAdCampaign.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reklam kampanyası'**
   String get walletTxnSpendAdCampaign;
+
+  /// No description provided for @walletTxnSpendAi.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay Zeka fiyatlama'**
   String get walletTxnSpendAi;
+
+  /// No description provided for @walletTxnWebTopup.
+  ///
+  /// In tr, this message translates to:
+  /// **'Web yükleme'**
   String get walletTxnWebTopup;
+
+  /// No description provided for @walletComingSoonLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'TUCi Satın Alma Yakında!'**
   String get walletComingSoonLabel;
+
+  /// No description provided for @walletComingSoonDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.'**
   String get walletComingSoonDesc;
+
+  /// No description provided for @walletBuyBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'TUCi Satın Alma Yakında'**
   String get walletBuyBtn;
 
+  /// No description provided for @reportLoading.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın analizi hazırlanıyor…'**
   String get reportLoading;
+
+  /// No description provided for @reportLoadFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rapor yüklenemedi.'**
   String get reportLoadFailed;
+
+  /// No description provided for @reportRetry.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tekrar Dene'**
   String get reportRetry;
+
+  /// No description provided for @reportGoHome.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ana Sayfaya Dön'**
   String get reportGoHome;
+
+  /// No description provided for @reportBadge.
+  ///
+  /// In tr, this message translates to:
+  /// **'YAYIN ANALİZİ'**
   String get reportBadge;
+
+  /// No description provided for @reportStreamEndedDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın sona erdi. Kitle analiziniz aşağıda.'**
   String get reportStreamEndedDesc;
+
+  /// No description provided for @reportMetricPeakViewers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Zirve\nİzleyici'**
   String get reportMetricPeakViewers;
+
+  /// No description provided for @reportMetricEngagedViewers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Etkileşimli\nİzleyici'**
   String get reportMetricEngagedViewers;
+
+  /// No description provided for @reportMetricAvgBudget.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama\nKitle Bütçesi'**
   String get reportMetricAvgBudget;
+
+  /// No description provided for @reportMetricDuration.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın\nSüresi'**
   String get reportMetricDuration;
+
+  /// No description provided for @reportSectionSwipeFeed.
+  ///
+  /// In tr, this message translates to:
+  /// **'SWIPE FEED ERİŞİMİ'**
   String get reportSectionSwipeFeed;
+
+  /// No description provided for @reportMetricSwipeImpressions.
+  ///
+  /// In tr, this message translates to:
+  /// **'Swipe Feed\nGörüntülenme'**
   String get reportMetricSwipeImpressions;
+
+  /// No description provided for @reportMetricSwipeReach.
+  ///
+  /// In tr, this message translates to:
+  /// **'Swipe Feed\nTekil Erişim'**
   String get reportMetricSwipeReach;
+
+  /// No description provided for @reportSectionAuction.
+  ///
+  /// In tr, this message translates to:
+  /// **'AÇIK ARTIRMA ÖZETİ'**
   String get reportSectionAuction;
+
+  /// No description provided for @reportMetricTotalAuctions.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam\nArtırma'**
   String get reportMetricTotalAuctions;
+
+  /// No description provided for @reportMetricSoldItems.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satılan\nÜrün'**
   String get reportMetricSoldItems;
+
+  /// No description provided for @reportMetricTotalBids.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam\nTeklif'**
   String get reportMetricTotalBids;
+
+  /// No description provided for @reportMetricRevenue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam\nHasılat'**
   String get reportMetricRevenue;
+
+  /// No description provided for @reportItemSold.
+  ///
+  /// In tr, this message translates to:
+  /// **'✅ Satıldı'**
   String get reportItemSold;
+
+  /// No description provided for @reportItemBuyNow.
+  ///
+  /// In tr, this message translates to:
+  /// **'⚡ Hemen Al'**
   String get reportItemBuyNow;
+
+  /// No description provided for @reportItemNotSold.
+  ///
+  /// In tr, this message translates to:
+  /// **'❌ Satılmadı'**
   String get reportItemNotSold;
+
+  /// No description provided for @reportChipStart.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başl.'**
   String get reportChipStart;
+
+  /// No description provided for @reportChipSale.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış'**
   String get reportChipSale;
+
+  /// No description provided for @reportChipBids.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif'**
   String get reportChipBids;
+
+  /// No description provided for @reportHesitation.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kararsız teklif — bu izleyiciler fiyat noktasına yakın ama dönüştüremedik.'**
   String reportHesitation(int count);
+
+  /// No description provided for @reportSmartInsight.
+  ///
+  /// In tr, this message translates to:
+  /// **'Akıllı Öneri'**
   String get reportSmartInsight;
+
+  /// No description provided for @reportDurationMin.
+  ///
+  /// In tr, this message translates to:
+  /// **'dk'**
   String get reportDurationMin;
+
+  /// No description provided for @reportDurationHour.
+  ///
+  /// In tr, this message translates to:
+  /// **'sa'**
   String get reportDurationHour;
+
+  /// No description provided for @reportDurationLess.
+  ///
+  /// In tr, this message translates to:
+  /// **'< 1 dk'**
   String get reportDurationLess;
+
+  String get proLoadFailed;
+  String get proUpgradeTitle;
+  String get proUpgradeBtn;
+  String get proHubTitle;
+  String get proToolSalesTitle;
+  String get proToolSalesDesc;
+  String get proToolListingsTitle;
+  String get proToolListingsDesc;
+  String get proToolMarketTitle;
+  String get proToolMarketDesc;
+  String get proBlastSection;
+  String get proBenefitsTitle;
+  String get proBenefit1;
+  String get proBenefit2;
+  String get proBenefit3;
+  String get proBenefit4;
+  String get proStatusTitle;
+  String get proStatusDesc;
+  String get proUnlockTitle;
+  String get proUnlockDesc;
+  String get proUnlockBtn;
+  String get proUpgradeSheetDesc;
+  String get blastRemainingTitle;
+  String get blastCreditEmpty;
+  String blastCreditUsed(int used, int remaining);
+  String get proAnalyticsTitle;
+  String get proSectionOverview;
+  String get proSectionFunnel;
+  String get proSectionTips;
+  String get proSectionHotLeads;
+  String get proHotLeadsDesc;
+  String get proSectionPriceIntel;
+  String get proPriceIntelDesc;
+  String get proSectionStreamPerf;
+  String get proSectionPeakHours;
+  String get proPeakHoursDesc;
+  String get proKpiRevenue30d;
+  String get proKpiLast30d;
+  String get proKpiSales;
+  String get proKpiBids;
+  String get proKpiActiveListings;
+  String get proKpiItemUnit;
+  String get proKpiBidUnit;
+  String get proKpiListingUnit;
+  String get proKpiTotalUnit;
+  String get proFunnelViews;
+  String get proFunnelHesitation;
+  String get proFunnelBid;
+  String get proFunnelSale;
+  String get proFunnelViewToBid;
+  String get proFunnelBidToSale;
+  String get priceSignalExpensive;
+  String get priceSignalCheap;
+  String get priceSignalFair;
+  String get priceYours;
+  String get priceMarketAvg;
+  String get priceDiff;
+  String get proNoStreams;
+  String get proStreamTotal;
+  String get proStreamThisMonth;
+  String get proStreamAvgViewers;
+  String get proStreamPeak;
+  String proStreamAvgDuration(String dur);
+  String get proEngagements;
+  String get marketSearchTitle;
+  String marketDayFilter(int days);
+  String get marketNoSearchData;
+  String get marketCategoryTitle;
+  String get marketPeakHoursTitle;
+  String get marketPeakHoursDesc;
+  String get marketNoActivityData;
+  String get marketTrendingTitle;
+  String get marketTrendingDesc;
+  String marketGrowthPos(String pct);
+  String marketGrowthNeg(String pct);
+  String get marketGrowthSub;
+  String get marketPaywallDesc;
+  String get listingPerfTitle;
+  String get listingNoDataTitle;
+  String get listingNoDataDesc;
+  String listingDayFilterN(int n);
+  String get listingTotalViews;
+  String get listingAvgCtr;
+  String listingVideoBeatsPhoto(String x);
+  String listingPhotoBeatsVideo(String x);
+  String get listingMediaEqual;
+  String get listingVideoLabel;
+  String get listingPhotoLabel;
+  String get listingWatchRateLabel;
+  String listingWatchedPct(String pct);
+  String get listingGalleryLabel;
+  String listingGalleryDeep(String n);
+  String get listingGalleryShallow;
+  String get metricViewed;
+  String get metricClicked;
+  String get listingPaywallDesc;
 }
 
 class _AppLocalizationsDelegate
