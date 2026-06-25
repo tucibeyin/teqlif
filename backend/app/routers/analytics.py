@@ -809,7 +809,7 @@ async def pro_insights(
                     """), {"uid": uid, "emb": emb_str})
                     market_avg = sim_r.scalar()
                 except Exception:
-                    pass
+                    await db.rollback()
 
             if market_avg is None:
                 cat_r = await db.execute(sql_text("""
