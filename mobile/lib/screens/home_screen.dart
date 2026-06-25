@@ -15,6 +15,8 @@ import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
+import 'live/swipe_live_screen.dart';
+import '../models/stream.dart';
 import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -797,6 +799,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                           final cid = item['campaign_id'];
                                           if (cid != null) AnalyticsService.trackAdClick(cid as int);
                                         }
+                                        // Highlight ilan → doğrudan canlı yayına katıl
+                                        if (item['is_highlight'] == true) {
+                                          final rawRoomId = item['active_room_id'];
+                                          if (rawRoomId != null) {
+                                            final roomId = rawRoomId is int
+                                                ? rawRoomId
+                                                : int.tryParse(rawRoomId.toString());
+                                            if (roomId != null) {
+                                              Navigator.push(ctx, MaterialPageRoute(
+                                                builder: (_) => SwipeLiveScreen.single(
+                                                    streamId: roomId),
+                                              ));
+                                              return;
+                                            }
+                                          }
+                                        }
                                         Navigator.push(ctx, MaterialPageRoute(
                                           builder: (_) => ListingDetailScreen(
                                               listing: Map<String, dynamic>.from(item)),
@@ -919,10 +937,23 @@ class _HorizontalListingCard extends StatefulWidget {
   State<_HorizontalListingCard> createState() => _HorizontalListingCardState();
 }
 
-class _HorizontalListingCardState extends State<_HorizontalListingCard> {
+class _HorizontalListingCardState extends State<_HorizontalListingCard>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _pulseCtrl;
+  Animation<double>? _pulseAnim;
+
   @override
   void initState() {
     super.initState();
+    if (widget.listing['is_highlight'] == true) {
+      _pulseCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 900),
+      )..repeat(reverse: true);
+      _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
+        CurvedAnimation(parent: _pulseCtrl!, curve: Curves.easeInOut),
+      );
+    }
     if (widget.listing['is_sponsored'] == true) {
       final cid = widget.listing['campaign_id'];
       if (cid != null) AnalyticsService.trackAdImpression(cid as int);
@@ -937,6 +968,12 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard> {
         contentType: 'photo',
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl?.dispose();
+    super.dispose();
   }
 
   String _fmt(dynamic price) {
@@ -1027,27 +1064,93 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard> {
                         ),
                       ),
                     ),
+                  // ── Highlight (Canlı Yayın Kesiği) badge ──────────────
+                  if (widget.listing['is_highlight'] == true)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.15),
+                              Colors.red.withValues(alpha: 0.75),
+                            ],
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (_pulseAnim != null)
+                              AnimatedBuilder(
+                                animation: _pulseAnim!,
+                                builder: (_, __) => Opacity(
+                                  opacity: _pulseAnim!.value,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    margin: const EdgeInsets.only(bottom: 4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(4, 0, 4, 6),
+                              child: Text(
+                                '🔴 Alev\nAlev!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(6, 5, 6, 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.listing['title'] as String? ?? '',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary(context)),
-                    maxLines: 2, overflow: TextOverflow.ellipsis,
+            if (widget.listing['is_highlight'] == true)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                color: Colors.red,
+                child: const Text(
+                  'Canlı Yayına Katıl →',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
                   ),
-                  if (price.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(price, style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700)),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 5, 6, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.listing['title'] as String? ?? '',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary(context)),
+                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                    ),
+                    if (price.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(price, style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700)),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
           ],
         ),
       ),

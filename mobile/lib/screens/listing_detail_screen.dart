@@ -85,8 +85,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         if (!mounted) return;
         _chewieCtrl = ChewieController(
           videoPlayerController: _videoCtrl!,
-          autoPlay: false,
-          looping: false,
+          autoPlay: widget.listing['is_highlight'] == true,
+          looping: widget.listing['is_highlight'] == true,
           allowFullScreen: true,
           allowMuting: true,
           showControls: true,
