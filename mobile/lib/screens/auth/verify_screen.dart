@@ -5,6 +5,7 @@ import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../utils/error_helper.dart';
+import 'category_onboarding_screen.dart';
 
 class VerifyScreen extends StatefulWidget {
   final String email;
@@ -38,7 +39,13 @@ class _VerifyScreenState extends State<VerifyScreen> {
         code: _codeCtrl.text.trim(),
       );
       PushNotificationService.initialize();
-      if (mounted) Navigator.of(context).pushReplacementNamed('/home');
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const CategoryOnboardingScreen(),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) showErrorSnackbar(context, e);
     } finally {

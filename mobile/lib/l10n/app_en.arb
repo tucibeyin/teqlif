@@ -755,5 +755,11 @@
   "listingGalleryShallow": "Viewed only the first photo",
   "metricViewed": "viewed",
   "metricClicked": "clicked",
-  "listingPaywallDesc": "Track how many people saw each listing, how many clicked, and how much interest it received."
+  "listingPaywallDesc": "Track how many people saw each listing, how many clicked, and how much interest it received.",
+
+  "onboardingTitle": "What are you into?",
+  "onboardingSubtitle": "Let us show you personalised listings and streams",
+  "onboardingMinHint": "Pick at least 3 categories",
+  "onboardingContinue": "Continue",
+  "onboardingSkip": "Skip for now"
 }

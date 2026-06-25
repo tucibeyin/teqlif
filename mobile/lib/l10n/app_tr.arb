@@ -756,5 +756,11 @@
   "listingGalleryShallow": "Sadece ilk fotoğrafa baktı",
   "metricViewed": "gördü",
   "metricClicked": "tıkladı",
-  "listingPaywallDesc": "Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin."
+  "listingPaywallDesc": "Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin.",
+
+  "onboardingTitle": "Nelerle ilgileniyorsun?",
+  "onboardingSubtitle": "Sana özel ilan ve yayınlar gösterelim",
+  "onboardingMinHint": "En az 3 kategori seç",
+  "onboardingContinue": "Devam Et",
+  "onboardingSkip": "Şimdilik Atla"
 }

@@ -185,4 +185,14 @@ class AuthService {
   static Future<void> logout() async {
     await StorageService.clear();
   }
+
+  static Future<void> seedOnboardingInterests(List<String> categories) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/onboarding/interests'),
+        headers: await _headers(auth: true),
+        body: jsonEncode({'categories': categories}),
+      ),
+    );
+  }
 }

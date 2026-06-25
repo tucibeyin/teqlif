@@ -756,5 +756,11 @@
   "listingGalleryShallow": "شاهد الصورة الأولى فقط",
   "metricViewed": "شاهد",
   "metricClicked": "نقر",
-  "listingPaywallDesc": "تتبع كم شخصاً رأى كل إعلان، وكم نقر، ومدى الاهتمام به."
+  "listingPaywallDesc": "تتبع كم شخصاً رأى كل إعلان، وكم نقر، ومدى الاهتمام به.",
+
+  "onboardingTitle": "ما الذي يهمك؟",
+  "onboardingSubtitle": "دعنا نعرض لك إعلانات وبثاً مباشراً مخصصاً لك",
+  "onboardingMinHint": "اختر 3 فئات على الأقل",
+  "onboardingContinue": "متابعة",
+  "onboardingSkip": "تخطي الآن"
 }

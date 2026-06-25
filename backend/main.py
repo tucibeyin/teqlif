@@ -16,7 +16,7 @@ from app.config import settings
 from app.logging_config import setup_logging
 from app.core.exceptions import AppException
 from app.core.logger import capture_exception
-from app.routers import auth, streams, webhooks, auction, chat, moderation, stories
+from app.routers import auth, streams, webhooks, auction, chat, moderation, stories, onboarding
 from app.services.auction_service import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics, leads, wallet
@@ -338,6 +338,7 @@ app.include_router(ads.router)
 app.include_router(wallet.router)
 app.include_router(leads.router)
 app.include_router(client_log.router)
+app.include_router(onboarding.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):
