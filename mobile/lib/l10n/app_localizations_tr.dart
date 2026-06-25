@@ -1263,4 +1263,165 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get offlineBannerMessage =>
       'İnternet bağlantısı yok, çevrimdışı moddasınız.';
+
+  @override
+  String get editProfileBio => 'Hakkımda';
+
+  @override
+  String get editProfileBioHint => 'Kendin hakkında kısa bir şeyler yaz…';
+
+  @override
+  String get editProfileBioHelper => 'Maks. 60 karakter';
+
+  @override
+  String get editProfileLink => 'Link';
+
+  @override
+  String get editProfileLinkHint => 'https://...';
+
+  @override
+  String get editProfileLinkHelper => 'https:// ile başlamalı';
+
+  @override
+  String get editProfileLinkError => 'Link http:// veya https:// ile başlamalı';
+
+  @override
+  String get settingsProTools => '📈 Pro Araçları';
+
+  @override
+  String get settingsProActive => 'AKTİF';
+
+  @override
+  String get walletTitle => 'TUCi Cüzdanım';
+
+  @override
+  String get walletBalance => 'Güncel Bakiye';
+
+  @override
+  String get walletRecentTxns => 'Son İşlemler';
+
+  @override
+  String get walletSpendingSummary => 'Harcama Özeti';
+
+  @override
+  String get walletTxnHistory => 'İşlem Geçmişi';
+
+  @override
+  String get walletNoTxns => 'Henüz işlem yok.';
+
+  @override
+  String get walletTxnAirdrop => 'Hoş geldin hediyesi';
+
+  @override
+  String get walletTxnReceiveGift => 'Hediye alındı';
+
+  @override
+  String get walletTxnSpendLeadGen => 'Sıcak Talep blast';
+
+  @override
+  String get walletTxnSpendAdCampaign => 'Reklam kampanyası';
+
+  @override
+  String get walletTxnSpendAi => 'Yapay Zeka fiyatlama';
+
+  @override
+  String get walletTxnWebTopup => 'Web yükleme';
+
+  @override
+  String get walletComingSoonLabel => 'TUCi Satın Alma Yakında!';
+
+  @override
+  String get walletComingSoonDesc =>
+      'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.';
+
+  @override
+  String get walletBuyBtn => 'TUCi Satın Alma Yakında';
+
+  @override
+  String get reportLoading => 'Yayın analizi hazırlanıyor…';
+
+  @override
+  String get reportLoadFailed => 'Rapor yüklenemedi.';
+
+  @override
+  String get reportRetry => 'Tekrar Dene';
+
+  @override
+  String get reportGoHome => 'Ana Sayfaya Dön';
+
+  @override
+  String get reportBadge => 'YAYIN ANALİZİ';
+
+  @override
+  String get reportStreamEndedDesc => 'Yayın sona erdi. Kitle analiziniz aşağıda.';
+
+  @override
+  String get reportMetricPeakViewers => 'Zirve\nİzleyici';
+
+  @override
+  String get reportMetricEngagedViewers => 'Etkileşimli\nİzleyici';
+
+  @override
+  String get reportMetricAvgBudget => 'Ortalama\nKitle Bütçesi';
+
+  @override
+  String get reportMetricDuration => 'Yayın\nSüresi';
+
+  @override
+  String get reportSectionSwipeFeed => 'SWIPE FEED ERİŞİMİ';
+
+  @override
+  String get reportMetricSwipeImpressions => 'Swipe Feed\nGörüntülenme';
+
+  @override
+  String get reportMetricSwipeReach => 'Swipe Feed\nTekil Erişim';
+
+  @override
+  String get reportSectionAuction => 'AÇIK ARTIRMA ÖZETİ';
+
+  @override
+  String get reportMetricTotalAuctions => 'Toplam\nArtırma';
+
+  @override
+  String get reportMetricSoldItems => 'Satılan\nÜrün';
+
+  @override
+  String get reportMetricTotalBids => 'Toplam\nTeklif';
+
+  @override
+  String get reportMetricRevenue => 'Toplam\nHasılat';
+
+  @override
+  String get reportItemSold => '✅ Satıldı';
+
+  @override
+  String get reportItemBuyNow => '⚡ Hemen Al';
+
+  @override
+  String get reportItemNotSold => '❌ Satılmadı';
+
+  @override
+  String get reportChipStart => 'Başl.';
+
+  @override
+  String get reportChipSale => 'Satış';
+
+  @override
+  String get reportChipBids => 'Teklif';
+
+  @override
+  String reportHesitation(int count) =>
+      '$count kararsız teklif — bu izleyiciler fiyat noktasına yakın ama dönüştüremedik.';
+
+  @override
+  String get reportSmartInsight => 'Akıllı Öneri';
+
+  @override
+  String get reportDurationMin => 'dk';
+
+  @override
+  String get reportDurationHour => 'sa';
+
+  @override
+  String get reportDurationLess => '< 1 dk';
 }

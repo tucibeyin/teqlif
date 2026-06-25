@@ -545,5 +545,67 @@
   "storyDeleteConfirm": "Are you sure you want to delete this story?",
   "storyDeleteFailed": "Could not delete story",
 
-  "offlineBannerMessage": "No internet connection, you are in offline mode."
+  "offlineBannerMessage": "No internet connection, you are in offline mode.",
+
+  "editProfileBio": "About Me",
+  "editProfileBioHint": "Write a short bio about yourself…",
+  "editProfileBioHelper": "Max. 60 characters",
+  "editProfileLink": "Link",
+  "editProfileLinkHint": "https://...",
+  "editProfileLinkHelper": "Must start with https://",
+  "editProfileLinkError": "Link must start with http:// or https://",
+
+  "settingsProTools": "📈 Pro Tools",
+  "settingsProActive": "ACTIVE",
+
+  "walletTitle": "My TUCi Wallet",
+  "walletBalance": "Current Balance",
+  "walletRecentTxns": "Recent Transactions",
+  "walletSpendingSummary": "Spending Summary",
+  "walletTxnHistory": "Transaction History",
+  "walletNoTxns": "No transactions yet.",
+  "walletTxnAirdrop": "Welcome gift",
+  "walletTxnReceiveGift": "Gift received",
+  "walletTxnSpendLeadGen": "Hot Lead blast",
+  "walletTxnSpendAdCampaign": "Ad campaign",
+  "walletTxnSpendAi": "AI pricing",
+  "walletTxnWebTopup": "Web top-up",
+  "walletComingSoonLabel": "TUCi Purchase Coming Soon!",
+  "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 TUCi balance.",
+  "walletBuyBtn": "TUCi Purchase Coming Soon",
+
+  "reportLoading": "Preparing stream analysis…",
+  "reportLoadFailed": "Could not load report.",
+  "reportRetry": "Try Again",
+  "reportGoHome": "Go to Home",
+  "reportBadge": "STREAM ANALYSIS",
+  "reportStreamEndedDesc": "Stream ended. Your audience analysis is below.",
+  "reportMetricPeakViewers": "Peak\nViewers",
+  "reportMetricEngagedViewers": "Engaged\nViewers",
+  "reportMetricAvgBudget": "Average\nAudience Budget",
+  "reportMetricDuration": "Stream\nDuration",
+  "reportSectionSwipeFeed": "SWIPE FEED REACH",
+  "reportMetricSwipeImpressions": "Swipe Feed\nImpressions",
+  "reportMetricSwipeReach": "Swipe Feed\nUnique Reach",
+  "reportSectionAuction": "AUCTION SUMMARY",
+  "reportMetricTotalAuctions": "Total\nAuctions",
+  "reportMetricSoldItems": "Sold\nItems",
+  "reportMetricTotalBids": "Total\nBids",
+  "reportMetricRevenue": "Total\nRevenue",
+  "reportItemSold": "✅ Sold",
+  "reportItemBuyNow": "⚡ Buy Now",
+  "reportItemNotSold": "❌ Not Sold",
+  "reportChipStart": "Start",
+  "reportChipSale": "Sale",
+  "reportChipBids": "Bids",
+  "reportHesitation": "{count} hesitant bid(s) — these viewers were close to the price point but didn't convert.",
+  "@reportHesitation": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "reportSmartInsight": "Smart Insight",
+  "reportDurationMin": "min",
+  "reportDurationHour": "h",
+  "reportDurationLess": "< 1 min"
 }

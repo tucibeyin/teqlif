@@ -546,5 +546,67 @@
   "storyDeleteConfirm": "Bu hikayeyi silmek istediğine emin misin?",
   "storyDeleteFailed": "Hikaye silinemedi",
 
-  "offlineBannerMessage": "İnternet bağlantısı yok, çevrimdışı moddasınız."
+  "offlineBannerMessage": "İnternet bağlantısı yok, çevrimdışı moddasınız.",
+
+  "editProfileBio": "Hakkımda",
+  "editProfileBioHint": "Kendin hakkında kısa bir şeyler yaz…",
+  "editProfileBioHelper": "Maks. 60 karakter",
+  "editProfileLink": "Link",
+  "editProfileLinkHint": "https://...",
+  "editProfileLinkHelper": "https:// ile başlamalı",
+  "editProfileLinkError": "Link http:// veya https:// ile başlamalı",
+
+  "settingsProTools": "📈 Pro Araçları",
+  "settingsProActive": "AKTİF",
+
+  "walletTitle": "TUCi Cüzdanım",
+  "walletBalance": "Güncel Bakiye",
+  "walletRecentTxns": "Son İşlemler",
+  "walletSpendingSummary": "Harcama Özeti",
+  "walletTxnHistory": "İşlem Geçmişi",
+  "walletNoTxns": "Henüz işlem yok.",
+  "walletTxnAirdrop": "Hoş geldin hediyesi",
+  "walletTxnReceiveGift": "Hediye alındı",
+  "walletTxnSpendLeadGen": "Sıcak Talep blast",
+  "walletTxnSpendAdCampaign": "Reklam kampanyası",
+  "walletTxnSpendAi": "Yapay Zeka fiyatlama",
+  "walletTxnWebTopup": "Web yükleme",
+  "walletComingSoonLabel": "TUCi Satın Alma Yakında!",
+  "walletComingSoonDesc": "Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.",
+  "walletBuyBtn": "TUCi Satın Alma Yakında",
+
+  "reportLoading": "Yayın analizi hazırlanıyor…",
+  "reportLoadFailed": "Rapor yüklenemedi.",
+  "reportRetry": "Tekrar Dene",
+  "reportGoHome": "Ana Sayfaya Dön",
+  "reportBadge": "YAYIN ANALİZİ",
+  "reportStreamEndedDesc": "Yayın sona erdi. Kitle analiziniz aşağıda.",
+  "reportMetricPeakViewers": "Zirve\nİzleyici",
+  "reportMetricEngagedViewers": "Etkileşimli\nİzleyici",
+  "reportMetricAvgBudget": "Ortalama\nKitle Bütçesi",
+  "reportMetricDuration": "Yayın\nSüresi",
+  "reportSectionSwipeFeed": "SWIPE FEED ERİŞİMİ",
+  "reportMetricSwipeImpressions": "Swipe Feed\nGörüntülenme",
+  "reportMetricSwipeReach": "Swipe Feed\nTekil Erişim",
+  "reportSectionAuction": "AÇIK ARTIRMA ÖZETİ",
+  "reportMetricTotalAuctions": "Toplam\nArtırma",
+  "reportMetricSoldItems": "Satılan\nÜrün",
+  "reportMetricTotalBids": "Toplam\nTeklif",
+  "reportMetricRevenue": "Toplam\nHasılat",
+  "reportItemSold": "✅ Satıldı",
+  "reportItemBuyNow": "⚡ Hemen Al",
+  "reportItemNotSold": "❌ Satılmadı",
+  "reportChipStart": "Başl.",
+  "reportChipSale": "Satış",
+  "reportChipBids": "Teklif",
+  "reportHesitation": "{count} kararsız teklif — bu izleyiciler fiyat noktasına yakın ama dönüştüremedik.",
+  "@reportHesitation": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "reportSmartInsight": "Akıllı Öneri",
+  "reportDurationMin": "dk",
+  "reportDurationHour": "sa",
+  "reportDurationLess": "< 1 dk"
 }

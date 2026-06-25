@@ -1002,12 +1002,12 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           const SizedBox(height: 8),
           // ── Pro Araçlar ───────────────────────────────────────────────────
           _SettingsSection(
-            title: '📈 Pro Araçları',
+            title: l.settingsProTools,
             items: [
               _SettingsTile(
                 icon: Icons.workspace_premium_outlined,
                 iconColor: const Color(0xFF06B6D4),
-                label: widget.user?['is_premium'] == true ? '👑 Pro Araçları' : '👑 Pro Araçları',
+                label: '👑 Pro Araçları',
                 trailing: widget.user?['is_premium'] == true
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -1015,7 +1015,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           gradient: const LinearGradient(colors: [Color(0xFF1E1B4B), Color(0xFF4338CA)]),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text('AKTİF', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                        child: Text(l.settingsProActive, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
                       )
                     : Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1129,6 +1129,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   segments: const [
                     ButtonSegment(value: 'tr', label: Text('TR')),
                     ButtonSegment(value: 'en', label: Text('EN')),
+                    ButtonSegment(value: 'ar', label: Text('AR')),
                   ],
                   selected: {currentLocale.languageCode},
                   showSelectedIcon: false,
@@ -1455,7 +1456,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       final bio = _bioCtrl.text.trim();
       final link = _linkCtrl.text.trim();
       if (link.isNotEmpty && !link.startsWith('http://') && !link.startsWith('https://')) {
-        showErrorSnackbar(context, Exception('Link http:// veya https:// ile başlamalı'));
+        showErrorSnackbar(context, Exception(AppLocalizations.of(context)!.editProfileLinkError));
         setState(() => _saving = false);
         return;
       }
@@ -1580,37 +1581,45 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             const SizedBox(height: 14),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _bioCtrl,
-              builder: (_, val, __) => TextField(
-                controller: _bioCtrl,
-                maxLength: 60,
-                maxLines: 2,
-                decoration: InputDecoration(
-                  labelText: 'Hakkımda',
-                  hintText: 'Kendin hakkında kısa bir şeyler yaz…',
-                  helperText: 'Maks. 60 karakter',
-                  helperStyle: const TextStyle(fontSize: 11),
-                  counterText: '${val.text.length}/60',
-                  counterStyle: TextStyle(
-                    fontSize: 11,
-                    color: val.text.length >= 60
-                        ? Colors.red
-                        : AppColors.textTertiary(context),
+              builder: (_, val, __) {
+                final l = AppLocalizations.of(context)!;
+                return TextField(
+                  controller: _bioCtrl,
+                  maxLength: 60,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: l.editProfileBio,
+                    hintText: l.editProfileBioHint,
+                    helperText: l.editProfileBioHelper,
+                    helperStyle: const TextStyle(fontSize: 11),
+                    counterText: '${val.text.length}/60',
+                    counterStyle: TextStyle(
+                      fontSize: 11,
+                      color: val.text.length >= 60
+                          ? Colors.red
+                          : AppColors.textTertiary(context),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
             const SizedBox(height: 14),
-            TextField(
-              controller: _linkCtrl,
-              keyboardType: TextInputType.url,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                labelText: 'Link',
-                hintText: 'https://...',
-                prefixIcon: Icon(Icons.link_rounded, size: 20),
-                helperText: 'https:// ile başlamalı',
-                helperStyle: TextStyle(fontSize: 11),
-              ),
+            Builder(
+              builder: (context) {
+                final l = AppLocalizations.of(context)!;
+                return TextField(
+                  controller: _linkCtrl,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  decoration: InputDecoration(
+                    labelText: l.editProfileLink,
+                    hintText: l.editProfileLinkHint,
+                    prefixIcon: const Icon(Icons.link_rounded, size: 20),
+                    helperText: l.editProfileLinkHelper,
+                    helperStyle: const TextStyle(fontSize: 11),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -2089,6 +2098,7 @@ class _TuciWalletSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -2125,7 +2135,7 @@ class _TuciWalletSheet extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const Text('Güncel Bakiye', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(AppLocalizations.of(context)!.walletBalance, style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 6),
                 Text(
                   '$balance TUCi',
@@ -2137,9 +2147,9 @@ class _TuciWalletSheet extends StatelessWidget {
           const SizedBox(height: 20),
           // Son işlemler
           if (history.isNotEmpty) ...[
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
-              child: Text('Son İşlemler', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              child: Text(AppLocalizations.of(context)!.walletRecentTxns, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
             ),
             const SizedBox(height: 8),
             ...history.map((t) {
@@ -2186,7 +2196,7 @@ class _TuciWalletSheet extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: null,
               icon: const Icon(Icons.schedule_rounded),
-              label: const Text('TUCi Satın Alma Yakında'),
+              label: Text(l.walletBuyBtn),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFEF3C7),
                 foregroundColor: const Color(0xFF92400E),
@@ -2226,11 +2236,13 @@ class _WalletScreenState extends State<WalletScreen> {
   List<dynamic> _txns = [];
   bool _loading = false;
 
-  static const _typeLabels = {
-    'airdrop':        'Hoş geldin hediyesi',
-    'spend_lead_gen': 'Sıcak Talep blast',
-    'spend_ai':       'Yapay Zeka fiyatlama',
-    'web_topup':      'Web yükleme',
+  Map<String, String> _typeLabels(AppLocalizations l) => {
+    'airdrop':           l.walletTxnAirdrop,
+    'receive_gift':      l.walletTxnReceiveGift,
+    'spend_lead_gen':    l.walletTxnSpendLeadGen,
+    'spend_ad_campaign': l.walletTxnSpendAdCampaign,
+    'spend_ai':          l.walletTxnSpendAi,
+    'web_topup':         l.walletTxnWebTopup,
   };
 
   @override
@@ -2269,10 +2281,11 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final summary = _spendingSummary;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TUCi Cüzdanım', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(AppLocalizations.of(context)!.walletTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
         surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
@@ -2311,8 +2324,8 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
               child: Column(
                 children: [
-                  const Text('Güncel Bakiye',
-                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  Text(l.walletBalance,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 8),
                   Text(
                     _balance != null ? '$_balance TUCi' : '—',
@@ -2331,11 +2344,11 @@ class _WalletScreenState extends State<WalletScreen> {
 
             // ── Harcama özeti ─────────────────────────────────────────
             if (summary.isNotEmpty) ...[
-              const Text('Harcama Özeti',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              Text(l.walletSpendingSummary,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 10),
               ...summary.entries.map((e) => _SummaryRow(
-                    label: _typeLabels[e.key] ?? e.key,
+                    label: _typeLabels(l)[e.key] ?? e.key,
                     amount: e.value,
                   )),
               const SizedBox(height: 20),
@@ -2343,12 +2356,12 @@ class _WalletScreenState extends State<WalletScreen> {
 
             // ── İşlem geçmişi ─────────────────────────────────────────
             if (_txns.isNotEmpty) ...[
-              const Text('İşlem Geçmişi',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              Text(l.walletTxnHistory,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 10),
               ..._txns.map((t) {
                 final amount = t['amount'] as int? ?? 0;
-                final label = _typeLabels[t['transaction_type']] ??
+                final label = _typeLabels(l)[t['transaction_type']] ??
                     (t['label'] as String? ?? '');
                 final isPos = amount > 0;
                 final dateStr = t['created_at'] as String? ?? '';
@@ -2367,10 +2380,10 @@ class _WalletScreenState extends State<WalletScreen> {
               }),
               const SizedBox(height: 24),
             ] else if (!_loading) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('Henüz işlem yok.',
-                    style: TextStyle(color: Colors.grey)),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(l.walletNoTxns,
+                    style: const TextStyle(color: Colors.grey)),
               ),
             ],
 
@@ -2387,19 +2400,19 @@ class _WalletScreenState extends State<WalletScreen> {
                 children: [
                   const Text('🔔', style: TextStyle(fontSize: 28)),
                   const SizedBox(height: 8),
-                  const Text(
-                    'TUCi Satın Alma Yakında!',
-                    style: TextStyle(
+                  Text(
+                    l.walletComingSoonLabel,
+                    style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
                       color: Color(0xFF92400E),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.',
+                  Text(
+                    l.walletComingSoonDesc,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Color(0xFF78350F), height: 1.5),
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF78350F), height: 1.5),
                   ),
                 ],
               ),

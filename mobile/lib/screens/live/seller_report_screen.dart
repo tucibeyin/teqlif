@@ -1,6 +1,6 @@
-import 'dart:math' show pi;
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/analytics_service.dart';
 
 class SellerReportScreen extends StatefulWidget {
@@ -21,7 +21,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
     with SingleTickerProviderStateMixin {
   Map<String, dynamic>? _report;
   bool _loading = true;
-  String? _error;
+  bool _hasError = false;
 
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
@@ -49,7 +49,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
     setState(() {
       _report = report;
       _loading = false;
-      _error = report == null ? 'Rapor yüklenemedi.' : null;
+      _hasError = report == null;
     });
     if (report != null) _fadeCtrl.forward();
   }
@@ -69,12 +69,12 @@ class _SellerReportScreenState extends State<SellerReportScreen>
     return '${buf.toString()} ₺';
   }
 
-  String _fmtDuration(int minutes) {
-    if (minutes < 1) return '< 1 dk';
+  String _fmtDuration(int minutes, AppLocalizations l) {
+    if (minutes < 1) return l.reportDurationLess;
     final h = minutes ~/ 60;
     final m = minutes % 60;
-    if (h > 0) return '${h}sa ${m}dk';
-    return '${m} dk';
+    if (h > 0) return '$h${l.reportDurationHour} $m${l.reportDurationMin}';
+    return '$m ${l.reportDurationMin}';
   }
 
   // ── Build ───────────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
       body: SafeArea(
         child: _loading
             ? _buildLoading()
-            : _error != null
+            : _hasError
                 ? _buildError()
                 : _buildReport(),
       ),
@@ -94,15 +94,16 @@ class _SellerReportScreenState extends State<SellerReportScreen>
   }
 
   Widget _buildLoading() {
-    return const Center(
+    final l = AppLocalizations.of(context)!;
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: kPrimary),
-          SizedBox(height: 16),
+          const CircularProgressIndicator(color: kPrimary),
+          const SizedBox(height: 16),
           Text(
-            'Yayın analizi hazırlanıyor…',
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+            l.reportLoading,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
           ),
         ],
       ),
@@ -110,6 +111,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
   }
 
   Widget _buildError() {
+    final l = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -119,21 +121,21 @@ class _SellerReportScreenState extends State<SellerReportScreen>
             const Icon(Icons.wifi_off_rounded, color: Color(0xFF475569), size: 52),
             const SizedBox(height: 16),
             Text(
-              _error!,
+              l.reportLoadFailed,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 15),
             ),
             const SizedBox(height: 24),
             _PrimaryButton(
-              label: 'Tekrar Dene',
+              label: l.reportRetry,
               onTap: () {
-                setState(() { _loading = true; _error = null; });
+                setState(() { _loading = true; _hasError = false; });
                 _loadReport();
               },
             ),
             const SizedBox(height: 12),
             _SecondaryButton(
-              label: 'Ana Sayfaya Dön',
+              label: l.reportGoHome,
               onTap: _goHome,
             ),
           ],
@@ -143,6 +145,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
   }
 
   Widget _buildReport() {
+    final l = AppLocalizations.of(context)!;
     final r = _report!;
     final uniqueViewers = r['unique_viewers'] as int? ?? 0;
     final peakViewers = r['peak_viewers'] as int? ?? 0;
@@ -165,7 +168,12 @@ class _SellerReportScreenState extends State<SellerReportScreen>
         slivers: [
           // ── Header ─────────────────────────────────────────────────────────
           SliverToBoxAdapter(
-            child: _Header(title: widget.streamTitle, duration: _fmtDuration(duration)),
+            child: _Header(
+              title: widget.streamTitle,
+              duration: _fmtDuration(duration, l),
+              badge: l.reportBadge,
+              subtitle: l.reportStreamEndedDesc,
+            ),
           ),
 
           // ── Metrik kartları ────────────────────────────────────────────────
@@ -175,26 +183,26 @@ class _SellerReportScreenState extends State<SellerReportScreen>
               delegate: SliverChildListDelegate([
                 _MetricCard(
                   icon: Icons.visibility_outlined,
-                  label: 'Zirve\nİzleyici',
+                  label: l.reportMetricPeakViewers,
                   value: '$peakViewers',
                   color: const Color(0xFF6366F1),
                 ),
                 _MetricCard(
                   icon: Icons.people_outline_rounded,
-                  label: 'Etkileşimli\nİzleyici',
+                  label: l.reportMetricEngagedViewers,
                   value: '$uniqueViewers',
                   color: const Color(0xFF8B5CF6),
                 ),
                 _MetricCard(
                   icon: Icons.account_balance_wallet_outlined,
-                  label: 'Ortalama\nKitle Bütçesi',
+                  label: l.reportMetricAvgBudget,
                   value: _fmtBudget(avgBudget),
                   color: const Color(0xFF10B981),
                 ),
                 _MetricCard(
                   icon: Icons.timer_outlined,
-                  label: 'Yayın\nSüresi',
-                  value: _fmtDuration(duration),
+                  label: l.reportMetricDuration,
+                  value: _fmtDuration(duration, l),
                   color: const Color(0xFF3B82F6),
                 ),
               ]),
@@ -214,7 +222,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                 child: _SectionHeader(
                   icon: Icons.swipe_rounded,
-                  label: 'SWIPE FEED ERİŞİMİ',
+                  label: l.reportSectionSwipeFeed,
                   color: const Color(0xFF06B6D4),
                 ),
               ),
@@ -225,13 +233,13 @@ class _SellerReportScreenState extends State<SellerReportScreen>
                 delegate: SliverChildListDelegate([
                   _MetricCard(
                     icon: Icons.play_circle_outline_rounded,
-                    label: 'Swipe Feed\nGörüntülenme',
+                    label: l.reportMetricSwipeImpressions,
                     value: '$swipeImpressions',
                     color: const Color(0xFF06B6D4),
                   ),
                   _MetricCard(
                     icon: Icons.person_search_rounded,
-                    label: 'Swipe Feed\nTekil Erişim',
+                    label: l.reportMetricSwipeReach,
                     value: '$swipeReach',
                     color: const Color(0xFF0EA5E9),
                   ),
@@ -253,7 +261,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                 child: _SectionHeader(
                   icon: Icons.gavel_rounded,
-                  label: 'AÇIK ARTIRMA ÖZETİ',
+                  label: l.reportSectionAuction,
                   color: const Color(0xFFF97316),
                 ),
               ),
@@ -264,25 +272,25 @@ class _SellerReportScreenState extends State<SellerReportScreen>
                 delegate: SliverChildListDelegate([
                   _MetricCard(
                     icon: Icons.gavel_rounded,
-                    label: 'Toplam\nArtırma',
+                    label: l.reportMetricTotalAuctions,
                     value: '$totalAuctions',
                     color: const Color(0xFFF97316),
                   ),
                   _MetricCard(
                     icon: Icons.check_circle_outline_rounded,
-                    label: 'Satılan\nÜrün',
+                    label: l.reportMetricSoldItems,
                     value: '$successfulAuctions',
                     color: const Color(0xFF22C55E),
                   ),
                   _MetricCard(
                     icon: Icons.price_change_outlined,
-                    label: 'Toplam\nTeklif',
+                    label: l.reportMetricTotalBids,
                     value: '$totalBids',
                     color: const Color(0xFF06B6D4),
                   ),
                   _MetricCard(
                     icon: Icons.payments_outlined,
-                    label: 'Toplam\nHasılat',
+                    label: l.reportMetricRevenue,
                     value: _fmtBudget(totalRevenue > 0 ? totalRevenue : null),
                     color: const Color(0xFF10B981),
                   ),
@@ -323,7 +331,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: _HesitationHint(count: hesitations),
+                child: _HesitationHint(count: hesitations, l: l),
               ),
             ),
 
@@ -332,7 +340,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _InsightCard(text: recommendation),
+                child: _InsightCard(text: recommendation, insightLabel: l.reportSmartInsight),
               ),
             ),
 
@@ -340,7 +348,7 @@ class _SellerReportScreenState extends State<SellerReportScreen>
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-              child: _PrimaryButton(label: 'Ana Sayfaya Dön', onTap: _goHome),
+              child: _PrimaryButton(label: l.reportGoHome, onTap: _goHome),
             ),
           ),
         ],
@@ -358,7 +366,14 @@ class _SellerReportScreenState extends State<SellerReportScreen>
 class _Header extends StatelessWidget {
   final String title;
   final String duration;
-  const _Header({required this.title, required this.duration});
+  final String badge;
+  final String subtitle;
+  const _Header({
+    required this.title,
+    required this.duration,
+    required this.badge,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -389,7 +404,7 @@ class _Header extends StatelessWidget {
                     Icon(Icons.bar_chart_rounded, color: kPrimary, size: 14),
                     const SizedBox(width: 4),
                     Text(
-                      'YAYIN ANALİZİ',
+                      badge,
                       style: TextStyle(
                         color: kPrimary,
                         fontSize: 11,
@@ -418,9 +433,9 @@ class _Header extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Yayın sona erdi. Kitle analiziniz aşağıda.',
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+          Text(
+            subtitle,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
           ),
         ],
       ),
@@ -513,7 +528,8 @@ class _MetricCard extends StatelessWidget {
 
 class _InsightCard extends StatelessWidget {
   final String text;
-  const _InsightCard({required this.text});
+  final String insightLabel;
+  const _InsightCard({required this.text, required this.insightLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -546,9 +562,9 @@ class _InsightCard extends StatelessWidget {
                 child: Icon(Icons.auto_awesome_rounded, color: kPrimary, size: 16),
               ),
               const SizedBox(width: 10),
-              const Text(
-                'Akıllı Öneri',
-                style: TextStyle(
+              Text(
+                insightLabel,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -676,7 +692,11 @@ class _AuctionItemRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  sold ? (isBoughtItNow ? '⚡ Hemen Al' : '✅ Satıldı') : '❌ Satılmadı',
+                  sold
+                      ? (isBoughtItNow
+                          ? AppLocalizations.of(context)!.reportItemBuyNow
+                          : AppLocalizations.of(context)!.reportItemSold)
+                      : AppLocalizations.of(context)!.reportItemNotSold,
                   style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -685,11 +705,11 @@ class _AuctionItemRow extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _InfoChip(label: 'Başl.', value: _fmt(startPrice), color: const Color(0xFF64748B)),
+              _InfoChip(label: AppLocalizations.of(context)!.reportChipStart, value: _fmt(startPrice), color: const Color(0xFF64748B)),
               const SizedBox(width: 8),
-              if (sold) _InfoChip(label: 'Satış', value: _fmt(finalPrice), color: const Color(0xFF22C55E)),
+              if (sold) _InfoChip(label: AppLocalizations.of(context)!.reportChipSale, value: _fmt(finalPrice), color: const Color(0xFF22C55E)),
               const SizedBox(width: 8),
-              _InfoChip(label: 'Teklif', value: '$bidCount', color: const Color(0xFF06B6D4)),
+              _InfoChip(label: AppLocalizations.of(context)!.reportChipBids, value: '$bidCount', color: const Color(0xFF06B6D4)),
               const Spacer(),
               if (durationMinutes > 0)
                 Text(
@@ -743,7 +763,8 @@ class _InfoChip extends StatelessWidget {
 
 class _HesitationHint extends StatelessWidget {
   final int count;
-  const _HesitationHint({required this.count});
+  final AppLocalizations l;
+  const _HesitationHint({required this.count, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -760,7 +781,7 @@ class _HesitationHint extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '$count kararsız teklif — bu izleyiciler fiyat noktasına yakın ama dönüştüremedik.',
+              l.reportHesitation(count),
               style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 12, height: 1.4),
             ),
           ),

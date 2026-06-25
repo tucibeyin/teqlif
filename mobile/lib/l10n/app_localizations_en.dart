@@ -1265,4 +1265,166 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get offlineBannerMessage =>
       'No internet connection, you are in offline mode.';
+
+  @override
+  String get editProfileBio => 'About Me';
+
+  @override
+  String get editProfileBioHint => 'Write a short bio about yourself…';
+
+  @override
+  String get editProfileBioHelper => 'Max. 60 characters';
+
+  @override
+  String get editProfileLink => 'Link';
+
+  @override
+  String get editProfileLinkHint => 'https://...';
+
+  @override
+  String get editProfileLinkHelper => 'Must start with https://';
+
+  @override
+  String get editProfileLinkError => 'Link must start with http:// or https://';
+
+  @override
+  String get settingsProTools => '📈 Pro Tools';
+
+  @override
+  String get settingsProActive => 'ACTIVE';
+
+  @override
+  String get walletTitle => 'My TUCi Wallet';
+
+  @override
+  String get walletBalance => 'Current Balance';
+
+  @override
+  String get walletRecentTxns => 'Recent Transactions';
+
+  @override
+  String get walletSpendingSummary => 'Spending Summary';
+
+  @override
+  String get walletTxnHistory => 'Transaction History';
+
+  @override
+  String get walletNoTxns => 'No transactions yet.';
+
+  @override
+  String get walletTxnAirdrop => 'Welcome gift';
+
+  @override
+  String get walletTxnReceiveGift => 'Gift received';
+
+  @override
+  String get walletTxnSpendLeadGen => 'Hot Lead blast';
+
+  @override
+  String get walletTxnSpendAdCampaign => 'Ad campaign';
+
+  @override
+  String get walletTxnSpendAi => 'AI pricing';
+
+  @override
+  String get walletTxnWebTopup => 'Web top-up';
+
+  @override
+  String get walletComingSoonLabel => 'TUCi Purchase Coming Soon!';
+
+  @override
+  String get walletComingSoonDesc =>
+      'Our payment infrastructure is being prepared. All users currently start with 100 TUCi balance.';
+
+  @override
+  String get walletBuyBtn => 'TUCi Purchase Coming Soon';
+
+  @override
+  String get reportLoading => 'Preparing stream analysis…';
+
+  @override
+  String get reportLoadFailed => 'Could not load report.';
+
+  @override
+  String get reportRetry => 'Try Again';
+
+  @override
+  String get reportGoHome => 'Go to Home';
+
+  @override
+  String get reportBadge => 'STREAM ANALYSIS';
+
+  @override
+  String get reportStreamEndedDesc =>
+      'Stream ended. Your audience analysis is below.';
+
+  @override
+  String get reportMetricPeakViewers => 'Peak\nViewers';
+
+  @override
+  String get reportMetricEngagedViewers => 'Engaged\nViewers';
+
+  @override
+  String get reportMetricAvgBudget => 'Average\nAudience Budget';
+
+  @override
+  String get reportMetricDuration => 'Stream\nDuration';
+
+  @override
+  String get reportSectionSwipeFeed => 'SWIPE FEED REACH';
+
+  @override
+  String get reportMetricSwipeImpressions => 'Swipe Feed\nImpressions';
+
+  @override
+  String get reportMetricSwipeReach => 'Swipe Feed\nUnique Reach';
+
+  @override
+  String get reportSectionAuction => 'AUCTION SUMMARY';
+
+  @override
+  String get reportMetricTotalAuctions => 'Total\nAuctions';
+
+  @override
+  String get reportMetricSoldItems => 'Sold\nItems';
+
+  @override
+  String get reportMetricTotalBids => 'Total\nBids';
+
+  @override
+  String get reportMetricRevenue => 'Total\nRevenue';
+
+  @override
+  String get reportItemSold => '✅ Sold';
+
+  @override
+  String get reportItemBuyNow => '⚡ Buy Now';
+
+  @override
+  String get reportItemNotSold => '❌ Not Sold';
+
+  @override
+  String get reportChipStart => 'Start';
+
+  @override
+  String get reportChipSale => 'Sale';
+
+  @override
+  String get reportChipBids => 'Bids';
+
+  @override
+  String reportHesitation(int count) =>
+      '$count hesitant bid(s) — these viewers were close to the price point but didn\'t convert.';
+
+  @override
+  String get reportSmartInsight => 'Smart Insight';
+
+  @override
+  String get reportDurationMin => 'min';
+
+  @override
+  String get reportDurationHour => 'h';
+
+  @override
+  String get reportDurationLess => '< 1 min';
 }

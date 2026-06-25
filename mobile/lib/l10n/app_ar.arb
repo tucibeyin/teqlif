@@ -1,0 +1,612 @@
+{
+  "@@locale": "ar",
+
+  "appName": "teqlif",
+
+  "navLive": "مباشر",
+  "navListings": "الإعلانات",
+  "navSearch": "بحث",
+  "navMessages": "الرسائل",
+  "navProfile": "ملفي",
+  "navSettings": "الإعدادات",
+
+  "loginWelcome": "مرحباً",
+  "loginSubtitle": "تسجيل الدخول إلى حسابك",
+  "loginNoAccount": "ليس لديك حساب؟ ",
+  "loginRegisterLink": "سجّل الآن",
+  "loginFaceId": "🔒 تسجيل الدخول بـ Face ID",
+  "loginFaceIdDesc": "يمكنك تسجيل الدخول بسرعة باستخدام Face ID في المرة القادمة دون إدخال كلمة المرور.",
+
+  "registerTitle": "إنشاء حساب",
+  "registerSubtitle": "إنشاء حساب جديد",
+  "registerJoin": "انضم إلى teqlif",
+  "registerHaveAccount": "لديك حساب بالفعل؟ ",
+  "registerLoginLink": "تسجيل الدخول",
+
+  "fieldEmail": "البريد الإلكتروني",
+  "fieldEmailHint": "أدخل البريد الإلكتروني",
+  "fieldPassword": "كلمة المرور",
+  "fieldPasswordHint": "أدخل كلمة المرور",
+  "fieldFullName": "الاسم الكامل",
+  "fieldFullNameHint": "أدخل الاسم الكامل",
+  "fieldUsername": "اسم المستخدم",
+  "fieldUsernameHint": "أدخل اسم المستخدم",
+  "fieldUsernameSubtitle": "يمكن استخدام الحروف الصغيرة والأرقام و _",
+  "fieldCurrentPassword": "كلمة المرور الحالية",
+  "fieldNewPassword": "كلمة المرور الجديدة",
+  "fieldNewPasswordConfirm": "كلمة المرور الجديدة (تأكيد)",
+  "fieldEmailCode": "رمز التحقق عبر البريد الإلكتروني",
+  "fieldPasswordConfirmHint": "أدخل كلمة المرور للتأكيد",
+  "fieldListingTitle": "عنوان الإعلان",
+  "fieldListingTitleHint": "أدخل العنوان",
+  "fieldCategory": "الفئة",
+  "fieldCategoryHint": "اختر الفئة",
+  "fieldPrice": "السعر",
+  "fieldPriceHint": "أدخل السعر",
+  "fieldLocation": "الموقع (اختياري)",
+  "fieldLocationHint": "اختر المدينة",
+  "fieldDescription": "الوصف",
+  "fieldDescriptionHint": "أدخل الوصف",
+  "fieldCity": "المدينة",
+
+  "btnLogin": "تسجيل الدخول",
+  "btnNotNow": "ليس الآن",
+  "btnEnable": "تفعيل",
+  "btnSave": "حفظ",
+  "btnCancel": "إلغاء",
+  "btnDelete": "حذف",
+  "btnDismiss": "رفض",
+  "btnRetry": "إعادة المحاولة",
+  "btnLogout": "تسجيل الخروج",
+  "btnEditProfile": "تعديل الملف الشخصي",
+  "btnCreateListing": "نشر إعلان",
+  "btnPublishListing": "نشر الإعلان",
+  "btnSendCode": "إرسال الرمز",
+  "btnChangePassword": "تغيير كلمة المرور",
+  "btnDeleteAccount": "حذف الحساب",
+  "btnAdd": "إضافة",
+  "btnAddPhoto": "إضافة صورة",
+  "btnPickGallery": "اختر من المعرض",
+  "btnPickCamera": "التقط بالكاميرا",
+  "btnCamera": "الكاميرا",
+  "btnClearFilters": "مسح الفلاتر",
+  "btnDeactivate": "إلغاء التنشيط",
+  "btnActivate": "تنشيط",
+  "btnRemoveFavorite": "إزالة من المفضلة",
+
+  "homeRecentListings": "آخر الإعلانات",
+  "searchHint": "جارٍ البحث...",
+  "citySelectTitle": "اختر المدينة",
+  "cityAll": "جميع المدن",
+
+  "catElectronics": "إلكترونيات",
+  "catVehicles": "مركبات",
+  "catRealEstate": "عقارات",
+  "catClothing": "ملابس",
+  "catSports": "رياضة",
+  "catBooks": "كتب",
+  "catHomeLife": "منزل وحياة",
+  "catOther": "أخرى",
+
+  "profileUsername": "المستخدم",
+  "profileListingCount": "إعلانات",
+  "profileFollowers": "متابعون",
+  "profileFollowing": "متابَعون",
+  "profileFollowersList": "المتابعون",
+  "profileFollowingList": "المتابَعون",
+  "profileFirstListing": "انشر أول إعلان لك!",
+  "profileMyListings": "إعلاناتي",
+  "profileActiveListings": "الإعلانات النشطة",
+  "profilePassiveListings": "الإعلانات المعلّقة",
+  "profileFavorites": "مفضلتي",
+  "profileAccountSection": "الحساب",
+  "profileNotificationSettings": "إعدادات الإشعارات",
+  "profileBlockedUsers": "المستخدمون المحظورون",
+  "profileFaceId": "تسجيل الدخول بـ Face ID",
+  "profileDarkMode": "الوضع الداكن",
+  "profileSupportSection": "الدعم",
+  "profileSupportCenter": "مركز الدعم",
+  "profileTerms": "شروط الاستخدام وEULA",
+  "profilePrivacy": "سياسة الخصوصية",
+  "profileChangePassword": "تغيير كلمة المرور",
+  "profileDeleteAccount": "حذف الحساب نهائياً",
+  "profileDeleteAccountDesc": "لا يمكن التراجع عن هذا الإجراء. ستُحذف جميع بياناتك نهائياً خلال 30 يوماً.",
+
+  "sectionPhotos": "الصور",
+  "photoCover": "غلاف",
+  "listingMaxPhotos": "يمكنك إضافة 10 صور كحد أقصى",
+
+  "statusOn": "مفعّل",
+  "statusOff": "معطّل",
+
+  "notifSettingsTitle": "إعدادات الإشعارات",
+  "notifMessagesTitle": "الرسائل",
+  "notifMessagesDesc": "عند وصول رسالة مباشرة جديدة",
+  "notifNewFollowerTitle": "متابع جديد",
+  "notifNewFollowerDesc": "عندما يتابعك أحد",
+  "notifAuctionWonTitle": "فزت بالمزاد",
+  "notifAuctionWonDesc": "عندما يُقبل عرضك",
+  "notifLiveStreamTitle": "بث مباشر",
+  "notifLiveStreamDesc": "عندما يبدأ أحد متابَعيك بثاً مباشراً",
+  "notifNewListingTitle": "إعلان جديد",
+  "notifNewListingDesc": "عندما يضيف أحد متابَعيك إعلاناً",
+  "notifNewBidTitle": "عرض جديد",
+  "notifNewBidDesc": "عند وصول عرض على إعلانك",
+  "notifBidOutbidTitle": "تجاوز العرض",
+  "notifBidOutbidDesc": "عندما يتجاوز أحدهم عرضك في المزاد",
+
+  "validFullNameMin": "يجب أن يتكون الاسم الكامل من حرفين على الأقل",
+  "validFullNameMax": "يجب ألا يتجاوز الاسم الكامل 100 حرف",
+  "validUsernameMin": "يجب أن يتكون من 3 أحرف على الأقل",
+  "validUsernameMax": "يجب ألا يتجاوز 50 حرفاً",
+  "validUsernameChars": "يمكن استخدام الحروف الصغيرة والأرقام و _ فقط",
+  "validUsernameTaken": "اسم المستخدم هذا محجوز بالفعل",
+  "validUsernameInvalid": "اسم المستخدم غير صالح. يمكن استخدام الحروف الصغيرة والأرقام و _ فقط.",
+  "validEmailMax": "يجب ألا يتجاوز البريد الإلكتروني 255 حرفاً",
+  "validEmailInvalid": "أدخل عنوان بريد إلكتروني صالحاً",
+  "validPasswordMin": "يجب أن يتكون من 8 أحرف على الأقل",
+  "validNewPasswordMin": "يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل.",
+  "validPasswordsMatch": "كلمتا المرور الجديدتان غير متطابقتين.",
+  "validVerificationCode": "أدخل رمز التحقق.",
+  "validAllFields": "املأ جميع الحقول.",
+  "validTermsRequired": "يجب قبول شروط الاستخدام.",
+
+  "usernameChecking": "جارٍ التحقق من اسم المستخدم...",
+  "usernameCheckingWait": "جارٍ التحقق من اسم المستخدم، يرجى الانتظار...",
+
+  "fieldPhone": "رقم الهاتف (اختياري)",
+  "fieldPhoneHint": "0### ### ## ##",
+
+  "emptyListings": "لا توجد إعلانات بعد",
+  "emptyFilteredListings": "لم يُعثر على إعلانات بهذا الفلتر",
+  "emptyActiveListings": "لا توجد إعلانات نشطة",
+  "emptyPassiveListings": "لا توجد إعلانات معلّقة",
+  "emptyFavorites": "لا توجد إعلانات مفضّلة بعد",
+
+  "errorConnection": "خطأ في الاتصال",
+  "errorListingsLoad": "تعذّر تحميل الإعلانات",
+  "errorPhotoUpload": "تعذّر رفع الصورة. حاول مجدداً.",
+  "errorCaptchaFailed": "فشل التحقق الأمني. يرجى المحاولة مجدداً.",
+  "errorTooFast": "أنت تُجري العمليات بسرعة كبيرة. يرجى الانتظار قليلاً.",
+
+  "msgPasswordChanged": "تم تغيير كلمة المرور بنجاح.",
+  "msgListingPublished": "تم نشر الإعلان!",
+
+  "dialogDeleteListingTitle": "حذف الإعلان",
+  "dialogDeleteListingDesc": "هل تريد حذف هذا الإعلان نهائياً؟",
+  "dialogFaceIdActivateTitle": "تحقق لتفعيل Face ID",
+
+  "settingsLanguage": "اللغة",
+
+  "homeAppBarTitle": "الإعلانات",
+  "homeSearchingHeader": "جارٍ البحث...",
+  "homeResultsCount": "تم العثور على {count} إعلان",
+  "@homeResultsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "searchUserHint": "ابحث عن مستخدم...",
+  "searchNoUser": "لم يُعثر على مستخدم",
+  "searchLiveStreams": "البثوث المباشرة",
+  "searchNoContent": "لا يوجد محتوى بعد",
+
+  "msgTabMessages": "الرسائل",
+  "msgTabNotifications": "الإشعارات",
+  "msgNoMessages": "لا توجد رسائل بعد",
+  "msgNoMessagesDesc": "عندما تهتم بإعلان ما\nسيظهر هنا",
+  "msgSendFailed": "تعذّر إرسال الرسالة",
+  "msgWriteHint": "اكتب رسالة...",
+  "msgNoChat": "لا توجد رسائل بعد.\nأرسل أول رسالة!",
+  "msgGoToListing": "📌 الانتقال إلى الإعلان",
+
+  "notifNone": "لا توجد إشعارات",
+  "notifNoneDesc": "ستظهر الإشعارات الجديدة هنا",
+  "notificationsTitle": "الإشعارات",
+  "notificationsMarkAllRead": "تعليم الكل كمقروء",
+
+  "blockedUsersTitle": "المستخدمون المحظورون",
+  "blockedNone": "لا يوجد مستخدمون محظورون",
+  "blockedUnblock": "رفع الحظر",
+  "blockedActionFailed": "تعذّر تنفيذ الإجراء",
+
+  "followNoFollowers": "لا يوجد متابعون بعد",
+  "followNoFollowing": "لا يوجد متابَعون بعد",
+  "followBtnFollowing": "يتابعك",
+  "followBtnFollow": "متابعة",
+
+  "pubProfileUserNotFound": "لم يُعثر على المستخدم",
+  "pubProfileListingsCount": "إعلاناته ({count})",
+  "@pubProfileListingsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "pubProfileStatListings": "الإعلانات",
+  "pubProfileStatFollowers": "المتابعون",
+  "pubProfileStatFollowing": "المتابَعون",
+  "pubProfileEditComingSoon": "تعديل الملف الشخصي قريباً",
+  "pubProfileFollowingLabel": "تتابعه",
+  "pubProfileFollowLabel": "متابعة",
+  "pubProfileSendMessage": "إرسال رسالة",
+  "pubProfileUpdateRating": "تحديث التقييم",
+  "pubProfileGiveRating": "تقييم",
+  "pubProfileBlock": "حظر",
+  "pubProfileUnblock": "رفع الحظر",
+  "pubProfileActionFailed": "تعذّر تنفيذ الإجراء",
+  "pubProfileNoReview": "لا توجد تقييمات بعد",
+
+  "ratingVeryBad": "سيء جداً",
+  "ratingBad": "سيء",
+  "ratingMedium": "متوسط",
+  "ratingGood": "جيد",
+  "ratingExcellent": "ممتاز",
+  "ratingSelectStar": "اختر نجمة",
+  "ratingCommentHint": "لماذا أعطيت هذا التقييم؟ (اختياري)",
+  "ratingSaveFailed": "تعذّر حفظ التقييم",
+  "ratingReviews": "التقييمات",
+  "ratingCount": "{count} تقييم",
+  "@ratingCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "ratingStarCount": "({count} تقييم)",
+  "@ratingStarCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "createListingPhotoCount": "الصور ({count}/{max})",
+  "@createListingPhotoCount": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "createListingSelectOption": "-- اختر --",
+  "createListingPhotoUploadFailed": "تعذّر رفع الصورة: {error}",
+  "@createListingPhotoUploadFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "createListingConnError": "خطأ في الاتصال. يرجى المحاولة مجدداً.",
+
+  "notifSettingsMessagesTitle": "الرسائل",
+  "notifSettingsMessagesDesc": "عند وصول رسالة مباشرة جديدة",
+  "notifSettingsFollowsTitle": "متابع جديد",
+  "notifSettingsFollowsDesc": "عندما يتابعك أحد",
+  "notifSettingsAuctionWonTitle": "فزت بالمزاد",
+  "notifSettingsAuctionWonDesc": "عندما يُقبل عرضك",
+  "notifSettingsStreamStartedTitle": "بث مباشر",
+  "notifSettingsStreamStartedDesc": "عندما يبدأ أحد متابَعيك بثاً مباشراً",
+  "notifSettingsNewListingTitle": "إعلان جديد",
+  "notifSettingsNewListingDesc": "عندما يضيف أحد متابَعيك إعلاناً",
+  "notifSettingsNewBidTitle": "عرض جديد",
+  "notifSettingsNewBidDesc": "عند وصول عرض على إعلانك",
+  "notifSettingsOutbidTitle": "تجاوز العرض",
+  "notifSettingsOutbidDesc": "عندما يتجاوز أحدهم عرضك في المزاد",
+
+  "btnOk": "موافق",
+  "btnGoBack": "العودة",
+  "errorGeneric": "حدث خطأ ما",
+
+  "listingPriceNotSet": "السعر غير محدد",
+  "listingMsgLoginRequired": "يجب تسجيل الدخول لإرسال رسالة",
+  "listingMsgOwnListing": "لا يمكنك إرسال رسالة لإعلانك الخاص",
+  "listingActivated": "تم تنشيط الإعلان",
+  "listingDeactivated": "تم إلغاء تنشيط الإعلان",
+  "listingDeleteConfirmContent": "هل أنت متأكد من حذف هذا الإعلان؟ لا يمكن التراجع عن هذا الإجراء.",
+  "listingDeleteConfirmYes": "نعم، احذف",
+  "listingInfo": "معلومات الإعلان",
+  "listingLocationLabel": "الموقع",
+  "listingSendMessage": "إرسال رسالة للبائع",
+  "listingReportTooltip": "الإبلاغ",
+  "listingDeleteTooltip": "حذف الإعلان",
+  "listingReportTitle": "🚩 الإبلاغ عن الإعلان",
+  "listingReportSelectHint": "اختر السبب",
+  "listingReportMisleading": "إعلان مضلّل",
+  "listingReportIllegal": "منتج غير قانوني",
+  "listingReportSpam": "سبام / إعلان مكرر",
+  "listingReportInappropriate": "محتوى غير لائق",
+  "listingReportFraud": "اشتباه بالاحتيال",
+  "listingReportNoteHint": "ملاحظة إضافية (اختياري)",
+  "listingReportSubmitBtn": "إرسال البلاغ",
+  "listingReportSelectRequired": "يرجى اختيار سبب",
+  "listingReportSuccess": "تم استلام بلاغك. شكراً لك.",
+  "listingDescriptionLabel": "الوصف",
+
+  "liveStreamsTitle": "البثوث المباشرة",
+  "liveStartStream": "بدء البث",
+  "liveAllCategory": "الكل",
+  "liveNoStreams": "لا توجد بثوث نشطة الآن",
+  "liveBeFirst": "كن أول من يبث!",
+  "livePullToRefresh": "اسحب للأسفل للتحديث",
+  "liveStreamsLoadError": "تعذّر تحميل البثوث",
+  "liveStartStreamDialogTitle": "بدء البث",
+  "liveStreamTitleHint": "عنوان البث",
+  "liveStreamTitleLabel": "العنوان *",
+  "liveCategoryLabel": "الفئة *",
+  "liveCategoryHint": "اختر فئة",
+  "liveStartBtn": "ابدأ",
+  "liveStreamTitleRequired": "عنوان البث مطلوب",
+  "liveStreamTitleMin": "يجب أن يتجاوز عنوان البث 3 أحرف.",
+  "liveCategoryRequired": "اختيار الفئة مطلوب",
+  "liveLoginRequired": "يجب تسجيل الدخول لبدء البث",
+  "liveBadgeLabel": "مباشر",
+  "liveEndedBadge": "انتهى",
+  "liveConnecting": "جارٍ بدء البث...",
+  "liveConnectingViewer": "جارٍ الاتصال بالبث...",
+  "livePermissionRequired": "إذن الكاميرا والميكروفون مطلوب",
+  "liveViewersTitle": "👁 المشاهدون ({count})",
+  "@liveViewersTitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "liveNoViewers": "لا يوجد مشاهدون بعد",
+  "liveEndStreamTitle": "إنهاء البث",
+  "liveEndStreamConfirm": "هل تريد إنهاء البث؟",
+  "liveEndStreamBtn": "إنهاء",
+  "liveGoBack": "العودة",
+  "liveEnded": "انتهى البث",
+  "liveStreamEndedTitle": "انتهى البث",
+  "liveStreamEndedDesc": "تم إنهاء هذا البث من قِبل المُذيع.",
+  "liveStreamEndedOverlay": "انتهى البث",
+  "liveDiscoverStreams": "اسحب لاستكشاف بثوث أخرى",
+  "liveLeaveBtn": "مغادرة",
+  "liveNextStream": "البث التالي",
+  "liveCameraClosed": "الكاميرا مغلقة",
+  "liveWaitingVideo": "في انتظار الفيديو...",
+  "liveModDemotedSelf": "تم إلغاء صلاحيات الإشراف بواسطة @{username}.",
+  "@liveModDemotedSelf": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "liveModPromotedSelf": "⭐ جعلك @{username} مشرفاً! يمكنك الآن إدارة المشاهدين.",
+  "@liveModPromotedSelf": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+
+  "modTitle": "🛡 الإشراف",
+  "modMute": "كتم",
+  "modUnmute": "إلغاء الكتم",
+  "modPromote": "تعيين مشرفاً",
+  "modDemote": "إلغاء الإشراف",
+  "modKick": "طرد من البث",
+  "modMutedMsg": "تم كتم @{username}",
+  "@modMutedMsg": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modUnmutedMsg": "تم إلغاء الكتم",
+  "modPromotedMsg": "تم تعيين @{username} مشرفاً",
+  "@modPromotedMsg": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modDemotedMsg": "تم إلغاء إشراف @{username}",
+  "@modDemotedMsg": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modKickedMsg": "تم طرد @{username} من البث",
+  "@modKickedMsg": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modPromotedSnack": "⭐ تم تعيين @{username} مشرفاً!",
+  "@modPromotedSnack": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modDemotedSnack": "✖ تم إلغاء إشراف @{username}",
+  "@modDemotedSnack": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+
+  "chatMessageHint": "اكتب رسالة...",
+  "chatMutedHint": "🔇 تم كتمك",
+  "chatHistoryTitle": "سجل المحادثة",
+  "chatHistoryCount": "آخر {count} رسالة",
+  "@chatHistoryCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "auctionTitle": "مزاد علني",
+  "auctionBidsHeader": "العروض",
+  "auctionAcceptBidTitle": "✅ قبول العرض",
+  "auctionItem": "المنتج",
+  "auctionWinnerPrice": "السعر الفائز",
+  "auctionBidder": "صاحب العرض",
+  "auctionAcceptConfirm": "عند القبول يُغلق المزاد ويُرسل ملخص تلقائياً إلى المحادثة.",
+  "auctionCancelBtn": "إلغاء",
+  "auctionContinueBtn": "متابعة",
+  "auctionAccepted": "تم قبول العرض! تم إرسال الملخص إلى المحادثة.",
+  "auctionEndTitle": "إنهاء المزاد",
+  "auctionEndDesc": "سيُحفظ النتيجة وسيُغلق المزاد.",
+  "auctionEndBtn": "إنهاء",
+  "auctionStatusActive": "نشط",
+  "auctionStatusPending": "في انتظار الموافقة ⚡",
+  "auctionStatusPaused": "متوقف",
+  "auctionStatusSold": "مُباع 🛒",
+  "auctionStatusEnded": "انتهى",
+  "auctionStatusIdle": "مزاد علني",
+  "auctionStartBtn": "▶ ابدأ",
+  "auctionBidBtn": "قدّم عرضاً",
+  "auctionMutedBtn": "🔇 تم كتمك",
+  "auctionBuyNowTitle": "⚡ اشتر الآن",
+  "auctionBuyNowPrice": "سعر الشراء الفوري",
+  "auctionBuyNowConfirm": "هل تريد شراء المنتج بهذا السعر فوراً؟ سينتهي المزاد.",
+  "auctionBuyNowRequest": "⚡ طلب شراء فوري",
+  "auctionBuyNowRequester": "طالب الشراء",
+  "auctionBuyNowRequestConfirm": "هل توافق على طلب الشراء الفوري لهذا الشخص؟",
+  "auctionBuyNowReject": "رفض",
+  "auctionBuyNowApprove": "موافقة",
+  "auctionWaitingHost": "في انتظار رد المُضيف",
+  "auctionWaitingHostDesc": "سيكتمل الشراء عند موافقة المُضيف.",
+  "auctionApprovalWaiting": "⚡ في انتظار الموافقة",
+  "auctionApprovalWaitingDesc": "تم إرسال طلب الشراء الفوري إلى المُضيف.",
+  "auctionInProgress": "⏳ جارٍ المعالجة",
+  "auctionInProgressDesc": "جارٍ إتمام الشراء الفوري مع @{username}.",
+  "@auctionInProgressDesc": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "auctionInProgressNoBid": "لا يمكنك تقديم عرض حتى تنتهي العملية.",
+  "auctionSold": "🛒 مُباع!",
+  "auctionBoughtBy": "تم الشراء الفوري بواسطة @{username}",
+  "@auctionBoughtBy": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "auctionBuyNowCongrats": "🎉 تهانينا! اكتمل الشراء.",
+  "auctionBuyNowSoldOther": "🛒 تم بيع المنتج فوراً! اشتراه @{buyer}.",
+  "@auctionBuyNowSoldOther": {
+    "placeholders": {
+      "buyer": {"type": "String"}
+    }
+  },
+  "auctionBinRejected": "تم رفض طلب الشراء الفوري، المزاد مستمر.",
+  "auctionBinRejectedOther": "اكتمل الشراء الفوري، المزاد مستمر.",
+  "auctionBuyNowBtn": "⚡ اشتر الآن — ",
+  "auctionBuyNowBuyBtn": "شراء",
+  "auctionAcceptBtn": "✅ قبول",
+  "auctionValidAmount": "أدخل مبلغاً صالحاً",
+  "auctionCustomAmountHint": "مبلغ مخصص (₺)",
+  "auctionFirstBid": "كن أول من يقدّم عرضاً!",
+  "auctionHighestBidder": "@{username} صاحب أعلى عرض",
+  "@auctionHighestBidder": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "auctionBidCount": "{count} عرض",
+  "@auctionBidCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "auctionManualEntry": "إدخال يدوي",
+  "auctionFromListings": "من إعلاناتي",
+  "auctionNoActiveListings": "لا توجد إعلانات نشطة.",
+  "auctionStartTitle": "بدء مزاد علني",
+  "auctionItemName": "اسم المنتج",
+  "auctionStartPrice": "سعر البداية (₺)",
+  "auctionBuyNowPriceHint": "سعر الشراء الفوري (₺، اختياري)",
+  "auctionBuyNowCompleted": "🛒 اكتمل الشراء الفوري! @{buyer} — ₺{price}",
+  "@auctionBuyNowCompleted": {
+    "placeholders": {
+      "buyer": {"type": "String"},
+      "price": {"type": "String"}
+    }
+  },
+  "offerHistory": "سجل العروض",
+  "offerAmountHint": "مبلغ العرض (₺)",
+  "offerBtn": "قدّم عرضاً",
+  "offerSuccess": "تم استلام عرضك!",
+  "offerError": "تعذّر إرسال العرض.",
+  "offerInvalidAmount": "أدخل مبلغاً صالحاً.",
+  "offerEmpty": "لا توجد عروض بعد.",
+  "offerLoginRequired": "يجب تسجيل الدخول لتقديم عرض.",
+
+  "storyTrayTitle": "من تتابعهم",
+  "storyTrayEmpty": "لا أحد من متابَعيك يبث الآن.",
+  "storyTrayError": "تعذّر التحميل",
+
+  "storyMyStory": "قصتي",
+  "storyProcessing": "جارٍ معالجة الفيديو...",
+  "storyTooLong": "الفيديو طويل جداً (15 ثانية كحد أقصى)",
+  "storyUploadFailed": "تعذّر رفع القصة",
+  "storyUploadSuccess": "تمت مشاركة قصتك!",
+  "storyLiveNow": "يبث الآن مباشرة!",
+  "storyJoinLive": "انضم للبث",
+  "storyJoinLiveFailed": "تعذّر الاتصال بالبث",
+  "storyWhoViewed": "من شاهد؟",
+  "storyViewersLoadFailed": "تعذّر تحميل المشاهدين",
+  "storyNoViewersYet": "لم يشاهد أحد بعد",
+  "storyDelete": "حذف القصة",
+  "storyDeleteConfirm": "هل أنت متأكد من حذف هذه القصة؟",
+  "storyDeleteFailed": "تعذّر حذف القصة",
+
+  "offlineBannerMessage": "لا يوجد اتصال بالإنترنت، أنت في وضع غير متصل.",
+
+  "editProfileBio": "عن نفسي",
+  "editProfileBioHint": "اكتب نبذة مختصرة عن نفسك...",
+  "editProfileBioHelper": "بحد أقصى 60 حرفاً",
+  "editProfileLink": "رابط",
+  "editProfileLinkHint": "https://...",
+  "editProfileLinkHelper": "يجب أن يبدأ بـ https://",
+  "editProfileLinkError": "يجب أن يبدأ الرابط بـ http:// أو https://",
+
+  "settingsProTools": "📈 أدوات Pro",
+  "settingsProActive": "نشط",
+
+  "walletTitle": "محفظة TUCi الخاصة بي",
+  "walletBalance": "الرصيد الحالي",
+  "walletRecentTxns": "آخر المعاملات",
+  "walletSpendingSummary": "ملخص الإنفاق",
+  "walletTxnHistory": "سجل المعاملات",
+  "walletNoTxns": "لا توجد معاملات بعد.",
+  "walletTxnAirdrop": "هدية الترحيب",
+  "walletTxnReceiveGift": "هدية مستلمة",
+  "walletTxnSpendLeadGen": "بث الطلبات الساخنة",
+  "walletTxnSpendAdCampaign": "حملة إعلانية",
+  "walletTxnSpendAi": "تسعير الذكاء الاصطناعي",
+  "walletTxnWebTopup": "شحن الرصيد عبر الويب",
+  "walletComingSoonLabel": "شراء TUCi قريباً!",
+  "walletComingSoonDesc": "جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TUCi كرصيد بداية.",
+  "walletBuyBtn": "شراء TUCi قريباً",
+
+  "reportLoading": "جارٍ إعداد تحليل البث...",
+  "reportLoadFailed": "تعذّر تحميل التقرير.",
+  "reportRetry": "حاول مجدداً",
+  "reportGoHome": "العودة إلى الرئيسية",
+  "reportBadge": "تحليل البث",
+  "reportStreamEndedDesc": "انتهى البث. تحليل جمهورك أدناه.",
+  "reportMetricPeakViewers": "ذروة\nالمشاهدين",
+  "reportMetricEngagedViewers": "المشاهدون\nالنشطون",
+  "reportMetricAvgBudget": "متوسط\nميزانية الجمهور",
+  "reportMetricDuration": "مدة\nالبث",
+  "reportSectionSwipeFeed": "وصول تغذية السحب",
+  "reportMetricSwipeImpressions": "ظهور\nتغذية السحب",
+  "reportMetricSwipeReach": "وصول فريد\nلتغذية السحب",
+  "reportSectionAuction": "ملخص المزاد",
+  "reportMetricTotalAuctions": "إجمالي\nالمزادات",
+  "reportMetricSoldItems": "العناصر\nالمباعة",
+  "reportMetricTotalBids": "إجمالي\nالعروض",
+  "reportMetricRevenue": "إجمالي\nالإيرادات",
+  "reportItemSold": "✅ مُباع",
+  "reportItemBuyNow": "⚡ اشتر الآن",
+  "reportItemNotSold": "❌ لم يُبَع",
+  "reportChipStart": "البداية",
+  "reportChipSale": "البيع",
+  "reportChipBids": "العروض",
+  "reportHesitation": "{count} عرض متردد — هؤلاء المشاهدون كانوا قريبين من السعر لكنهم لم يتحولوا.",
+  "@reportHesitation": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "reportSmartInsight": "توصية ذكية",
+  "reportDurationMin": "د",
+  "reportDurationHour": "س",
+  "reportDurationLess": "< 1 د"
+}

@@ -1,0 +1,1429 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Arabic (`ar`).
+class AppLocalizationsAr extends AppLocalizations {
+  AppLocalizationsAr([String locale = 'ar']) : super(locale);
+
+  @override
+  String get appName => 'teqlif';
+
+  @override
+  String get navLive => 'مباشر';
+
+  @override
+  String get navListings => 'الإعلانات';
+
+  @override
+  String get navSearch => 'بحث';
+
+  @override
+  String get navMessages => 'الرسائل';
+
+  @override
+  String get navProfile => 'ملفي';
+
+  @override
+  String get navSettings => 'الإعدادات';
+
+  @override
+  String get loginWelcome => 'مرحباً';
+
+  @override
+  String get loginSubtitle => 'تسجيل الدخول إلى حسابك';
+
+  @override
+  String get loginNoAccount => 'ليس لديك حساب؟ ';
+
+  @override
+  String get loginRegisterLink => 'سجّل الآن';
+
+  @override
+  String get loginFaceId => '🔒 تسجيل الدخول بـ Face ID';
+
+  @override
+  String get loginFaceIdDesc =>
+      'يمكنك تسجيل الدخول بسرعة باستخدام Face ID في المرة القادمة دون إدخال كلمة المرور.';
+
+  @override
+  String get registerTitle => 'إنشاء حساب';
+
+  @override
+  String get registerSubtitle => 'إنشاء حساب جديد';
+
+  @override
+  String get registerJoin => 'انضم إلى teqlif';
+
+  @override
+  String get registerHaveAccount => 'لديك حساب بالفعل؟ ';
+
+  @override
+  String get registerLoginLink => 'تسجيل الدخول';
+
+  @override
+  String get fieldEmail => 'البريد الإلكتروني';
+
+  @override
+  String get fieldEmailHint => 'أدخل البريد الإلكتروني';
+
+  @override
+  String get fieldPassword => 'كلمة المرور';
+
+  @override
+  String get fieldPasswordHint => 'أدخل كلمة المرور';
+
+  @override
+  String get fieldFullName => 'الاسم الكامل';
+
+  @override
+  String get fieldFullNameHint => 'أدخل الاسم الكامل';
+
+  @override
+  String get fieldUsername => 'اسم المستخدم';
+
+  @override
+  String get fieldUsernameHint => 'أدخل اسم المستخدم';
+
+  @override
+  String get fieldUsernameSubtitle =>
+      'يمكن استخدام الحروف الصغيرة والأرقام و _ فقط';
+
+  @override
+  String get fieldCurrentPassword => 'كلمة المرور الحالية';
+
+  @override
+  String get fieldNewPassword => 'كلمة المرور الجديدة';
+
+  @override
+  String get fieldNewPasswordConfirm => 'كلمة المرور الجديدة (تأكيد)';
+
+  @override
+  String get fieldEmailCode => 'رمز التحقق عبر البريد الإلكتروني';
+
+  @override
+  String get fieldPasswordConfirmHint => 'أدخل كلمة المرور للتأكيد';
+
+  @override
+  String get fieldListingTitle => 'عنوان الإعلان';
+
+  @override
+  String get fieldListingTitleHint => 'أدخل العنوان';
+
+  @override
+  String get fieldCategory => 'الفئة';
+
+  @override
+  String get fieldCategoryHint => 'اختر الفئة';
+
+  @override
+  String get fieldPrice => 'السعر';
+
+  @override
+  String get fieldPriceHint => 'أدخل السعر';
+
+  @override
+  String get fieldLocation => 'الموقع (اختياري)';
+
+  @override
+  String get fieldLocationHint => 'اختر المدينة';
+
+  @override
+  String get fieldDescription => 'الوصف';
+
+  @override
+  String get fieldDescriptionHint => 'أدخل الوصف';
+
+  @override
+  String get fieldCity => 'المدينة';
+
+  @override
+  String get btnLogin => 'تسجيل الدخول';
+
+  @override
+  String get btnNotNow => 'ليس الآن';
+
+  @override
+  String get btnEnable => 'تفعيل';
+
+  @override
+  String get btnSave => 'حفظ';
+
+  @override
+  String get btnCancel => 'إلغاء';
+
+  @override
+  String get btnDelete => 'حذف';
+
+  @override
+  String get btnDismiss => 'رفض';
+
+  @override
+  String get btnRetry => 'إعادة المحاولة';
+
+  @override
+  String get btnLogout => 'تسجيل الخروج';
+
+  @override
+  String get btnEditProfile => 'تعديل الملف الشخصي';
+
+  @override
+  String get btnCreateListing => 'نشر إعلان';
+
+  @override
+  String get btnPublishListing => 'نشر الإعلان';
+
+  @override
+  String get btnSendCode => 'إرسال الرمز';
+
+  @override
+  String get btnChangePassword => 'تغيير كلمة المرور';
+
+  @override
+  String get btnDeleteAccount => 'حذف الحساب';
+
+  @override
+  String get btnAdd => 'إضافة';
+
+  @override
+  String get btnAddPhoto => 'إضافة صورة';
+
+  @override
+  String get btnPickGallery => 'اختر من المعرض';
+
+  @override
+  String get btnPickCamera => 'التقط بالكاميرا';
+
+  @override
+  String get btnCamera => 'الكاميرا';
+
+  @override
+  String get btnClearFilters => 'مسح الفلاتر';
+
+  @override
+  String get btnDeactivate => 'إلغاء التنشيط';
+
+  @override
+  String get btnActivate => 'تنشيط';
+
+  @override
+  String get btnRemoveFavorite => 'إزالة من المفضلة';
+
+  @override
+  String get homeRecentListings => 'آخر الإعلانات';
+
+  @override
+  String get searchHint => 'جارٍ البحث...';
+
+  @override
+  String get citySelectTitle => 'اختر المدينة';
+
+  @override
+  String get cityAll => 'جميع المدن';
+
+  @override
+  String get catElectronics => 'إلكترونيات';
+
+  @override
+  String get catVehicles => 'مركبات';
+
+  @override
+  String get catRealEstate => 'عقارات';
+
+  @override
+  String get catClothing => 'ملابس';
+
+  @override
+  String get catSports => 'رياضة';
+
+  @override
+  String get catBooks => 'كتب';
+
+  @override
+  String get catHomeLife => 'منزل وحياة';
+
+  @override
+  String get catOther => 'أخرى';
+
+  @override
+  String get profileUsername => 'المستخدم';
+
+  @override
+  String get profileListingCount => 'إعلانات';
+
+  @override
+  String get profileFollowers => 'متابعون';
+
+  @override
+  String get profileFollowing => 'متابَعون';
+
+  @override
+  String get profileFollowersList => 'المتابعون';
+
+  @override
+  String get profileFollowingList => 'المتابَعون';
+
+  @override
+  String get profileFirstListing => 'انشر أول إعلان لك!';
+
+  @override
+  String get profileMyListings => 'إعلاناتي';
+
+  @override
+  String get profileActiveListings => 'الإعلانات النشطة';
+
+  @override
+  String get profilePassiveListings => 'الإعلانات المعلّقة';
+
+  @override
+  String get profileFavorites => 'مفضلتي';
+
+  @override
+  String get profileAccountSection => 'الحساب';
+
+  @override
+  String get profileNotificationSettings => 'إعدادات الإشعارات';
+
+  @override
+  String get profileBlockedUsers => 'المستخدمون المحظورون';
+
+  @override
+  String get profileFaceId => 'تسجيل الدخول بـ Face ID';
+
+  @override
+  String get profileDarkMode => 'الوضع الداكن';
+
+  @override
+  String get profileSupportSection => 'الدعم';
+
+  @override
+  String get profileSupportCenter => 'مركز الدعم';
+
+  @override
+  String get profileTerms => 'شروط الاستخدام وEULA';
+
+  @override
+  String get profilePrivacy => 'سياسة الخصوصية';
+
+  @override
+  String get profileChangePassword => 'تغيير كلمة المرور';
+
+  @override
+  String get profileDeleteAccount => 'حذف الحساب نهائياً';
+
+  @override
+  String get profileDeleteAccountDesc =>
+      'لا يمكن التراجع عن هذا الإجراء. ستُحذف جميع بياناتك نهائياً خلال 30 يوماً.';
+
+  @override
+  String get sectionPhotos => 'الصور';
+
+  @override
+  String get photoCover => 'غلاف';
+
+  @override
+  String get listingMaxPhotos => 'يمكنك إضافة 10 صور كحد أقصى';
+
+  @override
+  String get statusOn => 'مفعّل';
+
+  @override
+  String get statusOff => 'معطّل';
+
+  @override
+  String get notifSettingsTitle => 'إعدادات الإشعارات';
+
+  @override
+  String get notifMessagesTitle => 'الرسائل';
+
+  @override
+  String get notifMessagesDesc => 'عند وصول رسالة مباشرة جديدة';
+
+  @override
+  String get notifNewFollowerTitle => 'متابع جديد';
+
+  @override
+  String get notifNewFollowerDesc => 'عندما يتابعك أحد';
+
+  @override
+  String get notifAuctionWonTitle => 'فزت بالمزاد';
+
+  @override
+  String get notifAuctionWonDesc => 'عندما يُقبل عرضك';
+
+  @override
+  String get notifLiveStreamTitle => 'بث مباشر';
+
+  @override
+  String get notifLiveStreamDesc => 'عندما يبدأ أحد متابَعيك بثاً مباشراً';
+
+  @override
+  String get notifNewListingTitle => 'إعلان جديد';
+
+  @override
+  String get notifNewListingDesc => 'عندما يضيف أحد متابَعيك إعلاناً';
+
+  @override
+  String get notifNewBidTitle => 'عرض جديد';
+
+  @override
+  String get notifNewBidDesc => 'عند وصول عرض على إعلانك';
+
+  @override
+  String get notifBidOutbidTitle => 'تجاوز العرض';
+
+  @override
+  String get notifBidOutbidDesc => 'عندما يتجاوز أحدهم عرضك في المزاد';
+
+  @override
+  String get validFullNameMin => 'يجب أن يتكون الاسم الكامل من حرفين على الأقل';
+
+  @override
+  String get validFullNameMax => 'يجب ألا يتجاوز الاسم الكامل 100 حرف';
+
+  @override
+  String get validUsernameMin => 'يجب أن يتكون من 3 أحرف على الأقل';
+
+  @override
+  String get validUsernameMax => 'يجب ألا يتجاوز 50 حرفاً';
+
+  @override
+  String get validUsernameChars =>
+      'يمكن استخدام الحروف الصغيرة والأرقام و _ فقط';
+
+  @override
+  String get validUsernameTaken => 'اسم المستخدم هذا محجوز بالفعل';
+
+  @override
+  String get validUsernameInvalid =>
+      'اسم المستخدم غير صالح. يمكن استخدام الحروف الصغيرة والأرقام و _ فقط.';
+
+  @override
+  String get validEmailMax => 'يجب ألا يتجاوز البريد الإلكتروني 255 حرفاً';
+
+  @override
+  String get validEmailInvalid => 'أدخل عنوان بريد إلكتروني صالحاً';
+
+  @override
+  String get validPasswordMin => 'يجب أن يتكون من 8 أحرف على الأقل';
+
+  @override
+  String get validNewPasswordMin =>
+      'يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل.';
+
+  @override
+  String get validPasswordsMatch => 'كلمتا المرور الجديدتان غير متطابقتين.';
+
+  @override
+  String get validVerificationCode => 'أدخل رمز التحقق.';
+
+  @override
+  String get validAllFields => 'املأ جميع الحقول.';
+
+  @override
+  String get validTermsRequired => 'يجب قبول شروط الاستخدام.';
+
+  @override
+  String get usernameChecking => 'جارٍ التحقق من اسم المستخدم...';
+
+  @override
+  String get usernameCheckingWait =>
+      'جارٍ التحقق من اسم المستخدم، يرجى الانتظار...';
+
+  @override
+  String get fieldPhone => 'رقم الهاتف (اختياري)';
+
+  @override
+  String get fieldPhoneHint => '0### ### ## ##';
+
+  @override
+  String get emptyListings => 'لا توجد إعلانات بعد';
+
+  @override
+  String get emptyFilteredListings => 'لم يُعثر على إعلانات بهذا الفلتر';
+
+  @override
+  String get emptyActiveListings => 'لا توجد إعلانات نشطة';
+
+  @override
+  String get emptyPassiveListings => 'لا توجد إعلانات معلّقة';
+
+  @override
+  String get emptyFavorites => 'لا توجد إعلانات مفضّلة بعد';
+
+  @override
+  String get errorConnection => 'خطأ في الاتصال';
+
+  @override
+  String get errorListingsLoad => 'تعذّر تحميل الإعلانات';
+
+  @override
+  String get errorPhotoUpload => 'تعذّر رفع الصورة. حاول مجدداً.';
+
+  @override
+  String get errorCaptchaFailed =>
+      'فشل التحقق الأمني. يرجى المحاولة مجدداً.';
+
+  @override
+  String get errorTooFast =>
+      'أنت تُجري العمليات بسرعة كبيرة. يرجى الانتظار قليلاً.';
+
+  @override
+  String get msgPasswordChanged => 'تم تغيير كلمة المرور بنجاح.';
+
+  @override
+  String get msgListingPublished => 'تم نشر الإعلان!';
+
+  @override
+  String get dialogDeleteListingTitle => 'حذف الإعلان';
+
+  @override
+  String get dialogDeleteListingDesc =>
+      'هل تريد حذف هذا الإعلان نهائياً؟';
+
+  @override
+  String get dialogFaceIdActivateTitle => 'تحقق لتفعيل Face ID';
+
+  @override
+  String get settingsLanguage => 'اللغة';
+
+  @override
+  String get homeAppBarTitle => 'الإعلانات';
+
+  @override
+  String get homeSearchingHeader => 'جارٍ البحث...';
+
+  @override
+  String homeResultsCount(int count) {
+    return 'تم العثور على $count إعلان';
+  }
+
+  @override
+  String get searchUserHint => 'ابحث عن مستخدم...';
+
+  @override
+  String get searchNoUser => 'لم يُعثر على مستخدم';
+
+  @override
+  String get searchLiveStreams => 'البثوث المباشرة';
+
+  @override
+  String get searchNoContent => 'لا يوجد محتوى بعد';
+
+  @override
+  String get msgTabMessages => 'الرسائل';
+
+  @override
+  String get msgTabNotifications => 'الإشعارات';
+
+  @override
+  String get msgNoMessages => 'لا توجد رسائل بعد';
+
+  @override
+  String get msgNoMessagesDesc =>
+      'عندما تهتم بإعلان ما\nسيظهر هنا';
+
+  @override
+  String get msgSendFailed => 'تعذّر إرسال الرسالة';
+
+  @override
+  String get msgWriteHint => 'اكتب رسالة...';
+
+  @override
+  String get msgNoChat => 'لا توجد رسائل بعد.\nأرسل أول رسالة!';
+
+  @override
+  String get msgGoToListing => '📌 الانتقال إلى الإعلان';
+
+  @override
+  String get notifNone => 'لا توجد إشعارات';
+
+  @override
+  String get notifNoneDesc => 'ستظهر الإشعارات الجديدة هنا';
+
+  @override
+  String get notificationsTitle => 'الإشعارات';
+
+  @override
+  String get notificationsMarkAllRead => 'تعليم الكل كمقروء';
+
+  @override
+  String get blockedUsersTitle => 'المستخدمون المحظورون';
+
+  @override
+  String get blockedNone => 'لا يوجد مستخدمون محظورون';
+
+  @override
+  String get blockedUnblock => 'رفع الحظر';
+
+  @override
+  String get blockedActionFailed => 'تعذّر تنفيذ الإجراء';
+
+  @override
+  String get followNoFollowers => 'لا يوجد متابعون بعد';
+
+  @override
+  String get followNoFollowing => 'لا يوجد متابَعون بعد';
+
+  @override
+  String get followBtnFollowing => 'تتابعه';
+
+  @override
+  String get followBtnFollow => 'متابعة';
+
+  @override
+  String get pubProfileUserNotFound => 'لم يُعثر على المستخدم';
+
+  @override
+  String pubProfileListingsCount(int count) {
+    return 'إعلاناته ($count)';
+  }
+
+  @override
+  String get pubProfileStatListings => 'الإعلانات';
+
+  @override
+  String get pubProfileStatFollowers => 'المتابعون';
+
+  @override
+  String get pubProfileStatFollowing => 'المتابَعون';
+
+  @override
+  String get pubProfileEditComingSoon => 'تعديل الملف الشخصي قريباً';
+
+  @override
+  String get pubProfileFollowingLabel => 'تتابعه';
+
+  @override
+  String get pubProfileFollowLabel => 'متابعة';
+
+  @override
+  String get pubProfileSendMessage => 'إرسال رسالة';
+
+  @override
+  String get pubProfileUpdateRating => 'تحديث التقييم';
+
+  @override
+  String get pubProfileGiveRating => 'تقييم';
+
+  @override
+  String get pubProfileBlock => 'حظر';
+
+  @override
+  String get pubProfileUnblock => 'رفع الحظر';
+
+  @override
+  String get pubProfileActionFailed => 'تعذّر تنفيذ الإجراء';
+
+  @override
+  String get pubProfileNoReview => 'لا توجد تقييمات بعد';
+
+  @override
+  String get ratingVeryBad => 'سيء جداً';
+
+  @override
+  String get ratingBad => 'سيء';
+
+  @override
+  String get ratingMedium => 'متوسط';
+
+  @override
+  String get ratingGood => 'جيد';
+
+  @override
+  String get ratingExcellent => 'ممتاز';
+
+  @override
+  String get ratingSelectStar => 'اختر نجمة';
+
+  @override
+  String get ratingCommentHint => 'لماذا أعطيت هذا التقييم؟ (اختياري)';
+
+  @override
+  String get ratingSaveFailed => 'تعذّر حفظ التقييم';
+
+  @override
+  String get ratingReviews => 'التقييمات';
+
+  @override
+  String ratingCount(int count) {
+    return '$count تقييم';
+  }
+
+  @override
+  String ratingStarCount(int count) {
+    return '($count تقييم)';
+  }
+
+  @override
+  String createListingPhotoCount(int count, int max) {
+    return 'الصور ($count/$max)';
+  }
+
+  @override
+  String get createListingSelectOption => '-- اختر --';
+
+  @override
+  String createListingPhotoUploadFailed(String error) {
+    return 'تعذّر رفع الصورة: $error';
+  }
+
+  @override
+  String get createListingConnError => 'خطأ في الاتصال. يرجى المحاولة مجدداً.';
+
+  @override
+  String get notifSettingsMessagesTitle => 'الرسائل';
+
+  @override
+  String get notifSettingsMessagesDesc => 'عند وصول رسالة مباشرة جديدة';
+
+  @override
+  String get notifSettingsFollowsTitle => 'متابع جديد';
+
+  @override
+  String get notifSettingsFollowsDesc => 'عندما يتابعك أحد';
+
+  @override
+  String get notifSettingsAuctionWonTitle => 'فزت بالمزاد';
+
+  @override
+  String get notifSettingsAuctionWonDesc => 'عندما يُقبل عرضك';
+
+  @override
+  String get notifSettingsStreamStartedTitle => 'بث مباشر';
+
+  @override
+  String get notifSettingsStreamStartedDesc =>
+      'عندما يبدأ أحد متابَعيك بثاً مباشراً';
+
+  @override
+  String get notifSettingsNewListingTitle => 'إعلان جديد';
+
+  @override
+  String get notifSettingsNewListingDesc =>
+      'عندما يضيف أحد متابَعيك إعلاناً';
+
+  @override
+  String get notifSettingsNewBidTitle => 'عرض جديد';
+
+  @override
+  String get notifSettingsNewBidDesc => 'عند وصول عرض على إعلانك';
+
+  @override
+  String get notifSettingsOutbidTitle => 'تجاوز العرض';
+
+  @override
+  String get notifSettingsOutbidDesc =>
+      'عندما يتجاوز أحدهم عرضك في المزاد';
+
+  @override
+  String get btnOk => 'موافق';
+
+  @override
+  String get btnGoBack => 'العودة';
+
+  @override
+  String get errorGeneric => 'حدث خطأ ما';
+
+  @override
+  String get listingPriceNotSet => 'السعر غير محدد';
+
+  @override
+  String get listingMsgLoginRequired => 'يجب تسجيل الدخول لإرسال رسالة';
+
+  @override
+  String get listingMsgOwnListing => 'لا يمكنك إرسال رسالة لإعلانك الخاص';
+
+  @override
+  String get listingActivated => 'تم تنشيط الإعلان';
+
+  @override
+  String get listingDeactivated => 'تم إلغاء تنشيط الإعلان';
+
+  @override
+  String get listingDeleteConfirmContent =>
+      'هل أنت متأكد من حذف هذا الإعلان؟ لا يمكن التراجع عن هذا الإجراء.';
+
+  @override
+  String get listingDeleteConfirmYes => 'نعم، احذف';
+
+  @override
+  String get listingInfo => 'معلومات الإعلان';
+
+  @override
+  String get listingLocationLabel => 'الموقع';
+
+  @override
+  String get listingSendMessage => 'إرسال رسالة للبائع';
+
+  @override
+  String get listingReportTooltip => 'الإبلاغ';
+
+  @override
+  String get listingDeleteTooltip => 'حذف الإعلان';
+
+  @override
+  String get listingReportTitle => '🚩 الإبلاغ عن الإعلان';
+
+  @override
+  String get listingReportSelectHint => 'اختر السبب';
+
+  @override
+  String get listingReportMisleading => 'إعلان مضلّل';
+
+  @override
+  String get listingReportIllegal => 'منتج غير قانوني';
+
+  @override
+  String get listingReportSpam => 'سبام / إعلان مكرر';
+
+  @override
+  String get listingReportInappropriate => 'محتوى غير لائق';
+
+  @override
+  String get listingReportFraud => 'اشتباه بالاحتيال';
+
+  @override
+  String get listingReportNoteHint => 'ملاحظة إضافية (اختياري)';
+
+  @override
+  String get listingReportSubmitBtn => 'إرسال البلاغ';
+
+  @override
+  String get listingReportSelectRequired => 'يرجى اختيار سبب';
+
+  @override
+  String get listingReportSuccess => 'تم استلام بلاغك. شكراً لك.';
+
+  @override
+  String get listingDescriptionLabel => 'الوصف';
+
+  @override
+  String get liveStreamsTitle => 'البثوث المباشرة';
+
+  @override
+  String get liveStartStream => 'بدء البث';
+
+  @override
+  String get liveAllCategory => 'الكل';
+
+  @override
+  String get liveNoStreams => 'لا توجد بثوث نشطة الآن';
+
+  @override
+  String get liveBeFirst => 'كن أول من يبث!';
+
+  @override
+  String get livePullToRefresh => 'اسحب للأسفل للتحديث';
+
+  @override
+  String get liveStreamsLoadError => 'تعذّر تحميل البثوث';
+
+  @override
+  String get liveStartStreamDialogTitle => 'بدء البث';
+
+  @override
+  String get liveStreamTitleHint => 'عنوان البث';
+
+  @override
+  String get liveStreamTitleLabel => 'العنوان *';
+
+  @override
+  String get liveCategoryLabel => 'الفئة *';
+
+  @override
+  String get liveCategoryHint => 'اختر فئة';
+
+  @override
+  String get liveStartBtn => 'ابدأ';
+
+  @override
+  String get liveStreamTitleRequired => 'عنوان البث مطلوب';
+
+  @override
+  String get liveStreamTitleMin =>
+      'يجب أن يتجاوز عنوان البث 3 أحرف.';
+
+  @override
+  String get liveCategoryRequired => 'اختيار الفئة مطلوب';
+
+  @override
+  String get liveLoginRequired => 'يجب تسجيل الدخول لبدء البث';
+
+  @override
+  String get liveBadgeLabel => 'مباشر';
+
+  @override
+  String get liveEndedBadge => 'انتهى';
+
+  @override
+  String get liveConnecting => 'جارٍ بدء البث...';
+
+  @override
+  String get liveConnectingViewer => 'جارٍ الاتصال بالبث...';
+
+  @override
+  String get livePermissionRequired => 'إذن الكاميرا والميكروفون مطلوب';
+
+  @override
+  String liveViewersTitle(int count) {
+    return '👁 المشاهدون ($count)';
+  }
+
+  @override
+  String get liveNoViewers => 'لا يوجد مشاهدون بعد';
+
+  @override
+  String get liveEndStreamTitle => 'إنهاء البث';
+
+  @override
+  String get liveEndStreamConfirm => 'هل تريد إنهاء البث؟';
+
+  @override
+  String get liveEndStreamBtn => 'إنهاء';
+
+  @override
+  String get liveGoBack => 'العودة';
+
+  @override
+  String get liveEnded => 'انتهى البث';
+
+  @override
+  String get liveStreamEndedTitle => 'انتهى البث';
+
+  @override
+  String get liveStreamEndedDesc => 'تم إنهاء هذا البث من قِبل المُذيع.';
+
+  @override
+  String get liveStreamEndedOverlay => 'انتهى البث';
+
+  @override
+  String get liveDiscoverStreams => 'اسحب لاستكشاف بثوث أخرى';
+
+  @override
+  String get liveLeaveBtn => 'مغادرة';
+
+  @override
+  String get liveNextStream => 'البث التالي';
+
+  @override
+  String get liveCameraClosed => 'الكاميرا مغلقة';
+
+  @override
+  String get liveWaitingVideo => 'في انتظار الفيديو...';
+
+  @override
+  String liveModDemotedSelf(String username) {
+    return 'تم إلغاء صلاحيات الإشراف بواسطة @$username.';
+  }
+
+  @override
+  String liveModPromotedSelf(String username) {
+    return '⭐ جعلك @$username مشرفاً! يمكنك الآن إدارة المشاهدين.';
+  }
+
+  @override
+  String get modTitle => '🛡 الإشراف';
+
+  @override
+  String get modMute => 'كتم';
+
+  @override
+  String get modUnmute => 'إلغاء الكتم';
+
+  @override
+  String get modPromote => 'تعيين مشرفاً';
+
+  @override
+  String get modDemote => 'إلغاء الإشراف';
+
+  @override
+  String get modKick => 'طرد من البث';
+
+  @override
+  String modMutedMsg(String username) {
+    return 'تم كتم @$username';
+  }
+
+  @override
+  String get modUnmutedMsg => 'تم إلغاء الكتم';
+
+  @override
+  String modPromotedMsg(String username) {
+    return 'تم تعيين @$username مشرفاً';
+  }
+
+  @override
+  String modDemotedMsg(String username) {
+    return 'تم إلغاء إشراف @$username';
+  }
+
+  @override
+  String modKickedMsg(String username) {
+    return 'تم طرد @$username من البث';
+  }
+
+  @override
+  String modPromotedSnack(String username) {
+    return '⭐ تم تعيين @$username مشرفاً!';
+  }
+
+  @override
+  String modDemotedSnack(String username) {
+    return '✖ تم إلغاء إشراف @$username';
+  }
+
+  @override
+  String get chatMessageHint => 'اكتب رسالة...';
+
+  @override
+  String get chatMutedHint => '🔇 تم كتمك';
+
+  @override
+  String get chatHistoryTitle => 'سجل المحادثة';
+
+  @override
+  String chatHistoryCount(int count) {
+    return 'آخر $count رسالة';
+  }
+
+  @override
+  String get auctionTitle => 'مزاد علني';
+
+  @override
+  String get auctionBidsHeader => 'العروض';
+
+  @override
+  String get auctionAcceptBidTitle => '✅ قبول العرض';
+
+  @override
+  String get auctionItem => 'المنتج';
+
+  @override
+  String get auctionWinnerPrice => 'السعر الفائز';
+
+  @override
+  String get auctionBidder => 'صاحب العرض';
+
+  @override
+  String get auctionAcceptConfirm =>
+      'عند القبول يُغلق المزاد ويُرسل ملخص تلقائياً إلى المحادثة.';
+
+  @override
+  String get auctionCancelBtn => 'إلغاء';
+
+  @override
+  String get auctionContinueBtn => 'متابعة';
+
+  @override
+  String get auctionAccepted => 'تم قبول العرض! تم إرسال الملخص إلى المحادثة.';
+
+  @override
+  String get auctionEndTitle => 'إنهاء المزاد';
+
+  @override
+  String get auctionEndDesc => 'سيُحفظ النتيجة وسيُغلق المزاد.';
+
+  @override
+  String get auctionEndBtn => 'إنهاء';
+
+  @override
+  String get auctionStatusActive => 'نشط';
+
+  @override
+  String get auctionStatusPending => 'في انتظار الموافقة ⚡';
+
+  @override
+  String get auctionStatusPaused => 'متوقف';
+
+  @override
+  String get auctionStatusSold => 'مُباع 🛒';
+
+  @override
+  String get auctionStatusEnded => 'انتهى';
+
+  @override
+  String get auctionStatusIdle => 'مزاد علني';
+
+  @override
+  String get auctionStartBtn => '▶ ابدأ';
+
+  @override
+  String get auctionBidBtn => 'قدّم عرضاً';
+
+  @override
+  String get auctionMutedBtn => '🔇 تم كتمك';
+
+  @override
+  String get auctionBuyNowTitle => '⚡ اشتر الآن';
+
+  @override
+  String get auctionBuyNowPrice => 'سعر الشراء الفوري';
+
+  @override
+  String get auctionBuyNowConfirm =>
+      'هل تريد شراء المنتج بهذا السعر فوراً؟ سينتهي المزاد.';
+
+  @override
+  String get auctionBuyNowRequest => '⚡ طلب شراء فوري';
+
+  @override
+  String get auctionBuyNowRequester => 'طالب الشراء';
+
+  @override
+  String get auctionBuyNowRequestConfirm =>
+      'هل توافق على طلب الشراء الفوري لهذا الشخص؟';
+
+  @override
+  String get auctionBuyNowReject => 'رفض';
+
+  @override
+  String get auctionBuyNowApprove => 'موافقة';
+
+  @override
+  String get auctionWaitingHost => 'في انتظار رد المُضيف';
+
+  @override
+  String get auctionWaitingHostDesc => 'سيكتمل الشراء عند موافقة المُضيف.';
+
+  @override
+  String get auctionApprovalWaiting => '⚡ في انتظار الموافقة';
+
+  @override
+  String get auctionApprovalWaitingDesc =>
+      'تم إرسال طلب الشراء الفوري إلى المُضيف.';
+
+  @override
+  String get auctionInProgress => '⏳ جارٍ المعالجة';
+
+  @override
+  String auctionInProgressDesc(String username) {
+    return 'جارٍ إتمام الشراء الفوري مع @$username.';
+  }
+
+  @override
+  String get auctionInProgressNoBid =>
+      'لا يمكنك تقديم عرض حتى تنتهي العملية.';
+
+  @override
+  String get auctionSold => '🛒 مُباع!';
+
+  @override
+  String auctionBoughtBy(String username) {
+    return 'تم الشراء الفوري بواسطة @$username';
+  }
+
+  @override
+  String get auctionBuyNowCongrats => '🎉 تهانينا! اكتمل الشراء.';
+
+  @override
+  String auctionBuyNowSoldOther(String buyer) {
+    return '🛒 تم بيع المنتج فوراً! اشتراه @$buyer.';
+  }
+
+  @override
+  String get auctionBinRejected =>
+      'تم رفض طلب الشراء الفوري، المزاد مستمر.';
+
+  @override
+  String get auctionBinRejectedOther =>
+      'اكتمل الشراء الفوري، المزاد مستمر.';
+
+  @override
+  String get auctionBuyNowBtn => '⚡ اشتر الآن — ';
+
+  @override
+  String get auctionBuyNowBuyBtn => 'شراء';
+
+  @override
+  String get auctionAcceptBtn => '✅ قبول';
+
+  @override
+  String get auctionValidAmount => 'أدخل مبلغاً صالحاً';
+
+  @override
+  String get auctionCustomAmountHint => 'مبلغ مخصص (₺)';
+
+  @override
+  String get auctionFirstBid => 'كن أول من يقدّم عرضاً!';
+
+  @override
+  String auctionHighestBidder(String username) {
+    return '@$username صاحب أعلى عرض';
+  }
+
+  @override
+  String auctionBidCount(int count) {
+    return '$count عرض';
+  }
+
+  @override
+  String get auctionManualEntry => 'إدخال يدوي';
+
+  @override
+  String get auctionFromListings => 'من إعلاناتي';
+
+  @override
+  String get auctionNoActiveListings => 'لا توجد إعلانات نشطة.';
+
+  @override
+  String get auctionStartTitle => 'بدء مزاد علني';
+
+  @override
+  String get auctionItemName => 'اسم المنتج';
+
+  @override
+  String get auctionStartPrice => 'سعر البداية (₺)';
+
+  @override
+  String get auctionBuyNowPriceHint => 'سعر الشراء الفوري (₺، اختياري)';
+
+  @override
+  String auctionBuyNowCompleted(String buyer, String price) {
+    return '🛒 اكتمل الشراء الفوري! @$buyer — ₺$price';
+  }
+
+  @override
+  String get offerHistory => 'سجل العروض';
+
+  @override
+  String get offerAmountHint => 'مبلغ العرض (₺)';
+
+  @override
+  String get offerBtn => 'قدّم عرضاً';
+
+  @override
+  String get offerSuccess => 'تم استلام عرضك!';
+
+  @override
+  String get offerError => 'تعذّر إرسال العرض.';
+
+  @override
+  String get offerInvalidAmount => 'أدخل مبلغاً صالحاً.';
+
+  @override
+  String get offerEmpty => 'لا توجد عروض بعد.';
+
+  @override
+  String get offerLoginRequired => 'يجب تسجيل الدخول لتقديم عرض.';
+
+  @override
+  String get storyTrayTitle => 'من تتابعهم';
+
+  @override
+  String get storyTrayEmpty => 'لا أحد من متابَعيك يبث الآن.';
+
+  @override
+  String get storyTrayError => 'تعذّر التحميل';
+
+  @override
+  String get storyMyStory => 'قصتي';
+
+  @override
+  String get storyProcessing => 'جارٍ معالجة الفيديو...';
+
+  @override
+  String get storyTooLong => 'الفيديو طويل جداً (15 ثانية كحد أقصى)';
+
+  @override
+  String get storyUploadFailed => 'تعذّر رفع القصة';
+
+  @override
+  String get storyUploadSuccess => 'تمت مشاركة قصتك!';
+
+  @override
+  String get storyLiveNow => 'يبث الآن مباشرة!';
+
+  @override
+  String get storyJoinLive => 'انضم للبث';
+
+  @override
+  String get storyJoinLiveFailed => 'تعذّر الاتصال بالبث';
+
+  @override
+  String get storyWhoViewed => 'من شاهد؟';
+
+  @override
+  String get storyViewersLoadFailed => 'تعذّر تحميل المشاهدين';
+
+  @override
+  String get storyNoViewersYet => 'لم يشاهد أحد بعد';
+
+  @override
+  String get storyDelete => 'حذف القصة';
+
+  @override
+  String get storyDeleteConfirm => 'هل أنت متأكد من حذف هذه القصة؟';
+
+  @override
+  String get storyDeleteFailed => 'تعذّر حذف القصة';
+
+  @override
+  String get offlineBannerMessage =>
+      'لا يوجد اتصال بالإنترنت، أنت في وضع غير متصل.';
+
+  @override
+  String get editProfileBio => 'عن نفسي';
+
+  @override
+  String get editProfileBioHint => 'اكتب نبذة مختصرة عن نفسك...';
+
+  @override
+  String get editProfileBioHelper => 'بحد أقصى 60 حرفاً';
+
+  @override
+  String get editProfileLink => 'رابط';
+
+  @override
+  String get editProfileLinkHint => 'https://...';
+
+  @override
+  String get editProfileLinkHelper => 'يجب أن يبدأ بـ https://';
+
+  @override
+  String get editProfileLinkError =>
+      'يجب أن يبدأ الرابط بـ http:// أو https://';
+
+  @override
+  String get settingsProTools => '📈 أدوات Pro';
+
+  @override
+  String get settingsProActive => 'نشط';
+
+  @override
+  String get walletTitle => 'محفظة TUCi الخاصة بي';
+
+  @override
+  String get walletBalance => 'الرصيد الحالي';
+
+  @override
+  String get walletRecentTxns => 'آخر المعاملات';
+
+  @override
+  String get walletSpendingSummary => 'ملخص الإنفاق';
+
+  @override
+  String get walletTxnHistory => 'سجل المعاملات';
+
+  @override
+  String get walletNoTxns => 'لا توجد معاملات بعد.';
+
+  @override
+  String get walletTxnAirdrop => 'هدية الترحيب';
+
+  @override
+  String get walletTxnReceiveGift => 'هدية مستلمة';
+
+  @override
+  String get walletTxnSpendLeadGen => 'بث الطلبات الساخنة';
+
+  @override
+  String get walletTxnSpendAdCampaign => 'حملة إعلانية';
+
+  @override
+  String get walletTxnSpendAi => 'تسعير الذكاء الاصطناعي';
+
+  @override
+  String get walletTxnWebTopup => 'شحن الرصيد عبر الويب';
+
+  @override
+  String get walletComingSoonLabel => 'شراء TUCi قريباً!';
+
+  @override
+  String get walletComingSoonDesc =>
+      'جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TUCi كرصيد بداية.';
+
+  @override
+  String get walletBuyBtn => 'شراء TUCi قريباً';
+
+  @override
+  String get reportLoading => 'جارٍ إعداد تحليل البث...';
+
+  @override
+  String get reportLoadFailed => 'تعذّر تحميل التقرير.';
+
+  @override
+  String get reportRetry => 'حاول مجدداً';
+
+  @override
+  String get reportGoHome => 'العودة إلى الرئيسية';
+
+  @override
+  String get reportBadge => 'تحليل البث';
+
+  @override
+  String get reportStreamEndedDesc =>
+      'انتهى البث. تحليل جمهورك أدناه.';
+
+  @override
+  String get reportMetricPeakViewers => 'ذروة\nالمشاهدين';
+
+  @override
+  String get reportMetricEngagedViewers => 'المشاهدون\nالنشطون';
+
+  @override
+  String get reportMetricAvgBudget => 'متوسط\nميزانية الجمهور';
+
+  @override
+  String get reportMetricDuration => 'مدة\nالبث';
+
+  @override
+  String get reportSectionSwipeFeed => 'وصول تغذية السحب';
+
+  @override
+  String get reportMetricSwipeImpressions => 'ظهور\nتغذية السحب';
+
+  @override
+  String get reportMetricSwipeReach => 'وصول فريد\nلتغذية السحب';
+
+  @override
+  String get reportSectionAuction => 'ملخص المزاد';
+
+  @override
+  String get reportMetricTotalAuctions => 'إجمالي\nالمزادات';
+
+  @override
+  String get reportMetricSoldItems => 'العناصر\nالمباعة';
+
+  @override
+  String get reportMetricTotalBids => 'إجمالي\nالعروض';
+
+  @override
+  String get reportMetricRevenue => 'إجمالي\nالإيرادات';
+
+  @override
+  String get reportItemSold => '✅ مُباع';
+
+  @override
+  String get reportItemBuyNow => '⚡ اشتر الآن';
+
+  @override
+  String get reportItemNotSold => '❌ لم يُبَع';
+
+  @override
+  String get reportChipStart => 'البداية';
+
+  @override
+  String get reportChipSale => 'البيع';
+
+  @override
+  String get reportChipBids => 'العروض';
+
+  @override
+  String reportHesitation(int count) =>
+      '$count عرض متردد — هؤلاء المشاهدون كانوا قريبين من السعر لكنهم لم يتحولوا.';
+
+  @override
+  String get reportSmartInsight => 'توصية ذكية';
+
+  @override
+  String get reportDurationMin => 'د';
+
+  @override
+  String get reportDurationHour => 'س';
+
+  @override
+  String get reportDurationLess => '< 1 د';
+}
