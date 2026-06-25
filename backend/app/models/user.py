@@ -30,3 +30,5 @@ class User(Base):
     max_budget: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     tuci_balance: Mapped[int] = mapped_column(Integer, default=100, nullable=False, server_default="100")
+    bio: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

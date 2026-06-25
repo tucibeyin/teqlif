@@ -198,6 +198,18 @@ async def update_me(
     if data.profile_image_thumb_url is not None:
         current_user.profile_image_thumb_url = data.profile_image_thumb_url
 
+    if data.bio is not None:
+        bio = data.bio.strip()
+        if len(bio) > 60:
+            raise BadRequestException("Biyografi en fazla 60 karakter olabilir")
+        current_user.bio = bio or None
+
+    if data.website_url is not None:
+        url = data.website_url.strip()
+        if url and not url.startswith(("http://", "https://")):
+            raise BadRequestException("Link http:// veya https:// ile başlamalı")
+        current_user.website_url = url or None
+
     await db.commit()
     await db.refresh(current_user)
     return current_user

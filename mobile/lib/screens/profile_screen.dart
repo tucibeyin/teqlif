@@ -328,16 +328,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             if (_user?['is_premium'] == true) ...[
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                                    colors: [Color(0xFF0369A1), Color(0xFF0EA5E9)],
                                   ),
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: BorderRadius.circular(5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF0EA5E9).withValues(alpha: 0.35),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: const Text(
-                                  '👑 PRO',
-                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
+                                  'PRO',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 1.2,
+                                  ),
                                 ),
                               ),
                             ],
@@ -351,6 +363,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: AppColors.textTertiary(context),
                             ),
                           ),
+                        if ((_user?['bio'] as String?)?.isNotEmpty == true) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            _user!['bio'] as String,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary(context),
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                        if ((_user?['website_url'] as String?)?.isNotEmpty == true) ...[
+                          const SizedBox(height: 4),
+                          GestureDetector(
+                            onTap: () async {
+                              final raw = _user!['website_url'] as String;
+                              final uri = Uri.tryParse(raw);
+                              if (uri != null && await canLaunchUrl(uri)) {
+                                launchUrl(uri, mode: LaunchMode.externalApplication);
+                              }
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.link_rounded, size: 14, color: Color(0xFF0EA5E9)),
+                                const SizedBox(width: 3),
+                                Flexible(
+                                  child: Text(
+                                    (_user!['website_url'] as String)
+                                        .replaceFirst(RegExp(r'^https?://'), ''),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF0EA5E9),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1241,6 +1295,8 @@ class _EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<_EditProfileScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _usernameCtrl;
+  late final TextEditingController _bioCtrl;
+  late final TextEditingController _linkCtrl;
   bool _saving = false;
   String? _profileImageUrl;
 
@@ -1253,6 +1309,8 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.user?['full_name'] ?? '');
     _usernameCtrl = TextEditingController(text: widget.user?['username'] ?? '');
+    _bioCtrl = TextEditingController(text: widget.user?['bio'] as String? ?? '');
+    _linkCtrl = TextEditingController(text: widget.user?['website_url'] as String? ?? '');
     _profileImageUrl = widget.user?['profile_image_url'] as String?;
     _usernameCtrl.addListener(_onUsernameChanged);
   }
@@ -1262,6 +1320,8 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     _usernameDebounce?.cancel();
     _nameCtrl.dispose();
     _usernameCtrl.dispose();
+    _bioCtrl.dispose();
+    _linkCtrl.dispose();
     super.dispose();
   }
 
@@ -1392,11 +1452,23 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     try {
       final token = await StorageService.getToken();
       if (token == null) throw Exception('No token');
+      final bio = _bioCtrl.text.trim();
+      final link = _linkCtrl.text.trim();
+      if (link.isNotEmpty && !link.startsWith('http://') && !link.startsWith('https://')) {
+        showErrorSnackbar(context, Exception('Link http:// veya https:// ile başlamalı'));
+        setState(() => _saving = false);
+        return;
+      }
       final updatedUser = await apiCall(
         () => http.patch(
           Uri.parse('$kBaseUrl/auth/me'),
           headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-          body: jsonEncode({'full_name': name, 'username': username}),
+          body: jsonEncode({
+            'full_name': name,
+            'username': username,
+            'bio': bio.isEmpty ? null : bio,
+            'website_url': link.isEmpty ? null : link,
+          }),
         ),
       );
       await StorageService.saveUserInfo(
@@ -1503,6 +1575,41 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
                         : _usernameStatus == 'taken'
                             ? const Icon(Icons.cancel, color: Colors.red, size: 20)
                             : null,
+              ),
+            ),
+            const SizedBox(height: 14),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _bioCtrl,
+              builder: (_, val, __) => TextField(
+                controller: _bioCtrl,
+                maxLength: 60,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: 'Hakkımda',
+                  hintText: 'Kendin hakkında kısa bir şeyler yaz…',
+                  helperText: 'Maks. 60 karakter',
+                  helperStyle: const TextStyle(fontSize: 11),
+                  counterText: '${val.text.length}/60',
+                  counterStyle: TextStyle(
+                    fontSize: 11,
+                    color: val.text.length >= 60
+                        ? Colors.red
+                        : AppColors.textTertiary(context),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _linkCtrl,
+              keyboardType: TextInputType.url,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'Link',
+                hintText: 'https://...',
+                prefixIcon: Icon(Icons.link_rounded, size: 20),
+                helperText: 'https:// ile başlamalı',
+                helperStyle: TextStyle(fontSize: 11),
               ),
             ),
           ],
