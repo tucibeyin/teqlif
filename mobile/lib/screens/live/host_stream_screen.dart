@@ -22,6 +22,7 @@ import '../../services/auction_service.dart';
 import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/gift_hud.dart';
 import '../../widgets/live/host_top_bar.dart';
+import '../../widgets/live/hype_meter_widget.dart';
 import '../../widgets/live/live_video_player.dart';
 import '../../core/logger_service.dart';
 import '../../services/client_logger.dart';
@@ -83,6 +84,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   bool _blastSending = false;
   final _chatKey = GlobalKey<ChatPanelState>();
   final _heartsKey = GlobalKey<FloatingHeartsState>();
+  final _hypeScore = ValueNotifier<int>(0);
 
   // Balina Radarı HUD
   OverlayEntry? _whaleHudEntry;
@@ -206,6 +208,30 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     }
   }
 
+  void _showHypeAlert(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Text('🔥 ', style: TextStyle(fontSize: 18)),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFFEF4444),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _thumbTimer?.cancel();
@@ -213,6 +239,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     _whaleHudEntry?.remove();
     _giftHudTimer?.cancel();
     _giftHudEntry?.remove();
+    _hypeScore.dispose();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _listener?.dispose();
@@ -682,6 +709,14 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
+          // ── Hype Meter — sağ üst köşe, top bar altında ─────────────────
+          if (live)
+            Positioned(
+              top: topPad + 64,
+              right: 8,
+              child: HypeMeterWidget(hypeScore: _hypeScore),
+            ),
+
           // ── Alt panel: sohbet + açık artırma ───────────────────────────
           if (live)
             Positioned(
@@ -718,6 +753,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                           setState(() => _coHostUsername = null),
                       onWhaleAlert: _showWhaleHud,
                       onGift: _showGiftHud,
+                      onHypeUpdate: (s) => _hypeScore.value = s,
+                      onHypeAlert: _showHypeAlert,
                       pinAtBottom: true,
                       pinDismissible: true,
                     ),

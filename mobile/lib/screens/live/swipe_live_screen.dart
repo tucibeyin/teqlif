@@ -18,6 +18,7 @@ import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/wallet_service.dart';
 import '../../widgets/live/gift_hud.dart';
+import '../../widgets/live/hype_meter_widget.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/auction_panel.dart';
 import '../../l10n/app_localizations.dart';
@@ -265,6 +266,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   // Hediye HUD overlay
   OverlayEntry? _giftHudEntry;
   Timer? _giftHudTimer;
+  final _hypeScore = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -288,6 +290,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     _confettiController.dispose();
     _giftHudTimer?.cancel();
     _giftHudEntry?.remove();
+    _hypeScore.dispose();
     _deactivateSync();
     super.dispose();
   }
@@ -846,6 +849,13 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
         // ── Uçuşan kalpler ───────────────────────────────────────────────
         FloatingHearts(key: _heartsKey),
 
+        // ── Hype Meter — sağ üst köşe, top bar altında ──────────────────
+        Positioned(
+          top: topPad + 64,
+          right: 8,
+          child: HypeMeterWidget(hypeScore: _hypeScore),
+        ),
+
         // ── Co-Host PiP kutusu — sağ üst ────────────────────────────────
         // Öncelik: kendin co-host → local kamera. Değilse diğerinin track'i.
         if (_isSelfCoHost && _localVideoTrack != null)
@@ -1022,6 +1032,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                     },
                     pinAtBottom: true,
                     onGift: _showGiftHud,
+                    onHypeUpdate: (s) => _hypeScore.value = s,
                     trailingAction: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

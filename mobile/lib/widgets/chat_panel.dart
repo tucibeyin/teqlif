@@ -185,6 +185,12 @@ class ChatPanel extends StatefulWidget {
   /// Birisi hediye gönderdiğinde tüm odaya gelir.
   final void Function(String sender, String giftName, int cost)? onGift;
 
+  /// Hype skoru güncellendiğinde tüm odaya gelir (0-100 arası).
+  final void Function(int score)? onHypeUpdate;
+
+  /// Skor >= 80 olduğunda sadece host alır — satış fırsatı uyarısı.
+  final void Function(String message)? onHypeAlert;
+
   /// true ise pin banner mesaj input'unun altında gösterilir (host ekranı için).
   final bool pinAtBottom;
 
@@ -218,6 +224,8 @@ class ChatPanel extends StatefulWidget {
     this.onCoHostAccepted,
     this.onWhaleAlert,
     this.onGift,
+    this.onHypeUpdate,
+    this.onHypeAlert,
   });
 
   @override
@@ -454,6 +462,12 @@ class ChatPanelState extends State<ChatPanel> {
               final giftName = json['gift_name'] as String? ?? '';
               final cost     = (json['cost'] as num?)?.toInt() ?? 0;
               _eventType = 'gift:$sender:$giftName:$cost';
+            } else if (json['type'] == 'hype_update') {
+              final score = (json['score'] as num?)?.toInt() ?? 0;
+              widget.onHypeUpdate?.call(score);
+            } else if (json['type'] == 'hype_alert') {
+              final message = json['message'] as String? ?? '';
+              widget.onHypeAlert?.call(message);
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
