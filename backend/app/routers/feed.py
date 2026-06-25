@@ -5,6 +5,10 @@ from app.database import get_db
 from app.utils.auth import get_current_user, get_current_user_optional
 from app.models.user import User
 from app.services.feed_service import get_personalized_feed, get_foryou_feed
+from app.services.recommendation_service import (
+    get_personalized_feed as get_ch_personalized_feed,
+    get_user_category_affinity,
+)
 
 router = APIRouter(prefix="/api/feed", tags=["feed"])
 
@@ -26,6 +30,32 @@ async def get_feed(
     """
     user_id = current_user.id if current_user else None
     return await get_personalized_feed(user_id, page, seed, db)
+
+
+@router.get("/personalized")
+async def get_clickhouse_personalized_feed(
+    limit: int = Query(default=10, ge=1, le=30),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    ClickHouse telemetri verisinden epsilon-greedy kişiselleştirilmiş feed.
+
+    - click +5 / impression+dwell>3s +2 / skip -2 (son 7 gün)
+    - Top-3 kategori belirlenir; %80 bu kategorilerden, %20 keşfet
+    - Yeni kullanıcılarda (cold start) son 30 günün popüler ilanları döner
+    """
+    return await get_ch_personalized_feed(current_user.id, db, limit)
+
+
+@router.get("/personalized/affinity")
+async def get_affinity_profile(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Kullanıcının ClickHouse tabanlı kategori affinite profilini döndürür (debug/test için)."""
+    affinity = await get_user_category_affinity(current_user.id, db)
+    return {"user_id": current_user.id, "affinity": affinity, "cold_start": not affinity}
 
 
 @router.get("/for-you")
