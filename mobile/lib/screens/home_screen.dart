@@ -9,6 +9,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/analytics_service.dart';
 import '../services/city_service.dart';
+import '../services/feed_telemetry_service.dart';
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
@@ -27,6 +28,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // Kişiselleştirilmiş (Sana Özel) — yatay scroll, giriş yapanlar için
   List<dynamic> _forYouListings = [];
   bool _forYouLoading = false;
+  bool _forYouLoadingMore = false;
+  bool _forYouExhausted = false;
 
   // En Son Eklenenler — dikey grid, sonsuz scroll
   List<dynamic> _recentListings = [];
@@ -80,11 +83,13 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _cities = c);
     });
     _scrollCtrl.addListener(_onScroll);
+    _forYouScrollCtrl.addListener(_onForYouScroll);
   }
 
   @override
   void dispose() {
     _dwellTimer?.cancel();
+    _forYouScrollCtrl.removeListener(_onForYouScroll);
     _forYouScrollCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -100,6 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (itemId == null) return;
     _dwellTimer = Timer(const Duration(seconds: 3), () {
       final rawPrice = item['price'];
+      // Kullanıcı kartı 3 saniye izledi — hem Redis hem ClickHouse'a yaz
       AnalyticsService.logInteraction(
         itemId: itemId,
         itemType: 'listing',
@@ -108,7 +114,24 @@ class _HomeScreenState extends State<HomeScreen> {
         pricePoint: rawPrice != null ? (rawPrice as num).toDouble() : null,
         metadata: {'source': 'for_you_feed'},
       );
+      // ClickHouse feed_analytics → recommendation engine döngüsünü kapatır
+      FeedTelemetryService.instance.logEvent(
+        listingId: itemId.toString(),
+        eventType: 'impression',
+        dwellTimeMs: 3000,
+        contentType: 'photo',
+        slotIndex: index,
+      );
     });
+  }
+
+  // Sona yaklaşınca sessizce yeni batch yükle
+  void _onForYouScroll() {
+    if (!_forYouScrollCtrl.hasClients) return;
+    final pos = _forYouScrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - _cardWidth * 2) {
+      _loadMoreForYou();
+    }
   }
 
   void _onScroll() {
@@ -133,29 +156,46 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadFiltered(token);
     } else {
       // Normal mod: Sana Özel + En Son paralel yükle
-      if (loggedIn) _loadForYou(token!);
+      if (loggedIn) _loadForYou();
       await _loadRecent(token);
     }
   }
 
-  // ── Sana Özel (yatay, for-you endpoint) ───────────────────────────────────
+  // ── Sana Özel (yatay, ClickHouse kişiselleştirilmiş) ─────────────────────
 
-  Future<void> _loadForYou(String token) async {
+  Future<void> _loadForYou() async {
     if (!mounted) return;
-    setState(() => _forYouLoading = true);
+    setState(() {
+      _forYouLoading = true;
+      _forYouExhausted = false;
+    });
     try {
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/feed/for-you?page=0'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      final items = await ListingService.getPersonalizedFeed(limit: 10);
       if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as List;
-        setState(() => _forYouListings = data.take(8).toList());
-      }
+      setState(() {
+        _forYouListings = items;
+        _forYouExhausted = items.isEmpty;
+      });
     } catch (_) {
     } finally {
       if (mounted) setState(() => _forYouLoading = false);
+    }
+  }
+
+  Future<void> _loadMoreForYou() async {
+    if (_forYouLoadingMore || _forYouExhausted || !_isLoggedIn) return;
+    setState(() => _forYouLoadingMore = true);
+    try {
+      final more = await ListingService.getPersonalizedFeed(limit: 10);
+      if (!mounted) return;
+      if (more.isEmpty) {
+        setState(() => _forYouExhausted = true);
+      } else {
+        setState(() => _forYouListings = [..._forYouListings, ...more]);
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _forYouLoadingMore = false);
     }
   }
 
@@ -233,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadFiltered(String? token) async {
     if (!mounted) return;
-    setState(() { _recentLoading = true; _recentListings = []; _forYouListings = []; });
+    setState(() { _recentLoading = true; _recentListings = []; _forYouListings = []; _forYouExhausted = false; });
     try {
       final params = <String, String>{};
       if (_selectedCategory != null) params['category'] = _selectedCategory!;
@@ -734,8 +774,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                   controller: _forYouScrollCtrl,
                                   scrollDirection: Axis.horizontal,
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  itemCount: _forYouListings.length,
+                                  // +1 slot: sona yükleniyor spinner'ı
+                                  itemCount: _forYouListings.length + (_forYouLoadingMore ? 1 : 0),
                                   itemBuilder: (ctx, i) {
+                                    if (i == _forYouListings.length) {
+                                      return const SizedBox(
+                                        width: 60,
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 20, height: 20,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          ),
+                                        ),
+                                      );
+                                    }
                                     final item = _forYouListings[i] as Map<String, dynamic>;
                                     return _HorizontalListingCard(
                                       listing: item,
@@ -875,6 +927,16 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard> {
       final cid = widget.listing['campaign_id'];
       if (cid != null) AnalyticsService.trackAdImpression(cid as int);
     }
+    // Kart görüntülendi → ClickHouse feed_analytics (impression)
+    final lid = widget.listing['id'];
+    if (lid != null) {
+      FeedTelemetryService.instance.logEvent(
+        listingId: lid.toString(),
+        eventType: 'impression',
+        dwellTimeMs: 0,
+        contentType: 'photo',
+      );
+    }
   }
 
   String _fmt(dynamic price) {
@@ -896,7 +958,19 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard> {
     final price = _fmt(widget.listing['price']);
 
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: () {
+        // Tıklandı → ClickHouse feed_analytics (click)
+        final lid = widget.listing['id'];
+        if (lid != null) {
+          FeedTelemetryService.instance.logEvent(
+            listingId: lid.toString(),
+            eventType: 'click',
+            dwellTimeMs: 0,
+            contentType: 'photo',
+          );
+        }
+        widget.onTap();
+      },
       child: Container(
         width: 120,
         margin: const EdgeInsets.only(right: 10),

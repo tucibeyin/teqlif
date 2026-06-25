@@ -16,6 +16,28 @@ class ListingService {
     };
   }
 
+  /// ClickHouse telemetri tabanlı epsilon-greedy kişiselleştirilmiş feed.
+  /// Giriş yapılmamışsa boş liste döner.
+  static Future<List<Map<String, dynamic>>> getPersonalizedFeed({int limit = 10}) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return [];
+      final resp = await http
+          .get(
+            Uri.parse('$kBaseUrl/feed/personalized?limit=$limit'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        return (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[ListingService] getPersonalizedFeed hatası: $e');
+      return [];
+    }
+  }
+
   /// İlana ait teklifleri miktara göre büyükten küçüğe döner.
   static Future<List<ListingOffer>> getOffers(int listingId) async {
     try {
