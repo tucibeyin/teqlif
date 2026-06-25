@@ -125,6 +125,7 @@ async def _handle_ws_message(
     username: str,
     profile_image_url: str | None,
     is_host: bool,
+    host_id: int | None = None,
 ) -> None:
     """Gelen WS payload tipine göre message veya host_pin işleyicisine yönlendirir."""
     msg_type = payload.get("type")
@@ -133,6 +134,7 @@ async def _handle_ws_message(
             websocket=websocket, payload=payload, svc=svc,
             stream_id=stream_id, user_id=user_id, username=username,
             profile_image_url=profile_image_url, is_host=is_host,
+            host_id=host_id,
         )
     elif msg_type == WS.HOST_PIN and is_host:
         await _handle_host_pin(stream_id=stream_id, payload=payload, username=username)
@@ -148,6 +150,7 @@ async def _handle_chat_message(
     username: str,
     profile_image_url: str | None,
     is_host: bool,
+    host_id: int | None = None,
 ) -> None:
     """Sohbet mesajını işler: mute/shadowban kontrolleri yapılır, broadcast edilir."""
     content = str(payload.get("content", "")).strip()[:_MAX_MESSAGE_CHARS]
@@ -167,9 +170,38 @@ async def _handle_chat_message(
             "code": "muted",
             "message": "Bu yayında susturuldunuz",
         })
-    elif result.get("is_hidden"):
+        return
+    if result.get("is_hidden"):
         # Shadowban / küfür: mesajı sadece gönderene yolla (ghost)
         await safe_send_json(websocket, result)
+        return
+
+    # ── Hype Meter: mesaj puanla, skoru güncelle, broadcast et ───────────────
+    from app.core.hype_manager import hype_manager
+    from app.utils.sentiment import calculate_message_hype
+
+    delta = calculate_message_hype(content)
+    if delta != 0:
+        new_score = hype_manager.add_delta(stream_id, delta)
+        try:
+            await publish_chat(stream_id, {
+                "type": WS.HYPE_UPDATE,
+                "score": round(new_score),
+            })
+        except Exception as exc:
+            logger.warning("[Hype] Broadcast başarısız | stream=%s | %s", stream_id, exc)
+
+        # Host uyarısı: eşik geçildiyse ve cooldown dolduysa
+        if host_id and hype_manager.should_alert(stream_id):
+            hype_manager.mark_alerted(stream_id)
+            host_topic = f"chat:{stream_id}:u{host_id}"
+            try:
+                await ws_manager.publish("chat_broadcast", host_topic, {
+                    "type": WS.HYPE_ALERT,
+                    "message": "Oda alev alev! Büyük ürünü satmanın tam zamanı!",
+                })
+            except Exception as exc:
+                logger.warning("[Hype] Host alert gönderilemedi | stream=%s | %s", stream_id, exc)
 
 
 async def _handle_host_pin(*, stream_id: int, payload: dict, username: str) -> None:
@@ -374,6 +406,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
                     username=username,
                     profile_image_url=profile_image_url,
                     is_host=is_host,
+                    host_id=host_id,
                 )
             except Exception as exc:
                 logger.warning(

@@ -156,6 +156,9 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(pubsub_listener())
     chat_task = asyncio.create_task(chat_pubsub_listener())
     mod_task = asyncio.create_task(moderation_pubsub_listener())
+    # Hype Meter sönümleme döngüsü
+    from app.core.hype_manager import hype_manager
+    hype_manager.start_decay()
     yield
     task.cancel()
     chat_task.cancel()
@@ -163,6 +166,7 @@ async def lifespan(app: FastAPI):
     await asyncio.gather(task, chat_task, mod_task, return_exceptions=True)
     # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
     await ws_manager.shutdown()
+    hype_manager.stop_decay()
     await arq_pool.close()
     clear_pool()
     await close_clickhouse()

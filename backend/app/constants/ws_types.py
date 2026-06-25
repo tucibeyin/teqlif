@@ -44,3 +44,7 @@ WHALE_ALERT = "WHALE_ALERT"  # Sadece yayın sahibine (host) gönderilir
 
 # ── Canlı Hediye ──────────────────────────────────────────────────────────────
 GIFT = "gift"  # Tüm odaya broadcast — gönderen, gift_name, cost
+
+# ── Hype Meter (Heyecan Ölçer) ───────────────────────────────────────────────
+HYPE_UPDATE = "hype_update"   # Tüm odaya: {"type": "hype_update", "score": 85}
+HYPE_ALERT  = "hype_alert"    # Sadece host'a: {"type": "hype_alert", "message": "..."}
