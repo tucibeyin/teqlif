@@ -1,15 +1,15 @@
 """add highlight fields to listings
 
-Revision ID: a2b3c4d5e6f7
-Revises: z1a2b3c4d5e6
+Revision ID: b3c4d5e6f7a8
+Revises: a2b3c4d5e6f7
 Create Date: 2026-06-26
 
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = 'a2b3c4d5e6f7'
-down_revision = 'z1a2b3c4d5e6'
+revision = 'b3c4d5e6f7a8'
+down_revision = 'a2b3c4d5e6f7'
 branch_labels = None
 depends_on = None
 
