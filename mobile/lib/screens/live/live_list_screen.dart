@@ -54,6 +54,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   }
 
   void triggerStartDialog() => _showStartDialog();
+  void refresh() => _load();
 
   Future<void> _load() async {
     if (!mounted) return;

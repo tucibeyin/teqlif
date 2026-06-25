@@ -40,13 +40,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   StreamSubscription<Uri>? _deepLinkSub;
   StreamSubscription<void>? _authFailedSub;
 
+  final GlobalKey<LiveListScreenState> _liveListKey = GlobalKey();
   late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
     _screens = [
-      const LiveListScreen(),
+      LiveListScreen(key: _liveListKey),
       const HomeScreen(),
       const SearchScreen(),
       const MessagesScreen(),
@@ -128,6 +129,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   void _onNavTap(int index) {
+    // Canlı yayınlar tabına dönüşte listeyi ve hikayeleri güncelle
+    if (index == 0 && _currentIndex != 0) {
+      _liveListKey.currentState?.refresh();
+    }
     setState(() => _currentIndex = index);
     // Mesajlar tabına geçince listeyi ve badge'i güncelle
     if (index == 3) {
@@ -175,7 +180,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         builder: (_) => SwipeLiveScreen.single(streamId: streamId),
       ),
       (route) => route.isFirst,
-    );
+    ).then((_) => _liveListKey.currentState?.refresh());
   }
 
   void _navigateToListing(int listingId) {
@@ -253,7 +258,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               builder: (_) => SwipeLiveScreen.single(streamId: id),
             ),
             (route) => route.settings.name == '/home' || route.isFirst,
-          );
+          ).then((_) => _liveListKey.currentState?.refresh());
         }
         break;
     }
