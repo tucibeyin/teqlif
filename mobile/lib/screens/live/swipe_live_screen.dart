@@ -25,6 +25,7 @@ import '../../l10n/app_localizations.dart';
 import '../../widgets/chat_panel.dart';
 import '../../widgets/live/cohost_mod_sheet.dart';
 import '../../widgets/live/floating_hearts.dart';
+import '../../widgets/live/raid_ended_overlay.dart';
 import '../../widgets/live/viewer_top_bar.dart';
 import '../public_profile_screen.dart';
 import '../listing_detail_screen.dart';
@@ -757,6 +758,18 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     }
   }
 
+  Future<void> _handleRaid(int targetStreamId) async {
+    await _deactivate();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SwipeLiveScreen.single(streamId: targetStreamId),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -800,31 +813,12 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
         // ── Yayın sona erdi overlay ──────────────────────────────────────
         if (_streamEnded)
           Positioned.fill(
-            child: ColoredBox(
-              color: Colors.black87,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.videocam_off_rounded,
-                        color: Colors.white38, size: 56),
-                    const SizedBox(height: 12),
-                    Text(l.liveStreamEndedOverlay,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 4),
-                    Text(l.liveDiscoverStreams,
-                        style: const TextStyle(color: Colors.white60, fontSize: 13)),
-                    if (!widget.isLast) ...[
-                      const SizedBox(height: 20),
-                      const Icon(Icons.keyboard_arrow_up_rounded,
-                          color: Colors.white38, size: 32),
-                    ]
-                  ],
-                ),
-              ),
+            child: RaidEndedOverlay(
+              streamId: widget.stream.id,
+              hostUsername: _resolvedHostUsername ?? widget.stream.host.username,
+              hostThumbnailUrl: widget.stream.thumbnailUrl,
+              onClose: _leave,
+              onRaid: _handleRaid,
             ),
           ),
 

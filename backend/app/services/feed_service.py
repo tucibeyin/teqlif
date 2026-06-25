@@ -274,10 +274,10 @@ async def _mark_impressions(user_id: int, listing_ids: list[int], db: AsyncSessi
     await db.execute(
         text("""
             INSERT INTO listing_impressions (user_id, listing_id)
-            VALUES (:uid, unnest(:ids::int[]))
+            VALUES (:uid, :lid)
             ON CONFLICT (user_id, listing_id) DO UPDATE SET seen_at = NOW()
         """),
-        {"uid": user_id, "ids": listing_ids},
+        [{"uid": user_id, "lid": lid} for lid in listing_ids],
     )
     await db.commit()
 
