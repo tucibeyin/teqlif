@@ -1007,7 +1007,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.workspace_premium_outlined,
                 iconColor: const Color(0xFF06B6D4),
-                label: '👑 Pro Araçları',
+                label: '👑 ${l.proHubTitle}',
                 trailing: widget.user?['is_premium'] == true
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
