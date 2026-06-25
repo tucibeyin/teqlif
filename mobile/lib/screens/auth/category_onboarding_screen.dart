@@ -64,7 +64,7 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,8 +90,8 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
               const SizedBox(height: 32),
 
               // Kategori grid
-              Expanded(
-                child: GridView.builder(
+              GridView.builder(
+                  shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
@@ -154,7 +154,6 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
                     );
                   },
                 ),
-              ),
 
               // Alt butonlar
               const SizedBox(height: 16),
