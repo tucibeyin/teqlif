@@ -52,6 +52,9 @@ class StoryViewerScreen extends StatefulWidget {
 
 class _StoryViewerScreenState extends State<StoryViewerScreen> {
   late final PageController _pageController;
+  // Double-pop koruması: video bitti + kullanıcı aynı anda swipe-down yapınca
+  // iki bağımsız yoldan Navigator.pop() çağrılabilir — bu flag bunu önler.
+  bool _closed = false;
 
   @override
   void initState() {
@@ -65,10 +68,16 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
     super.dispose();
   }
 
+  void _safeClose() {
+    if (_closed || !mounted) return;
+    _closed = true;
+    Navigator.of(context).pop();
+  }
+
   void _goToGroup(int index) {
-    if (!mounted) return;
+    if (!mounted || _closed) return;
     if (index < 0 || index >= widget.groups.length) {
-      Navigator.of(context).pop();
+      _safeClose();
       return;
     }
     _pageController.animateToPage(
@@ -92,7 +101,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
           group: widget.groups[i],
           onNextGroup: () => _goToGroup(i + 1),
           onPrevGroup: () => _goToGroup(i - 1),
-          onClose: () => Navigator.of(context).pop(),
+          onClose: _safeClose,
         ),
       ),
     );
@@ -597,6 +606,8 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       },
       onVerticalDragEnd: (details) {
         if (_verticalDragOffset > 150) {
+          // _advancePending olsa bile kullanıcı istekli kapatıyor — onClose
+          // tarafında _safeClose() double-pop'u önler.
           widget.onClose();
         } else if (_verticalDragOffset < -150) {
           _goToProfile(context);
