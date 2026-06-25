@@ -182,7 +182,12 @@ async def _handle_chat_message(
 
     delta = calculate_message_hype(content)
     if delta != 0:
-        new_score = hype_manager.add_delta(stream_id, delta)
+        viewer_count = ws_manager.subscriber_count(f"chat:{stream_id}")
+        new_score = hype_manager.add_delta(
+            stream_id, delta,
+            user_id=user_id,
+            viewer_count=max(1, viewer_count),
+        )
         try:
             await publish_chat(stream_id, {
                 "type": WS.HYPE_UPDATE,
