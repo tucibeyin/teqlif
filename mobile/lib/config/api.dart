@@ -17,10 +17,23 @@ String imgUrl(String? path) {
   return '$kBaseHost$path';
 }
 
+/// 429 yanıtındaki Retry-After başlığını okur, 1–5 saniye arasında bekler.
+Future<void> _waitForRateLimit(http.Response response) async {
+  final retryAfter = int.tryParse(response.headers['retry-after'] ?? '') ?? 2;
+  await Future.delayed(Duration(seconds: retryAfter.clamp(1, 5)));
+}
+
 /// JSON olmayan hata yanıtını [AppException]'a dönüştürür.
-/// 502/503/504 → SERVER_DOWN, diğer 4xx → INVALID_RESPONSE.
+/// 429 → RATE_LIMITED, 502/503/504 → SERVER_DOWN, diğer 4xx → INVALID_RESPONSE.
 /// Hata yoksa null döner (başarılı yanıt için JSON olmayabilir).
 AppException? _parseGatewayError(http.Response response) {
+  if (response.statusCode == 429) {
+    return AppException(
+      'Çok fazla istek gönderildi. Lütfen bir süre bekleyin.',
+      code: 'RATE_LIMITED',
+      statusCode: 429,
+    );
+  }
   if (response.statusCode == 502 ||
       response.statusCode == 503 ||
       response.statusCode == 504) {
@@ -81,15 +94,23 @@ Never _parseErrorBody(Map<String, dynamic> body, int statusCode) {
 Future<Map<String, dynamic>> apiCall(
   Future<http.Response> Function() request, {
   bool retried = false,
+  bool retried429 = false,
 }) async {
   try {
     final response = await request();
+
+    // 429 → Retry-After kadar bekle, bir kez yeniden dene
+    if (response.statusCode == 429 && !retried429) {
+      await _waitForRateLimit(response);
+      return apiCall(request, retried: retried, retried429: true);
+    }
+
     final Map<String, dynamic> body;
 
     try {
       body = jsonDecode(response.body) as Map<String, dynamic>;
     } catch (_) {
-      // JSON parse hatası — Nginx 502/503/504 HTML sayfası veya boş yanıt
+      // JSON parse hatası — Nginx 429/502/503/504 HTML sayfası veya boş yanıt
       final gatewayErr = _parseGatewayError(response);
       if (gatewayErr != null) throw gatewayErr;
       return {};
@@ -126,12 +147,20 @@ Future<Map<String, dynamic>> apiCall(
 
 /// Liste döndüren endpoint'ler için [apiCall] muadili.
 /// 401 → token yenile → bir kez retry mekanizması dahildir.
+/// 429 → Retry-After kadar bekle → bir kez retry mekanizması dahildir.
 Future<List<dynamic>> apiCallList(
   Future<http.Response> Function() request, {
   bool retried = false,
+  bool retried429 = false,
 }) async {
   try {
     final response = await request();
+
+    // 429 → Retry-After kadar bekle, bir kez yeniden dene
+    if (response.statusCode == 429 && !retried429) {
+      await _waitForRateLimit(response);
+      return apiCallList(request, retried: retried, retried429: true);
+    }
 
     if (response.statusCode == 401 && !retried) {
       final refreshed = await _tryRefreshOnce();
