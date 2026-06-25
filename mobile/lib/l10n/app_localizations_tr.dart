@@ -1749,4 +1749,19 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get listingPaywallDesc =>
       'Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin.';
+
+  @override
+  String get onboardingTitle => 'Nelerle ilgileniyorsun?';
+
+  @override
+  String get onboardingSubtitle => 'Sana özel ilan ve yayınlar gösterelim';
+
+  @override
+  String get onboardingMinHint => 'En az 3 kategori seç';
+
+  @override
+  String get onboardingContinue => 'Devam Et';
+
+  @override
+  String get onboardingSkip => 'Şimdilik Atla';
 }

@@ -1733,4 +1733,20 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get listingPaywallDesc =>
       'تتبع كم شخصاً رأى كل إعلان، وكم نقر، ومدى الاهتمام به.';
+
+  @override
+  String get onboardingTitle => 'ما الذي يهمك؟';
+
+  @override
+  String get onboardingSubtitle =>
+      'دعنا نعرض لك إعلانات وبثاً مباشراً مخصصاً لك';
+
+  @override
+  String get onboardingMinHint => 'اختر 3 فئات على الأقل';
+
+  @override
+  String get onboardingContinue => 'متابعة';
+
+  @override
+  String get onboardingSkip => 'تخطي الآن';
 }

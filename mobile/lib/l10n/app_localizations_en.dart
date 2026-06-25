@@ -1748,4 +1748,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get listingPaywallDesc =>
       'Track how many people saw each listing, how many clicked, and how much interest it received.';
+
+  @override
+  String get onboardingTitle => 'What are you into?';
+
+  @override
+  String get onboardingSubtitle =>
+      'Let us show you personalised listings and streams';
+
+  @override
+  String get onboardingMinHint => 'Pick at least 3 categories';
+
+  @override
+  String get onboardingContinue => 'Continue';
+
+  @override
+  String get onboardingSkip => 'Skip for now';
 }

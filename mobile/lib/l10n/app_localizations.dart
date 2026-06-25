@@ -3369,6 +3369,36 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin.'**
   String get listingPaywallDesc;
+
+  /// No description provided for @onboardingTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Nelerle ilgileniyorsun?'**
+  String get onboardingTitle;
+
+  /// No description provided for @onboardingSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sana özel ilan ve yayınlar gösterelim'**
+  String get onboardingSubtitle;
+
+  /// No description provided for @onboardingMinHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'En az 3 kategori seç'**
+  String get onboardingMinHint;
+
+  /// No description provided for @onboardingContinue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Devam Et'**
+  String get onboardingContinue;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şimdilik Atla'**
+  String get onboardingSkip;
 }
 
 class _AppLocalizationsDelegate
