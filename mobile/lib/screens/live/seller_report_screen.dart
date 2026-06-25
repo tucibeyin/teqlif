@@ -149,6 +149,8 @@ class _SellerReportScreenState extends State<SellerReportScreen>
     final avgBudget = r['avg_budget'];
     final hesitations = r['hesitation_count'] as int? ?? 0;
     final duration = r['duration_minutes'] as int? ?? 0;
+    final swipeImpressions = r['swipe_impressions'] as int? ?? 0;
+    final swipeReach = r['swipe_reach'] as int? ?? 0;
     final recommendation = r['recommendation'] as String? ?? '';
     final auctionSummary = r['auction_summary'] as Map<String, dynamic>? ?? {};
     final totalAuctions = auctionSummary['total_auctions'] as int? ?? 0;
@@ -204,6 +206,45 @@ class _SellerReportScreenState extends State<SellerReportScreen>
               ),
             ),
           ),
+
+          // ── Swipe Feed Erişimi (sadece veri varsa) ────────────────────────
+          if (swipeImpressions > 0) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                child: _SectionHeader(
+                  icon: Icons.swipe_rounded,
+                  label: 'SWIPE FEED ERİŞİMİ',
+                  color: const Color(0xFF06B6D4),
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              sliver: SliverGrid(
+                delegate: SliverChildListDelegate([
+                  _MetricCard(
+                    icon: Icons.play_circle_outline_rounded,
+                    label: 'Swipe Feed\nGörüntülenme',
+                    value: '$swipeImpressions',
+                    color: const Color(0xFF06B6D4),
+                  ),
+                  _MetricCard(
+                    icon: Icons.person_search_rounded,
+                    label: 'Swipe Feed\nTekil Erişim',
+                    value: '$swipeReach',
+                    color: const Color(0xFF0EA5E9),
+                  ),
+                ]),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 1.35,
+                ),
+              ),
+            ),
+          ],
 
           // ── Açık Artırma Özeti (sadece auction varsa) ─────────────────────
           if (totalAuctions > 0) ...[

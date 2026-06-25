@@ -28,6 +28,7 @@ import '../../widgets/live/viewer_top_bar.dart';
 import '../public_profile_screen.dart';
 import '../listing_detail_screen.dart';
 import '../../services/feed_telemetry_service.dart';
+import '../../services/analytics_service.dart';
 
 // ── Feed item tipleri ────────────────────────────────────────────────────────
 
@@ -421,6 +422,11 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
           _room = room;
           _loading = false;
         });
+        AnalyticsService.logInteraction(
+          itemId: widget.stream.id,
+          itemType: 'stream',
+          interactionType: 'swipe_impression',
+        );
       }
     } on AppException catch (e) {
       if (!mounted) return;

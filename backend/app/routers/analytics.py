@@ -245,16 +245,20 @@ async def get_seller_report(
     unique_viewers = 0
     avg_budget: float | None = None
     hesitation_count = 0
+    swipe_impressions = 0
+    swipe_reach = 0
 
     try:
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
 
+        ts_start = stream.started_at.strftime("%Y-%m-%d %H:%M:%S")
+        ts_end = ended.strftime("%Y-%m-%d %H:%M:%S")
+
         if listing_ids:
             ids_str = ", ".join(str(i) for i in listing_ids)
-            ts_start = stream.started_at.strftime("%Y-%m-%d %H:%M:%S")
-            ts_end = ended.strftime("%Y-%m-%d %H:%M:%S")
 
+            # user_events: detay ekranı etkileşimleri
             result = await ch.query(f"""
                 SELECT
                     countDistinct(user_id)                          AS unique_viewers,
@@ -266,13 +270,46 @@ async def get_seller_report(
                   AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
             """)
             row = result.result_rows[0] if result.result_rows else (0, None, 0)
-            unique_viewers = int(row[0] or 0)
+            ue_unique = int(row[0] or 0)
             avg_budget = float(row[1]) if row[1] else None
             hesitation_count = int(row[2] or 0)
+
+            # feed_analytics: swipe feed görüntülemeleri (listing_id String olarak saklanır)
+            feed_result = await ch.query(f"""
+                SELECT
+                    count()                AS total_impressions,
+                    countDistinct(user_id) AS swipe_reach
+                FROM feed_analytics
+                WHERE toUInt64OrZero(listing_id) IN ({ids_str})
+                  AND event_type = 'impression'
+                  AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+            """)
+            feed_row = feed_result.result_rows[0] if feed_result.result_rows else (0, 0)
+            swipe_impressions = int(feed_row[0] or 0)
+            swipe_reach = int(feed_row[1] or 0)
+
+            # unique_viewers = user_events + feed_analytics kullanıcılarının birleşimi
+            if swipe_reach > 0:
+                union_result = await ch.query(f"""
+                    SELECT countDistinct(uid) FROM (
+                        SELECT toString(user_id) AS uid FROM user_events
+                        WHERE item_id IN ({ids_str}) AND item_type = 'listing'
+                          AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+                          AND user_id IS NOT NULL
+                        UNION ALL
+                        SELECT user_id AS uid FROM feed_analytics
+                        WHERE toUInt64OrZero(listing_id) IN ({ids_str})
+                          AND event_type = 'impression'
+                          AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+                          AND user_id IS NOT NULL AND user_id != ''
+                    )
+                """)
+                union_row = union_result.result_rows[0] if union_result.result_rows else (0,)
+                unique_viewers = int(union_row[0] or 0)
+            else:
+                unique_viewers = ue_unique
         else:
-            # Açık artırma ilanı yoksa sadece 'view'/'dwell' sinyallerini kullan
-            ts_start = stream.started_at.strftime("%Y-%m-%d %H:%M:%S")
-            ts_end = ended.strftime("%Y-%m-%d %H:%M:%S")
+            # Açık artırma ilanı yoksa stream-level swipe impression'ları say
             result = await ch.query(f"""
                 SELECT countDistinct(user_id), avgIf(price_point, price_point > 0), 0
                 FROM user_events
@@ -298,6 +335,8 @@ async def get_seller_report(
         "unique_viewers": unique_viewers,
         "avg_budget": round(avg_budget, 2) if avg_budget else None,
         "hesitation_count": hesitation_count,
+        "swipe_impressions": swipe_impressions,
+        "swipe_reach": swipe_reach,
         "recommendation": recommendation,
         "auction_summary": auction_summary,
     }
