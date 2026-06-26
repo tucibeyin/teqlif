@@ -6,6 +6,7 @@ import '../services/analytics_service.dart';
 import 'listing_analytics_screen.dart';
 import 'market_intelligence_screen.dart';
 import 'pro_insights_screen.dart';
+import 'pro_stream_analytics_screen.dart';
 
 class ProHubScreen extends StatefulWidget {
   final bool isPremium;
@@ -95,6 +96,28 @@ class _ProHubScreenState extends State<ProHubScreen> {
               context,
               MaterialPageRoute(builder: (_) => MarketIntelligenceScreen(isPremium: isPremium)),
             ),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.schedule_outlined,
+            iconColor: const Color(0xFF8B5CF6),
+            title: 'En İyi Yayın Saati',
+            description: 'Geçmiş yayın verilerinize göre en yüksek dönüşüm sağlayan gün ve saat dilimlerini görün.',
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BestStreamTimeScreen()))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.pie_chart_outline,
+            iconColor: const Color(0xFFEC4899),
+            title: 'Dönüşüm Analizi',
+            description: 'Kategori bazlı açık artırma kazanma oranlarınızı ve ortalama satış fiyatlarını inceleyin.',
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversionBreakdownScreen()))
+                : () => _showUpgrade(context),
           ),
 
           // ── Blast Kredi Kartı ──────────────────────────────────────────────

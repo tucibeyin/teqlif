@@ -880,6 +880,195 @@ async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
         raise
 
 
+async def compute_seller_badges_task(ctx: dict) -> None:
+    """
+    Her gün 01:30'da çalışır.
+    Son 30 gündeki auction_won / (auction_won + auction_ended) oranından
+    satıcı rozetlerini hesaplar ve Redis'e yazar (25 saat TTL).
+
+    Rozetler:
+      trusted_seller  → conv_rate >= 0.65 VE en az 3 tamamlanan açık artırma
+      active_seller   → en az 5 tamamlanan açık artırma (conv_rate sınırı yok)
+    """
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        from app.utils.redis_client import get_redis
+
+        ch = await get_clickhouse_client()
+        result = await ch.query("""
+            SELECT
+                user_id,
+                countIf(event_type = 'auction_won')                           AS won,
+                countIf(event_type IN ('auction_won', 'auction_ended'))        AS total
+            FROM user_events
+            WHERE timestamp >= now() - INTERVAL 30 DAY
+              AND event_type IN ('auction_won', 'auction_ended')
+              AND user_id IS NOT NULL
+            GROUP BY user_id
+            HAVING total >= 3
+        """)
+
+        redis = await get_redis()
+        pipe = redis.pipeline()
+        badge_count = 0
+        for row in result.result_rows:
+            uid, won, total = row
+            conv = won / total if total > 0 else 0.0
+            if conv >= 0.65:
+                badge = "trusted_seller"
+            elif total >= 5:
+                badge = "active_seller"
+            else:
+                continue
+            pipe.setex(f"seller:badge:{uid}", 90_000, badge)  # 25 saat
+            badge_count += 1
+        await pipe.execute()
+        logger.info("[Worker] compute_seller_badges_task tamamlandı | rozet=%d", badge_count)
+    except Exception as exc:
+        logger.error("[Worker] compute_seller_badges_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
+async def compute_trending_categories_task(ctx: dict) -> None:
+    """
+    Her 6 saatte çalışır.
+    Son 7 gündeki auction_won sayısını önceki 7 günle karşılaştırır.
+    %30'dan fazla artış gösteren kategorileri 'trending:categories' Redis setine yazar.
+    """
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        from app.utils.redis_client import get_redis
+
+        ch = await get_clickhouse_client()
+        # user_events'te item_type='listing' olan auction_won event'lerini kategoriye göre say
+        # listing kategorisini bilmediğimiz için feed_analytics'teki stream_category alanını kullanıyoruz
+        # Alternatif: PostgreSQL'den son 7/14 günün auction kazanma sayısını kategori bazlı çekelim
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text as sql_text
+
+        async with AsyncSessionLocal() as db:
+            rows = await db.execute(sql_text("""
+                WITH
+                    recent AS (
+                        SELECT l.category, COUNT(*) AS cnt
+                        FROM auctions a
+                        INNER JOIN listings l ON l.id = a.listing_id
+                        WHERE a.ended_at >= NOW() - INTERVAL '7 days'
+                          AND a.winner_id IS NOT NULL
+                          AND l.category IS NOT NULL
+                        GROUP BY l.category
+                    ),
+                    prev AS (
+                        SELECT l.category, COUNT(*) AS cnt
+                        FROM auctions a
+                        INNER JOIN listings l ON l.id = a.listing_id
+                        WHERE a.ended_at >= NOW() - INTERVAL '14 days'
+                          AND a.ended_at <  NOW() - INTERVAL '7 days'
+                          AND a.winner_id IS NOT NULL
+                          AND l.category IS NOT NULL
+                        GROUP BY l.category
+                    )
+                SELECT r.category
+                FROM recent r
+                LEFT JOIN prev p ON p.category = r.category
+                WHERE r.cnt >= 2
+                  AND (p.cnt IS NULL OR r.cnt > p.cnt * 1.3)
+            """))
+            trending = [row[0] for row in rows.fetchall()]
+
+        redis = await get_redis()
+        key = "trending:categories"
+        pipe = redis.pipeline()
+        pipe.delete(key)
+        if trending:
+            pipe.sadd(key, *trending)
+        pipe.expire(key, 21_600)  # 6 saat
+        await pipe.execute()
+        logger.info("[Worker] compute_trending_categories_task | trend=%s", trending)
+    except Exception as exc:
+        logger.error("[Worker] compute_trending_categories_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
+async def send_budget_match_notifications_task(ctx: dict, listing_id: int) -> None:
+    """
+    Yeni ilan oluşturulduğunda bütçesi + tercihleri uyumlu kullanıcılara bildirim gönderir.
+    listing_service.create_listing() tarafından 3 dakika gecikmeli enqueue edilir
+    (embedding worker'ının çalışması için yeterli süre tanınır).
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import select, text as sql_text
+        from app.models.listing import Listing
+
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(Listing).where(Listing.id == listing_id))
+            listing = res.scalar_one_or_none()
+            if not listing or not listing.is_active or listing.is_deleted:
+                return
+
+            min_price = listing.price * 0.7
+
+            if listing.embedding is not None:
+                emb_str = "[" + ",".join(str(x) for x in listing.embedding) + "]"
+                rows = await db.execute(
+                    sql_text(f"""
+                        SELECT id FROM users
+                        WHERE max_budget >= :min_price
+                          AND id != :owner_id
+                          AND is_active = TRUE
+                          AND preference_embedding IS NOT NULL
+                          AND preference_embedding <=> '{emb_str}'::vector < 0.45
+                        ORDER BY preference_embedding <=> '{emb_str}'::vector
+                        LIMIT 100
+                    """),
+                    {"min_price": min_price, "owner_id": listing.user_id},
+                )
+            else:
+                rows = await db.execute(
+                    sql_text("""
+                        SELECT id FROM users
+                        WHERE max_budget >= :min_price AND id != :owner_id AND is_active = TRUE
+                        ORDER BY max_budget DESC LIMIT 60
+                    """),
+                    {"min_price": min_price, "owner_id": listing.user_id},
+                )
+
+            recipient_ids = [r[0] for r in rows.fetchall()]
+            title_val = listing.title
+            price_val = listing.price
+
+        if not recipient_ids:
+            return
+
+        from app.routers.notifications import push_notification
+        import asyncio as _asyncio
+
+        title = "Bütçene uygun yeni ilan! 💡"
+        body = f"{title_val} — {price_val:.0f} ₺"
+
+        async def _notify(uid: int) -> None:
+            try:
+                await push_notification(
+                    user_id=uid,
+                    notif={"type": "budget_match", "title": title, "body": body, "related_id": listing_id},
+                    pref_key="budget_match",
+                )
+            except Exception:
+                pass
+
+        for i in range(0, len(recipient_ids), 20):
+            await _asyncio.gather(*[_notify(uid) for uid in recipient_ids[i:i + 20]])
+
+        logger.info("[BudgetMatch] listing_id=%s → %d kullanıcıya bildirim", listing_id, len(recipient_ids))
+    except Exception as exc:
+        logger.error("[BudgetMatch] Başarısız | listing_id=%s | %s", listing_id, exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 async def calculate_user_budgets_task(ctx: dict) -> None:
     """
     Her gece 02:00'da çalışır.
@@ -942,6 +1131,9 @@ class WorkerSettings:
         cleanup_hype_highlights_task,
         deactivate_expired_listings_task,
         delete_expired_inactive_listings_task,
+        compute_seller_badges_task,
+        compute_trending_categories_task,
+        send_budget_match_notifications_task,
     ]
 
     cron_jobs = [
@@ -973,6 +1165,10 @@ class WorkerSettings:
         cron(deactivate_expired_listings_task, hour=4, minute=0),
         # Her gün 04:30 — 60+ gün pasif kalan ilanları sil
         cron(delete_expired_inactive_listings_task, hour=4, minute=30),
+        # Her gün 01:30 — satıcı rozetlerini hesapla (Redis cache)
+        cron(compute_seller_badges_task, hour=1, minute=30),
+        # Her 6 saatte — trend kategorileri hesapla (Redis cache)
+        cron(compute_trending_categories_task, hour={0, 6, 12, 18}, minute=0),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

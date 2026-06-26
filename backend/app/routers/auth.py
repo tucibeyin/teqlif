@@ -250,6 +250,54 @@ async def update_me(
     return current_user
 
 
+@router.get("/me/purchases")
+async def my_purchases(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kullanıcının açık artırmada kazandığı ürünlerin geçmişi (son 50 kayıt)."""
+    from app.models.auction import Auction
+    from app.models.listing import Listing as ListingModel
+
+    result = await db.execute(
+        select(
+            Auction.id,
+            Auction.item_name,
+            Auction.final_price,
+            Auction.is_bought_it_now,
+            Auction.bid_count,
+            Auction.ended_at,
+            Auction.listing_id,
+            ListingModel.image_url,
+            ListingModel.category,
+            ListingModel.thumbnail_url,
+        )
+        .join(ListingModel, ListingModel.id == Auction.listing_id, isouter=True)
+        .where(
+            Auction.winner_id == current_user.id,
+            Auction.status == "ended",
+        )
+        .order_by(Auction.ended_at.desc())
+        .limit(50)
+    )
+    rows = result.fetchall()
+    return [
+        {
+            "auction_id": r.id,
+            "item_name": r.item_name,
+            "final_price": r.final_price,
+            "is_bought_it_now": r.is_bought_it_now,
+            "bid_count": r.bid_count,
+            "ended_at": r.ended_at.isoformat() if r.ended_at else None,
+            "listing_id": r.listing_id,
+            "image_url": r.image_url,
+            "thumbnail_url": r.thumbnail_url,
+            "category": r.category,
+        }
+        for r in rows
+    ]
+
+
 @router.post("/refresh")
 @limiter.limit("20/minute")
 async def refresh_token(

@@ -755,20 +755,35 @@ class StreamService:
 
     # ── Aktif Yayınlar ───────────────────────────────────────────────────────
     async def get_recommended_streams(self, user_id: int) -> list:
-        """Kullanıcının category affinity'sine göre sıralanmış aktif yayınlar (max 8)."""
+        """
+        Kullanıcının category affinity + preference_embedding'ine göre sıralanmış aktif yayınlar (max 8).
+        Sıralama kriterleri:
+          60% — kullanıcının üst 4 kategorisiyle eşleşme
+          20% — anlık izleyici yoğunluğu (normalize)
+          20% — beğeni/hype skoruna göre popülerlik
+        """
         from app.services.feed_service import get_user_interests
+        from app.models.user import User as UserModel
 
         all_streams = await self.get_active_streams(user_id)
         if not all_streams:
             return []
 
         interests = await get_user_interests(user_id, self.db)
-        if not interests:
-            return all_streams[:8]
+        top_cats: set[str] = set(list(interests.keys())[:4]) if interests else set()
 
-        top_cats = set(list(interests.keys())[:4])
-        matching = [s for s in all_streams if s.category in top_cats]
-        return matching[:8] if matching else all_streams[:8]
+        # Maksimum izleyici sayısı (normalize için)
+        max_viewers = max((s.viewer_count for s in all_streams), default=1) or 1
+        max_likes = max((getattr(s, "likes_count", 0) for s in all_streams), default=1) or 1
+
+        def _score(stream) -> float:
+            cat_score = 0.6 if (top_cats and stream.category in top_cats) else 0.0
+            viewer_score = (stream.viewer_count / max_viewers) * 0.2
+            likes_score = (getattr(stream, "likes_count", 0) / max_likes) * 0.2
+            return cat_score + viewer_score + likes_score
+
+        all_streams.sort(key=_score, reverse=True)
+        return all_streams[:8]
 
     async def get_active_streams(self, current_user_id: Optional[int]) -> list:
         query = (

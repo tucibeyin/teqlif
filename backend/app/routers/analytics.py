@@ -968,6 +968,117 @@ async def pro_insights(
     }
 
 
+@router.get("/pro/best-stream-time")
+async def best_stream_time(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Satıcının geçmiş yayın verilerine göre en yüksek dönüşüm sağlayan gün/saat dilimlerini döner.
+    Son 90 günlük yayın geçmişini 3'er saatlik bloklara bölerek kategori bazlı analiz eder.
+    """
+    uid = current_user.id
+    _DAYS = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"]
+
+    result = await db.execute(sql_text("""
+        WITH stream_auctions AS (
+            SELECT
+                ls.id                                                                     AS stream_id,
+                EXTRACT(DOW FROM ls.started_at AT TIME ZONE 'Europe/Istanbul')::int      AS day_of_week,
+                FLOOR(EXTRACT(HOUR FROM ls.started_at AT TIME ZONE 'Europe/Istanbul') / 3) * 3
+                                                                                          AS hour_block,
+                COUNT(a.id)                                                               AS total_auctions,
+                COUNT(a.winner_id)                                                        AS won_auctions
+            FROM live_streams ls
+            LEFT JOIN auctions a ON a.stream_id = ls.id
+            WHERE ls.host_id = :uid
+              AND ls.started_at >= NOW() - INTERVAL '90 days'
+              AND ls.ended_at IS NOT NULL
+            GROUP BY ls.id, ls.started_at
+        )
+        SELECT
+            day_of_week,
+            hour_block::int,
+            COUNT(*)                                                                       AS stream_count,
+            COALESCE(SUM(won_auctions)::float / NULLIF(SUM(total_auctions), 0), 0)        AS conv_rate,
+            SUM(won_auctions)                                                              AS total_wins
+        FROM stream_auctions
+        GROUP BY day_of_week, hour_block
+        ORDER BY conv_rate DESC, total_wins DESC
+        LIMIT 5
+    """), {"uid": uid})
+
+    rows = result.fetchall()
+    slots = [
+        {
+            "day": _DAYS[int(r.day_of_week)],
+            "hour_range": f"{int(r.hour_block):02d}:00 - {int(r.hour_block)+3:02d}:00",
+            "stream_count": int(r.stream_count),
+            "conversion_rate": round(float(r.conv_rate) * 100, 1),
+            "total_wins": int(r.total_wins),
+        }
+        for r in rows
+    ]
+    if not slots:
+        return {"slots": [], "recommendation": "Henüz yeterli yayın verisi yok (min. 1 yayın gerekli)."}
+
+    best = slots[0]
+    return {
+        "slots": slots,
+        "recommendation": (
+            f"{best['day']} {best['hour_range']} saatlerinde "
+            f"%{best['conversion_rate']:.1f} dönüşüm oranıyla en iyi performansı gösteriyorsunuz."
+        ),
+    }
+
+
+@router.get("/pro/conversion-breakdown")
+async def conversion_breakdown(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Satıcının kategori bazlı açık artırma dönüşüm analizi (son 90 gün).
+    Her kategori için: toplam müzayede sayısı, kazanılan, ortalama fiyat, dönüşüm oranı.
+    """
+    uid = current_user.id
+    _CAT_LABELS_MAP = {
+        "elektronik": "Elektronik", "giyim": "Giyim", "ev": "Ev & Yaşam",
+        "spor": "Spor", "kitap": "Kitap", "oyun": "Oyun",
+        "diger": "Diğer", "sohbet": "Sohbet",
+    }
+
+    result = await db.execute(sql_text("""
+        SELECT
+            COALESCE(l.category, 'diger')                                              AS category,
+            COUNT(a.id)                                                                AS total_auctions,
+            COUNT(a.winner_id)                                                         AS won_auctions,
+            COALESCE(AVG(a.final_price) FILTER (WHERE a.winner_id IS NOT NULL), 0)    AS avg_final_price,
+            COALESCE(COUNT(a.winner_id)::float / NULLIF(COUNT(a.id), 0), 0)           AS conv_rate
+        FROM listings l
+        INNER JOIN auctions a ON a.listing_id = l.id
+            AND a.ended_at >= NOW() - INTERVAL '90 days'
+        WHERE l.user_id = :uid
+          AND l.is_deleted = FALSE
+        GROUP BY l.category
+        HAVING COUNT(a.id) > 0
+        ORDER BY conv_rate DESC, total_auctions DESC
+    """), {"uid": uid})
+
+    rows = result.fetchall()
+    return [
+        {
+            "category": r.category,
+            "label": _CAT_LABELS_MAP.get(r.category, r.category or "Diğer"),
+            "total_auctions": int(r.total_auctions),
+            "won_auctions": int(r.won_auctions),
+            "avg_final_price": round(float(r.avg_final_price), 2),
+            "conversion_rate": round(float(r.conv_rate) * 100, 1),
+        }
+        for r in rows
+    ]
+
+
 # ── Feed Telemetri ────────────────────────────────────────────────────────────
 
 @router.post("/feed-events", status_code=204)

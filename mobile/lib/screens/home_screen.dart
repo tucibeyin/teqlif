@@ -1066,6 +1066,50 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                         ),
                       ),
                     ),
+                  // ── Seller badge (trusted / active) ────────────────────
+                  if (widget.listing['seller_badge'] == 'trusted_seller')
+                    Positioned(
+                      top: widget.listing['seller_is_premium'] == true ? 24 : 5,
+                      right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text('✅', style: TextStyle(fontSize: 9)),
+                      ),
+                    )
+                  else if (widget.listing['seller_badge'] == 'active_seller')
+                    Positioned(
+                      top: widget.listing['seller_is_premium'] == true ? 24 : 5,
+                      right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text('⭐', style: TextStyle(fontSize: 9)),
+                      ),
+                    ),
+                  // ── Trend rozeti ────────────────────────────────────────
+                  if (widget.listing['is_trending'] == true)
+                    Positioned(
+                      bottom: 5,
+                      right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.deepOrange.withValues(alpha: 0.88),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text(
+                          '🔥 Trend',
+                          style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
                   // ── Highlight (Canlı Yayın Kesiği) badge ──────────────
                   if (widget.listing['is_highlight'] == true)
                     Positioned.fill(
@@ -1342,6 +1386,47 @@ class _GridItemState extends State<_GridItem> {
                   'Sponsorlu',
                   style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
                 ),
+              ),
+            ),
+          // Seller badge — sol alt (sponsorlu yokken sol üst)
+          if (widget.listing['seller_badge'] == 'trusted_seller')
+            Positioned(
+              bottom: price.isNotEmpty ? 26 : 6,
+              left: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A).withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: const Text('✅ Güvenilir', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
+              ),
+            )
+          else if (widget.listing['seller_badge'] == 'active_seller')
+            Positioned(
+              bottom: price.isNotEmpty ? 26 : 6,
+              left: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: const Text('⭐ Aktif', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          // Trend rozeti — sağ alt
+          if (widget.listing['is_trending'] == true)
+            Positioned(
+              bottom: price.isNotEmpty ? 26 : 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.deepOrange.withValues(alpha: 0.88),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: const Text('🔥', style: TextStyle(fontSize: 10)),
               ),
             ),
           // Kalp butonu — sağ üst köşe

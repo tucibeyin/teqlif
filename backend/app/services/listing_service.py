@@ -37,6 +37,23 @@ logger = get_logger(__name__)
 
 
 # ── Yardımcı: model → dict dönüşümü ─────────────────────────────────────────
+async def _fetch_seller_meta(user_ids: list[int]) -> tuple[dict[int, str | None], set[str]]:
+    """
+    Batch olarak Redis'ten seller_badge ve trending kategorileri çeker.
+    Döner: (badge_map {user_id: badge}, trending_categories set)
+    """
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        badge_keys = [f"seller:badge:{uid}" for uid in user_ids]
+        results = await redis.mget(*badge_keys) if badge_keys else []
+        badge_map = {uid: (val or None) for uid, val in zip(user_ids, results)}
+        trending_cats = set(await redis.smembers("trending:categories") or [])
+        return badge_map, trending_cats
+    except Exception:
+        return {}, set()
+
+
 def _row_dict(
     listing: Listing,
     user: User,
@@ -44,6 +61,8 @@ def _row_dict(
     is_liked: bool = False,
     is_sponsored: bool = False,
     campaign_id: Optional[int] = None,
+    seller_badge: str | None = None,
+    is_trending: bool = False,
 ) -> dict:
     return {
         "id": listing.id,
@@ -64,7 +83,50 @@ def _row_dict(
         "is_sponsored": is_sponsored,
         "campaign_id": campaign_id,
         "seller_is_premium": user.is_premium,
+        "seller_badge": seller_badge,
+        "is_trending": is_trending,
     }
+
+
+async def _trigger_search_alerts(listing_id: int, category: Optional[str], price: Optional[float]) -> None:
+    """
+    Yeni ilan oluşturulduğunda eşleşen arama alarmlarına push bildirimi gönderir.
+    Fire-and-forget — hata olursa loglanır, akışı durdurmaz.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models.search_alert import SearchAlert
+        from app.routers.notifications import push_notification
+
+        async with AsyncSessionLocal() as db:
+            q = select(SearchAlert).where(SearchAlert.is_active == True)  # noqa: E712
+            if category:
+                q = q.where((SearchAlert.category == category) | (SearchAlert.category.is_(None)))
+            if price is not None:
+                q = q.where((SearchAlert.max_price >= price) | (SearchAlert.max_price.is_(None)))
+            result = await db.execute(q.limit(200))
+            alerts = result.scalars().all()
+
+        import asyncio as _aio
+        async def _send(a: SearchAlert) -> None:
+            try:
+                await push_notification(
+                    user_id=a.user_id,
+                    notif={
+                        "type": "search_alert",
+                        "title": "Arama alarmı: yeni ilan",
+                        "body": f"{category or 'İlan'} kategorisinde yeni ürün eklendi",
+                        "related_id": listing_id,
+                    },
+                    pref_key="search_alert",
+                )
+            except Exception:
+                pass
+
+        for i in range(0, len(alerts), 20):
+            await _aio.gather(*[_send(a) for a in alerts[i:i + 20]])
+    except Exception as exc:
+        logger.warning("[SearchAlert] Trigger başarısız | listing_id=%s | %s", listing_id, exc)
 
 
 # ── Servis sınıfı ────────────────────────────────────────────────────────────
@@ -104,6 +166,7 @@ class ListingService:
         rows = result.all()
 
         listing_ids = [listing.id for listing, _ in rows]
+        user_ids = list({user.id for _, user in rows})
         counts, liked_set = await LikeService.batch_listing_likes(
             self.db, listing_ids, current_user_id
         )
@@ -118,12 +181,15 @@ class ListingService:
             )
             for lid, cid in camp_result.all():
                 campaign_map.setdefault(lid, cid)
+        badge_map, trending_cats = await _fetch_seller_meta(user_ids)
         return [
             _row_dict(
                 listing, user,
                 counts.get(listing.id, 0), listing.id in liked_set,
                 is_sponsored=listing.id in campaign_map,
                 campaign_id=campaign_map.get(listing.id),
+                seller_badge=badge_map.get(user.id),
+                is_trending=listing.category in trending_cats,
             )
             for listing, user in rows
         ]
@@ -156,12 +222,15 @@ class ListingService:
             )
             for lid, cid in camp_result.all():
                 campaign_map.setdefault(lid, cid)
+        badge_map, trending_cats = await _fetch_seller_meta([current_user.id])
         return [
             _row_dict(
                 listing, user,
                 counts.get(listing.id, 0), listing.id in liked_set,
                 is_sponsored=listing.id in campaign_map,
                 campaign_id=campaign_map.get(listing.id),
+                seller_badge=badge_map.get(user.id),
+                is_trending=listing.category in trending_cats,
             )
             for listing, user in rows
         ]
@@ -191,11 +260,14 @@ class ListingService:
             .limit(1)
         )
         campaign_id = camp_result.scalar_one_or_none()
+        badge_map, trending_cats = await _fetch_seller_meta([user.id])
         return _row_dict(
             listing, user,
             counts.get(listing.id, 0), listing.id in liked_set,
             is_sponsored=campaign_id is not None,
             campaign_id=campaign_id,
+            seller_badge=badge_map.get(user.id),
+            is_trending=listing.category in trending_cats,
         )
 
     # ── İlan Oluştur ─────────────────────────────────────────────────────────
@@ -308,6 +380,22 @@ class ListingService:
                     capture_exception(exc)
 
         _asyncio.create_task(_notify_followers())
+
+        # Budget-match bildirimi: 3 dk sonra çalışır (embedding worker için süre tanır)
+        try:
+            from app.utils.arq_pool import get_arq_pool
+            arq_pool = await get_arq_pool()
+            await arq_pool.enqueue_job(
+                "send_budget_match_notifications_task",
+                listing.id,
+                _defer_by=180,  # 3 dakika
+            )
+        except Exception as exc:
+            logger.warning("[LISTINGS] budget_match enqueue başarısız | listing_id=%s | %s", listing.id, exc)
+
+        # Arama alarmı eşleşmeleri — anlık tetikle
+        _asyncio.create_task(_trigger_search_alerts(listing.id, listing.category, listing.price))
+
         return {"id": listing.id}
 
     # ── Aktif/Pasif Geçiş ────────────────────────────────────────────────────

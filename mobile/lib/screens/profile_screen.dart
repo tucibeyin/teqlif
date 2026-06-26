@@ -41,7 +41,10 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _user;
   List<dynamic> _listings = [];
+  List<dynamic> _purchases = [];
   bool _loading = true;
+  bool _purchasesLoading = false;
+  int _selectedTab = 0; // 0 = İlanlar, 1 = Alışverişler
   int? _tuciBalance;
   List<dynamic> _tuciHistory = [];
 
@@ -86,6 +89,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
       sub.cancel();
     }
     super.dispose();
+  }
+
+  Future<void> _loadPurchases() async {
+    if (_purchasesLoading) return;
+    if (mounted) setState(() => _purchasesLoading = true);
+    try {
+      final token = await StorageService.getToken();
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/auth/me/purchases'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body) as List?;
+        if (mounted) setState(() { _purchases = decoded ?? []; });
+      }
+    } catch (_) {
+      // sessizce geç
+    } finally {
+      if (mounted) setState(() => _purchasesLoading = false);
+    }
   }
 
   /// Cüzdan bakiyesi için hafif yenileme (wallet butonuna basıldığında).
@@ -168,6 +191,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         onError: (_) { if (mounted) setState(() => _loading = false); },
       ),
     );
+
+    // ── Satın alma geçmişi (fire-and-forget ilk açılışta) ────────────────
+    _loadPurchases();
 
     _subs.add(
       // ── Cüzdan (cache: user_wallet_data) ─────────────────────────────────
@@ -589,8 +615,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // ── Arama & Kategori filtresi ──
-            if (!_loading || _listings.isNotEmpty)
+            // ── Sekme seçici: İlanlar / Alışverişler ──
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: Row(
+                  children: [
+                    _TabChip(label: 'İlanlar', selected: _selectedTab == 0, onTap: () => setState(() => _selectedTab = 0)),
+                    const SizedBox(width: 8),
+                    _TabChip(label: 'Alışverişler', selected: _selectedTab == 1, onTap: () {
+                      setState(() => _selectedTab = 1);
+                      if (_purchases.isEmpty) _loadPurchases();
+                    }),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── Arama & Kategori filtresi (sadece İlanlar sekmesinde) ──
+            if (_selectedTab == 0 && (!_loading || _listings.isNotEmpty))
               SliverToBoxAdapter(
                 child: ListingFilter(
                   searchCtrl: _searchCtrl,
@@ -607,8 +650,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
 
+            // ── Alışverişler listesi ──
+            if (_selectedTab == 1) ...[
+              if (_purchasesLoading && _purchases.isEmpty)
+                const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_purchases.isEmpty)
+                const SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.shopping_bag_outlined, size: 52, color: Color(0xFFD1D5DB)),
+                        SizedBox(height: 12),
+                        Text('Henüz satın alma yok', style: TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+                        SizedBox(height: 4),
+                        Text('Canlı yayınlarda açık artırmaya katıl', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.all(12),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) => _PurchaseItem(purchase: _purchases[i]),
+                      childCount: _purchases.length,
+                    ),
+                  ),
+                ),
+            ],
+
             // ── İlanlar grid ──
-            if (_loading)
+            if (_selectedTab == 0 && _loading)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 sliver: SliverGrid(
@@ -625,7 +701,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               )
-            else if (_listings.isEmpty)
+            else if (_selectedTab == 0 && _listings.isEmpty)
               SliverFillRemaining(
                 child: Builder(
                   builder: (context) {
@@ -659,7 +735,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
               )
-            else if (_filteredListings.isEmpty)
+            else if (_selectedTab == 0 && _filteredListings.isEmpty)
               const SliverFillRemaining(
                 child: Center(
                   child: Column(
@@ -679,7 +755,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               )
-            else
+            else if (_selectedTab == 0)
               SliverGrid(
                 delegate: SliverChildBuilderDelegate(
                   (ctx, i) => _ListingGridItem(
@@ -697,6 +773,115 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Tab seçici chip ────────────────────────────────────────────────────────
+class _TabChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _TabChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? kPrimary : AppColors.surfaceVariant(context),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : AppColors.textSecondary(context),
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Satın alma geçmişi list item ───────────────────────────────────────────
+class _PurchaseItem extends StatelessWidget {
+  final Map<String, dynamic> purchase;
+  const _PurchaseItem({required this.purchase});
+
+  @override
+  Widget build(BuildContext context) {
+    final imgRaw = purchase['thumbnail_url'] as String? ?? purchase['image_url'] as String?;
+    final img = imgRaw != null ? imgUrl(imgRaw) : null;
+    final price = purchase['final_price'];
+    final priceStr = price != null ? '${(price as num).toInt()} ₺' : '';
+    final date = purchase['ended_at'] as String?;
+    String dateStr = '';
+    if (date != null) {
+      try {
+        final dt = DateTime.parse(date).toLocal();
+        dateStr = '${dt.day}.${dt.month}.${dt.year}';
+      } catch (_) {}
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5)],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+            child: img != null
+                ? CachedNetworkImage(imageUrl: img, width: 72, height: 72, fit: BoxFit.cover)
+                : Container(
+                    width: 72,
+                    height: 72,
+                    color: AppColors.surfaceVariant(context),
+                    child: Icon(Icons.shopping_bag_outlined, color: AppColors.border(context)),
+                  ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  purchase['item_name'] as String? ?? '',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (purchase['category'] != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    purchase['category'] as String,
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    if (priceStr.isNotEmpty)
+                      Text(priceStr, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kPrimary)),
+                    const Spacer(),
+                    if (dateStr.isNotEmpty)
+                      Text(dateStr, style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
       ),
     );
   }

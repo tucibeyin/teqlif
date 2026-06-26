@@ -56,6 +56,85 @@ async def check_stream_active(
     return {"active": stream is not None and stream.ended_at is None}
 
 
+@router.get("/{stream_id}/audience-insights")
+async def audience_insights(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Pro yayıncıya özel: canlı yayındaki izleyicilerin bütçe segmentasyonu.
+    Sadece yayın sahibi erişebilir.
+
+    Segmentler:
+      - Yüksek bütçe: max_budget >= 1000 TL
+      - Orta bütçe: 250–999 TL
+      - Düşük bütçe: < 250 TL
+    """
+    from app.core.exceptions import ForbiddenException, NotFoundException
+    from app.utils.redis_client import get_redis
+    from sqlalchemy import text as sql_text
+
+    result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+    stream = result.scalar_one_or_none()
+    if not stream:
+        raise NotFoundException("Yayın bulunamadı")
+    if stream.host_id != current_user.id:
+        raise ForbiddenException("Bu yayının istatistiklerine erişim yetkiniz yok")
+
+    redis = await get_redis()
+    viewer_key = f"live:viewer_set:{stream.room_name}"
+    viewer_ids_raw = await redis.smembers(viewer_key)
+
+    viewer_ids = []
+    for v in (viewer_ids_raw or []):
+        try:
+            viewer_ids.append(int(v))
+        except (ValueError, TypeError):
+            pass
+
+    if not viewer_ids:
+        return {
+            "viewer_count": stream.viewer_count,
+            "avg_budget": None,
+            "high_value_count": 0,
+            "medium_value_count": 0,
+            "low_budget_count": 0,
+            "ready_buyers_count": 0,
+            "segments": [
+                {"label": "Yüksek Bütçe (1000₺+)", "count": 0, "color": "#4CAF50"},
+                {"label": "Orta Bütçe (250-999₺)", "count": 0, "color": "#2196F3"},
+                {"label": "Düşük Bütçe (<250₺)", "count": 0, "color": "#FF9800"},
+            ],
+        }
+
+    rows = await db.execute(
+        sql_text("SELECT id, max_budget, is_premium FROM users WHERE id = ANY(:ids) AND is_active = TRUE"),
+        {"ids": viewer_ids},
+    )
+    user_data = rows.fetchall()
+    budgets = [float(r.max_budget) for r in user_data if r.max_budget is not None]
+    avg_budget = round(sum(budgets) / len(budgets), 2) if budgets else None
+    high_value = sum(1 for b in budgets if b >= 1000)
+    medium_value = sum(1 for b in budgets if 250 <= b < 1000)
+    low_budget = sum(1 for b in budgets if b < 250)
+    ready_buyers = sum(1 for r in user_data if r.is_premium)
+
+    return {
+        "viewer_count": stream.viewer_count,
+        "avg_budget": avg_budget,
+        "high_value_count": high_value,
+        "medium_value_count": medium_value,
+        "low_budget_count": low_budget,
+        "ready_buyers_count": ready_buyers,
+        "segments": [
+            {"label": "Yüksek Bütçe (1000₺+)", "count": high_value, "color": "#4CAF50"},
+            {"label": "Orta Bütçe (250-999₺)", "count": medium_value, "color": "#2196F3"},
+            {"label": "Düşük Bütçe (<250₺)", "count": low_budget, "color": "#FF9800"},
+        ],
+    }
+
+
 @router.post("/start", response_model=StreamTokenOut, status_code=status.HTTP_201_CREATED)
 async def start_stream(
     data: StreamStart,

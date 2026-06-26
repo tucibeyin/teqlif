@@ -258,4 +258,14 @@ class StreamService {
   static List _tryDecodeList(String body) {
     try { return jsonDecode(body) as List; } catch (_) { return []; }
   }
+
+  static Future<Map<String, dynamic>> fetchAudienceInsights(int streamId) async {
+    final token = await StorageService.getToken();
+    final resp = await http.get(
+      Uri.parse('$kBaseUrl/streams/$streamId/audience-insights'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    _throwHttpError(resp.statusCode, resp.body, fallback: 'Bütçe analizi alınamadı');
+  }
 }

@@ -35,6 +35,7 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _showAllUsers = false;
   bool _searching = false;
   bool _hasQuery = false;
+  bool _alertCreating = false;
 
   // Explore data
   // Sana Özel (for-you, personalized)
@@ -65,6 +66,76 @@ class _SearchScreenState extends State<SearchScreen> {
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _showAlertSheet(BuildContext context) async {
+    final query = _controller.text.trim();
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Arama Alarmı', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text('"$query" için yeni ilan eklendiğinde bildirim al.', style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('İptal'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Alarm Oluştur'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _alertCreating = true);
+    try {
+      final token = await StorageService.getToken();
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/search-alerts'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'query': query}),
+      );
+      if (mounted) {
+        if (resp.statusCode == 201) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Arama alarmı oluşturuldu ✓')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Alarm oluşturulamadı, tekrar dene')),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Alarm oluşturulamadı, tekrar dene')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _alertCreating = false);
+    }
   }
 
   void _onScroll() {
@@ -290,10 +361,22 @@ class _SearchScreenState extends State<SearchScreen> {
                   hintText: 'Yapay zeka ile arayın (Örn: Vintage bir saat)',
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _hasQuery
-                      ? IconButton(
-                          key: const Key('search_btn_arama_temizle'),
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: _controller.clear,
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: _alertCreating
+                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Icon(Icons.notifications_none, size: 20),
+                              tooltip: 'Arama Alarmı Oluştur',
+                              onPressed: _alertCreating ? null : () => _showAlertSheet(context),
+                            ),
+                            IconButton(
+                              key: const Key('search_btn_arama_temizle'),
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: _controller.clear,
+                            ),
+                          ],
                         )
                       : null,
                   filled: true,

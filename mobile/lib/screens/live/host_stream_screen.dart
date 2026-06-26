@@ -209,6 +209,104 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     }
   }
 
+  Future<void> _showAudienceInsights(BuildContext ctx) async {
+    final streamId = widget.streamToken.streamId;
+    Map<String, dynamic>? data;
+    bool loading = true;
+
+    await showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (innerCtx, setSt) {
+            if (loading) {
+              () async {
+                try {
+                  final d = await StreamService.fetchAudienceInsights(streamId);
+                  setSt(() { data = d; loading = false; });
+                } catch (_) {
+                  setSt(() => loading = false);
+                }
+              }();
+            }
+            return Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFF1A2332),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              child: loading
+                  ? const SizedBox(
+                      height: 180,
+                      child: Center(child: CircularProgressIndicator(color: Colors.white54)),
+                    )
+                  : data == null
+                      ? const SizedBox(
+                          height: 120,
+                          child: Center(child: Text('Veri alınamadı', style: TextStyle(color: Colors.white60))),
+                        )
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              const Icon(Icons.people, color: Colors.white, size: 18),
+                              const SizedBox(width: 8),
+                              const Text('İzleyici Bütçe Analizi', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                              const Spacer(),
+                              Text('${data!['viewer_count'] ?? 0} izleyici', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                            ]),
+                            const SizedBox(height: 16),
+                            if (data!['avg_budget'] != null)
+                              _InsightTile(
+                                icon: '💰',
+                                label: 'Ortalama Bütçe',
+                                value: '${(data!['avg_budget'] as num).toStringAsFixed(0)} ₺',
+                                color: const Color(0xFF10B981),
+                              ),
+                            const SizedBox(height: 8),
+                            ...(data!['segments'] as List? ?? []).map((s) {
+                              final seg = s as Map<String, dynamic>;
+                              final color = _hexToColor(seg['color'] as String? ?? '#6B7280');
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(children: [
+                                  Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                                  const SizedBox(width: 8),
+                                  Text(seg['label'] as String? ?? '', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const Spacer(),
+                                  Text('${seg['count']}', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                                ]),
+                              );
+                            }),
+                            if ((data!['ready_buyers_count'] as int? ?? 0) > 0) ...[
+                              const SizedBox(height: 8),
+                              _InsightTile(
+                                icon: '🎯',
+                                label: 'Pro İzleyici',
+                                value: '${data!['ready_buyers_count']}',
+                                color: const Color(0xFF3B82F6),
+                              ),
+                            ],
+                          ],
+                        ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Color _hexToColor(String hex) {
+    try {
+      return Color(int.parse(hex.replaceFirst('#', '0xFF')));
+    } catch (_) {
+      return Colors.grey;
+    }
+  }
+
   void _showHypeAlert(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -892,6 +990,31 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                           ),
                         ),
                       ),
+                    // ── Audience Insights butonu ───────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+                      child: GestureDetector(
+                        onTap: () => _showAudienceInsights(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.people_outline, color: Colors.white, size: 15),
+                              SizedBox(width: 6),
+                              Text('İzleyici Bütçe Analizi', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                              Spacer(),
+                              Icon(Icons.chevron_right, color: Colors.white54, size: 15),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                     // Açık artırma şeridi — Canlı Sohbet kategorisinde gizle
                     if (widget.streamToken.category != 'sohbet')
                       AuctionPanel(
@@ -2014,6 +2137,35 @@ class _WhaleHudState extends State<_WhaleHud>
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _InsightTile extends StatelessWidget {
+  final String icon;
+  final String label;
+  final String value;
+  final Color color;
+  const _InsightTile({required this.icon, required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 10),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          const Spacer(),
+          Text(value, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w700)),
+        ],
       ),
     );
   }
