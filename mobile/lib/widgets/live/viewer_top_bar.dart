@@ -14,6 +14,7 @@ class ViewerTopBar extends StatelessWidget {
   final bool isCoHost;
   final bool streamEnded;
   final VoidCallback onLeave;
+  final VoidCallback? onEnterPip;
   final int? streamId;
   final String? thumbnailUrl;
 
@@ -26,6 +27,7 @@ class ViewerTopBar extends StatelessWidget {
     required this.isCoHost,
     required this.onLeave,
     this.streamEnded = false,
+    this.onEnterPip,
     this.streamId,
     this.thumbnailUrl,
   });
@@ -57,7 +59,7 @@ class ViewerTopBar extends StatelessWidget {
               // Geri
               GestureDetector(
                 key: const Key('viewer_btn_geri'),
-                onTap: onLeave,
+                onTap: onEnterPip ?? onLeave,
                 child: Container(
                   width: 36,
                   height: 36,

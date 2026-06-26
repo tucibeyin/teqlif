@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -27,6 +28,8 @@ import '../../widgets/live/cohost_mod_sheet.dart';
 import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/raid_ended_overlay.dart';
 import '../../widgets/live/viewer_top_bar.dart';
+import '../../providers/pip_provider.dart';
+import '../../services/pip_service.dart';
 import '../public_profile_screen.dart';
 import '../listing_detail_screen.dart';
 import '../../services/feed_telemetry_service.dart';
@@ -479,7 +482,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
 // ── Tek yayın sayfası ────────────────────────────────────────────────────────
 
-class _SwipeLivePage extends StatefulWidget {
+class _SwipeLivePage extends ConsumerStatefulWidget {
   final StreamOut stream;
   final bool isActive;
   final bool isPrefetch;
@@ -498,10 +501,10 @@ class _SwipeLivePage extends StatefulWidget {
   });
 
   @override
-  State<_SwipeLivePage> createState() => _SwipeLivePageState();
+  ConsumerState<_SwipeLivePage> createState() => _SwipeLivePageState();
 }
 
-class _SwipeLivePageState extends State<_SwipeLivePage> {
+class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   Room? _room;
   EventsListener<RoomEvent>? _listener;
   JoinTokenOut? _token;
@@ -529,6 +532,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   String? _myUsername;
   // leaveStream'in çift çağrılmasını önler
   bool _leftStream = false;
+  // PiP moduna geçilirken dispose'un Room'u kesmesini önler
+  bool _enteringPip = false;
   // _activate() / _deactivate() race condition koruması
   int _activationGen = 0;
   // Prefetch modunda sadece video subscribe edilir, ses kapalı
@@ -583,7 +588,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     _giftHudTimer?.cancel();
     _giftHudEntry?.remove();
     _hypeScore.dispose();
-    _deactivateSync();
+    _likeThrottleTimer?.cancel();
+    if (!_enteringPip) _deactivateSync();
     super.dispose();
   }
 
@@ -1313,6 +1319,35 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     }
   }
 
+  Future<void> _enterPip() async {
+    final track = _remoteVideoTrack;
+    final room = _room;
+    if (track == null || room == null) {
+      await _leave();
+      return;
+    }
+
+    // dispose()'un Room'u kapatmamasını sağla
+    _enteringPip = true;
+    _leftStream = true;
+
+    // Backend'e ayrılma bildirimi (fire-and-forget)
+    StreamService.leaveStream(widget.stream.id).catchError((_) {});
+
+    // Room + VideoTrack'i PiP provider'a aktar
+    ref.read(pipProvider.notifier).enablePip(
+      streamId: widget.stream.id,
+      roomName: _resolvedTitle ?? widget.stream.title,
+      hostUsername: _resolvedHostUsername ?? widget.stream.host.username,
+      room: room,
+      track: track,
+    );
+
+    if (!mounted) return;
+    PipService.showPip(context);
+    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+  }
+
   Future<void> _handleRaid(int targetStreamId) async {
     await _deactivate();
     if (mounted) {
@@ -1390,6 +1425,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
             isCoHost: _isCoHost,
             streamEnded: _streamEnded,
             onLeave: _leave,
+            onEnterPip: _streamEnded ? null : _enterPip,
             streamId: widget.stream.id,
             thumbnailUrl: widget.stream.thumbnailUrl,
           ),
