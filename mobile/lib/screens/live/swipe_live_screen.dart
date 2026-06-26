@@ -262,6 +262,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   String? _myUsername;
   // leaveStream'in çift çağrılmasını önler
   bool _leftStream = false;
+  // _activate() / _deactivate() race condition koruması
+  int _activationGen = 0;
   // Kazanan konfetisi
   late ConfettiController _confettiController;
   // Hediye HUD overlay
@@ -341,6 +343,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
   Future<void> _activate() async {
     if (!mounted) return;
+    final myGen = ++_activationGen;
     _leftStream = false;
     setState(() {
       _loading = true;
@@ -354,10 +357,11 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
       final info = await StorageService.getUserInfo();
       _myUsername = info?['username'] as String?;
     }
+    if (!mounted || _activationGen != myGen) return;
 
     try {
       final token = await StreamService.joinStream(widget.stream.id);
-      if (!mounted) return;
+      if (!mounted || _activationGen != myGen) return;
 
       // single() modu: stub'daki boş title/username'i token'dan doldur
       if (_resolvedTitle == null) {
@@ -404,6 +408,12 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
         connectOptions: const ConnectOptions(autoSubscribe: true),
       );
 
+      // _deactivate() bağlantı süresinde çağrıldıysa room'u temizle
+      if (!mounted || _activationGen != myGen) {
+        room.disconnect();
+        return;
+      }
+
       // Zaten yayında olan track'leri kontrol et
       for (final p in room.remoteParticipants.values) {
         final isHostParticipant = p.identity == token.hostLivekitIdentity;
@@ -420,7 +430,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
         }
       }
 
-      if (mounted) {
+      if (mounted && _activationGen == myGen) {
         setState(() {
           _token = token;
           _room = room;
@@ -689,6 +699,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   }
 
   Future<void> _deactivate() async {
+    _activationGen++;
     _listener?.dispose();
     _listener = null;
     final room = _room;
@@ -716,6 +727,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
   // dispose'da await kullanamayız, senkron temizlik
   void _deactivateSync() {
+    _activationGen++;
     _likeThrottleTimer?.cancel();
     _listener?.dispose();
     _listener = null;
