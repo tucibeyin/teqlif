@@ -44,6 +44,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   package_info_plus: ^8.1.0
+  in_app_update: ^4.2.3
 
 dev_dependencies:
   flutter_test:

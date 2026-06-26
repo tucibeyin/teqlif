@@ -3,18 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
+import '../services/version_service.dart';
 
-// Uygulama mağazada yayınlandıktan sonra buraya gerçek store ID'leri yazılmalı.
 const _kAndroidStoreUrl =
     'https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile';
-// iOS App Store ID'si (mağazada yayınlanınca güncellenecek):
-const _kIosStoreUrl = 'https://apps.apple.com/app/id0000000000';
 
 class ForceUpdateScreen extends StatelessWidget {
   const ForceUpdateScreen({super.key});
 
   Future<void> _openStore() async {
-    final uri = Uri.parse(Platform.isIOS ? _kIosStoreUrl : _kAndroidStoreUrl);
+    final url = Platform.isIOS ? VersionService.iosStoreUrl : _kAndroidStoreUrl;
+    final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       // Mağaza açılamazsa sessizce devam et
     }
@@ -24,7 +23,7 @@ class ForceUpdateScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return PopScope(
-      canPop: false, // geri tuşu devre dışı
+      canPop: false,
       child: Scaffold(
         backgroundColor: const Color(0xFF0F172A),
         body: SafeArea(
@@ -33,7 +32,6 @@ class ForceUpdateScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo / ikon
                 Container(
                   width: 100,
                   height: 100,
@@ -52,8 +50,6 @@ class ForceUpdateScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 32),
-
-                // Başlık
                 Text(
                   l.updateRequiredTitle,
                   textAlign: TextAlign.center,
@@ -65,8 +61,6 @@ class ForceUpdateScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-
-                // Açıklama
                 Text(
                   l.updateRequiredDesc,
                   textAlign: TextAlign.center,
@@ -77,8 +71,6 @@ class ForceUpdateScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // Güncelle butonu
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(

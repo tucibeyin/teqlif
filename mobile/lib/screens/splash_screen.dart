@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:in_app_update/in_app_update.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/analytics_service.dart';
@@ -34,14 +36,21 @@ class _SplashScreenState extends State<SplashScreen> {
     final token = await StorageService.getToken();
     FlutterNativeSplash.remove();
 
-    // Versiyon kontrolü — güncelleme gerekiyorsa devam etme
-    final updateRequired = await VersionService.isUpdateRequired();
-    if (!mounted) return;
-    if (updateRequired) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const ForceUpdateScreen()),
-      );
-      return;
+    // Versiyon kontrolü
+    if (Platform.isIOS) {
+      // iOS: iTunes Lookup API ile App Store'daki güncel versiyon karşılaştırılır
+      final needsUpdate = await VersionService.isIosUpdateRequired();
+      if (!mounted) return;
+      if (needsUpdate) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const ForceUpdateScreen()),
+        );
+        return;
+      }
+    } else if (Platform.isAndroid) {
+      // Android: Google Play In-App Update (Immediate mod — tam ekran overlay)
+      await _checkAndroidUpdate();
+      if (!mounted) return;
     }
 
     // Rozeti sıfırla (non-blocking)
@@ -86,6 +95,20 @@ class _SplashScreenState extends State<SplashScreen> {
     // Cold-start deep link'i yakala — MainScreen tüketecek
     await DeepLinkService.captureInitialLink();
     Navigator.of(context).pushReplacementNamed('/home');
+  }
+
+  Future<void> _checkAndroidUpdate() async {
+    try {
+      final info = await InAppUpdate.checkForUpdate();
+      if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+        // Immediate mod: Play Store tam ekran overlay açar, uygulama güncellenmeden devam edemez
+        await InAppUpdate.performImmediateUpdate();
+        // performImmediateUpdate başarıyla tamamlanırsa uygulama zaten yeniden başlar.
+        // Kullanıcı update'i reddederse (bazı Android sürümlerinde mümkün) akış devam eder.
+      }
+    } catch (_) {
+      // Play Store erişilemiyor veya sideload kurulum → sessizce devam et
+    }
   }
 
   Future<void> _prefetch(String token) async {
