@@ -833,7 +833,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
 
     } on AppException catch (e) {
       if (e.statusCode == 400 && mounted) _leave();
-      else if (e.statusCode == 403) widget.onStreamEnded?.call();
+      else if (e.statusCode == 403 || e.statusCode == 404) widget.onStreamEnded?.call();
     } catch (_) {
       // Prefetch başarısız — kullanıcı sayfaya gelince _activate() yeniden dener
     }
@@ -996,8 +996,11 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
       if (e.statusCode == 400) {
         // Kendi yayınına viewer olarak katılma denemesi — sessizce geri dön
         _leave();
-      } else if (e.statusCode == 403) {
-        showErrorSnackbar(context, e);
+      } else if (e.statusCode == 403 || e.statusCode == 404) {
+        final l = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.liveEnded), behavior: SnackBarBehavior.floating),
+        );
         setState(() => _streamEnded = true);
         widget.onStreamEnded?.call();
       } else {
