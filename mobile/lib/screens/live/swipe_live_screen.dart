@@ -110,8 +110,15 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   // Oturum içinde sona erdiği tespit edilen yayınların ID'leri — döngüden çıkarılır
   final Set<int> _endedStreamIds = {};
 
-  // Her K canlı yayın arasına 1 ilan
-  static const int _livePerListing = 2;
+  // Dinamik grup yapısı: her grup = 1 yayın + N ilan
+  // _groupBoundaries[i] = (startPage, listingCount) — lazy inşa edilir
+  final List<(int, int)> _groupBoundaries = [];
+  int _nextGroupStartPage = 0;
+  int _currentListingsPerGroup = 0; // listing pool dolunca davranışa göre 1-3
+
+  // Davranış takibi: yayın izleme süresine göre ilan sayısı güncellenir
+  final List<int> _recentDwells = []; // son 10 yayın dwell süresi (ms)
+  int? _dwellStart; // mevcut yayın sayfasına girildiği an (ms epoch)
 
   // ── Parent-level prefetch: child ±1 bağlanırken parent +2/+3'ü hazırlar ──
   final Map<int, _PrefetchEntry> _prefetchCache = {};
@@ -126,6 +133,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     _currentPage = _pageForLiveIndex(widget.initialIndex);
     _pageCtrl = PageController(initialPage: _currentPage);
     _loadListingFeed();
+    _dwellStart = DateTime.now().millisecondsSinceEpoch;
     // Bildirimden gelirken single mod: arka planda tam listeyi çek
     if (widget.streams.length == 1 && widget.streams[0].roomName.isEmpty) {
       _expandFromSingleMode(widget.streams[0].id);
@@ -146,46 +154,94 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     super.dispose();
   }
 
-  /// initialIndex numaralı canlı yayının hangi PageView sayfasında olduğunu hesaplar.
-  int _pageForLiveIndex(int liveIdx) {
-    final group = liveIdx ~/ _livePerListing;
-    final pos = liveIdx % _livePerListing;
-    return group * (_livePerListing + 1) + pos;
-  }
+  // ── Grup yönetimi ────────────────────────────────────────────────────────────
 
-  /// Sayfa indeksine göre hangi feed öğesinin gösterileceğini hesaplar.
-  _FeedItem _itemAt(int pageIndex) {
-    final group = pageIndex ~/ (_livePerListing + 1);
-    final posInGroup = pageIndex % (_livePerListing + 1);
-    final isListingSlot = posInGroup == _livePerListing;
-
-    if (isListingSlot && _listingPool.isNotEmpty) {
-      // Önceki live stream'in kategorisini context olarak al
-      final prevLiveIdx = (group * _livePerListing) % _liveItems.length;
-      final prevCategory = _liveItems[prevLiveIdx].category;
-      return _ListingItem(
-        _listingPool[group % _listingPool.length],
-        slotIndex: pageIndex,
-        streamCategory: prevCategory,
-      );
-    } else {
-      final livePos = isListingSlot ? 0 : posInGroup;
-      // Sona eren yayınları filtrele; hepsi bittiyse listeyi olduğu gibi kullan
-      final validItems = _endedStreamIds.isEmpty
-          ? _liveItems
-          : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-      final src = validItems.isNotEmpty ? validItems : _liveItems;
-      final liveIdx = (group * _livePerListing + livePos) % src.length;
-      return _LiveItem(src[liveIdx]);
+  /// targetGroupIdx'e kadar (dahil) grup sınırlarını lazy olarak inşa eder.
+  void _ensureGroupsBuilt(int targetGroupIdx) {
+    while (_groupBoundaries.length <= targetGroupIdx) {
+      _groupBoundaries.add((_nextGroupStartPage, _currentListingsPerGroup));
+      _nextGroupStartPage += 1 + _currentListingsPerGroup;
     }
   }
 
+  /// Son izleme sürelerine göre grup başına ilan sayısını hesaplar.
+  int _computeListingsPerGroup() {
+    if (_listingPool.isEmpty) return 0;
+    if (_recentDwells.length < 3) return 2; // yeterli veri yok → varsayılan
+    final avgMs = _recentDwells.fold(0, (a, b) => a + b) ~/ _recentDwells.length;
+    if (avgMs < 3000) return 3;   // hızlı geçiyor → daha fazla ilan
+    if (avgMs > 15000) return 1;  // uzun izliyor → daha az ilan
+    return 2;
+  }
+
+  /// Bir yayın sayfasından çıkılınca dwell süresi kaydedilir, N güncellenir.
+  void _trackStreamDwell(int dwellMs) {
+    _recentDwells.add(dwellMs);
+    if (_recentDwells.length > 10) _recentDwells.removeAt(0);
+    _currentListingsPerGroup = _computeListingsPerGroup();
+  }
+
+  /// initialIndex numaralı canlı yayının hangi PageView sayfasında olduğunu hesaplar.
+  int _pageForLiveIndex(int liveIdx) {
+    _ensureGroupsBuilt(liveIdx);
+    return _groupBoundaries[liveIdx].$1;
+  }
+
+  /// Sayfa indeksine göre hangi feed öğesinin gösterileceğini hesaplar.
+  /// Grup yapısı: her grup = 1 yayın + N ilan (N dinamik, _groupBoundaries'da kayıtlı).
+  _FeedItem _itemAt(int pageIndex) {
+    // pageIndex'i içeren grubu bul (lazy build)
+    int groupIdx = 0;
+    while (true) {
+      _ensureGroupsBuilt(groupIdx);
+      final (startPage, listingCount) = _groupBoundaries[groupIdx];
+      if (pageIndex < startPage + 1 + listingCount) break;
+      groupIdx++;
+    }
+    final (groupStart, listingCount) = _groupBoundaries[groupIdx];
+    final posInGroup = pageIndex - groupStart;
+
+    // Sona eren yayınları filtrele
+    final validItems = _endedStreamIds.isEmpty
+        ? _liveItems
+        : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
+    final src = validItems.isNotEmpty ? validItems : _liveItems;
+    final streamForGroup = src[groupIdx % src.length];
+
+    if (posInGroup == 0 || _listingPool.isEmpty) {
+      return _LiveItem(streamForGroup);
+    }
+    // Ilan slotu: posInGroup 1..listingCount
+    // Her grup ve her slot için farklı ilan seç
+    final listingIdx = (groupIdx * 3 + posInGroup - 1) % _listingPool.length;
+    return _ListingItem(
+      _listingPool[listingIdx],
+      slotIndex: pageIndex,
+      streamCategory: streamForGroup.category,
+    );
+  }
+
   void _onPageChanged(int page) {
+    // Önceki sayfadan çıkılırken dwell süresi kaydet (stream sayfasıysa)
+    if (_dwellStart != null) {
+      final prevItem = _itemAt(_currentPage);
+      if (prevItem is _LiveItem) {
+        _trackStreamDwell(DateTime.now().millisecondsSinceEpoch - _dwellStart!);
+      }
+      _dwellStart = null;
+    }
+
     setState(() => _currentPage = page);
+
+    // Yeni sayfada stream varsa dwell ölçümü başlat
+    if (_itemAt(page) is _LiveItem) {
+      _dwellStart = DateTime.now().millisecondsSinceEpoch;
+    }
+
     _evictStalePrefetches(page);
     _schedulePrefetch(page);
-    // Her 9 sayfada bir (3 döngü) yeni ilanlar ve canlı yayınları yenile
-    if (page > 0 && page % ((_livePerListing + 1) * 3) == 0) {
+    // Her 15 sayfada bir yenile (~5 grup)
+    if (page > 0 && page % 15 == 0) {
       _loadListingFeed();
       _refreshLiveStreams();
     }
@@ -272,11 +328,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   /// O an aktif olan sayfanın stream'ini döner (listing slotundaysa null).
   StreamOut? _getCurrentStream() {
     if (_liveItems.isEmpty) return null;
-    final posInGroup = _currentPage % (_livePerListing + 1);
-    if (posInGroup == _livePerListing) return null;
-    final group = _currentPage ~/ (_livePerListing + 1);
-    final liveIdx = (group * _livePerListing + posInGroup) % _liveItems.length;
-    return _liveItems[liveIdx];
+    final item = _itemAt(_currentPage);
+    return item is _LiveItem ? item.stream : null;
   }
 
   /// Bir yayının sona erdiği bildirildiğinde döngüden çıkarılır.
@@ -297,7 +350,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   /// Polling tabanlı silme false-positive üretiyordu: liste geçici eksik
   /// döndüğünde aktif yayınlar kaybolup geri gelmiyordu.
   Future<void> _refreshLiveStreams() async {
-    if (_liveItems.length <= 1) return;  // single mod → yenileme yok
+    if (_liveItems.isEmpty) return;
     try {
       final fresh = await StreamService.getActiveStreams();
       if (!mounted) return;
@@ -323,7 +376,6 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       );
       final others = fresh.where((s) => s.id != targetId).toList();
       final expanded = [target, ...others];
-      if (expanded.length <= 1) return; // başka yayın yok, single mod devam
       setState(() => _liveItems = expanded);
       _loadListingFeed();
       _schedulePrefetch(_currentPage);
@@ -331,8 +383,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   }
 
   Future<void> _loadListingFeed() async {
-    // Tek yayın modunda listing ekleme
-    if (_liveItems.length <= 1 || _fetchingListings) return;
+    if (_fetchingListings) return;
     _fetchingListings = true;
     try {
       final token = await StorageService.getToken();
@@ -346,10 +397,11 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       if (resp.statusCode != 200) return;
       final List<dynamic> raw = jsonDecode(resp.body) as List<dynamic>;
       if (raw.isEmpty || !mounted) return;
-      // Havuza yeni ilanlar ekle (setState ile rebuild tetiklenir)
-      if (mounted) {
-        setState(() => _listingPool.addAll(raw.cast<Map<String, dynamic>>()));
-      }
+      setState(() {
+        _listingPool.addAll(raw.cast<Map<String, dynamic>>());
+        // İlk yükleme: listing yokken 0'dı, şimdi varsayılan 2'ye geç
+        if (_currentListingsPerGroup == 0) _currentListingsPerGroup = 2;
+      });
     } catch (_) {
       // Listing feed yükleme başarısız olursa sadece canlı yayınlar gösterilir
     } finally {
@@ -368,7 +420,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         physics: const PageScrollPhysics(),
         onPageChanged: _onPageChanged,
         // itemCount: null → sonsuz scroll
-        itemCount: _liveItems.length <= 1 ? 1 : null,
+        itemCount: null,
         itemBuilder: (_, i) {
           final item = _itemAt(i);
           return switch (item) {
