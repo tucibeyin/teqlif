@@ -139,6 +139,16 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
+    // Aktif PiP varsa bu yayın ekranı açılmadan önce kapat
+    if (PipService.isVisible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ProviderScope.containerOf(context, listen: false)
+            .read(pipProvider.notifier)
+            .disablePip();
+        PipService.hidePip();
+      });
+    }
     _liveItems = widget.streams;
     _currentPage = _pageForLiveIndex(widget.initialIndex);
     _pageCtrl = PageController(initialPage: _currentPage);

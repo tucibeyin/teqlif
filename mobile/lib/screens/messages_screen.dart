@@ -15,8 +15,11 @@ import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'live/swipe_live_screen.dart';
 import '../services/stream_service.dart';
+import '../services/pip_service.dart';
+import '../providers/pip_provider.dart';
 import '../l10n/app_localizations.dart';
 
 class MessagesScreen extends StatefulWidget {
@@ -523,6 +526,12 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               ),
             );
             return;
+          }
+          if (PipService.isVisible) {
+            ProviderScope.containerOf(context, listen: false)
+                .read(pipProvider.notifier)
+                .disablePip();
+            PipService.hidePip();
           }
           Navigator.push(context, MaterialPageRoute(
             builder: (_) => SwipeLiveScreen.single(streamId: relatedId),
