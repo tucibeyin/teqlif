@@ -39,11 +39,6 @@ class Settings(BaseSettings):
     captcha_secret_key: str = ""
     debug: bool = False  # True → localhost CORS origins eklenir (sadece geliştirme ortamı)
 
-    # Zorunlu minimum uygulama versiyonları — aşağısındaki sürümler force-update ekranı görür.
-    # .env'e MIN_IOS_VERSION / MIN_ANDROID_VERSION yazarak güncellenebilir.
-    min_ios_version: str = "1.0.0"
-    min_android_version: str = "1.0.0"
-
     class Config:
         env_file = ".env"
 
