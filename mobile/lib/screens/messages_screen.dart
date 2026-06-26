@@ -586,6 +586,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               setState(() => (_notifications[i] as Map<String, dynamic>)['is_read'] = true);
               _navigate(_notifications[i] as Map<String, dynamic>);
             },
+            tileColor: isRead ? null : kPrimary.withValues(alpha: 0.06),
             leading: Container(
               width: 40,
               height: 40,
@@ -623,6 +624,16 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               ],
             ),
             isThreeLine: displayBody != null && displayBody.isNotEmpty,
+            trailing: isRead
+                ? null
+                : Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: kPrimary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
           );
         },
       ),
