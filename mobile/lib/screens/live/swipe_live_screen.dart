@@ -444,7 +444,6 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     return PopScope(
       canPop: true,
       onPopInvoked: (didPop) {
-        debugPrint('[PiP] onPopInvoked didPop=$didPop pipAction=${_pipAction != null}');
         if (didPop) _pipAction?.call();
       },
       child: Scaffold(
@@ -562,7 +561,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     if (widget.isActive) {
-      debugPrint('[PiP] initState registering pip action streamId=${widget.stream.id}');
       widget.onPipActionChanged?.call(_pipForBackGesture);
       _activate();
     } else if (widget.isPrefetch) {
