@@ -293,43 +293,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         actions: [
-          GestureDetector(
-            onTap: () {
-              _loadWallet(bypassCache: true);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => WalletScreen(
-                    initialBalance: _tuciBalance,
-                    initialHistory: _tuciHistory,
+          Padding(
+            padding: const EdgeInsets.only(top: 10, right: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    _loadWallet(bypassCache: true);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WalletScreen(
+                          initialBalance: _tuciBalance,
+                          initialHistory: _tuciHistory,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.account_balance_wallet_outlined, size: 22),
+                        if (_tuciBalance != null)
+                          Text(
+                            '$_tuciBalance T',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFB8860B),
+                              height: 1.1,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.account_balance_wallet_outlined, size: 22),
-                  if (_tuciBalance != null)
-                    Text(
-                      '$_tuciBalance T',
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFB8860B),
-                        height: 1.1,
-                      ),
-                    ),
-                ],
-              ),
+                IconButton(
+                  key: const Key('profile_btn_ayarlar'),
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: _openSettings,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                ),
+                const SizedBox(width: 4),
+              ],
             ),
-          ),
-          IconButton(
-            key: const Key('profile_btn_ayarlar'),
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: _openSettings,
           ),
         ],
       ),
