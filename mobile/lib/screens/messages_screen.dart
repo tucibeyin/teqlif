@@ -590,15 +590,13 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isRead
-                    ? AppColors.surfaceVariant(context)
-                    : typeColor.withValues(alpha: 0.12),
+                color: typeColor.withValues(alpha: isRead ? 0.08 : 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 _iconForType(type),
                 size: 20,
-                color: isRead ? AppColors.iconSecondary(context) : typeColor,
+                color: typeColor.withValues(alpha: isRead ? 0.55 : 1.0),
               ),
             ),
             title: Text(
