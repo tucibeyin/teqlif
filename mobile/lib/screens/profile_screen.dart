@@ -21,9 +21,11 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/upload_service.dart';
 import '../utils/error_helper.dart';
+import '../utils/start_stream_helper.dart';
 import '../widgets/shimmer_loading.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
+import 'create_listing_screen.dart';
 import 'pro_hub_screen.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
@@ -188,41 +190,122 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         surfaceTintColor: Colors.transparent,
-        leading: GestureDetector(
-          onTap: () {
-            _loadWallet();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => WalletScreen(
-                  initialBalance: _tuciBalance,
-                  initialHistory: _tuciHistory,
+        leading: PopupMenuButton<String>(
+          offset: const Offset(8, 48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 6,
+          icon: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: kPrimary,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: kPrimary.withValues(alpha: 0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
-              ),
-            );
-          },
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.account_balance_wallet_outlined, size: 22),
-              if (_tuciBalance != null)
-                Text(
-                  '$_tuciBalance T',
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFB8860B),
-                    height: 1.1,
-                  ),
-                ),
-            ],
+              ],
+            ),
+            child: const Icon(Icons.add, color: Colors.white, size: 22),
           ),
+          itemBuilder: (ctx) => [
+            PopupMenuItem(
+              value: 'listing',
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: kPrimary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.sell_outlined, color: kPrimary, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'İlan Ekle',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: 'live',
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.videocam_outlined,
+                        color: Colors.red, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Canlı Yayın Aç',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          onSelected: (val) {
+            if (val == 'listing') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CreateListingScreen(),
+                ),
+              );
+            } else if (val == 'live') {
+              showStartStreamDialog(context);
+            }
+          },
         ),
         title: Text(
           '@$username',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         actions: [
+          GestureDetector(
+            onTap: () {
+              _loadWallet();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WalletScreen(
+                    initialBalance: _tuciBalance,
+                    initialHistory: _tuciHistory,
+                  ),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.account_balance_wallet_outlined, size: 22),
+                  if (_tuciBalance != null)
+                    Text(
+                      '$_tuciBalance T',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFB8860B),
+                        height: 1.1,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
           IconButton(
             key: const Key('profile_btn_ayarlar'),
             icon: const Icon(Icons.settings_outlined),
@@ -1299,6 +1382,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
   late final TextEditingController _bioCtrl;
   late final TextEditingController _linkCtrl;
   bool _saving = false;
+  bool _uploadingAvatar = false;
   String? _profileImageUrl;
 
   // Username availability check
@@ -1395,7 +1479,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     final token = await StorageService.getToken();
     if (token == null) return;
 
-    setState(() => _saving = true);
+    setState(() { _saving = true; _uploadingAvatar = true; });
     try {
       final file = File(picked.path);
       final upload = await UploadService.uploadFile(file);
@@ -1426,7 +1510,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         const SnackBar(content: Text('Fotoğraf yüklenemedi. Tekrar deneyin.')),
       );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() { _saving = false; _uploadingAvatar = false; });
     }
   }
 
@@ -1532,6 +1616,24 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
                             ),
                           ),
                   ),
+                  if (_uploadingAvatar)
+                    ClipOval(
+                      child: Container(
+                        width: 88,
+                        height: 88,
+                        color: Colors.black.withValues(alpha: 0.50),
+                        child: const Center(
+                          child: SizedBox(
+                            width: 30,
+                            height: 30,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   Positioned(
                     bottom: 0,
                     right: 0,

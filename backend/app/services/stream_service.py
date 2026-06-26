@@ -455,7 +455,14 @@ class StreamService:
 
     async def _broadcast_stream_ended(self, stream_id: int, publish_chat) -> None:
         try:
+            # İzleyicilere (chat odasına) bildir
             await publish_chat(stream_id, {"type": WS.STREAM_ENDED})
+            # Tüm bağlı istemcilere (ana ekran) bildir — global topic
+            from app.core.ws_manager import ws_manager
+            await ws_manager.publish(
+                "chat_broadcast", "global",
+                {"type": WS.STREAM_ENDED, "stream_id": stream_id},
+            )
         except Exception:
             logger.error("[STREAMS] stream_ended yayınlanamadı | stream_id=%s",
                          stream_id, exc_info=True)

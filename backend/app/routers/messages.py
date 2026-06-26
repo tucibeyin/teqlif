@@ -316,6 +316,7 @@ async def messages_ws(websocket: WebSocket):
         return
 
     ws_manager.connect(websocket, f"dm:{user_id}")
+    ws_manager.connect(websocket, "global")   # feed eventleri (stream_ended vb.)
     logger.info("[DM WS] BAĞLANDI | user_id=%s", user_id)
 
     try:
@@ -347,6 +348,6 @@ async def messages_ws(websocket: WebSocket):
     except Exception as exc:
         logger.warning("[DM WS] HATA | user_id=%s | %s", user_id, exc)
     finally:
-        ws_manager.disconnect(websocket, f"dm:{user_id}")
+        ws_manager.disconnect(websocket, f"dm:{user_id}", "global")
         await release_ws_session(user_id)
         logger.info("[DM WS] AYRILDI | user_id=%s", user_id)

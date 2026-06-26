@@ -1,64 +1,65 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/api.dart';
 import '../models/stream.dart';
+import '../services/api_service.dart';
 import '../services/storage_service.dart';
-import '../services/stream_service.dart';
 
 /// Kullanıcının takip ettiği kişilerin aktif canlı yayınlarını yönetir.
 ///
-/// Stale-While-Revalidate mimarisi:
-///   1. Kasa'da veri varsa anında UI'a basılır (sıfır spinner).
-///   2. Arka planda API isteği atılır; gelince kasa güncellenir, UI sessizce yenilenir.
-///   3. API hatası olursa: kasa varsa hata yutulur; kasa yoksa hata fırlatılır.
+/// Stale-While-Revalidate (SWR) akışı [ApiService.get] aracılığıyla:
+///   1. Hive'dan **senkron** eski veri → UI anında render edilir.
+///   2. Arka planda HTTP isteği → cache güncellenir, UI sessizce yenilenir.
+///   3. Ağ hatası + geçerli cache → hata yutulur, eski veri korunur.
 class FollowedStreamsNotifier
     extends AutoDisposeAsyncNotifier<List<StreamOut>> {
   bool _disposed = false;
+
+  static const _url = '$kBaseUrl/streams/following/live';
+
+  static List<StreamOut> _parse(dynamic raw) =>
+      (raw as List)
+          .cast<Map<String, dynamic>>()
+          .map(StreamOut.fromJson)
+          .toList();
 
   @override
   Future<List<StreamOut>> build() async {
     ref.onDispose(() => _disposed = true);
 
-    // ── 1. Kasa kontrolü ────────────────────────────────────────────────────
-    final cached =
-        await StorageService.getCachedData(StorageService.cacheStreams);
-    if (cached != null) {
-      final cachedList = (cached as List)
-          .map((e) => StreamOut.fromJson(e as Map<String, dynamic>))
-          .toList();
-      // Cache veriyi anında döndür; arka planda revalidate başlat.
-      Future.microtask(_revalidate);
-      return cachedList;
+    List<StreamOut>? last;
+    await for (final batch in ApiService.get<List<StreamOut>>(
+      url: _url,
+      cacheKey: StorageService.cacheStreams,
+      cacheTtl: const Duration(minutes: 3),
+      fromJson: _parse,
+    )) {
+      last = batch;
+      if (!_disposed) state = AsyncData(batch);
     }
-
-    // ── 2. Kasa boş → direkt API ─────────────────────────────────────────
-    return _revalidate();
+    return last ?? [];
   }
 
-  /// API'den taze veri çeker, kasayı günceller, state'i yeniler.
-  Future<List<StreamOut>> _revalidate() async {
-    try {
-      final fresh = await StreamService.getFollowedLiveStreams();
-      await StorageService.cacheData(
-        StorageService.cacheStreams,
-        fresh.map((e) => e.toJson()).toList(),
-      );
-      if (!_disposed) state = AsyncData(fresh);
-      return fresh;
-    } catch (e, st) {
-      // Kasa'dan basılmış veri varsa hatayı yut; kullanıcı eski veriyi görür.
-      if (state is AsyncData) {
-        debugPrint('[FollowedStreams] API hatası (cache korunuyor): $e');
-        return (state as AsyncData<List<StreamOut>>).value;
-      }
-      // Kasa da boşsa hatayı yukarı ilet.
-      Error.throwWithStackTrace(e, st);
-    }
-  }
-
-  /// Pull-to-refresh veya manuel tetikleme için.
+  /// Pull-to-refresh veya manuel tetikleme: cache READ atlanır,
+  /// ağdan doğrudan çeker ve başarılıysa cache'i günceller.
   Future<void> refresh() async {
     state = const AsyncLoading();
-    await _revalidate();
+    try {
+      await for (final batch in ApiService.get<List<StreamOut>>(
+        url: _url,
+        cacheKey: StorageService.cacheStreams,
+        cacheTtl: const Duration(minutes: 3),
+        bypassCache: true,
+        fromJson: _parse,
+      )) {
+        if (!_disposed) state = AsyncData(batch);
+      }
+    } catch (e) {
+      debugPrint('[FollowedStreams] refresh hatası: $e');
+      if (!_disposed && state is AsyncLoading) {
+        state = AsyncError(e, StackTrace.current);
+      }
+    }
   }
 }
 

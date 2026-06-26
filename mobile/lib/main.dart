@@ -14,6 +14,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/analytics_service.dart';
+import 'services/cache_service.dart';
 import 'services/feed_telemetry_service.dart';
 import 'services/push_notification_service.dart';
 import 'widgets/global_keyboard_accessory.dart';
@@ -44,6 +45,7 @@ void main() async {
         return true; // hatayı "işlendi" olarak işaretle, uygulama çökmez
       };
 
+      await CacheService.init();
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
       await ThemeProvider.instance.load();
       // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
