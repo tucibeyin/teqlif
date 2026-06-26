@@ -3399,6 +3399,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Şimdilik Atla'**
   String get onboardingSkip;
+
+  /// Chat rate-limit uyarısı — kullanıcı çok hızlı mesaj attığında gösterilir.
+  String get chatRateLimited;
+
+  /// Shill bidding: SwipeToBidButton üzerinde geçici olarak gösterilen metin.
+  String get fraudInvalidBid;
+
+  /// Telefon doğrulama bottom sheet başlığı.
+  String get fraudShieldTitle;
+
+  /// Telefon doğrulama bottom sheet açıklama metni.
+  String get fraudShieldDesc;
+
+  /// Telefon doğrulama bottom sheet birincil buton etiketi.
+  String get fraudShieldVerifyBtn;
+
+  /// Telefon doğrulama bottom sheet ikincil (vazgeç) buton etiketi.
+  String get fraudShieldDismiss;
 }
 
 class _AppLocalizationsDelegate

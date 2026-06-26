@@ -1187,6 +1187,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
   void _showPhoneVerificationSheet() {
     if (!mounted) return;
+    final l = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E293B),
@@ -1222,8 +1223,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
             ),
             const SizedBox(height: 18),
             // Başlık
-            const Text(
-              'Güvenlik Doğrulaması Gerekli',
+            Text(
+              l.fraudShieldTitle,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white,
@@ -1234,8 +1235,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
             ),
             const SizedBox(height: 10),
             // Açıklama
-            const Text(
-              'Bu kadar yüksek bir teklif verebilmek için hesabının gerçek bir kişiye ait olduğunu doğrulamamız gerekiyor. Bu sadece 1 dakikanı alır.',
+            Text(
+              l.fraudShieldDesc,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Color(0xFF94A3B8),
@@ -1255,9 +1256,9 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   );
                 },
                 icon: const Icon(Icons.phone_android_rounded, size: 18),
-                label: const Text(
-                  'Telefonumu Doğrula',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                label: Text(
+                  l.fraudShieldVerifyBtn,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber.shade600,
@@ -1273,9 +1274,9 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
             // İptal
             TextButton(
               onPressed: () => Navigator.pop(sheetCtx),
-              child: const Text(
-                'Şimdi değil',
-                style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+              child: Text(
+                l.fraudShieldDismiss,
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
               ),
             ),
           ],

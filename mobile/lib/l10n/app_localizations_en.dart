@@ -1764,4 +1764,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingSkip => 'Skip for now';
+
+  @override
+  String get chatRateLimited => 'Slow down a bit 🐢';
+
+  @override
+  String get fraudInvalidBid => 'Invalid Action';
+
+  @override
+  String get fraudShieldTitle => 'Security Verification Required';
+
+  @override
+  String get fraudShieldDesc =>
+      'To place such a high bid, we need to verify that your account belongs to a real person. This only takes 1 minute.';
+
+  @override
+  String get fraudShieldVerifyBtn => 'Verify My Phone';
+
+  @override
+  String get fraudShieldDismiss => 'Not now';
 }

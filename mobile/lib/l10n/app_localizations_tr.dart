@@ -1764,4 +1764,23 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get onboardingSkip => 'Şimdilik Atla';
+
+  @override
+  String get chatRateLimited => 'Biraz yavaşla 🐢';
+
+  @override
+  String get fraudInvalidBid => 'Geçersiz İşlem';
+
+  @override
+  String get fraudShieldTitle => 'Güvenlik Doğrulaması Gerekli';
+
+  @override
+  String get fraudShieldDesc =>
+      'Bu kadar yüksek bir teklif verebilmek için hesabının gerçek bir kişiye ait olduğunu doğrulamamız gerekiyor. Bu sadece 1 dakikanı alır.';
+
+  @override
+  String get fraudShieldVerifyBtn => 'Telefonumu Doğrula';
+
+  @override
+  String get fraudShieldDismiss => 'Şimdi değil';
 }

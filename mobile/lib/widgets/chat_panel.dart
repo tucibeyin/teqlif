@@ -482,9 +482,9 @@ class ChatPanelState extends State<ChatPanel> {
                 }
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text(
-                      'Biraz yavaşla 🐢',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    content: Text(
+                      AppLocalizations.of(context)!.chatRateLimited,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                     ),
                     backgroundColor: Colors.red.shade700,
                     duration: const Duration(seconds: 2),

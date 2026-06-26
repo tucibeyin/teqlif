@@ -1749,4 +1749,23 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get onboardingSkip => 'تخطي الآن';
+
+  @override
+  String get chatRateLimited => 'تمهّل قليلاً 🐢';
+
+  @override
+  String get fraudInvalidBid => 'إجراء غير صالح';
+
+  @override
+  String get fraudShieldTitle => 'التحقق الأمني مطلوب';
+
+  @override
+  String get fraudShieldDesc =>
+      'لتقديم عرض بهذا المبلغ الكبير، نحتاج إلى التحقق من أن حسابك يخص شخصاً حقيقياً. لن يستغرق ذلك سوى دقيقة واحدة.';
+
+  @override
+  String get fraudShieldVerifyBtn => 'تحقق من هاتفي';
+
+  @override
+  String get fraudShieldDismiss => 'ليس الآن';
 }

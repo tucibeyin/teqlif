@@ -762,5 +762,12 @@
   "onboardingSubtitle": "دعنا نعرض لك إعلانات وبثاً مباشراً مخصصاً لك",
   "onboardingMinHint": "اختر 3 فئات على الأقل",
   "onboardingContinue": "متابعة",
-  "onboardingSkip": "تخطي الآن"
+  "onboardingSkip": "تخطي الآن",
+
+  "chatRateLimited": "تمهّل قليلاً 🐢",
+  "fraudInvalidBid": "إجراء غير صالح",
+  "fraudShieldTitle": "التحقق الأمني مطلوب",
+  "fraudShieldDesc": "لتقديم عرض بهذا المبلغ الكبير، نحتاج إلى التحقق من أن حسابك يخص شخصاً حقيقياً. لن يستغرق ذلك سوى دقيقة واحدة.",
+  "fraudShieldVerifyBtn": "تحقق من هاتفي",
+  "fraudShieldDismiss": "ليس الآن"
 }

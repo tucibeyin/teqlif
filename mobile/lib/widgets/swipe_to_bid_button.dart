@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import '../config/theme.dart';
+import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 
 class SwipeToBidButton extends StatefulWidget {
@@ -225,7 +226,7 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
                                     ),
                                   )
                                 : _ShimmerText(
-                                    text: widget.isInvalid ? 'Geçersiz İşlem' : widget.text,
+                                    text: widget.isInvalid ? AppLocalizations.of(context)!.fraudInvalidBid : widget.text,
                                     shimmerAnim: _shimmerAnim,
                                   ),
                           ),

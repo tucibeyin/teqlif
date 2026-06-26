@@ -762,5 +762,12 @@
   "onboardingSubtitle": "Sana özel ilan ve yayınlar gösterelim",
   "onboardingMinHint": "En az 3 kategori seç",
   "onboardingContinue": "Devam Et",
-  "onboardingSkip": "Şimdilik Atla"
+  "onboardingSkip": "Şimdilik Atla",
+
+  "chatRateLimited": "Biraz yavaşla 🐢",
+  "fraudInvalidBid": "Geçersiz İşlem",
+  "fraudShieldTitle": "Güvenlik Doğrulaması Gerekli",
+  "fraudShieldDesc": "Bu kadar yüksek bir teklif verebilmek için hesabının gerçek bir kişiye ait olduğunu doğrulamamız gerekiyor. Bu sadece 1 dakikanı alır.",
+  "fraudShieldVerifyBtn": "Telefonumu Doğrula",
+  "fraudShieldDismiss": "Şimdi değil"
 }

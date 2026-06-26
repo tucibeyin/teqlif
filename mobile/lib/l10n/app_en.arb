@@ -761,5 +761,12 @@
   "onboardingSubtitle": "Let us show you personalised listings and streams",
   "onboardingMinHint": "Pick at least 3 categories",
   "onboardingContinue": "Continue",
-  "onboardingSkip": "Skip for now"
+  "onboardingSkip": "Skip for now",
+
+  "chatRateLimited": "Slow down a bit 🐢",
+  "fraudInvalidBid": "Invalid Action",
+  "fraudShieldTitle": "Security Verification Required",
+  "fraudShieldDesc": "To place such a high bid, we need to verify that your account belongs to a real person. This only takes 1 minute.",
+  "fraudShieldVerifyBtn": "Verify My Phone",
+  "fraudShieldDismiss": "Not now"
 }
