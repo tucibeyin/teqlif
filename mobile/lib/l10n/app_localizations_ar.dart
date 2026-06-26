@@ -1751,6 +1751,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onboardingSkip => 'تخطي الآن';
 
   @override
+  String get updateRequiredTitle => 'تحديث مطلوب';
+
+  @override
+  String get updateRequiredDesc =>
+      'يرجى تحديث التطبيق إلى أحدث إصدار للحصول على أفضل تجربة.';
+
+  @override
+  String get updateRequiredBtn => 'تحديث الآن';
+
+  @override
   String get chatRateLimited => 'تمهّل قليلاً 🐢';
 
   @override

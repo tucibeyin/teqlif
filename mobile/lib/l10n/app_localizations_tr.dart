@@ -1766,6 +1766,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get onboardingSkip => 'Şimdilik Atla';
 
   @override
+  String get updateRequiredTitle => 'Güncelleme Gerekli';
+
+  @override
+  String get updateRequiredDesc =>
+      'Uygulamanın en iyi şekilde çalışması için lütfen güncel sürüme geçin.';
+
+  @override
+  String get updateRequiredBtn => 'Şimdi Güncelle';
+
+  @override
   String get chatRateLimited => 'Biraz yavaşla 🐢';
 
   @override

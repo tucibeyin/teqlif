@@ -60,6 +60,7 @@ from app.routers import admin_data
 from app.routers import feed
 from app.routers import ads
 from app.routers import client_log
+from app.routers import version
 from prometheus_fastapi_instrumentator import Instrumentator
 
 logger = setup_logging()
@@ -345,6 +346,7 @@ app.include_router(wallet.router)
 app.include_router(leads.router)
 app.include_router(client_log.router)
 app.include_router(onboarding.router)
+app.include_router(version.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):

@@ -764,6 +764,10 @@
   "onboardingContinue": "متابعة",
   "onboardingSkip": "تخطي الآن",
 
+  "updateRequiredTitle": "تحديث مطلوب",
+  "updateRequiredDesc": "يرجى تحديث التطبيق إلى أحدث إصدار للحصول على أفضل تجربة.",
+  "updateRequiredBtn": "تحديث الآن",
+
   "chatRateLimited": "تمهّل قليلاً 🐢",
   "fraudInvalidBid": "إجراء غير صالح",
   "fraudShieldTitle": "التحقق الأمني مطلوب",

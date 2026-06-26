@@ -12,6 +12,8 @@ import '../services/biometric_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/version_service.dart';
+import 'force_update_screen.dart';
 import 'package:http/http.dart' as http;
 
 class SplashScreen extends StatefulWidget {
@@ -31,6 +33,16 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _boot() async {
     final token = await StorageService.getToken();
     FlutterNativeSplash.remove();
+
+    // Versiyon kontrolü — güncelleme gerekiyorsa devam etme
+    final updateRequired = await VersionService.isUpdateRequired();
+    if (!mounted) return;
+    if (updateRequired) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const ForceUpdateScreen()),
+      );
+      return;
+    }
 
     // Rozeti sıfırla (non-blocking)
     AppBadgePlus.isSupported().then((ok) {

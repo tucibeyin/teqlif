@@ -763,6 +763,10 @@
   "onboardingContinue": "Continue",
   "onboardingSkip": "Skip for now",
 
+  "updateRequiredTitle": "Update Required",
+  "updateRequiredDesc": "Please update the app to the latest version for the best experience.",
+  "updateRequiredBtn": "Update Now",
+
   "chatRateLimited": "Slow down a bit 🐢",
   "fraudInvalidBid": "Invalid Action",
   "fraudShieldTitle": "Security Verification Required",

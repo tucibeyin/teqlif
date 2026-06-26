@@ -1766,6 +1766,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingSkip => 'Skip for now';
 
   @override
+  String get updateRequiredTitle => 'Update Required';
+
+  @override
+  String get updateRequiredDesc =>
+      'Please update the app to the latest version for the best experience.';
+
+  @override
+  String get updateRequiredBtn => 'Update Now';
+
+  @override
   String get chatRateLimited => 'Slow down a bit 🐢';
 
   @override

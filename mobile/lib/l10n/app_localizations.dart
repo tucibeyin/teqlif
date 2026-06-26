@@ -3400,22 +3400,58 @@ abstract class AppLocalizations {
   /// **'Şimdilik Atla'**
   String get onboardingSkip;
 
-  /// Chat rate-limit uyarısı — kullanıcı çok hızlı mesaj attığında gösterilir.
+  /// No description provided for @updateRequiredTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güncelleme Gerekli'**
+  String get updateRequiredTitle;
+
+  /// No description provided for @updateRequiredDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulamanın en iyi şekilde çalışması için lütfen güncel sürüme geçin.'**
+  String get updateRequiredDesc;
+
+  /// No description provided for @updateRequiredBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şimdi Güncelle'**
+  String get updateRequiredBtn;
+
+  /// No description provided for @chatRateLimited.
+  ///
+  /// In tr, this message translates to:
+  /// **'Biraz yavaşla 🐢'**
   String get chatRateLimited;
 
-  /// Shill bidding: SwipeToBidButton üzerinde geçici olarak gösterilen metin.
+  /// No description provided for @fraudInvalidBid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz İşlem'**
   String get fraudInvalidBid;
 
-  /// Telefon doğrulama bottom sheet başlığı.
+  /// No description provided for @fraudShieldTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güvenlik Doğrulaması Gerekli'**
   String get fraudShieldTitle;
 
-  /// Telefon doğrulama bottom sheet açıklama metni.
+  /// No description provided for @fraudShieldDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kadar yüksek bir teklif verebilmek için hesabının gerçek bir kişiye ait olduğunu doğrulamamız gerekiyor. Bu sadece 1 dakikanı alır.'**
   String get fraudShieldDesc;
 
-  /// Telefon doğrulama bottom sheet birincil buton etiketi.
+  /// No description provided for @fraudShieldVerifyBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefonumu Doğrula'**
   String get fraudShieldVerifyBtn;
 
-  /// Telefon doğrulama bottom sheet ikincil (vazgeç) buton etiketi.
+  /// No description provided for @fraudShieldDismiss.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şimdi değil'**
   String get fraudShieldDismiss;
 }
 

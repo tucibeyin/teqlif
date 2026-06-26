@@ -764,6 +764,10 @@
   "onboardingContinue": "Devam Et",
   "onboardingSkip": "Şimdilik Atla",
 
+  "updateRequiredTitle": "Güncelleme Gerekli",
+  "updateRequiredDesc": "Uygulamanın en iyi şekilde çalışması için lütfen güncel sürüme geçin.",
+  "updateRequiredBtn": "Şimdi Güncelle",
+
   "chatRateLimited": "Biraz yavaşla 🐢",
   "fraudInvalidBid": "Geçersiz İşlem",
   "fraudShieldTitle": "Güvenlik Doğrulaması Gerekli",
