@@ -8,6 +8,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/analytics_service.dart';
+import '../services/api_service.dart';
 import '../services/city_service.dart';
 import '../services/feed_telemetry_service.dart';
 import '../services/listing_service.dart';
@@ -16,7 +17,6 @@ import '../widgets/shimmer_loading.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
-import '../models/stream.dart';
 import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -144,7 +144,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Ana yükleme ────────────────────────────────────────────────────────────
 
-  Future<void> _load() async {
+  /// [bypassCache]: pull-to-refresh'te true — Hive okuma atlanır, cache ezilir.
+  Future<void> _load({bool bypassCache = false}) async {
     _error = null;
     _recentPage = 0;
     _recentExhausted = false;
@@ -154,46 +155,55 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() => _isLoggedIn = loggedIn);
 
     if (_hasFilter) {
-      // Filtre modunda: sadece filtrelenmiş sonuçlar
       await _loadFiltered(token);
     } else {
-      // Normal mod: Sana Özel + En Son paralel yükle
-      if (loggedIn) _loadForYou();
-      await _loadRecent(token);
+      // Paralel yükleme: ForYou beklenmeden arka planda başlar
+      if (loggedIn) unawaited(_loadForYou(bypassCache: bypassCache));
+      await _loadRecent(token, bypassCache: bypassCache);
     }
   }
 
   // ── Sana Özel (yatay, ClickHouse kişiselleştirilmiş) ─────────────────────
 
-  Future<void> _loadForYou() async {
+  // ── Sana Özel (yatay, ClickHouse kişiselleştirilmiş) ─────────────────────
+
+  /// SWR stream'den dinler: 1. event cache'ten anlık, 2. event API'den taze.
+  Future<void> _loadForYou({bool bypassCache = false}) async {
     if (!mounted) return;
-    setState(() {
-      _forYouLoading = true;
-      _forYouExhausted = false;
-    });
+    setState(() { _forYouLoading = true; _forYouExhausted = false; });
     try {
-      final items = await ListingService.getPersonalizedFeed(limit: 10);
-      if (!mounted) return;
-      setState(() {
-        _forYouListings = items;
-        _forYouExhausted = items.isEmpty;
-      });
+      await for (final items in ListingService.getPersonalizedFeed(
+        limit: 10,
+        bypassCache: bypassCache,
+      )) {
+        if (!mounted) return;
+        setState(() {
+          _forYouListings = items;
+          _forYouExhausted = items.isEmpty;
+          _forYouLoading = false;
+        });
+      }
     } catch (_) {
     } finally {
       if (mounted) setState(() => _forYouLoading = false);
     }
   }
 
+  /// Load-more: pagination, cache kullanmaz — her zaman ağdan çeker.
   Future<void> _loadMoreForYou() async {
     if (_forYouLoadingMore || _forYouExhausted || !_isLoggedIn) return;
     setState(() => _forYouLoadingMore = true);
     try {
-      final more = await ListingService.getPersonalizedFeed(limit: 10);
-      if (!mounted) return;
-      if (more.isEmpty) {
-        setState(() => _forYouExhausted = true);
-      } else {
-        setState(() => _forYouListings = [..._forYouListings, ...more]);
+      await for (final more in ApiService.get<List<Map<String, dynamic>>>(
+        url: '$kBaseUrl/feed/personalized?limit=10',
+        fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
+      )) {
+        if (!mounted) return;
+        if (more.isEmpty) {
+          setState(() => _forYouExhausted = true);
+        } else {
+          setState(() => _forYouListings = [..._forYouListings, ...more]);
+        }
       }
     } catch (_) {
     } finally {
@@ -203,40 +213,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── En Son Eklenenler (dikey grid, /api/listings) ─────────────────────────
 
-  Future<void> _loadRecent(String? token) async {
+  /// SWR stream: filtre yoksa Hive cache önce, sonra API. Filtre varsa her zaman API.
+  Future<void> _loadRecent(String? token, {bool bypassCache = false}) async {
     if (!mounted) return;
     setState(() { _recentLoading = true; _recentListings = []; });
     try {
-      // Önce önbellekten göster
-      if (!_hasFilter) {
-        final cached = await StorageService.getCachedData(StorageService.cacheFeed);
-        if (cached != null && mounted) {
-          setState(() { _recentListings = cached as List; _recentLoading = false; });
-        }
-      }
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings'),
-        headers: token != null ? {'Authorization': 'Bearer $token'} : null,
-      );
-      if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final fresh = jsonDecode(resp.body) as List;
-        await StorageService.cacheData(StorageService.cacheFeed, fresh);
-        setState(() { _recentListings = fresh; _recentLoading = false; _recentPage = 1; });
-      } else {
-        if (_recentListings.isEmpty) {
-          final l = AppLocalizations.of(context)!;
-          setState(() { _error = l.errorListingsLoad; _recentLoading = false; });
-        } else {
-          setState(() => _recentLoading = false);
-        }
+      await for (final listings in ApiService.get<List<dynamic>>(
+        url: '$kBaseUrl/listings',
+        cacheKey: _hasFilter ? null : StorageService.cacheFeed,
+        cacheTtl: const Duration(minutes: 5),
+        bypassCache: bypassCache,
+        fromJson: (raw) => raw as List,
+      )) {
+        if (!mounted) return;
+        setState(() {
+          _recentListings = listings;
+          _recentLoading = false;
+          _recentPage = 1;
+        });
       }
     } catch (e) {
       debugPrint('[HomeScreen] _loadRecent: $e');
-      if (mounted && _recentListings.isEmpty) {
+      if (!mounted) return;
+      if (_recentListings.isEmpty) {
         final l = AppLocalizations.of(context)!;
         setState(() { _error = l.errorConnection; _recentLoading = false; });
-      } else if (mounted) {
+      } else {
         setState(() => _recentLoading = false);
       }
     }
@@ -407,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final categories = _buildCategories(l);
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: () => _load(bypassCache: true),
         child: CustomScrollView(
           controller: _scrollCtrl,
           physics: const AlwaysScrollableScrollPhysics(),

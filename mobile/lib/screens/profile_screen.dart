@@ -15,10 +15,10 @@ import '../core/app_exception.dart';
 import '../core/logger_service.dart';
 import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
+import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
-import '../services/notification_service.dart';
 import '../services/upload_service.dart';
 import '../utils/error_helper.dart';
 import '../utils/start_stream_helper.dart';
@@ -45,98 +45,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int? _tuciBalance;
   List<dynamic> _tuciHistory = [];
 
+  /// Aktif stream aboneliklerinin takibi — dispose'da iptal edilir.
+  final List<StreamSubscription<dynamic>> _subs = [];
+
   @override
   void initState() {
     super.initState();
-    _load().catchError((e) {
-      LoggerService.instance.warning('ProfileScreen', 'Beklenmedik hata: $e');
-      if (mounted) setState(() => _loading = false);
-    });
-    _loadWallet();
+    _load();
   }
 
-  Future<void> _loadWallet() async {
-    final data = await WalletService.getBalance();
-    if (!mounted || data == null) return;
-    setState(() {
-      _tuciBalance = data['balance'] as int?;
-      _tuciHistory = data['transactions'] as List? ?? [];
-    });
+  @override
+  void dispose() {
+    for (final sub in _subs) {
+      sub.cancel();
+    }
+    super.dispose();
   }
 
-  Future<void> _load() async {
-    // ── A: Önce kasadan anında göster ────────────────────────────────────
-    Map<String, dynamic>? localInfo;
-    dynamic cachedUser;
-    dynamic cachedListings;
-    try {
-      localInfo      = await StorageService.getUserInfo();
-      cachedUser     = await StorageService.getCachedData(StorageService.cacheProfile);
-      cachedListings = await StorageService.getCachedData(StorageService.cacheUserListings);
-    } catch (e) {
-      LoggerService.instance.warning('ProfileScreen', 'Kasa okunamadı: $e');
-    }
-    if (mounted) {
+  /// Cüzdan bakiyesi için hafif yenileme (wallet butonuna basıldığında).
+  Future<void> _loadWallet({bool bypassCache = false}) async {
+    await for (final data in WalletService.getBalanceStream(
+      bypassCache: bypassCache,
+    )) {
+      if (!mounted) return;
       setState(() {
-        // Tam profil cache varsa onu, yoksa temel user info'yu göster
-        if (cachedUser is Map) {
-          _user = Map<String, dynamic>.from(cachedUser as Map);
-        } else if (localInfo != null) {
-          _user = localInfo;
-        }
-        if (cachedListings is List) _listings = cachedListings as List;
-        _loading = (_user == null && cachedListings is! List);
+        _tuciBalance = data['balance'] as int?;
+        _tuciHistory = data['transactions'] as List? ?? [];
       });
     }
+  }
 
-    // ── B: Arka planda API ────────────────────────────────────────────────
-    try {
-      final username = (_user ?? localInfo)?['username'] as String?;
-      final userId   = (_user ?? localInfo)?['id'] as int?;
-      final token    = await StorageService.getToken();
+  /// SWR paralel yükleme: profil, ilanlar ve cüzdan aynı anda başlar.
+  /// Her stream hem Hive cache'ten (anlık) hem API'den (taze) emit eder.
+  /// [bypassCache]: pull-to-refresh için cache okumayı atlar, cache'i ezar.
+  Future<void> _load({bool bypassCache = false}) async {
+    // Önceki abonelikleri iptal et (tekrarlı _load çağrıları için)
+    for (final sub in _subs) { sub.cancel(); }
+    _subs.clear();
 
-      final results = await Future.wait([
-        username != null
-            ? NotificationService.getUserByUsername(username)
-            : Future<Map<String, dynamic>?>.value(null),
-        userId != null
-            ? _fetchListings(userId, token)
-            : Future<List<dynamic>>.value([]),
-      ]);
+    // Kimlik bilgisi: güvenli depodan al (hızlı, bir kez)
+    final localInfo = await StorageService.getUserInfo();
+    final username = localInfo?['username'] as String?;
+    final userId   = localInfo?['id'] as int?;
 
-      if (!mounted) return;
-      final freshUser     = (results[0] as Map<String, dynamic>?) ?? _user;
-      final freshListings = results[1] as List<dynamic>;
+    if (!mounted) return;
+    // Güvenli depodan temel bilgileri anında göster (cache gelene kadar)
+    if (_user == null && localInfo != null) {
+      setState(() { _user = localInfo; _loading = true; });
+    }
 
-      // ── C: Kasayı güncelle ───────────────────────────────────────────────
-      if (freshUser != null) {
-        await StorageService.cacheData(StorageService.cacheProfile, freshUser);
-      }
-      await StorageService.cacheData(StorageService.cacheUserListings, freshListings);
-
-      setState(() {
-        if (freshUser != null) _user = freshUser;
-        _listings = freshListings;
-        _loading  = false;
-      });
-    } catch (e) {
-      // ── D: Hata → kasa doluysa yut, boşsa loading'i kapat ──────────────
-      LoggerService.instance.warning('ProfileScreen', 'Profil yüklenemedi: $e');
-      if (!mounted) return;
+    if (username == null || userId == null) {
       setState(() => _loading = false);
+      return;
     }
-  }
 
-  Future<List<dynamic>> _fetchListings(int userId, String? token) async {
-    final resp = await http.get(
-      Uri.parse('$kBaseUrl/listings?user_id=$userId'),
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
+    // Her stream bağımsız çalışır — UI her event'te güncellenir
+    _subs.add(
+      // ── Profil (cache: user_profile_data) ────────────────────────────────
+      ApiService.get<Map<String, dynamic>>(
+        url: '$kBaseUrl/users/$username',
+        cacheKey: StorageService.cacheProfile,
+        cacheTtl: const Duration(minutes: 10),
+        bypassCache: bypassCache,
+        fromJson: (raw) => Map<String, dynamic>.from(raw as Map),
+      ).listen(
+        (user) {
+          if (mounted) setState(() { _user = user; _loading = false; });
+        },
+        onError: (e) {
+          LoggerService.instance.warning('ProfileScreen', 'Profil yüklenemedi: $e');
+          if (mounted) setState(() => _loading = false);
+        },
+      ),
     );
-    if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
-    return [];
+
+    _subs.add(
+      // ── İlanlar (cache: user_listings_data) ──────────────────────────────
+      ApiService.get<List<dynamic>>(
+        url: '$kBaseUrl/listings?user_id=$userId',
+        cacheKey: StorageService.cacheUserListings,
+        cacheTtl: const Duration(minutes: 5),
+        bypassCache: bypassCache,
+        fromJson: (raw) => raw as List,
+      ).listen(
+        (listings) {
+          if (mounted) setState(() { _listings = listings; _loading = false; });
+        },
+        onError: (_) { if (mounted) setState(() => _loading = false); },
+      ),
+    );
+
+    _subs.add(
+      // ── Cüzdan (cache: user_wallet_data) ─────────────────────────────────
+      WalletService.getBalanceStream(bypassCache: bypassCache).listen(
+        (wallet) {
+          if (mounted) {
+            setState(() {
+              _tuciBalance = wallet['balance'] as int?;
+              _tuciHistory = wallet['transactions'] as List? ?? [];
+            });
+          }
+        },
+      ),
+    );
   }
 
 
@@ -275,7 +286,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           GestureDetector(
             onTap: () {
-              _loadWallet();
+              _loadWallet(bypassCache: true);
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -315,7 +326,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: RefreshIndicator(
         color: kPrimary,
-        onRefresh: _load,
+        onRefresh: () => _load(bypassCache: true),
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(

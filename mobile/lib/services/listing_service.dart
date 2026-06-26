@@ -5,6 +5,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import '../config/api.dart';
 import '../core/app_exception.dart';
 import '../models/listing_offer.dart';
+import 'api_service.dart';
 import 'storage_service.dart';
 
 class ListingService {
@@ -17,25 +18,24 @@ class ListingService {
   }
 
   /// ClickHouse telemetri tabanlı epsilon-greedy kişiselleştirilmiş feed.
-  /// Giriş yapılmamışsa boş liste döner.
-  static Future<List<Map<String, dynamic>>> getPersonalizedFeed({int limit = 10}) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return [];
-      final resp = await http
-          .get(
-            Uri.parse('$kBaseUrl/feed/personalized?limit=$limit'),
-            headers: {'Authorization': 'Bearer $token'},
-          )
-          .timeout(const Duration(seconds: 10));
-      if (resp.statusCode == 200) {
-        return (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
-      }
-      return [];
-    } catch (e) {
-      debugPrint('[ListingService] getPersonalizedFeed hatası: $e');
-      return [];
-    }
+  ///
+  /// SWR Stream: ilk event Hive cache'ten (anlık), ikinci event API'den (taze).
+  /// Giriş yapılmamışsa tek `[]` emit edilir.
+  /// [bypassCache]: `true` ise cache okuma atlanır (pull-to-refresh).
+  static Stream<List<Map<String, dynamic>>> getPersonalizedFeed({
+    int limit = 10,
+    bool bypassCache = false,
+  }) async* {
+    final token = await StorageService.getToken();
+    if (token == null) { yield []; return; }
+
+    yield* ApiService.get<List<Map<String, dynamic>>>(
+      url: '$kBaseUrl/feed/personalized?limit=$limit',
+      cacheKey: 'feed_personalized',
+      cacheTtl: const Duration(minutes: 10),
+      bypassCache: bypassCache,
+      fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
+    );
   }
 
   /// İlana ait teklifleri miktara göre büyükten küçüğe döner.

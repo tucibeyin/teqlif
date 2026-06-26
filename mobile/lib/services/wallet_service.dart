@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
+import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
 class WalletService {
@@ -50,4 +51,19 @@ class WalletService {
     } catch (_) {}
     return null;
   }
+
+  /// SWR Stream: önce Hive cache, sonra taze API verisi.
+  /// Giriş yapılmamışsa stream hiç emit etmez.
+  /// [bypassCache]: pull-to-refresh için cache okumayı atlar.
+  static Stream<Map<String, dynamic>> getBalanceStream({
+    int limit = 5,
+    bool bypassCache = false,
+  }) =>
+      ApiService.get<Map<String, dynamic>>(
+        url: '$kBaseUrl/wallet/balance?limit=$limit',
+        cacheKey: 'user_wallet_data',
+        cacheTtl: const Duration(minutes: 2),
+        bypassCache: bypassCache,
+        fromJson: (raw) => raw as Map<String, dynamic>,
+      );
 }
