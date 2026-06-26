@@ -442,10 +442,10 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: true,
       onPopInvoked: (didPop) {
         debugPrint('[PiP] onPopInvoked didPop=$didPop pipAction=${_pipAction != null}');
-        if (!didPop) _pipAction?.call();
+        if (didPop) _pipAction?.call();
       },
       child: Scaffold(
       backgroundColor: Colors.black,
@@ -563,7 +563,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     if (widget.isActive) {
       debugPrint('[PiP] initState registering pip action streamId=${widget.stream.id}');
-      widget.onPipActionChanged?.call(_enterPip);
+      widget.onPipActionChanged?.call(_pipForBackGesture);
       _activate();
     } else if (widget.isPrefetch) {
       _prefetchConnect();
@@ -574,7 +574,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   void didUpdateWidget(_SwipeLivePage old) {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
-      widget.onPipActionChanged?.call(_enterPip);
+      widget.onPipActionChanged?.call(_pipForBackGesture);
       // Sayfa aktif oldu
       if (_room != null) {
         _promoteToActive();  // zaten pre-bağlı → sesi aç
@@ -1335,24 +1335,17 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
     }
   }
 
-  Future<void> _enterPip() async {
-    debugPrint('[PiP] _enterPip called track=${_remoteVideoTrack != null} room=${_room != null}');
+  // iOS back gesture veya ← button'dan PiP kurulumu (senkron)
+  void _pipForBackGesture() {
+    if (_enteringPip || _leftStream) return; // Zaten işleniyor
     final track = _remoteVideoTrack;
     final room = _room;
-    if (track == null || room == null) {
-      debugPrint('[PiP] fallback _leave (no track/room)');
-      await _leave();
-      return;
-    }
+    if (track == null || room == null) return; // Video yok, PiP açılamaz
 
-    // dispose()'un Room'u kapatmamasını sağla
     _enteringPip = true;
     _leftStream = true;
-
-    // Backend'e ayrılma bildirimi (fire-and-forget)
     StreamService.leaveStream(widget.stream.id).catchError((_) {});
 
-    // Room + VideoTrack'i PiP provider'a aktar
     ref.read(pipProvider.notifier).enablePip(
       streamId: widget.stream.id,
       roomName: _resolvedTitle ?? widget.stream.title,
@@ -1361,9 +1354,19 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
       track: track,
     );
 
-    if (!mounted) return;
-    PipService.showPip(context);
-    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    if (mounted) PipService.showPip(context);
+  }
+
+  // ← butonu için: PiP kur + geri git
+  Future<void> _enterPip() async {
+    final track = _remoteVideoTrack;
+    final room = _room;
+    if (track == null || room == null) {
+      await _leave();
+      return;
+    }
+    _pipForBackGesture();
+    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _handleRaid(int targetStreamId) async {
