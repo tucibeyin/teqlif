@@ -1104,9 +1104,9 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                           color: Colors.deepOrange.withValues(alpha: 0.88),
                           borderRadius: BorderRadius.circular(5),
                         ),
-                        child: const Text(
-                          '🔥 Trend',
-                          style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                        child: Text(
+                          AppLocalizations.of(context)!.badgeTrending,
+                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
@@ -1399,7 +1399,7 @@ class _GridItemState extends State<_GridItem> {
                   color: const Color(0xFF16A34A).withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(5),
                 ),
-                child: const Text('✅ Güvenilir', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
+                child: Text(AppLocalizations.of(context)!.badgeTrustedSeller, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
               ),
             )
           else if (widget.listing['seller_badge'] == 'active_seller')
@@ -1412,7 +1412,7 @@ class _GridItemState extends State<_GridItem> {
                   color: const Color(0xFFF59E0B).withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(5),
                 ),
-                child: const Text('⭐ Aktif', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
+                child: Text(AppLocalizations.of(context)!.badgeActiveSeller, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
               ),
             ),
           // Trend rozeti — sağ alt

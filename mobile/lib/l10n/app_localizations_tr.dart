@@ -1793,4 +1793,122 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get fraudShieldDismiss => 'Şimdi değil';
+
+  @override
+  String get tabListings => 'İlanlar';
+
+  @override
+  String get tabPurchases => 'Alışverişler';
+
+  @override
+  String get purchasesEmpty => 'Henüz satın alma yok';
+
+  @override
+  String get purchasesEmptyHint => 'Canlı yayınlarda açık artırmaya katıl';
+
+  @override
+  String get badgeTrustedSeller => '✅ Güvenilir';
+
+  @override
+  String get badgeActiveSeller => '⭐ Aktif';
+
+  @override
+  String get badgeTrending => '🔥 Trend';
+
+  @override
+  String get searchAlertTitle => 'Arama Alarmı';
+
+  @override
+  String searchAlertBody(String query) {
+    return '\"$query\" için yeni ilan eklendiğinde bildirim al.';
+  }
+
+  @override
+  String get searchAlertCreate => 'Alarm Oluştur';
+
+  @override
+  String get searchAlertCreated => 'Arama alarmı oluşturuldu ✓';
+
+  @override
+  String get searchAlertFailed => 'Alarm oluşturulamadı, tekrar dene';
+
+  @override
+  String get searchAlertTooltip => 'Arama Alarmı Oluştur';
+
+  @override
+  String get audienceInsightsTitle => 'İzleyici Bütçe Analizi';
+
+  @override
+  String audienceInsightsViewers(int count) {
+    return '$count izleyici';
+  }
+
+  @override
+  String get audienceAvgBudget => 'Ortalama Bütçe';
+
+  @override
+  String get audienceProViewers => 'Pro İzleyici';
+
+  @override
+  String get audienceHighBudget => 'Yüksek Bütçe (1000₺+)';
+
+  @override
+  String get audienceMedBudget => 'Orta Bütçe (250-999₺)';
+
+  @override
+  String get audienceLowBudget => 'Düşük Bütçe (<250₺)';
+
+  @override
+  String get proToolBestTimeTitle => 'En İyi Yayın Saati';
+
+  @override
+  String get proToolBestTimeDesc =>
+      'Geçmiş yayın verilerinize göre en yüksek dönüşüm sağlayan gün ve saat dilimlerini görün.';
+
+  @override
+  String get proToolConversionTitle => 'Dönüşüm Analizi';
+
+  @override
+  String get proToolConversionDesc =>
+      'Kategori bazlı açık artırma kazanma oranlarınızı ve ortalama satış fiyatlarını inceleyin.';
+
+  @override
+  String get bestTimeNoData => 'Henüz yeterli yayın verisi yok';
+
+  @override
+  String get bestTimeNoDataHint =>
+      'En az 1 yayın yapıldıktan sonra analiz hazır olacak';
+
+  @override
+  String get bestTimeSlotsHeader => 'En İyi Zaman Dilimleri';
+
+  @override
+  String bestTimeSlotStats(int wins, int count) {
+    return '$wins satış / $count yayın';
+  }
+
+  @override
+  String get conversionNoData => 'Henüz açık artırma verisi yok';
+
+  @override
+  String get conversionNoDataHint =>
+      'Son 90 günde canlı yayında açık artırma düzenlemelisiniz';
+
+  @override
+  String get conversionSectionHeader => 'Kategori Bazlı Dönüşüm (Son 90 Gün)';
+
+  @override
+  String conversionCategoryCount(int count) {
+    return 'Toplam $count kategori';
+  }
+
+  @override
+  String conversionCategorySales(int won, int total) {
+    return '$won/$total satış';
+  }
+
+  @override
+  String conversionAvgPrice(String price) {
+    return 'Ort. $price ₺';
+  }
 }

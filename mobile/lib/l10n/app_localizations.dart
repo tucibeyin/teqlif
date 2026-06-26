@@ -3453,6 +3453,210 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Şimdi değil'**
   String get fraudShieldDismiss;
+
+  /// No description provided for @tabListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanlar'**
+  String get tabListings;
+
+  /// No description provided for @tabPurchases.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alışverişler'**
+  String get tabPurchases;
+
+  /// No description provided for @purchasesEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz satın alma yok'**
+  String get purchasesEmpty;
+
+  /// No description provided for @purchasesEmptyHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı yayınlarda açık artırmaya katıl'**
+  String get purchasesEmptyHint;
+
+  /// No description provided for @badgeTrustedSeller.
+  ///
+  /// In tr, this message translates to:
+  /// **'✅ Güvenilir'**
+  String get badgeTrustedSeller;
+
+  /// No description provided for @badgeActiveSeller.
+  ///
+  /// In tr, this message translates to:
+  /// **'⭐ Aktif'**
+  String get badgeActiveSeller;
+
+  /// No description provided for @badgeTrending.
+  ///
+  /// In tr, this message translates to:
+  /// **'🔥 Trend'**
+  String get badgeTrending;
+
+  /// No description provided for @searchAlertTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arama Alarmı'**
+  String get searchAlertTitle;
+
+  /// No description provided for @searchAlertBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"{query}\" için yeni ilan eklendiğinde bildirim al.'**
+  String searchAlertBody(String query);
+
+  /// No description provided for @searchAlertCreate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alarm Oluştur'**
+  String get searchAlertCreate;
+
+  /// No description provided for @searchAlertCreated.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arama alarmı oluşturuldu ✓'**
+  String get searchAlertCreated;
+
+  /// No description provided for @searchAlertFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alarm oluşturulamadı, tekrar dene'**
+  String get searchAlertFailed;
+
+  /// No description provided for @searchAlertTooltip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arama Alarmı Oluştur'**
+  String get searchAlertTooltip;
+
+  /// No description provided for @audienceInsightsTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İzleyici Bütçe Analizi'**
+  String get audienceInsightsTitle;
+
+  /// No description provided for @audienceInsightsViewers.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} izleyici'**
+  String audienceInsightsViewers(int count);
+
+  /// No description provided for @audienceAvgBudget.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama Bütçe'**
+  String get audienceAvgBudget;
+
+  /// No description provided for @audienceProViewers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pro İzleyici'**
+  String get audienceProViewers;
+
+  /// No description provided for @audienceHighBudget.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yüksek Bütçe (1000₺+)'**
+  String get audienceHighBudget;
+
+  /// No description provided for @audienceMedBudget.
+  ///
+  /// In tr, this message translates to:
+  /// **'Orta Bütçe (250-999₺)'**
+  String get audienceMedBudget;
+
+  /// No description provided for @audienceLowBudget.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düşük Bütçe (<250₺)'**
+  String get audienceLowBudget;
+
+  /// No description provided for @proToolBestTimeTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'En İyi Yayın Saati'**
+  String get proToolBestTimeTitle;
+
+  /// No description provided for @proToolBestTimeDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçmiş yayın verilerinize göre en yüksek dönüşüm sağlayan gün ve saat dilimlerini görün.'**
+  String get proToolBestTimeDesc;
+
+  /// No description provided for @proToolConversionTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dönüşüm Analizi'**
+  String get proToolConversionTitle;
+
+  /// No description provided for @proToolConversionDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori bazlı açık artırma kazanma oranlarınızı ve ortalama satış fiyatlarını inceleyin.'**
+  String get proToolConversionDesc;
+
+  /// No description provided for @bestTimeNoData.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz yeterli yayın verisi yok'**
+  String get bestTimeNoData;
+
+  /// No description provided for @bestTimeNoDataHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'En az 1 yayın yapıldıktan sonra analiz hazır olacak'**
+  String get bestTimeNoDataHint;
+
+  /// No description provided for @bestTimeSlotsHeader.
+  ///
+  /// In tr, this message translates to:
+  /// **'En İyi Zaman Dilimleri'**
+  String get bestTimeSlotsHeader;
+
+  /// No description provided for @bestTimeSlotStats.
+  ///
+  /// In tr, this message translates to:
+  /// **'{wins} satış / {count} yayın'**
+  String bestTimeSlotStats(int wins, int count);
+
+  /// No description provided for @conversionNoData.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz açık artırma verisi yok'**
+  String get conversionNoData;
+
+  /// No description provided for @conversionNoDataHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son 90 günde canlı yayında açık artırma düzenlemelisiniz'**
+  String get conversionNoDataHint;
+
+  /// No description provided for @conversionSectionHeader.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori Bazlı Dönüşüm (Son 90 Gün)'**
+  String get conversionSectionHeader;
+
+  /// No description provided for @conversionCategoryCount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam {count} kategori'**
+  String conversionCategoryCount(int count);
+
+  /// No description provided for @conversionCategorySales.
+  ///
+  /// In tr, this message translates to:
+  /// **'{won}/{total} satış'**
+  String conversionCategorySales(int won, int total);
+
+  /// No description provided for @conversionAvgPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ort. {price} ₺'**
+  String conversionAvgPrice(String price);
 }
 
 class _AppLocalizationsDelegate

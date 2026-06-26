@@ -211,6 +211,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   Future<void> _showAudienceInsights(BuildContext ctx) async {
     final streamId = widget.streamToken.streamId;
+    final l = AppLocalizations.of(ctx)!;
     Map<String, dynamic>? data;
     bool loading = true;
 
@@ -254,15 +255,15 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                             Row(children: [
                               const Icon(Icons.people, color: Colors.white, size: 18),
                               const SizedBox(width: 8),
-                              const Text('İzleyici Bütçe Analizi', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                              Text(l.audienceInsightsTitle, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
                               const Spacer(),
-                              Text('${data!['viewer_count'] ?? 0} izleyici', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                              Text(l.audienceInsightsViewers(data!['viewer_count'] as int? ?? 0), style: const TextStyle(color: Colors.white54, fontSize: 12)),
                             ]),
                             const SizedBox(height: 16),
                             if (data!['avg_budget'] != null)
                               _InsightTile(
                                 icon: '💰',
-                                label: 'Ortalama Bütçe',
+                                label: l.audienceAvgBudget,
                                 value: '${(data!['avg_budget'] as num).toStringAsFixed(0)} ₺',
                                 color: const Color(0xFF10B981),
                               ),
@@ -285,7 +286,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                               const SizedBox(height: 8),
                               _InsightTile(
                                 icon: '🎯',
-                                label: 'Pro İzleyici',
+                                label: l.audienceProViewers,
                                 value: '${data!['ready_buyers_count']}',
                                 color: const Color(0xFF3B82F6),
                               ),
@@ -1002,14 +1003,14 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.people_outline, color: Colors.white, size: 15),
-                              SizedBox(width: 6),
-                              Text('İzleyici Bütçe Analizi', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                              Spacer(),
-                              Icon(Icons.chevron_right, color: Colors.white54, size: 15),
+                              const Icon(Icons.people_outline, color: Colors.white, size: 15),
+                              const SizedBox(width: 6),
+                              Text(AppLocalizations.of(context)!.audienceInsightsTitle, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                              const Spacer(),
+                              const Icon(Icons.chevron_right, color: Colors.white54, size: 15),
                             ],
                           ),
                         ),

@@ -1793,4 +1793,122 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fraudShieldDismiss => 'Not now';
+
+  @override
+  String get tabListings => 'Listings';
+
+  @override
+  String get tabPurchases => 'Purchases';
+
+  @override
+  String get purchasesEmpty => 'No purchases yet';
+
+  @override
+  String get purchasesEmptyHint => 'Join live auctions to buy items';
+
+  @override
+  String get badgeTrustedSeller => '✅ Trusted';
+
+  @override
+  String get badgeActiveSeller => '⭐ Active';
+
+  @override
+  String get badgeTrending => '🔥 Trending';
+
+  @override
+  String get searchAlertTitle => 'Search Alert';
+
+  @override
+  String searchAlertBody(String query) {
+    return 'Get notified when a new listing matches \"$query\".';
+  }
+
+  @override
+  String get searchAlertCreate => 'Create Alert';
+
+  @override
+  String get searchAlertCreated => 'Search alert created ✓';
+
+  @override
+  String get searchAlertFailed => 'Failed to create alert, try again';
+
+  @override
+  String get searchAlertTooltip => 'Create Search Alert';
+
+  @override
+  String get audienceInsightsTitle => 'Audience Budget Analysis';
+
+  @override
+  String audienceInsightsViewers(int count) {
+    return '$count viewers';
+  }
+
+  @override
+  String get audienceAvgBudget => 'Average Budget';
+
+  @override
+  String get audienceProViewers => 'Pro Viewers';
+
+  @override
+  String get audienceHighBudget => 'High Budget (1000₺+)';
+
+  @override
+  String get audienceMedBudget => 'Mid Budget (250-999₺)';
+
+  @override
+  String get audienceLowBudget => 'Low Budget (<250₺)';
+
+  @override
+  String get proToolBestTimeTitle => 'Best Stream Time';
+
+  @override
+  String get proToolBestTimeDesc =>
+      'See the days and hours with the highest conversion rate based on your past streams.';
+
+  @override
+  String get proToolConversionTitle => 'Conversion Analysis';
+
+  @override
+  String get proToolConversionDesc =>
+      'Review your auction win rates and average sale prices by category.';
+
+  @override
+  String get bestTimeNoData => 'Not enough stream data yet';
+
+  @override
+  String get bestTimeNoDataHint =>
+      'Analysis will be ready after at least 1 stream';
+
+  @override
+  String get bestTimeSlotsHeader => 'Best Time Slots';
+
+  @override
+  String bestTimeSlotStats(int wins, int count) {
+    return '$wins sales / $count streams';
+  }
+
+  @override
+  String get conversionNoData => 'No auction data yet';
+
+  @override
+  String get conversionNoDataHint =>
+      'You need to run live auctions in the last 90 days';
+
+  @override
+  String get conversionSectionHeader => 'Category Conversion (Last 90 Days)';
+
+  @override
+  String conversionCategoryCount(int count) {
+    return 'Total $count categories';
+  }
+
+  @override
+  String conversionCategorySales(int won, int total) {
+    return '$won/$total sales';
+  }
+
+  @override
+  String conversionAvgPrice(String price) {
+    return 'Avg. $price ₺';
+  }
 }

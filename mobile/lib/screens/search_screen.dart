@@ -70,6 +70,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _showAlertSheet(BuildContext context) async {
     final query = _controller.text.trim();
+    final l = AppLocalizations.of(context)!;
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
@@ -79,23 +80,23 @@ class _SearchScreenState extends State<SearchScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Arama Alarmı', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            Text(l.searchAlertTitle, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            Text('"$query" için yeni ilan eklendiğinde bildirim al.', style: const TextStyle(fontSize: 14)),
+            Text(l.searchAlertBody(query), style: const TextStyle(fontSize: 14)),
             const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text('İptal'),
+                    child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Alarm Oluştur'),
+                    child: Text(l.searchAlertCreate),
                   ),
                 ),
               ],
@@ -119,18 +120,18 @@ class _SearchScreenState extends State<SearchScreen> {
       if (mounted) {
         if (resp.statusCode == 201) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Arama alarmı oluşturuldu ✓')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.searchAlertCreated)),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Alarm oluşturulamadı, tekrar dene')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.searchAlertFailed)),
           );
         }
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Alarm oluşturulamadı, tekrar dene')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.searchAlertFailed)),
         );
       }
     } finally {
@@ -368,7 +369,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               icon: _alertCreating
                                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                                   : const Icon(Icons.notifications_none, size: 20),
-                              tooltip: 'Arama Alarmı Oluştur',
+                              tooltip: AppLocalizations.of(context)!.searchAlertTooltip,
                               onPressed: _alertCreating ? null : () => _showAlertSheet(context),
                             ),
                             IconButton(

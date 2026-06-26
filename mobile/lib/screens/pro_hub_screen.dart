@@ -101,8 +101,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
           _ToolCard(
             icon: Icons.schedule_outlined,
             iconColor: const Color(0xFF8B5CF6),
-            title: 'En İyi Yayın Saati',
-            description: 'Geçmiş yayın verilerinize göre en yüksek dönüşüm sağlayan gün ve saat dilimlerini görün.',
+            title: l.proToolBestTimeTitle,
+            description: l.proToolBestTimeDesc,
             isPremium: isPremium,
             onTap: isPremium
                 ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BestStreamTimeScreen()))
@@ -112,8 +112,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
           _ToolCard(
             icon: Icons.pie_chart_outline,
             iconColor: const Color(0xFFEC4899),
-            title: 'Dönüşüm Analizi',
-            description: 'Kategori bazlı açık artırma kazanma oranlarınızı ve ortalama satış fiyatlarını inceleyin.',
+            title: l.proToolConversionTitle,
+            description: l.proToolConversionDesc,
             isPremium: isPremium,
             onTap: isPremium
                 ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversionBreakdownScreen()))

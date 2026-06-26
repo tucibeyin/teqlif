@@ -60,7 +60,7 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: const Text('En İyi Yayın Saati'),
+        title: Text(AppLocalizations.of(context)!.proToolBestTimeTitle),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
@@ -104,19 +104,19 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                SizedBox(height: 40),
-                Icon(Icons.schedule_outlined, size: 52, color: Color(0xFFD1D5DB)),
-                SizedBox(height: 12),
-                Text('Henüz yeterli yayın verisi yok', style: TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
-                SizedBox(height: 4),
-                Text('En az 1 yayın yapıldıktan sonra analiz hazır olacak', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+              children: [
+                const SizedBox(height: 40),
+                const Icon(Icons.schedule_outlined, size: 52, color: Color(0xFFD1D5DB)),
+                const SizedBox(height: 12),
+                Text(AppLocalizations.of(context)!.bestTimeNoData, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+                const SizedBox(height: 4),
+                Text(AppLocalizations.of(context)!.bestTimeNoDataHint, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
               ],
             ),
           )
         else ...[
           Text(
-            'En İyi Zaman Dilimleri',
+            AppLocalizations.of(context)!.bestTimeSlotsHeader,
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
           ),
           const SizedBox(height: 12),
@@ -166,7 +166,7 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF10B981)),
                       ),
                       Text(
-                        '$wins satış / $count yayın',
+                        AppLocalizations.of(context)!.bestTimeSlotStats(wins, count),
                         style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
                       ),
                     ],
@@ -219,7 +219,7 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: const Text('Dönüşüm Analizi'),
+        title: Text(AppLocalizations.of(context)!.proToolConversionTitle),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
@@ -233,15 +233,15 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
 
   Widget _buildContent(BuildContext context) {
     if (_data.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.pie_chart_outline, size: 52, color: Color(0xFFD1D5DB)),
-            SizedBox(height: 12),
-            Text('Henüz açık artırma verisi yok', style: TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
-            SizedBox(height: 4),
-            Text('Son 90 günde canlı yayında açık artırma düzenlemelisiniz', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+            const Icon(Icons.pie_chart_outline, size: 52, color: Color(0xFFD1D5DB)),
+            const SizedBox(height: 12),
+            Text(AppLocalizations.of(context)!.conversionNoData, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+            const SizedBox(height: 4),
+            Text(AppLocalizations.of(context)!.conversionNoDataHint, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
           ],
         ),
       );
@@ -252,10 +252,10 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Kategori Bazlı Dönüşüm (Son 90 Gün)',
+        Text(AppLocalizations.of(context)!.conversionSectionHeader,
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
         const SizedBox(height: 4),
-        Text('Toplam ${_data.length} kategori',
+        Text(AppLocalizations.of(context)!.conversionCategoryCount(_data.length),
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
         const SizedBox(height: 16),
         ..._data.map((row) {
@@ -304,10 +304,10 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text('$won/$total satış', style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
+                    Text(AppLocalizations.of(context)!.conversionCategorySales(won, total), style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
                     const Spacer(),
                     if (avgPrice > 0)
-                      Text('Ort. ${avgPrice.toStringAsFixed(0)} ₺',
+                      Text(AppLocalizations.of(context)!.conversionAvgPrice(avgPrice.toStringAsFixed(0)),
                           style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
                   ],
                 ),

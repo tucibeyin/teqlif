@@ -1778,4 +1778,121 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get fraudShieldDismiss => 'ليس الآن';
+
+  @override
+  String get tabListings => 'الإعلانات';
+
+  @override
+  String get tabPurchases => 'المشتريات';
+
+  @override
+  String get purchasesEmpty => 'لا توجد مشتريات بعد';
+
+  @override
+  String get purchasesEmptyHint => 'شارك في المزادات المباشرة لشراء المنتجات';
+
+  @override
+  String get badgeTrustedSeller => '✅ موثوق';
+
+  @override
+  String get badgeActiveSeller => '⭐ نشط';
+
+  @override
+  String get badgeTrending => '🔥 رائج';
+
+  @override
+  String get searchAlertTitle => 'تنبيه البحث';
+
+  @override
+  String searchAlertBody(String query) {
+    return 'احصل على إشعار عند إضافة إعلان جديد يطابق \"$query\".';
+  }
+
+  @override
+  String get searchAlertCreate => 'إنشاء تنبيه';
+
+  @override
+  String get searchAlertCreated => 'تم إنشاء تنبيه البحث ✓';
+
+  @override
+  String get searchAlertFailed => 'فشل إنشاء التنبيه، حاول مجدداً';
+
+  @override
+  String get searchAlertTooltip => 'إنشاء تنبيه بحث';
+
+  @override
+  String get audienceInsightsTitle => 'تحليل ميزانية الجمهور';
+
+  @override
+  String audienceInsightsViewers(int count) {
+    return '$count مشاهد';
+  }
+
+  @override
+  String get audienceAvgBudget => 'متوسط الميزانية';
+
+  @override
+  String get audienceProViewers => 'مشاهدون Pro';
+
+  @override
+  String get audienceHighBudget => 'ميزانية عالية (+1000₺)';
+
+  @override
+  String get audienceMedBudget => 'ميزانية متوسطة (250-999₺)';
+
+  @override
+  String get audienceLowBudget => 'ميزانية منخفضة (<250₺)';
+
+  @override
+  String get proToolBestTimeTitle => 'أفضل وقت للبث';
+
+  @override
+  String get proToolBestTimeDesc =>
+      'اعرف الأيام والأوقات ذات أعلى معدل تحويل بناءً على بياناتك السابقة.';
+
+  @override
+  String get proToolConversionTitle => 'تحليل التحويلات';
+
+  @override
+  String get proToolConversionDesc =>
+      'راجع معدلات الفوز في المزادات ومتوسط أسعار البيع حسب الفئة.';
+
+  @override
+  String get bestTimeNoData => 'لا توجد بيانات بث كافية بعد';
+
+  @override
+  String get bestTimeNoDataHint => 'سيكون التحليل جاهزاً بعد بث واحد على الأقل';
+
+  @override
+  String get bestTimeSlotsHeader => 'أفضل الأوقات';
+
+  @override
+  String bestTimeSlotStats(int wins, int count) {
+    return '$wins مبيعة / $count بث';
+  }
+
+  @override
+  String get conversionNoData => 'لا توجد بيانات مزاد بعد';
+
+  @override
+  String get conversionNoDataHint =>
+      'تحتاج إلى إجراء مزادات مباشرة خلال الـ 90 يوماً الماضية';
+
+  @override
+  String get conversionSectionHeader => 'التحويل حسب الفئة (90 يومًا)';
+
+  @override
+  String conversionCategoryCount(int count) {
+    return 'إجمالي $count فئة';
+  }
+
+  @override
+  String conversionCategorySales(int won, int total) {
+    return '$won/$total مبيعة';
+  }
+
+  @override
+  String conversionAvgPrice(String price) {
+    return 'متوسط $price ₺';
+  }
 }

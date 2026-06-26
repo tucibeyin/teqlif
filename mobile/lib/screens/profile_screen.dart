@@ -621,9 +621,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                 child: Row(
                   children: [
-                    _TabChip(label: 'İlanlar', selected: _selectedTab == 0, onTap: () => setState(() => _selectedTab = 0)),
+                    _TabChip(label: AppLocalizations.of(context)!.tabListings, selected: _selectedTab == 0, onTap: () => setState(() => _selectedTab = 0)),
                     const SizedBox(width: 8),
-                    _TabChip(label: 'Alışverişler', selected: _selectedTab == 1, onTap: () {
+                    _TabChip(label: AppLocalizations.of(context)!.tabPurchases, selected: _selectedTab == 1, onTap: () {
                       setState(() => _selectedTab = 1);
                       if (_purchases.isEmpty) _loadPurchases();
                     }),
@@ -657,16 +657,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Center(child: CircularProgressIndicator()),
                 )
               else if (_purchases.isEmpty)
-                const SliverFillRemaining(
+                SliverFillRemaining(
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.shopping_bag_outlined, size: 52, color: Color(0xFFD1D5DB)),
-                        SizedBox(height: 12),
-                        Text('Henüz satın alma yok', style: TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
-                        SizedBox(height: 4),
-                        Text('Canlı yayınlarda açık artırmaya katıl', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+                        const Icon(Icons.shopping_bag_outlined, size: 52, color: Color(0xFFD1D5DB)),
+                        const SizedBox(height: 12),
+                        Text(AppLocalizations.of(context)!.purchasesEmpty, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(AppLocalizations.of(context)!.purchasesEmptyHint, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
                       ],
                     ),
                   ),
