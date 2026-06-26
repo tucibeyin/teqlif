@@ -47,7 +47,7 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
                   child: VideoTrackRenderer(
                     pip.track!,
                     fit: VideoViewFit.cover,
-                    mirrorMode: VideoViewMirrorMode.off,
+                    mirrorMode: VideoViewMirrorMode.mirror,
                   ),
                 ),
               ),
