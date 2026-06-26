@@ -76,11 +76,11 @@ class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
 
   static const _url = '$kBaseUrl/stories/mine';
 
-  static List<StoryItem> _parse(dynamic raw) =>
-      (raw as List)
-          .cast<Map<String, dynamic>>()
-          .map(StoryItem.fromJson)
-          .toList();
+  static List<StoryItem> _parse(dynamic raw) {
+    // Backend {items:[...], total:N} veya düz liste döndürebilir
+    final list = raw is Map ? (raw['items'] as List? ?? []) : (raw as List);
+    return list.cast<Map<String, dynamic>>().map(StoryItem.fromJson).toList();
+  }
 
   @override
   Future<List<StoryItem>> build() async {

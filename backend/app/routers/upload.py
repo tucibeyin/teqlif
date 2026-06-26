@@ -104,10 +104,13 @@ async def _process_listing_video(src: str, out_dir: str) -> tuple[str, str | Non
     thumb_path = os.path.join(out_dir, thumb_name)
 
     if shutil.which("ffmpeg"):
+        # Stream copy: video yeniden encode edilmez (anlık tamamlanır).
+        # iPhone H.264 / HEVC MOV → MP4 remux için yeterli.
+        # -c:a aac: ses varsa AAC'ye normalize et (sessiz video sorun olmaz).
+        # -t: 15 sn'yi aşan videoları kes.
         compress_cmd = [
             "ffmpeg", "-y", "-i", src,
-            "-vf", "scale=-2:720",
-            "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+            "-c:v", "copy",
             "-c:a", "aac", "-b:a", "128k",
             "-movflags", "+faststart",
             "-t", str(int(MAX_VIDEO_DURATION)),
@@ -119,11 +122,11 @@ async def _process_listing_video(src: str, out_dir: str) -> tuple[str, str | Non
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
-            await asyncio.wait_for(proc.communicate(), timeout=120)
+            await asyncio.wait_for(proc.communicate(), timeout=30)
             if proc.returncode != 0 or not os.path.exists(video_path):
                 raise RuntimeError("ffmpeg başarısız")
         except Exception:
-            # Sıkıştırma başarısız — orijinal mp4'ü kopyala
+            # Remux başarısız — orijinali doğrudan kullan
             shutil.copy2(src, video_path)
 
         thumb_cmd = [
