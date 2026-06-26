@@ -45,6 +45,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int? _tuciBalance;
   List<dynamic> _tuciHistory = [];
 
+  // ── Arama & kategori filtresi ─────────────────────────────────────────────
+  String _searchQuery = '';
+  String? _selectedCategory;
+  final _searchCtrl = TextEditingController();
+
+  List<String> get _categories => _listings
+      .map((l) => l['category'] as String?)
+      .whereType<String>()
+      .where((c) => c.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<dynamic> get _filteredListings {
+    var r = _listings;
+    if (_selectedCategory != null) {
+      r = r.where((l) => l['category'] == _selectedCategory).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      r = r.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+    }
+    return r;
+  }
+
   /// Aktif stream aboneliklerinin takibi — dispose'da iptal edilir.
   final List<StreamSubscription<dynamic>> _subs = [];
 
@@ -56,6 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
+    _searchCtrl.dispose();
     for (final sub in _subs) {
       sub.cancel();
     }
@@ -293,54 +319,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(top: 10, right: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    _loadWallet(bypassCache: true);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => WalletScreen(
-                          initialBalance: _tuciBalance,
-                          initialHistory: _tuciHistory,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.account_balance_wallet_outlined, size: 22),
-                        if (_tuciBalance != null)
-                          Text(
-                            '$_tuciBalance T',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFB8860B),
-                              height: 1.1,
-                            ),
-                          ),
-                      ],
-                    ),
+          // Cüzdan
+          GestureDetector(
+            onTap: () {
+              _loadWallet(bypassCache: true);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WalletScreen(
+                    initialBalance: _tuciBalance,
+                    initialHistory: _tuciHistory,
                   ),
                 ),
-                IconButton(
-                  key: const Key('profile_btn_ayarlar'),
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: _openSettings,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                ),
-                const SizedBox(width: 4),
-              ],
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.account_balance_wallet_outlined, size: 22),
+                  if (_tuciBalance != null)
+                    Text(
+                      '$_tuciBalance T',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFB8860B),
+                        height: 1.1,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          // Ayarlar — cüzdanla aynı yapı, her zaman dikey ortada
+          GestureDetector(
+            key: const Key('profile_btn_ayarlar'),
+            onTap: _openSettings,
+            child: const Padding(
+              padding: EdgeInsets.fromLTRB(6, 0, 12, 0),
+              child: Icon(Icons.settings_outlined, size: 22),
             ),
           ),
         ],
@@ -555,6 +575,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+
+            // ── Arama & Kategori filtresi ──
+            if (!_loading || _listings.isNotEmpty)
+              SliverToBoxAdapter(
+                child: ListingFilter(
+                  searchCtrl: _searchCtrl,
+                  searchQuery: _searchQuery,
+                  selectedCategory: _selectedCategory,
+                  categories: _categories,
+                  onSearchChanged: (v) => setState(() => _searchQuery = v.trim()),
+                  onSearchCleared: () {
+                    _searchCtrl.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                  onCategorySelected: (cat) =>
+                      setState(() => _selectedCategory = cat),
+                ),
+              ),
+
             // ── İlanlar grid ──
             if (_loading)
               SliverPadding(
@@ -607,14 +646,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
               )
+            else if (_filteredListings.isEmpty)
+              const SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search_off_rounded, size: 52, color: Color(0xFFD1D5DB)),
+                      SizedBox(height: 12),
+                      Text(
+                        'Sonuç bulunamadı',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
             else
               SliverGrid(
                 delegate: SliverChildBuilderDelegate(
                   (ctx, i) => _ListingGridItem(
-                    key: Key('profile_listing_${_listings[i]['id']}'),
-                    listing: _listings[i],
+                    key: Key('profile_listing_${_filteredListings[i]['id']}'),
+                    listing: _filteredListings[i],
                   ),
-                  childCount: _listings.length,
+                  childCount: _filteredListings.length,
                 ),
                 gridDelegate:
                     const SliverGridDelegateWithFixedCrossAxisCount(
@@ -624,6 +683,129 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Arama + Kategori filtresi widget'ı (ProfileScreen & PublicProfileScreen) ──
+
+class ListingFilter extends StatelessWidget {
+  final TextEditingController searchCtrl;
+  final String searchQuery;
+  final String? selectedCategory;
+  final List<String> categories;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onSearchCleared;
+  final ValueChanged<String?> onCategorySelected;
+
+  const _ListingFilter({
+    required this.searchCtrl,
+    required this.searchQuery,
+    required this.selectedCategory,
+    required this.categories,
+    required this.onSearchChanged,
+    required this.onSearchCleared,
+    required this.onCategorySelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+          child: TextField(
+            controller: searchCtrl,
+            onChanged: onSearchChanged,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'İlan başlığı ara...',
+              hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary(context)),
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: onSearchCleared,
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: kPrimary),
+              ),
+              filled: true,
+              fillColor: AppColors.surface(context),
+            ),
+          ),
+        ),
+        if (categories.isNotEmpty)
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                _CategoryChip(
+                  label: 'Tümü',
+                  selected: selectedCategory == null,
+                  onTap: () => onCategorySelected(null),
+                ),
+                ...categories.map((cat) => _CategoryChip(
+                      label: cat,
+                      selected: selectedCategory == cat,
+                      onTap: () => onCategorySelected(cat),
+                    )),
+              ],
+            ),
+          ),
+        const SizedBox(height: 6),
+      ],
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _CategoryChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? kPrimary : AppColors.surface(context),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? kPrimary : AppColors.border(context),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : AppColors.textPrimary(context),
+            ),
+          ),
         ),
       ),
     );

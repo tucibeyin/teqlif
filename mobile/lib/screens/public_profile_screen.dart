@@ -13,6 +13,7 @@ import 'messages_screen.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
+import 'profile_screen.dart' show ListingFilter;
 
 const _starColor = Color(0xFFF59E0B);
 
@@ -36,10 +37,41 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   bool _blockLoading = false;
   Map<String, dynamic>? _ratingSummary;
 
+  // ── Arama & kategori filtresi ─────────────────────────────────────────────
+  String _searchQuery = '';
+  String? _selectedCategory;
+  final _searchCtrl = TextEditingController();
+
+  List<String> get _categories => _listings
+      .map((l) => l['category'] as String?)
+      .whereType<String>()
+      .where((c) => c.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<dynamic> get _filteredListings {
+    var r = _listings;
+    if (_selectedCategory != null) {
+      r = r.where((l) => l['category'] == _selectedCategory).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      r = r.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+    }
+    return r;
+  }
+
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Future<Map<String, String>> _authHeaders() async {
@@ -413,6 +445,23 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           ),
         ),
 
+        // ── Arama & Kategori filtresi ──
+        if (!_loading || _listings.isNotEmpty)
+          SliverToBoxAdapter(
+            child: ListingFilter(
+              searchCtrl: _searchCtrl,
+              searchQuery: _searchQuery,
+              selectedCategory: _selectedCategory,
+              categories: _categories,
+              onSearchChanged: (v) => setState(() => _searchQuery = v.trim()),
+              onSearchCleared: () {
+                _searchCtrl.clear();
+                setState(() => _searchQuery = '');
+              },
+              onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
+            ),
+          ),
+
         // Listings grid
         if (_listings.isEmpty)
           SliverToBoxAdapter(
@@ -423,6 +472,24 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   'Henüz ilan yok',
                   style: TextStyle(
                       color: AppColors.textTertiary(context), fontSize: 14),
+                ),
+              ),
+            ),
+          )
+        else if (_filteredListings.isEmpty)
+          const SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Icon(Icons.search_off_rounded, size: 48, color: Color(0xFFD1D5DB)),
+                    SizedBox(height: 10),
+                    Text(
+                      'Sonuç bulunamadı',
+                      style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -438,7 +505,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               ),
               delegate: SliverChildBuilderDelegate(
                 (ctx, i) {
-                  final listing = Map<String, dynamic>.from(_listings[i]);
+                  final listing = Map<String, dynamic>.from(_filteredListings[i]);
                   final imgs = listing['image_urls'] as List? ?? [];
                   final raw = imgs.isNotEmpty
                       ? imgs[0] as String
@@ -516,7 +583,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ),
                   );
                 },
-                childCount: _listings.length,
+                childCount: _filteredListings.length,
               ),
             ),
           ),
