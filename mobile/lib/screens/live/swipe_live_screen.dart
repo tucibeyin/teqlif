@@ -251,14 +251,29 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   // ── Parent prefetch yönetimi ─────────────────────────────────────────────
 
   /// ±2 ve ±3 konumundaki live yayınları önceden bağlar.
-  /// ±1 çocuk widget'ları kendi _prefetchConnect()'lerini kullanır.
+  /// ±1 ve mevcut sayfa çocuk widget'lar tarafından yönetilir — parent bunları
+  /// atlamalıdır. Aksi hâlde az yayın olduğunda (ör. 2 yayın, listing yok)
+  /// aynı LiveKit odasına eş zamanlı iki bağlantı açılarak ICE yarışı oluşur.
   void _schedulePrefetch(int page) {
+    // Çocuk widget'ların sorumluluğundaki stream ID'leri (mevcut ±1)
+    final childStreams = <int>{};
+    for (final d in [-1, 0, 1]) {
+      final p = page + d;
+      if (p < 0) continue;
+      try {
+        final item = _itemAt(p);
+        if (item is _LiveItem) childStreams.add(item.stream.id);
+      } catch (_) {}
+    }
+
     for (final delta in [2, 3, -2, -3]) {
       final target = page + delta;
       if (target < 0) continue;
       try {
         final item = _itemAt(target);
-        if (item is _LiveItem) _startParentPrefetch(item.stream);
+        if (item is _LiveItem && !childStreams.contains(item.stream.id)) {
+          _startParentPrefetch(item.stream);
+        }
       } catch (_) {}
     }
   }
