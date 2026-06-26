@@ -15,6 +15,8 @@ import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
+import 'live/swipe_live_screen.dart';
+import '../services/stream_service.dart';
 import '../l10n/app_localizations.dart';
 
 class MessagesScreen extends StatefulWidget {
@@ -459,17 +461,75 @@ class _NotificationsTabState extends State<_NotificationsTab> {
   }
 
   IconData _iconForType(String? type) {
+    return switch (type) {
+      'follow'              => Icons.person_add_rounded,
+      'new_bid'             => Icons.gavel_rounded,
+      'outbid'              => Icons.arrow_circle_up_rounded,
+      'auction_won'         => Icons.shopping_bag_rounded,
+      'message'             => Icons.chat_bubble_rounded,
+      'smart_auction_alert' => Icons.bolt_rounded,
+      'listing_deactivated' => Icons.pause_circle_rounded,
+      'listing_deleted'     => Icons.delete_outline_rounded,
+      _                     => Icons.notifications_rounded,
+    };
+  }
+
+  Color _colorForType(String? type) {
+    return switch (type) {
+      'follow'              => const Color(0xFF6366F1),
+      'new_bid'             => const Color(0xFFF97316),
+      'outbid'              => const Color(0xFFEF4444),
+      'auction_won'         => const Color(0xFF16A34A),
+      'message'             => const Color(0xFF0EA5E9),
+      'smart_auction_alert' => const Color(0xFF8B5CF6),
+      _                     => kPrimary,
+    };
+  }
+
+  void _navigate(Map<String, dynamic> notif) {
+    final type = notif['type'] as String? ?? '';
+    final relatedId = notif['related_id'] as int?;
+    final body = notif['body'] as String?;
+    final title = notif['title'] as String? ?? '';
+
+    String extractHandle(String t) =>
+        RegExp(r'@(\w+)').firstMatch(t)?.group(1) ?? '';
+
     switch (type) {
+      case 'follow':
+        final username = (body != null && body.isNotEmpty && !body.contains(' '))
+            ? body
+            : extractHandle(title);
+        if (username.isNotEmpty) {
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => PublicProfileScreen(username: username),
+          ));
+        }
+      case 'new_bid':
+      case 'outbid':
+      case 'smart_auction_alert':
+        if (relatedId != null && !StreamService.isHosting) {
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => SwipeLiveScreen.single(streamId: relatedId),
+          ));
+        }
+      case 'auction_won':
+        if (relatedId != null) {
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => ListingDeepLinkLoader(listingId: relatedId),
+          ));
+        }
       case 'message':
-        return Icons.chat_bubble_outline;
-      case 'bid':
-        return Icons.gavel_outlined;
-      case 'sale':
-        return Icons.shopping_bag_outlined;
-      case 'system':
-        return Icons.info_outline;
-      default:
-        return Icons.notifications_none_outlined;
+        if (relatedId != null) {
+          final username = extractHandle(title);
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => DirectChatScreen(
+              otherUserId: relatedId,
+              displayName: username.isNotEmpty ? username : 'Kullanıcı',
+              otherHandle: username,
+            ),
+          ));
+        }
     }
   }
 
@@ -515,20 +575,27 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           final createdAt = notif['created_at'] as String?;
           final isRead = (notif['is_read'] as bool?) ?? true;
 
+          final typeColor = _colorForType(type);
+          // follow: body = username (navigasyon için), görüntüleme için kullanılmaz
+          final displayBody = type == 'follow' ? null : body;
           return ListTile(
+            onTap: () {
+              setState(() => (_notifications[i] as Map<String, dynamic>)['is_read'] = true);
+              _navigate(_notifications[i] as Map<String, dynamic>);
+            },
             leading: Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
                 color: isRead
                     ? AppColors.surfaceVariant(context)
-                    : kPrimary.withOpacity(0.12),
+                    : typeColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 _iconForType(type),
                 size: 20,
-                color: isRead ? AppColors.iconSecondary(context) : kPrimary,
+                color: isRead ? AppColors.iconSecondary(context) : typeColor,
               ),
             ),
             title: Text(
@@ -541,9 +608,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (body != null && body.isNotEmpty)
+                if (displayBody != null && displayBody.isNotEmpty)
                   Text(
-                    body,
+                    displayBody,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
@@ -554,7 +621,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
                 ),
               ],
             ),
-            isThreeLine: body != null && body.isNotEmpty,
+            isThreeLine: displayBody != null && displayBody.isNotEmpty,
           );
         },
       ),
