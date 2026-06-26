@@ -38,6 +38,20 @@ sealed class _FeedItem {
   const _FeedItem();
 }
 
+// ── Parent prefetch cache entry ──────────────────────────────────────────────
+// Parent _SwipeLiveScreenState tarafından 2 sayfa ilerisine önceden
+// bağlanılır; child bunu bulunca sadece listener kurup audio'yu açar.
+class _PrefetchEntry {
+  final Room room;
+  final JoinTokenOut token;
+  final EventsListener<RoomEvent> listener;
+  _PrefetchEntry({required this.room, required this.token, required this.listener});
+  void dispose() {
+    listener.dispose();
+    room.disconnect();
+  }
+}
+
 class _LiveItem extends _FeedItem {
   final StreamOut stream;
   const _LiveItem(this.stream);
@@ -99,6 +113,10 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   // Her K canlı yayın arasına 1 ilan
   static const int _livePerListing = 2;
 
+  // ── Parent-level prefetch: child ±1 bağlanırken parent +2/+3'ü hazırlar ──
+  final Map<int, _PrefetchEntry> _prefetchCache = {};
+  final Set<int> _prefetchConnecting = {};
+
   @override
   void initState() {
     super.initState();
@@ -111,11 +129,17 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     // Bildirimden gelirken single mod: arka planda tam listeyi çek
     if (widget.streams.length == 1 && widget.streams[0].roomName.isEmpty) {
       _expandFromSingleMode(widget.streams[0].id);
+    } else {
+      _schedulePrefetch(_currentPage);
     }
   }
 
   @override
   void dispose() {
+    for (final e in _prefetchCache.values) {
+      e.dispose();
+    }
+    _prefetchCache.clear();
     _pageCtrl.dispose();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -158,10 +182,90 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   void _onPageChanged(int page) {
     setState(() => _currentPage = page);
+    _evictStalePrefetches(page);
+    _schedulePrefetch(page);
     // Her 9 sayfada bir (3 döngü) yeni ilanlar ve canlı yayınları yenile
     if (page > 0 && page % ((_livePerListing + 1) * 3) == 0) {
       _loadListingFeed();
       _refreshLiveStreams();
+    }
+  }
+
+  // ── Parent prefetch yönetimi ─────────────────────────────────────────────
+
+  /// page+2 ve page+3 konumundaki live yayınları önceden bağlar.
+  /// page+1 çocuk widget'ı kendi başlar; burada ona 1 adım daha önde gidilir.
+  void _schedulePrefetch(int page) {
+    for (final delta in [2, 3]) {
+      try {
+        final item = _itemAt(page + delta);
+        if (item is _LiveItem) _startParentPrefetch(item.stream);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _startParentPrefetch(StreamOut stream) async {
+    final id = stream.id;
+    if (_prefetchCache.containsKey(id) || _prefetchConnecting.contains(id)) return;
+    _prefetchConnecting.add(id);
+    try {
+      final token = await StreamService.joinStream(id);
+      if (!mounted) { _prefetchConnecting.remove(id); return; }
+      final room = Room();
+      final evListener = room.createListener();
+      // Prefetch modda sadece video track'leri subscribe et
+      evListener.on<TrackPublishedEvent>((e) {
+        if (e.publication.kind == TrackType.VIDEO && !e.publication.subscribed) {
+          e.publication.subscribe();
+        }
+      });
+      await room.connect(
+        token.livekitUrl,
+        token.token,
+        connectOptions: const ConnectOptions(autoSubscribe: false),
+      );
+      if (!mounted) {
+        evListener.dispose();
+        room.disconnect();
+        _prefetchConnecting.remove(id);
+        return;
+      }
+      // Mevcut katılımcıların video track'lerini hemen subscribe et
+      for (final p in room.remoteParticipants.values) {
+        for (final pub in p.videoTrackPublications) {
+          if (!pub.subscribed) pub.subscribe();
+        }
+      }
+      if (mounted) {
+        _prefetchCache[id] = _PrefetchEntry(room: room, token: token, listener: evListener);
+      } else {
+        evListener.dispose();
+        room.disconnect();
+      }
+    } catch (_) {
+      // Prefetch başarısız — child kendi _prefetchConnect()'ini kullanır
+    } finally {
+      _prefetchConnecting.remove(id);
+    }
+  }
+
+  /// Child, kendi initState/prefetchConnect'inde bunu çağırarak hazır odayı alır.
+  _PrefetchEntry? takePrefetchEntry(int streamId) {
+    return _prefetchCache.remove(streamId);
+  }
+
+  /// Artık görünmeyecek yayınlara ait hazır odaları temizle.
+  void _evictStalePrefetches(int currentPage) {
+    final keepIds = <int>{};
+    for (int delta = -1; delta <= 4; delta++) {
+      try {
+        final item = _itemAt(currentPage + delta);
+        if (item is _LiveItem) keepIds.add(item.stream.id);
+      } catch (_) {}
+    }
+    final staleIds = _prefetchCache.keys.where((id) => !keepIds.contains(id)).toList();
+    for (final id in staleIds) {
+      _prefetchCache.remove(id)?.dispose();
     }
   }
 
@@ -224,6 +328,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       if (expanded.length <= 1) return; // başka yayın yok, single mod devam
       setState(() => _liveItems = expanded);
       _loadListingFeed();
+      _schedulePrefetch(_currentPage);
     } catch (_) {}
   }
 
@@ -276,6 +381,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 isPrefetch: (i - _currentPage).abs() == 1,
                 isLast: false,
                 onStreamEnded: () => _onStreamEnded(stream.id),
+                takePrefetch: takePrefetchEntry,
               ),
             _ListingItem(:final listing, :final slotIndex, :final streamCategory) =>
               _ListingVideoPage(
@@ -300,6 +406,7 @@ class _SwipeLivePage extends StatefulWidget {
   final bool isPrefetch;
   final bool isLast;
   final VoidCallback? onStreamEnded;
+  final _PrefetchEntry? Function(int streamId)? takePrefetch;
 
   const _SwipeLivePage({
     super.key,
@@ -308,6 +415,7 @@ class _SwipeLivePage extends StatefulWidget {
     required this.isLast,
     this.isPrefetch = false,
     this.onStreamEnded,
+    this.takePrefetch,
   });
 
   @override
@@ -445,11 +553,109 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
   // ── Ön yükleme (prefetch) ─────────────────────────────────────────────────
 
+  /// Parent tarafından 2 sayfa ilerisinde önceden bağlanılmış bir oda varsa
+  /// onu devralır: listener kurulur, mevcut track'ler state'e yazılır.
+  /// Yoksa normal _prefetchConnect akışı devam eder.
+  Future<void> _setupFromPrefetchEntry(_PrefetchEntry entry, {bool activate = false}) async {
+    if (!mounted) { entry.dispose(); return; }
+    final myGen = ++_activationGen;
+    final room = entry.room;
+    final token = entry.token;
+
+    _resolvedTitle ??= token.title;
+    _resolvedHostUsername ??= token.hostUsername;
+
+    // Parent'ın minimal listener'ını değiştir, tam listener kur
+    entry.listener.dispose();
+    _listener = room.createListener();
+
+    _listener!.on<TrackPublishedEvent>((e) {
+      final shouldSub = e.publication.kind == TrackType.VIDEO || !_isPrefetchMode;
+      if (shouldSub && !e.publication.subscribed) e.publication.subscribe();
+    });
+    _listener!.on<TrackSubscribedEvent>((e) {
+      if (!mounted || e.track is! VideoTrack) return;
+      final vTrack = e.track as VideoTrack;
+      final isHost = e.participant.identity == token.hostLivekitIdentity;
+      if (isHost) {
+        setState(() { _remoteVideoTrack = vTrack; _hostParticipantSid = e.participant.sid; });
+      } else if (e.participant.sid != _hostParticipantSid) {
+        setState(() => _coHostVideoTrack = vTrack);
+      }
+    });
+    _listener!.on<TrackUnsubscribedEvent>((e) {
+      if (!mounted) return;
+      if (e.track == _remoteVideoTrack) setState(() => _remoteVideoTrack = null);
+      else if (e.track == _coHostVideoTrack) setState(() => _coHostVideoTrack = null);
+    });
+    _listener!.on<RoomDisconnectedEvent>((_) {
+      if (mounted) setState(() => _remoteVideoTrack = null);
+    });
+
+    if (!mounted || _activationGen != myGen) { room.disconnect(); return; }
+
+    // Mevcut katılımcılardan track'leri topla; aktiveyse audio da subscribe et
+    VideoTrack? hostVideo;
+    VideoTrack? coHostVideo;
+    String? hostSid;
+    for (final p in room.remoteParticipants.values) {
+      final isHost = p.identity == token.hostLivekitIdentity;
+      if (isHost) hostSid = p.sid;
+      for (final pub in p.videoTrackPublications) {
+        if (!pub.subscribed) pub.subscribe();
+        if (pub.track != null) {
+          if (isHost) hostVideo = pub.track as VideoTrack;
+          else coHostVideo = pub.track as VideoTrack;
+        }
+      }
+      if (activate) {
+        for (final pub in p.audioTrackPublications) {
+          if (!pub.subscribed) await pub.subscribe();
+        }
+      }
+    }
+
+    if (!mounted || _activationGen != myGen) { room.disconnect(); return; }
+
+    _isPrefetchMode = !activate;
+    if (_myUsername == null) {
+      final info = await StorageService.getUserInfo();
+      _myUsername = info?['username'] as String?;
+    }
+
+    setState(() {
+      _token = token;
+      _room = room;
+      _loading = false;
+      _streamEnded = false;
+      if (hostSid != null) _hostParticipantSid = hostSid;
+      if (hostVideo != null) _remoteVideoTrack = hostVideo;
+      if (coHostVideo != null) _coHostVideoTrack = coHostVideo;
+    });
+
+    if (activate) {
+      _leftStream = false;
+      if (mounted) AnalyticsService.logInteraction(
+        itemId: widget.stream.id,
+        itemType: 'stream',
+        interactionType: 'swipe_impression',
+      );
+    }
+  }
+
   /// Kullanıcı henüz bu sayfaya gelmeden arka planda LiveKit'e bağlanır.
   /// Ses kapalıdır; video track gelir ve renderer hazır olur.
   /// Sayfa aktif olduğunda _promoteToActive() ile ses de açılır → anında izleme.
   Future<void> _prefetchConnect() async {
     if (!mounted || _room != null) return;
+
+    // Parent 2 sayfa ilerisini önceden bağlamışsa kullan — çok daha hızlı
+    final cached = widget.takePrefetch?.call(widget.stream.id);
+    if (cached != null) {
+      await _setupFromPrefetchEntry(cached, activate: false);
+      return;
+    }
+
     final myGen = ++_activationGen;
 
     try {
@@ -572,6 +778,14 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
   Future<void> _activate() async {
     if (!mounted) return;
+
+    // Parent hızlı yoldan bağlamışsa doğrudan aktiflere geç
+    final cached = widget.takePrefetch?.call(widget.stream.id);
+    if (cached != null) {
+      await _setupFromPrefetchEntry(cached, activate: true);
+      return;
+    }
+
     final myGen = ++_activationGen;
     _leftStream = false;
     setState(() {
