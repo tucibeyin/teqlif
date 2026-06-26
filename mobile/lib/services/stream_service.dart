@@ -171,6 +171,24 @@ class StreamService {
     );
   }
 
+  static Future<void> pipEnter(int streamId) async {
+    try {
+      await http.post(
+        Uri.parse('$kBaseUrl/streams/$streamId/pip-enter'),
+        headers: await _headers(),
+      );
+    } catch (_) {}
+  }
+
+  static Future<void> pipExit(int streamId) async {
+    try {
+      await http.delete(
+        Uri.parse('$kBaseUrl/streams/$streamId/pip-exit'),
+        headers: await _headers(),
+      );
+    } catch (_) {}
+  }
+
   static Future<List<String>> getViewers(int streamId) async {
     final headers = await _headers();
     final resp = await http.get(Uri.parse('$kBaseUrl/streams/$streamId/viewers'), headers: headers);

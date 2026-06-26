@@ -1355,7 +1355,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
 
     _enteringPip = true;
     _leftStream = true;
-    StreamService.leaveStream(widget.stream.id).catchError((_) {});
+    StreamService.pipEnter(widget.stream.id);
 
     ref.read(pipProvider.notifier).enablePip(
       streamId: widget.stream.id,

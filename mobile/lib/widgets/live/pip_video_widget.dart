@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import '../../providers/pip_provider.dart';
 import '../../screens/live/swipe_live_screen.dart';
+import '../../services/stream_service.dart';
 
 class PipVideoWidget extends ConsumerStatefulWidget {
   const PipVideoWidget({super.key});
@@ -110,6 +111,8 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
   }
 
   void _closePip() {
+    final streamId = ref.read(pipProvider).currentStreamId;
+    if (streamId != null) StreamService.pipExit(streamId);
     ref.read(pipProvider.notifier).disablePip();
   }
 
@@ -117,7 +120,8 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
     final pip = ref.read(pipProvider);
     final streamId = pip.currentStreamId;
     if (streamId == null) return;
-    // Önce PiP'i kapat (Room'u da disconnect eder)
+    // PiP'ten tam ekrana geçince pip_viewer_set'ten çıkar (joinStream yeniden ekleyecek)
+    StreamService.pipExit(streamId);
     ref.read(pipProvider.notifier).disablePip();
     // Tam ekrana yeni bağlantıyla aç
     Navigator.of(context, rootNavigator: true).push(

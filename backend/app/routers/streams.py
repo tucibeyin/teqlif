@@ -83,13 +83,25 @@ async def audience_insights(
         raise ForbiddenException("Bu yayının istatistiklerine erişim yetkiniz yok")
 
     redis = await get_redis()
-    viewer_key = f"live:viewer_set:{stream.room_name}"
-    viewer_ids_raw = await redis.smembers(viewer_key)
+    # viewer_set kullanıcı adı ile, pip_viewer_set user_id ile saklar; her ikisini de çek
+    chat_members_raw = await redis.smembers(f"live:viewer_set:{stream.room_name}")
+    pip_members_raw = await redis.smembers(f"live:pip_viewer_set:{stream_id}")
 
-    viewer_ids = []
-    for v in (viewer_ids_raw or []):
+    # chat_viewer_set içindeki username'leri user_id'ye çevir
+    viewer_ids: set[int] = set()
+    if chat_members_raw:
+        usernames = [v.decode() if isinstance(v, bytes) else v for v in chat_members_raw]
+        rows_uname = await db.execute(
+            sql_text("SELECT id FROM users WHERE username = ANY(:names)"),
+            {"names": usernames},
+        )
+        for r in rows_uname.fetchall():
+            viewer_ids.add(r.id)
+
+    # pip_viewer_set'teki integer user_id'leri ekle
+    for v in (pip_members_raw or []):
         try:
-            viewer_ids.append(int(v))
+            viewer_ids.add(int(v.decode() if isinstance(v, bytes) else v))
         except (ValueError, TypeError):
             pass
 
@@ -110,7 +122,7 @@ async def audience_insights(
 
     rows = await db.execute(
         sql_text("SELECT id, max_budget, is_premium FROM users WHERE id = ANY(:ids) AND is_active = TRUE"),
-        {"ids": viewer_ids},
+        {"ids": list(viewer_ids)},
     )
     user_data = rows.fetchall()
     budgets = [float(r.max_budget) for r in user_data if r.max_budget is not None]
@@ -120,8 +132,9 @@ async def audience_insights(
     low_budget = sum(1 for b in budgets if b < 250)
     ready_buyers = sum(1 for r in user_data if r.is_premium)
 
+    pip_count = len(pip_members_raw) if pip_members_raw else 0
     return {
-        "viewer_count": stream.viewer_count,
+        "viewer_count": stream.viewer_count + pip_count,
         "avg_budget": avg_budget,
         "high_value_count": high_value,
         "medium_value_count": medium_value,
@@ -215,6 +228,30 @@ async def leave_stream(
     get_logger(__name__).info(
         "[STREAMS] Yayından ayrılındı | stream_id=%s user_id=%s", stream_id, current_user.id
     )
+
+
+@router.post("/{stream_id}/pip-enter", status_code=status.HTTP_204_NO_CONTENT)
+async def pip_enter(
+    stream_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    """PiP moduna girildiğinde izleyiciyi pip_viewer_set'e ekle (2 saat TTL)."""
+    from app.database_redis import get_redis
+    redis = await get_redis()
+    key = f"live:pip_viewer_set:{stream_id}"
+    await redis.sadd(key, str(current_user.id))
+    await redis.expire(key, 7200)
+
+
+@router.delete("/{stream_id}/pip-exit", status_code=status.HTTP_204_NO_CONTENT)
+async def pip_exit(
+    stream_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    """PiP kapatıldığında izleyiciyi pip_viewer_set'ten çıkar."""
+    from app.database_redis import get_redis
+    redis = await get_redis()
+    await redis.srem(f"live:pip_viewer_set:{stream_id}", str(current_user.id))
 
 
 @router.patch("/{stream_id}/thumbnail")
