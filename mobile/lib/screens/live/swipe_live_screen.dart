@@ -292,6 +292,10 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   }
 
   /// API'den güncel yayın listesini çekip _liveItems'ı günceller.
+  /// Sadece yeni yayın ekler; silme işlemi yalnızca güvenilir sinyallerden
+  /// (403 hatası veya WS stream_ended eventi) tetiklenir.
+  /// Polling tabanlı silme false-positive üretiyordu: liste geçici eksik
+  /// döndüğünde aktif yayınlar kaybolup geri gelmiyordu.
   Future<void> _refreshLiveStreams() async {
     if (_liveItems.length <= 1) return;  // single mod → yenileme yok
     try {
@@ -299,14 +303,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       if (!mounted) return;
       setState(() {
         final existingIds = _liveItems.map((s) => s.id).toSet();
-        // Yeni yayınları ekle
         for (final s in fresh) {
           if (!existingIds.contains(s.id)) _liveItems.add(s);
-        }
-        // Artık canlı olmayan yayınları ended olarak işaretle
-        final freshIds = fresh.map((s) => s.id).toSet();
-        for (final s in _liveItems) {
-          if (!freshIds.contains(s.id)) _endedStreamIds.add(s.id);
         }
       });
     } catch (_) {}

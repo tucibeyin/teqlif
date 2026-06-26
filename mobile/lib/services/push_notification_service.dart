@@ -51,8 +51,11 @@ class PushNotificationService {
       sound: true,
     );
 
-    FirebaseMessaging.onMessage.listen((msg) {
-      notificationStream.add(msg.data);
+    FirebaseMessaging.onMessage.listen((_) {
+      // Uygulama ön plandayken gelen bildirim — navigasyon tetiklemez.
+      // Badge yenileme MainScreen._fcmSub tarafından zaten yapılıyor.
+      // Boş emit: type yok → _handleNotifNavigation çalışmaz.
+      notificationStream.add({});
     });
 
     // Arka planda (background) tıklama — MainScreen zaten dinliyor
