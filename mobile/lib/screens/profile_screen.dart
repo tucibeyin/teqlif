@@ -200,6 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        centerTitle: true,
         surfaceTintColor: Colors.transparent,
         leading: PopupMenuButton<String>(
           offset: const Offset(8, 48),
