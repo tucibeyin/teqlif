@@ -463,6 +463,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
   IconData _iconForType(String? type) {
     return switch (type) {
       'follow'              => Icons.person_add_rounded,
+      'stream_started'      => Icons.live_tv_rounded,
       'new_bid'             => Icons.gavel_rounded,
       'outbid'              => Icons.arrow_circle_up_rounded,
       'auction_won'         => Icons.shopping_bag_rounded,
@@ -477,6 +478,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
   Color _colorForType(String? type) {
     return switch (type) {
       'follow'              => const Color(0xFF6366F1),
+      'stream_started'      => const Color(0xFFEF4444),
       'new_bid'             => const Color(0xFFF97316),
       'outbid'              => const Color(0xFFEF4444),
       'auction_won'         => const Color(0xFF16A34A),
@@ -505,6 +507,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
             builder: (_) => PublicProfileScreen(username: username),
           ));
         }
+      case 'stream_started':
       case 'new_bid':
       case 'outbid':
       case 'smart_auction_alert':
