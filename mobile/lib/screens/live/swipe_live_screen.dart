@@ -844,7 +844,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     }
   }
 
-  Future<void> _activate() async {
+  Future<void> _activate({int _attempt = 0}) async {
     if (!mounted) return;
 
     // Parent hızlı yoldan bağlamışsa doğrudan aktiflere geç
@@ -968,7 +968,18 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
       }
     } catch (e, st) {
       LoggerService.instance.captureException(e, stackTrace: st, tag: 'SwipeLivePage._activate');
-      if (mounted) setState(() => _loading = false);
+      // Network/ICE geçici hatası: sayfa hâlâ aktifse otomatik yeniden dene (max 2 kez)
+      // Spinner bekleme süresince görünür kalır; başarısız olursa loading temizlenir.
+      if (mounted && widget.isActive && _attempt < 2) {
+        await Future.delayed(const Duration(milliseconds: 2000));
+        if (mounted && widget.isActive) {
+          _activate(_attempt: _attempt + 1);
+        } else {
+          if (mounted) setState(() => _loading = false);
+        }
+      } else {
+        if (mounted) setState(() => _loading = false);
+      }
     }
   }
 
