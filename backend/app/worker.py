@@ -610,7 +610,9 @@ async def update_user_preference_embedding(ctx: dict, user_id: int) -> None:
                 if emb is None:
                     continue
                 w = min(float(inter.duration_seconds or 1.0), 60.0)
-                if inter.interaction_type == "offer":
+                if inter.interaction_type == "auction_won":
+                    w *= 20.0   # gerçek satın alma — en güçlü sinyal
+                elif inter.interaction_type == "offer":
                     w *= 5.0
                 elif inter.interaction_type == "click":
                     w *= 2.0

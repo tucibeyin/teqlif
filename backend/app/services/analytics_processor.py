@@ -20,30 +20,47 @@ from app.database_clickhouse import get_clickhouse_client
 
 logger = logging.getLogger(__name__)
 
-# Bu event tipleri "kullanıcının bütçesiyle ilgilendiği" fiyatları temsil eder
-_RELEVANT_EVENTS = ("view", "bid_hesitation", "dwell")
-
-
 async def calculate_user_budgets() -> int:
     """
-    ClickHouse'dan son 7 günün p90 price_point değerlerini çeker,
+    ClickHouse'dan p90 price_point değerlerini çeker,
     PostgreSQL users tablosundaki max_budget kolonunu günceller.
+
+    auction_won olayları 3× ağırlıklı sayılır: gerçek ödeme = en güvenilir bütçe sinyali.
+    Diğer olaylar (view, bid_hesitation, dwell) son 7 gün; auction_won son 90 gün.
 
     Döndürür: güncellenen kullanıcı sayısı
     """
     ch = await get_clickhouse_client()
 
-    # Son 7 gün içinde anlamlı price_point içeren event'leri grupla
+    # auction_won: 90 günlük pencere, 3× ağırlık (UNION ALL ile çoğaltılır)
+    # diğerleri: 7 günlük pencere, 1× ağırlık
     query = """
         SELECT
             user_id,
             quantiles(0.90)(price_point)[1] AS p90_budget
-        FROM user_events
-        WHERE
-            timestamp >= now() - INTERVAL 7 DAY
-            AND event_type IN ('view', 'bid_hesitation', 'dwell')
-            AND price_point > 0
-            AND user_id IS NOT NULL
+        FROM (
+            SELECT user_id, price_point
+            FROM user_events
+            WHERE timestamp >= now() - INTERVAL 7 DAY
+              AND event_type IN ('view', 'bid_hesitation', 'dwell')
+              AND price_point > 0
+              AND user_id IS NOT NULL
+            UNION ALL
+            SELECT user_id, price_point FROM user_events
+            WHERE timestamp >= now() - INTERVAL 90 DAY
+              AND event_type = 'auction_won'
+              AND price_point > 0 AND user_id IS NOT NULL
+            UNION ALL
+            SELECT user_id, price_point FROM user_events
+            WHERE timestamp >= now() - INTERVAL 90 DAY
+              AND event_type = 'auction_won'
+              AND price_point > 0 AND user_id IS NOT NULL
+            UNION ALL
+            SELECT user_id, price_point FROM user_events
+            WHERE timestamp >= now() - INTERVAL 90 DAY
+              AND event_type = 'auction_won'
+              AND price_point > 0 AND user_id IS NOT NULL
+        )
         GROUP BY user_id
         HAVING count() >= 3
         ORDER BY user_id

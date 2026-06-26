@@ -1015,6 +1015,15 @@ class AuctionService:
                     receiver_id=winner_user_id,
                     content=dm_content,
                 )
+                # Kazananın preference_embedding'ini güçlendir (×20 ağırlık)
+                if listing_id:
+                    from app.models.analytics import UserInteraction
+                    self.db.add(UserInteraction(
+                        user_id=winner_user_id,
+                        item_id=listing_id,
+                        item_type="listing",
+                        interaction_type="auction_won",
+                    ))
                 self.db.add(dm)
             except ValueError:
                 logger.warning(
@@ -1037,6 +1046,20 @@ class AuctionService:
         # Commit başarılı → şimdi Redis'i güncelle ve temizle
         await redis.hset(key, "status", "ended")
         await redis.delete(key)
+
+        # Kazananın preference_embedding'ini kuyruğa al
+        if winner_user_id:
+            try:
+                from app.core.arq_pool import get_pool
+                pool = get_pool()
+                if pool:
+                    await pool.enqueue_job(
+                        "update_user_preference_embedding",
+                        winner_user_id,
+                        _job_id=f"pref_emb:{winner_user_id}",
+                    )
+            except Exception as exc:
+                logger.warning("[ACCEPT] preference_embedding kuyruğa alınamadı | winner_id=%s | %s", winner_user_id, exc)
 
         from app.database_clickhouse import track_user_event
         if winner_user_id and listing_id:

@@ -29,6 +29,8 @@ _INACTIVE_DAYS = 5         # Bu kadar gün sessizlik → risk sinyali
 _LOOKBACK_DAYS = 30        # Daha önce aktif miydi? kontrolü için pencere
 _DWELL_WINDOW_DAYS = 3     # Dwell drop karşılaştırma penceresi
 _BATCH_SIZE = 20           # Aynı anda kaç kullanıcıya push
+_SELLER_GAP_DAYS = 14      # Bu kadar gün ilan açmamış satıcı → risk sinyali
+_SELLER_LOOKBACK_DAYS = 60 # Satıcı geçmişi kontrol penceresi
 
 
 # ── ClickHouse sorguları ────────────────────────────────────────────────────────
@@ -82,36 +84,76 @@ WHERE p.dwell > 0
 """.format(window=_DWELL_WINDOW_DAYS, window2=_DWELL_WINDOW_DAYS * 2)
 
 
-async def _fetch_risky_user_ids() -> set[int]:
-    """ClickHouse'dan riskli kullanıcı ID'lerini çek. Hata durumunda boş küme döner."""
+# Kriter 3: Daha önce ilan açmış ama son N gündür açmayan satıcılar
+_Q_SELLER_INACTIVE = """
+WITH
+    active_sellers AS (
+        SELECT DISTINCT user_id
+        FROM user_events
+        WHERE event_type = 'listing_created'
+          AND timestamp >= now() - INTERVAL {gap} DAY
+          AND user_id IS NOT NULL
+    ),
+    was_active AS (
+        SELECT DISTINCT user_id
+        FROM user_events
+        WHERE event_type = 'listing_created'
+          AND timestamp >= now() - INTERVAL {lookback} DAY
+          AND timestamp  < now() - INTERVAL {gap} DAY
+          AND user_id IS NOT NULL
+    )
+SELECT toUInt32(w.user_id) AS uid
+FROM was_active w
+WHERE w.user_id NOT IN (SELECT user_id FROM active_sellers)
+""".format(gap=_SELLER_GAP_DAYS, lookback=_SELLER_LOOKBACK_DAYS)
+
+
+async def _fetch_risky_user_ids() -> tuple[set[int], set[int]]:
+    """
+    ClickHouse'dan riskli kullanıcı ID'lerini çek.
+    Döner: (alıcı_churn_ids, satıcı_churn_ids)
+    Hata durumunda boş kümeler döner.
+    """
     try:
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
 
-        result1, result2 = await asyncio.gather(
+        result1, result2, result3 = await asyncio.gather(
             ch.query(_Q_INACTIVE),
             ch.query(_Q_DWELL_DROP),
+            ch.query(_Q_SELLER_INACTIVE),
             return_exceptions=True,
         )
 
-        risky: set[int] = set()
+        buyer_risky: set[int] = set()
+        seller_risky: set[int] = set()
 
         if isinstance(result1, Exception):
             logger.warning("[ChurnAirdrop] Kriter-1 sorgusu başarısız: %s", result1)
         else:
-            risky.update(int(row[0]) for row in result1.result_rows if row[0])
+            buyer_risky.update(int(row[0]) for row in result1.result_rows if row[0])
 
         if isinstance(result2, Exception):
             logger.warning("[ChurnAirdrop] Kriter-2 sorgusu başarısız: %s", result2)
         else:
-            risky.update(int(row[0]) for row in result2.result_rows if row[0])
+            buyer_risky.update(int(row[0]) for row in result2.result_rows if row[0])
 
-        logger.info("[ChurnAirdrop] ClickHouse riskli kullanıcı sayısı: %d", len(risky))
-        return risky
+        if isinstance(result3, Exception):
+            logger.warning("[ChurnAirdrop] Kriter-3 (satıcı) sorgusu başarısız: %s", result3)
+        else:
+            seller_risky.update(int(row[0]) for row in result3.result_rows if row[0])
+            # Satıcı churn aynı zamanda alıcı churn olabilir — çakışan ID'leri satıcı olarak tut
+            buyer_risky -= seller_risky
+
+        logger.info(
+            "[ChurnAirdrop] ClickHouse riskli kullanıcı: alıcı=%d satıcı=%d",
+            len(buyer_risky), len(seller_risky),
+        )
+        return buyer_risky, seller_risky
 
     except Exception as exc:
         logger.error("[ChurnAirdrop] ClickHouse erişilemedi: %s", exc, exc_info=True)
-        return set()
+        return set(), set()
 
 
 async def _filter_already_received(user_ids: set[int]) -> set[int]:
@@ -199,9 +241,22 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
     return recipients
 
 
-async def _send_airdrop_notifications(recipients: list[dict]) -> None:
+async def _send_airdrop_notifications(recipients: list[dict], is_seller: bool = False) -> None:
     """Her alıcıya push bildirimi gönder (batch'ler hâlinde)."""
     from app.routers.notifications import push_notification
+
+    if is_seller:
+        notif_title = "İlanlarınız sizi bekliyor! 🛍️"
+        notif_body = (
+            f"Hesabına {_AIRDROP_AMOUNT} TUCi hediye yükledik. "
+            "Yeni ilan aç, alıcılarla buluş!"
+        )
+    else:
+        notif_title = "Seni özledik! 🎁"
+        notif_body = (
+            f"Hesabına {_AIRDROP_AMOUNT} TUCi hediye yükledik, "
+            "hemen canlı yayınlara göz at ve harca!"
+        )
 
     async def _notify(r: dict) -> None:
         try:
@@ -209,9 +264,8 @@ async def _send_airdrop_notifications(recipients: list[dict]) -> None:
                 user_id=r["user_id"],
                 notif={
                     "type": "churn_airdrop",
-                    "title": "Seni özledik! 🎁",
-                    "body": f"Hesabına {_AIRDROP_AMOUNT} TUCi hediye yükledik, "
-                            "hemen canlı yayınlara göz at ve harca!",
+                    "title": notif_title,
+                    "body": notif_body,
                 },
                 pref_key=None,  # Cüzdan kredisi — tercih filtresi atlanır
             )
@@ -225,7 +279,7 @@ async def _send_airdrop_notifications(recipients: list[dict]) -> None:
         batch = recipients[i : i + _BATCH_SIZE]
         await asyncio.gather(*[_notify(r) for r in batch])
 
-    logger.info("[ChurnAirdrop] %d push bildirimi gönderildi.", len(recipients))
+    logger.info("[ChurnAirdrop] %d push bildirimi gönderildi (satıcı=%s).", len(recipients), is_seller)
 
 
 # ── Ana görev ──────────────────────────────────────────────────────────────────
@@ -233,27 +287,35 @@ async def _send_airdrop_notifications(recipients: list[dict]) -> None:
 async def process_churn_and_airdrop(ctx: dict) -> None:
     """
     ARQ cron görevi — her gün 03:30'da çalışır.
-    ClickHouse analizinden riskli kullanıcıları tespit eder,
-    son 30 günde airdrop almamışlara 10 TUCi yükler ve bildirim gönderir.
+    ClickHouse analizinden riskli alıcıları ve inaktif satıcıları tespit eder,
+    son 30 günde airdrop almamışlara 10 TUCi yükler ve role özel bildirim gönderir.
     """
     logger.info("[ChurnAirdrop] Görev başlatıldı.")
     try:
-        risky_ids = await _fetch_risky_user_ids()
-        if not risky_ids:
+        buyer_ids, seller_ids = await _fetch_risky_user_ids()
+        all_risky = buyer_ids | seller_ids
+
+        if not all_risky:
             logger.info("[ChurnAirdrop] Riskli kullanıcı bulunamadı, görev tamamlandı.")
             return
 
-        eligible_ids = await _filter_already_received(risky_ids)
+        eligible_ids = await _filter_already_received(all_risky)
         if not eligible_ids:
             logger.info("[ChurnAirdrop] Tüm riskli kullanıcılar zaten airdrop aldı, atlanıyor.")
             return
 
-        recipients = await _apply_airdrops(eligible_ids)
-        await _send_airdrop_notifications(recipients)
+        eligible_buyers = eligible_ids & buyer_ids
+        eligible_sellers = eligible_ids & seller_ids
+
+        buyer_recipients = await _apply_airdrops(eligible_buyers)
+        seller_recipients = await _apply_airdrops(eligible_sellers)
+
+        await _send_airdrop_notifications(buyer_recipients, is_seller=False)
+        await _send_airdrop_notifications(seller_recipients, is_seller=True)
 
         logger.info(
-            "[ChurnAirdrop] Görev tamamlandı | riskli=%d | airdrop_gönderilen=%d",
-            len(risky_ids), len(recipients),
+            "[ChurnAirdrop] Görev tamamlandı | alıcı_airdrop=%d | satıcı_airdrop=%d",
+            len(buyer_recipients), len(seller_recipients),
         )
     except Exception as exc:
         logger.error("[ChurnAirdrop] Görev başarısız: %s", exc, exc_info=True)

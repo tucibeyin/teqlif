@@ -202,6 +202,29 @@ async def _score_and_rank(
                 LIMIT 100
             )
         ),
+        -- Host kalitesi: son 30 gündeki ortalama yayın süresi (2 saat = tam puan)
+        host_quality AS (
+            SELECT host_id,
+                   LEAST(
+                       AVG(EXTRACT(EPOCH FROM (ended_at - started_at))),
+                       7200
+                   ) / 7200.0 AS quality
+            FROM live_streams
+            WHERE ended_at IS NOT NULL
+              AND started_at IS NOT NULL
+              AND started_at > NOW() - INTERVAL '30 days'
+            GROUP BY host_id
+        ),
+        -- Satıcı conversion oranı: son 30 gündeki kabul edilen / toplam açık artırma
+        seller_conv AS (
+            SELECT li.user_id AS seller_id,
+                   COUNT(CASE WHEN a.winner_id IS NOT NULL THEN 1 END)::float /
+                   NULLIF(COUNT(*), 0) AS conv_rate
+            FROM auctions a
+            INNER JOIN listings li ON li.id = a.listing_id
+            WHERE a.ended_at > NOW() - INTERVAL '30 days'
+            GROUP BY li.user_id
+        ),
         scored AS (
             SELECT
                 l.id,
@@ -213,6 +236,8 @@ async def _score_and_rank(
                     + ({exploration_expr}) * 0.05
                     + (ABS(HASHTEXT(l.id::text || :seed)::float / 2147483647.0)) * 0.02
                     - COALESCE(imp.seen, 0.0) * 0.30
+                    + COALESCE(hq.quality, 0.0) * 0.05
+                    + COALESCE(sc.conv_rate, 0.0) * 0.08
                 ) AS feed_score
             FROM candidates c
             INNER JOIN listings l ON l.id = c.id
@@ -231,6 +256,8 @@ async def _score_and_rank(
                 FROM listing_impressions
                 WHERE user_id = :uid
             ) imp ON imp.listing_id = l.id
+            LEFT JOIN host_quality hq ON hq.host_id = l.user_id
+            LEFT JOIN seller_conv sc ON sc.seller_id = l.user_id
         )
         SELECT id
         FROM scored
