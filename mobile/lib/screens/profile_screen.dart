@@ -700,7 +700,7 @@ class ListingFilter extends StatelessWidget {
   final VoidCallback onSearchCleared;
   final ValueChanged<String?> onCategorySelected;
 
-  const _ListingFilter({
+  const ListingFilter({
     required this.searchCtrl,
     required this.searchQuery,
     required this.selectedCategory,
