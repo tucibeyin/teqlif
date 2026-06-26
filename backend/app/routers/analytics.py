@@ -288,26 +288,28 @@ async def get_seller_report(
             swipe_impressions = int(feed_row[0] or 0)
             swipe_reach = int(feed_row[1] or 0)
 
-            # unique_viewers = user_events + feed_analytics kullanıcılarının birleşimi
-            if swipe_reach > 0:
-                union_result = await ch.query(f"""
-                    SELECT countDistinct(uid) FROM (
-                        SELECT toString(user_id) AS uid FROM user_events
-                        WHERE item_id IN ({ids_str}) AND item_type = 'listing'
-                          AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
-                          AND user_id IS NOT NULL
-                        UNION ALL
-                        SELECT user_id AS uid FROM feed_analytics
-                        WHERE toUInt64OrZero(listing_id) IN ({ids_str})
-                          AND event_type = 'impression'
-                          AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
-                          AND user_id IS NOT NULL AND user_id != ''
-                    )
-                """)
-                union_row = union_result.result_rows[0] if union_result.result_rows else (0,)
-                unique_viewers = int(union_row[0] or 0)
-            else:
-                unique_viewers = ue_unique
+            # unique_viewers = listing events + feed impressions + stream swipe viewers
+            union_result = await ch.query(f"""
+                SELECT countDistinct(uid) FROM (
+                    SELECT toString(user_id) AS uid FROM user_events
+                    WHERE item_id IN ({ids_str}) AND item_type = 'listing'
+                      AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+                      AND user_id IS NOT NULL
+                    UNION ALL
+                    SELECT user_id AS uid FROM feed_analytics
+                    WHERE toUInt64OrZero(listing_id) IN ({ids_str})
+                      AND event_type = 'impression'
+                      AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+                      AND user_id IS NOT NULL AND user_id != ''
+                    UNION ALL
+                    SELECT toString(user_id) AS uid FROM user_events
+                    WHERE item_type = 'stream' AND item_id = {stream_id}
+                      AND timestamp BETWEEN '{ts_start}' AND '{ts_end}'
+                      AND user_id IS NOT NULL
+                )
+            """)
+            union_row = union_result.result_rows[0] if union_result.result_rows else (0,)
+            unique_viewers = int(union_row[0] or 0)
         else:
             # Açık artırma ilanı yoksa stream-level swipe impression'ları say
             result = await ch.query(f"""

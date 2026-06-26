@@ -389,7 +389,22 @@ class StreamService:
     async def _cleanup_redis(self, stream: "LiveStream", stream_id: int, mod_key) -> None:
         try:
             redis = await get_redis()
+            # Yayın süresince ulaşılan en yüksek izleyici sayısını DB'ye kaydet
+            peak_raw = await redis.get(f"live:peak_viewers:{stream.room_name}")
+            if peak_raw:
+                peak = int(peak_raw)
+                if peak > (stream.viewer_count or 0):
+                    stream.viewer_count = peak
+                    try:
+                        await self.db.commit()
+                    except Exception:
+                        await self.db.rollback()
+                        logger.error(
+                            "[STREAMS] Peak viewer_count DB kaydedilemedi | stream_id=%s",
+                            stream_id, exc_info=True,
+                        )
             await redis.delete(f"live:viewers:{stream.room_name}")
+            await redis.delete(f"live:peak_viewers:{stream.room_name}")
             await redis.delete(f"live:viewer_set:{stream_id}")
             await redis.delete(mod_key(stream_id))
             await redis.delete(f"pin:{stream_id}")

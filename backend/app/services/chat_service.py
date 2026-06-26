@@ -56,8 +56,13 @@ async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> Non
     try:
         redis = await get_redis()
         key = f"live:viewers:{room_name}"
+        peak_key = f"live:peak_viewers:{room_name}"
         if delta > 0:
             count = await redis.incr(key)
+            peak_raw = await redis.get(peak_key)
+            current_peak = int(peak_raw) if peak_raw else 0
+            if count > current_peak:
+                await redis.set(peak_key, count)
         else:
             count = await redis.decr(key)
             if count < 0:
