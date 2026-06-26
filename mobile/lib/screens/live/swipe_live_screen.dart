@@ -266,7 +266,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       } catch (_) {}
     }
 
-    for (final delta in [2, 3, -2, -3]) {
+    for (final delta in [2, 3, 4, -2, -3, -4]) {
       final target = page + delta;
       if (target < 0) continue;
       try {
@@ -331,7 +331,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   /// Artık görünmeyecek yayınlara ait hazır odaları temizle.
   void _evictStalePrefetches(int currentPage) {
     final keepIds = <int>{};
-    for (int delta = -3; delta <= 4; delta++) {
+    for (int delta = -4; delta <= 5; delta++) {
       try {
         final item = _itemAt(currentPage + delta);
         if (item is _LiveItem) keepIds.add(item.stream.id);
@@ -971,7 +971,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
       // Network/ICE geçici hatası: sayfa hâlâ aktifse otomatik yeniden dene (max 2 kez)
       // Spinner bekleme süresince görünür kalır; başarısız olursa loading temizlenir.
       if (mounted && widget.isActive && _attempt < 2) {
-        await Future.delayed(const Duration(milliseconds: 2000));
+        await Future.delayed(const Duration(milliseconds: 500));
         if (mounted && widget.isActive) {
           _activate(_attempt: _attempt + 1);
         } else {
