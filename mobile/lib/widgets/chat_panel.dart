@@ -241,6 +241,8 @@ class ChatPanelState extends State<ChatPanel> {
   final _scrollController = ScrollController();
   bool _autoScroll = true;
   bool _selfMuted = false;
+  // Rate-limit gelince metni geri yüklemek için son gönderilen içerik
+  String? _lastSentText;
 
   _ChatWsManager? _ws;
   bool _streamEnded = false;
@@ -468,6 +470,30 @@ class ChatPanelState extends State<ChatPanel> {
             } else if (json['type'] == 'hype_alert') {
               final message = json['message'] as String? ?? '';
               widget.onHypeAlert?.call(message);
+            } else if (json['type'] == 'error') {
+              final code = json['code'] as String? ?? '';
+              if (code == 'rate_limited' && mounted) {
+                // Metni geri yükle — kullanıcı yeniden gönderebilsin
+                if (_lastSentText != null && _lastSentText!.isNotEmpty) {
+                  _inputCtrl.text = _lastSentText!;
+                  _inputCtrl.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _inputCtrl.text.length),
+                  );
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text(
+                      'Biraz yavaşla 🐢',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    backgroundColor: Colors.red.shade700,
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                );
+              }
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -590,6 +616,7 @@ class ChatPanelState extends State<ChatPanel> {
   void _sendMessage() {
     final content = _inputCtrl.text.trim();
     if (content.isEmpty) return;
+    _lastSentText = content;
     _ws?.send({'type': 'message', 'content': content});
     _inputCtrl.clear();
   }

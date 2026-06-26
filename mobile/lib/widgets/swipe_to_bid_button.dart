@@ -8,6 +8,9 @@ class SwipeToBidButton extends StatefulWidget {
   final String text;
   final VoidCallback onSwipeComplete;
   final bool isLoading;
+  /// true → buton 3s kırmızıya döner, "Geçersiz İşlem" mesajı gösterilir.
+  /// Genellikle shill-bidding hatasında parent tarafından geçici olarak set edilir.
+  final bool isInvalid;
   final int? itemId;
   final double? pricePoint;
 
@@ -16,6 +19,7 @@ class SwipeToBidButton extends StatefulWidget {
     required this.text,
     required this.onSwipeComplete,
     this.isLoading = false,
+    this.isInvalid = false,
     this.itemId,
     this.pricePoint,
   });
@@ -187,14 +191,19 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
                           top: 0,
                           bottom: 0,
                           child: AnimatedContainer(
-                            duration: Duration.zero,
+                            duration: const Duration(milliseconds: 200),
                             width: fillWidth.clamp(0.0, constraints.maxWidth),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [
-                                  kPrimary.withValues(alpha: 0.40),
-                                  kPrimary.withValues(alpha: 0.15 + _dragProgress * 0.20),
-                                ],
+                                colors: widget.isInvalid
+                                    ? [
+                                        Colors.red.withValues(alpha: 0.50),
+                                        Colors.red.withValues(alpha: 0.30),
+                                      ]
+                                    : [
+                                        kPrimary.withValues(alpha: 0.40),
+                                        kPrimary.withValues(alpha: 0.15 + _dragProgress * 0.20),
+                                      ],
                               ),
                             ),
                           ),
@@ -216,7 +225,7 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
                                     ),
                                   )
                                 : _ShimmerText(
-                                    text: widget.text,
+                                    text: widget.isInvalid ? 'Geçersiz İşlem' : widget.text,
                                     shimmerAnim: _shimmerAnim,
                                   ),
                           ),
@@ -240,6 +249,7 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
                     size: _thumbSize - _trackPadding * 2,
                     progress: _dragProgress,
                     isLoading: widget.isLoading,
+                    color: widget.isInvalid ? Colors.red : kPrimary,
                   ),
                 ),
               ),
@@ -310,11 +320,13 @@ class _Thumb extends StatelessWidget {
   final double size;
   final double progress;
   final bool isLoading;
+  final Color color;
 
   const _Thumb({
     required this.size,
     required this.progress,
     required this.isLoading,
+    this.color = kPrimary,
   });
 
   @override
@@ -326,15 +338,15 @@ class _Thumb extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: [
-            Color.lerp(kPrimary, Colors.white, 0.18)!,
-            kPrimary,
+            Color.lerp(color, Colors.white, 0.18)!,
+            color,
           ],
           center: const Alignment(-0.3, -0.4),
           radius: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: kPrimary.withValues(alpha: 0.45 + progress * 0.35),
+            color: color.withValues(alpha: 0.45 + progress * 0.35),
             blurRadius: 10 + progress * 10,
             spreadRadius: 0,
             offset: const Offset(0, 2),

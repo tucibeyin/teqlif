@@ -18,6 +18,7 @@ import 'shimmer_loading.dart';
 import 'smart_bid_picker.dart';
 import 'swipe_to_bid_button.dart';
 import '../utils/bid_calculator.dart';
+import '../screens/profile_screen.dart';
 
 class AuctionPanel extends ConsumerStatefulWidget {
   final int streamId;
@@ -1090,6 +1091,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   bool _msgError = false;
   bool _loading = false;
   int _selectedBid = 0;
+  // Shill bidding tespit edildiğinde 3s kırmızı buton gösterimi
+  bool _fraudDetected = false;
 
   @override
   void initState() {
@@ -1126,20 +1129,159 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   Future<void> _placeBid(double amount) async {
     if (_loading) return;
     setState(() => _loading = true);
+    // context'i async öncesi sakla (use_build_context_synchronously için)
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await AuctionService.placeBid(widget.streamId, amount);
       _customBidCtrl.clear();
       _setMsg('₺${_fmt(amount)} teklifiniz alındı!');
     } on AppException catch (e) {
-      _setMsg(e.message, error: true);
+      _handleBidError(e.message, messenger: messenger);
     } catch (e, st) {
       LoggerService.instance.captureException(e, stackTrace: st, tag: '_BidSheetContent._placeBid');
       final s = e.toString();
-      _setMsg(s.startsWith('Exception: ') ? s.substring('Exception: '.length) : s,
-          error: true);
+      final msg = s.startsWith('Exception: ') ? s.substring('Exception: '.length) : s;
+      _handleBidError(msg, messenger: messenger);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _handleBidError(String message, {ScaffoldMessengerState? messenger}) {
+    if (!mounted) return;
+    final sm = messenger ?? ScaffoldMessenger.of(context);
+
+    // Shill Bidding: "Aynı ağ üzerinden..." → 3s kırmızı buton + SnackBar
+    if (message.contains('Aynı ağ') || message.contains('shill') || message.contains('fraud')) {
+      setState(() => _fraudDetected = true);
+      sm.showSnackBar(
+        SnackBar(
+          content: Row(children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
+          ]),
+          backgroundColor: Colors.red.shade800,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      // 3 saniye sonra normal renge dön
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _fraudDetected = false);
+      });
+      return;
+    }
+
+    // Troll Teklif: "telefon numaranızı doğrulayın" → modal bottom sheet
+    if (message.contains('telefon') || message.contains('doğrulayın')) {
+      _showPhoneVerificationSheet();
+      return;
+    }
+
+    // Diğer hatalar → mevcut hata kutusu
+    _setMsg(message, error: true);
+  }
+
+  void _showPhoneVerificationSheet() {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      isScrollControlled: true,
+      builder: (sheetCtx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24, 8, 24, MediaQuery.of(sheetCtx).viewInsets.bottom + 32,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 24),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Ikon
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
+              ),
+              child: const Icon(Icons.verified_user_rounded, color: Colors.amber, size: 30),
+            ),
+            const SizedBox(height: 18),
+            // Başlık
+            const Text(
+              'Güvenlik Doğrulaması Gerekli',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Açıklama
+            const Text(
+              'Bu kadar yüksek bir teklif verebilmek için hesabının gerçek bir kişiye ait olduğunu doğrulamamız gerekiyor. Bu sadece 1 dakikanı alır.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 13,
+                height: 1.55,
+              ),
+            ),
+            const SizedBox(height: 28),
+            // Doğrula butonu
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(sheetCtx); // bottom sheet'i kapat
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                },
+                icon: const Icon(Icons.phone_android_rounded, size: 18),
+                label: const Text(
+                  'Telefonumu Doğrula',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber.shade600,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // İptal
+            TextButton(
+              onPressed: () => Navigator.pop(sheetCtx),
+              child: const Text(
+                'Şimdi değil',
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _buyItNow() async {
@@ -1348,12 +1490,13 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 ? '${_fmt(_selectedBid.toDouble())} ₺ Teklif Ver'
                 : 'Teklif Ver',
             isLoading: _loading,
+            isInvalid: _fraudDetected,
             itemId: liveState.listingId,
             pricePoint: _selectedBid > 0
                 ? _selectedBid.toDouble()
                 : (liveState.currentBid ?? liveState.startPrice),
             onSwipeComplete: () {
-              if (_selectedBid > 0) _placeBid(_selectedBid.toDouble());
+              if (_selectedBid > 0 && !_fraudDetected) _placeBid(_selectedBid.toDouble());
             },
           ),
           // Hemen Al butonu — buyItNowPrice varsa ve currentBid < buyItNowPrice ise göster
