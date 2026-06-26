@@ -108,6 +108,10 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     _currentPage = _pageForLiveIndex(widget.initialIndex);
     _pageCtrl = PageController(initialPage: _currentPage);
     _loadListingFeed();
+    // Bildirimden gelirken single mod: arka planda tam listeyi çek
+    if (widget.streams.length == 1 && widget.streams[0].roomName.isEmpty) {
+      _expandFromSingleMode(widget.streams[0].id);
+    }
   }
 
   @override
@@ -201,6 +205,25 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
           if (!freshIds.contains(s.id)) _endedStreamIds.add(s.id);
         }
       });
+    } catch (_) {}
+  }
+
+  /// Bildirimden gelinen tek-yayın modunu tam listeye yükseltir.
+  /// Hedef yayın başa alınır, diğerleri arkasına eklenir.
+  Future<void> _expandFromSingleMode(int targetId) async {
+    try {
+      final fresh = await StreamService.getActiveStreams();
+      if (!mounted || fresh.isEmpty) return;
+      // Hedef yayını bulun (API'de varsa gerçek verisini kullan, yoksa stub'ı koru)
+      final target = fresh.firstWhere(
+        (s) => s.id == targetId,
+        orElse: () => _liveItems[0],
+      );
+      final others = fresh.where((s) => s.id != targetId).toList();
+      final expanded = [target, ...others];
+      if (expanded.length <= 1) return; // başka yayın yok, single mod devam
+      setState(() => _liveItems = expanded);
+      _loadListingFeed();
     } catch (_) {}
   }
 
