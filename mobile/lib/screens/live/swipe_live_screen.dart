@@ -1327,7 +1327,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
               mirrorMode: VideoViewMirrorMode.mirror,
             ),
           )
-        else if (!widget.isActive && hasThumbnail)
+        else if (hasThumbnail)
           Positioned.fill(
             child: CachedNetworkImage(
               imageUrl: imgUrl(widget.stream.thumbnailUrl),
@@ -1341,10 +1341,10 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
         // ── Yükleniyor ───────────────────────────────────────────────────
         if (_loading)
-          const Positioned.fill(
+          Positioned.fill(
             child: ColoredBox(
-              color: Colors.black54,
-              child: Center(child: CircularProgressIndicator(color: kPrimary)),
+              color: hasThumbnail ? Colors.black38 : Colors.black54,
+              child: const Center(child: CircularProgressIndicator(color: kPrimary)),
             ),
           ),
 
