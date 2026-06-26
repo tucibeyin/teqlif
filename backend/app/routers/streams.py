@@ -42,6 +42,20 @@ async def _optional_user_id(
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
+@router.get("/{stream_id}/check")
+async def check_stream_active(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Yayının hâlâ aktif olup olmadığını kontrol eder."""
+    result = await db.execute(
+        select(LiveStream).where(LiveStream.id == stream_id)
+    )
+    stream = result.scalar_one_or_none()
+    return {"active": stream is not None and stream.ended_at is None}
+
+
 @router.post("/start", response_model=StreamTokenOut, status_code=status.HTTP_201_CREATED)
 async def start_stream(
     data: StreamStart,

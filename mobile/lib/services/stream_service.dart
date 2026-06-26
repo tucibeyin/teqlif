@@ -138,6 +138,17 @@ class StreamService {
     } catch (_) {}
   }
 
+  static Future<bool> isStreamActive(int streamId) async {
+    try {
+      final body = await apiCall(
+        () async => http.get(Uri.parse('$kBaseUrl/streams/$streamId/check'), headers: await _headers()),
+      );
+      return body['active'] as bool? ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<JoinTokenOut> joinStream(int streamId) async {
     final body = await apiCall(
       () async => http.post(Uri.parse('$kBaseUrl/streams/$streamId/join'), headers: await _headers()),

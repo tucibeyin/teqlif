@@ -488,7 +488,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     };
   }
 
-  void _navigate(Map<String, dynamic> notif) {
+  Future<void> _navigate(Map<String, dynamic> notif) async {
     final type = notif['type'] as String? ?? '';
     final relatedId = notif['related_id'] as int?;
     final body = notif['body'] as String?;
@@ -512,6 +512,18 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       case 'outbid':
       case 'smart_auction_alert':
         if (relatedId != null && !StreamService.isHosting) {
+          final active = await StreamService.isStreamActive(relatedId);
+          if (!mounted) return;
+          if (!active) {
+            final l = AppLocalizations.of(context)!;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l.liveEnded),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
           Navigator.push(context, MaterialPageRoute(
             builder: (_) => SwipeLiveScreen.single(streamId: relatedId),
           ));
@@ -584,7 +596,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           return ListTile(
             onTap: () {
               setState(() => (_notifications[i] as Map<String, dynamic>)['is_read'] = true);
-              _navigate(_notifications[i] as Map<String, dynamic>);
+              _navigate(_notifications[i] as Map<String, dynamic>);  // async, fire-and-forget
             },
             tileColor: isRead ? null : kPrimary.withValues(alpha: 0.06),
             leading: Container(
