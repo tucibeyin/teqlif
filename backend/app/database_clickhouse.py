@@ -132,3 +132,28 @@ async def close_clickhouse() -> None:
         await _client.close()
         _client = None
         logger.info("[ClickHouse] Bağlantı kapatıldı.")
+
+
+async def track_user_event(
+    *,
+    event_type: str,
+    item_id: int,
+    item_type: str,
+    user_id: Optional[int] = None,
+    price_point: Optional[float] = None,
+    duration_seconds: Optional[float] = None,
+) -> None:
+    """
+    user_events tablosuna tek satır ekler. Fire-and-forget — hata olursa sadece loglanır.
+    Çağıranı bloklamaz; asyncio.create_task ile çağırılmalıdır.
+    """
+    if _client is None:
+        return
+    try:
+        await _client.insert(
+            "user_events",
+            [[user_id, item_id, item_type, event_type, price_point, duration_seconds]],
+            column_names=["user_id", "item_id", "item_type", "event_type", "price_point", "duration_seconds"],
+        )
+    except Exception as exc:
+        logger.warning("[ClickHouse] track_user_event başarısız | event=%s item_id=%s | %s", event_type, item_id, exc)

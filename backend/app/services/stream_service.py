@@ -15,6 +15,7 @@ Hata Yönetimi:
     LiveKit      → logger.warning (non-critical, yayın sonlandı sayılır)
     İş kuralları → BadRequest / Forbidden / NotFound / TooManyRequests / Conflict
 """
+import asyncio
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -296,6 +297,14 @@ class StreamService:
         stream.is_live = True
         await self.db.commit()
 
+        from app.database_clickhouse import track_user_event
+        asyncio.create_task(track_user_event(
+            event_type="stream_start",
+            item_id=stream.id,
+            item_type="stream",
+            user_id=user.id,
+        ))
+
         background_tasks.add_task(
             notify_followers_task,
             user_id=user.id,
@@ -375,6 +384,7 @@ class StreamService:
     async def _mark_stream_ended(self, stream: "LiveStream", stream_id: int) -> None:
         stream.is_live = False
         stream.ended_at = datetime.now(timezone.utc)
+        duration = (stream.ended_at - stream.started_at).total_seconds() if stream.started_at else None
         try:
             await self.db.commit()
         except Exception as exc:
@@ -385,6 +395,15 @@ class StreamService:
             )
             capture_exception(exc)
             raise DatabaseException("Yayın sonlandırılamadı")
+
+        from app.database_clickhouse import track_user_event
+        asyncio.create_task(track_user_event(
+            event_type="stream_end",
+            item_id=stream_id,
+            item_type="stream",
+            user_id=stream.host_id,
+            duration_seconds=duration,
+        ))
 
     async def _cleanup_redis(self, stream: "LiveStream", stream_id: int, mod_key) -> None:
         try:

@@ -251,6 +251,16 @@ class ListingService:
         await release_action_lock(uid, "listing_create")
         logger.info("[LISTINGS] İlan oluşturuldu | user_id=%s listing_id=%s", uid, listing.id)
 
+        import asyncio as _asyncio2
+        from app.database_clickhouse import track_user_event
+        _asyncio2.create_task(track_user_event(
+            event_type="listing_created",
+            item_id=listing.id,
+            item_type="listing",
+            user_id=uid,
+            price_point=float(listing.price) if listing.price is not None else None,
+        ))
+
         # search_vector doldur (FTS için)
         try:
             from sqlalchemy import text as _text
@@ -341,6 +351,7 @@ class ListingService:
 
         listing.is_deleted = True
         listing.is_active = False
+        _owner_id = listing.user_id
         try:
             await self.db.commit()
         except Exception as exc:
@@ -351,6 +362,15 @@ class ListingService:
             )
             capture_exception(exc)
             raise DatabaseException("İlan silinemedi")
+
+        import asyncio as _asyncio3
+        from app.database_clickhouse import track_user_event
+        _asyncio3.create_task(track_user_event(
+            event_type="listing_deleted",
+            item_id=listing_id,
+            item_type="listing",
+            user_id=_owner_id,
+        ))
 
         return {"ok": True}
 

@@ -528,6 +528,18 @@ class AuctionService:
         await redis.hset(key, "status", "ended")
         await redis.delete(key)
 
+        from app.database_clickhouse import track_user_event
+        _host_id = user.id if user else None
+        _track_lid = int(lid_str) if lid_str else stream_id
+        _track_type = "listing" if lid_str else "stream"
+        asyncio.create_task(track_user_event(
+            event_type="auction_ended",
+            item_id=_track_lid,
+            item_type=_track_type,
+            user_id=_host_id,
+            price_point=final_price if data.get("current_bidder_id") else None,
+        ))
+
         state = {
             "status": "ended",
             "winner_accepted": False,  # bitir/kes — kazanan onaylanmadı
@@ -1025,6 +1037,16 @@ class AuctionService:
         # Commit başarılı → şimdi Redis'i güncelle ve temizle
         await redis.hset(key, "status", "ended")
         await redis.delete(key)
+
+        from app.database_clickhouse import track_user_event
+        if winner_user_id and listing_id:
+            asyncio.create_task(track_user_event(
+                event_type="auction_won",
+                item_id=listing_id,
+                item_type="listing",
+                user_id=winner_user_id,
+                price_point=final_price,
+            ))
 
         # Kazanana push notification (commit sonrası, non-blocking)
         if winner_user_id:
