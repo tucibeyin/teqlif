@@ -363,7 +363,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       debugPrint('[CreateListing] Video upload HATA: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Video yüklenemedi: $e')),
+          SnackBar(content: Text(_uploadError(e))),
         );
         _removeVideo();
         return;
@@ -557,6 +557,22 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  /// Upload hatalarını kullanıcı dostu Türkçe mesaja çevirir.
+  String _uploadError(Object e) {
+    final s = e.toString();
+    if (s.contains('HTTP 413')) return 'Video dosyası çok büyük. Daha kısa bir video deneyin.';
+    if (s.contains('HTTP 502') || s.contains('HTTP 503') || s.contains('HTTP 504')) {
+      return 'Sunucu şu an meşgul, lütfen tekrar deneyin.';
+    }
+    if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
+      return 'Oturum süreniz dolmuş, lütfen tekrar giriş yapın.';
+    }
+    if (s.contains('SocketException') || s.contains('Connection') || s.contains('network')) {
+      return 'İnternet bağlantınızı kontrol edin.';
+    }
+    return 'Video yüklenemedi, lütfen tekrar deneyin.';
   }
 
   /// 403/429 hata kodlarını kullanıcı dostu mesaja çevirir.
