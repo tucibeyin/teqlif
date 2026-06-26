@@ -419,14 +419,20 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         _listingPool.addAll(raw.cast<Map<String, dynamic>>());
         if (_currentListingsPerGroup == 0) {
           _currentListingsPerGroup = 2;
-          // Gruplar 0 ilanla inşa edilmişti; kullanıcı henüz stream 0'daysa
-          // sınırları temizle — bir sonraki swipe'ta doğru sayıda ilan çıkar.
+          // Gruplar 0 ilanla inşa edilmişti. Kullanıcı hâlâ sayfa 0'daysa
+          // (stream widget'ı değişmez) boundary'leri sıfırla; yeni gruplar
+          // 2 ilan boşluğuyla kurulur ve stream 1 sayfa 3'e taşınır.
+          // Sayfa > 0'daysa stream widget kesilir — dokunma.
           if (_currentPage == 0) {
             _groupBoundaries.clear();
             _nextGroupStartPage = 0;
           }
         }
       });
+      // Güncel layout ile prefetch'i hemen yeniden planla.
+      // Sayfa 0'daysa: stream 1 artık sayfa 3'te ve ±4 aralığında →
+      // _activate gelmeden önce bağlantı açılmış olur.
+      if (mounted) _schedulePrefetch(_currentPage);
     } catch (_) {
       // Listing feed yükleme başarısız olursa sadece canlı yayınlar gösterilir
     } finally {
