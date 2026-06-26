@@ -130,6 +130,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   // ── Parent-level prefetch: child ±1 bağlanırken parent +2/+3'ü hazırlar ──
   final Map<int, _PrefetchEntry> _prefetchCache = {};
+  // Aktif sayfanın PiP aksiyonu — iOS back gesture intercept için
+  VoidCallback? _pipAction;
   final Set<int> _prefetchConnecting = {};
 
   @override
@@ -439,7 +441,12 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) _pipAction?.call();
+      },
+      child: Scaffold(
       backgroundColor: Colors.black,
       resizeToAvoidBottomInset: false,
       body: PageView.builder(
@@ -460,6 +467,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 isLast: false,
                 onStreamEnded: () => _onStreamEnded(stream.id),
                 takePrefetch: takePrefetchEntry,
+                onPipActionChanged: (cb) { _pipAction = cb; },
               ),
             _ListingItem(:final listing, :final slotIndex, :final streamCategory) =>
               _ListingVideoPage(
@@ -476,6 +484,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
           };
         },
       ),
+      ),
     );
   }
 }
@@ -489,6 +498,7 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
   final bool isLast;
   final VoidCallback? onStreamEnded;
   final _PrefetchEntry? Function(int streamId)? takePrefetch;
+  final void Function(VoidCallback?)? onPipActionChanged;
 
   const _SwipeLivePage({
     super.key,
@@ -498,6 +508,7 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
     this.isPrefetch = false,
     this.onStreamEnded,
     this.takePrefetch,
+    this.onPipActionChanged,
   });
 
   @override
@@ -550,6 +561,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     if (widget.isActive) {
+      widget.onPipActionChanged?.call(_enterPip);
       _activate();
     } else if (widget.isPrefetch) {
       _prefetchConnect();
@@ -560,6 +572,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   void didUpdateWidget(_SwipeLivePage old) {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
+      widget.onPipActionChanged?.call(_enterPip);
       // Sayfa aktif oldu
       if (_room != null) {
         _promoteToActive();  // zaten pre-bağlı → sesi aç
@@ -567,6 +580,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
         _activate();
       }
     } else if (!widget.isActive && old.isActive) {
+      widget.onPipActionChanged?.call(null);
       // Sayfa aktif değil oldu
       if (widget.isPrefetch) {
         _demoteToPrefetch();  // komşu kalıyor → sesi kapat, video bağlı
@@ -1368,12 +1382,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
     final hasThumbnail =
         widget.stream.thumbnailUrl != null && widget.stream.thumbnailUrl!.isNotEmpty;
 
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) {
-        if (!didPop) _enterPip();
-      },
-      child: Stack(
+    return Stack(
       children: [
         // ── Arka plan: video veya thumbnail ──────────────────────────────
         if (_remoteVideoTrack != null)
@@ -1698,7 +1707,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
           ),
         ),
       ],
-      ),
     );
   }
 
