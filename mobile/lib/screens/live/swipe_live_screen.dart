@@ -250,12 +250,14 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   // ── Parent prefetch yönetimi ─────────────────────────────────────────────
 
-  /// page+2 ve page+3 konumundaki live yayınları önceden bağlar.
-  /// page+1 çocuk widget'ı kendi başlar; burada ona 1 adım daha önde gidilir.
+  /// ±2 ve ±3 konumundaki live yayınları önceden bağlar.
+  /// ±1 çocuk widget'ları kendi _prefetchConnect()'lerini kullanır.
   void _schedulePrefetch(int page) {
-    for (final delta in [2, 3]) {
+    for (final delta in [2, 3, -2, -3]) {
+      final target = page + delta;
+      if (target < 0) continue;
       try {
-        final item = _itemAt(page + delta);
+        final item = _itemAt(target);
         if (item is _LiveItem) _startParentPrefetch(item.stream);
       } catch (_) {}
     }
@@ -314,7 +316,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   /// Artık görünmeyecek yayınlara ait hazır odaları temizle.
   void _evictStalePrefetches(int currentPage) {
     final keepIds = <int>{};
-    for (int delta = -1; delta <= 4; delta++) {
+    for (int delta = -3; delta <= 4; delta++) {
       try {
         final item = _itemAt(currentPage + delta);
         if (item is _LiveItem) keepIds.add(item.stream.id);
