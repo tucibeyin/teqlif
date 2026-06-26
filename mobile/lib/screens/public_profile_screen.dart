@@ -592,15 +592,15 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Widget _buildAvatar(String fullName, String initial) {
-    final imgUrl = _user?['profile_image_url'] as String?;
+    final rawImg = _user?['profile_image_url'] as String?;
     final isLive = (_user?['is_live'] as bool?) ?? false;
     final streamId = _user?['active_stream_id'] as int?;
 
     final avatar = CircleAvatar(
       radius: 44,
       backgroundColor: kPrimary.withOpacity(0.15),
-      backgroundImage: imgUrl != null ? NetworkImage(imgUrl) : null,
-      child: imgUrl == null
+      backgroundImage: rawImg != null ? NetworkImage(imgUrl(rawImg)) : null,
+      child: rawImg == null
           ? Text(
               initial,
               style: const TextStyle(
@@ -1148,7 +1148,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                           final raterInitial = raterName.isNotEmpty
                               ? raterName[0].toUpperCase()
                               : '?';
-                          final imgUrl =
+                          final raterImg =
                               rater['profile_image_url'] as String?;
                           final score = r['score'] as int;
                           final comment = r['comment'] as String?;
@@ -1167,10 +1167,10 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                                   radius: 20,
                                   backgroundColor:
                                       kPrimary.withOpacity(0.12),
-                                  backgroundImage: imgUrl != null
-                                      ? NetworkImage(imgUrl)
+                                  backgroundImage: raterImg != null
+                                      ? NetworkImage(imgUrl(raterImg))
                                       : null,
-                                  child: imgUrl == null
+                                  child: raterImg == null
                                       ? Text(
                                           raterInitial,
                                           style: const TextStyle(

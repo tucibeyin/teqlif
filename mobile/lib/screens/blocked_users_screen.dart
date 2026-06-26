@@ -109,7 +109,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                         (u['username'] as String?) ??
                         '?';
                     final username = u['username'] as String? ?? '';
-                    final imgUrl = u['profile_image_url'] as String?;
+                    final rawImg = u['profile_image_url'] as String?;
                     final initial =
                         name.isNotEmpty ? name[0].toUpperCase() : '?';
                     return ListTile(
@@ -126,8 +126,8 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                           radius: 22,
                           backgroundColor: kPrimary.withOpacity(0.12),
                           backgroundImage:
-                              imgUrl != null ? NetworkImage(imgUrl) : null,
-                          child: imgUrl == null
+                              rawImg != null ? NetworkImage(imgUrl(rawImg)) : null,
+                          child: rawImg == null
                               ? Text(
                                   initial,
                                   style: const TextStyle(
