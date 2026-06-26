@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../config/api.dart';
+import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
 import '../services/notification_service.dart';
+import '../services/offline_queue_service.dart';
 import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
@@ -600,7 +603,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _loadMessages();
+    if (state == AppLifecycleState.resumed) _loadMessages(bypassCache: true);
   }
 
   Future<void> _initScreen() async {
@@ -610,15 +613,46 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     _listenWs();
   }
 
-  Future<void> _loadMessages() async {
+  Future<void> _loadMessages({bool bypassCache = false}) async {
     if (mounted) setState(() { _loading = true; _error = false; });
     try {
-      final data = await NotificationService.getMessages(widget.otherUserId);
-      if (mounted) {
-        setState(() {
-          _messages = data.map((m) => Map<String, dynamic>.from(m as Map)).toList();
-          _loading = false;
-        });
+      // SWR: önce Hive cache (anlık), sonra API (taze)
+      await for (final data in ApiService.get<List<Map<String, dynamic>>>(
+        url: '$kBaseUrl/messages/${widget.otherUserId}',
+        cacheKey: 'chat_${widget.otherUserId}',
+        cacheTtl: const Duration(minutes: 2),
+        bypassCache: bypassCache,
+        fromJson: (raw) => (raw as List)
+            .map((m) => Map<String, dynamic>.from(m as Map))
+            .toList(),
+      )) {
+        if (!mounted) return;
+        // Bekleyen kuyruk mesajlarını API yanıtına birleştir
+        final pending = OfflineQueueService.getPendingForReceiver(widget.otherUserId);
+        final merged = List<Map<String, dynamic>>.from(data);
+        for (final p in pending) {
+          // API zaten teslim ettiyse gösterme
+          final alreadyIn = data.any(
+            (m) => m['content'] == p['content'] &&
+                   (m['sender_id'] as int?) == _myUserId,
+          );
+          if (!alreadyIn) {
+            merged.add({
+              'id': -(p['queued_at'] as int),
+              'sender_id': _myUserId,
+              'receiver_id': widget.otherUserId,
+              'content': p['content'] as String,
+              'is_read': false,
+              'created_at': DateTime.fromMillisecondsSinceEpoch(
+                      p['queued_at'] as int)
+                  .toUtc()
+                  .toIso8601String(),
+              '_pending': true,
+              '_local_id': p['local_id'] as String?,
+            });
+          }
+        }
+        setState(() { _messages = merged; _loading = false; });
         _scrollToBottom();
       }
     } catch (e) {
@@ -711,7 +745,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     setState(() => _sending = true);
     _textCtrl.clear();
 
-    // Optimistically add message to UI immediately
+    // Optimistik ekleme — pending (saat ikonu) gösterir
     final tempId = -DateTime.now().millisecondsSinceEpoch;
     if (_myUserId != null && mounted) {
       setState(() => _messages.add({
@@ -721,19 +755,43 @@ class _DirectChatScreenState extends State<DirectChatScreen>
         'content': text,
         'is_read': false,
         'created_at': DateTime.now().toUtc().toIso8601String(),
+        '_pending': true,
       }));
       _scrollToBottom();
     }
 
+    // Çevrimdışıysa doğrudan kuyruğa yaz
+    final isOnline = await ConnectivityService().isConnected;
+    if (!isOnline) {
+      final localId = await OfflineQueueService.enqueue(widget.otherUserId, text);
+      if (mounted) {
+        setState(() {
+          _sending = false;
+          final idx = _messages.indexWhere((m) => m['id'] == tempId);
+          if (idx >= 0) {
+            _messages[idx] = {..._messages[idx], '_local_id': localId};
+          }
+        });
+      }
+      return;
+    }
+
+    // Çevrimiçi → API'ye gönder
     final ok = await NotificationService.sendMessage(widget.otherUserId, text);
     if (mounted) {
       setState(() => _sending = false);
       if (!ok) {
-        // Remove temp message on failure
+        // API başarısız → kuyruğa ekle, pending göster
+        final localId = await OfflineQueueService.enqueue(widget.otherUserId, text);
+        setState(() {
+          final idx = _messages.indexWhere((m) => m['id'] == tempId);
+          if (idx >= 0) {
+            _messages[idx] = {..._messages[idx], '_local_id': localId};
+          }
+        });
+      } else {
+        // Başarı → WS onaylı mesajı ekleyecek; optimistik geçiciyi sil
         setState(() => _messages.removeWhere((m) => m['id'] == tempId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.msgSendFailed)),
-        );
       }
     }
   }
@@ -811,6 +869,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                               final content = msg['content'] as String? ?? '';
                               final time = _timeLabel(msg['created_at'] as String?);
                               final isRead = (msg['is_read'] as bool?) ?? false;
+                              final isPending = (msg['_pending'] as bool?) ?? false;
 
                               return Align(
                                 alignment: isMe
@@ -859,11 +918,15 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                                           if (isMe) ...[
                                             const SizedBox(width: 3),
                                             Icon(
-                                              isRead ? Icons.done_all : Icons.done,
+                                              isPending
+                                                  ? Icons.access_time_rounded
+                                                  : (isRead ? Icons.done_all : Icons.done),
                                               size: 12,
-                                              color: isRead
-                                                  ? Colors.blue.shade200
-                                                  : Colors.white.withOpacity(0.6),
+                                              color: isPending
+                                                  ? Colors.white.withOpacity(0.45)
+                                                  : (isRead
+                                                      ? Colors.blue.shade200
+                                                      : Colors.white.withOpacity(0.6)),
                                             ),
                                           ],
                                         ],

@@ -7,12 +7,14 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../core/app_exception.dart';
 import '../../models/stream.dart';
+import '../../services/connectivity_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/ws_service.dart';
 import '../../utils/start_stream_helper.dart';
 import '../../providers/story_provider.dart';
 import '../../widgets/live/story_tray.dart';
+import '../../widgets/offline_banner.dart';
 import 'swipe_live_screen.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -42,19 +44,36 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   bool _isLoggedIn = false;
   String? _selectedCategory; // null = Tümü
   String? _error;
+  bool _isOffline = false;
 
   StreamSubscription<Map<String, dynamic>>? _wsSub;
+  StreamSubscription<bool>? _connectSub;
+  final _connectSvc = ConnectivityService();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
     _wsSub = WsService.messageStream.stream.listen(_onWsMessage);
+
+    // Anlık bağlantı durumu
+    _connectSvc.isConnected.then((online) {
+      if (mounted) setState(() => _isOffline = !online);
+    });
+    // Değişimleri dinle
+    _connectSub = _connectSvc.onConnectivityChanged.listen((online) {
+      if (!mounted) return;
+      final wasOffline = _isOffline;
+      setState(() => _isOffline = !online);
+      // İnternet geri geldi → listeyi yenile
+      if (online && wasOffline) _load(bypassCache: true);
+    });
   }
 
   @override
   void dispose() {
     _wsSub?.cancel();
+    _connectSub?.cancel();
     super.dispose();
   }
 
@@ -75,9 +94,10 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
 
   void triggerStartDialog() =>
       showStartStreamDialog(context, onStreamStarted: _load);
-  void refresh() => _load();
+  void refresh() => _load(bypassCache: true);
 
-  Future<void> _load() async {
+  /// [bypassCache]: pull-to-refresh ve bağlantı geri geldiğinde true.
+  Future<void> _load({bool bypassCache = false}) async {
     if (!mounted) return;
     setState(() => _loading = true);
     ref.invalidate(storyGroupsProvider);
@@ -86,30 +106,37 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     final token = await StorageService.getToken();
     if (mounted) setState(() => _isLoggedIn = token != null);
 
+    // Kişisel öneriler: arka planda ağdan çek (cache gerekmez, oturum bazlı)
+    if (token != null) {
+      unawaited(
+        StreamService.getRecommendedStreams().then((rec) {
+          if (mounted) setState(() => _recommended = rec);
+        }),
+      );
+    }
+
+    // Aktif yayınlar: SWR — önce cache (anlık), sonra API (taze)
     try {
-      // Tüm yayınlar + kişisel yayınlar paralel yükle
-      final allFuture = StreamService.getActiveStreams();
-      final recFuture = token != null
-          ? StreamService.getRecommendedStreams()
-          : Future.value(<StreamOut>[]);
-
-      final results = await Future.wait([allFuture, recFuture]);
-      if (!mounted) return;
-
-      setState(() {
-        _streams = results[0];
-        _recommended = results[1];
-        _loading = false;
-        _error = null;
-      });
+      await for (final streams in StreamService.getActiveStreamsStream(
+        bypassCache: bypassCache,
+      )) {
+        if (!mounted) return;
+        setState(() {
+          _streams = streams;
+          _loading = false;
+          _error = null;
+        });
+      }
     } catch (e, st) {
       debugPrint('[LiveList] _load hatası: $e\n$st');
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e is AppException
-            ? e.message
-            : AppLocalizations.of(context)!.liveStreamsLoadError;
+        if (_streams.isEmpty) {
+          _error = e is AppException
+              ? e.message
+              : AppLocalizations.of(context)!.liveStreamsLoadError;
+        }
       });
     }
   }
@@ -119,6 +146,8 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
 
   Future<void> _joinStream(StreamOut stream) async {
     if (!mounted) return;
+    // Çevrimdışıyken yayına girmeyi engelle
+    if (_isOffline) return;
     // ID ile ara: farklı liste örneklerinden gelen stream objelerini referans değil ID ile eşleştir
     final idx = _streams.indexWhere((s) => s.id == stream.id);
     Navigator.push(
@@ -187,6 +216,9 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       ),
       body: Column(
         children: [
+          // ── Çevrimdışı bilgi bandı ─────────────────────────────
+          const OfflineBanner(),
+
           // ── Video Hikayeler (Story Tray) ────────────────────────
           const StoryTray(),
 

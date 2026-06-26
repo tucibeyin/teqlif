@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../core/app_exception.dart';
 import '../models/stream.dart';
+import 'api_service.dart';
 import 'storage_service.dart';
 
 class StreamService {
@@ -39,6 +40,29 @@ class StreamService {
     }
     return result;
   }
+
+  /// SWR Stream versiyonu: önce Hive cache (anlık), sonra API (taze).
+  /// [bypassCache]: pull-to-refresh veya LiveList her açılışında true.
+  /// TTL: 1 dakika (yayınlar gerçek zamanlı değişir).
+  static Stream<List<StreamOut>> getActiveStreamsStream({bool bypassCache = false}) =>
+      ApiService.get<List<StreamOut>>(
+        url: '$kBaseUrl/streams/active',
+        cacheKey: 'active_streams',
+        cacheTtl: const Duration(minutes: 1),
+        bypassCache: bypassCache,
+        fromJson: (raw) {
+          final list = raw as List;
+          final result = <StreamOut>[];
+          for (final e in list) {
+            try {
+              result.add(StreamOut.fromJson(e as Map<String, dynamic>));
+            } catch (err) {
+              debugPrint('[StreamService] SWR parse hatası: $err | veri: $e');
+            }
+          }
+          return result;
+        },
+      );
 
   static Future<List<StreamOut>> getRecommendedStreams() async {
     final headers = await _headers();

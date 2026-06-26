@@ -8,6 +8,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/stream.dart';
 import '../services/analytics_service.dart';
+import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../services/stream_service.dart';
 import 'public_profile_screen.dart';
@@ -91,51 +92,100 @@ class _SearchScreenState extends State<SearchScreen> {
     _debounce = Timer(const Duration(milliseconds: 500), () => _search(q));
   }
 
-  Future<void> _loadExplore() async {
+  /// SWR paralel yükleme: yayınlar + kişisel feed + son ilanlar aynı anda başlar.
+  /// Her akış Hive'dan anında veri yayarsa _exploreLoading hemen kapanır.
+  /// [bypassCache]: pull-to-refresh senaryosunda cache READ atlanır.
+  Future<void> _loadExplore({bool bypassCache = false}) async {
+    if (!mounted) return;
     setState(() {
       _exploreLoading = true;
-      _exploreListings = [];
-      _recentListings = [];
       _forYouPage = 0;
       _forYouExhausted = false;
     });
-    try {
-      final token = await StorageService.getToken();
-      final loggedIn = token != null;
-      final headers = loggedIn ? {'Authorization': 'Bearer $token'} : <String, String>{};
 
-      final streamsFuture = StreamService.getActiveStreams();
-      // Sana Özel (login) veya Son İlanlar (misafir)
-      final forYouFuture = loggedIn
-          ? http.get(Uri.parse('$kBaseUrl/feed/for-you?page=0'), headers: headers)
-          : http.get(Uri.parse('$kBaseUrl/listings'), headers: headers);
-      // En Son İlanlar (her zaman)
-      final recentFuture = http.get(Uri.parse('$kBaseUrl/listings'), headers: headers);
+    final token = await StorageService.getToken();
+    final loggedIn = token != null;
+    if (mounted) setState(() => _isLoggedIn = loggedIn);
 
-      final streams = await streamsFuture;
-      final forYouResp = await forYouFuture;
-      final recentResp = loggedIn ? await recentFuture : forYouResp;
+    // İlk veri geldiğinde loading'i kapat (cache varsa anlık)
+    bool _firstDataArrived = false;
+    void _maybeStopLoading() {
+      if (!_firstDataArrived && mounted) {
+        _firstDataArrived = true;
+        setState(() => _exploreLoading = false);
+      }
+    }
 
-      if (!mounted) return;
-      setState(() {
-        _isLoggedIn = loggedIn;
-        _exploreStreams = streams.take(4).toList();
-        if (forYouResp.statusCode == 200) {
-          final data = jsonDecode(forYouResp.body) as List;
+    // ── Aktif yayınlar (1 dk cache) ────────────────────────────────────────
+    _loadExploreStreams(bypassCache, _maybeStopLoading);
+
+    // ── Kişisel feed (giriş: 1 saat cache | misafir: 5 dk) ────────────────
+    _loadExploreForYou(loggedIn: loggedIn, bypassCache: bypassCache, onData: _maybeStopLoading);
+
+    // ── En son ilanlar (5 dk cache, yalnızca giriş yapılmışsa ayrı çek) ───
+    if (loggedIn) {
+      _loadExploreRecent(bypassCache: bypassCache, onData: _maybeStopLoading);
+    } else {
+      // Misafirde for-you zaten son ilanları gösterir
+      _maybeStopLoading();
+    }
+  }
+
+  void _loadExploreStreams(bool bypassCache, VoidCallback onData) {
+    StreamService.getActiveStreamsStream(bypassCache: bypassCache).listen(
+      (streams) {
+        if (mounted) setState(() => _exploreStreams = streams.take(4).toList());
+        onData();
+      },
+      onError: (_) => onData(),
+    );
+  }
+
+  void _loadExploreForYou({
+    required bool loggedIn,
+    required bool bypassCache,
+    required VoidCallback onData,
+  }) {
+    final url = loggedIn ? '$kBaseUrl/feed/for-you?page=0' : '$kBaseUrl/listings';
+    final cacheKey = loggedIn ? 'explore_for_you' : StorageService.cacheFeed;
+    final ttl = loggedIn ? const Duration(hours: 1) : const Duration(minutes: 5);
+
+    ApiService.get<List<dynamic>>(
+      url: url,
+      cacheKey: cacheKey,
+      cacheTtl: ttl,
+      bypassCache: bypassCache,
+      fromJson: (raw) => raw as List,
+    ).listen(
+      (data) {
+        if (!mounted) return;
+        setState(() {
           _exploreListings = data;
           if (loggedIn) {
             _forYouPage = 1;
-            if (data.length < 20) _forYouExhausted = true;
+            _forYouExhausted = data.length < 20;
           }
-        }
-        if (loggedIn && recentResp.statusCode == 200) {
-          _recentListings = (jsonDecode(recentResp.body) as List).take(12).toList();
-        }
-        _exploreLoading = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _exploreLoading = false);
-    }
+        });
+        onData();
+      },
+      onError: (_) => onData(),
+    );
+  }
+
+  void _loadExploreRecent({required bool bypassCache, required VoidCallback onData}) {
+    ApiService.get<List<dynamic>>(
+      url: '$kBaseUrl/listings',
+      cacheKey: StorageService.cacheFeed,
+      cacheTtl: const Duration(minutes: 5),
+      bypassCache: bypassCache,
+      fromJson: (raw) => raw as List,
+    ).listen(
+      (recent) {
+        if (mounted) setState(() => _recentListings = recent.take(12).toList());
+        onData();
+      },
+      onError: (_) => onData(),
+    );
   }
 
   Future<void> _loadMoreForYou() async {
