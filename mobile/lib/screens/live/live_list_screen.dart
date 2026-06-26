@@ -404,11 +404,15 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
 
   Future<void> _joinStream(StreamOut stream) async {
     if (!mounted) return;
-    final idx = _streams.indexOf(stream);
+    // ID ile ara: farklı liste örneklerinden gelen stream objelerini referans değil ID ile eşleştir
+    final idx = _streams.indexWhere((s) => s.id == stream.id);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SwipeLiveScreen(streams: _streams, initialIndex: idx),
+        builder: (_) => SwipeLiveScreen(
+          streams: _streams,
+          initialIndex: idx < 0 ? 0 : idx,
+        ),
       ),
     ).then((_) => _load());
   }

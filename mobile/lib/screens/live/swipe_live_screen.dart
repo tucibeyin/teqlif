@@ -183,6 +183,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   /// initialIndex numaralı canlı yayının hangi PageView sayfasında olduğunu hesaplar.
   int _pageForLiveIndex(int liveIdx) {
+    if (liveIdx < 0) return 0;
     _ensureGroupsBuilt(liveIdx);
     return _groupBoundaries[liveIdx].$1;
   }
