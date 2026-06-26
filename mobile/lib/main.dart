@@ -15,6 +15,7 @@ import 'screens/main_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/analytics_service.dart';
 import 'services/cache_service.dart';
+import 'services/storage_service.dart';
 import 'services/feed_telemetry_service.dart';
 import 'services/offline_queue_service.dart';
 import 'services/push_notification_service.dart';
@@ -47,6 +48,7 @@ void main() async {
       };
 
       await CacheService.init();
+      await StorageService.restoreAvatarUrl();
       await OfflineQueueService.init();
       OfflineQueueService.startDrainOnReconnect();
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);

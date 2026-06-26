@@ -107,6 +107,30 @@ class StorageService {
     };
   }
 
+  // ── Avatar URL — in-memory cache (disk'e de yazılır, startup'ta restore edilir) ──
+  static const _avatarUrlKey = 'teqlif_avatar_url';
+  static String? _cachedAvatarUrl;
+
+  /// Startup'ta bir kez çağrılır; SharedPreferences'tan URL'yi memory'e yükler.
+  static Future<void> restoreAvatarUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    _cachedAvatarUrl = prefs.getString(_avatarUrlKey);
+  }
+
+  /// Profil API'sinden URL geldiğinde kaydet; hem memory hem disk güncellenir.
+  static Future<void> saveAvatarUrl(String? url) async {
+    _cachedAvatarUrl = url;
+    final prefs = await SharedPreferences.getInstance();
+    if (url != null && url.isNotEmpty) {
+      await prefs.setString(_avatarUrlKey, url);
+    } else {
+      await prefs.remove(_avatarUrlKey);
+    }
+  }
+
+  /// Senkron getter — initState'de beklemeden kullanılabilir.
+  static String? get cachedAvatarUrl => _cachedAvatarUrl;
+
   static const _biometricKey = 'teqlif_biometric_enabled';
 
   static Future<bool> isBiometricEnabled() async {

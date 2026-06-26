@@ -89,8 +89,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final userId   = localInfo?['id'] as int?;
 
     if (!mounted) return;
-    // Güvenli depodan temel bilgileri anında göster (cache gelene kadar)
+    // Güvenli depodan temel bilgileri anında göster (cache gelene kadar).
+    // Avatar URL'si memory'den senkron eklenir — boş avatar gösterilmez.
     if (_user == null && localInfo != null) {
+      final avatarUrl = StorageService.cachedAvatarUrl;
+      if (avatarUrl != null) localInfo['profile_image_url'] = avatarUrl;
       setState(() { _user = localInfo; _loading = true; });
     }
 
@@ -110,6 +113,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         fromJson: (raw) => Map<String, dynamic>.from(raw as Map),
       ).listen(
         (user) {
+          // Avatar URL'yi kalıcı kaydet — sonraki açılışta anında gösterilir
+          final avatarUrl = user['profile_image_url'] as String?;
+          if (avatarUrl != null && avatarUrl.isNotEmpty) {
+            StorageService.saveAvatarUrl(avatarUrl);
+          }
           if (mounted) setState(() { _user = user; _loading = false; });
         },
         onError: (e) {
