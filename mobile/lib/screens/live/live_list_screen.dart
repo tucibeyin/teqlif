@@ -86,8 +86,8 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
           _streams.removeWhere((s) => s.id == streamId);
           _recommended.removeWhere((s) => s.id == streamId);
         });
-        // Story tray'i de güncelle (yayın hikayesi kaybolmalı)
-        ref.invalidate(storyGroupsProvider);
+        // Story tray'i de ağdan yenile (cache'i bypass et)
+        unawaited(ref.read(storyGroupsProvider.notifier).refresh());
       }
     }
   }
@@ -100,8 +100,11 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   Future<void> _load({bool bypassCache = false}) async {
     if (!mounted) return;
     setState(() => _loading = true);
-    ref.invalidate(storyGroupsProvider);
-    ref.invalidate(myStoriesProvider);
+    // refresh() → bypassCache:true ile ağdan çeker; invalidate() değil
+    // çünkü invalidate, build()'daki bypassCache:false ile Hive cache'i önce
+    // gösterir ve story tray anlık güncellenmez.
+    unawaited(ref.read(storyGroupsProvider.notifier).refresh());
+    unawaited(ref.read(myStoriesProvider.notifier).refresh());
 
     final token = await StorageService.getToken();
     if (mounted) setState(() => _isLoggedIn = token != null);
@@ -158,7 +161,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
           initialIndex: idx < 0 ? 0 : idx,
         ),
       ),
-    ).then((_) => _load());
+    ).then((_) => _load(bypassCache: true));
   }
 
   List<String> get _categories {
