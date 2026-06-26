@@ -56,12 +56,14 @@ async def get_auction_bids(
 
 @router.post("/{stream_id}/start", response_model=AuctionStateOut)
 async def start_auction(
+    request: Request,
     stream_id: int,
     data: AuctionStart,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await AuctionService(db).start(stream_id, data, current_user)
+    host_ip = request.client.host if request.client else None
+    return await AuctionService(db).start(stream_id, data, current_user, host_ip=host_ip)
 
 
 @router.post("/{stream_id}/pause", response_model=AuctionStateOut)
@@ -100,7 +102,8 @@ async def place_bid(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await AuctionService(db).place_bid(stream_id, data, current_user)
+    bidder_ip = request.client.host if request.client else None
+    return await AuctionService(db).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
 
 
 @router.post("/{stream_id}/buy-it-now", response_model=dict)

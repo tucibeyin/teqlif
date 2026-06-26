@@ -45,6 +45,51 @@ logger = get_logger(__name__)
 
 _PUBSUB_CHANNEL = "auction_broadcast"
 
+# Telefon doğrulaması gerektiren teklif eşiği (TL)
+_HIGH_BID_THRESHOLD_TL = 10_000
+# Mevcut fiyatın kaç katını aşarsa yüksek teklif sayılır
+_HIGH_BID_MULTIPLIER = 3
+
+
+async def _log_fraud_attempt(
+    fraud_type: str,
+    stream_id: int,
+    user_id: int,
+    username: str,
+    extra: dict | None = None,
+) -> None:
+    """
+    Dolandırıcılık girişimini logger + Redis'e kaydeder.
+
+    - Logger: Grafana/log-alert ile gerçek zamanlı izlenebilir.
+    - Redis ZADD fraud_log: score=timestamp → son 30 günü tutar,
+      admin sorgusu veya banlama scripti için kullanılır.
+    """
+    import json as _json
+    import time
+
+    payload = {
+        "fraud_type": fraud_type,
+        "stream_id": stream_id,
+        "user_id": user_id,
+        "username": username,
+        **(extra or {}),
+    }
+    logger.warning(
+        "[FRAUD_ATTEMPT] type=%s stream_id=%s user_id=%s username=%s extra=%s",
+        fraud_type, stream_id, user_id, username, extra,
+    )
+    try:
+        redis = await get_redis()
+        score = time.time()
+        value = _json.dumps(payload)
+        await redis.zadd("fraud_log", {value: score})
+        # 30 günden eski kayıtları temizle
+        cutoff = score - 30 * 24 * 3600
+        await redis.zremrangebyscore("fraud_log", "-inf", cutoff)
+    except Exception as exc:
+        logger.error("[FRAUD_ATTEMPT] Redis log yazılamadı | %s", exc)
+
 
 # ── Fiyat formatlama yardımcısı ──────────────────────────────────────────────
 def fmt_price(v: float) -> str:
@@ -355,7 +400,7 @@ class AuctionService:
         return await get_auction_state(stream_id)
 
     # ── Başlat ───────────────────────────────────────────────────────────────
-    async def start(self, stream_id: int, data: AuctionStart, user: User) -> dict:
+    async def start(self, stream_id: int, data: AuctionStart, user: User, host_ip: str | None = None) -> dict:
         await self._require_host(stream_id, user)
         redis = await get_redis()
         key = auction_key(stream_id)
@@ -388,6 +433,7 @@ class AuctionService:
             "current_bidder_name": "",
             "bid_count": "0",
             "host_id": str(user.id),
+            "host_ip": host_ip or "",
             "stream_id": str(stream_id),
             "listing_id": str(listing_id_val) if listing_id_val else "",
         })
@@ -499,7 +545,7 @@ class AuctionService:
         return state
 
     # ── Teklif Ver ───────────────────────────────────────────────────────────
-    async def place_bid(self, stream_id: int, data: BidIn, user: User) -> dict:
+    async def place_bid(self, stream_id: int, data: BidIn, user: User, bidder_ip: str | None = None) -> dict:
         from app.routers.notifications import push_notification
         from app.routers.moderation import mute_key
         from app.core.action_guard import check_user_action_rate
@@ -525,6 +571,39 @@ class AuctionService:
         prev_data = await redis.hgetall(auction_key(stream_id))
         prev_bidder_id_str = prev_data.get("current_bidder_id", "")
         prev_item_name = prev_data.get("item_name", "")
+
+        # ── Shill Bidding Koruması (IP Eşleşme Kontrolü) ─────────────────────
+        host_ip_stored = prev_data.get("host_ip", "")
+        if bidder_ip and host_ip_stored and bidder_ip == host_ip_stored:
+            await _log_fraud_attempt(
+                "shill_bidding",
+                stream_id=stream_id,
+                user_id=user.id,
+                username=user.username,
+                extra={"bidder_ip": bidder_ip, "amount": float(data.amount)},
+            )
+            raise ForbiddenException(
+                "Aynı ağ üzerinden kendi yayınınızda teklif veremezsiniz"
+            )
+
+        # ── Troll Teklif Koruması (Telefon Doğrulama) ────────────────────────
+        current_bid_raw = prev_data.get("current_bid")
+        current_bid = float(current_bid_raw) if current_bid_raw else 0.0
+        is_high_bid = (
+            float(data.amount) > _HIGH_BID_THRESHOLD_TL
+            or (current_bid > 0 and float(data.amount) > current_bid * _HIGH_BID_MULTIPLIER)
+        )
+        if is_high_bid and not user.phone:
+            await _log_fraud_attempt(
+                "troll_bid_no_phone",
+                stream_id=stream_id,
+                user_id=user.id,
+                username=user.username,
+                extra={"amount": float(data.amount), "current_bid": current_bid},
+            )
+            raise ForbiddenException(
+                "Yüksek tutarlı teklifler için lütfen Profilinizden telefon numaranızı doğrulayın."
+            )
 
         # Fiyat & durum doğrulama (read-only, Redis değişmez)
         val = await redis.eval(_VALIDATE_BID_SCRIPT, 1, auction_key(stream_id), str(data.amount))

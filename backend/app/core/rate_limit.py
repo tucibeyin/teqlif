@@ -53,6 +53,29 @@ limiter = Limiter(
 
 
 
+async def check_chat_rate_limit(user_id: str) -> bool:
+    """
+    Chat WebSocket rate limiter — Redis fixed-window.
+    Kullanıcının 10 saniyede maksimum 5 mesaj atmasına izin verir.
+
+    Returns:
+        True  → limit içinde, mesaj iletilebilir.
+        False → limit aşıldı, mesajı iletme; sadece gönderene uyarı dön.
+    Redis kesintisinde fail-open davranır (True döner).
+    """
+    from app.utils.redis_client import get_redis
+    try:
+        redis = await get_redis()
+        key = f"chat_rate:{user_id}"
+        count = await redis.incr(key)
+        if count == 1:
+            await redis.expire(key, 10)
+        return count <= 5
+    except Exception as exc:
+        logger.warning("[CHAT RATE] Redis hatası, fail-open | user_id=%s | %s", user_id, exc)
+        return True
+
+
 async def rate_limit_exceeded_handler(
     request: Request, exc: RateLimitExceeded
 ) -> JSONResponse:

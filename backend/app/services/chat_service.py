@@ -25,6 +25,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.core.auto_mod import auto_mod, analyze_text_all
+from app.core.rate_limit import check_chat_rate_limit
 from app.core.logger import get_logger
 from app.core.ws_manager import ws_manager, safe_send_json
 from app.constants import ws_types as WS
@@ -370,6 +371,11 @@ class ChatService:
 
         if await self._check_muted(redis, stream_id, user_id):
             return None
+
+        # Chat hız sınırı: 10 saniyede 5 mesaj
+        if not await check_chat_rate_limit(str(user_id)):
+            logger.info("[CHAT RATE] Limit aşıldı | stream_id=%s user_id=%s", stream_id, user_id)
+            return {"type": "error", "code": "rate_limited", "is_rate_limited": True}
 
         is_hidden = await self._apply_content_filters(user_id, content)
         chat_msg = await self._build_message_obj(

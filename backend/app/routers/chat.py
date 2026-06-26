@@ -173,6 +173,13 @@ async def _handle_chat_message(
             "message": "Bu yayında susturuldunuz",
         })
         return
+    if result.get("is_rate_limited"):
+        await safe_send_json(websocket, {
+            "type": "error",
+            "code": "rate_limited",
+            "message": "Çok hızlı mesaj atıyorsun. Lütfen biraz bekle.",
+        })
+        return
     if result.get("is_hidden"):
         # Shadowban / küfür: mesajı sadece gönderene yolla (ghost)
         await safe_send_json(websocket, result)
