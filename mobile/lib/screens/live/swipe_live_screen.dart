@@ -412,29 +412,25 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
           if (token != null) 'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 5));
+      debugPrint('[SwipeLive] listing feed HTTP ${resp.statusCode}');
       if (resp.statusCode != 200) return;
       final List<dynamic> raw = jsonDecode(resp.body) as List<dynamic>;
+      debugPrint('[SwipeLive] listing feed ${raw.length} ilan, page=$_currentPage lpg=$_currentListingsPerGroup');
       if (raw.isEmpty || !mounted) return;
       setState(() {
         _listingPool.addAll(raw.cast<Map<String, dynamic>>());
         if (_currentListingsPerGroup == 0) {
           _currentListingsPerGroup = 2;
-          // Gruplar 0 ilanla inşa edilmişti. Kullanıcı hâlâ sayfa 0'daysa
-          // (stream widget'ı değişmez) boundary'leri sıfırla; yeni gruplar
-          // 2 ilan boşluğuyla kurulur ve stream 1 sayfa 3'e taşınır.
-          // Sayfa > 0'daysa stream widget kesilir — dokunma.
           if (_currentPage == 0) {
             _groupBoundaries.clear();
             _nextGroupStartPage = 0;
           }
         }
       });
-      // Güncel layout ile prefetch'i hemen yeniden planla.
-      // Sayfa 0'daysa: stream 1 artık sayfa 3'te ve ±4 aralığında →
-      // _activate gelmeden önce bağlantı açılmış olur.
+      debugPrint('[SwipeLive] listing fix sonrası boundaries=${_groupBoundaries.length} lpg=$_currentListingsPerGroup');
       if (mounted) _schedulePrefetch(_currentPage);
-    } catch (_) {
-      // Listing feed yükleme başarısız olursa sadece canlı yayınlar gösterilir
+    } catch (e) {
+      debugPrint('[SwipeLive] listing feed hata: $e');
     } finally {
       _fetchingListings = false;
     }
@@ -860,14 +856,20 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   Future<void> _activate([int attempt = 0]) async {
     if (!mounted) return;
 
-    // Parent hızlı yoldan bağlamışsa doğrudan aktiflere geç
+    // Parent hızlı yoldan bağlamışsa doğrudan aktiflere geç — debounce yok
     final cached = widget.takePrefetch?.call(widget.stream.id);
     if (cached != null) {
       await _setupFromPrefetchEntry(cached, activate: true);
       return;
     }
 
+    // Hızlı geçişlerde ICE başlatma: kullanıcı 300ms bu sayfada kalmazsa
+    // bağlantıya gerek yok (activationGen ilerlediyse zaten iptal olur).
     final myGen = ++_activationGen;
+    if (attempt == 0) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted || _activationGen != myGen) return;
+    }
     _leftStream = false;
     setState(() {
       _loading = true;
