@@ -359,7 +359,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     try {
       final result = await UploadService.uploadVideo(file);
       if (mounted) setState(() => _videoUploadUrl = result.videoUrl);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[CreateListing] Video upload HATA: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Video yüklenemedi: $e')),
