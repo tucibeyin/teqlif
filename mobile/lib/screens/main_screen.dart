@@ -8,6 +8,7 @@ import '../services/deep_link_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
+import '../services/stream_service.dart';
 import '../services/ws_service.dart';
 import 'home_screen.dart';
 import 'listing_detail_screen.dart';
@@ -150,6 +151,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       case 'stream_started':
       case 'outbid':
       case 'smart_auction_alert':
+        // Kullanıcı yayın yapıyorsa kendi yayınından çıkarma
+        if (StreamService.isHosting) break;
         // stream_id varsa onu kullan; yoksa sender_id'ye (eski bildirimler) düş
         final sid = int.tryParse(data['stream_id']?.toString() ?? '') ??
             int.tryParse(data['sender_id']?.toString() ?? '');

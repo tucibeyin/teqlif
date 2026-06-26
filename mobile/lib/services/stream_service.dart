@@ -8,6 +8,12 @@ import '../models/stream.dart';
 import 'storage_service.dart';
 
 class StreamService {
+  /// Kullanıcı aktif olarak yayın yapıyor mu?
+  /// HostStreamScreen initState/dispose tarafından set edilir.
+  /// _handleNotifNavigation bu flag'i kontrol ederek yayıncıyı
+  /// başka yayınlara yönlendirmez.
+  static bool isHosting = false;
+
   static Future<Map<String, String>> _headers() async {
     final token = await StorageService.getToken();
     return {

@@ -95,6 +95,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   @override
   void initState() {
     super.initState();
+    StreamService.isHosting = true;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     _connect();
@@ -234,6 +235,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   @override
   void dispose() {
+    StreamService.isHosting = false;
     _thumbTimer?.cancel();
     _whaleHudTimer?.cancel();
     _whaleHudEntry?.remove();
