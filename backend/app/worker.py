@@ -17,6 +17,7 @@ from arq.connections import RedisSettings
 from app.config import settings
 from app.core.logger import get_logger, capture_exception
 from app.tasks.analytics_tasks import process_churn_and_airdrop, cleanup_hype_highlights_task
+from app.tasks.listing_tasks import deactivate_expired_listings_task, delete_expired_inactive_listings_task
 
 logger = get_logger(__name__)
 
@@ -937,6 +938,8 @@ class WorkerSettings:
         sync_ad_campaigns_task,
         process_churn_and_airdrop,
         cleanup_hype_highlights_task,
+        deactivate_expired_listings_task,
+        delete_expired_inactive_listings_task,
     ]
 
     cron_jobs = [
@@ -964,6 +967,10 @@ class WorkerSettings:
         cron(process_churn_and_airdrop, hour=3, minute=30),
         # Her saat başında — süresi dolmuş highlight dosya + DB temizliği
         cron(cleanup_hype_highlights_task, minute=0),
+        # Her gün 04:00 — 30 günlük ilanları pasife al
+        cron(deactivate_expired_listings_task, hour=4, minute=0),
+        # Her gün 04:30 — 60+ gün pasif kalan ilanları sil
+        cron(delete_expired_inactive_listings_task, hour=4, minute=30),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

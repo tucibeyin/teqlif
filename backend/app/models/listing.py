@@ -34,6 +34,8 @@ class Listing(Base):
     is_highlight: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     active_room_id: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Otomatik pasife alındığında set edilir; 60 gün sonra ilan silinir.
+    deactivated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     likes: Mapped[list["ListingLike"]] = relationship(  # type: ignore[name-defined]
         "ListingLike", cascade="all, delete-orphan", passive_deletes=True

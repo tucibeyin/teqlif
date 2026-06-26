@@ -156,7 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _subs.add(
       // ── İlanlar (cache: user_listings_data) ──────────────────────────────
       ApiService.get<List<dynamic>>(
-        url: '$kBaseUrl/listings?user_id=$userId',
+        url: '$kBaseUrl/listings/my',
         cacheKey: StorageService.cacheUserListings,
         cacheTtl: const Duration(minutes: 5),
         bypassCache: bypassCache,
@@ -873,6 +873,7 @@ class _ListingGridItem extends StatelessWidget {
     final price = _fmt(listing['price']);
 
     final isSponsored = listing['is_sponsored'] == true;
+    final isPassive = listing['is_active'] == false;
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -894,6 +895,11 @@ class _ListingGridItem extends StatelessWidget {
                   errorWidget: (_, __, ___) => _placeholder(context),
                 )
               : _placeholder(context),
+          // Pasif ilanlar için karartma overlay
+          if (isPassive)
+            Positioned.fill(
+              child: Container(color: Colors.black.withValues(alpha: 0.45)),
+            ),
           if (price.isNotEmpty)
             Positioned(
               left: 0,
@@ -920,7 +926,29 @@ class _ListingGridItem extends StatelessWidget {
                 ),
               ),
             ),
-          if (isSponsored)
+          // Pasif badge — sol üst köşe
+          if (isPassive)
+            Positioned(
+              top: 5,
+              left: 5,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF64748B),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'Pasif',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .2,
+                  ),
+                ),
+              ),
+            )
+          else if (isSponsored)
             Positioned(
               top: 5,
               left: 5,
