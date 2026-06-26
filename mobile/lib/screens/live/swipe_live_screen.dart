@@ -1368,7 +1368,12 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
     final hasThumbnail =
         widget.stream.thumbnailUrl != null && widget.stream.thumbnailUrl!.isNotEmpty;
 
-    return Stack(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) _enterPip();
+      },
+      child: Stack(
       children: [
         // ── Arka plan: video veya thumbnail ──────────────────────────────
         if (_remoteVideoTrack != null)
@@ -1693,6 +1698,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
           ),
         ),
       ],
+      ),
     );
   }
 
