@@ -340,27 +340,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.account_balance_wallet_outlined, size: 22),
-                  if (_tuciBalance != null)
-                    Text(
-                      '$_tuciBalance T',
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFB8860B),
-                        height: 1.1,
-                      ),
-                    ),
+                  // Sabit yükseklik: text göründüğünde de gösterilmediğinde de
+                  // Settings ikonu ile aynı toplam yükseklikte kalsın
+                  SizedBox(
+                    height: 11,
+                    child: _tuciBalance != null
+                        ? Text(
+                            '$_tuciBalance T',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFB8860B),
+                              height: 1.1,
+                            ),
+                          )
+                        : null,
+                  ),
                 ],
               ),
             ),
           ),
-          // Ayarlar — cüzdanla aynı yapı, her zaman dikey ortada
+          // Ayarlar — cüzdanla özdeş Column yapısı, alt SizedBox hizayı korur
           GestureDetector(
             key: const Key('profile_btn_ayarlar'),
             onTap: _openSettings,
-            child: const Padding(
-              padding: EdgeInsets.fromLTRB(6, 0, 12, 0),
-              child: Icon(Icons.settings_outlined, size: 22),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 0, 12, 0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.settings_outlined, size: 22),
+                  SizedBox(height: 11), // cüzdan text alanıyla eşit yükseklik
+                ],
+              ),
             ),
           ),
         ],
