@@ -89,10 +89,12 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   late final PageController _pageCtrl;
   int _currentPage = 0;
 
-  // Sonsuz swipe: canlı yayınlar sabit, ilanlar büyüyen havuzdan beslenir
-  late final List<StreamOut> _liveItems;
+  // Sonsuz swipe: canlı yayınlar güncellenir, ilanlar büyüyen havuzdan beslenir
+  late List<StreamOut> _liveItems;
   final List<Map<String, dynamic>> _listingPool = [];
   bool _fetchingListings = false;
+  // Oturum içinde sona erdiği tespit edilen yayınların ID'leri — döngüden çıkarılır
+  final Set<int> _endedStreamIds = {};
 
   // Her K canlı yayın arasına 1 ilan
   static const int _livePerListing = 2;
@@ -140,17 +142,66 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       );
     } else {
       final livePos = isListingSlot ? 0 : posInGroup;
-      final liveIdx = (group * _livePerListing + livePos) % _liveItems.length;
-      return _LiveItem(_liveItems[liveIdx]);
+      // Sona eren yayınları filtrele; hepsi bittiyse listeyi olduğu gibi kullan
+      final validItems = _endedStreamIds.isEmpty
+          ? _liveItems
+          : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
+      final src = validItems.isNotEmpty ? validItems : _liveItems;
+      final liveIdx = (group * _livePerListing + livePos) % src.length;
+      return _LiveItem(src[liveIdx]);
     }
   }
 
   void _onPageChanged(int page) {
     setState(() => _currentPage = page);
-    // Her 9 sayfada bir (3 döngü) yeni ilanlar çek
+    // Her 9 sayfada bir (3 döngü) yeni ilanlar ve canlı yayınları yenile
     if (page > 0 && page % ((_livePerListing + 1) * 3) == 0) {
       _loadListingFeed();
+      _refreshLiveStreams();
     }
+  }
+
+  /// O an aktif olan sayfanın stream'ini döner (listing slotundaysa null).
+  StreamOut? _getCurrentStream() {
+    if (_liveItems.isEmpty) return null;
+    final posInGroup = _currentPage % (_livePerListing + 1);
+    if (posInGroup == _livePerListing) return null;
+    final group = _currentPage ~/ (_livePerListing + 1);
+    final liveIdx = (group * _livePerListing + posInGroup) % _liveItems.length;
+    return _liveItems[liveIdx];
+  }
+
+  /// Bir yayının sona erdiği bildirildiğinde döngüden çıkarılır.
+  /// Mevcut sayfanın yayınıysa sayfa değişimine kadar beklenir.
+  void _onStreamEnded(int streamId) {
+    if (_endedStreamIds.contains(streamId)) return;
+    _endedStreamIds.add(streamId);
+    // Current page'in yayını değilse hemen yeniden inşa et
+    // (prefetch sayfaları geçerli yayına güncellenir)
+    if (_getCurrentStream()?.id != streamId && mounted) {
+      setState(() {});
+    }
+  }
+
+  /// API'den güncel yayın listesini çekip _liveItems'ı günceller.
+  Future<void> _refreshLiveStreams() async {
+    if (_liveItems.length <= 1) return;  // single mod → yenileme yok
+    try {
+      final fresh = await StreamService.getActiveStreams();
+      if (!mounted) return;
+      setState(() {
+        final existingIds = _liveItems.map((s) => s.id).toSet();
+        // Yeni yayınları ekle
+        for (final s in fresh) {
+          if (!existingIds.contains(s.id)) _liveItems.add(s);
+        }
+        // Artık canlı olmayan yayınları ended olarak işaretle
+        final freshIds = fresh.map((s) => s.id).toSet();
+        for (final s in _liveItems) {
+          if (!freshIds.contains(s.id)) _endedStreamIds.add(s.id);
+        }
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadListingFeed() async {
@@ -201,6 +252,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 isActive: i == _currentPage,
                 isPrefetch: (i - _currentPage).abs() == 1,
                 isLast: false,
+                onStreamEnded: () => _onStreamEnded(stream.id),
               ),
             _ListingItem(:final listing, :final slotIndex, :final streamCategory) =>
               _ListingVideoPage(
@@ -224,6 +276,7 @@ class _SwipeLivePage extends StatefulWidget {
   final bool isActive;
   final bool isPrefetch;
   final bool isLast;
+  final VoidCallback? onStreamEnded;
 
   const _SwipeLivePage({
     super.key,
@@ -231,6 +284,7 @@ class _SwipeLivePage extends StatefulWidget {
     required this.isActive,
     required this.isLast,
     this.isPrefetch = false,
+    this.onStreamEnded,
   });
 
   @override
@@ -451,6 +505,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
     } on AppException catch (e) {
       if (e.statusCode == 400 && mounted) _leave();
+      else if (e.statusCode == 403) widget.onStreamEnded?.call();
     } catch (_) {
       // Prefetch başarısız — kullanıcı sayfaya gelince _activate() yeniden dener
     }
@@ -602,6 +657,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
       } else if (e.statusCode == 403) {
         showErrorSnackbar(context, e);
         setState(() => _streamEnded = true);
+        widget.onStreamEnded?.call();
       } else {
         showErrorSnackbar(context, e);
       }
@@ -1150,8 +1206,10 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                 children: [
                   ChatPanel(
                     streamId: widget.stream.id,
-                    onStreamEnded: () =>
-                        setState(() => _streamEnded = true),
+                    onStreamEnded: () {
+                      setState(() => _streamEnded = true);
+                      widget.onStreamEnded?.call();
+                    },
                     onViewerCountChanged: (n) =>
                         setState(() => _viewerCount = n),
                     onMuted: _handleMuted,
