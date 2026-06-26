@@ -12,6 +12,7 @@ from app.schemas.message import MessageOut, ConversationOut, SendMessageIn
 from app.schemas.notification import UnreadCountOut
 from app.utils.auth import get_current_user, decode_token
 from app.routers.notifications import push_notification
+from app.core.auto_mod import analyze_text_all
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.ws_manager import ws_manager
@@ -214,10 +215,14 @@ async def send_message(
     if block_exists:
         raise ForbiddenException("Bu kullanıcıyla mesajlaşamazsınız")
 
+    # Auto-mod: içerik tüm dillerde kontrol edilir (zero-latency, DB öncesi)
+    is_shadowbanned = analyze_text_all(data.content)
+
     msg = DirectMessage(
         sender_id=uid,
         receiver_id=data.receiver_id,
         content=data.content,
+        is_shadowbanned=is_shadowbanned,
     )
     db.add(msg)
     await db.commit()
@@ -233,7 +238,6 @@ async def send_message(
         created_at=msg.created_at,
     )
 
-    # Broadcast to receiver's DM WebSocket if connected
     dm_payload = {
         "type": "message",
         "id": msg.id,
@@ -244,9 +248,16 @@ async def send_message(
         "is_read": msg.is_read,
         "created_at": msg.created_at.isoformat() if msg.created_at else None,
     }
-    await _broadcast_dm(data.receiver_id, dm_payload)
-    # Also send back to sender so their WS updates
+    # Shadowbanned mesaj sadece gönderene görünür; alıcıya broadcast yapılmaz
+    if not is_shadowbanned:
+        await _broadcast_dm(data.receiver_id, dm_payload)
     await _broadcast_dm(uid, dm_payload)
+
+    if is_shadowbanned:
+        logger.info(
+            "[AUTO_MOD] DM shadowban | sender_id=%s receiver_id=%s msg_id=%s",
+            uid, data.receiver_id, msg.id,
+        )
 
     # Create notification for receiver
     await push_notification(

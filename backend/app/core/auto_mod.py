@@ -1,95 +1,120 @@
 """
-Auto-Mod çekirdeği — içerik filtreleme altyapısı.
+Auto-Mod çekirdeği — Zero-Latency içerik filtreleme.
 
-Kullanım:
-    from app.core.auto_mod import auto_mod
+Genel kullanım:
+    from app.core.auto_mod import analyze_text, normalize_text
 
-    if auto_mod.contains_profanity(text):
-        # mesajı reddet veya gizle
+    if analyze_text(text, language='tr'):
+        # mesajı gizle / shadowban uygula
 
-Özel kelimeler `app/core/bad_words.txt` dosyasından yüklenir (her satır bir kelime).
-better_profanity'nin varsayılan İngilizce listesi de aktiftir; iki liste birleştirilir.
+Dil sözlükleri app/core/bad_words/{lang}.json dosyalarından yüklenir.
+Tüm diller aynı anda kontrol edilmek istenirse analyze_text_all() kullanılır.
 
-Dayanıklılık: better_profanity kurulu değilse AutoMod yine de çalışır,
-contains_profanity() her zaman False döner (filtreleme devre dışı, mesajlar akar).
+Dayanıklılık: JSON dosyası yoksa ilgili dil sessizce atlanır (filtre hiç
+çalışmaz değil, sadece eksik dil listeye katkı sağlamaz).
 """
 
+from __future__ import annotations
+
+import json
 import os
+import re
+from functools import lru_cache
+
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-_BAD_WORDS_PATH = os.path.join(os.path.dirname(__file__), "bad_words.txt")
+_BAD_WORDS_DIR = os.path.join(os.path.dirname(__file__), "bad_words")
+_SUPPORTED_LANGS = ("tr", "en", "ar")
 
-# better_profanity opsiyonel — kurulu değilse filtreleme sessizce devre dışı kalır
-try:
-    from better_profanity import profanity as _profanity
-    _PROFANITY_AVAILABLE = True
-except ImportError:
-    _profanity = None  # type: ignore[assignment]
-    _PROFANITY_AVAILABLE = False
-    logger.warning(
-        "[AUTO_MOD] better_profanity kurulu değil — küfür filtresi devre dışı. "
-        "`pip install better-profanity==0.7.0` ile kurabilirsiniz."
+# Normalize'da temizlenecek karakter sınıfı: noktalama, boşluk ve ayırıcılar
+_STRIP_RE = re.compile(r"[\s\.,\-_\*\+|\\/:;'\"!?@#$%^&()\[\]{}<>~`​­]+")
+
+
+# ── Metin normalleştirme ──────────────────────────────────────────────────────
+
+def normalize_text(text: str) -> str:
+    """
+    Metni küçük harfe çevirip noktalama, boşluk ve ayırıcı karakterleri kaldırır.
+
+    Örnek:
+        "S.i.k.t.i.r  git!" → "siktirgo"  (substring eşleşmesi için)
+    """
+    text = text.lower()
+    text = _STRIP_RE.sub("", text)
+    return text
+
+
+# ── Sözlük yükleme (uygulama ömrü boyunca önbelleklenir) ────────────────────
+
+@lru_cache(maxsize=8)
+def _load_bad_words(language: str) -> frozenset[str]:
+    """
+    Verilen dil için bad_words/{lang}.json'ı yükler ve normalize eder.
+    Dosya yoksa boş küme döner; bir sonraki çağrıda tekrar okunmaz.
+    """
+    path = os.path.join(_BAD_WORDS_DIR, f"{language}.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            words: list[str] = json.load(f)
+        normalized = frozenset(normalize_text(w) for w in words if w.strip())
+        logger.info("[AUTO_MOD] %s: %d kelime yüklendi", language, len(normalized))
+        return normalized
+    except FileNotFoundError:
+        logger.warning("[AUTO_MOD] Sözlük bulunamadı: %s", path)
+        return frozenset()
+    except Exception as exc:
+        logger.error("[AUTO_MOD] Sözlük yüklenemedi (%s): %s", language, exc)
+        return frozenset()
+
+
+# ── Analiz fonksiyonları ──────────────────────────────────────────────────────
+
+def analyze_text(text: str, language: str = "tr") -> bool:
+    """
+    Metni normalize edip belirtilen dil sözlüğünde substring eşleşmesi arar.
+
+    Args:
+        text:     Kontrol edilecek ham metin.
+        language: Dil kodu — 'tr', 'en', 'ar'. Bilinmiyorsa 'tr' kullanılır.
+
+    Returns:
+        True  → yasaklı kelime bulundu (mesaj gizlenmeli).
+        False → temiz veya sözlük boş.
+    """
+    normalized = normalize_text(text)
+    if not normalized:
+        return False
+    words = _load_bad_words(language)
+    return any(word in normalized for word in words)
+
+
+def analyze_text_all(text: str) -> bool:
+    """
+    Tüm desteklenen dillerde (tr, en, ar) içerik kontrolü yapar.
+    Herhangi bir dilde eşleşme bulunursa True döner.
+    Çok dilli kullanıcı tabanı için tercih edilen yol.
+    """
+    normalized = normalize_text(text)
+    if not normalized:
+        return False
+    return any(
+        any(word in normalized for word in _load_bad_words(lang))
+        for lang in _SUPPORTED_LANGS
     )
 
 
-class AutoMod:
+# ── Geriye dönük uyumluluk — eski kod auto_mod.contains_profanity() kullanıyor ──
+
+class _LegacyAutoMod:
     """
-    Canlı yayın chat ve DM mesajları için içerik denetleyici.
-
-    Başlangıçta bir kez yüklenir; uygulama genelinde singleton olarak kullanılır.
-    Özel kelimeler `bad_words.txt`'den eklenir; better_profanity'nin yerleşik
-    İngilizce listesi de aktif tutulur.
+    Eski ChatService entegrasyonu için shim.
+    Yeni kod analyze_text() veya analyze_text_all() kullanmalı.
     """
-
-    def __init__(self) -> None:
-        self._custom_words_lower: set[str] = set()
-        if _PROFANITY_AVAILABLE:
-            self._load_custom_words()
-
-    def _load_custom_words(self) -> None:
-        """bad_words.txt'i okuyup better_profanity'ye ekler."""
-        custom_words: list[str] = []
-        try:
-            with open(_BAD_WORDS_PATH, encoding="utf-8") as f:
-                for line in f:
-                    word = line.strip()
-                    if word and not word.startswith("#"):
-                        custom_words.append(word)
-        except FileNotFoundError:
-            logger.warning("[AUTO_MOD] bad_words.txt bulunamadı: %s", _BAD_WORDS_PATH)
-        except Exception as exc:
-            logger.error("[AUTO_MOD] bad_words.txt okunamadı: %s", exc)
-
-        # load_censor_words(custom_censor_list) — built-in liste + custom kelimeler
-        # tek seferde yükler; add_censor_words bazı sürümlerde contains_profanity'de
-        # algılanmayabiliyor.
-        _profanity.load_censor_words()
-        self._custom_words_lower = {w.lower() for w in custom_words}
-        logger.info("[AUTO_MOD] %d özel kelime yüklendi", len(custom_words))
 
     def contains_profanity(self, text: str) -> bool:
-        """
-        Metinde yasaklı kelime varsa True döner.
-        better_profanity kurulu değilse her zaman False döner.
-
-        Args:
-            text: Kontrol edilecek ham metin.
-
-        Returns:
-            True  → yasaklı kelime bulundu (mesaj gizlenmeli).
-            False → temiz veya filtre devre dışı.
-        """
-        if not _PROFANITY_AVAILABLE:
-            return False
-        # better_profanity kontrolü
-        if _profanity.contains_profanity(text):
-            return True
-        # Fallback: custom kelimeleri kelime kelime kontrol et
-        text_lower = text.lower()
-        return any(word in text_lower for word in self._custom_words_lower)
+        return analyze_text_all(text)
 
 
-# Uygulama genelinde kullanılan singleton
-auto_mod = AutoMod()
+auto_mod = _LegacyAutoMod()

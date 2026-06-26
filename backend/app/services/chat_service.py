@@ -24,7 +24,7 @@ import redis.asyncio as aioredis
 from sqlalchemy import select
 
 from app.config import settings
-from app.core.auto_mod import auto_mod
+from app.core.auto_mod import auto_mod, analyze_text_all
 from app.core.logger import get_logger
 from app.core.ws_manager import ws_manager, safe_send_json
 from app.constants import ws_types as WS
@@ -310,7 +310,9 @@ class ChatService:
 
     async def _apply_content_filters(self, user_id: int, content: str) -> bool:
         """Shadowban veya küfür içeriyorsa True (mesaj gizlenecek) döner."""
-        return await self.is_shadowbanned(user_id) or auto_mod.contains_profanity(content)
+        if await self.is_shadowbanned(user_id):
+            return True
+        return analyze_text_all(content)
 
     async def _build_message_obj(
         self, redis, stream_id: int, user_id: int, username: str,
