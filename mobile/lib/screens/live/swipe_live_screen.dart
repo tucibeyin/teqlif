@@ -199,6 +199,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 key: ValueKey('live_${stream.id}_$i'),
                 stream: stream,
                 isActive: i == _currentPage,
+                isPrefetch: (i - _currentPage).abs() == 1,
                 isLast: false,
               ),
             _ListingItem(:final listing, :final slotIndex, :final streamCategory) =>
@@ -221,6 +222,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 class _SwipeLivePage extends StatefulWidget {
   final StreamOut stream;
   final bool isActive;
+  final bool isPrefetch;
   final bool isLast;
 
   const _SwipeLivePage({
@@ -228,6 +230,7 @@ class _SwipeLivePage extends StatefulWidget {
     required this.stream,
     required this.isActive,
     required this.isLast,
+    this.isPrefetch = false,
   });
 
   @override
@@ -264,6 +267,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   bool _leftStream = false;
   // _activate() / _deactivate() race condition koruması
   int _activationGen = 0;
+  // Prefetch modunda sadece video subscribe edilir, ses kapalı
+  bool _isPrefetchMode = false;
   // Kazanan konfetisi
   late ConfettiController _confettiController;
   // Hediye HUD overlay
@@ -275,15 +280,35 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
-    if (widget.isActive) _activate();
+    if (widget.isActive) {
+      _activate();
+    } else if (widget.isPrefetch) {
+      _prefetchConnect();
+    }
   }
 
   @override
   void didUpdateWidget(_SwipeLivePage old) {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
-      _activate();
+      // Sayfa aktif oldu
+      if (_room != null) {
+        _promoteToActive();  // zaten pre-bağlı → sesi aç
+      } else {
+        _activate();
+      }
     } else if (!widget.isActive && old.isActive) {
+      // Sayfa aktif değil oldu
+      if (widget.isPrefetch) {
+        _demoteToPrefetch();  // komşu kalıyor → sesi kapat, video bağlı
+      } else {
+        _deactivate();
+      }
+    } else if (widget.isPrefetch && !old.isPrefetch && !widget.isActive && _room == null) {
+      // Prefetch'e girdi, henüz bağlı değil
+      _prefetchConnect();
+    } else if (!widget.isPrefetch && !widget.isActive && (old.isPrefetch || old.isActive) && _room != null) {
+      // Artık ne active ne prefetch → tamamen kapat
       _deactivate();
     }
   }
@@ -339,6 +364,132 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     _confettiController.play();
     HapticFeedback.heavyImpact();
     Future.delayed(const Duration(milliseconds: 200), HapticFeedback.vibrate);
+  }
+
+  // ── Ön yükleme (prefetch) ─────────────────────────────────────────────────
+
+  /// Kullanıcı henüz bu sayfaya gelmeden arka planda LiveKit'e bağlanır.
+  /// Ses kapalıdır; video track gelir ve renderer hazır olur.
+  /// Sayfa aktif olduğunda _promoteToActive() ile ses de açılır → anında izleme.
+  Future<void> _prefetchConnect() async {
+    if (!mounted || _room != null) return;
+    final myGen = ++_activationGen;
+
+    try {
+      if (_myUsername == null) {
+        final info = await StorageService.getUserInfo();
+        _myUsername = info?['username'] as String?;
+      }
+      if (!mounted || _activationGen != myGen) return;
+
+      final token = await StreamService.joinStream(widget.stream.id);
+      if (!mounted || _activationGen != myGen) return;
+
+      if (_resolvedTitle == null) {
+        _resolvedTitle = token.title;
+        _resolvedHostUsername = token.hostUsername;
+      }
+
+      _isPrefetchMode = true;
+      final room = Room();
+      _listener = room.createListener();
+
+      // Yeni track publish olduğunda: prefetch modda sadece video, active modda her şey
+      _listener!.on<TrackPublishedEvent>((e) {
+        if (e.publication.kind == TrackType.VIDEO || !_isPrefetchMode) {
+          e.publication.subscribe();
+        }
+      });
+      _listener!.on<TrackSubscribedEvent>((e) {
+        if (e.track is VideoTrack && mounted) {
+          final vTrack = e.track as VideoTrack;
+          final isHost = e.participant.identity == token.hostLivekitIdentity;
+          if (isHost) {
+            setState(() {
+              _remoteVideoTrack = vTrack;
+              _hostParticipantSid = e.participant.sid;
+            });
+          } else if (e.participant.sid != _hostParticipantSid) {
+            setState(() => _coHostVideoTrack = vTrack);
+          }
+        }
+      });
+      _listener!.on<TrackUnsubscribedEvent>((e) {
+        if (e.track is VideoTrack && mounted) {
+          if (e.track == _remoteVideoTrack) setState(() => _remoteVideoTrack = null);
+          else if (e.track == _coHostVideoTrack) setState(() => _coHostVideoTrack = null);
+        }
+      });
+      _listener!.on<RoomDisconnectedEvent>((_) {
+        if (mounted) setState(() => _remoteVideoTrack = null);
+      });
+
+      await room.connect(
+        token.livekitUrl,
+        token.token,
+        connectOptions: const ConnectOptions(autoSubscribe: false),
+      );
+      if (!mounted || _activationGen != myGen) {
+        room.disconnect();
+        return;
+      }
+
+      // Zaten stream'de olan katılımcıların video track'lerini subscribe et
+      for (final p in room.remoteParticipants.values) {
+        final isHost = p.identity == token.hostLivekitIdentity;
+        if (isHost) _hostParticipantSid = p.sid;
+        for (final pub in p.videoTrackPublications) {
+          if (!pub.subscribed) pub.subscribe();
+        }
+      }
+      if (!mounted || _activationGen != myGen) {
+        room.disconnect();
+        return;
+      }
+
+      setState(() { _token = token; _room = room; });
+
+    } on AppException catch (e) {
+      if (e.statusCode == 400 && mounted) _leave();
+    } catch (_) {
+      // Prefetch başarısız — kullanıcı sayfaya gelince _activate() yeniden dener
+    }
+  }
+
+  /// Prefetch bağlantısı üzerinden tam izlemeye geç: audio subscribe et.
+  Future<void> _promoteToActive() async {
+    if (!mounted || _room == null) return;
+    _leftStream = false;
+    _isPrefetchMode = false;
+    if (mounted) setState(() => _streamEnded = false);
+
+    final room = _room!;
+    for (final p in room.remoteParticipants.values) {
+      for (final pub in p.audioTrackPublications) {
+        if (!pub.subscribed) await pub.subscribe();
+      }
+    }
+
+    if (mounted) {
+      AnalyticsService.logInteraction(
+        itemId: widget.stream.id,
+        itemType: 'stream',
+        interactionType: 'swipe_impression',
+      );
+    }
+  }
+
+  /// Aktif sayfadan komşu sayfaya geç: audio unsubscribe et, video bağlı kalır.
+  Future<void> _demoteToPrefetch() async {
+    if (!mounted || _room == null) return;
+    _isPrefetchMode = true;
+
+    final room = _room!;
+    for (final p in room.remoteParticipants.values) {
+      for (final pub in p.audioTrackPublications) {
+        if (pub.subscribed) await pub.unsubscribe();
+      }
+    }
   }
 
   Future<void> _activate() async {
