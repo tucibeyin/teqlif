@@ -64,6 +64,11 @@ class _ListingItem extends _FeedItem {
   const _ListingItem(this.listing, {this.slotIndex = 0, this.streamCategory = ''});
 }
 
+// İlan havuzu henüz yüklenmedi: siyah placeholder (stream widget değil).
+class _LoadingListingItem extends _FeedItem {
+  const _LoadingListingItem();
+}
+
 // ── SwipeLiveScreen ──────────────────────────────────────────────────────────
 
 class SwipeLiveScreen extends StatefulWidget {
@@ -114,7 +119,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   // _groupBoundaries[i] = (startPage, listingCount) — lazy inşa edilir
   final List<(int, int)> _groupBoundaries = [];
   int _nextGroupStartPage = 0;
-  int _currentListingsPerGroup = 0; // listing pool dolunca davranışa göre 1-3
+  int _currentListingsPerGroup = 2; // initState'den itibaren 2; _trackStreamDwell ile güncellenir
 
   // Davranış takibi: yayın izleme süresine göre ilan sayısı güncellenir
   final List<int> _recentDwells = []; // son 10 yayın dwell süresi (ms)
@@ -166,7 +171,6 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   /// Son izleme sürelerine göre grup başına ilan sayısını hesaplar.
   int _computeListingsPerGroup() {
-    if (_listingPool.isEmpty) return 0;
     if (_recentDwells.length < 3) return 2; // yeterli veri yok → varsayılan
     final avgMs = _recentDwells.fold(0, (a, b) => a + b) ~/ _recentDwells.length;
     if (avgMs < 3000) return 3;   // hızlı geçiyor → daha fazla ilan
@@ -209,9 +213,9 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     final src = validItems.isNotEmpty ? validItems : _liveItems;
     final streamForGroup = src[groupIdx % src.length];
 
-    if (posInGroup == 0 || _listingPool.isEmpty) {
-      return _LiveItem(streamForGroup);
-    }
+    if (posInGroup == 0) return _LiveItem(streamForGroup);
+    // İlan slotu ama havuz henüz boş → placeholder (stream widget değil)
+    if (_listingPool.isEmpty) return const _LoadingListingItem();
     // Ilan slotu: posInGroup 1..listingCount
     // Her grup ve her slot için farklı ilan seç
     final listingIdx = (groupIdx * 3 + posInGroup - 1) % _listingPool.length;
@@ -419,15 +423,9 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       if (raw.isEmpty || !mounted) return;
       setState(() {
         _listingPool.addAll(raw.cast<Map<String, dynamic>>());
-        if (_currentListingsPerGroup == 0) {
-          _currentListingsPerGroup = 2;
-          if (_currentPage == 0) {
-            _groupBoundaries.clear();
-            _nextGroupStartPage = 0;
-          }
-        }
+        // _LoadingListingItem slotları otomatik olarak yeniden çizilir:
+        // _itemAt artık _listingPool.isNotEmpty olduğundan _ListingItem döndürür.
       });
-      debugPrint('[SwipeLive] listing fix sonrası boundaries=${_groupBoundaries.length} lpg=$_currentListingsPerGroup');
       if (mounted) _schedulePrefetch(_currentPage);
     } catch (e) {
       debugPrint('[SwipeLive] listing feed hata: $e');
@@ -467,6 +465,10 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 isActive: i == _currentPage,
                 slotIndex: slotIndex,
                 streamCategory: streamCategory,
+              ),
+            _LoadingListingItem() => ColoredBox(
+                key: ValueKey('loading_$i'),
+                color: Colors.black,
               ),
           };
         },
