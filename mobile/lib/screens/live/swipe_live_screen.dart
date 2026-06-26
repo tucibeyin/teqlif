@@ -417,8 +417,15 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       if (raw.isEmpty || !mounted) return;
       setState(() {
         _listingPool.addAll(raw.cast<Map<String, dynamic>>());
-        // İlk yükleme: listing yokken 0'dı, şimdi varsayılan 2'ye geç
-        if (_currentListingsPerGroup == 0) _currentListingsPerGroup = 2;
+        if (_currentListingsPerGroup == 0) {
+          _currentListingsPerGroup = 2;
+          // Gruplar 0 ilanla inşa edilmişti; kullanıcı henüz stream 0'daysa
+          // sınırları temizle — bir sonraki swipe'ta doğru sayıda ilan çıkar.
+          if (_currentPage == 0) {
+            _groupBoundaries.clear();
+            _nextGroupStartPage = 0;
+          }
+        }
       });
     } catch (_) {
       // Listing feed yükleme başarısız olursa sadece canlı yayınlar gösterilir
