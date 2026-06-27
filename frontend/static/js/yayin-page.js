@@ -1876,13 +1876,14 @@
 
     async function _initBlast(title, category) {
         const btn = document.getElementById('btnBlast');
-        if (!btn) return;
+        const wrapper = document.getElementById('blastWrapper');
+        if (!btn || !wrapper) return;
         try {
             const qs = new URLSearchParams({ title: title || 'Canlı Yayın' });
             if (category) qs.set('category', category);
             const data = await apiFetch('/leads/audience-size?' + qs);
             if (!data || !data.audience_size) return;
-            btn.style.display = '';
+            wrapper.style.display = 'inline-block';
             btn.dataset.audienceSize = data.audience_size;
             btn.dataset.estimatedCost = data.estimated_cost;
             btn.title = `${data.audience_size} kişiye ulaşılabilir`;
@@ -1908,7 +1909,7 @@
                 });
                 const sent = (result && result.sent) || size;
                 _blastToast(`🎯 ${sent} kişiye bildirim gönderildi!`, '#059669');
-                btn.style.display = 'none';
+                wrapper.style.display = 'none';
             } catch (e) {
                 _blastToast((e && e.detail) || 'Bildirim gönderilemedi.', '#dc2626');
                 btn.disabled = false;

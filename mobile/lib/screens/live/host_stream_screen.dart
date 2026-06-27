@@ -82,6 +82,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   int _audienceSize = 0;
   double _audienceCost = 0.0;
   bool _blastSending = false;
+  bool _blastDismissed = false;
   final _chatKey = GlobalKey<ChatPanelState>();
   final _heartsKey = GlobalKey<FloatingHeartsState>();
   final _hypeScore = ValueNotifier<int>(0);
@@ -920,10 +921,13 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       ),
                     ),
                     // ── Lead blast butonu ──────────────────────────────────
-                    if (_audienceSize > 0)
+                    if (_audienceSize > 0 && !_blastDismissed)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                        child: GestureDetector(
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                        GestureDetector(
                           onTap: _blastSending ? null : _sendLeadBlast,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -989,6 +993,27 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                     ],
                             ),
                           ),
+                        ),
+                            // ── Kapat X ─────────────────────────────────
+                            Positioned(
+                              top: -6,
+                              right: -6,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _blastDismissed = true),
+                                behavior: HitTestBehavior.opaque,
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF1E293B),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close_rounded,
+                                      color: Colors.white70, size: 12),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     // ── Audience Insights butonu ───────────────────────
