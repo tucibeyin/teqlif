@@ -143,7 +143,6 @@
             border-collapse: collapse;
         }
 
-        /* Column widths */
         .ctable .col-feat { width: 46%; }
         .ctable .col-std  { width: 27%; }
         .ctable .col-pro  { width: 27%; }
@@ -159,9 +158,7 @@
         }
 
         .th-feat { text-align: left !important; color: var(--text-dim); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
-
         .th-std  { color: var(--text-dim); border-left: 1px solid var(--border-dark); }
-
         .th-pro  {
             color: var(--pri);
             background: var(--pro-bg) !important;
@@ -183,9 +180,14 @@
         }
 
         /* ── tbody ─────────────────────────────────────────────── */
-        .ctable tbody tr { transition: background .12s; }
+        .ctable tbody tr.feat-row {
+            cursor: pointer;
+            transition: background .12s;
+        }
 
-        .ctable tbody tr:hover td { background-color: rgba(255,255,255,.025) !important; }
+        .ctable tbody tr.feat-row:hover td { background-color: rgba(255,255,255,.03) !important; }
+        .ctable tbody tr.feat-row.open .td-feat { background: rgba(6,182,212,.06); }
+        .ctable tbody tr.feat-row.open .td-pro  { background: rgba(6,182,212,.10); }
 
         .ctable tbody td {
             padding: .45rem 1rem;
@@ -216,6 +218,46 @@
             font-weight: 600;
         }
 
+        /* Feature label row inner */
+        .feat-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+        }
+
+        .feat-chevron {
+            color: var(--text-dim);
+            font-size: .65rem;
+            flex-shrink: 0;
+            transition: transform .2s;
+            margin-left: auto;
+        }
+
+        .feat-row.open .feat-chevron { transform: rotate(180deg); color: var(--pri); }
+
+        /* Description row */
+        .desc-row td {
+            background: rgba(6,182,212,.04) !important;
+            border-left: none !important;
+            border-bottom: 1px solid var(--border-dark);
+            padding: 0 !important;
+            overflow: hidden;
+        }
+
+        .desc-inner {
+            padding: .55rem 1rem .65rem 1.15rem;
+            font-size: .76rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+            border-left: 2px solid var(--pri);
+            margin: 0 .5rem .5rem;
+            border-radius: 0 0 4px 4px;
+        }
+
+        .desc-row { display: none; }
+        .desc-row.open { display: table-row; }
+
         /* Value styles */
         .v-ok  { color: var(--green); }
         .v-no  { color: var(--red); opacity: .65; }
@@ -236,13 +278,11 @@
         .tfoot-std { background: #0e0e14 !important; text-align: center; border-left: 1px solid var(--border-dark); }
         .tfoot-pro { background: var(--pro-bg) !important; text-align: center; border-left: 1px solid var(--border-pri); }
 
-        /* Price row */
         .price-label { font-size: .68rem; color: var(--text-dim); margin-bottom: .15rem; }
         .price-val   { font-size: 1.35rem; font-weight: 900; color: var(--pri); line-height: 1.1; }
         .price-sub   { font-size: .65rem; color: var(--text-dim); margin-top: .12rem; min-height: .8rem; }
         .price-free  { font-size: 1.1rem; font-weight: 800; color: var(--text-dim); }
 
-        /* Buttons */
         .btn-free {
             width: 100%;
             background: none;
@@ -312,6 +352,7 @@
             .ctable tbody td, .ctable tfoot td, .ctable thead th { padding: .4rem .65rem; font-size: .74rem; }
             .price-val { font-size: 1.1rem; }
             .page-header h1 { font-size: 1.2rem; }
+            .desc-inner { font-size: .72rem; }
         }
     </style>
 </head>
@@ -359,46 +400,127 @@
                 </tr>
             </thead>
             <tbody>
-                <tr class="row-hi">
-                    <td class="td-feat">💛 Canlı Yayın Hediye Geliri</td>
+
+                <!-- 1 -->
+                <tr class="feat-row row-hi" data-key="gift">
+                    <td class="td-feat">
+                        <div class="feat-inner">
+                            <span>💛 Canlı Yayın Hediye Geliri</span>
+                            <span class="feat-chevron">▾</span>
+                        </div>
+                    </td>
                     <td class="td-std"><span class="v-dim">%70</span></td>
                     <td class="td-pro"><span class="v-hi">🔥 %95</span></td>
                 </tr>
-                <tr>
-                    <td class="td-feat">📊 Pazar Trendleri &amp; Analitik</td>
+                <tr class="desc-row" data-key="gift">
+                    <td colspan="3"><div class="desc-inner">Canlı yayında izleyicilerden aldığınız hediyeler TUCi'ye dönüştürülür. Standart hesaplarda platforma %30 komisyon kesilirken Pro'da bu oran yalnızca %5'e düşer — her yayında çok daha fazlası cebinizde kalır.</div></td>
+                </tr>
+
+                <!-- 2 -->
+                <tr class="feat-row" data-key="analytics">
+                    <td class="td-feat">
+                        <div class="feat-inner">
+                            <span>📊 Pazar Trendleri &amp; Analitik</span>
+                            <span class="feat-chevron">▾</span>
+                        </div>
+                    </td>
                     <td class="td-std"><span class="v-no">🔒 Kilitli</span></td>
                     <td class="td-pro"><span class="v-ok">✔ Sınırsız</span></td>
                 </tr>
-                <tr>
-                    <td class="td-feat">🤖 Yapay Zeka Fiyat Danışmanı</td>
+                <tr class="desc-row" data-key="analytics">
+                    <td colspan="3"><div class="desc-inner">Hangi kategorilerde talep artıyor, benzer ürünler ne fiyata satıldı, rakip satıcılar ne zaman daha aktif — tüm bu verilere gerçek zamanlı erişin. Doğru zamanda doğru fiyatla sat.</div></td>
+                </tr>
+
+                <!-- 3 -->
+                <tr class="feat-row" data-key="ai">
+                    <td class="td-feat">
+                        <div class="feat-inner">
+                            <span>🤖 Yapay Zeka Fiyat Danışmanı</span>
+                            <span class="feat-chevron">▾</span>
+                        </div>
+                    </td>
                     <td class="td-std"><span class="v-dim">Ücretli</span></td>
                     <td class="td-pro"><span class="v-ok">⚡ Ücretsiz</span></td>
                 </tr>
-                <tr>
-                    <td class="td-feat">🐋 Balina (VIP) Alıcı Radarı</td>
+                <tr class="desc-row" data-key="ai">
+                    <td colspan="3"><div class="desc-inner">İlan oluştururken yapay zeka, platformdaki benzer ürünlerin geçmiş satışlarını analiz ederek size en rekabetçi fiyatı saniyeler içinde önerir. Standart kullanıcılar bu özellik için TUCi öderken Pro'da tamamen ücretsizdir.</div></td>
+                </tr>
+
+                <!-- 4 -->
+                <tr class="feat-row" data-key="whale">
+                    <td class="td-feat">
+                        <div class="feat-inner">
+                            <span>🐋 Balina (VIP) Alıcı Radarı</span>
+                            <span class="feat-chevron">▾</span>
+                        </div>
+                    </td>
                     <td class="td-std"><span class="v-no">✘ Yok</span></td>
                     <td class="td-pro"><span class="v-ok">✔ Aktif</span></td>
                 </tr>
-                <tr>
-                    <td class="td-feat">⭐ Öne Çıkarılmış İlan Önceliği</td>
-                    <td class="td-std"><span class="v-no">✘ Yok</span></td>
+                <tr class="desc-row" data-key="whale">
+                    <td colspan="3"><div class="desc-inner">Platformun en yüksek bütçeli alıcıları — "Balinalar" — ilanınızı incelediğinde anında bildirim alırsınız. Bu alıcılar hızlı karar verir ve yüksek teklifler sunar; fırsatı kaçırmadan yanıt verin.</div></td>
+                </tr>
+
+                <!-- 5 -->
+                <tr class="feat-row" data-key="boost">
+                    <td class="td-feat">
+                        <div class="feat-inner">
+                            <span>⭐ Öne Çıkarılmış İlan Önceliği</span>
+                            <span class="feat-chevron">▾</span>
+                        </div>
+                    </td>
+                    <td class="td-std"><span class="v-dim">0 / ay</span></td>
                     <td class="td-pro"><span class="v-ok">✔ 20 / ay</span></td>
                 </tr>
-                <tr>
-                    <td class="td-feat">👑 Pro Kullanıcı Rozeti</td>
+                <tr class="desc-row" data-key="boost">
+                    <td colspan="3"><div class="desc-inner">Ayda 20 ilanınızı rakiplerinizin önüne geçirecek şekilde "Sana Özel" akışında öne çıkarabilirsiniz. Her boost 50 TUCi bütçeyle çalışır ve tıklama başına 1 TUCi harcar — bütçe bitene kadar ilanınız ön sırada görünür.</div></td>
+                </tr>
+
+                <!-- 6 -->
+                <tr class="feat-row" data-key="badge">
+                    <td class="td-feat">
+                        <div class="feat-inner">
+                            <span>👑 Pro Kullanıcı Rozeti</span>
+                            <span class="feat-chevron">▾</span>
+                        </div>
+                    </td>
                     <td class="td-std"><span class="v-no">✘ Yok</span></td>
                     <td class="td-pro"><span class="v-ok">✔ Profilde</span></td>
                 </tr>
-                <tr>
-                    <td class="td-feat">📣 Kitle Blast Kredisi</td>
-                    <td class="td-std"><span class="v-dim">3 / ay</span></td>
-                    <td class="td-pro"><span class="v-ok">✔ 20 / ay</span></td>
+                <tr class="desc-row" data-key="badge">
+                    <td colspan="3"><div class="desc-inner">Profilinizde ve ilanlarınızın yanında görünen altın 👑 rozet, alıcılara ciddi ve güvenilir bir satıcıyla muhatap olduklarını gösterir. Güven arttıkça tıklanma ve teklif oranı da yükselir.</div></td>
                 </tr>
-                <tr>
-                    <td class="td-feat">💬 Müşteri Desteği</td>
+
+                <!-- 7 -->
+                <tr class="feat-row" data-key="blast">
+                    <td class="td-feat">
+                        <div class="feat-inner">
+                            <span>📣 Kitle Blast Kredisi</span>
+                            <span class="feat-chevron">▾</span>
+                        </div>
+                    </td>
+                    <td class="td-std"><span class="v-dim">3 / ay</span></td>
+                    <td class="td-pro"><span class="v-ok">20 / ay</span></td>
+                </tr>
+                <tr class="desc-row" data-key="blast">
+                    <td colspan="3"><div class="desc-inner">Seçtiğiniz kullanıcı segmentine (örneğin belirli bir kategoriyi takip edenler veya daha önce ilanlarınızı görüntüleyenler) toplu bildirim gönderin. Yeni bir ilan açtığınızda veya fiyat düştüğünde kitlenize anında duyurun.</div></td>
+                </tr>
+
+                <!-- 8 -->
+                <tr class="feat-row" data-key="support">
+                    <td class="td-feat">
+                        <div class="feat-inner">
+                            <span>💬 Müşteri Desteği</span>
+                            <span class="feat-chevron">▾</span>
+                        </div>
+                    </td>
                     <td class="td-std"><span class="v-dim">Standart</span></td>
                     <td class="td-pro"><span class="v-ok">⚡ Öncelikli</span></td>
                 </tr>
+                <tr class="desc-row" data-key="support">
+                    <td colspan="3"><div class="desc-inner">Pro kullanıcıların destek talepleri öncelikli sıraya alınır. Hesap sorunları, ödeme konuları veya ilanlarınızla ilgili her türlü sorunda standart bekleme süresinin çok önünde yanıt alırsınız.</div></td>
+                </tr>
+
             </tbody>
             <tfoot>
                 <tr>
@@ -408,7 +530,7 @@
                     </td>
                     <td class="tfoot-pro" style="padding:.6rem 1rem .3rem;">
                         <div class="price-label" id="planPeriodLabel">Aylık</div>
-                        <div class="price-val" id="planPrice">₺500</div>
+                        <div class="price-val" id="planPrice">₺200</div>
                         <div class="price-sub" id="planSubPrice"></div>
                     </td>
                 </tr>
@@ -436,6 +558,6 @@
 </div>
 
 <script src="/static/js/main.js"></script>
-<script src="/static/js/pro-plan.js?v=3"></script>
+<script src="/static/js/pro-plan.js?v=4"></script>
 </body>
 </html>
