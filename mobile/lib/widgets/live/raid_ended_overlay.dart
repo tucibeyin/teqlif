@@ -218,7 +218,8 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
 
