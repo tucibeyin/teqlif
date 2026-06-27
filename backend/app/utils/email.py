@@ -219,7 +219,6 @@ async def send_phone_verification_email(
     yes_url: str,
     no_url: str,
 ) -> None:
-    masked = phone[:3] + "***" + phone[-2:] if len(phone) > 5 else "***"
     payload = {
         "sender": {
             "name": settings.brevo_sender_name,
@@ -231,7 +230,7 @@ async def send_phone_verification_email(
 <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;border-radius:16px;padding:32px">
   <h2 style="color:#0d9488;margin-top:0">Telefon Numarası Doğrulama</h2>
   <p>Merhaba <strong>{full_name}</strong>,</p>
-  <p>Hesabınıza <strong>{masked}</strong> numarası eklendi. Bu numara size ait mi?</p>
+  <p>Hesabınıza <strong style="font-size:18px;letter-spacing:1px">{phone}</strong> numarası eklendi. Bu numara size ait mi?</p>
   <div style="margin:32px 0;display:flex;gap:12px">
     <a href="{yes_url}" style="display:inline-block;background:#0d9488;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;margin-right:12px">
       ✓ Evet, benimdir
