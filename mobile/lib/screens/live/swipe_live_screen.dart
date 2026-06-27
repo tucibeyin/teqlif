@@ -701,7 +701,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
       if (!mounted) return;
       if (e.reason == DisconnectReason.roomDeleted) {
         setState(() { _remoteVideoTrack = null; _streamEnded = true; });
-        widget.onStreamEnded?.call();
       } else {
         setState(() => _remoteVideoTrack = null);
       }
@@ -822,7 +821,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
         if (!mounted) return;
         if (e.reason == DisconnectReason.roomDeleted) {
           setState(() { _remoteVideoTrack = null; _streamEnded = true; });
-          widget.onStreamEnded?.call();
         } else {
           setState(() => _remoteVideoTrack = null);
         }
@@ -973,7 +971,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
         if (!mounted) return;
         if (e.reason == DisconnectReason.roomDeleted) {
           setState(() { _remoteVideoTrack = null; _streamEnded = true; });
-          widget.onStreamEnded?.call();
         } else {
           setState(() => _remoteVideoTrack = null);
         }
@@ -1243,7 +1240,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
         if (!mounted) return;
         if (e.reason == DisconnectReason.roomDeleted) {
           setState(() { _remoteVideoTrack = null; _localVideoTrack = null; _isSelfCoHost = false; _streamEnded = true; });
-          widget.onStreamEnded?.call();
         } else {
           setState(() { _remoteVideoTrack = null; _localVideoTrack = null; _isSelfCoHost = false; });
         }
@@ -1359,6 +1355,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   }
 
   Future<void> _leave() async {
+    widget.onStreamEnded?.call();
     await _deactivate();
     if (mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
@@ -1400,6 +1397,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   }
 
   Future<void> _handleRaid(int targetStreamId) async {
+    widget.onStreamEnded?.call();
     await _deactivate();
     if (mounted) {
       Navigator.pushReplacement(
@@ -1628,7 +1626,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
                     streamId: widget.stream.id,
                     onStreamEnded: () {
                       setState(() => _streamEnded = true);
-                      widget.onStreamEnded?.call();
                     },
                     onViewerCountChanged: (n) =>
                         setState(() => _viewerCount = n),
