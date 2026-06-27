@@ -638,10 +638,16 @@ class _PhoneSheet extends StatefulWidget {
 }
 
 class _PhoneSheetState extends State<_PhoneSheet> {
-  String? _phoneE164;
+  late String? _phoneE164;
   bool _loading = false;
   bool _sent = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneE164 = widget.currentPhone;
+  }
 
   Future<void> _send() async {
     final phone = _phoneE164;

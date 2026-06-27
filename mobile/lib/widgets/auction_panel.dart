@@ -1914,10 +1914,16 @@ class _PhoneVerifySheet extends StatefulWidget {
 }
 
 class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
-  String? _phoneE164;
+  late String? _phoneE164;
   bool _loading = false;
   bool _sent = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneE164 = widget.existingPhone;
+  }
 
   Future<void> _sendVerification() async {
     final phone = _phoneE164;
