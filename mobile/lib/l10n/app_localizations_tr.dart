@@ -1322,7 +1322,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get walletTxnReceiveGift => 'Hediye alındı';
 
   @override
-  String get walletTxnSpendLeadGen => 'Sıcak Talep blast';
+  String get walletTxnSpendLeadGen => 'Toplu Duyuru';
 
   @override
   String get walletTxnSpendAdCampaign => 'Reklam kampanyası';
@@ -1508,11 +1508,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get blastCreditEmpty =>
-      'Bu ay blast krediniz doldu. Yeni ayda yenilenir.';
+      'Bu ay duyuru krediniz doldu. Yeni ayda yenilenir.';
 
   @override
   String blastCreditUsed(int used, int remaining) {
-    return '$used blast kullandınız, $remaining hakkınız kaldı.';
+    return '$used duyuru gönderdiniz, $remaining hakkınız kaldı.';
   }
 
   @override

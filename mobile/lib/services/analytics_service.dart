@@ -115,9 +115,9 @@ class AnalyticsService {
       // Yetersiz bütçe veya başka hata — mesajı döndür
       try {
         final body = jsonDecode(resp.body) as Map<String, dynamic>;
-        return {'error': body['detail'] ?? 'Blast gönderilemedi.'};
+        return {'error': body['detail'] ?? 'Duyuru gönderilemedi.'};
       } catch (_) {}
-      return {'error': 'Blast gönderilemedi.'};
+      return {'error': 'Duyuru gönderilemedi.'};
     } catch (_) {}
     return null;
   }

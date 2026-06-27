@@ -1496,11 +1496,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get blastCreditEmpty =>
-      'استنفدت رصيدك للبث هذا الشهر. يتجدد الشهر القادم.';
+      'استنفدت رصيد الإشعارات هذا الشهر. يتجدد الشهر القادم.';
 
   @override
   String blastCreditUsed(int used, int remaining) {
-    return 'استخدمت $used بث، $remaining متبقٍ.';
+    return 'أرسلت $used إشعاراً، $remaining متبقٍ.';
   }
 
   @override

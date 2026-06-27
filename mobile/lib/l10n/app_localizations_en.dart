@@ -1324,7 +1324,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletTxnReceiveGift => 'Gift received';
 
   @override
-  String get walletTxnSpendLeadGen => 'Hot Lead blast';
+  String get walletTxnSpendLeadGen => 'Mass Notification';
 
   @override
   String get walletTxnSpendAdCampaign => 'Ad campaign';
@@ -1508,11 +1508,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get blastCreditEmpty =>
-      'Your blast credits are used up for this month. Renewed next month.';
+      'Your notification credits are used up for this month. Renewed next month.';
 
   @override
   String blastCreditUsed(int used, int remaining) {
-    return 'Used $used blasts, $remaining remaining.';
+    return 'Sent $used notifications, $remaining remaining.';
   }
 
   @override

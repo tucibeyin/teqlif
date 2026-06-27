@@ -2593,7 +2593,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletTxnSpendLeadGen.
   ///
   /// In tr, this message translates to:
-  /// **'Sıcak Talep blast'**
+  /// **'Toplu Duyuru'**
   String get walletTxnSpendLeadGen;
 
   /// No description provided for @walletTxnSpendAdCampaign.
@@ -2947,13 +2947,13 @@ abstract class AppLocalizations {
   /// No description provided for @blastCreditEmpty.
   ///
   /// In tr, this message translates to:
-  /// **'Bu ay blast krediniz doldu. Yeni ayda yenilenir.'**
+  /// **'Bu ay duyuru krediniz doldu. Yeni ayda yenilenir.'**
   String get blastCreditEmpty;
 
   /// No description provided for @blastCreditUsed.
   ///
   /// In tr, this message translates to:
-  /// **'{used} blast kullandınız, {remaining} hakkınız kaldı.'**
+  /// **'{used} duyuru gönderdiniz, {remaining} hakkınız kaldı.'**
   String blastCreditUsed(int used, int remaining);
 
   /// No description provided for @proAnalyticsTitle.

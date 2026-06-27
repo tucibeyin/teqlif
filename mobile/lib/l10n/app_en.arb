@@ -569,7 +569,7 @@
   "walletNoTxns": "No transactions yet.",
   "walletTxnAirdrop": "Welcome gift",
   "walletTxnReceiveGift": "Gift received",
-  "walletTxnSpendLeadGen": "Hot Lead blast",
+  "walletTxnSpendLeadGen": "Mass Notification",
   "walletTxnSpendAdCampaign": "Ad campaign",
   "walletTxnSpendAi": "AI pricing",
   "walletTxnWebTopup": "Web top-up",
@@ -635,8 +635,8 @@
   "proUnlockBtn": "Go Pro",
   "proUpgradeSheetDesc": "You need to upgrade to Pro to use this tool.",
   "blastRemainingTitle": "Remaining This Month",
-  "blastCreditEmpty": "Your blast credits are used up for this month. Renewed next month.",
-  "blastCreditUsed": "Used {used} blasts, {remaining} remaining.",
+  "blastCreditEmpty": "Your notification credits are used up for this month. Renewed next month.",
+  "blastCreditUsed": "Sent {used} notifications, {remaining} remaining.",
   "@blastCreditUsed": {
     "placeholders": {
       "used": { "type": "int" },

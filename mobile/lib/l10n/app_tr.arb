@@ -570,7 +570,7 @@
   "walletNoTxns": "Henüz işlem yok.",
   "walletTxnAirdrop": "Hoş geldin hediyesi",
   "walletTxnReceiveGift": "Hediye alındı",
-  "walletTxnSpendLeadGen": "Sıcak Talep blast",
+  "walletTxnSpendLeadGen": "Toplu Duyuru",
   "walletTxnSpendAdCampaign": "Reklam kampanyası",
   "walletTxnSpendAi": "Yapay Zeka fiyatlama",
   "walletTxnWebTopup": "Web yükleme",
@@ -636,8 +636,8 @@
   "proUnlockBtn": "Pro'ya Geç",
   "proUpgradeSheetDesc": "Bu aracı kullanmak için Pro'ya geçmeniz gerekiyor.",
   "blastRemainingTitle": "Bu Ay Kalan Hak",
-  "blastCreditEmpty": "Bu ay blast krediniz doldu. Yeni ayda yenilenir.",
-  "blastCreditUsed": "{used} blast kullandınız, {remaining} hakkınız kaldı.",
+  "blastCreditEmpty": "Bu ay duyuru krediniz doldu. Yeni ayda yenilenir.",
+  "blastCreditUsed": "{used} duyuru gönderdiniz, {remaining} hakkınız kaldı.",
   "@blastCreditUsed": {
     "placeholders": {
       "used": { "type": "int" },

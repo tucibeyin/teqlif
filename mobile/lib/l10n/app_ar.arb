@@ -636,8 +636,8 @@
   "proUnlockBtn": "الترقية إلى Pro",
   "proUpgradeSheetDesc": "تحتاج إلى الترقية إلى Pro لاستخدام هذه الأداة.",
   "blastRemainingTitle": "الرصيد المتبقي هذا الشهر",
-  "blastCreditEmpty": "استنفدت رصيدك للبث هذا الشهر. يتجدد الشهر القادم.",
-  "blastCreditUsed": "استخدمت {used} بث، {remaining} متبقٍ.",
+  "blastCreditEmpty": "استنفدت رصيد الإشعارات هذا الشهر. يتجدد الشهر القادم.",
+  "blastCreditUsed": "أرسلت {used} إشعاراً، {remaining} متبقٍ.",
   "@blastCreditUsed": {
     "placeholders": {
       "used": { "type": "int" },
