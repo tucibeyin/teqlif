@@ -11,7 +11,7 @@ security_logger = SecurityLogger()
 
 _RL_WINDOW  = 60     # saniye
 _RL_LIMIT   = 120    # istek/pencere — aşınca auto-ban
-_RL_BAN_TTL = 86400  # 24 saat
+_RL_BAN_TTL = 900    # 15 dakika
 
 
 class InputSanitizationMiddleware(BaseHTTPMiddleware):
