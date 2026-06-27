@@ -642,11 +642,10 @@ async def confirm_phone_verification(
 
 
 def _phone_verify_confirm_page(token: str, action: str) -> str:
-    """GET ile açılan onay sayfası — prefetcher'lar buraya kadar gelir, işlem yapmaz."""
-    is_yes = action == "yes"
-    btn_color = "#0d9488" if is_yes else "#ef4444"
-    btn_text = "✓ Evet, bu numara benim" if is_yes else "✕ Hayır, bu numara benim değil"
-    question = "Bu telefon numarasını onaylamak istiyor musunuz?" if is_yes else "Bu telefon numarasını hesabınızdan kaldırmak istiyor musunuz?"
+    """GET ile açılan ara sayfa.
+    Email tarayıcıları JS çalıştırmaz → token korunur.
+    Gerçek kullanıcı açınca JS formu anında POST eder → tek dokunuşta sonuç."""
+    label = "Telefonunuz doğrulanıyor..." if action == "yes" else "Telefon numaranız kaldırılıyor..."
     return f"""<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -660,28 +659,20 @@ def _phone_verify_confirm_page(token: str, action: str) -> str:
     .card{{background:#1e293b;border-radius:24px;padding:40px 28px;max-width:400px;width:100%;
            text-align:center;box-shadow:0 8px 40px #00000080;}}
     .brand{{color:#06b6d4;font-weight:800;font-size:24px;letter-spacing:-0.5px;margin-bottom:32px;}}
-    .icon{{width:72px;height:72px;border-radius:50%;background:#06b6d422;border:2px solid #06b6d460;
-           display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;}}
-    h2{{color:#f1f5f9;margin:0 0 12px;font-size:20px;font-weight:700;}}
-    p{{color:#94a3b8;font-size:14px;line-height:1.6;margin-bottom:28px;}}
-    form{{display:inline;}}
-    .btn{{display:inline-block;width:100%;padding:14px 24px;border:none;border-radius:12px;
-          background:{btn_color};color:#fff;font-size:15px;font-weight:700;cursor:pointer;
-          text-decoration:none;margin-bottom:12px;}}
-    .hint{{font-size:12px;color:#475569;margin-top:8px;}}
+    .spinner{{width:48px;height:48px;border:3px solid #1e3a5f;border-top-color:#06b6d4;
+              border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px;}}
+    @keyframes spin{{to{{transform:rotate(360deg)}}}}
+    p{{color:#94a3b8;font-size:15px;}}
   </style>
 </head>
 <body>
   <div class="card">
     <div class="brand">teqlif</div>
-    <div class="icon">📱</div>
-    <h2>Telefon Doğrulama</h2>
-    <p>{question}</p>
-    <form method="POST" action="/api/auth/phone-verify/confirm?token={token}&action={action}">
-      <button type="submit" class="btn">{btn_text}</button>
-    </form>
-    <p class="hint">Bu işlemi siz başlatmadıysanız sayfayı kapatabilirsiniz.</p>
+    <div class="spinner"></div>
+    <p>{label}</p>
+    <form id="f" method="POST" action="/api/auth/phone-verify/confirm?token={token}&action={action}" style="display:none"></form>
   </div>
+  <script>document.getElementById('f').submit();</script>
 </body>
 </html>"""
 
