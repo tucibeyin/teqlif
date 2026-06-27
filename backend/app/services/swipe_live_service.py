@@ -2,15 +2,17 @@
 SwipeLive Kişiselleştirme Servisi
 
 Kullanıcıya özel SwipeLive konfigürasyonu üretir:
-  1. Yayınları kullanıcı ilgi skorlarına + ClickHouse geçmiş davranışına göre sıralar
-  2. Yayınlar arası gösterilecek ilan sayısını (0-3) geçmiş etkileşim verisinden hesaplar
-  3. Tercih edilen ilan kategorilerini döndürür (listing pool filtrelemesi için)
+  1. Yayınları çok sinyalli skorla sıralar
+  2. Yayınlar arası gösterilecek ilan sayısını (0-3) CTR'dan hesaplar
+  3. Listing-stream kategori korelasyonundan tercih edilen ilan kategorileri döndürür
 
 Algoritma ağırlıkları:
-  category_affinity  × 0.40  (UserInterest tablosundan)
-  stream_quality     × 0.25  (izleyici sayısı + like sayısı)
-  ch_engagement      × 0.20  (swipe_live_events: dwell/skip oranı)
-  recency            × 0.15  (yayın ne kadar süredir aktif — yeni yayın önce)
+  category_affinity   × 0.35  (UserInterest tablosundan)
+  stream_quality      × 0.20  (izleyici + like)
+  ch_engagement       × 0.20  (swipe_live_events dwell/skip oranı)
+  als_score           × 0.15  (collaborative filtering — benzer kullanıcılar ne izledi)
+  recency             × 0.10  (yeni yayın önce)
+  + diversity penalty         (aynı kategori tekrar → ceza)
 
 Sonuç Redis'te 5 dakika önbelleklenir.
 """
@@ -27,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database_clickhouse import get_clickhouse_client
 from app.services.feed_service import get_user_interests
 from app.services.stream_service import StreamService
+from app.services.swipe_live_ml import get_als_scores
 from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
@@ -38,10 +41,7 @@ AFFINITY_CACHE_TTL = 900  # 15 dakika (worker tarafından yazılır)
 
 
 async def get_swipe_live_config(user_id: int, db: AsyncSession) -> dict:
-    """
-    Kullanıcıya özel SwipeLive konfigürasyonunu döndürür.
-    Sonuç Redis'te önbelleklenir.
-    """
+    """Kullanıcıya özel SwipeLive konfigürasyonunu döndürür (Redis önbellekli)."""
     redis = await get_redis()
     cache_key = f"swivelive_cfg:{user_id}"
     cached = await redis.get(cache_key)
@@ -54,7 +54,6 @@ async def get_swipe_live_config(user_id: int, db: AsyncSession) -> dict:
 
 
 async def invalidate_config_cache(user_id: int) -> None:
-    """Worker veya event handler config cache'ini sıfırladığında çağrılır."""
     redis = await get_redis()
     await redis.delete(f"swivelive_cfg:{user_id}")
 
@@ -63,55 +62,57 @@ async def invalidate_config_cache(user_id: int) -> None:
 
 
 async def _build_config(user_id: int, db: AsyncSession) -> dict:
-    # 1. Aktif yayınları çek
+    # 1. Aktif yayınlar
     streams = await StreamService(db).get_active_streams(user_id)
 
-    # 2. Kategori ilgi skorları (feed_service ile aynı kaynak)
+    # 2. Kategori ilgi skorları
     interests: dict[str, float] = await get_user_interests(user_id, db)
 
-    # 3. ClickHouse'dan geçmiş SwipeLive etkileşimi
-    ch_engagement = await _fetch_ch_stream_engagement(user_id)
-    listing_engagement = await _fetch_ch_listing_engagement(user_id)
+    # 3. ClickHouse sinyalleri — paralel çek
+    import asyncio
+    ch_engagement, listing_engagement, listing_stream_corr = await asyncio.gather(
+        _fetch_ch_stream_engagement(user_id),
+        _fetch_ch_listing_engagement(user_id),
+        _fetch_listing_stream_correlation(user_id, interests),
+    )
 
-    # 4. Yayınları skorla ve sırala
+    # 4. ALS collaborative filtering skorları
+    stream_ids = [s.id for s in streams]
+    als_scores: dict[int, float] = {}
+    try:
+        als_scores = await get_als_scores(user_id, stream_ids)
+    except Exception as exc:
+        logger.debug("[SwipeLive] ALS skor alınamadı: %s", exc)
+
+    # 5. Yayınları skorla ve sırala
+    seen_categories: dict[str, int] = {}
     scored = []
-    prev_category: str | None = None
     for stream in streams:
-        score = _score_stream(stream, interests, ch_engagement, prev_category)
+        score = _score_stream(
+            stream, interests, ch_engagement,
+            als_scores, seen_categories,
+        )
         scored.append((score, stream))
+        seen_categories[stream.category] = seen_categories.get(stream.category, 0) + 1
 
     scored.sort(key=lambda x: -x[0])
     ranked_streams = [s for _, s in scored]
-    if ranked_streams:
-        prev_category = ranked_streams[0].category
 
-    # 5. listings_per_group hesapla
+    # 6. listings_per_group CTR'dan hesapla
     lpg = _compute_listings_per_group(listing_engagement)
 
-    # 6. Kullanıcının tercih ettiği ilan kategorileri (ilgi skoruna göre top-3)
-    preferred_cats = [
-        cat for cat, _ in sorted(interests.items(), key=lambda x: -x[1])[:3]
-    ]
+    # 7. Tercih edilen ilan kategorileri
+    #    a) Listing-stream korelasyonu (SwipeLive içi davranış)
+    #    b) Fallback: genel kategori ilgisi
+    if listing_stream_corr:
+        preferred_cats = listing_stream_corr
+    else:
+        preferred_cats = [
+            cat for cat, _ in sorted(interests.items(), key=lambda x: -x[1])[:3]
+        ]
 
-    # Serialization için stream'leri dict'e çevir
-    stream_dicts = []
-    for s in ranked_streams:
-        stream_dicts.append({
-            "id": s.id,
-            "room_name": s.room_name,
-            "title": s.title,
-            "category": s.category,
-            "viewer_count": getattr(s, "viewer_count", 0),
-            "started_at": s.started_at.isoformat(),
-            "thumbnail_url": s.thumbnail_url,
-            "likes_count": getattr(s, "likes_count", 0),
-            "host": {
-                "id": s.host.id,
-                "username": s.host.username,
-                "full_name": s.host.full_name,
-                "profile_image_url": getattr(s.host, "profile_image_url", None),
-            },
-        })
+    # Serialization
+    stream_dicts = [_stream_to_dict(s) for s in ranked_streams]
 
     return {
         "streams": stream_dicts,
@@ -124,13 +125,13 @@ def _score_stream(
     stream,
     interests: dict[str, float],
     ch_engagement: dict[int, dict],
-    prev_category: str | None,
+    als_scores: dict[int, float],
+    seen_categories: dict[str, int],
 ) -> float:
     # 1. Category affinity
-    affinity = interests.get(stream.category, 0.05)
-    affinity = min(affinity, 1.0)
+    affinity = min(interests.get(stream.category, 0.05), 1.0)
 
-    # 2. Stream quality (log-normalized viewer count + like count)
+    # 2. Stream quality
     viewer_score = math.log1p(getattr(stream, "viewer_count", 0)) / 10.0
     like_score = math.log1p(getattr(stream, "likes_count", 0)) / 8.0
     quality = min((viewer_score + like_score) / 2.0, 1.0)
@@ -139,7 +140,10 @@ def _score_stream(
     eng = ch_engagement.get(stream.id, {})
     ch_score = eng.get("engagement_score", 0.0)
 
-    # 4. Yenilik (son 2 saatte başlamış yayınlara bonus)
+    # 4. ALS collaborative filtering
+    als = min(als_scores.get(stream.id, 0.0), 1.0)
+
+    # 5. Yenilik
     now = datetime.now(timezone.utc)
     started = stream.started_at
     if started.tzinfo is None:
@@ -147,33 +151,26 @@ def _score_stream(
     age_hours = (now - started).total_seconds() / 3600.0
     recency = max(0.0, 1.0 - age_hours / 2.0)
 
-    # 5. Çeşitlilik bonusu — önceki yayınla aynı kategoriyse ceza
-    diversity = 0.0 if stream.category == prev_category else 0.1
+    # 6. Çeşitlilik cezası — kategorinin kaçıncı tekrarı
+    repeat_count = seen_categories.get(stream.category, 0)
+    diversity_penalty = repeat_count * 0.08  # her tekrar -0.08
 
     return (
-        affinity  * 0.40
-        + quality * 0.25
+        affinity  * 0.35
+        + quality * 0.20
         + ch_score * 0.20
-        + recency  * 0.15
-        + diversity
+        + als      * 0.15
+        + recency  * 0.10
+        - diversity_penalty
     )
 
 
 def _compute_listings_per_group(listing_engagement: dict) -> int:
-    """
-    Kullanıcının SwipeLive'daki listing tıklama oranına göre
-    yayınlar arası gösterilecek ilan sayısını hesaplar (0-3).
-
-    Yüksek CTR → kullanıcı ilanlara ilgili → daha fazla göster
-    Düşük CTR  → ilanlara ilgisiz → az göster (yayına odaklan)
-    Veri yoksa → 2 (varsayılan)
-    """
+    """CTR'a göre yayınlar arası ilan sayısı (0-3)."""
     clicks = listing_engagement.get("clicks", 0)
     impressions = listing_engagement.get("impressions", 0)
-
     if impressions < 5:
         return 2  # soğuk başlangıç
-
     ctr = clicks / impressions
     if ctr >= 0.15:
         return 3
@@ -188,19 +185,18 @@ def _compute_listings_per_group(listing_engagement: dict) -> int:
 
 
 async def _fetch_ch_stream_engagement(user_id: int) -> dict[int, dict]:
-    """
-    Son 30 günde kullanıcının her yayınla etkileşimini döndürür.
-    stream_id → { engagement_score: float }
-    """
+    """Son 30 günde kullanıcının her yayınla etkileşimini döndürür."""
     try:
         ch = await get_clickhouse_client()
         result = await ch.query(
             """
             SELECT
                 stream_id,
-                countIf(event_type = 'dwell')   AS dwells,
-                countIf(event_type = 'skip')    AS skips,
-                avgIf(dwell_ms, event_type = 'dwell') AS avg_dwell
+                countIf(event_type = 'dwell')                        AS dwells,
+                countIf(event_type = 'skip')                         AS skips,
+                avgIf(dwell_ms, event_type = 'dwell')                AS avg_dwell,
+                countIf(event_type = 'stream_heart')                 AS hearts,
+                countIf(event_type IN ('stream_gift', 'stream_bid')) AS strong_eng
             FROM swipe_live_events
             WHERE user_id = {uid:UInt32}
               AND timestamp >= now() - INTERVAL 30 DAY
@@ -211,16 +207,17 @@ async def _fetch_ch_stream_engagement(user_id: int) -> dict[int, dict]:
         )
         out: dict[int, dict] = {}
         for row in result.result_rows:
-            sid, dwells, skips, avg_dwell = row
-            # Basit engagement score: dwell kalitesi - skip cezası
-            total = dwells + skips
+            sid, dwells, skips, avg_dwell, hearts, strong = row
+            total = (dwells or 0) + (skips or 0)
             if total == 0:
                 score = 0.0
             else:
-                dwell_ratio = dwells / total
-                quality = min(avg_dwell / 15000.0, 1.0)  # 15s üzeri tam puan
-                score = dwell_ratio * quality
-            out[int(sid)] = {"engagement_score": round(score, 4)}
+                dwell_ratio = (dwells or 0) / total
+                quality = min((avg_dwell or 0) / 15000.0, 1.0)
+                # Güçlü etkileşim (hediye, teklif, kalp) bonusu
+                engagement_bonus = min((hearts or 0) * 0.05 + (strong or 0) * 0.15, 0.3)
+                score = dwell_ratio * quality + engagement_bonus
+            out[int(sid)] = {"engagement_score": round(min(score, 1.0), 4)}
         return out
     except Exception as exc:
         logger.debug("[SwipeLive] _fetch_ch_stream_engagement başarısız: %s", exc)
@@ -228,14 +225,9 @@ async def _fetch_ch_stream_engagement(user_id: int) -> dict[int, dict]:
 
 
 async def _fetch_ch_listing_engagement(user_id: int) -> dict:
-    """
-    Son 30 günde kullanıcının SwipeLive içi listing tıklama/impression verisini döndürür.
-    Hem feed_analytics (genel feed) hem swipe_live_events (SwipeLive içi) birleştirilir.
-    """
+    """Son 30 günde listing tıklama/impression verisini döndürür."""
     try:
         ch = await get_clickhouse_client()
-
-        # swipe_live_events'ten (listing eventleri)
         r1 = await ch.query(
             """
             SELECT
@@ -250,12 +242,11 @@ async def _fetch_ch_listing_engagement(user_id: int) -> dict:
         )
         row1 = r1.result_rows[0] if r1.result_rows else (0, 0)
 
-        # feed_analytics'ten (genel listing feed)
         r2 = await ch.query(
             """
             SELECT
-                countIf(event_type = 'click')       AS clicks,
-                countIf(event_type = 'impression')  AS impressions
+                countIf(event_type = 'click')      AS clicks,
+                countIf(event_type = 'impression') AS impressions
             FROM feed_analytics
             WHERE user_id = {uid:String}
               AND timestamp >= now() - INTERVAL 30 DAY
@@ -272,3 +263,121 @@ async def _fetch_ch_listing_engagement(user_id: int) -> dict:
     except Exception as exc:
         logger.debug("[SwipeLive] _fetch_ch_listing_engagement başarısız: %s", exc)
         return {}
+
+
+async def _fetch_listing_stream_correlation(
+    user_id: int,
+    interests: dict[str, float],
+) -> list[str]:
+    """
+    Kullanıcının izlediği stream kategorileri sonrasında hangi listing
+    kategorilerine tıkladığını hesaplar → preferred_listing_categories listesi.
+
+    Mantık:
+      1. Kullanıcının swipe_live_events'teki listing_tap eventlerini çek
+      2. stream_category → listing_category tıklama sayısı
+      3. Kullanıcının top-3 stream kategori ilgisiyle ağırlıklandır
+      4. En yüksek skora sahip top-3 listing kategorisi döndür
+
+    Yeterli veri yoksa boş liste → _build_config fallback'e düşer.
+    """
+    try:
+        ch = await get_clickhouse_client()
+        result = await ch.query(
+            """
+            SELECT
+                stream_category,
+                listing_category,
+                count() AS taps
+            FROM swipe_live_events
+            WHERE user_id = {uid:UInt32}
+              AND event_type = 'listing_tap'
+              AND stream_category != ''
+              AND listing_category != ''
+              AND timestamp >= now() - INTERVAL 60 DAY
+            GROUP BY stream_category, listing_category
+            HAVING taps >= 1
+            ORDER BY taps DESC
+            LIMIT 50
+            """,
+            parameters={"uid": user_id},
+        )
+
+        if not result.result_rows:
+            # Kullanıcı verisi yoksa global korelasyona bak
+            return await _fetch_global_listing_stream_correlation(interests)
+
+        # stream_category affinity'si ile ağırlıklandırılmış listing skoru
+        listing_scores: dict[str, float] = {}
+        for stream_cat, listing_cat, taps in result.result_rows:
+            stream_weight = interests.get(stream_cat, 0.1)
+            listing_scores[listing_cat] = listing_scores.get(listing_cat, 0.0) + taps * stream_weight
+
+        if not listing_scores:
+            return []
+
+        top = sorted(listing_scores.items(), key=lambda x: -x[1])[:3]
+        return [cat for cat, _ in top]
+
+    except Exception as exc:
+        logger.debug("[SwipeLive] _fetch_listing_stream_correlation başarısız: %s", exc)
+        return []
+
+
+async def _fetch_global_listing_stream_correlation(
+    interests: dict[str, float],
+) -> list[str]:
+    """
+    Kullanıcıya özel veri yokken global korelasyon tablosuna bak.
+    Tüm kullanıcıların davranışından en iyi listing kategorisi.
+    """
+    try:
+        ch = await get_clickhouse_client()
+        # Kullanıcının top-2 stream kategorisini al
+        top_stream_cats = [
+            cat for cat, _ in sorted(interests.items(), key=lambda x: -x[1])[:2]
+        ]
+        if not top_stream_cats:
+            return []
+
+        result = await ch.query(
+            """
+            SELECT
+                listing_category,
+                count() AS taps
+            FROM swipe_live_events
+            WHERE event_type = 'listing_tap'
+              AND stream_category IN {cats:Array(String)}
+              AND listing_category != ''
+              AND timestamp >= now() - INTERVAL 30 DAY
+            GROUP BY listing_category
+            ORDER BY taps DESC
+            LIMIT 3
+            """,
+            parameters={"cats": top_stream_cats},
+        )
+        return [row[0] for row in result.result_rows]
+    except Exception:
+        return []
+
+
+# ----------------------------  HELPERS  -------------------------------------
+
+
+def _stream_to_dict(s) -> dict:
+    return {
+        "id": s.id,
+        "room_name": s.room_name,
+        "title": s.title,
+        "category": s.category,
+        "viewer_count": getattr(s, "viewer_count", 0),
+        "started_at": s.started_at.isoformat(),
+        "thumbnail_url": s.thumbnail_url,
+        "likes_count": getattr(s, "likes_count", 0),
+        "host": {
+            "id": s.host.id,
+            "username": s.host.username,
+            "full_name": s.host.full_name,
+            "profile_image_url": getattr(s.host, "profile_image_url", None),
+        },
+    }

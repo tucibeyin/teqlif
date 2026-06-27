@@ -1099,6 +1099,22 @@ async def sync_ad_campaigns_task(ctx: dict) -> None:
         logger.error("[Worker] sync_ad_campaigns_task başarısız | %s", str(exc), exc_info=True)
 
 
+async def train_swipe_live_als_task(ctx: dict) -> None:
+    """
+    Her gece 03:15'te çalışır.
+    30 günlük swipe_live_events verisinden ALS collaborative filtering modeli eğitir.
+    Kullanıcı ve stream vektörlerini Redis'e yazar (25 saat TTL).
+    """
+    try:
+        from app.services.swipe_live_ml import train_swipe_live_als
+        await train_swipe_live_als()
+        logger.info("[Worker] train_swipe_live_als_task tamamlandı")
+    except Exception as exc:
+        logger.error("[Worker] train_swipe_live_als_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 async def invalidate_swipe_live_configs_task(ctx: dict) -> None:
     """
     Her 15 dakikada bir: ClickHouse'daki yeni SwipeLive etkileşim verisini
@@ -1167,6 +1183,7 @@ class WorkerSettings:
         compute_trending_categories_task,
         send_budget_match_notifications_task,
         invalidate_swipe_live_configs_task,
+        train_swipe_live_als_task,
     ]
 
     cron_jobs = [
@@ -1204,6 +1221,8 @@ class WorkerSettings:
         cron(compute_seller_badges_task, hour=1, minute=30),
         # Her 6 saatte — trend kategorileri hesapla (Redis cache)
         cron(compute_trending_categories_task, hour={0, 6, 12, 18}, minute=0),
+        # Her gece 03:15 — SwipeLive ALS collaborative filtering modeli eğit
+        cron(train_swipe_live_als_task, hour=3, minute=15),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

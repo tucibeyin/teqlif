@@ -374,6 +374,21 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     });
   }
 
+  void _recordEngagementEvent(StreamOut stream, String eventType) {
+    _pendingEvents.add({
+      'stream_id': stream.id,
+      'listing_id': 0,
+      'event_type': eventType,
+      'dwell_ms': 0,
+      'stream_category': stream.category,
+      'listing_category': '',
+      'listings_seen': 0,
+      'slot_index': _currentPage,
+      'session_id': _sessionId,
+    });
+    if (_pendingEvents.length >= 20) _flushPendingEvents();
+  }
+
   void _recordListingEvent(int listingId, String eventType, {
     int dwellMs = 0,
     String listingCategory = '',
@@ -636,6 +651,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 takePrefetch: takePrefetchEntry,
                 onRoomDeposit: _depositRoom,
                 onPipActionChanged: (cb) { _pipAction = cb; },
+                onEngagementEvent: (type) => _recordEngagementEvent(stream, type),
               ),
             _ListingItem(:final listing, :final slotIndex, :final streamCategory) =>
               _ListingVideoPage(
@@ -669,6 +685,8 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
   final void Function(VoidCallback?)? onPipActionChanged;
   // Evict edilirken Room'u parent cache'e devret → aynı stream bir sonraki grupta anında hazır
   final bool Function(int streamId, _PrefetchEntry entry)? onRoomDeposit;
+  // Etkileşim eventi — parent'a ML sinyali gönderir
+  final void Function(String eventType)? onEngagementEvent;
 
   const _SwipeLivePage({
     super.key,
@@ -680,6 +698,7 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
     this.takePrefetch,
     this.onPipActionChanged,
     this.onRoomDeposit,
+    this.onEngagementEvent,
   });
 
   @override
@@ -1565,6 +1584,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   void _fireLikeRequest() {
     StreamService.likeStream(widget.stream.id).catchError((_) {});
+    widget.onEngagementEvent?.call('stream_heart');
   }
 
   Future<void> _leave() async {
@@ -1610,6 +1630,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   }
 
   Future<void> _handleRaid(int targetStreamId) async {
+    widget.onEngagementEvent?.call('raid_chose');
     // Parent cache'de hedef stream için prefetch varsa dispose olmadan önce köprüye al
     final bridgeEntry = widget.takePrefetch?.call(targetStreamId);
     if (bridgeEntry != null) {
