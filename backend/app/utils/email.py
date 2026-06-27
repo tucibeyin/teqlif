@@ -127,8 +127,8 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
           <tr>
             <td style="background:linear-gradient(135deg,#0c2a3e 0%,#0a1f30 50%,#061524 100%);
                        padding:40px 40px 32px;text-align:center">
-              <p style="margin:0 0 24px;font-size:28px;font-weight:900;letter-spacing:-0.5px;color:#ffffff">
-                teq<span style="color:#06b6d4">lif</span>
+              <p style="margin:0 0 24px;font-size:28px;font-weight:900;letter-spacing:-0.5px;color:#06b6d4">
+                teqlif
               </p>
               <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#f1f5f9;
                           line-height:1.2;letter-spacing:-0.3px">
