@@ -18,14 +18,27 @@ class AccountInfoScreen extends StatefulWidget {
   State<AccountInfoScreen> createState() => _AccountInfoScreenState();
 }
 
-class _AccountInfoScreenState extends State<AccountInfoScreen> {
+class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindingObserver {
   Map<String, dynamic>? _user;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUser();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Kullanıcı tarayıcıdan (telefon doğrulama linki) uygulamaya döndüğünde yenile
+    if (state == AppLifecycleState.resumed) _loadUser();
   }
 
   Future<void> _loadUser() async {

@@ -626,6 +626,10 @@ async def confirm_phone_verification(
 
 def _phone_verify_html(title: str, body: str, color: str, success: bool) -> str:
     icon = "✓" if success else "✕"
+    btn = (
+        f'<a href="teqlif://profile" style="display:inline-block;margin-top:24px;background:{color};color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:700;font-size:15px;">Uygulamaya Dön</a>'
+        if success else ""
+    )
     return f"""<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -633,12 +637,14 @@ def _phone_verify_html(title: str, body: str, color: str, success: bool) -> str:
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>teqlif — {title}</title>
   <style>
-    body{{margin:0;background:#0f172a;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;}}
-    .card{{background:#1e293b;border-radius:20px;padding:40px 32px;max-width:380px;width:90%;text-align:center;box-shadow:0 8px 32px #00000066;}}
-    .icon{{width:72px;height:72px;border-radius:50%;background:{color}22;border:2px solid {color}66;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;color:{color};}}
-    h2{{color:#f1f5f9;margin:0 0 12px;font-size:20px;}}
-    p{{color:#94a3b8;line-height:1.6;margin:0;font-size:14px;}}
-    .brand{{color:{color};font-weight:700;font-size:22px;margin-bottom:28px;}}
+    *{{box-sizing:border-box;margin:0;padding:0;}}
+    body{{background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px;}}
+    .card{{background:#1e293b;border-radius:24px;padding:40px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 8px 40px #00000080;}}
+    .brand{{color:#06b6d4;font-weight:800;font-size:24px;letter-spacing:-0.5px;margin-bottom:32px;}}
+    .icon{{width:80px;height:80px;border-radius:50%;background:{color}20;border:2px solid {color}60;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:36px;color:{color};}}
+    h2{{color:#f1f5f9;margin:0 0 14px;font-size:22px;font-weight:700;}}
+    p{{color:#94a3b8;line-height:1.7;font-size:15px;}}
+    .hint{{margin-top:20px;font-size:13px;color:#475569;}}
   </style>
 </head>
 <body>
@@ -647,6 +653,8 @@ def _phone_verify_html(title: str, body: str, color: str, success: bool) -> str:
     <div class="icon">{icon}</div>
     <h2>{title}</h2>
     <p>{body}</p>
+    {btn}
+    <p class="hint">Bu sayfayı kapatıp uygulamaya dönebilirsiniz.</p>
   </div>
 </body>
 </html>"""
