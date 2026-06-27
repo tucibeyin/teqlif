@@ -194,10 +194,17 @@ async function submitNewUser() {
 }
 
 async function deleteUser(id, username) {
-    if (!confirm(`DİKKAT: @${username} kalıcı silinecek. Emin misiniz?`)) return;
+    if (!confirm(`@${username} hesabı kapatılsın mı? (Soft delete — e-posta korunur)`)) return;
     const res = await fetch(`/api/admin-data/users/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-    if (res.ok) { alert(`@${username} silindi.`); loadUsers(); }
-    else { const err = await res.json(); alert("Silinemedi: " + (err.error?.message || "İlişkili veri var.")); }
+    if (res.ok) { const d = await res.json(); alert(d.message); closeModal(); loadUsers(); }
+    else { const err = await res.json(); alert("Silinemedi: " + (err.detail || "Hata.")); }
+}
+
+async function purgeUser(id, username) {
+    if (!confirm(`DİKKAT: @${username} kalıcı anonimize edilecek.\n\nE-posta, kullanıcı adı ve telefon temizlenecek → aynı bilgilerle yeniden kayıt açılabilir.\n\nBu işlem geri alınamaz. Devam edilsin mi?`)) return;
+    const res = await fetch(`/api/admin-data/users/${id}/purge`, { method: 'POST', headers: getAuthHeaders() });
+    if (res.ok) { const d = await res.json(); alert(d.message); closeModal(); loadUsers(); }
+    else { const err = await res.json(); alert("Silinemedi: " + (err.detail || "Hata.")); }
 }
 
 // ── TUCi EKONOMİSİ ───────────────────────────────────────────────────────────
@@ -476,6 +483,8 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('btnCloseEditModal')?.addEventListener('click', closeModal);
     document.getElementById('btnSubmitUserUpdate')?.addEventListener('click', submitUserUpdate);
     document.getElementById('btnToggleShadowban')?.addEventListener('click', toggleShadowban);
+    document.getElementById('btnSoftDeleteUser')?.addEventListener('click', () => { if (currentUserId) deleteUser(currentUserId, (document.getElementById('modal-title')?.innerText || '').replace('@','')); });
+    document.getElementById('btnPurgeUser')?.addEventListener('click', () => { if (currentUserId) purgeUser(currentUserId, (document.getElementById('modal-title')?.innerText || '').replace('@','')); });
     document.getElementById('btnSubmitPasswordReset')?.addEventListener('click', submitPasswordReset);
     document.getElementById('btnOpenAddUser')?.addEventListener('click', openAddUserModal);
     document.getElementById('btnCloseAddUserModal')?.addEventListener('click', closeAddUserModal);

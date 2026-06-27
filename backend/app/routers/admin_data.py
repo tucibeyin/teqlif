@@ -389,6 +389,55 @@ async def delete_user(
 
     return {"message": f"Kullanıcı @{user.username} hesabı kapatıldı (soft delete)."}
 
+
+# Kullanıcı Kalıcı Silme (Anonimize)
+# Gerçek bir SQL DELETE mümkün değil: bids/listings/auctions/streams FK kısıtları kırar.
+# Bunun yerine e-posta, kullanıcı adı ve telefon temizlenir → aynı bilgilerle yeniden kayıt açılabilir.
+@router.post("/users/{user_id}/purge")
+async def purge_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(check_admin_access),
+):
+    user = await db.get(User, user_id)
+    if not user:
+        raise NotFoundException("Kullanıcı bulunamadı.")
+
+    if user.email == settings.admin_email:
+        raise BadRequestException("Sistem yöneticisi silinemez.")
+
+    old_username = user.username
+    now = datetime.now(timezone.utc)
+
+    # Kimlik bilgilerini temizle — FK satırları korunur
+    user.email        = f"purged_{user_id}@deleted.invalid"
+    user.username     = f"deleted_{user_id}"
+    user.full_name    = "Silinmiş Hesap"
+    user.phone        = None
+    user.phone_verified = False
+    user.hashed_password = ""
+    user.avatar_url   = None
+    user.bio          = None
+    user.website_url  = None
+    user.fcm_token    = None
+    user.is_active    = False
+    user.is_verified  = False
+    user.deleted_at   = user.deleted_at or now
+
+    await db.commit()
+
+    try:
+        redis = await get_redis()
+        await redis.delete(
+            f"interests:{user_id}",
+            f"feed:{user_id}:0",
+            f"shadowban:{user_id}",
+        )
+    except Exception:
+        pass
+
+    return {"message": f"Kullanıcı @{old_username} kalıcı olarak silindi (anonimize)."}
+
 # ==========================================
 # 5. TUCi EKONOMİSİ
 # ==========================================
