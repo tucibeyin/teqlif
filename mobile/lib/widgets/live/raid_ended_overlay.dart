@@ -79,13 +79,7 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _fadeAnim,
-      child: GestureDetector(
-        // Yalnızca dikey drag'i bloke et; yatay drag kartlar arası geçiş için serbest
-        behavior: HitTestBehavior.opaque,
-        onVerticalDragStart: (_) {},
-        onVerticalDragUpdate: (_) {},
-        onVerticalDragEnd: (_) {},
-        child: Container(
+      child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
@@ -210,7 +204,6 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
             ),
           ),
         ),
-      ),
     );
   }
 

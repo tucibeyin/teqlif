@@ -226,6 +226,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         ? _liveItems
         : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
     final src = validItems.isNotEmpty ? validItems : _liveItems;
+    if (src.isEmpty) return const _LoadingListingItem();
     final streamForGroup = src[groupIdx % src.length];
 
     if (posInGroup == 0) return _LiveItem(streamForGroup);
