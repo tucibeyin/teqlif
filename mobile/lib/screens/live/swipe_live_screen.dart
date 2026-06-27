@@ -166,6 +166,11 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   // Periyodik canlı yayın kontrol timer'ı
   Timer? _streamCheckTimer;
 
+  // Listing-only modunda inşa edilen grup sayısı.
+  // Bu indeksten küçük gruplar yayın geri gelse bile listing gösterir
+  // → yeni yayınlar kullanıcının mevcut konumunu bozmadan ileride çıkar.
+  int _listingOnlyGroupCount = 0;
+
   // ── Parent-level prefetch: child ±1 bağlanırken parent +2/+3'ü hazırlar ──
   final Map<int, _PrefetchEntry> _prefetchCache = {};
   // Aktif sayfanın PiP aksiyonu — iOS back gesture intercept için
@@ -326,8 +331,12 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         ? _liveItems
         : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
 
-    // Hiç geçerli yayın kalmadıysa tüm slotları listing göster
-    if (validItems.isEmpty) {
+    // Listing-only modunda inşa edilmiş gruplar dondurulur:
+    // yeni yayın gelse bile bu gruplar listing göstermeye devam eder.
+    final isListingOnlyGroup = _listingOnlyGroupCount > 0 && groupIdx < _listingOnlyGroupCount;
+
+    // Hiç geçerli yayın kalmadıysa veya donmuş listing zonundaysak listing göster
+    if (validItems.isEmpty || isListingOnlyGroup) {
       if (_listingPool.isEmpty) {
         debugPrint('[SwipeLive] _itemAt($pageIndex) → loading (no streams, no listings)');
         return const _LoadingListingItem();
@@ -339,7 +348,9 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       return _ListingItem(item, slotIndex: pageIndex, streamCategory: '');
     }
 
-    final streamForGroup = validItems[groupIdx % validItems.length];
+    // Donmuş listing grupları sayılmadan stream seçimi yapılır
+    final streamIdx = (groupIdx - _listingOnlyGroupCount) % validItems.length;
+    final streamForGroup = validItems[streamIdx];
 
     if (posInGroup == 0) return _LiveItem(streamForGroup);
     // İlan slotu ama havuz henüz boş → placeholder (stream widget değil)
@@ -577,7 +588,11 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       final fresh = await StreamService.getActiveStreams();
       if (!mounted) return;
       final freshIds = fresh.map((s) => s.id).toSet();
+      bool needsPrefetch = false;
       setState(() {
+        // Bu refresh öncesi geçerli yayın sayısı
+        final validBefore = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
+
         // Yeni yayınları ekle
         final existingIds = _liveItems.map((s) => s.id).toSet();
         for (final s in fresh) {
@@ -600,7 +615,21 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
             }
           }
         }
+
+        // Listing-only → yayın var geçişi: mevcut grupları dondur
+        // Böylece yeni yayınlar kullanıcının bulunduğu konumu bozmaz,
+        // sadece ilerleyen sayfalarda organik olarak çıkar.
+        final validAfter = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
+        if (validBefore.isEmpty && validAfter.isNotEmpty) {
+          _listingOnlyGroupCount = _groupBoundaries.length;
+          needsPrefetch = true;
+          debugPrint(
+            '[SwipeLive] refresh: ${validAfter.length} yeni yayın geldi, '
+            '$_listingOnlyGroupCount grup listing-only donduruldu, page=$_currentPage',
+          );
+        }
       });
+      if (needsPrefetch && mounted) _schedulePrefetch(_currentPage);
     } catch (_) {}
   }
 
