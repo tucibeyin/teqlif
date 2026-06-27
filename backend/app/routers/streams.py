@@ -237,7 +237,7 @@ async def pip_enter(
     current_user: User = Depends(get_current_user),
 ):
     """PiP moduna girildiğinde izleyiciyi pip_viewer_set'e ekle (2 saat TTL)."""
-    from app.database_redis import get_redis
+    from app.utils.redis_client import get_redis
     redis = await get_redis()
     key = f"live:pip_viewer_set:{stream_id}"
     await redis.sadd(key, str(current_user.id))
@@ -250,7 +250,7 @@ async def pip_exit(
     current_user: User = Depends(get_current_user),
 ):
     """PiP kapatıldığında izleyiciyi pip_viewer_set'ten çıkar."""
-    from app.database_redis import get_redis
+    from app.utils.redis_client import get_redis
     redis = await get_redis()
     await redis.srem(f"live:pip_viewer_set:{stream_id}", str(current_user.id))
 
