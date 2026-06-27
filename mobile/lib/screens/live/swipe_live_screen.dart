@@ -302,13 +302,17 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         ? _liveItems
         : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
 
-    // Hiç geçerli yayın kalmadıysa dead stream döngüsünü önle — tüm slotları listing göster.
-    // (mevcut sayfadaki widget _onStreamEnded → setState çağrılmadığı için hayatta kalır)
+    // Hiç geçerli yayın kalmadıysa tüm slotları listing göster
     if (validItems.isEmpty) {
-      if (_listingPool.isEmpty) return const _LoadingListingItem();
+      if (_listingPool.isEmpty) {
+        debugPrint('[SwipeLive] _itemAt($pageIndex) → loading (no streams, no listings)');
+        return const _LoadingListingItem();
+      }
       final listingIdx =
           (groupIdx * (_currentListingsPerGroup + 1) + posInGroup) % _listingPool.length;
-      return _ListingItem(_listingPool[listingIdx], slotIndex: pageIndex, streamCategory: '');
+      final item = _listingPool[listingIdx];
+      debugPrint('[SwipeLive] _itemAt($pageIndex) → listing id=${item["id"]} (no live streams)');
+      return _ListingItem(item, slotIndex: pageIndex, streamCategory: '');
     }
 
     final streamForGroup = validItems[groupIdx % validItems.length];
@@ -508,11 +512,20 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   void _onStreamEnded(int streamId) {
     if (_endedStreamIds.contains(streamId)) return;
     _endedStreamIds.add(streamId);
-    // Current page'in yayını değilse hemen yeniden inşa et
-    // (mevcut sayfadaysa raid overlay görünür kalmalı — kullanıcı swipe etince değişir)
-    if (_getCurrentStream()?.id != streamId && mounted) {
+    if (!mounted) return;
+
+    final remaining = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
+    debugPrint('[SwipeLive] stream_ended id=$streamId | remaining=${remaining.length} | currentStream=${_getCurrentStream()?.id}');
+
+    if (remaining.isEmpty) {
+      // Son yayın da bitti — mevcut sayfayı da rebuild et, ilanlar gösterilsin
+      debugPrint('[SwipeLive] Tüm yayınlar bitti, ilanlar gösteriliyor');
+      setState(() {});
+    } else if (_getCurrentStream()?.id != streamId) {
+      // Başka bir sayfanın yayını bitti — sadece o sayfayı güncelle
       setState(() {});
     }
+    // else: mevcut sayfanın yayını bitti ama başka yayın var → raid overlay korunur
   }
 
   /// API'den güncel yayın listesini çekip _liveItems'ı günceller.
