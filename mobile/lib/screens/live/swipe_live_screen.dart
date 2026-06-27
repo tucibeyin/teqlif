@@ -55,6 +55,34 @@ class _PrefetchEntry {
   }
 }
 
+// ── Raid köprüsü ─────────────────────────────────────────────────────────────
+// Eski SwipeLiveScreen dispose olmadan önce raid hedefinin prefetch bağlantısını
+// burada saklar; yeni ekranın _activate() bunu bulunca anında kullanır.
+class _RaidPrefetchBridge {
+  static int? _streamId;
+  static _PrefetchEntry? _entry;
+
+  static void put(int streamId, _PrefetchEntry entry) {
+    _entry?.dispose(); // önceki varsa temizle
+    _streamId = streamId;
+    _entry = entry;
+  }
+
+  static _PrefetchEntry? take(int streamId) {
+    if (_streamId == streamId) {
+      final e = _entry;
+      _streamId = null;
+      _entry = null;
+      return e;
+    }
+    // Başka stream için saklanmış → artık geçersiz, temizle
+    _entry?.dispose();
+    _streamId = null;
+    _entry = null;
+    return null;
+  }
+}
+
 class _LiveItem extends _FeedItem {
   final StreamOut stream;
   const _LiveItem(this.stream);
@@ -935,6 +963,13 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   Future<void> _activate([int attempt = 0]) async {
     if (!mounted) return;
 
+    // Raid köprüsünden bağlantı aktar (eski ekrandan kurtarıldıysa) — debounce yok
+    final bridged = _RaidPrefetchBridge.take(widget.stream.id);
+    if (bridged != null) {
+      await _setupFromPrefetchEntry(bridged, activate: true);
+      return;
+    }
+
     // Parent hızlı yoldan bağlamışsa doğrudan aktiflere geç — debounce yok
     final cached = widget.takePrefetch?.call(widget.stream.id);
     if (cached != null) {
@@ -1433,6 +1468,11 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   }
 
   Future<void> _handleRaid(int targetStreamId) async {
+    // Parent cache'de hedef stream için prefetch varsa dispose olmadan önce köprüye al
+    final bridgeEntry = widget.takePrefetch?.call(targetStreamId);
+    if (bridgeEntry != null) {
+      _RaidPrefetchBridge.put(targetStreamId, bridgeEntry);
+    }
     widget.onStreamEnded?.call();
     await _deactivate();
     if (mounted) {
