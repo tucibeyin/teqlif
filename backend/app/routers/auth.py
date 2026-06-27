@@ -96,21 +96,6 @@ async def _create_user_and_send_code(
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
     await _send_verification_email(request, data.email, data.full_name, code, has_phone=bool(data.phone))
 
-    # Hoşgeldin e-postası — doğrulama kodundan kısa bir süre sonra kuyruğa alınır
-    lang = _detect_lang(request)
-    try:
-        await request.app.state.arq_pool.enqueue_job(
-            "send_welcome_email_task", user.email, user.full_name, bool(data.phone), lang,
-            _defer_by=5,  # 5 saniye sonra gönder (doğrulama kodu e-postasından sonra gelsin)
-        )
-    except Exception as exc:
-        logger.warning("[WELCOME] Kuyruğa alınamadı, direkt gönderiliyor | %s", exc)
-        try:
-            from app.utils.email import send_welcome_email
-            await send_welcome_email(user.email, user.full_name, has_phone=bool(data.phone), lang=lang)
-        except Exception as exc2:
-            logger.error("[WELCOME] Gönderilemedi | %s", exc2)
-
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
@@ -137,6 +122,19 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
     await db.commit()
     await db.refresh(user)
     await redis.delete(f"verify:{data.email}")
+
+    lang = _detect_lang(request)
+    try:
+        await request.app.state.arq_pool.enqueue_job(
+            "send_welcome_email_task", user.email, user.full_name, bool(user.phone), lang,
+        )
+    except Exception as exc:
+        logger.warning("[WELCOME] Kuyruğa alınamadı, direkt gönderiliyor | %s", exc)
+        try:
+            from app.utils.email import send_welcome_email
+            await send_welcome_email(user.email, user.full_name, has_phone=bool(user.phone), lang=lang)
+        except Exception as exc2:
+            logger.error("[WELCOME] Gönderilemedi | %s", exc2)
 
     token = create_access_token(user.id)
     refresh = create_refresh_token()
