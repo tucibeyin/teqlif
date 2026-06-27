@@ -440,6 +440,48 @@ class ListingService:
         listing.is_deleted = True
         listing.is_active = False
         _owner_id = listing.user_id
+
+        # Aktif kampanya varsa iptal et ve kalan TUCi'yi iade et
+        campaign_result = await self.db.execute(
+            select(AdCampaign).where(
+                AdCampaign.listing_id == listing_id,
+                AdCampaign.status.in_(["active", "paused"]),
+            )
+        )
+        campaign = campaign_result.scalar_one_or_none()
+        refund_amount = 0
+        if campaign:
+            try:
+                from app.utils.redis_client import get_redis
+                redis = await get_redis()
+                budget_str = await redis.get(f"ad_campaign_budget:{campaign.id}")
+                if budget_str is not None:
+                    refund_amount = max(0, int(float(budget_str)))
+                else:
+                    refund_amount = max(0, campaign.total_budget - campaign.spent_budget)
+            except Exception:
+                refund_amount = max(0, campaign.total_budget - campaign.spent_budget)
+
+            campaign.status = "cancelled"
+            campaign.spent_budget = campaign.total_budget - refund_amount
+
+            if refund_amount > 0:
+                from sqlalchemy import text as sql_text
+                from app.models.tuci_transaction import TuciTransaction
+                await self.db.execute(
+                    sql_text("UPDATE users SET tuci_balance = tuci_balance + :amt WHERE id = :uid"),
+                    {"amt": refund_amount, "uid": _owner_id},
+                )
+                self.db.add(TuciTransaction(
+                    user_id=_owner_id,
+                    amount=refund_amount,
+                    transaction_type="refund_ad_campaign",
+                ))
+                logger.info(
+                    "[LISTINGS] Kampanya iadesi | listing_id=%s campaign_id=%s refund=%d TUCi",
+                    listing_id, campaign.id, refund_amount,
+                )
+
         try:
             await self.db.commit()
         except Exception as exc:
@@ -451,6 +493,15 @@ class ListingService:
             capture_exception(exc)
             raise DatabaseException("İlan silinemedi")
 
+        # Redis'ten kampanya bütçe key'ini temizle
+        if campaign and refund_amount >= 0:
+            try:
+                from app.utils.redis_client import get_redis
+                redis = await get_redis()
+                await redis.delete(f"ad_campaign_budget:{campaign.id}")
+            except Exception:
+                pass
+
         import asyncio as _asyncio3
         from app.database_clickhouse import track_user_event
         _asyncio3.create_task(track_user_event(
@@ -460,7 +511,10 @@ class ListingService:
             user_id=_owner_id,
         ))
 
-        return {"ok": True}
+        result_data: dict = {"ok": True}
+        if refund_amount > 0:
+            result_data["refunded_tuci"] = refund_amount
+        return result_data
 
     # ── Teklif Ver ───────────────────────────────────────────────────────────
     async def create_offer(self, listing_id: int, current_user: User, amount: float) -> dict:

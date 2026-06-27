@@ -52,19 +52,11 @@ class _AdReportScreenState extends State<AdReportScreen>
 
   // ── Formatters ──────────────────────────────────────────────────────────────
 
-  String _fmtTL(dynamic raw) {
+  String _fmtTuci(dynamic raw) {
     if (raw == null) return '—';
-    final val = (raw as num).toDouble();
+    final val = (raw as num).toInt();
     if (val < 0) return '—';
-    final s = val.toStringAsFixed(2);
-    final parts = s.split('.');
-    final intPart = parts[0];
-    final buf = StringBuffer();
-    for (int i = 0; i < intPart.length; i++) {
-      if (i > 0 && (intPart.length - i) % 3 == 0) buf.write('.');
-      buf.write(intPart[i]);
-    }
-    return '${buf.toString()},${parts[1]} ₺';
+    return '$val TUCi';
   }
 
   String _fmtCtr(dynamic raw) {
@@ -160,16 +152,13 @@ class _AdReportScreenState extends State<AdReportScreen>
 
   Widget _buildReport() {
     final r = _report!;
-    final status           = r['status'] as String?;
-    final totalBudget      = r['total_budget'];
-    final spent            = r['spent_budget'];
-    final remaining        = r['remaining_budget'];
-    final impressions      = r['impressions'] as int? ?? 0;
-    final clicks           = r['clicks'] as int? ?? 0;
-    final ctr              = r['ctr'];
-    final totalBudgetD     = totalBudget != null ? (totalBudget as num).toDouble() : 1.0;
-    final spentD           = spent != null ? (spent as num).toDouble() : 0.0;
-    final ctrD             = ctr != null ? (ctr as num).toDouble() : 0.0;
+    final status      = r['status'] as String?;
+    final totalBudget = r['total_budget'];
+    final spent       = r['spent_budget'];
+    final impressions = r['impressions'] as int? ?? 0;
+    final clicks      = r['clicks'] as int? ?? 0;
+    final ctr         = r['ctr'];
+    final ctrD        = ctr != null ? (ctr as num).toDouble() : 0.0;
 
     return FadeTransition(
       opacity: _fadeAnim,
@@ -247,8 +236,9 @@ class _AdReportScreenState extends State<AdReportScreen>
                 _MetricCard(
                   icon: Icons.account_balance_wallet_outlined,
                   label: 'Harcanan\nBütçe',
-                  value: _fmtTL(spent),
+                  value: _fmtTuci(spent),
                   color: const Color(0xFFEF4444),
+                  hint: totalBudget != null ? '${_fmtTuci(totalBudget)} bütçeden' : null,
                 ),
               ]),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -256,54 +246,6 @@ class _AdReportScreenState extends State<AdReportScreen>
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
                 childAspectRatio: 1.3,
-              ),
-            ),
-          ),
-
-          const SliverToBoxAdapter(child: SizedBox(height: 10)),
-
-          // ── Bütçe özeti kartı ─────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111827),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF1E293B)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Bütçe Özeti',
-                      style: TextStyle(
-                        color: Color(0xFFCBD5E1),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _BudgetRow(label: 'Toplam Bütçe', value: _fmtTL(totalBudget), color: const Color(0xFF64748B)),
-                    const SizedBox(height: 8),
-                    _BudgetRow(label: 'Harcanan', value: _fmtTL(spent), color: const Color(0xFFEF4444)),
-                    const SizedBox(height: 8),
-                    _BudgetRow(label: 'Kalan', value: _fmtTL(remaining), color: const Color(0xFF10B981)),
-                    const SizedBox(height: 12),
-                    if (totalBudgetD > 0) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: spentD / totalBudgetD,
-                          backgroundColor: const Color(0xFF1E293B),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFEF4444)),
-                          minHeight: 6,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
               ),
             ),
           ),
@@ -463,26 +405,6 @@ class _MetricCard extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-// ── Budget Row ───────────────────────────────────────────────────────────────
-
-class _BudgetRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  const _BudgetRow({required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-        Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700)),
-      ],
     );
   }
 }
