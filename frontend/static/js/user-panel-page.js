@@ -31,7 +31,7 @@ async function loadWallet() {
 
 const _TYPE_LABELS = {
     airdrop:        'Hoş geldin hediyesi',
-    spend_lead_gen: 'Sıcak Talep blast',
+    spend_lead_gen: 'Toplu Duyuru',
     spend_ai:       'Yapay Zeka fiyatlama',
     web_topup:      'Web yükleme',
 };

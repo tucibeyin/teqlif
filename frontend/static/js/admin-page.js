@@ -235,7 +235,7 @@ async function loadTuci() {
         </div>`).join('');
 
     const TYPE_LABELS = {
-        airdrop: '🎁 Airdrop', spend_lead_gen: '🎯 Blast', spend_ai: '🤖 AI',
+        airdrop: '🎁 Airdrop', spend_lead_gen: '🎯 Duyuru', spend_ai: '🤖 AI',
         web_topup: '💳 Topup', spend_ad_campaign: '📢 Sponsorluk',
     };
     document.getElementById('tuci-table-body').innerHTML = (d.transactions || []).map(tx => {
