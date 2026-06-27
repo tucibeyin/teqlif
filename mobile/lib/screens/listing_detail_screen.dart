@@ -506,6 +506,42 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   Future<void> _boostListing(BuildContext ctx) async {
+    // Önce boost kredi durumunu çek
+    int remaining = 0;
+    int limit = 0;
+    bool isPro = false;
+    try {
+      final token = await StorageService.getToken();
+      final cr = await http.get(
+        Uri.parse('$kBaseUrl/ads/boost-credits'),
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      );
+      if (cr.statusCode == 200) {
+        final d = jsonDecode(cr.body) as Map<String, dynamic>;
+        remaining = (d['remaining'] as num).toInt();
+        limit     = (d['limit'] as num).toInt();
+        isPro     = d['is_pro'] == true;
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+
+    // Pro değilse veya kredit bittiyse direkt bilgilendir
+    if (!isPro) {
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+        content: Text('⭐ İlan öne çıkarma yalnızca Pro üyelere özeldir.'),
+        backgroundColor: Color(0xFFF97316),
+      ));
+      return;
+    }
+    if (remaining <= 0) {
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content: Text('Bu ay $limit boost hakkını kullandın. Yeni ay başında sıfırlanır.'),
+        backgroundColor: const Color(0xFFDC2626),
+      ));
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: ctx,
       builder: (dlgCtx) => AlertDialog(
@@ -523,6 +559,18 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             Text(
               'İlanınız "Sana Özel" akışında öne çıkarılacak.',
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '⭐ Kalan boost hakkı: $remaining / $limit',
+                style: const TextStyle(fontSize: 12, color: Color(0xFFF97316), fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),

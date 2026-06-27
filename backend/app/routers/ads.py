@@ -23,10 +23,41 @@ from app.models.listing import Listing
 from app.models.tuci_transaction import TuciTransaction
 from app.models.user import User
 from app.utils.auth import bearer_scheme, decode_token, get_current_user
+from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ads", tags=["ads"])
+
+# ── Boost Kredi Sabitleri ─────────────────────────────────────────────────────
+
+_BOOST_LIMIT_FREE = 0   # Ücretsiz hesap: boost yapamaz
+_BOOST_LIMIT_PRO  = 20  # Pro hesap: ayda 20 boost
+
+
+def _boost_redis_key(user_id: int) -> str:
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    return f"boost_credits:{user_id}:{month}"
+
+
+async def _get_boost_used(user_id: int) -> int:
+    redis = await get_redis()
+    val = await redis.get(_boost_redis_key(user_id))
+    return int(val) if val else 0
+
+
+async def _increment_boost(user_id: int) -> None:
+    redis = await get_redis()
+    key = _boost_redis_key(user_id)
+    count = await redis.incr(key)
+    if count == 1:
+        # İlk boost — ayın sonuna kadar TTL
+        now = datetime.now(timezone.utc)
+        import calendar
+        last_day = calendar.monthrange(now.year, now.month)[1]
+        end_of_month = now.replace(day=last_day, hour=23, minute=59, second=59)
+        ttl = int((end_of_month - now).total_seconds()) + 1
+        await redis.expire(key, ttl)
 
 
 # ── Şemalar ───────────────────────────────────────────────────────────────────
@@ -52,6 +83,20 @@ async def create_campaign(
     - AdCampaign kaydı oluşturulur (status='active').
     - Redis bütçe engine'ine yüklenir (anında aktif hale gelir).
     """
+    # Aylık boost kredi kontrolü
+    boost_limit = _BOOST_LIMIT_PRO if current_user.is_premium else _BOOST_LIMIT_FREE
+    if boost_limit == 0:
+        raise HTTPException(
+            status_code=403,
+            detail="İlan öne çıkarma yalnızca Pro hesaplara özeldir. Pro'ya geçerek ayda 20 boost hakkı kazanabilirsin.",
+        )
+    boost_used = await _get_boost_used(current_user.id)
+    if boost_used >= boost_limit:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Bu ay {boost_limit} boost hakkını kullandın. Kalan: 0. Yeni ay başında sıfırlanır.",
+        )
+
     # İlanın bu kullanıcıya ait olduğunu doğrula
     listing = await db.scalar(
         select(Listing).where(
@@ -94,6 +139,9 @@ async def create_campaign(
     await db.commit()
     await db.refresh(campaign)
 
+    # Boost kredi sayacını artır
+    await _increment_boost(current_user.id)
+
     # Redis'e anında yükle — cron'u beklemeye gerek yok
     try:
         from app.services.ad_service import load_active_campaigns_to_redis
@@ -111,6 +159,19 @@ async def create_campaign(
         "status": campaign.status,
         "total_budget": campaign.total_budget,
         "cpc_bid": campaign.cpc_bid,
+    }
+
+
+@router.get("/boost-credits")
+async def boost_credits(current_user: User = Depends(get_current_user)):
+    """Kullanıcının bu ayki boost kredi durumunu döndürür."""
+    limit = _BOOST_LIMIT_PRO if current_user.is_premium else _BOOST_LIMIT_FREE
+    used  = await _get_boost_used(current_user.id)
+    return {
+        "used": used,
+        "limit": limit,
+        "remaining": max(0, limit - used),
+        "is_pro": current_user.is_premium,
     }
 
 
