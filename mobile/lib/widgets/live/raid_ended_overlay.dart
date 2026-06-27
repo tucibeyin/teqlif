@@ -82,7 +82,15 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
 
     return FadeTransition(
       opacity: _fadeAnim,
-      child: Container(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragStart: (_) {},
+        onVerticalDragUpdate: (_) {},
+        onVerticalDragEnd: (_) {},
+        onHorizontalDragStart: (_) {},
+        onHorizontalDragUpdate: (_) {},
+        onHorizontalDragEnd: (_) {},
+        child: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -212,6 +220,7 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
       ),
     );
   }
+
 
   Widget _buildShimmer() {
     return Column(
