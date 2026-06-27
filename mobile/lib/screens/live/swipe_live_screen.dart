@@ -163,6 +163,9 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   // Oturum ID'si (backend'de kullanıcı seansını ayırt eder)
   final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
 
+  // Periyodik canlı yayın kontrol timer'ı
+  Timer? _streamCheckTimer;
+
   // ── Parent-level prefetch: child ±1 bağlanırken parent +2/+3'ü hazırlar ──
   final Map<int, _PrefetchEntry> _prefetchCache = {};
   // Aktif sayfanın PiP aksiyonu — iOS back gesture intercept için
@@ -197,6 +200,10 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     }
     // Kişiselleştirilmiş sıralama + listings_per_group backend'den çek
     _fetchPersonalizedConfig();
+    // Her 30 saniyede canlı yayın durumunu kontrol et (WS gecikmesine karşı)
+    _streamCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _refreshLiveStreams();
+    });
   }
 
   Future<void> _fetchPersonalizedConfig() async {
@@ -232,6 +239,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       e.dispose();
     }
     _prefetchCache.clear();
+    _streamCheckTimer?.cancel();
     _pageCtrl.dispose();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -261,10 +269,15 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   int _computeListingsPerGroup() {
     if (_recentDwells.isEmpty) return 2; // soğuk başlangıç
     final avgMs = _recentDwells.fold(0, (a, b) => a + b) ~/ _recentDwells.length;
-    if (avgMs < 2000) return 3;   // çok hızlı kaydırıyor → max ilan
-    if (avgMs < 8000) return 2;   // normal izleme
-    if (avgMs < 20000) return 1;  // uzun izliyor → az ilan
-    return 0;                      // çok uzun izliyor → yayınlar arka arkaya
+    // Eşikler gerçek kullanım davranışına göre ayarlandı:
+    // < 5s  → hızlı geziniyor, akışa dalmamış → max ilan göster
+    // 5-12s → normal izleme → orta
+    // 12-30s → yayınla meşgul → az ilan
+    // > 30s → yayına odaklanmış → ilan yok
+    if (avgMs < 5000) return 3;
+    if (avgMs < 12000) return 2;
+    if (avgMs < 30000) return 1;
+    return 0;
   }
 
   /// Bir yayın sayfasından çıkılınca dwell süresi kaydedilir, N güncellenir.
@@ -570,12 +583,19 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         for (final s in fresh) {
           if (!existingIds.contains(s.id)) _liveItems.add(s);
         }
-        // Fresh liste doluysa aktif listede olmayan yayınlar gerçekten bitmiş demektir.
-        // Boş fresh liste → geçici API hatası olabilir, o yüzden atlanır.
         if (fresh.isNotEmpty) {
+          // Aktif listede olmayan yayınlar gerçekten bitmiş
           for (final s in _liveItems) {
             if (!freshIds.contains(s.id)) {
               debugPrint('[SwipeLive] refresh: stream ${s.id} aktif listede yok → ended');
+              _endedStreamIds.add(s.id);
+            }
+          }
+        } else if (_endedStreamIds.isNotEmpty) {
+          // Boş liste + bazı yayınlar zaten bitmişse: tüm kalan yayınlar da bitmiş
+          for (final s in _liveItems) {
+            if (!_endedStreamIds.contains(s.id)) {
+              debugPrint('[SwipeLive] refresh: stream ${s.id} → boş liste + önceki bitişler → ended');
               _endedStreamIds.add(s.id);
             }
           }
