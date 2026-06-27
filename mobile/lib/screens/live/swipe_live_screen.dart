@@ -344,7 +344,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       final listingIdx =
           (groupIdx * (_currentListingsPerGroup + 1) + posInGroup) % _listingPool.length;
       final item = _listingPool[listingIdx];
-      debugPrint('[SwipeLive] _itemAt($pageIndex) → listing id=${item["id"]} (no live streams)');
+      debugPrint('[SwipeLive] _itemAt($pageIndex) → listing id=${item["id"]} ${isListingOnlyGroup ? "(frozen zone)" : "(no live streams)"}');
       return _ListingItem(item, slotIndex: pageIndex, streamCategory: '');
     }
 
