@@ -113,15 +113,25 @@ async function loadUsers() {
     const res = await adminFetch('/api/admin-data/users/recent?limit=50');
     if (!res) return;
     const data = await res.json();
-    document.getElementById("user-table-body").innerHTML = data.map(u => `
+    document.getElementById("user-table-body").innerHTML = data.map(u => {
+        const statusPills = [];
+        if (u.deleted_at) {
+            statusPills.push('<span class="status-pill" style="background:#374151;color:#9ca3af;">🗑 Silindi</span>');
+        } else if (!u.is_active) {
+            statusPills.push('<span class="status-pill" style="background:#ef4444;color:white;">🚫 Yasaklı</span>');
+        } else {
+            statusPills.push('<span class="status-pill" style="background:#10b981;color:#0f172a;">✅ Aktif</span>');
+        }
+        if (u.is_shadowbanned) statusPills.push('<span class="status-pill" style="background:#7c3aed;color:white;">👁 Gizli Kısıtlı</span>');
+        if (!u.is_verified && !u.deleted_at) statusPills.push('<span class="status-pill" style="background:#f59e0b;color:#0f172a;">✉ Doğrulanmamış</span>');
+        return `
         <tr>
             <td style="color:#64748b;">#${u.id}</td>
             <td>
                 <a href="/profil/${u.username}" target="_blank" class="admin-link">@${u.username}</a>
-                ${u.is_shadowbanned ? '<span class="status-pill" style="background:#7c3aed;color:white;margin-left:4px;">👁 Shadow</span>' : ''}
                 <br><small style="color:#64748b;">${u.email}</small>
             </td>
-            <td>${u.is_active ? '<span class="status-pill" style="background:#10b981;color:#0f172a">Aktif</span>' : '<span class="status-pill" style="background:#ef4444;color:white">Yasaklı</span>'}</td>
+            <td style="white-space:nowrap;">${statusPills.join(' ')}</td>
             <td><span style="color:#fbbf24;font-weight:700;">${u.tuci_balance} T</span></td>
             <td><span style="color:#94a3b8;">${u.listing_count} ilan · ${u.stream_count} yayın</span></td>
             <td>${u.fcm_token ? '🟢' : '⚫'}</td>
@@ -135,7 +145,8 @@ async function loadUsers() {
                     data-modal-shadow="${u.is_shadowbanned}"
                     class="action-btn">Yönet</button>
             </td>
-        </tr>`).join("");
+        </tr>`;
+    }).join("");
     document.getElementById("search-users").value = "";
 }
 
@@ -147,7 +158,7 @@ function openModal(id, un, fn, email, act, shadow) {
     document.getElementById("edit-active").value = act ? "true" : "false";
     document.getElementById("edit-password").value = "";
     const shadowBtn = document.getElementById("btnToggleShadowban");
-    shadowBtn.textContent = shadow ? '👁 Shadowban Kaldır' : '👁 Shadowban Uygula';
+    shadowBtn.textContent = shadow ? '👁 Gizli Kısıtlamayı Kaldır' : '👁 Gizli Kısıtlama (Shadowban) Uygula';
     shadowBtn.style.background = shadow ? '#6b7280' : '#7c3aed';
     document.getElementById("user-modal").classList.remove("hidden");
 }
