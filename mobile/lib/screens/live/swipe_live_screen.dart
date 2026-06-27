@@ -253,19 +253,19 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     final validItems = _endedStreamIds.isEmpty
         ? _liveItems
         : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-    final src = validItems.isNotEmpty ? validItems : _liveItems;
-    if (src.isEmpty) return const _LoadingListingItem();
-    final streamForGroup = src[groupIdx % src.length];
 
-    if (posInGroup == 0) {
-      // Hiç yayın kalmadıysa stream slot'unu da ilan ile doldur
-      if (src.isEmpty) {
-        if (_listingPool.isEmpty) return const _LoadingListingItem();
-        final listingIdx = (groupIdx * (_currentListingsPerGroup + 1)) % _listingPool.length;
-        return _ListingItem(_listingPool[listingIdx], slotIndex: pageIndex, streamCategory: '');
-      }
-      return _LiveItem(streamForGroup);
+    // Hiç geçerli yayın kalmadıysa dead stream döngüsünü önle — tüm slotları listing göster.
+    // (mevcut sayfadaki widget _onStreamEnded → setState çağrılmadığı için hayatta kalır)
+    if (validItems.isEmpty) {
+      if (_listingPool.isEmpty) return const _LoadingListingItem();
+      final listingIdx =
+          (groupIdx * (_currentListingsPerGroup + 1) + posInGroup) % _listingPool.length;
+      return _ListingItem(_listingPool[listingIdx], slotIndex: pageIndex, streamCategory: '');
     }
+
+    final streamForGroup = validItems[groupIdx % validItems.length];
+
+    if (posInGroup == 0) return _LiveItem(streamForGroup);
     // İlan slotu ama havuz henüz boş → placeholder (stream widget değil)
     if (_listingPool.isEmpty) return const _LoadingListingItem();
     // Ilan slotu: posInGroup 1..listingCount
@@ -422,20 +422,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   void _onStreamEnded(int streamId) {
     if (_endedStreamIds.contains(streamId)) return;
     _endedStreamIds.add(streamId);
-
-    // Son yayın da bittiyse listeyi temizle → saf ilan akışı moduna geç
-    final remaining = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-    if (remaining.isEmpty && mounted) {
-      setState(() {
-        _liveItems = [];
-        _endedStreamIds.clear();
-        _groupBoundaries.clear();
-        _nextGroupStartPage = 0;
-      });
-      return;
-    }
-
     // Current page'in yayını değilse hemen yeniden inşa et
+    // (mevcut sayfadaysa raid overlay görünür kalmalı — kullanıcı swipe etince değişir)
     if (_getCurrentStream()?.id != streamId && mounted) {
       setState(() {});
     }
