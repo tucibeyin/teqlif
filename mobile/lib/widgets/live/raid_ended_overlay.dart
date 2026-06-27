@@ -65,8 +65,7 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
       ).timeout(const Duration(seconds: 8));
       if (!mounted) return;
       if (resp.statusCode == 200) {
-        final list = (jsonDecode(resp.body) as List)
-            .cast<Map<String, dynamic>>();
+        final list = (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
         setState(() { _targets = list; _loading = false; });
       } else {
         setState(() { _targets = []; _loading = false; });
@@ -78,109 +77,102 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final safeBottom = MediaQuery.of(context).padding.bottom;
-
     return FadeTransition(
       opacity: _fadeAnim,
       child: GestureDetector(
+        // Yalnızca dikey drag'i bloke et; yatay drag kartlar arası geçiş için serbest
         behavior: HitTestBehavior.opaque,
         onVerticalDragStart: (_) {},
         onVerticalDragUpdate: (_) {},
         onVerticalDragEnd: (_) {},
-        onHorizontalDragStart: (_) {},
-        onHorizontalDragUpdate: (_) {},
-        onHorizontalDragEnd: (_) {},
         child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xEE0D0D0D),
-              Color(0xEE1A0A00),
-              Color(0xEE0D0D0D),
-            ],
-            stops: [0.0, 0.55, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(
-              top: 8,
-              bottom: safeBottom > 0 ? 0 : 16,
-              left: 16,
-              right: 16,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xF00D0D0D),
+                Color(0xF01A0A00),
+                Color(0xF00D0D0D),
+              ],
+              stops: [0.0, 0.55, 1.0],
             ),
+          ),
+          child: SafeArea(
             child: Column(
               children: [
                 // ── Kapat butonu ────────────────────────────────────────────
                 Align(
                   alignment: Alignment.topRight,
-                  child: IconButton(
-                    onPressed: widget.onClose,
-                    icon: const Icon(Icons.close_rounded,
-                        color: Colors.white54, size: 24),
-                    padding: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8, top: 4),
+                    child: IconButton(
+                      onPressed: widget.onClose,
+                      icon: const Icon(Icons.close_rounded,
+                          color: Colors.white54, size: 24),
+                      padding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
 
-                // ── Host profil fotoğrafı (soluklaşan) ─────────────────────
+                // ── Host banner (kompakt) ────────────────────────────────────
                 _HostBanner(
                   username: widget.hostUsername,
                   thumbnailUrl: widget.hostThumbnailUrl,
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // ── Divider ─────────────────────────────────────────────────
-                Container(
-                  height: 1,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        kPrimary.withValues(alpha: 0.6),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // ── Baskın başlığı ──────────────────────────────────────────
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('🔥', style: TextStyle(fontSize: 20)),
-                    SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        'Eğlence Devam Ediyor!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.3,
-                        ),
-                        textAlign: TextAlign.center,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Container(
+                    height: 1,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          kPrimary.withValues(alpha: 0.6),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Diğer Yayınlara Baskın Yap',
-                  style: TextStyle(
-                    color: Color(0xFFFB923C),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
-                // ── Hedef kartlar ───────────────────────────────────────────
-                Expanded(
+                // ── Baskın başlığı ──────────────────────────────────────────
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('🔥', style: TextStyle(fontSize: 18)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Eğlence Devam Ediyor!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Diğer Yayınlara Baskın Yap',
+                  style: TextStyle(
+                    color: Color(0xFFFB923C),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // ── Hedef kartlar (yatay carousel) ──────────────────────────
+                SizedBox(
+                  height: 220,
                   child: _loading
                       ? _buildShimmer()
                       : (_targets == null || _targets!.isEmpty)
@@ -189,7 +181,7 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.live_tv_outlined,
-                                      color: Colors.white24, size: 40),
+                                      color: Colors.white24, size: 36),
                                   SizedBox(height: 8),
                                   Text(
                                     'Şu an başka aktif yayın yok',
@@ -200,10 +192,11 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
                               ),
                             )
                           : ListView.separated(
-                              padding: EdgeInsets.zero,
+                              scrollDirection: Axis.horizontal,
+                              // Kenar padding'i ekleyerek yanlardan swipe-to-close alanı yarat
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
                               itemCount: _targets!.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 10),
+                              separatorBuilder: (_, __) => const SizedBox(width: 12),
                               itemBuilder: (_, i) => _RaidTargetCard(
                                 data: _targets![i],
                                 onTap: () =>
@@ -212,34 +205,31 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
                             ),
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
               ],
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
-
   Widget _buildShimmer() {
-    return Column(
-      children: List.generate(
-        3,
-        (i) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: ShimmerBox(
-            height: 80,
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: 3,
+      separatorBuilder: (_, __) => const SizedBox(width: 12),
+      itemBuilder: (_, __) => ShimmerBox(
+        width: 150,
+        height: 220,
+        borderRadius: BorderRadius.circular(14),
       ),
     );
   }
 }
 
-// ── Soluklaşan Host banner ───────────────────────────────────────────────────
+// ── Kompakt host banner ───────────────────────────────────────────────────────
 
 class _HostBanner extends StatelessWidget {
   final String username;
@@ -260,54 +250,47 @@ class _HostBanner extends StatelessWidget {
           ).createShader(bounds),
           blendMode: BlendMode.dstIn,
           child: Container(
-            width: 72,
-            height: 72,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                  color: kPrimary.withValues(alpha: 0.5), width: 2),
+              border: Border.all(color: kPrimary.withValues(alpha: 0.5), width: 2),
             ),
             child: ClipOval(
               child: thumbnailUrl != null
                   ? CachedNetworkImage(
                       imageUrl: imgUrl(thumbnailUrl!),
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => _avatarFallback(),
+                      errorWidget: (_, __, ___) => _fallback(),
                     )
-                  : _avatarFallback(),
+                  : _fallback(),
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Text(
           '@$username',
           style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
+              color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         const Text(
           'Bu yayın sona erdi. Teşekkürler! 👋',
           style: TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
+              color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
           textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  Widget _avatarFallback() => Container(
+  Widget _fallback() => Container(
         color: const Color(0xFF1E293B),
-        child: const Icon(Icons.person_rounded, color: Colors.white38, size: 32),
+        child: const Icon(Icons.person_rounded, color: Colors.white38, size: 28),
       );
 }
 
-// ── Tek raid hedef kartı ─────────────────────────────────────────────────────
+// ── Küçük dikey raid kartı ────────────────────────────────────────────────────
 
 class _RaidTargetCard extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -327,10 +310,12 @@ class _RaidTargetCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 80,
+        width: 150,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [Color(0xFF1C1C1C), Color(0xFF2A1000)],
           ),
           border: Border.all(
@@ -338,22 +323,22 @@ class _RaidTargetCard extends StatelessWidget {
             width: 1,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Thumbnail
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(11)),
-              child: SizedBox(
-                width: 80,
-                height: 80,
+            // Thumbnail (üst %55)
+            Expanded(
+              flex: 55,
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(13)),
                 child: thumbUrl != null
                     ? CachedNetworkImage(
                         imageUrl: imgUrl(thumbUrl),
                         fit: BoxFit.cover,
                         placeholder: (_, __) => const ShimmerBox(
-                          width: 80,
-                          height: 80,
+                          width: double.infinity,
+                          height: double.infinity,
                         ),
                         errorWidget: (_, __, ___) => _thumbFallback(),
                       )
@@ -361,116 +346,105 @@ class _RaidTargetCard extends StatelessWidget {
               ),
             ),
 
-            // Info
+            // Bilgi (alt %45)
             Expanded(
+              flex: 45,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Başlık + kategori rozeti
+                    // Başlık
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    // Host + kategori
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                            title,
+                            '@$hostName',
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            maxLines: 1,
+                                color: Colors.white54, fontSize: 10),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (category.isNotEmpty) ...[
-                          const SizedBox(width: 6),
+                        if (category.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                                horizontal: 4, vertical: 1),
                             decoration: BoxDecoration(
                               color: kPrimary.withValues(alpha: 0.25),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                  color: kPrimary.withValues(alpha: 0.5),
-                                  width: 0.8),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               category,
                               style: const TextStyle(
-                                color: kPrimary,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                              ),
+                                  color: kPrimary,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w700),
                             ),
                           ),
-                        ],
                       ],
                     ),
 
-                    // Host adı
-                    Text(
-                      '@$hostName',
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 11,
-                      ),
-                    ),
-
-                    // İzleyici + hype
+                    // İzleyici + hype + buton satırı
                     Row(
                       children: [
                         const Icon(Icons.remove_red_eye_outlined,
-                            color: Colors.white38, size: 12),
-                        const SizedBox(width: 3),
-                        Text(
-                          '$viewerCount',
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 11),
-                        ),
+                            color: Colors.white38, size: 10),
+                        const SizedBox(width: 2),
+                        Text('$viewerCount',
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 10)),
                         if (hypeScore > 0) ...[
-                          const SizedBox(width: 10),
-                          const Text('🔥',
-                              style: TextStyle(fontSize: 11)),
-                          const SizedBox(width: 2),
-                          Text(
-                            '$hypeScore',
-                            style: TextStyle(
-                              color: hypeScore >= 80
-                                  ? const Color(0xFFFB923C)
-                                  : Colors.white54,
-                              fontSize: 11,
-                              fontWeight: hypeScore >= 80
-                                  ? FontWeight.w700
-                                  : FontWeight.normal,
-                            ),
-                          ),
+                          const SizedBox(width: 6),
+                          Text('🔥$hypeScore',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: hypeScore >= 80
+                                    ? const Color(0xFFFB923C)
+                                    : Colors.white54,
+                                fontWeight: hypeScore >= 80
+                                    ? FontWeight.w700
+                                    : FontWeight.normal,
+                              )),
                         ],
                         const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFFEF4444),
-                                Color(0xFFFB923C)
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(8),
+                      ],
+                    ),
+
+                    // Baskın yap butonu
+                    SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEF4444), Color(0xFFFB923C)],
                           ),
-                          child: const Text(
-                            'Baskın Yap!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Baskın Yap!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
