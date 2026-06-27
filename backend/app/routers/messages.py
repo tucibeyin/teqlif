@@ -289,14 +289,22 @@ async def messages_ws(websocket: WebSocket):
     try:
         raw = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
         token = raw.get("token", "") if isinstance(raw, dict) else ""
+    except WebSocketDisconnect:
+        return
     except (asyncio.TimeoutError, Exception):
-        await websocket.close(code=4001)
+        try:
+            await websocket.close(code=4001)
+        except Exception:
+            pass
         return
 
     user_id = decode_token(token)
     if not user_id:
         logger.warning("[DM WS] Geçersiz token, bağlantı kapatıldı")
-        await websocket.close(code=4001)
+        try:
+            await websocket.close(code=4001)
+        except Exception:
+            pass
         return
 
     # ── 3. DB doğrulama ───────────────────────────────────────────────────────
@@ -305,7 +313,10 @@ async def messages_ws(websocket: WebSocket):
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
             if not user or not user.is_active:
-                await websocket.close(code=4001)
+                try:
+                    await websocket.close(code=4001)
+                except Exception:
+                    pass
                 return
     except Exception as exc:
         logger.error("[DM WS] DB doğrulama hatası | user_id=%s | %s", user_id, exc, exc_info=True)
@@ -319,7 +330,10 @@ async def messages_ws(websocket: WebSocket):
     session_count = await register_ws_session(user_id)
     if session_count > MAX_CONCURRENT_SESSIONS:
         await release_ws_session(user_id)
-        await websocket.close(code=4008)
+        try:
+            await websocket.close(code=4008)
+        except Exception:
+            pass
         logger.warning(
             "[DM WS] Eş zamanlı oturum limiti aşıldı | user_id=%s | count=%s limit=%s",
             user_id, session_count, MAX_CONCURRENT_SESSIONS,
