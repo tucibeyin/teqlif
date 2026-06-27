@@ -569,7 +569,8 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
   ConsumerState<_SwipeLivePage> createState() => _SwipeLivePageState();
 }
 
-class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
+class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
+    with AutomaticKeepAliveClientMixin {
   Room? _room;
   EventsListener<RoomEvent>? _listener;
   JoinTokenOut? _token;
@@ -601,6 +602,16 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   bool _enteringPip = false;
   // _activate() / _deactivate() race condition koruması
   int _activationGen = 0;
+  // Bağlantı devam ederken veya room mevcut iken widget'ı PageView evict etme
+  bool _keepAlive = false;
+
+  @override
+  bool get wantKeepAlive => _keepAlive || _room != null;
+
+  void _setKeepAlive(bool v) {
+    _keepAlive = v;
+    if (mounted) updateKeepAlive();
+  }
   // Prefetch modunda sadece video subscribe edilir, ses kapalı
   bool _isPrefetchMode = false;
   // Kazanan konfetisi
@@ -806,18 +817,16 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   /// _leftStream=true yapılarak dispose'da leaveStream çağrılması önlenir.
   bool _tryDepositRoom() {
     if (_room == null || _token == null || _listener == null) return false;
-    final accepted = widget.onRoomDeposit?.call(
-      widget.stream.id,
-      _PrefetchEntry(room: _room!, token: _token!, listener: _listener!),
-    );
-    if (accepted == true) {
-      _activationGen++;
-      _room = null;
-      _token = null;
-      _listener = null;
-      _leftStream = true; // dispose'da leaveStream çağrılmasın — bağlantı devam ediyor
-      return true;
-    }
+    final entry = _PrefetchEntry(room: _room!, token: _token!, listener: _listener!);
+    // Önce temizle: kabul veya ret olsun, bu slot artık room sahibi değil
+    _activationGen++;
+    _room = null;
+    _token = null;
+    _listener = null;
+    _leftStream = true; // leaveStream başka slot üstlendi
+    final accepted = widget.onRoomDeposit?.call(widget.stream.id, entry);
+    if (accepted == true) return true;
+    // Ret: başka bir slot zaten cache'e yazmış — entry.dispose() _depositRoom'da çağrıldı
     return false;
   }
 
@@ -979,6 +988,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
 
     // Hızlı geçişlerde ICE başlatma: kullanıcı 300ms bu sayfada kalmazsa
     // bağlantıya gerek yok (activationGen ilerlediyse zaten iptal olur).
+    // Widget evict edilse bile bağlantı tamamlanana dek keepAlive ile hayatta kalır.
+    if (attempt == 0) { _keepAlive = true; updateKeepAlive(); }
     final myGen = ++_activationGen;
     if (attempt == 0) {
       await Future.delayed(const Duration(milliseconds: 300));
@@ -1081,6 +1092,15 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
           _room = room;
           _loading = false;
         });
+
+        _setKeepAlive(false); // _room != null keepAlive'ı sürdürür
+
+        // Bağlantı sırasında widget evict edildiyse: room'u parent cache'e bırak
+        if (!widget.isActive && !widget.isPrefetch) {
+          if (!_tryDepositRoom()) _deactivate();
+          return;
+        }
+
         AnalyticsService.logInteraction(
           itemId: widget.stream.id,
           itemType: 'stream',
@@ -1088,6 +1108,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
         );
       }
     } on AppException catch (e) {
+      _setKeepAlive(false);
       if (!mounted) return;
       setState(() => _loading = false);
       if (e.statusCode == 400) {
@@ -1104,12 +1125,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
         showErrorSnackbar(context, e);
       }
     } catch (e, st) {
+      _setKeepAlive(false);
       LoggerService.instance.captureException(e, stackTrace: st, tag: 'SwipeLivePage._activate');
       // Network/ICE geçici hatası: sayfa hâlâ aktifse otomatik yeniden dene (max 2 kez)
       // Spinner bekleme süresince görünür kalır; başarısız olursa loading temizlenir.
       if (mounted && widget.isActive && attempt < 2) {
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted && widget.isActive) {
+          _keepAlive = true; // yeniden dene — keepAlive tekrar ayarla
           _activate(attempt + 1);
         } else {
           if (mounted) setState(() => _loading = false);
@@ -1358,6 +1381,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
   }
 
   Future<void> _deactivate() async {
+    _setKeepAlive(false);
     _activationGen++;
     _listener?.dispose();
     _listener = null;
@@ -1386,6 +1410,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
 
   // dispose'da await kullanamayız, senkron temizlik
   void _deactivateSync() {
+    _keepAlive = false; // mounted olmayabilir, updateKeepAlive çağırmıyoruz
     _activationGen++;
     _likeThrottleTimer?.cancel();
     _listener?.dispose();
@@ -1487,6 +1512,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin için gerekli
     final l = AppLocalizations.of(context)!;
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
