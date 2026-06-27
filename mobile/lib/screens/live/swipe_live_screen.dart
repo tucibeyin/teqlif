@@ -156,6 +156,13 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   final List<int> _recentDwells = []; // son 10 yayın dwell süresi (ms)
   int? _dwellStart; // mevcut yayın sayfasına girildiği an (ms epoch)
 
+  // Kişiselleştirme — tercih edilen ilan kategorileri (backend'den gelir)
+  List<String> _preferredListingCategories = [];
+  // Backend'e gönderilmeyi bekleyen event batch
+  final List<Map<String, dynamic>> _pendingEvents = [];
+  // Oturum ID'si (backend'de kullanıcı seansını ayırt eder)
+  final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+
   // ── Parent-level prefetch: child ±1 bağlanırken parent +2/+3'ü hazırlar ──
   final Map<int, _PrefetchEntry> _prefetchCache = {};
   // Aktif sayfanın PiP aksiyonu — iOS back gesture intercept için
@@ -188,6 +195,26 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     } else {
       _schedulePrefetch(_currentPage);
     }
+    // Kişiselleştirilmiş sıralama + listings_per_group backend'den çek
+    _fetchPersonalizedConfig();
+  }
+
+  Future<void> _fetchPersonalizedConfig() async {
+    final config = await StreamService.getSwipeLiveConfig();
+    if (!mounted || config == null) return;
+    // Sadece single mod değilse stream sırasını güncelle (single modda tek yayın var)
+    final isSingle = widget.streams.length == 1 && widget.streams[0].roomName.isEmpty;
+    setState(() {
+      if (!isSingle && config.streams.isNotEmpty) {
+        _liveItems = config.streams;
+        _groupBoundaries.clear();
+        _nextGroupStartPage = 0;
+        _currentPage = 0;
+      }
+      _currentListingsPerGroup = config.listingsPerGroup;
+      _preferredListingCategories = config.preferredListingCategories;
+    });
+    if (!isSingle) _schedulePrefetch(_currentPage);
   }
 
   @override
@@ -199,7 +226,15 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     _pageCtrl.dispose();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _flushPendingEvents(); // oturum kapanırken bekleyen eventleri gönder
     super.dispose();
+  }
+
+  void _flushPendingEvents() {
+    if (_pendingEvents.isEmpty) return;
+    final toSend = List<Map<String, dynamic>>.from(_pendingEvents);
+    _pendingEvents.clear();
+    StreamService.sendSwipeLiveEvents(toSend);
   }
 
   // ── Grup yönetimi ────────────────────────────────────────────────────────────
@@ -296,7 +331,9 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     if (_dwellStart != null) {
       final prevItem = _itemAt(_currentPage);
       if (prevItem is _LiveItem) {
-        _trackStreamDwell(DateTime.now().millisecondsSinceEpoch - _dwellStart!);
+        final dwellMs = DateTime.now().millisecondsSinceEpoch - _dwellStart!;
+        _trackStreamDwell(dwellMs);
+        _recordStreamEvent(prevItem.stream, dwellMs);
       }
       _dwellStart = null;
     }
@@ -315,6 +352,42 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       _loadListingFeed();
       _refreshLiveStreams();
     }
+    // Her 20 event'te batch gönder
+    if (_pendingEvents.length >= 20) _flushPendingEvents();
+  }
+
+  void _recordStreamEvent(StreamOut stream, int dwellMs) {
+    _pendingEvents.add({
+      'stream_id': stream.id,
+      'listing_id': 0,
+      'event_type': dwellMs < 2000 ? 'skip' : 'dwell',
+      'dwell_ms': dwellMs,
+      'stream_category': stream.category,
+      'listing_category': '',
+      'listings_seen': _currentListingsPerGroup,
+      'slot_index': _currentPage,
+      'session_id': _sessionId,
+    });
+  }
+
+  void _recordListingEvent(int listingId, String eventType, {
+    int dwellMs = 0,
+    String listingCategory = '',
+    int slotIndex = 0,
+  }) {
+    // Mevcut aktif yayın kategorisi
+    final streamCategory = _getCurrentStream()?.category ?? '';
+    _pendingEvents.add({
+      'stream_id': 0,
+      'listing_id': listingId,
+      'event_type': eventType,
+      'dwell_ms': dwellMs,
+      'stream_category': streamCategory,
+      'listing_category': listingCategory,
+      'listings_seen': 0,
+      'slot_index': slotIndex,
+      'session_id': _sessionId,
+    });
   }
 
   // ── Parent prefetch yönetimi ─────────────────────────────────────────────
@@ -497,7 +570,18 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       debugPrint('[SwipeLive] listing feed ${raw.length} ilan, page=$_currentPage lpg=$_currentListingsPerGroup');
       if (raw.isEmpty || !mounted) return;
       setState(() {
-        _listingPool.addAll(raw.cast<Map<String, dynamic>>());
+        final newItems = raw.cast<Map<String, dynamic>>();
+        // Tercih edilen kategoriler öne, diğerleri arkaya (kararlı sıralama)
+        if (_preferredListingCategories.isNotEmpty) {
+          newItems.sort((a, b) {
+            final catA = a['category']?.toString() ?? '';
+            final catB = b['category']?.toString() ?? '';
+            final rankA = _preferredListingCategories.indexOf(catA);
+            final rankB = _preferredListingCategories.indexOf(catB);
+            return (rankA < 0 ? 999 : rankA).compareTo(rankB < 0 ? 999 : rankB);
+          });
+        }
+        _listingPool.addAll(newItems);
         // _LoadingListingItem slotları otomatik olarak yeniden çizilir:
         // _itemAt artık _listingPool.isNotEmpty olduğundan _ListingItem döndürür.
       });

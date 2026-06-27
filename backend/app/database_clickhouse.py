@@ -76,6 +76,29 @@ PARTITION BY toYYYYMM(timestamp)
 ORDER BY (category, timestamp)
 """
 
+# SwipeLive'da yayın ve ilan etkileşimlerini izler.
+# stream_id=0 → ilan eventi; listing_id=0 → yayın eventi.
+_CREATE_SWIPE_LIVE_EVENTS_TABLE = """
+CREATE TABLE IF NOT EXISTS swipe_live_events
+(
+    user_id          UInt32,
+    stream_id        UInt32        DEFAULT 0,
+    listing_id       UInt32        DEFAULT 0,
+    event_type       LowCardinality(String),
+    dwell_ms         UInt32        DEFAULT 0,
+    stream_category  LowCardinality(String) DEFAULT '',
+    listing_category LowCardinality(String) DEFAULT '',
+    listings_seen    UInt8         DEFAULT 0,
+    slot_index       UInt32        DEFAULT 0,
+    session_id       String        DEFAULT '',
+    timestamp        DateTime      DEFAULT now()
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(timestamp)
+ORDER BY (user_id, timestamp)
+SETTINGS index_granularity = 8192
+"""
+
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
@@ -115,6 +138,7 @@ async def init_clickhouse() -> None:
         for stmt in _ALTER_FEED_ANALYTICS:
             await _client.command(stmt)
         await _client.command(_CREATE_SEARCH_EVENTS_TABLE)
+        await _client.command(_CREATE_SWIPE_LIVE_EVENTS_TABLE)
         logger.info("[ClickHouse] Bağlantı kuruldu, tablolar hazır.")
     except Exception as exc:
         logger.warning(
@@ -157,3 +181,37 @@ async def track_user_event(
         )
     except Exception as exc:
         logger.warning("[ClickHouse] track_user_event başarısız | event=%s item_id=%s | %s", event_type, item_id, exc)
+
+
+async def batch_insert_swipe_live_events(events: list[dict]) -> None:
+    """
+    swipe_live_events tablosuna batch insert yapar. Fire-and-forget.
+    Her event dict'i şu alanları içermelidir:
+      user_id, stream_id, listing_id, event_type, dwell_ms,
+      stream_category, listing_category, listings_seen, slot_index, session_id
+    """
+    if _client is None or not events:
+        return
+    cols = [
+        "user_id", "stream_id", "listing_id", "event_type", "dwell_ms",
+        "stream_category", "listing_category", "listings_seen", "slot_index", "session_id",
+    ]
+    rows = [
+        [
+            e.get("user_id", 0),
+            e.get("stream_id", 0),
+            e.get("listing_id", 0),
+            e.get("event_type", ""),
+            e.get("dwell_ms", 0),
+            e.get("stream_category", ""),
+            e.get("listing_category", ""),
+            e.get("listings_seen", 0),
+            e.get("slot_index", 0),
+            e.get("session_id", ""),
+        ]
+        for e in events
+    ]
+    try:
+        await _client.insert("swipe_live_events", rows, column_names=cols)
+    except Exception as exc:
+        logger.warning("[ClickHouse] batch_insert_swipe_live_events başarısız | count=%d | %s", len(events), exc)

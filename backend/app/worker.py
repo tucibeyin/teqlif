@@ -1099,6 +1099,38 @@ async def sync_ad_campaigns_task(ctx: dict) -> None:
         logger.error("[Worker] sync_ad_campaigns_task başarısız | %s", str(exc), exc_info=True)
 
 
+async def invalidate_swipe_live_configs_task(ctx: dict) -> None:
+    """
+    Her 15 dakikada bir: ClickHouse'daki yeni SwipeLive etkileşim verisini
+    kullanıcı config cache'lerine yansıtmak için ilgili Redis anahtarlarını temizler.
+    Bir sonraki /swipe-live-config isteğinde konfigürasyon yeniden hesaplanır.
+    Tüm keyler değil — sadece son 15 dakikada event gönderen kullanıcılarınki.
+    """
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        from app.utils.redis_client import get_redis
+
+        ch = await get_clickhouse_client()
+        result = await ch.query(
+            """
+            SELECT DISTINCT user_id
+            FROM swipe_live_events
+            WHERE timestamp >= now() - INTERVAL 15 MINUTE
+              AND user_id > 0
+            """
+        )
+        if not result.result_rows:
+            return
+
+        redis = await get_redis()
+        keys = [f"swivelive_cfg:{row[0]}" for row in result.result_rows]
+        if keys:
+            await redis.delete(*keys)
+            logger.info("[Worker] invalidate_swipe_live_configs: %d kullanıcı cache sıfırlandı", len(keys))
+    except Exception as exc:
+        logger.warning("[Worker] invalidate_swipe_live_configs başarısız | %s", exc)
+
+
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
 class WorkerSettings:
@@ -1134,6 +1166,7 @@ class WorkerSettings:
         compute_seller_badges_task,
         compute_trending_categories_task,
         send_budget_match_notifications_task,
+        invalidate_swipe_live_configs_task,
     ]
 
     cron_jobs = [
@@ -1151,6 +1184,8 @@ class WorkerSettings:
         cron(cleanup_old_analytics_task, weekday=0, hour=4, minute=0),
         # Her 15 dakikada kullanıcı ilgi skorlarını güncelle
         cron(compute_user_interests_task, minute={0, 15, 30, 45}),
+        # Her 15 dakikada SwipeLive config cache'lerini sıfırla (yeni event gelenlerin)
+        cron(invalidate_swipe_live_configs_task, minute={5, 20, 35, 50}),
         # Her gün 05:00 — eski listing impressionlarını temizle
         cron(cleanup_old_impressions_task, hour=5, minute=0),
         # Her 5 dakikada Redis interaction kuyruğunu DB'ye yaz

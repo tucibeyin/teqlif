@@ -19,10 +19,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.user import User
 from app.models.stream import LiveStream
-from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinTokenOut
+from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinTokenOut, SwipeLiveConfig
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
 from app.services.stream_service import StreamService
 from app.services.like_service import LikeService
+from app.services.swipe_live_service import get_swipe_live_config
 
 router = APIRouter(prefix="/api/streams", tags=["streams"])
 
@@ -317,6 +318,19 @@ async def get_recommended_streams(
 ):
     """Category affinity'ye göre kişiselleştirilmiş aktif yayınlar (max 8)."""
     return await StreamService(db).get_recommended_streams(current_user.id)
+
+
+@router.get("/swipe-live-config", response_model=SwipeLiveConfig)
+async def swipe_live_config(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    SwipeLive başlangıcı için kişiselleştirilmiş konfigürasyon.
+    Yayınları kullanıcı ilgi + ClickHouse davranış skoruna göre sıralar,
+    listings_per_group ve tercih edilen ilan kategorilerini döndürür.
+    """
+    return await get_swipe_live_config(current_user.id, db)
 
 
 @router.get("/active", response_model=list[StreamOut])

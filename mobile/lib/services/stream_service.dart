@@ -286,4 +286,36 @@ class StreamService {
     if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
     _throwHttpError(resp.statusCode, resp.body, fallback: 'Bütçe analizi alınamadı');
   }
+
+  /// Kullanıcıya özel SwipeLive konfigürasyonu: sıralanmış yayınlar + listings_per_group.
+  /// Hata olursa null döner — çağıran varsayılan davranışa düşer.
+  static Future<SwipeLiveConfig?> getSwipeLiveConfig() async {
+    try {
+      final headers = await _headers();
+      final resp = await http
+          .get(Uri.parse('$kBaseUrl/streams/swipe-live-config'), headers: headers)
+          .timeout(const Duration(seconds: 4));
+      if (resp.statusCode == 200) {
+        return SwipeLiveConfig.fromJson(
+            jsonDecode(resp.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// SwipeLive davranış eventlerini batch olarak gönderir. Fire-and-forget.
+  static Future<void> sendSwipeLiveEvents(
+      List<Map<String, dynamic>> events) async {
+    if (events.isEmpty) return;
+    try {
+      final headers = await _headers();
+      await http
+          .post(
+            Uri.parse('$kBaseUrl/analytics/swipe-live-events'),
+            headers: headers,
+            body: jsonEncode({'events': events}),
+          )
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {}
+  }
 }

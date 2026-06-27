@@ -1123,6 +1123,58 @@ async def ingest_feed_events(
         logger.error("[feed-events] ClickHouse insert hatası: %s", exc, exc_info=True)
 
 
+# ── SwipeLive Davranış Eventleri ─────────────────────────────────────────────
+
+class SwipeLiveEventItem(BaseModel):
+    stream_id: int = 0
+    listing_id: int = 0
+    event_type: str = Field(max_length=40)
+    dwell_ms: int = 0
+    stream_category: str = Field(default="", max_length=30)
+    listing_category: str = Field(default="", max_length=30)
+    listings_seen: int = 0
+    slot_index: int = 0
+    session_id: str = Field(default="", max_length=64)
+
+
+class SwipeLiveEventBatch(BaseModel):
+    events: list[SwipeLiveEventItem] = Field(max_length=200)
+
+
+@router.post("/swipe-live-events", status_code=204)
+async def ingest_swipe_live_events(
+    batch: SwipeLiveEventBatch,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    SwipeLive'daki yayın ve ilan davranışlarını (dwell/skip/listing_tap/listing_impression)
+    swipe_live_events ClickHouse tablosuna batch insert yapar.
+    Yayın sıralama ve ilan sayısı kararlarını besler.
+    """
+    if not batch.events:
+        return
+
+    from app.database_clickhouse import batch_insert_swipe_live_events
+
+    events = [
+        {
+            "user_id": current_user.id,
+            "stream_id": e.stream_id,
+            "listing_id": e.listing_id,
+            "event_type": e.event_type,
+            "dwell_ms": e.dwell_ms,
+            "stream_category": e.stream_category,
+            "listing_category": e.listing_category,
+            "listings_seen": e.listings_seen,
+            "slot_index": e.slot_index,
+            "session_id": e.session_id,
+        }
+        for e in batch.events
+    ]
+    import asyncio
+    asyncio.create_task(batch_insert_swipe_live_events(events))
+
+
 # ── Feed Performans İstatistikleri (Pro) ──────────────────────────────────────
 
 @router.get("/my-feed-stats")

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, field_validator
 
 
@@ -68,3 +68,15 @@ class JoinTokenOut(BaseModel):
     category: str
     host_username: str
     host_livekit_identity: str  # LiveKit token identity = str(host.id)
+
+
+class SwipeLiveConfig(BaseModel):
+    """
+    SwipeLive başlangıcında mobil uygulamaya gönderilen kişiselleştirme konfigürasyonu.
+    streams: kullanıcıya göre sıralanmış aktif yayınlar
+    listings_per_group: yayınlar arası gösterilecek ilan sayısı (0-3)
+    preferred_listing_categories: ilan havuzu önceliklendirme için top kategoriler
+    """
+    streams: List[StreamOut]
+    listings_per_group: int
+    preferred_listing_categories: List[str] = []

@@ -120,3 +120,29 @@ class JoinTokenOut {
         hostLivekitIdentity: json['host_livekit_identity'],
       );
 }
+
+class SwipeLiveConfig {
+  final List<StreamOut> streams;
+  final int listingsPerGroup;
+  final List<String> preferredListingCategories;
+
+  const SwipeLiveConfig({
+    required this.streams,
+    required this.listingsPerGroup,
+    required this.preferredListingCategories,
+  });
+
+  factory SwipeLiveConfig.fromJson(Map<String, dynamic> json) {
+    final streamList = (json['streams'] as List? ?? [])
+        .map((e) => StreamOut.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final cats = (json['preferred_listing_categories'] as List? ?? [])
+        .map((e) => e.toString())
+        .toList();
+    return SwipeLiveConfig(
+      streams: streamList,
+      listingsPerGroup: (json['listings_per_group'] as int?) ?? 2,
+      preferredListingCategories: cats,
+    );
+  }
+}
