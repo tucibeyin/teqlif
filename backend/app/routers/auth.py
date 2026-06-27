@@ -568,12 +568,23 @@ async def request_phone_verification(
 
 
 @router.get("/phone-verify/confirm")
+async def confirm_phone_verification_page(
+    token: str,
+    action: str,
+):
+    """E-posta linki: onay sayfası gösterir. Gerçek işlem POST ile yapılır.
+    Email prefetcher'ları GET atar ama POST atamaz — token korunmuş olur."""
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(_phone_verify_confirm_page(token, action))
+
+
+@router.post("/phone-verify/confirm")
 async def confirm_phone_verification(
     token: str,
     action: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """E-postadaki 'Evet/Hayır' linkini işler. HTML sayfa döner."""
+    """Kullanıcı onay butonuna bastığında çağrılır. Token bu noktada tüketilir."""
     from fastapi.responses import HTMLResponse
     import json as _json
 
@@ -583,7 +594,7 @@ async def confirm_phone_verification(
     if not raw:
         return HTMLResponse(_phone_verify_html(
             "Bağlantı Geçersiz",
-            "Bu doğrulama bağlantısı geçersiz ya da süresi dolmuş.",
+            "Bu doğrulama bağlantısı geçersiz ya da süresi dolmuş (30 dk geçerlidir).",
             "#ef4444", False,
         ))
 
@@ -611,7 +622,6 @@ async def confirm_phone_verification(
             "#0d9488", True,
         ))
     else:
-        # Hayır: telefonu temizle, kullanıcı profil sayfasından güncellesin
         if user.phone == phone:
             user.phone = None
             user.phone_verified = False
@@ -622,6 +632,51 @@ async def confirm_phone_verification(
             "Telefon numarası hesabınızdan kaldırıldı. Uygulamadan profil sayfanıza gidip numaranızı güncelleyebilirsiniz.",
             "#f59e0b", False,
         ))
+
+
+def _phone_verify_confirm_page(token: str, action: str) -> str:
+    """GET ile açılan onay sayfası — prefetcher'lar buraya kadar gelir, işlem yapmaz."""
+    is_yes = action == "yes"
+    btn_color = "#0d9488" if is_yes else "#ef4444"
+    btn_text = "✓ Evet, bu numara benim" if is_yes else "✕ Hayır, bu numara benim değil"
+    question = "Bu telefon numarasını onaylamak istiyor musunuz?" if is_yes else "Bu telefon numarasını hesabınızdan kaldırmak istiyor musunuz?"
+    return f"""<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>teqlif — Telefon Doğrulama</title>
+  <style>
+    *{{box-sizing:border-box;margin:0;padding:0;}}
+    body{{background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+         display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px;}}
+    .card{{background:#1e293b;border-radius:24px;padding:40px 28px;max-width:400px;width:100%;
+           text-align:center;box-shadow:0 8px 40px #00000080;}}
+    .brand{{color:#06b6d4;font-weight:800;font-size:24px;letter-spacing:-0.5px;margin-bottom:32px;}}
+    .icon{{width:72px;height:72px;border-radius:50%;background:#06b6d422;border:2px solid #06b6d460;
+           display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;}}
+    h2{{color:#f1f5f9;margin:0 0 12px;font-size:20px;font-weight:700;}}
+    p{{color:#94a3b8;font-size:14px;line-height:1.6;margin-bottom:28px;}}
+    form{{display:inline;}}
+    .btn{{display:inline-block;width:100%;padding:14px 24px;border:none;border-radius:12px;
+          background:{btn_color};color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+          text-decoration:none;margin-bottom:12px;}}
+    .hint{{font-size:12px;color:#475569;margin-top:8px;}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">teqlif</div>
+    <div class="icon">📱</div>
+    <h2>Telefon Doğrulama</h2>
+    <p>{question}</p>
+    <form method="POST" action="/api/auth/phone-verify/confirm?token={token}&action={action}">
+      <button type="submit" class="btn">{btn_text}</button>
+    </form>
+    <p class="hint">Bu işlemi siz başlatmadıysanız sayfayı kapatabilirsiniz.</p>
+  </div>
+</body>
+</html>"""
 
 
 def _phone_verify_html(title: str, body: str, color: str, success: bool) -> str:
