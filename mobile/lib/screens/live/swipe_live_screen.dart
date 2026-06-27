@@ -145,6 +145,9 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   bool _fetchingListings = false;
   // Oturum içinde sona erdiği tespit edilen yayınların ID'leri — döngüden çıkarılır
   final Set<int> _endedStreamIds = {};
+  // Poll'dan tespit edilen biten current stream — child sayfaya isEnded ile geçirilir,
+  // raid overlay child tarafından gösterilir; kullanıcı kapatınca _endedStreamIds'e taşınır.
+  int? _polledEndedStreamId;
 
   // Dinamik grup yapısı: her grup = 1 yayın + N ilan
   // _groupBoundaries[i] = (startPage, listingCount) — lazy inşa edilir
@@ -562,6 +565,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   void _onStreamEnded(int streamId) {
     if (_endedStreamIds.contains(streamId)) return;
     _endedStreamIds.add(streamId);
+    if (_polledEndedStreamId == streamId) _polledEndedStreamId = null;
     if (!mounted) return;
 
     final remaining = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
@@ -600,10 +604,18 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         }
         if (fresh.isNotEmpty) {
           // Aktif listede olmayan yayınlar gerçekten bitmiş
+          final currentStreamId = _getCurrentStream()?.id;
           for (final s in _liveItems) {
-            if (!freshIds.contains(s.id)) {
-              debugPrint('[SwipeLive] refresh: stream ${s.id} aktif listede yok → ended');
-              _endedStreamIds.add(s.id);
+            if (!freshIds.contains(s.id) && !_endedStreamIds.contains(s.id)) {
+              if (s.id == currentStreamId) {
+                // İzlenen yayın bitti: hemen swap etmek yerine child'a isEnded sinyali gönder,
+                // child raid overlay'i göstersin; kullanıcı kapattıkça _endedStreamIds'e geçer.
+                debugPrint('[SwipeLive] refresh: stream ${s.id} bitti (izleniyor) → raid overlay tetikleniyor');
+                _polledEndedStreamId = s.id;
+              } else {
+                debugPrint('[SwipeLive] refresh: stream ${s.id} aktif listede yok → ended');
+                _endedStreamIds.add(s.id);
+              }
             }
           }
         } else if (_endedStreamIds.isNotEmpty) {
@@ -720,6 +732,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 isPrefetch: (i - _currentPage).abs() == 1,
                 isLast: false,
                 swipeLiveMode: true,
+                isEnded: _polledEndedStreamId == stream.id,
                 onStreamEnded: () => _onStreamEnded(stream.id),
                 takePrefetch: takePrefetchEntry,
                 onRoomDeposit: _depositRoom,
@@ -762,6 +775,8 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
   final void Function(String eventType)? onEngagementEvent;
   // true = çok yayınlı SwipeLive modu; davranış farklılaşır
   final bool swipeLiveMode;
+  // Parent'tan gelen "yayın bitti" sinyali (poll tespiti) — child raid overlay gösterir
+  final bool isEnded;
 
   const _SwipeLivePage({
     super.key,
@@ -769,6 +784,7 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
     required this.isActive,
     required this.isLast,
     this.isPrefetch = false,
+    this.isEnded = false,
     this.onStreamEnded,
     this.takePrefetch,
     this.onPipActionChanged,
@@ -848,6 +864,11 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   @override
   void didUpdateWidget(_SwipeLivePage old) {
     super.didUpdateWidget(old);
+    // Parent poll'dan gelen "yayın bitti" sinyali: raid overlay göster
+    if (widget.isEnded && !old.isEnded && !_streamEnded) {
+      setState(() { _remoteVideoTrack = null; _streamEnded = true; });
+      widget.onEngagementEvent?.call('raid_view');
+    }
     if (widget.isActive && !old.isActive) {
       widget.onPipActionChanged?.call(_pipForBackGesture);
       // Sayfa aktif oldu
