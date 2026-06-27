@@ -345,16 +345,18 @@ async def get_active_streams(
 async def get_raid_targets(
     stream_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Yayın biterken izleyicilere önerilen diğer aktif yayınlar (Raid/Baskın).
 
     - Biten yayını (stream_id) sonuçlardan dışlar
-    - Sıralama: hype_score DESC → viewer_count DESC
+    - Sıralama: kullanıcı kategori ilgisi (0.55) + hype_score (0.30) + viewer_count (0.15)
     - Maksimum 3 yayın döner
     """
+    import math
     from app.core.hype_manager import hype_manager
+    from app.services.feed_service import get_user_interests
     from app.utils.redis_client import get_redis
 
     result = await db.execute(
@@ -366,6 +368,9 @@ async def get_raid_targets(
     if not streams:
         return []
 
+    # Kullanıcı kategori ilgi skorları (kişiselleştirme)
+    interests: dict[str, float] = await get_user_interests(current_user.id, db)
+
     # Redis'ten anlık izleyici sayılarını çek
     redis = await get_redis()
     viewer_keys = [f"live:viewers:{s.room_name}" for s in streams]
@@ -374,11 +379,13 @@ async def get_raid_targets(
     for s, raw in zip(streams, raw_counts):
         viewer_map[s.id] = int(raw) if raw else s.viewer_count
 
-    # Hype skoru + izleyici sayısına göre sırala
-    def _sort_key(s: LiveStream) -> tuple:
-        return (hype_manager.get_score(s.id), viewer_map.get(s.id, 0))
+    def _score(s: LiveStream) -> float:
+        affinity = min(interests.get(s.category or "", 0.05), 1.0)
+        hype = min(hype_manager.get_score(s.id) / 100.0, 1.0)
+        viewers = math.log1p(viewer_map.get(s.id, 0)) / 10.0
+        return affinity * 0.55 + hype * 0.30 + viewers * 0.15
 
-    top3 = sorted(streams, key=_sort_key, reverse=True)[:3]
+    top3 = sorted(streams, key=_score, reverse=True)[:3]
 
     return [
         {

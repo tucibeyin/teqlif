@@ -690,7 +690,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 isActive: i == _currentPage,
                 isPrefetch: (i - _currentPage).abs() == 1,
                 isLast: false,
-                showRaidOverlay: false,
+                swipeLiveMode: true,
                 onStreamEnded: () => _onStreamEnded(stream.id),
                 takePrefetch: takePrefetchEntry,
                 onRoomDeposit: _depositRoom,
@@ -731,8 +731,8 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
   final bool Function(int streamId, _PrefetchEntry entry)? onRoomDeposit;
   // Etkileşim eventi — parent'a ML sinyali gönderir
   final void Function(String eventType)? onEngagementEvent;
-  // Multi-stream SwipeLive modunda raid overlay gösterme — parent handle eder
-  final bool showRaidOverlay;
+  // true = çok yayınlı SwipeLive modu; davranış farklılaşır
+  final bool swipeLiveMode;
 
   const _SwipeLivePage({
     super.key,
@@ -745,7 +745,7 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
     this.onPipActionChanged,
     this.onRoomDeposit,
     this.onEngagementEvent,
-    this.showRaidOverlay = true,
+    this.swipeLiveMode = false,
   });
 
   @override
@@ -938,11 +938,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     _listener!.on<RoomDisconnectedEvent>((e) {
       if (!mounted) return;
       if (e.reason == DisconnectReason.roomDeleted) {
-        if (widget.showRaidOverlay) {
-          setState(() { _remoteVideoTrack = null; _streamEnded = true; });
-        } else {
+        if (widget.swipeLiveMode && !widget.isActive) {
+          // Arka planda biten yayın → sessizce listeden çıkar
           setState(() => _remoteVideoTrack = null);
           widget.onStreamEnded?.call();
+        } else {
+          // Aktif sayfa veya single mod → overlay göster
+          setState(() { _remoteVideoTrack = null; _streamEnded = true; });
+          widget.onEngagementEvent?.call('raid_view');
         }
       } else {
         setState(() => _remoteVideoTrack = null);
@@ -1240,11 +1243,12 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       _listener!.on<RoomDisconnectedEvent>((e) {
         if (!mounted) return;
         if (e.reason == DisconnectReason.roomDeleted) {
-          if (widget.showRaidOverlay) {
-            setState(() { _remoteVideoTrack = null; _streamEnded = true; });
-          } else {
+          if (widget.swipeLiveMode && !widget.isActive) {
             setState(() => _remoteVideoTrack = null);
             widget.onStreamEnded?.call();
+          } else {
+            setState(() { _remoteVideoTrack = null; _streamEnded = true; });
+            widget.onEngagementEvent?.call('raid_view');
           }
         } else {
           setState(() => _remoteVideoTrack = null);
@@ -1644,7 +1648,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     widget.onEngagementEvent?.call('stream_heart');
   }
 
-  Future<void> _leave() async {
+  Future<void> _leave({bool fromOverlay = false}) async {
+    if (widget.swipeLiveMode && fromOverlay) {
+      // SwipeLive'da raid overlay'i kapattı — uygulamadan çıkma, yayını listeden çıkar
+      widget.onEngagementEvent?.call('raid_close');
+      widget.onStreamEnded?.call();
+      await _deactivate();
+      return;
+    }
     widget.onStreamEnded?.call();
     await _deactivate();
     if (mounted) {
@@ -1688,7 +1699,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   Future<void> _handleRaid(int targetStreamId) async {
     widget.onEngagementEvent?.call('raid_chose');
-    // Parent cache'de hedef stream için prefetch varsa dispose olmadan önce köprüye al
+    if (widget.swipeLiveMode) {
+      // SwipeLive'da baskın seçildi — uygulamadan çıkma, biten yayını listeden çıkar
+      // Hedef yayın zaten listede olabilir; kullanıcı swipe ederek ulaşabilir
+      widget.onStreamEnded?.call();
+      await _deactivate();
+      return;
+    }
+    // Single mod: hedef yayına geç
     final bridgeEntry = widget.takePrefetch?.call(targetStreamId);
     if (bridgeEntry != null) {
       _RaidPrefetchBridge.put(targetStreamId, bridgeEntry);
@@ -1746,14 +1764,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
             ),
           ),
 
-        // ── Yayın sona erdi overlay (sadece single-stream modda gösterilir) ─
-        if (_streamEnded && widget.showRaidOverlay)
+        // ── Yayın sona erdi overlay ─────────────────────────────────────────
+        if (_streamEnded)
           Positioned.fill(
             child: RaidEndedOverlay(
               streamId: widget.stream.id,
               hostUsername: _resolvedHostUsername ?? widget.stream.host.username,
               hostThumbnailUrl: widget.stream.thumbnailUrl,
-              onClose: _leave,
+              onClose: () => _leave(fromOverlay: true),
               onRaid: _handleRaid,
             ),
           ),
@@ -1922,10 +1940,11 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                   ChatPanel(
                     streamId: widget.stream.id,
                     onStreamEnded: () {
-                      if (widget.showRaidOverlay) {
-                        setState(() => _streamEnded = true);
-                      } else {
+                      if (widget.swipeLiveMode && !widget.isActive) {
                         widget.onStreamEnded?.call();
+                      } else {
+                        setState(() => _streamEnded = true);
+                        widget.onEngagementEvent?.call('raid_view');
                       }
                     },
                     onViewerCountChanged: (n) =>
