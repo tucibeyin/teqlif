@@ -111,7 +111,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
 # ==========================================
 @router.get("/users/recent")
 async def get_recent_users(limit: int = 50, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
-    result = await db.execute(select(User).order_by(desc(User.created_at)).limit(limit))
+    result = await db.execute(select(User).where(User.deleted_at.is_(None)).order_by(desc(User.created_at)).limit(limit))
     users = result.scalars().all()
 
     # listing ve stream sayılarını batch ile çek
