@@ -202,16 +202,25 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   Future<void> _fetchPersonalizedConfig() async {
     final config = await StreamService.getSwipeLiveConfig();
     if (!mounted || config == null) return;
-    // Sadece single mod değilse stream sırasını güncelle (single modda tek yayın var)
     final isSingle = widget.streams.length == 1 && widget.streams[0].roomName.isEmpty;
     setState(() {
       if (!isSingle && config.streams.isNotEmpty) {
         _liveItems = config.streams;
-        _groupBoundaries.clear();
-        _nextGroupStartPage = 0;
-        _currentPage = 0;
+        // _currentPage DEĞİŞTİRME — PageController ile senkron kalmalı.
+        // Kullanıcı zaten sayfaları kaydırmaya başlamış olabilir;
+        // _currentPage=0 yapmak aktif stream widget'ını isActive=false yaparak
+        // 403 algılamasını bozuyor ve bağlantı döngüsüne neden oluyor.
+        if (_currentPage == 0) {
+          _groupBoundaries.clear();
+          _nextGroupStartPage = 0;
+        }
       }
-      _currentListingsPerGroup = config.listingsPerGroup;
+      // Backend lpg'yi sadece local dwell verisi yoksa kullan.
+      // _recentDwells doluysa kullanıcı zaten adapt edilmiş değere sahip;
+      // backend override etmemeli.
+      if (_recentDwells.isEmpty) {
+        _currentListingsPerGroup = config.listingsPerGroup;
+      }
       _preferredListingCategories = config.preferredListingCategories;
     });
     if (!isSingle) _schedulePrefetch(_currentPage);
@@ -264,6 +273,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     _recentDwells.add(dwellMs);
     if (_recentDwells.length > 10) _recentDwells.removeAt(0);
     final newN = _computeListingsPerGroup();
+    final avgMs = _recentDwells.fold(0, (a, b) => a + b) ~/ _recentDwells.length;
+    debugPrint('[SwipeLive] dwell=${dwellMs}ms avg=${avgMs}ms lpg: $_currentListingsPerGroup → $newN');
     if (newN == _currentListingsPerGroup) return;
     _currentListingsPerGroup = newN;
     // Mevcut sayfa ötesindeki grupları yeniden inşa et
@@ -552,10 +563,22 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     try {
       final fresh = await StreamService.getActiveStreams();
       if (!mounted) return;
+      final freshIds = fresh.map((s) => s.id).toSet();
       setState(() {
+        // Yeni yayınları ekle
         final existingIds = _liveItems.map((s) => s.id).toSet();
         for (final s in fresh) {
           if (!existingIds.contains(s.id)) _liveItems.add(s);
+        }
+        // Fresh liste doluysa aktif listede olmayan yayınlar gerçekten bitmiş demektir.
+        // Boş fresh liste → geçici API hatası olabilir, o yüzden atlanır.
+        if (fresh.isNotEmpty) {
+          for (final s in _liveItems) {
+            if (!freshIds.contains(s.id)) {
+              debugPrint('[SwipeLive] refresh: stream ${s.id} aktif listede yok → ended');
+              _endedStreamIds.add(s.id);
+            }
+          }
         }
       });
     } catch (_) {}
