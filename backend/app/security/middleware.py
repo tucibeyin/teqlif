@@ -34,30 +34,46 @@ class SecurityMiddleware:
         return self.shared_limiter.limit("5 per hour")
 
 # Security headers middleware
+_DEFAULT_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' https://accounts.google.com https://www.google.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://challenges.cloudflare.com https://www.gstatic.com https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com; "
+    "style-src 'self' 'unsafe-inline' https://accounts.google.com https://cdn.jsdelivr.net; "
+    "img-src 'self' data: https:; "
+    "media-src 'self' blob:; "
+    "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+    "frame-src 'self' https://accounts.google.com https://www.google.com https://challenges.cloudflare.com https://*.firebaseapp.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com; "
+    "connect-src 'self' ws: wss: https://accounts.google.com https://www.google.com https://*.sentry.io https://cdn.jsdelivr.net https://browser.sentry-cdn.com https://challenges.cloudflare.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net;"
+)
+
+# Telefon doğrulama onay sayfası: kendi oluşturduğumuz HTML, inline script güvenli
+_PHONE_VERIFY_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "form-action 'self';"
+)
+
 async def security_headers(request: Request, call_next):
     """
     Tüm response'lara güvenlik header'ları ekler
     """
     response = await call_next(request)
-    
-    # Security headers
+
+    is_phone_verify_page = (
+        request.url.path == "/api/auth/phone-verify/confirm"
+        and request.method == "GET"
+    )
+
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' https://accounts.google.com https://www.google.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://challenges.cloudflare.com https://www.gstatic.com https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com; "
-        "style-src 'self' 'unsafe-inline' https://accounts.google.com https://cdn.jsdelivr.net; "
-        "img-src 'self' data: https:; "
-        "media-src 'self' blob:; "
-        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
-        "frame-src 'self' https://accounts.google.com https://www.google.com https://challenges.cloudflare.com https://*.firebaseapp.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com; "
-        "connect-src 'self' ws: wss: https://accounts.google.com https://www.google.com https://*.sentry.io https://cdn.jsdelivr.net https://browser.sentry-cdn.com https://challenges.cloudflare.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net;"
+        _PHONE_VERIFY_CSP if is_phone_verify_page else _DEFAULT_CSP
     )
     response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
-    
+
     return response
 
 # Custom security rate limiter functions
