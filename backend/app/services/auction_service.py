@@ -584,7 +584,9 @@ class AuctionService:
         prev_bidder_id_str = prev_data.get("current_bidder_id", "")
         prev_item_name = prev_data.get("item_name", "")
 
-        # ── Shill Bidding Koruması (IP Eşleşme Kontrolü) ─────────────────────
+        # ── Shill Bidding Sinyali (IP Eşleşme) ───────────────────────────────
+        # Aynı IP'den host ve farklı kullanıcı teklif verebilir (paylaşımlı ağ,
+        # ev/ofis ortamı). Hard-block yerine sadece sinyal kaydedilir.
         host_ip_stored = prev_data.get("host_ip", "")
         if bidder_ip and host_ip_stored and bidder_ip == host_ip_stored:
             await _log_fraud_attempt(
@@ -593,9 +595,6 @@ class AuctionService:
                 user_id=user.id,
                 username=user.username,
                 extra={"bidder_ip": bidder_ip, "amount": float(data.amount)},
-            )
-            raise ForbiddenException(
-                "Aynı ağ üzerinden kendi yayınınızda teklif veremezsiniz"
             )
 
         # ── Troll Teklif Koruması (Telefon Doğrulama) ────────────────────────
