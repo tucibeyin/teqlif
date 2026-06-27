@@ -50,6 +50,22 @@ async def send_verification_email_task(
         raise  # ARQ görevi "failed" olarak işaretlenir
 
 
+async def send_welcome_email_task(
+    ctx: dict,
+    email: str,
+    full_name: str,
+    has_phone: bool = False,
+    lang: str = "tr",
+) -> None:
+    try:
+        from app.utils.email import send_welcome_email
+        await send_welcome_email(email, full_name, has_phone=has_phone, lang=lang)
+        logger.info("[Worker] Hoşgeldin e-postası gönderildi: %s", email)
+    except Exception as exc:
+        logger.error("[Worker] Hoşgeldin e-postası gönderilemedi [%s]: %s", email, str(exc), exc_info=True)
+        capture_exception(exc)
+
+
 # ── Task: FCM Push Bildirimi ─────────────────────────────────────────────────
 
 async def send_push_notification_task(
@@ -1162,6 +1178,7 @@ class WorkerSettings:
 
     functions = [
         send_verification_email_task,
+        send_welcome_email_task,
         send_push_notification_task,
         cleanup_expired_stories_task,
         cleanup_old_notifications_task,
