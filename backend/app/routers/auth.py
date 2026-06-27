@@ -575,6 +575,13 @@ async def confirm_phone_verification_page(
     """E-posta linki: onay sayfası gösterir. Gerçek işlem POST ile yapılır.
     Email prefetcher'ları GET atar ama POST atamaz — token korunmuş olur."""
     from fastapi.responses import HTMLResponse
+    redis = await get_redis()
+    if not await redis.exists(f"phone_verify:{token}"):
+        return HTMLResponse(_phone_verify_html(
+            "Bağlantı Kullanılamaz",
+            "Bu doğrulama bağlantısı daha önce kullanılmış ya da süresi dolmuş.",
+            "#64748b", False,
+        ))
     return HTMLResponse(_phone_verify_confirm_page(token, action))
 
 
