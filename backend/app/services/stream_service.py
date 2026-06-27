@@ -220,6 +220,7 @@ class StreamService:
                     LiveStream.is_live == True,  # noqa: E712
                     and_(
                         LiveStream.is_live == False,  # noqa: E712
+                        LiveStream.ended_at.is_(None),  # Gerçekten bitmiş değil, ghost pending
                         LiveStream.started_at >= recent_threshold,
                     ),
                 ),
