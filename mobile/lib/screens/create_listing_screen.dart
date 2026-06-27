@@ -815,6 +815,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   const SizedBox(height: 10),
                   _AiPriceButton(
                     loading: _aiLoading,
+                    isPro: _isPro,
                     onTap: _fetchAiPriceEstimate,
                   ),
                   const SizedBox(height: 14),
@@ -867,55 +868,26 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(l.btnPublishListing),
-                            const SizedBox(height: 3),
-                            _isPro
-                                ? Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.18),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: const [
-                                        Icon(Icons.workspace_premium_rounded,
-                                            size: 11, color: Color(0xFF34D399)),
-                                        SizedBox(width: 3),
-                                        Text(
-                                          'Pro · Ücretsiz',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF34D399),
-                                            letterSpacing: 0.3,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.18),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: const [
-                                        Text(
-                                          '1 TUCi',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFFFBBF24),
-                                            letterSpacing: 0.3,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                            if (!_isPro) ...[
+                              const SizedBox(height: 3),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Text(
+                                  '1 TUCi',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFFFBBF24),
+                                    letterSpacing: 0.3,
                                   ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                 ),
@@ -956,8 +928,9 @@ class _ThousandSeparatorFormatter extends TextInputFormatter {
 
 class _AiPriceButton extends StatelessWidget {
   final bool loading;
+  final bool isPro;
   final VoidCallback onTap;
-  const _AiPriceButton({required this.loading, required this.onTap});
+  const _AiPriceButton({required this.loading, required this.isPro, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1011,6 +984,32 @@ class _AiPriceButton extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (isPro) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.workspace_premium_rounded, size: 10, color: Color(0xFF34D399)),
+                          SizedBox(width: 3),
+                          Text(
+                            'Pro · Ücretsiz',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF34D399),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
         ),
       ),
