@@ -697,8 +697,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
       if (e.track == _remoteVideoTrack) setState(() => _remoteVideoTrack = null);
       else if (e.track == _coHostVideoTrack) setState(() => _coHostVideoTrack = null);
     });
-    _listener!.on<RoomDisconnectedEvent>((_) {
-      if (mounted) setState(() => _remoteVideoTrack = null);
+    _listener!.on<RoomDisconnectedEvent>((e) {
+      if (!mounted) return;
+      if (e.reason == DisconnectReason.roomDeleted) {
+        setState(() { _remoteVideoTrack = null; _streamEnded = true; });
+        widget.onStreamEnded?.call();
+      } else {
+        setState(() => _remoteVideoTrack = null);
+      }
     });
 
     if (!mounted || _activationGen != myGen) { room.disconnect(); return; }
@@ -812,8 +818,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
           else if (e.track == _coHostVideoTrack) setState(() => _coHostVideoTrack = null);
         }
       });
-      _listener!.on<RoomDisconnectedEvent>((_) {
-        if (mounted) setState(() => _remoteVideoTrack = null);
+      _listener!.on<RoomDisconnectedEvent>((e) {
+        if (!mounted) return;
+        if (e.reason == DisconnectReason.roomDeleted) {
+          setState(() { _remoteVideoTrack = null; _streamEnded = true; });
+          widget.onStreamEnded?.call();
+        } else {
+          setState(() => _remoteVideoTrack = null);
+        }
       });
 
       await room.connect(
@@ -854,7 +866,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
     if (!mounted || _room == null) return;
     _leftStream = false;
     _isPrefetchMode = false;
-    if (mounted) setState(() => _streamEnded = false);
+    // Oda silindiyse (roomDeleted) _streamEnded sıfırlanmamalı
+    if (mounted && !_streamEnded) setState(() => _streamEnded = false);
 
     final room = _room!;
     for (final p in room.remoteParticipants.values) {
@@ -956,8 +969,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
           }
         }
       });
-      _listener!.on<RoomDisconnectedEvent>((_) {
-        if (mounted) setState(() => _remoteVideoTrack = null);
+      _listener!.on<RoomDisconnectedEvent>((e) {
+        if (!mounted) return;
+        if (e.reason == DisconnectReason.roomDeleted) {
+          setState(() { _remoteVideoTrack = null; _streamEnded = true; });
+          widget.onStreamEnded?.call();
+        } else {
+          setState(() => _remoteVideoTrack = null);
+        }
       });
 
       await room.connect(
@@ -1220,13 +1239,13 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
           setState(() => _localVideoTrack = e.publication.track as LocalVideoTrack);
         }
       });
-      _listener!.on<RoomDisconnectedEvent>((_) {
-        if (mounted) {
-          setState(() {
-            _remoteVideoTrack = null;
-            _localVideoTrack = null;
-            _isSelfCoHost = false;
-          });
+      _listener!.on<RoomDisconnectedEvent>((e) {
+        if (!mounted) return;
+        if (e.reason == DisconnectReason.roomDeleted) {
+          setState(() { _remoteVideoTrack = null; _localVideoTrack = null; _isSelfCoHost = false; _streamEnded = true; });
+          widget.onStreamEnded?.call();
+        } else {
+          setState(() { _remoteVideoTrack = null; _localVideoTrack = null; _isSelfCoHost = false; });
         }
       });
 
