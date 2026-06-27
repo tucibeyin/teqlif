@@ -552,9 +552,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           children: [
             const Text('Kampanya planı:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             const SizedBox(height: 10),
-            const _BoostRow(icon: Icons.account_balance_wallet_outlined, label: 'Toplam Bütçe', value: '100 TUCi'),
+            const _BoostRow(icon: Icons.account_balance_wallet_outlined, label: 'Toplam Bütçe', value: '50 TUCi'),
             const _BoostRow(icon: Icons.ads_click, label: 'Tıklama Başı Maliyet', value: '1 TUCi'),
-            const _BoostRow(icon: Icons.touch_app_outlined, label: 'Tahmini Tıklama', value: '~100 tıklama'),
+            const _BoostRow(icon: Icons.touch_app_outlined, label: 'Tahmini Tıklama', value: '~50 tıklama'),
             const SizedBox(height: 12),
             Text(
               'İlanınız "Sana Özel" akışında öne çıkarılacak.',
@@ -600,7 +600,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         },
         body: jsonEncode({
           'listing_id': widget.listing['id'],
-          'total_budget': 100,
+          'total_budget': 50,
           'cpc_bid': 1,
         }),
       );

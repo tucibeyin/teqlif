@@ -506,7 +506,7 @@
         try {
             var result = await apiFetch('/ads/campaigns', {
                 method: 'POST',
-                body: JSON.stringify({ listing_id: listingId, total_budget: 100, cpc_bid: 1 })
+                body: JSON.stringify({ listing_id: listingId, total_budget: 50, cpc_bid: 1 })
             });
             if (modal) modal.classList.remove('open');
             if (btn) {
