@@ -134,7 +134,6 @@ async function loadUsers() {
                     data-modal-active="${u.is_active}"
                     data-modal-shadow="${u.is_shadowbanned}"
                     class="action-btn">Yönet</button>
-                <button data-delete-user="${u.id}" data-delete-un="${u.username}" class="action-btn" style="background:var(--admin-danger);">Sil</button>
             </td>
         </tr>`).join("");
     document.getElementById("search-users").value = "";
@@ -502,8 +501,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('user-table-body')?.addEventListener('click', e => {
         const openBtn = e.target.closest('[data-open-modal]');
         if (openBtn) { openModal(Number(openBtn.dataset.openModal), openBtn.dataset.modalUn, openBtn.dataset.modalFn, openBtn.dataset.modalEmail, openBtn.dataset.modalActive === 'true', openBtn.dataset.modalShadow === 'true'); return; }
-        const delBtn = e.target.closest('[data-delete-user]');
-        if (delBtn) deleteUser(Number(delBtn.dataset.deleteUser), delBtn.dataset.deleteUn);
     });
 
     document.getElementById('stream-table-body')?.addEventListener('click', e => {
