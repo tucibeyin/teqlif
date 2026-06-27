@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     firebase_service_account: str = ""  # path to service account JSON
     sentry_backend_dsn: str | None = None
     google_client_id: str = ""
+    site_url: str = "https://www.teqlif.com"
     admin_email: str = ""
     admin_password_hash: str = ""
     captcha_enabled: bool = False

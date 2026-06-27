@@ -547,7 +547,7 @@ async def request_phone_verification(
         _json.dumps({"user_id": current_user.id, "phone": data.phone}),
     )
 
-    base_url = str(request.base_url).rstrip("/")
+    base_url = settings.site_url.rstrip("/")
     yes_url = f"{base_url}/api/auth/phone-verify/confirm?token={token}&action=yes"
     no_url = f"{base_url}/api/auth/phone-verify/confirm?token={token}&action=no"
 
