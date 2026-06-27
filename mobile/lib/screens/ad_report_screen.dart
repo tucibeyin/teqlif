@@ -52,13 +52,6 @@ class _AdReportScreenState extends State<AdReportScreen>
 
   // ── Formatters ──────────────────────────────────────────────────────────────
 
-  String _fmtTuci(dynamic raw) {
-    if (raw == null) return '—';
-    final val = (raw as num).toInt();
-    if (val < 0) return '—';
-    return '$val TUCi';
-  }
-
   String _fmtCtr(dynamic raw) {
     if (raw == null) return '%0,00';
     final v = (raw as num).toDouble();
@@ -150,15 +143,24 @@ class _AdReportScreenState extends State<AdReportScreen>
     );
   }
 
+  int _activeDays(dynamic createdAt) {
+    if (createdAt == null) return 0;
+    try {
+      final dt = DateTime.parse(createdAt as String);
+      return DateTime.now().difference(dt).inDays.clamp(0, 9999);
+    } catch (_) {
+      return 0;
+    }
+  }
+
   Widget _buildReport() {
     final r = _report!;
     final status      = r['status'] as String?;
-    final totalBudget = r['total_budget'];
-    final spent       = r['spent_budget'];
     final impressions = r['impressions'] as int? ?? 0;
     final clicks      = r['clicks'] as int? ?? 0;
     final ctr         = r['ctr'];
     final ctrD        = ctr != null ? (ctr as num).toDouble() : 0.0;
+    final activeDays  = _activeDays(r['created_at']);
 
     return FadeTransition(
       opacity: _fadeAnim,
@@ -227,18 +229,17 @@ class _AdReportScreenState extends State<AdReportScreen>
                   color: const Color(0xFF10B981),
                 ),
                 _MetricCard(
-                  icon: Icons.percent_rounded,
-                  label: 'Tıklama Oranı\n(CTR)',
+                  icon: Icons.touch_app_rounded,
+                  label: 'Her 100 Görüntülemede\nKaç Kişi Tıkladı',
                   value: _fmtCtr(ctr),
                   color: const Color(0xFFF59E0B),
-                  hint: clicks > 0 && impressions > 0 ? '$clicks / $impressions' : null,
+                  hint: clicks > 0 && impressions > 0 ? '$clicks tıklama / $impressions görüntüleme' : null,
                 ),
                 _MetricCard(
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: 'Harcanan\nBütçe',
-                  value: _fmtTuci(spent),
-                  color: const Color(0xFFEF4444),
-                  hint: totalBudget != null ? '${_fmtTuci(totalBudget)} bütçeden' : null,
+                  icon: Icons.calendar_today_rounded,
+                  label: 'Aktif\nSüre',
+                  value: activeDays == 0 ? '<1 gün' : '$activeDays gün',
+                  color: const Color(0xFF06B6D4),
                 ),
               ]),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -420,12 +421,12 @@ class _CtrInsight extends StatelessWidget {
 
   String get _insight {
     if (impressions == 0) {
-      return 'Henüz gösterim kaydedilmedi. İlan akışa girdiğinde metrikler güncellenecek.';
+      return 'Henüz kimse ilanınızı görmedi. İlan akışa girdiğinde burası güncellenecek.';
     }
-    if (ctr >= 5) return 'Harika performans! CTR %$ctr ile ortalamanın çok üzerinde. İlan içeriğiniz alıcılarla güçlü rezonans kuryor.';
-    if (ctr >= 2) return 'İyi performans. CTR %$ctr seviyesinde. İlan fotoğraflarını veya başlığı iyileştirerek daha fazla tıklama elde edebilirsiniz.';
-    if (ctr >= 0.5) return 'Düşük CTR (%$ctr). İlan görseli veya fiyatı alıcıları yeterince çekmiyor olabilir. Başlığı ve ana fotoğrafı güncellemeyi deneyin.';
-    return 'CTR çok düşük (%$ctr). İlan içeriğinizi ve fiyatlandırmayı gözden geçirmenizi öneririz.';
+    if (ctr >= 5) return 'Harika! İlanınızı gören her 100 kişiden $clicks\'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.';
+    if (ctr >= 2) return 'İyi gidiyorsunuz. $impressions kişi ilanınızı gördü, $clicks\'i inceledi. Fotoğrafları veya başlığı geliştirerek daha fazla ilgi çekebilirsiniz.';
+    if (ctr >= 0.5) return '$impressions kişi ilanınızı gördü ama sadece $clicks\'i tıkladı. İlan kapak fotoğrafı veya fiyat, alıcıları yeterince çekmemiş olabilir.';
+    return '$impressions kişi ilanınızı gördü, $clicks tıklama aldı. İlan başlığını, fotoğrafını ve fiyatını gözden geçirmenizi öneririz.';
   }
 
   @override
