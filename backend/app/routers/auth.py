@@ -16,6 +16,7 @@ from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException, ConflictException
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
+from app.config import settings
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
