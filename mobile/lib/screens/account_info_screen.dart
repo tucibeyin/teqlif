@@ -542,7 +542,7 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
             child: Container(
               width: 40, height: 4,
               margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.border(context), borderRadius: BorderRadius.circular(2)),
             ),
           ),
           Text(l.accountInfoEmailChangeTitle, style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.w800)),
@@ -600,7 +600,7 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
             Center(
               child: TextButton(
                 onPressed: _loading ? null : () => setState(() { _codeSent = false; _codeCtrl.clear(); _error = null; }),
-                child: Text(l.accountInfoDifferentEmail, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                child: Text(l.accountInfoDifferentEmail, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13)),
               ),
             ),
           ],
@@ -681,7 +681,7 @@ class _PhoneSheetState extends State<_PhoneSheet> {
             child: Container(
               width: 40, height: 4,
               margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.border(context), borderRadius: BorderRadius.circular(2)),
             ),
           ),
           if (_sent) ...[
@@ -752,7 +752,7 @@ class _PhoneSheetState extends State<_PhoneSheet> {
             const SizedBox(height: 10),
             TextButton(
               onPressed: widget.onClose,
-              child: Text(l.accountInfoCancel, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+              child: Text(l.accountInfoCancel, style: TextStyle(color: AppColors.textSecondary(context))),
             ),
           ],
         ],

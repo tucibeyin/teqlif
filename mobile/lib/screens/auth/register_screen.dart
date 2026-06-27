@@ -86,7 +86,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.shield_outlined, color: Color(0xFF06B6D4), size: 20),
+            const Icon(Icons.shield_outlined, color: kPrimary, size: 20),
             const SizedBox(width: 8),
             Text(l.phoneInfoTitle, style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16, fontWeight: FontWeight.w700)),
           ],
@@ -98,7 +98,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(l.phoneInfoGotIt, style: const TextStyle(color: Color(0xFF06B6D4), fontWeight: FontWeight.w700)),
+            child: Text(l.phoneInfoGotIt, style: const TextStyle(color: kPrimary, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
