@@ -415,6 +415,93 @@ async def update_notification_prefs(
     return data
 
 
+class _EmailChangeRequest(BaseModel):
+    new_email: str
+
+
+class _EmailChangeVerify(BaseModel):
+    new_email: str
+    code: str
+
+
+@router.post("/email-change/request", status_code=status.HTTP_202_ACCEPTED)
+async def request_email_change(
+    data: _EmailChangeRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Yeni e-postaya doğrulama kodu gönderir."""
+    from pydantic import EmailStr, validate_email
+    from pydantic_core import PydanticCustomError
+    import json as _json
+
+    # Temel format kontrolü
+    try:
+        validate_email(data.new_email)
+    except Exception:
+        raise BadRequestException("Geçersiz e-posta adresi")
+
+    new_email = data.new_email.lower().strip()
+
+    if new_email == current_user.email:
+        raise BadRequestException("Bu zaten mevcut e-posta adresiniz")
+
+    existing = await db.scalar(select(User).where(User.email == new_email))
+    if existing:
+        raise BadRequestException("Bu e-posta adresi zaten kullanılıyor")
+
+    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
+    redis = await get_redis()
+    await redis.setex(
+        f"email_change:{current_user.id}",
+        VERIFY_CODE_TTL,
+        _json.dumps({"new_email": new_email, "code": code}),
+    )
+
+    try:
+        await send_verification_code(new_email, current_user.full_name, code)
+    except Exception as exc:
+        logger.error("[EMAIL_CHANGE] Kod gönderilemedi | user_id=%s | %s", current_user.id, exc)
+        raise BadRequestException("E-posta gönderilemedi, lütfen tekrar deneyin")
+
+    return {"message": "Doğrulama kodu gönderildi"}
+
+
+@router.post("/email-change/verify")
+async def verify_email_change(
+    data: _EmailChangeVerify,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Doğrulama kodunu kontrol edip e-postayı günceller."""
+    import json as _json
+
+    redis = await get_redis()
+    raw = await redis.get(f"email_change:{current_user.id}")
+    if not raw:
+        raise BadRequestException("Doğrulama kodu bulunamadı veya süresi doldu")
+
+    stored = _json.loads(raw)
+    if stored["code"] != data.code.strip():
+        raise BadRequestException("Doğrulama kodu hatalı")
+    if stored["new_email"] != data.new_email.lower().strip():
+        raise BadRequestException("E-posta adresi eşleşmiyor")
+
+    # Çakışma son kontrolü
+    existing = await db.scalar(
+        select(User).where(User.email == stored["new_email"], User.id != current_user.id)
+    )
+    if existing:
+        raise BadRequestException("Bu e-posta adresi başka bir hesapta kullanılıyor")
+
+    current_user.email = stored["new_email"]
+    await db.commit()
+    await redis.delete(f"email_change:{current_user.id}")
+
+    logger.info("[EMAIL_CHANGE] E-posta güncellendi | user_id=%s → %s", current_user.id, stored["new_email"])
+    return {"message": "E-posta adresiniz başarıyla güncellendi"}
+
+
 class _PhoneVerifyRequest(BaseModel):
     phone: str
 

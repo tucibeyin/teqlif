@@ -1895,4 +1895,111 @@ class AppLocalizationsAr extends AppLocalizations {
   String conversionAvgPrice(String price) {
     return 'متوسط $price ₺';
   }
+
+  @override
+  String get accountInfoTitle => 'معلوماتي';
+
+  @override
+  String get accountInfoBasicSection => 'المعلومات الأساسية';
+
+  @override
+  String get accountInfoSecuritySection => 'أمان الحساب';
+
+  @override
+  String get accountInfoFullName => 'الاسم الكامل';
+
+  @override
+  String get accountInfoUsername => 'اسم المستخدم';
+
+  @override
+  String get accountInfoBio => 'نبذة';
+
+  @override
+  String get accountInfoWebsite => 'الموقع الإلكتروني';
+
+  @override
+  String get accountInfoEmail => 'البريد الإلكتروني';
+
+  @override
+  String get accountInfoPhone => 'الهاتف';
+
+  @override
+  String get accountInfoPhoneEmpty => 'لم يُضف بعد';
+
+  @override
+  String get accountInfoVerified => 'موثّق';
+
+  @override
+  String get accountInfoUnverified => 'غير موثّق';
+
+  @override
+  String get accountInfoSave => 'حفظ';
+
+  @override
+  String get accountInfoUsernameTaken => 'اسم المستخدم مأخوذ';
+
+  @override
+  String get accountInfoSaved => 'تم تحديث المعلومات';
+
+  @override
+  String get accountInfoEmailChangeTitle => 'تغيير البريد الإلكتروني';
+
+  @override
+  String accountInfoEmailCurrent(String email) {
+    return 'الحالي: $email';
+  }
+
+  @override
+  String get accountInfoNewEmail => 'عنوان البريد الإلكتروني الجديد';
+
+  @override
+  String get accountInfoVerifyCode => 'رمز التحقق';
+
+  @override
+  String get accountInfoSendCode => 'إرسال الرمز';
+
+  @override
+  String get accountInfoVerifyCodeBtn => 'تأكيد الرمز';
+
+  @override
+  String get accountInfoCodeSent => 'تم إرسال رمز التحقق';
+
+  @override
+  String get accountInfoEmailUpdated => 'تم تحديث بريدك الإلكتروني';
+
+  @override
+  String get accountInfoDifferentEmail => 'استخدام بريد آخر';
+
+  @override
+  String get accountInfoPhoneAddTitle => 'إضافة هاتف';
+
+  @override
+  String get accountInfoPhoneChangeTitle => 'تغيير الهاتف';
+
+  @override
+  String accountInfoPhoneCurrent(String phone) {
+    return 'الحالي: $phone';
+  }
+
+  @override
+  String get accountInfoPhoneSendVerify => 'إرسال بريد التحقق';
+
+  @override
+  String get accountInfoEmailSent => 'تم إرسال البريد';
+
+  @override
+  String get accountInfoEmailSentDesc =>
+      'أرسلنا رابط التحقق إلى بريدك المسجّل. انقر الرابط للتحقق من رقم هاتفك.';
+
+  @override
+  String get accountInfoCancel => 'إلغاء';
+
+  @override
+  String get accountInfoOk => 'حسناً';
+
+  @override
+  String get accountInfoConnectError => 'تعذّر الاتصال بالخادم';
+
+  @override
+  String get accountInfoMenuLabel => 'معلوماتي';
 }

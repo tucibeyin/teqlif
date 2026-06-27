@@ -1911,4 +1911,111 @@ class AppLocalizationsEn extends AppLocalizations {
   String conversionAvgPrice(String price) {
     return 'Avg. $price ₺';
   }
+
+  @override
+  String get accountInfoTitle => 'My Information';
+
+  @override
+  String get accountInfoBasicSection => 'Basic Information';
+
+  @override
+  String get accountInfoSecuritySection => 'Account Security';
+
+  @override
+  String get accountInfoFullName => 'Full Name';
+
+  @override
+  String get accountInfoUsername => 'Username';
+
+  @override
+  String get accountInfoBio => 'Bio';
+
+  @override
+  String get accountInfoWebsite => 'Website';
+
+  @override
+  String get accountInfoEmail => 'Email';
+
+  @override
+  String get accountInfoPhone => 'Phone';
+
+  @override
+  String get accountInfoPhoneEmpty => 'Not added';
+
+  @override
+  String get accountInfoVerified => 'Verified';
+
+  @override
+  String get accountInfoUnverified => 'Unverified';
+
+  @override
+  String get accountInfoSave => 'Save';
+
+  @override
+  String get accountInfoUsernameTaken => 'This username is taken';
+
+  @override
+  String get accountInfoSaved => 'Information updated';
+
+  @override
+  String get accountInfoEmailChangeTitle => 'Change Email';
+
+  @override
+  String accountInfoEmailCurrent(String email) {
+    return 'Current: $email';
+  }
+
+  @override
+  String get accountInfoNewEmail => 'New email address';
+
+  @override
+  String get accountInfoVerifyCode => 'Verification code';
+
+  @override
+  String get accountInfoSendCode => 'Send Code';
+
+  @override
+  String get accountInfoVerifyCodeBtn => 'Verify Code';
+
+  @override
+  String get accountInfoCodeSent => 'Verification code sent';
+
+  @override
+  String get accountInfoEmailUpdated => 'Your email address has been updated';
+
+  @override
+  String get accountInfoDifferentEmail => 'Use a different email';
+
+  @override
+  String get accountInfoPhoneAddTitle => 'Add Phone';
+
+  @override
+  String get accountInfoPhoneChangeTitle => 'Change Phone';
+
+  @override
+  String accountInfoPhoneCurrent(String phone) {
+    return 'Current: $phone';
+  }
+
+  @override
+  String get accountInfoPhoneSendVerify => 'Send Verification Email';
+
+  @override
+  String get accountInfoEmailSent => 'Email Sent';
+
+  @override
+  String get accountInfoEmailSentDesc =>
+      'We sent a verification link to your registered email. Click the link to verify your phone number.';
+
+  @override
+  String get accountInfoCancel => 'Cancel';
+
+  @override
+  String get accountInfoOk => 'OK';
+
+  @override
+  String get accountInfoConnectError => 'Could not connect to server';
+
+  @override
+  String get accountInfoMenuLabel => 'My Information';
 }

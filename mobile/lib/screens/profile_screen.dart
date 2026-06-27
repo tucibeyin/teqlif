@@ -29,6 +29,7 @@ import 'create_listing_screen.dart';
 import 'pro_hub_screen.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
+import 'account_info_screen.dart';
 import '../services/wallet_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -1585,6 +1586,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           _SettingsSection(
             title: l.profileAccountSection,
             items: [
+              _SettingsTile(
+                icon: Icons.manage_accounts_outlined,
+                label: l.accountInfoMenuLabel,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AccountInfoScreen()),
+                ),
+              ),
               _SettingsTile(
                 icon: Icons.lock_outline,
                 label: l.profileChangePassword,

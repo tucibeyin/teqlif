@@ -1911,4 +1911,111 @@ class AppLocalizationsTr extends AppLocalizations {
   String conversionAvgPrice(String price) {
     return 'Ort. $price ₺';
   }
+
+  @override
+  String get accountInfoTitle => 'Bilgilerim';
+
+  @override
+  String get accountInfoBasicSection => 'Temel Bilgiler';
+
+  @override
+  String get accountInfoSecuritySection => 'Hesap Güvenliği';
+
+  @override
+  String get accountInfoFullName => 'Ad Soyad';
+
+  @override
+  String get accountInfoUsername => 'Kullanıcı Adı';
+
+  @override
+  String get accountInfoBio => 'Biyografi';
+
+  @override
+  String get accountInfoWebsite => 'Web Sitesi';
+
+  @override
+  String get accountInfoEmail => 'E-posta';
+
+  @override
+  String get accountInfoPhone => 'Telefon';
+
+  @override
+  String get accountInfoPhoneEmpty => 'Eklenmemiş';
+
+  @override
+  String get accountInfoVerified => 'Doğrulandı';
+
+  @override
+  String get accountInfoUnverified => 'Doğrulanmamış';
+
+  @override
+  String get accountInfoSave => 'Kaydet';
+
+  @override
+  String get accountInfoUsernameTaken => 'Bu kullanıcı adı alınmış';
+
+  @override
+  String get accountInfoSaved => 'Bilgiler güncellendi';
+
+  @override
+  String get accountInfoEmailChangeTitle => 'E-posta Değiştir';
+
+  @override
+  String accountInfoEmailCurrent(String email) {
+    return 'Mevcut: $email';
+  }
+
+  @override
+  String get accountInfoNewEmail => 'Yeni e-posta adresi';
+
+  @override
+  String get accountInfoVerifyCode => 'Doğrulama kodu';
+
+  @override
+  String get accountInfoSendCode => 'Kod Gönder';
+
+  @override
+  String get accountInfoVerifyCodeBtn => 'Kodu Doğrula';
+
+  @override
+  String get accountInfoCodeSent => 'Doğrulama kodu gönderildi';
+
+  @override
+  String get accountInfoEmailUpdated => 'E-posta adresiniz güncellendi';
+
+  @override
+  String get accountInfoDifferentEmail => 'Farklı e-posta gir';
+
+  @override
+  String get accountInfoPhoneAddTitle => 'Telefon Ekle';
+
+  @override
+  String get accountInfoPhoneChangeTitle => 'Telefonu Değiştir';
+
+  @override
+  String accountInfoPhoneCurrent(String phone) {
+    return 'Mevcut: $phone';
+  }
+
+  @override
+  String get accountInfoPhoneSendVerify => 'Doğrulama E-postası Gönder';
+
+  @override
+  String get accountInfoEmailSent => 'E-posta Gönderildi';
+
+  @override
+  String get accountInfoEmailSentDesc =>
+      'Kayıtlı e-posta adresinize doğrulama bağlantısı gönderdik. Bağlantıya tıklayarak telefon numaranızı doğrulayın.';
+
+  @override
+  String get accountInfoCancel => 'İptal';
+
+  @override
+  String get accountInfoOk => 'Tamam';
+
+  @override
+  String get accountInfoConnectError => 'Sunucuya bağlanılamadı';
+
+  @override
+  String get accountInfoMenuLabel => 'Bilgilerim';
 }
