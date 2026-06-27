@@ -45,10 +45,12 @@ logger = get_logger(__name__)
 
 _PUBSUB_CHANNEL = "auction_broadcast"
 
-# Telefon doğrulaması gerektiren teklif eşiği (TL)
+# Telefon doğrulaması gerektiren mutlak teklif eşiği (TL)
 _HIGH_BID_THRESHOLD_TL = 10_000
-# Mevcut fiyatın kaç katını aşarsa yüksek teklif sayılır
-_HIGH_BID_MULTIPLIER = 3
+# Katlama kontrolü: mevcut teklif bu değerin üzerindeyken geçerli
+_MULTIPLIER_MIN_BASE_TL = 500
+# Mevcut fiyatın kaç katını aşarsa yüksek teklif sayılır (sadece base >= 500 TL)
+_HIGH_BID_MULTIPLIER = 10
 
 
 async def _log_fraud_attempt(
@@ -602,7 +604,10 @@ class AuctionService:
         current_bid = float(current_bid_raw) if current_bid_raw else 0.0
         is_high_bid = (
             float(data.amount) > _HIGH_BID_THRESHOLD_TL
-            or (current_bid > 0 and float(data.amount) > current_bid * _HIGH_BID_MULTIPLIER)
+            or (
+                current_bid >= _MULTIPLIER_MIN_BASE_TL
+                and float(data.amount) > current_bid * _HIGH_BID_MULTIPLIER
+            )
         )
         if is_high_bid and not user.phone:
             await _log_fraud_attempt(
