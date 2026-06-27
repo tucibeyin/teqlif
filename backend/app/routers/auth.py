@@ -587,13 +587,22 @@ async def confirm_phone_verification_page(
 
 @router.post("/phone-verify/confirm")
 async def confirm_phone_verification(
-    token: str,
+    request: Request,
     action: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcı onay butonuna bastığında çağrılır. Token bu noktada tüketilir."""
+    """Kullanıcı onay butonuna bastığında çağrılır. Token bu noktada tüketilir.
+    Token form body'den okunur (HTML'de görünmez → email tarayıcı POST atamaz)."""
     from fastapi.responses import HTMLResponse
     import json as _json
+
+    # Token yalnızca form field'ında — query string'de yok (scanner koruması)
+    form = await request.form()
+    token = form.get("token")
+    if not token:
+        return HTMLResponse(_phone_verify_html(
+            "Geçersiz İstek", "Token bulunamadı.", "#ef4444", False,
+        ))
 
     redis = await get_redis()
     raw = await redis.get(f"phone_verify:{token}")
@@ -670,9 +679,11 @@ def _phone_verify_confirm_page(token: str, action: str) -> str:
     <div class="brand">teqlif</div>
     <div class="spinner"></div>
     <p>{label}</p>
-    <form id="f" method="POST" action="/api/auth/phone-verify/confirm?token={token}&action={action}" style="display:none"></form>
+    <form id="f" method="POST" action="/api/auth/phone-verify/confirm?action={action}" style="display:none">
+      <input type="hidden" name="token" id="tk" value="">
+    </form>
   </div>
-  <script>document.getElementById('f').submit();</script>
+  <script>document.getElementById('tk').value='{token}';document.getElementById('f').submit();</script>
 </body>
 </html>"""
 
