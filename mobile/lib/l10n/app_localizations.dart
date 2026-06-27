@@ -3657,6 +3657,210 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Ort. {price} ₺'**
   String conversionAvgPrice(String price);
+
+  /// No description provided for @accountInfoTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilgilerim'**
+  String get accountInfoTitle;
+
+  /// No description provided for @accountInfoBasicSection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Temel Bilgiler'**
+  String get accountInfoBasicSection;
+
+  /// No description provided for @accountInfoSecuritySection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap Güvenliği'**
+  String get accountInfoSecuritySection;
+
+  /// No description provided for @accountInfoFullName.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ad Soyad'**
+  String get accountInfoFullName;
+
+  /// No description provided for @accountInfoUsername.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcı Adı'**
+  String get accountInfoUsername;
+
+  /// No description provided for @accountInfoBio.
+  ///
+  /// In tr, this message translates to:
+  /// **'Biyografi'**
+  String get accountInfoBio;
+
+  /// No description provided for @accountInfoWebsite.
+  ///
+  /// In tr, this message translates to:
+  /// **'Web Sitesi'**
+  String get accountInfoWebsite;
+
+  /// No description provided for @accountInfoEmail.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta'**
+  String get accountInfoEmail;
+
+  /// No description provided for @accountInfoPhone.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefon'**
+  String get accountInfoPhone;
+
+  /// No description provided for @accountInfoPhoneEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Eklenmemiş'**
+  String get accountInfoPhoneEmpty;
+
+  /// No description provided for @accountInfoVerified.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulandı'**
+  String get accountInfoVerified;
+
+  /// No description provided for @accountInfoUnverified.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulanmamış'**
+  String get accountInfoUnverified;
+
+  /// No description provided for @accountInfoSave.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kaydet'**
+  String get accountInfoSave;
+
+  /// No description provided for @accountInfoUsernameTaken.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kullanıcı adı alınmış'**
+  String get accountInfoUsernameTaken;
+
+  /// No description provided for @accountInfoSaved.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilgiler güncellendi'**
+  String get accountInfoSaved;
+
+  /// No description provided for @accountInfoEmailChangeTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta Değiştir'**
+  String get accountInfoEmailChangeTitle;
+
+  /// No description provided for @accountInfoEmailCurrent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mevcut: {email}'**
+  String accountInfoEmailCurrent(String email);
+
+  /// No description provided for @accountInfoNewEmail.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni e-posta adresi'**
+  String get accountInfoNewEmail;
+
+  /// No description provided for @accountInfoVerifyCode.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama kodu'**
+  String get accountInfoVerifyCode;
+
+  /// No description provided for @accountInfoSendCode.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kod Gönder'**
+  String get accountInfoSendCode;
+
+  /// No description provided for @accountInfoVerifyCodeBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kodu Doğrula'**
+  String get accountInfoVerifyCodeBtn;
+
+  /// No description provided for @accountInfoCodeSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama kodu gönderildi'**
+  String get accountInfoCodeSent;
+
+  /// No description provided for @accountInfoEmailUpdated.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta adresiniz güncellendi'**
+  String get accountInfoEmailUpdated;
+
+  /// No description provided for @accountInfoDifferentEmail.
+  ///
+  /// In tr, this message translates to:
+  /// **'Farklı e-posta gir'**
+  String get accountInfoDifferentEmail;
+
+  /// No description provided for @accountInfoPhoneAddTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefon Ekle'**
+  String get accountInfoPhoneAddTitle;
+
+  /// No description provided for @accountInfoPhoneChangeTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefonu Değiştir'**
+  String get accountInfoPhoneChangeTitle;
+
+  /// No description provided for @accountInfoPhoneCurrent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mevcut: {phone}'**
+  String accountInfoPhoneCurrent(String phone);
+
+  /// No description provided for @accountInfoPhoneSendVerify.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama E-postası Gönder'**
+  String get accountInfoPhoneSendVerify;
+
+  /// No description provided for @accountInfoEmailSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta Gönderildi'**
+  String get accountInfoEmailSent;
+
+  /// No description provided for @accountInfoEmailSentDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kayıtlı e-posta adresinize doğrulama bağlantısı gönderdik. Bağlantıya tıklayarak telefon numaranızı doğrulayın.'**
+  String get accountInfoEmailSentDesc;
+
+  /// No description provided for @accountInfoCancel.
+  ///
+  /// In tr, this message translates to:
+  /// **'İptal'**
+  String get accountInfoCancel;
+
+  /// No description provided for @accountInfoOk.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tamam'**
+  String get accountInfoOk;
+
+  /// No description provided for @accountInfoConnectError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sunucuya bağlanılamadı'**
+  String get accountInfoConnectError;
+
+  /// No description provided for @accountInfoMenuLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilgilerim'**
+  String get accountInfoMenuLabel;
 }
 
 class _AppLocalizationsDelegate

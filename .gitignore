@@ -1,3 +1,6 @@
+# Claude Code bellek dosyaları
+memory/
+
 # Hassas dosyalar
 .env
 .env.local
