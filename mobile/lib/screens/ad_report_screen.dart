@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
+import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 
 class AdReportScreen extends StatefulWidget {
@@ -40,12 +41,13 @@ class _AdReportScreenState extends State<AdReportScreen>
   }
 
   Future<void> _loadReport() async {
+    final l = AppLocalizations.of(context)!;
     final report = await AnalyticsService.getCampaignReport(widget.campaignId);
     if (!mounted) return;
     setState(() {
       _report = report;
       _loading = false;
-      _error = report == null ? 'Rapor yüklenemedi.' : null;
+      _error = report == null ? l.adReportLoadError : null;
     });
     if (report != null) _fadeCtrl.forward();
   }
@@ -58,11 +60,12 @@ class _AdReportScreenState extends State<AdReportScreen>
     return '%${v.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 
-  String _statusLabel(String? s) {
+  String _statusLabel(String? s, AppLocalizations l) {
     switch (s) {
-      case 'active':    return 'Aktif';
-      case 'completed': return 'Tamamlandı';
-      case 'paused':    return 'Duraklatıldı';
+      case 'active':    return l.adReportStatusActive;
+      case 'completed': return l.adReportStatusCompleted;
+      case 'paused':    return l.adReportStatusPaused;
+      case 'cancelled': return l.adReportStatusCancelled;
       default:          return s ?? '—';
     }
   }
@@ -73,6 +76,16 @@ class _AdReportScreenState extends State<AdReportScreen>
       case 'completed': return const Color(0xFF6366F1);
       case 'paused':    return const Color(0xFFF59E0B);
       default:          return const Color(0xFF64748B);
+    }
+  }
+
+  int _activeDays(dynamic createdAt) {
+    if (createdAt == null) return 0;
+    try {
+      final dt = DateTime.parse(createdAt as String);
+      return DateTime.now().difference(dt).inDays.clamp(0, 9999);
+    } catch (_) {
+      return 0;
     }
   }
 
@@ -93,15 +106,16 @@ class _AdReportScreenState extends State<AdReportScreen>
   }
 
   Widget _buildLoading() {
-    return const Center(
+    final l = AppLocalizations.of(context)!;
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: kPrimary),
-          SizedBox(height: 16),
+          const CircularProgressIndicator(color: kPrimary),
+          const SizedBox(height: 16),
           Text(
-            'Reklam analizi hazırlanıyor…',
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+            l.adReportLoading,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
           ),
         ],
       ),
@@ -109,6 +123,7 @@ class _AdReportScreenState extends State<AdReportScreen>
   }
 
   Widget _buildError() {
+    final l = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -124,7 +139,7 @@ class _AdReportScreenState extends State<AdReportScreen>
             ),
             const SizedBox(height: 24),
             _AdButton(
-              label: 'Tekrar Dene',
+              label: l.btnRetry,
               color: kPrimary,
               onTap: () {
                 setState(() { _loading = true; _error = null; });
@@ -133,7 +148,7 @@ class _AdReportScreenState extends State<AdReportScreen>
             ),
             const SizedBox(height: 12),
             _AdButton(
-              label: 'Geri Dön',
+              label: l.btnGoBack,
               color: const Color(0xFF1E293B),
               onTap: () => Navigator.pop(context),
             ),
@@ -143,17 +158,8 @@ class _AdReportScreenState extends State<AdReportScreen>
     );
   }
 
-  int _activeDays(dynamic createdAt) {
-    if (createdAt == null) return 0;
-    try {
-      final dt = DateTime.parse(createdAt as String);
-      return DateTime.now().difference(dt).inDays.clamp(0, 9999);
-    } catch (_) {
-      return 0;
-    }
-  }
-
   Widget _buildReport() {
+    final l = AppLocalizations.of(context)!;
     final r = _report!;
     final status      = r['status'] as String?;
     final impressions = r['impressions'] as int? ?? 0;
@@ -167,7 +173,13 @@ class _AdReportScreenState extends State<AdReportScreen>
       child: CustomScrollView(
         slivers: [
           // ── Header ──────────────────────────────────────────────────────────
-          SliverToBoxAdapter(child: _AdHeader(title: widget.listingTitle)),
+          SliverToBoxAdapter(
+            child: _AdHeader(
+              title: widget.listingTitle,
+              tagLabel: l.adReportTitle,
+              subtitle: l.adReportSubtitle,
+            ),
+          ),
 
           // ── Durum Chip ──────────────────────────────────────────────────────
           SliverToBoxAdapter(
@@ -194,7 +206,7 @@ class _AdReportScreenState extends State<AdReportScreen>
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          _statusLabel(status),
+                          _statusLabel(status, l),
                           style: TextStyle(
                             color: _statusColor(status),
                             fontSize: 12,
@@ -218,27 +230,31 @@ class _AdReportScreenState extends State<AdReportScreen>
               delegate: SliverChildListDelegate([
                 _MetricCard(
                   icon: Icons.visibility_outlined,
-                  label: 'Gösterim',
+                  label: l.adReportMetricImpressions,
                   value: '$impressions',
                   color: const Color(0xFF6366F1),
                 ),
                 _MetricCard(
                   icon: Icons.ads_click,
-                  label: 'Tıklama',
+                  label: l.adReportMetricClicks,
                   value: '$clicks',
                   color: const Color(0xFF10B981),
                 ),
                 _MetricCard(
                   icon: Icons.touch_app_rounded,
-                  label: 'Her 100 Görüntülemede\nKaç Kişi Tıkladı',
+                  label: l.adReportMetricClickRate,
                   value: _fmtCtr(ctr),
                   color: const Color(0xFFF59E0B),
-                  hint: clicks > 0 && impressions > 0 ? '$clicks tıklama / $impressions görüntüleme' : null,
+                  hint: clicks > 0 && impressions > 0
+                      ? l.adReportMetricClickRateHint(clicks, impressions)
+                      : null,
                 ),
                 _MetricCard(
                   icon: Icons.calendar_today_rounded,
-                  label: 'Aktif\nSüre',
-                  value: activeDays == 0 ? '<1 gün' : '$activeDays gün',
+                  label: l.adReportMetricActiveDays,
+                  value: activeDays == 0
+                      ? l.adReportMetricActiveDaysLessThan1
+                      : l.adReportMetricActiveDaysValue(activeDays),
                   color: const Color(0xFF06B6D4),
                 ),
               ]),
@@ -251,7 +267,7 @@ class _AdReportScreenState extends State<AdReportScreen>
             ),
           ),
 
-          // ── CTR Insight kartı ─────────────────────────────────────────────
+          // ── Akıllı Analiz kartı ───────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -264,7 +280,7 @@ class _AdReportScreenState extends State<AdReportScreen>
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
               child: _AdButton(
-                label: 'Geri Dön',
+                label: l.btnGoBack,
                 color: const Color(0xFF1E293B),
                 onTap: () => Navigator.pop(context),
               ),
@@ -280,7 +296,14 @@ class _AdReportScreenState extends State<AdReportScreen>
 
 class _AdHeader extends StatelessWidget {
   final String title;
-  const _AdHeader({required this.title});
+  final String tagLabel;
+  final String subtitle;
+
+  const _AdHeader({
+    required this.title,
+    required this.tagLabel,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +339,7 @@ class _AdHeader extends StatelessWidget {
                     Icon(Icons.campaign_rounded, color: kPrimary, size: 14),
                     const SizedBox(width: 4),
                     Text(
-                      'REKLAM RAPORU',
+                      tagLabel,
                       style: TextStyle(
                         color: kPrimary,
                         fontSize: 11,
@@ -340,9 +363,9 @@ class _AdHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 5),
-          const Text(
-            'Kampanyanızın gerçek zamanlı performansı',
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+          Text(
+            subtitle,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
           ),
         ],
       ),
@@ -419,18 +442,17 @@ class _CtrInsight extends StatelessWidget {
 
   const _CtrInsight({required this.ctr, required this.clicks, required this.impressions});
 
-  String get _insight {
-    if (impressions == 0) {
-      return 'Henüz kimse ilanınızı görmedi. İlan akışa girdiğinde burası güncellenecek.';
-    }
-    if (ctr >= 5) return 'Harika! İlanınızı gören her 100 kişiden $clicks\'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.';
-    if (ctr >= 2) return 'İyi gidiyorsunuz. $impressions kişi ilanınızı gördü, $clicks\'i inceledi. Fotoğrafları veya başlığı geliştirerek daha fazla ilgi çekebilirsiniz.';
-    if (ctr >= 0.5) return '$impressions kişi ilanınızı gördü ama sadece $clicks\'i tıkladı. İlan kapak fotoğrafı veya fiyat, alıcıları yeterince çekmemiş olabilir.';
-    return '$impressions kişi ilanınızı gördü, $clicks tıklama aldı. İlan başlığını, fotoğrafını ve fiyatını gözden geçirmenizi öneririz.';
+  String _insight(AppLocalizations l) {
+    if (impressions == 0) return l.adReportInsightNoImpressions;
+    if (ctr >= 5)   return l.adReportInsightGreat(clicks);
+    if (ctr >= 2)   return l.adReportInsightGood(clicks, impressions);
+    if (ctr >= 0.5) return l.adReportInsightLow(clicks, impressions);
+    return l.adReportInsightVeryLow(clicks, impressions);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -453,11 +475,11 @@ class _CtrInsight extends StatelessWidget {
                 child: Icon(Icons.auto_awesome_rounded, color: kPrimary, size: 14),
               ),
               const SizedBox(width: 8),
-              const Text('Akıllı Analiz', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+              Text(l.adReportSmartAnalysis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 10),
-          Text(_insight, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13, height: 1.55)),
+          Text(_insight(l), style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13, height: 1.55)),
         ],
       ),
     );
