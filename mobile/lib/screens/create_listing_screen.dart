@@ -877,14 +877,21 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                                   color: Colors.white.withValues(alpha: 0.18),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: const Text(
-                                  '1 TUCi',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFFFBBF24),
-                                    letterSpacing: 0.3,
-                                  ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.toll_rounded, size: 10, color: Color(0xFFFBBF24)),
+                                    SizedBox(width: 3),
+                                    Text(
+                                      'İlan yayınlama ücreti: 1 TUCi',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFFFBBF24),
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
