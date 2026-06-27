@@ -363,6 +363,17 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     }
   }
 
+  /// Child widget evict edilirken kendi Room'unu buraya depolar.
+  /// Aynı stream'in bir sonraki page slot'u bunu takePrefetchEntry ile alır → yeniden bağlanmaz.
+  bool _depositRoom(int streamId, _PrefetchEntry entry) {
+    if (_prefetchCache.containsKey(streamId)) {
+      entry.dispose(); // zaten var, yenisini reddet
+      return false;
+    }
+    _prefetchCache[streamId] = entry;
+    return true;
+  }
+
   /// O an aktif olan sayfanın stream'ini döner (listing slotundaysa null).
   StreamOut? _getCurrentStream() {
     if (_liveItems.isEmpty) return null;
@@ -478,6 +489,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 isLast: false,
                 onStreamEnded: () => _onStreamEnded(stream.id),
                 takePrefetch: takePrefetchEntry,
+                onRoomDeposit: _depositRoom,
                 onPipActionChanged: (cb) { _pipAction = cb; },
               ),
             _ListingItem(:final listing, :final slotIndex, :final streamCategory) =>
@@ -510,6 +522,8 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
   final VoidCallback? onStreamEnded;
   final _PrefetchEntry? Function(int streamId)? takePrefetch;
   final void Function(VoidCallback?)? onPipActionChanged;
+  // Evict edilirken Room'u parent cache'e devret → aynı stream bir sonraki grupta anında hazır
+  final bool Function(int streamId, _PrefetchEntry entry)? onRoomDeposit;
 
   const _SwipeLivePage({
     super.key,
@@ -520,6 +534,7 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
     this.onStreamEnded,
     this.takePrefetch,
     this.onPipActionChanged,
+    this.onRoomDeposit,
   });
 
   @override
@@ -596,14 +611,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
       if (widget.isPrefetch) {
         _demoteToPrefetch();  // komşu kalıyor → sesi kapat, video bağlı
       } else {
-        _deactivate();
+        if (!_tryDepositRoom()) _deactivate();
       }
     } else if (widget.isPrefetch && !old.isPrefetch && !widget.isActive && _room == null) {
       // Prefetch'e girdi, henüz bağlı değil
       _prefetchConnect();
     } else if (!widget.isPrefetch && !widget.isActive && (old.isPrefetch || old.isActive) && _room != null) {
-      // Artık ne active ne prefetch → tamamen kapat
-      _deactivate();
+      // Artık ne active ne prefetch → room'u parent'a devretmeyi dene, yoksa kapat
+      if (!_tryDepositRoom()) _deactivate();
     }
   }
 
@@ -756,6 +771,26 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage> {
         interactionType: 'swipe_impression',
       );
     }
+  }
+
+  /// Evict edilirken mevcut Room'u parent'ın prefetch cache'ine devret.
+  /// Başarılı olursa _room/_token/_listener temizlenir (disconnect edilmez),
+  /// _leftStream=true yapılarak dispose'da leaveStream çağrılması önlenir.
+  bool _tryDepositRoom() {
+    if (_room == null || _token == null || _listener == null) return false;
+    final accepted = widget.onRoomDeposit?.call(
+      widget.stream.id,
+      _PrefetchEntry(room: _room!, token: _token!, listener: _listener!),
+    );
+    if (accepted == true) {
+      _activationGen++;
+      _room = null;
+      _token = null;
+      _listener = null;
+      _leftStream = true; // dispose'da leaveStream çağrılmasın — bağlantı devam ediyor
+      return true;
+    }
+    return false;
   }
 
   /// Kullanıcı henüz bu sayfaya gelmeden arka planda LiveKit'e bağlanır.
