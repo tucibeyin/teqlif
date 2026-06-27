@@ -47,7 +47,14 @@ async def send_phone_verification_email(
         response.raise_for_status()
 
 
-async def send_verification_code(email: str, full_name: str, code: str) -> None:
+async def send_verification_code(email: str, full_name: str, code: str, *, has_phone: bool = False) -> None:
+    phone_note = (
+        "<p style='margin-top:20px;padding:12px 16px;background:#1e293b;border-left:3px solid #0d9488;"
+        "border-radius:4px;color:#94a3b8;font-size:13px'>"
+        "📱 Kayıt sırasında telefon numarası girdiniz. Hesabınıza giriş yaptıktan sonra "
+        "<strong style='color:#f1f5f9'>Profil → Bilgilerim</strong> ekranından telefonunuzu doğrulayabilirsiniz.</p>"
+    ) if has_phone else ""
+
     payload = {
         "sender": {
             "name": settings.brevo_sender_name,
@@ -60,6 +67,7 @@ async def send_verification_code(email: str, full_name: str, code: str) -> None:
             f"<p>teqlif hesabınızı doğrulamak için aşağıdaki kodu kullanın:</p>"
             f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
             f"<p>Bu kod <strong>10 dakika</strong> geçerlidir.</p>"
+            f"{phone_note}"
             f"<p>Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>"
         ),
     }

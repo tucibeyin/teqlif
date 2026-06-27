@@ -28,7 +28,8 @@ _PHONE_VERIFY_TOKEN_TTL = 1800  # 30 dakika
 
 
 async def _send_verification_email(
-    request: Request, email: str, full_name: str, code: str, *, raise_on_failure: bool = False
+    request: Request, email: str, full_name: str, code: str, *,
+    raise_on_failure: bool = False, has_phone: bool = False,
 ) -> None:
     """Doğrulama e-postasını ARQ kuyruğu üzerinden gönderir; başarısız olursa doğrudan gönderir.
 
@@ -36,12 +37,12 @@ async def _send_verification_email(
     """
     try:
         await request.app.state.arq_pool.enqueue_job(
-            "send_verification_email_task", email, full_name, code
+            "send_verification_email_task", email, full_name, code, has_phone
         )
     except Exception as e:
         logger.warning("ARQ enqueue başarısız, direkt gönderilecek [%s]: %s", email, str(e))
         try:
-            await send_verification_code(email, full_name, code)
+            await send_verification_code(email, full_name, code, has_phone=has_phone)
         except Exception as e2:
             logger.error(
                 "Doğrulama e-postası gönderilemedi [%s]: %s", email, str(e2), exc_info=True
@@ -82,28 +83,7 @@ async def _create_user_and_send_code(
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
-    await _send_verification_email(request, data.email, data.full_name, code)
-
-    # Telefon numarası verildiyse doğrulama e-postası da gönder
-    if data.phone:
-        import json as _json
-        phone_token = secrets.token_urlsafe(32)
-        await redis.setex(
-            f"phone_verify:{phone_token}",
-            _PHONE_VERIFY_TOKEN_TTL,
-            _json.dumps({"user_id": user.id, "phone": data.phone}),
-        )
-        base_url = str(request.base_url).rstrip("/")
-        try:
-            await send_phone_verification_email(
-                email=user.email,
-                full_name=user.full_name,
-                phone=data.phone,
-                yes_url=f"{base_url}/api/auth/phone-verify/confirm?token={phone_token}&action=yes",
-                no_url=f"{base_url}/api/auth/phone-verify/confirm?token={phone_token}&action=no",
-            )
-        except Exception as exc:
-            logger.warning("[PHONE_VERIFY] Kayıt sonrası e-posta gönderilemedi | %s", exc)
+    await _send_verification_email(request, data.email, data.full_name, code, has_phone=bool(data.phone))
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)

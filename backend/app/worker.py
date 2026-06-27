@@ -29,6 +29,7 @@ async def send_verification_email_task(
     email: str,
     full_name: str,
     code: str,
+    has_phone: bool = False,
 ) -> None:
     """
     Doğrulama kodunu e-posta ile iletir.
@@ -36,7 +37,7 @@ async def send_verification_email_task(
     """
     try:
         from app.utils.email import send_verification_code
-        await send_verification_code(email, full_name, code)
+        await send_verification_code(email, full_name, code, has_phone=has_phone)
         logger.info("[Worker] Doğrulama e-postası gönderildi: %s", email)
     except Exception as exc:
         logger.error(
