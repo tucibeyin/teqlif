@@ -58,7 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         try { await AuthService.resendCode(email); } catch (_) {}
         if (mounted) {
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => VerifyScreen(email: email)),
+            MaterialPageRoute(builder: (_) => VerifyScreen(email: email, resent: true)),
           );
         }
       } else if (mounted) {

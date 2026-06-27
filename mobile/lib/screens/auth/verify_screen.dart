@@ -9,7 +9,8 @@ import 'category_onboarding_screen.dart';
 
 class VerifyScreen extends StatefulWidget {
   final String email;
-  const VerifyScreen({super.key, required this.email});
+  final bool resent;
+  const VerifyScreen({super.key, required this.email, this.resent = false});
 
   @override
   State<VerifyScreen> createState() => _VerifyScreenState();
@@ -19,7 +20,13 @@ class _VerifyScreenState extends State<VerifyScreen> {
   final _codeCtrl = TextEditingController();
   bool _loading = false;
   bool _resending = false;
-  String? _success;
+  late String? _success;
+
+  @override
+  void initState() {
+    super.initState();
+    _success = widget.resent ? 'Yeni doğrulama kodu ${widget.email} adresine gönderildi.' : null;
+  }
 
   @override
   void dispose() {
