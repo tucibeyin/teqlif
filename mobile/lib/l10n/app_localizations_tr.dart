@@ -76,6 +76,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get fieldPasswordHint => 'Şifre giriniz';
 
   @override
+  String get fieldPasswordConfirm => 'Şifre Tekrar';
+
+  @override
+  String get fieldPasswordConfirmHint => 'Onaylamak için şifrenizi girin';
+
+  @override
+  String get validPasswordMismatch => 'Şifreler eşleşmiyor';
+
+  @override
   String get fieldFullName => 'Ad Soyad';
 
   @override
@@ -101,9 +110,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get fieldEmailCode => 'E-posta Doğrulama Kodu';
-
-  @override
-  String get fieldPasswordConfirmHint => 'Onaylamak için şifrenizi girin';
 
   @override
   String get fieldListingTitle => 'İlan Başlığı';

@@ -76,6 +76,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get fieldPasswordHint => 'أدخل كلمة المرور';
 
   @override
+  String get fieldPasswordConfirm => 'تأكيد كلمة المرور';
+
+  @override
+  String get fieldPasswordConfirmHint => 'أدخل كلمة المرور للتأكيد';
+
+  @override
+  String get validPasswordMismatch => 'كلمتا المرور غير متطابقتين';
+
+  @override
   String get fieldFullName => 'الاسم الكامل';
 
   @override
@@ -102,9 +111,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get fieldEmailCode => 'رمز التحقق عبر البريد الإلكتروني';
-
-  @override
-  String get fieldPasswordConfirmHint => 'أدخل كلمة المرور للتأكيد';
 
   @override
   String get fieldListingTitle => 'عنوان الإعلان';

@@ -232,6 +232,24 @@ abstract class AppLocalizations {
   /// **'Şifre giriniz'**
   String get fieldPasswordHint;
 
+  /// No description provided for @fieldPasswordConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifre Tekrar'**
+  String get fieldPasswordConfirm;
+
+  /// No description provided for @fieldPasswordConfirmHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Onaylamak için şifrenizi girin'**
+  String get fieldPasswordConfirmHint;
+
+  /// No description provided for @validPasswordMismatch.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifreler eşleşmiyor'**
+  String get validPasswordMismatch;
+
   /// No description provided for @fieldFullName.
   ///
   /// In tr, this message translates to:
@@ -285,12 +303,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'E-posta Doğrulama Kodu'**
   String get fieldEmailCode;
-
-  /// No description provided for @fieldPasswordConfirmHint.
-  ///
-  /// In tr, this message translates to:
-  /// **'Onaylamak için şifrenizi girin'**
-  String get fieldPasswordConfirmHint;
 
   /// No description provided for @fieldListingTitle.
   ///

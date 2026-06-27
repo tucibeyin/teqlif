@@ -76,6 +76,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldPasswordHint => 'Enter your password';
 
   @override
+  String get fieldPasswordConfirm => 'Confirm Password';
+
+  @override
+  String get fieldPasswordConfirmHint => 'Enter your password to confirm';
+
+  @override
+  String get validPasswordMismatch => 'Passwords do not match';
+
+  @override
   String get fieldFullName => 'Full Name';
 
   @override
@@ -102,9 +111,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fieldEmailCode => 'Email Verification Code';
-
-  @override
-  String get fieldPasswordConfirmHint => 'Enter your password to confirm';
 
   @override
   String get fieldListingTitle => 'Listing Title';

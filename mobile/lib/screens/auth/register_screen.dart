@@ -25,10 +25,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _usernameCtrl = TextEditingController();
   final _fullNameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _passConfirmCtrl = TextEditingController();
   String? _phoneE164; // E.164 formatında telefon (+90532...)
 
   bool _loading = false;
   bool _obscure = true;
+  bool _obscureConfirm = true;
   bool _eulaAccepted = false;
 
   // Username availability check
@@ -48,6 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _usernameCtrl.dispose();
     _fullNameCtrl.dispose();
     _passCtrl.dispose();
+    _passConfirmCtrl.dispose();
     super.dispose();
   }
 
@@ -283,10 +286,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
-                      textInputAction: TextInputAction.done,
+                      textInputAction: TextInputAction.next,
                       validator: (v) {
                         if (v == null || v.isEmpty) return l.fieldPasswordHint;
                         if (v.length < 8) return l.validPasswordMin;
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      key: const Key('register_input_sifre_tekrar'),
+                      controller: _passConfirmCtrl,
+                      obscureText: _obscureConfirm,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      smartDashesType: SmartDashesType.disabled,
+                      smartQuotesType: SmartQuotesType.disabled,
+                      decoration: InputDecoration(
+                        labelText: l.fieldPasswordConfirm,
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscureConfirm
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined),
+                          onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                        ),
+                      ),
+                      textInputAction: TextInputAction.done,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return l.fieldPasswordConfirmHint;
+                        if (v != _passCtrl.text) return l.validPasswordMismatch;
                         return null;
                       },
                     ),
