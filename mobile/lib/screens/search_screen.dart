@@ -615,10 +615,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => SwipeLiveScreen(
-                        streams: _streamResults,
-                        initialIndex: i,
-                      ),
+                      builder: (_) => SwipeLiveScreen.single(streamId: _streamResults[i].id),
                     ),
                   ),
                 ),
@@ -672,10 +669,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => SwipeLiveScreen(
-                          streams: _exploreStreams,
-                          initialIndex: i,
-                        ),
+                        builder: (_) => SwipeLiveScreen.single(streamId: _exploreStreams[i].id),
                       ),
                     ),
                   ),

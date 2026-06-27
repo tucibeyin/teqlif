@@ -152,14 +152,10 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     // Çevrimdışıyken yayına girmeyi engelle
     if (_isOffline) return;
     // ID ile ara: farklı liste örneklerinden gelen stream objelerini referans değil ID ile eşleştir
-    final idx = _streams.indexWhere((s) => s.id == stream.id);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SwipeLiveScreen(
-          streams: _streams,
-          initialIndex: idx < 0 ? 0 : idx,
-        ),
+        builder: (_) => SwipeLiveScreen.single(streamId: stream.id),
       ),
     ).then((_) => _load(bypassCache: true));
   }
