@@ -212,20 +212,33 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     }
   }
 
-  /// Son izleme sürelerine göre grup başına ilan sayısını hesaplar.
+  /// Son izleme sürelerine göre grup başına ilan sayısını hesaplar (0–3).
+  /// İlk yayından itibaren adapte eder; daha fazla veriyle daha kararlı hale gelir.
   int _computeListingsPerGroup() {
-    if (_recentDwells.length < 3) return 2; // yeterli veri yok → varsayılan
+    if (_recentDwells.isEmpty) return 2; // soğuk başlangıç
     final avgMs = _recentDwells.fold(0, (a, b) => a + b) ~/ _recentDwells.length;
-    if (avgMs < 3000) return 3;   // hızlı geçiyor → daha fazla ilan
-    if (avgMs > 15000) return 1;  // uzun izliyor → daha az ilan
-    return 2;
+    if (avgMs < 2000) return 3;   // çok hızlı kaydırıyor → max ilan
+    if (avgMs < 8000) return 2;   // normal izleme
+    if (avgMs < 20000) return 1;  // uzun izliyor → az ilan
+    return 0;                      // çok uzun izliyor → yayınlar arka arkaya
   }
 
   /// Bir yayın sayfasından çıkılınca dwell süresi kaydedilir, N güncellenir.
+  /// N değişirse öndeki (henüz görülmemiş) gruplar da yeniden hesaplanır.
   void _trackStreamDwell(int dwellMs) {
     _recentDwells.add(dwellMs);
     if (_recentDwells.length > 10) _recentDwells.removeAt(0);
-    _currentListingsPerGroup = _computeListingsPerGroup();
+    final newN = _computeListingsPerGroup();
+    if (newN == _currentListingsPerGroup) return;
+    _currentListingsPerGroup = newN;
+    // Mevcut sayfa ötesindeki grupları yeniden inşa et
+    final firstFutureGroup = _groupBoundaries.indexWhere(
+      (g) => g.$1 > _currentPage,
+    );
+    if (firstFutureGroup > 0) {
+      _groupBoundaries.removeRange(firstFutureGroup, _groupBoundaries.length);
+      _nextGroupStartPage = _groupBoundaries.last.$1 + 1 + _groupBoundaries.last.$2;
+    }
   }
 
   /// initialIndex numaralı canlı yayının hangi PageView sayfasında olduğunu hesaplar.
