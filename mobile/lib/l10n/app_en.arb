@@ -854,5 +854,9 @@
   "accountInfoCancel": "Cancel",
   "accountInfoOk": "OK",
   "accountInfoConnectError": "Could not connect to server",
-  "accountInfoMenuLabel": "My Information"
+  "accountInfoMenuLabel": "My Information",
+
+  "phoneInfoTitle": "Why phone number?",
+  "phoneInfoBody": "Your phone number helps us secure your account for high-value bids. We need to verify it to prevent fake bids and to reach you when you win. Your number is never shared with third parties.",
+  "phoneInfoGotIt": "Got it"
 }

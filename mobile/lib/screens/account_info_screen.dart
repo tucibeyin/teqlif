@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
@@ -10,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../core/app_exception.dart';
+import '../widgets/phone_input_field.dart';
 
 class AccountInfoScreen extends StatefulWidget {
   const AccountInfoScreen({super.key});
@@ -638,25 +638,14 @@ class _PhoneSheet extends StatefulWidget {
 }
 
 class _PhoneSheetState extends State<_PhoneSheet> {
-  final _phoneMask = MaskTextInputFormatter(
-    mask: '(###) ### ## ##',
-    filter: {'#': RegExp(r'[0-9]')},
-  );
-  final _ctrl = TextEditingController();
+  String? _phoneE164;
   bool _loading = false;
   bool _sent = false;
   String? _error;
 
-  String _toE164(String masked) {
-    final digits = masked.replaceAll(RegExp(r'\D'), '');
-    if (digits.length == 10) return '+90$digits';
-    if (digits.length == 11 && digits.startsWith('0')) return '+9${digits.substring(1)}';
-    return '+90$digits';
-  }
-
   Future<void> _send() async {
-    final phone = _toE164(_ctrl.text.trim());
-    if (phone.length < 13) {
+    final phone = _phoneE164;
+    if (phone == null || phone.length < 8) {
       setState(() => _error = AppLocalizations.of(context)!.accountInfoPhone);
       return;
     }
@@ -678,12 +667,6 @@ class _PhoneSheetState extends State<_PhoneSheet> {
     } catch (_) {
       if (mounted) setState(() { _error = AppLocalizations.of(context)!.accountInfoConnectError; _loading = false; });
     }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
   }
 
   @override
@@ -744,34 +727,11 @@ class _PhoneSheetState extends State<_PhoneSheet> {
               ),
             ],
             const SizedBox(height: 20),
-            TextField(
-              controller: _ctrl,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [_phoneMask],
-              style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16),
-              decoration: InputDecoration(
-                hintText: '(5##) ### ## ##',
-                hintStyle: TextStyle(color: AppColors.textSecondary(context)),
-                filled: true,
-                fillColor: AppColors.bg(context),
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('🇹🇷', style: TextStyle(fontSize: 18)),
-                      SizedBox(width: 6),
-                      Text('+90', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
-                    ],
-                  ),
-                ),
-                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                errorText: _error,
-                errorStyle: const TextStyle(color: Color(0xFFEF4444)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
-              onChanged: (_) { if (_error != null) setState(() => _error = null); },
+            PhoneInputField(
+              initialE164: widget.currentPhone,
+              errorText: _error,
+              onChanged: (e164) => setState(() { _phoneE164 = e164; _error = null; }),
+              onReset: () => setState(() => _phoneE164 = null),
             ),
             const SizedBox(height: 20),
             SizedBox(

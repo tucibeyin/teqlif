@@ -2018,4 +2018,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountInfoMenuLabel => 'My Information';
+
+  @override
+  String get phoneInfoTitle => 'Why phone number?';
+
+  @override
+  String get phoneInfoBody =>
+      'Your phone number helps us secure your account for high-value bids. We need to verify it to prevent fake bids and to reach you when you win. Your number is never shared with third parties.';
+
+  @override
+  String get phoneInfoGotIt => 'Got it';
 }

@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
@@ -19,6 +18,7 @@ import '../utils/price_formatter.dart';
 import 'shimmer_loading.dart';
 import 'smart_bid_picker.dart';
 import 'swipe_to_bid_button.dart';
+import 'phone_input_field.dart';
 import '../utils/bid_calculator.dart';
 
 class AuctionPanel extends ConsumerStatefulWidget {
@@ -1914,38 +1914,14 @@ class _PhoneVerifySheet extends StatefulWidget {
 }
 
 class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
-  final _phoneMask = MaskTextInputFormatter(
-    mask: '(###) ### ## ##',
-    filter: {'#': RegExp(r'[0-9]')},
-  );
-  late final TextEditingController _ctrl;
+  String? _phoneE164;
   bool _loading = false;
   bool _sent = false;
   String? _error;
 
-  @override
-  void initState() {
-    super.initState();
-    // Kaydedilmiş ama doğrulanmamış telefonu göster (ör. token süresi dolduysa tekrar gönderim kolaylaşır)
-    final existing = widget.existingPhone;
-    if (existing != null && existing.startsWith('+90') && existing.length >= 12) {
-      final local = existing.substring(3); // +90 sonrası 10 hane
-      _ctrl = TextEditingController(text: _phoneMask.maskText(local));
-    } else {
-      _ctrl = TextEditingController();
-    }
-  }
-
-  String _toE164(String masked) {
-    final digits = masked.replaceAll(RegExp(r'\D'), '');
-    if (digits.length == 10) return '+90$digits';
-    if (digits.length == 11 && digits.startsWith('0')) return '+9${digits.substring(1)}';
-    return '+90$digits';
-  }
-
   Future<void> _sendVerification() async {
-    final phone = _toE164(_ctrl.text.trim());
-    if (phone.length < 13) {
+    final phone = _phoneE164;
+    if (phone == null || phone.length < 8) {
       setState(() => _error = 'Geçerli bir telefon numarası girin');
       return;
     }
@@ -1970,12 +1946,6 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
     } catch (_) {
       setState(() { _error = 'Sunucuya bağlanılamadı'; _loading = false; });
     }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
   }
 
   @override
@@ -2044,44 +2014,11 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
               style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.55),
             ),
             const SizedBox(height: 24),
-            TextField(
-              controller: _ctrl,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [_phoneMask],
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              decoration: InputDecoration(
-                hintText: '(5##) ### ## ##',
-                hintStyle: const TextStyle(color: Color(0xFF475569)),
-                filled: true,
-                fillColor: const Color(0xFF0F172A),
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('🇹🇷', style: TextStyle(fontSize: 18)),
-                      SizedBox(width: 6),
-                      Text('+90', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
-                    ],
-                  ),
-                ),
-                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF334155)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF334155)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF0D9488), width: 1.5),
-                ),
-                errorText: _error,
-                errorStyle: const TextStyle(color: Color(0xFFEF4444)),
-              ),
-              onChanged: (_) { if (_error != null) setState(() => _error = null); },
+            PhoneInputField(
+              initialE164: widget.existingPhone,
+              errorText: _error,
+              onChanged: (e164) => setState(() { _phoneE164 = e164; _error = null; }),
+              onReset: () => setState(() => _phoneE164 = null),
             ),
             const SizedBox(height: 20),
             SizedBox(

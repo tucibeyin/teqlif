@@ -3861,6 +3861,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bilgilerim'**
   String get accountInfoMenuLabel;
+
+  /// No description provided for @phoneInfoTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Neden telefon numarası?'**
+  String get phoneInfoTitle;
+
+  /// No description provided for @phoneInfoBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefon numaranız, yüksek tutarlı tekliflerde hesabınızın güvenliğini sağlamak için kullanılır. Sahte teklifleri önlemek ve kazandığınızda size ulaşabilmek için bu bilgiyi doğrulamamız gerekir. Numaranız hiçbir zaman üçüncü taraflarla paylaşılmaz.'**
+  String get phoneInfoBody;
+
+  /// No description provided for @phoneInfoGotIt.
+  ///
+  /// In tr, this message translates to:
+  /// **'Anladım'**
+  String get phoneInfoGotIt;
 }
 
 class _AppLocalizationsDelegate

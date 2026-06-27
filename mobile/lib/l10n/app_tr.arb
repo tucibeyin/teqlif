@@ -855,5 +855,9 @@
   "accountInfoCancel": "İptal",
   "accountInfoOk": "Tamam",
   "accountInfoConnectError": "Sunucuya bağlanılamadı",
-  "accountInfoMenuLabel": "Bilgilerim"
+  "accountInfoMenuLabel": "Bilgilerim",
+
+  "phoneInfoTitle": "Neden telefon numarası?",
+  "phoneInfoBody": "Telefon numaranız, yüksek tutarlı tekliflerde hesabınızın güvenliğini sağlamak için kullanılır. Sahte teklifleri önlemek ve kazandığınızda size ulaşabilmek için bu bilgiyi doğrulamamız gerekir. Numaranız hiçbir zaman üçüncü taraflarla paylaşılmaz.",
+  "phoneInfoGotIt": "Anladım"
 }

@@ -2002,4 +2002,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accountInfoMenuLabel => 'معلوماتي';
+
+  @override
+  String get phoneInfoTitle => 'لماذا رقم الهاتف؟';
+
+  @override
+  String get phoneInfoBody =>
+      'يُستخدم رقم هاتفك لتأمين حسابك عند تقديم عروض بقيم عالية. نحتاج إلى التحقق منه لمنع العروض الوهمية وللتواصل معك عند فوزك. لن يُشارك رقمك مع أي جهة خارجية.';
+
+  @override
+  String get phoneInfoGotIt => 'فهمت';
 }

@@ -855,5 +855,9 @@
   "accountInfoCancel": "إلغاء",
   "accountInfoOk": "حسناً",
   "accountInfoConnectError": "تعذّر الاتصال بالخادم",
-  "accountInfoMenuLabel": "معلوماتي"
+  "accountInfoMenuLabel": "معلوماتي",
+
+  "phoneInfoTitle": "لماذا رقم الهاتف؟",
+  "phoneInfoBody": "يُستخدم رقم هاتفك لتأمين حسابك عند تقديم عروض بقيم عالية. نحتاج إلى التحقق منه لمنع العروض الوهمية وللتواصل معك عند فوزك. لن يُشارك رقمك مع أي جهة خارجية.",
+  "phoneInfoGotIt": "فهمت"
 }

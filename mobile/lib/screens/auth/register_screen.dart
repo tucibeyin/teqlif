@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
@@ -10,6 +9,7 @@ import '../../core/logger_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
 import '../../utils/error_helper.dart';
+import '../../widgets/phone_input_field.dart';
 import 'verify_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -25,12 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _usernameCtrl = TextEditingController();
   final _fullNameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _phoneMask = MaskTextInputFormatter(
-    mask: '0### ### ## ##',
-    filter: {'#': RegExp(r'[0-9]')},
-    type: MaskAutoCompletionType.lazy,
-  );
+  String? _phoneE164; // E.164 formatında telefon (+90532...)
 
   bool _loading = false;
   bool _obscure = true;
@@ -53,7 +48,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _usernameCtrl.dispose();
     _fullNameCtrl.dispose();
     _passCtrl.dispose();
-    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -84,16 +78,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  void _showPhoneInfoDialog(BuildContext context, dynamic l) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.shield_outlined, color: Color(0xFF06B6D4), size: 20),
+            const SizedBox(width: 8),
+            Text(l.phoneInfoTitle, style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Text(
+          l.phoneInfoBody,
+          style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.phoneInfoGotIt, style: const TextStyle(color: Color(0xFF06B6D4), fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openUrl(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  /// Telefon numarasını E.164 formatına çevirir: 0532... → +90532...
-  String? _toE164(String masked) {
-    final digits = masked.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 11) return null;
-    return '+90${digits.substring(1)}';
   }
 
   Future<void> _submit() async {
@@ -105,13 +119,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     setState(() => _loading = true);
     try {
-      final phone = _toE164(_phoneCtrl.text.trim());
       await AuthService.register(
         email: _emailCtrl.text.trim(),
         username: _usernameCtrl.text.trim(),
         fullName: _fullNameCtrl.text.trim(),
         password: _passCtrl.text,
-        phone: phone,
+        phone: _phoneE164,
       );
       if (mounted) {
         Navigator.of(context).push(
@@ -232,28 +245,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
                     // ── Telefon Numarası (İsteğe Bağlı) ──────────────────────
-                    TextFormField(
+                    Row(
+                      children: [
+                        Text(
+                          l.fieldPhone,
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                        ),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () => _showPhoneInfoDialog(context, l),
+                          child: Icon(Icons.help_outline_rounded, size: 15, color: AppColors.textSecondary(context)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    PhoneInputField(
                       key: const Key('register_input_telefon'),
-                      controller: _phoneCtrl,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [_phoneMask],
-                      decoration: InputDecoration(
-                        labelText: l.fieldPhone,
-                        hintText: l.fieldPhoneHint,
-                        prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                        suffixIcon: _phoneCtrl.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  _phoneCtrl.clear();
-                                  _phoneMask.clear();
-                                  setState(() {});
-                                },
-                              )
-                            : null,
-                      ),
-                      onChanged: (_) => setState(() {}),
-                      // Telefon opsiyonel — validasyon yok
+                      onChanged: (e164) => setState(() => _phoneE164 = e164),
+                      onReset: () => setState(() => _phoneE164 = null),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(

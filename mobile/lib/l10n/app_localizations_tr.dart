@@ -2018,4 +2018,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get accountInfoMenuLabel => 'Bilgilerim';
+
+  @override
+  String get phoneInfoTitle => 'Neden telefon numarası?';
+
+  @override
+  String get phoneInfoBody =>
+      'Telefon numaranız, yüksek tutarlı tekliflerde hesabınızın güvenliğini sağlamak için kullanılır. Sahte teklifleri önlemek ve kazandığınızda size ulaşabilmek için bu bilgiyi doğrulamamız gerekir. Numaranız hiçbir zaman üçüncü taraflarla paylaşılmaz.';
+
+  @override
+  String get phoneInfoGotIt => 'Anladım';
 }
