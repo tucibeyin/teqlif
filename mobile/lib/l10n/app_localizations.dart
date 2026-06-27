@@ -3891,6 +3891,132 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Anladım'**
   String get phoneInfoGotIt;
+
+  /// No description provided for @adReportTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'REKLAM RAPORU'**
+  String get adReportTitle;
+
+  /// No description provided for @adReportSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kampanyanızın gerçek zamanlı performansı'**
+  String get adReportSubtitle;
+
+  /// No description provided for @adReportLoading.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reklam analizi hazırlanıyor…'**
+  String get adReportLoading;
+
+  /// No description provided for @adReportLoadError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rapor yüklenemedi.'**
+  String get adReportLoadError;
+
+  /// No description provided for @adReportStatusActive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif'**
+  String get adReportStatusActive;
+
+  /// No description provided for @adReportStatusCompleted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tamamlandı'**
+  String get adReportStatusCompleted;
+
+  /// No description provided for @adReportStatusPaused.
+  ///
+  /// In tr, this message translates to:
+  /// **'Duraklatıldı'**
+  String get adReportStatusPaused;
+
+  /// No description provided for @adReportStatusCancelled.
+  ///
+  /// In tr, this message translates to:
+  /// **'İptal Edildi'**
+  String get adReportStatusCancelled;
+
+  /// No description provided for @adReportMetricImpressions.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gösterim'**
+  String get adReportMetricImpressions;
+
+  /// No description provided for @adReportMetricClicks.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tıklama'**
+  String get adReportMetricClicks;
+
+  /// No description provided for @adReportMetricClickRate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Her 100 Görüntülemede\nKaç Kişi Tıkladı'**
+  String get adReportMetricClickRate;
+
+  /// No description provided for @adReportMetricClickRateHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'{clicks} tıklama / {impressions} görüntüleme'**
+  String adReportMetricClickRateHint(int clicks, int impressions);
+
+  /// No description provided for @adReportMetricActiveDays.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif\nSüre'**
+  String get adReportMetricActiveDays;
+
+  /// No description provided for @adReportMetricActiveDaysLessThan1.
+  ///
+  /// In tr, this message translates to:
+  /// **'<1 gün'**
+  String get adReportMetricActiveDaysLessThan1;
+
+  /// No description provided for @adReportMetricActiveDaysValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'{days} gün'**
+  String adReportMetricActiveDaysValue(int days);
+
+  /// No description provided for @adReportSmartAnalysis.
+  ///
+  /// In tr, this message translates to:
+  /// **'Akıllı Analiz'**
+  String get adReportSmartAnalysis;
+
+  /// No description provided for @adReportInsightNoImpressions.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz kimse ilanınızı görmedi. İlan akışa girdiğinde burası güncellenecek.'**
+  String get adReportInsightNoImpressions;
+
+  /// No description provided for @adReportInsightGreat.
+  ///
+  /// In tr, this message translates to:
+  /// **'Harika! İlanınızı gören her 100 kişiden {clicks}\'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.'**
+  String adReportInsightGreat(int clicks);
+
+  /// No description provided for @adReportInsightGood.
+  ///
+  /// In tr, this message translates to:
+  /// **'İyi gidiyorsunuz. {impressions} kişi ilanınızı gördü, {clicks}\'i inceledi. Fotoğrafları veya başlığı geliştirerek daha fazla ilgi çekebilirsiniz.'**
+  String adReportInsightGood(int clicks, int impressions);
+
+  /// No description provided for @adReportInsightLow.
+  ///
+  /// In tr, this message translates to:
+  /// **'{impressions} kişi ilanınızı gördü ama sadece {clicks}\'i tıkladı. İlan kapak fotoğrafı veya fiyat, alıcıları yeterince çekmemiş olabilir.'**
+  String adReportInsightLow(int clicks, int impressions);
+
+  /// No description provided for @adReportInsightVeryLow.
+  ///
+  /// In tr, this message translates to:
+  /// **'{impressions} kişi ilanınızı gördü, {clicks} tıklama aldı. İlan başlığını, fotoğrafını ve fiyatını gözden geçirmenizi öneririz.'**
+  String adReportInsightVeryLow(int clicks, int impressions);
 }
 
 class _AppLocalizationsDelegate

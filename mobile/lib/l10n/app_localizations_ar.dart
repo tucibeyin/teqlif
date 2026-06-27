@@ -2018,4 +2018,80 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get phoneInfoGotIt => 'فهمت';
+
+  @override
+  String get adReportTitle => 'تقرير الإعلان';
+
+  @override
+  String get adReportSubtitle => 'أداء حملتك الإعلانية في الوقت الفعلي';
+
+  @override
+  String get adReportLoading => 'جارٍ تحليل الإعلان…';
+
+  @override
+  String get adReportLoadError => 'تعذّر تحميل التقرير.';
+
+  @override
+  String get adReportStatusActive => 'نشط';
+
+  @override
+  String get adReportStatusCompleted => 'مكتمل';
+
+  @override
+  String get adReportStatusPaused => 'متوقف';
+
+  @override
+  String get adReportStatusCancelled => 'ملغى';
+
+  @override
+  String get adReportMetricImpressions => 'المشاهدات';
+
+  @override
+  String get adReportMetricClicks => 'النقرات';
+
+  @override
+  String get adReportMetricClickRate => 'عدد النقرات\nلكل 100 مشاهدة';
+
+  @override
+  String adReportMetricClickRateHint(int clicks, int impressions) {
+    return '$clicks نقرة / $impressions مشاهدة';
+  }
+
+  @override
+  String get adReportMetricActiveDays => 'مدة\nالنشاط';
+
+  @override
+  String get adReportMetricActiveDaysLessThan1 => 'أقل من يوم';
+
+  @override
+  String adReportMetricActiveDaysValue(int days) {
+    return '$days أيام';
+  }
+
+  @override
+  String get adReportSmartAnalysis => 'تحليل ذكي';
+
+  @override
+  String get adReportInsightNoImpressions =>
+      'لم يرَ أحد إعلانك بعد. ستُحدَّث هذه الصفحة فور دخول الإعلان إلى الخلاصة.';
+
+  @override
+  String adReportInsightGreat(int clicks) {
+    return 'رائع! نقر $clicks من كل 100 شخص رأوا إعلانك — هذه نسبة تفاعل ممتازة. العنوان والصورة يجذبان المشترين.';
+  }
+
+  @override
+  String adReportInsightGood(int clicks, int impressions) {
+    return 'أداء جيد. شاهد $impressions شخصاً إعلانك وتفاعل معه $clicks. تحسين الصور أو العنوان قد يجلب اهتماماً أكبر.';
+  }
+
+  @override
+  String adReportInsightLow(int clicks, int impressions) {
+    return 'شاهد $impressions شخصاً إعلانك لكن $clicks فقط نقروا عليه. قد لا تكون الصورة الرئيسية أو السعر جذّابَيْن بما يكفي.';
+  }
+
+  @override
+  String adReportInsightVeryLow(int clicks, int impressions) {
+    return 'شاهد $impressions شخصاً إعلانك وحصل على $clicks نقرة. ننصح بمراجعة العنوان والصور والسعر.';
+  }
 }

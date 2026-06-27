@@ -2034,4 +2034,80 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get phoneInfoGotIt => 'Got it';
+
+  @override
+  String get adReportTitle => 'AD REPORT';
+
+  @override
+  String get adReportSubtitle => 'Real-time performance of your campaign';
+
+  @override
+  String get adReportLoading => 'Preparing ad analysis…';
+
+  @override
+  String get adReportLoadError => 'Could not load report.';
+
+  @override
+  String get adReportStatusActive => 'Active';
+
+  @override
+  String get adReportStatusCompleted => 'Completed';
+
+  @override
+  String get adReportStatusPaused => 'Paused';
+
+  @override
+  String get adReportStatusCancelled => 'Cancelled';
+
+  @override
+  String get adReportMetricImpressions => 'Views';
+
+  @override
+  String get adReportMetricClicks => 'Clicks';
+
+  @override
+  String get adReportMetricClickRate => 'Clicks per\n100 Views';
+
+  @override
+  String adReportMetricClickRateHint(int clicks, int impressions) {
+    return '$clicks clicks / $impressions views';
+  }
+
+  @override
+  String get adReportMetricActiveDays => 'Active\nDuration';
+
+  @override
+  String get adReportMetricActiveDaysLessThan1 => '<1 day';
+
+  @override
+  String adReportMetricActiveDaysValue(int days) {
+    return '$days days';
+  }
+
+  @override
+  String get adReportSmartAnalysis => 'Smart Analysis';
+
+  @override
+  String get adReportInsightNoImpressions =>
+      'No one has seen your listing yet. This will update once the listing enters the feed.';
+
+  @override
+  String adReportInsightGreat(int clicks) {
+    return 'Great! $clicks out of every 100 people who saw your listing clicked on it — that\'s an excellent engagement rate. Your title and photo are attracting buyers.';
+  }
+
+  @override
+  String adReportInsightGood(int clicks, int impressions) {
+    return 'Going well. $impressions people saw your listing and $clicks checked it out. Improving your photos or title can drive even more interest.';
+  }
+
+  @override
+  String adReportInsightLow(int clicks, int impressions) {
+    return '$impressions people saw your listing but only $clicks clicked. Your cover photo or price may not be appealing enough to buyers.';
+  }
+
+  @override
+  String adReportInsightVeryLow(int clicks, int impressions) {
+    return '$impressions people saw your listing and it got $clicks clicks. We recommend reviewing your title, photos, and pricing.';
+  }
 }

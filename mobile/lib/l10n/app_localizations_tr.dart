@@ -2034,4 +2034,81 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get phoneInfoGotIt => 'Anladım';
+
+  @override
+  String get adReportTitle => 'REKLAM RAPORU';
+
+  @override
+  String get adReportSubtitle => 'Kampanyanızın gerçek zamanlı performansı';
+
+  @override
+  String get adReportLoading => 'Reklam analizi hazırlanıyor…';
+
+  @override
+  String get adReportLoadError => 'Rapor yüklenemedi.';
+
+  @override
+  String get adReportStatusActive => 'Aktif';
+
+  @override
+  String get adReportStatusCompleted => 'Tamamlandı';
+
+  @override
+  String get adReportStatusPaused => 'Duraklatıldı';
+
+  @override
+  String get adReportStatusCancelled => 'İptal Edildi';
+
+  @override
+  String get adReportMetricImpressions => 'Gösterim';
+
+  @override
+  String get adReportMetricClicks => 'Tıklama';
+
+  @override
+  String get adReportMetricClickRate =>
+      'Her 100 Görüntülemede\nKaç Kişi Tıkladı';
+
+  @override
+  String adReportMetricClickRateHint(int clicks, int impressions) {
+    return '$clicks tıklama / $impressions görüntüleme';
+  }
+
+  @override
+  String get adReportMetricActiveDays => 'Aktif\nSüre';
+
+  @override
+  String get adReportMetricActiveDaysLessThan1 => '<1 gün';
+
+  @override
+  String adReportMetricActiveDaysValue(int days) {
+    return '$days gün';
+  }
+
+  @override
+  String get adReportSmartAnalysis => 'Akıllı Analiz';
+
+  @override
+  String get adReportInsightNoImpressions =>
+      'Henüz kimse ilanınızı görmedi. İlan akışa girdiğinde burası güncellenecek.';
+
+  @override
+  String adReportInsightGreat(int clicks) {
+    return 'Harika! İlanınızı gören her 100 kişiden $clicks\'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.';
+  }
+
+  @override
+  String adReportInsightGood(int clicks, int impressions) {
+    return 'İyi gidiyorsunuz. $impressions kişi ilanınızı gördü, $clicks\'i inceledi. Fotoğrafları veya başlığı geliştirerek daha fazla ilgi çekebilirsiniz.';
+  }
+
+  @override
+  String adReportInsightLow(int clicks, int impressions) {
+    return '$impressions kişi ilanınızı gördü ama sadece $clicks\'i tıkladı. İlan kapak fotoğrafı veya fiyat, alıcıları yeterince çekmemiş olabilir.';
+  }
+
+  @override
+  String adReportInsightVeryLow(int clicks, int impressions) {
+    return '$impressions kişi ilanınızı gördü, $clicks tıklama aldı. İlan başlığını, fotoğrafını ve fiyatını gözden geçirmenizi öneririz.';
+  }
 }
