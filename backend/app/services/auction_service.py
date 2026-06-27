@@ -609,7 +609,7 @@ class AuctionService:
                 and float(data.amount) > current_bid * _HIGH_BID_MULTIPLIER
             )
         )
-        if is_high_bid and not user.phone:
+        if is_high_bid and (not user.phone or not user.phone_verified):
             await _log_fraud_attempt(
                 "troll_bid_no_phone",
                 stream_id=stream_id,

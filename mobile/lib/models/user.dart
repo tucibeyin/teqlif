@@ -4,6 +4,8 @@ class User {
   final String username;
   final String fullName;
   final bool isVerified;
+  final String? phone;
+  final bool phoneVerified;
   final String? profileImageUrl;
   final String? profileImageThumbUrl;
 
@@ -13,6 +15,8 @@ class User {
     required this.username,
     required this.fullName,
     required this.isVerified,
+    this.phone,
+    this.phoneVerified = false,
     this.profileImageUrl,
     this.profileImageThumbUrl,
   });
@@ -24,6 +28,8 @@ class User {
       username: json['username'] as String,
       fullName: json['full_name'] as String,
       isVerified: json['is_verified'] as bool? ?? false,
+      phone: json['phone'] as String?,
+      phoneVerified: json['phone_verified'] as bool? ?? false,
       profileImageUrl: json['profile_image_url'] as String?,
       profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
     );

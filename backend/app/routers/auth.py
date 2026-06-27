@@ -3,6 +3,7 @@ import re
 import secrets
 from typing import Optional
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
@@ -10,7 +11,7 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS
 from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, set_auth_cookies, clear_auth_cookies
-from app.utils.email import send_verification_code
+from app.utils.email import send_verification_code, send_phone_verification_email
 from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException, ConflictException
 from app.core.logger import get_logger, capture_exception
@@ -23,6 +24,7 @@ VERIFY_CODE_TTL = 600          # 10 dakika
 _VERIFY_CODE_MIN = 100_000     # 6 haneli kod alt sınırı
 _VERIFY_CODE_RANGE = 900_000   # üretilecek kod aralığı (100000–999999)
 _USERNAME_RE = re.compile(r"^[a-z0-9_]{3,50}$")
+_PHONE_VERIFY_TOKEN_TTL = 1800  # 30 dakika
 
 
 async def _send_verification_email(
@@ -81,6 +83,27 @@ async def _create_user_and_send_code(
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
     await _send_verification_email(request, data.email, data.full_name, code)
+
+    # Telefon numarası verildiyse doğrulama e-postası da gönder
+    if data.phone:
+        import json as _json
+        phone_token = secrets.token_urlsafe(32)
+        await redis.setex(
+            f"phone_verify:{phone_token}",
+            _PHONE_VERIFY_TOKEN_TTL,
+            _json.dumps({"user_id": user.id, "phone": data.phone}),
+        )
+        base_url = str(request.base_url).rstrip("/")
+        try:
+            await send_phone_verification_email(
+                email=user.email,
+                full_name=user.full_name,
+                phone=data.phone,
+                yes_url=f"{base_url}/api/auth/phone-verify/confirm?token={phone_token}&action=yes",
+                no_url=f"{base_url}/api/auth/phone-verify/confirm?token={phone_token}&action=no",
+            )
+        except Exception as exc:
+            logger.warning("[PHONE_VERIFY] Kayıt sonrası e-posta gönderilemedi | %s", exc)
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -390,6 +413,151 @@ async def update_notification_prefs(
     await db.commit()
     await db.refresh(current_user)
     return data
+
+
+class _PhoneVerifyRequest(BaseModel):
+    phone: str
+
+
+@router.post("/phone-verify/request", status_code=status.HTTP_202_ACCEPTED)
+async def request_phone_verification(
+    data: _PhoneVerifyRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Telefon numarasını kaydedip doğrulama e-postası gönderir."""
+    from app.security.validation import SecureInputValidator
+    from fastapi.responses import JSONResponse
+
+    valid, err = SecureInputValidator.validate_phone(data.phone)
+    if not valid:
+        raise BadRequestException("Geçersiz telefon numarası formatı")
+
+    # Başka bir kullanıcıda kayıtlıysa reddet
+    existing = await db.scalar(
+        select(User).where(User.phone == data.phone, User.id != current_user.id)
+    )
+    if existing:
+        raise BadRequestException("Bu telefon numarası başka bir hesapta kayıtlı")
+
+    # Telefonu kaydet (henüz doğrulanmamış)
+    current_user.phone = data.phone
+    current_user.phone_verified = False
+    await db.commit()
+
+    # Token üret ve Redis'e kaydet
+    token = secrets.token_urlsafe(32)
+    redis = await get_redis()
+    import json as _json
+    await redis.setex(
+        f"phone_verify:{token}",
+        _PHONE_VERIFY_TOKEN_TTL,
+        _json.dumps({"user_id": current_user.id, "phone": data.phone}),
+    )
+
+    base_url = str(request.base_url).rstrip("/")
+    yes_url = f"{base_url}/api/auth/phone-verify/confirm?token={token}&action=yes"
+    no_url = f"{base_url}/api/auth/phone-verify/confirm?token={token}&action=no"
+
+    try:
+        await send_phone_verification_email(
+            email=current_user.email,
+            full_name=current_user.full_name,
+            phone=data.phone,
+            yes_url=yes_url,
+            no_url=no_url,
+        )
+    except Exception as exc:
+        logger.error("[PHONE_VERIFY] E-posta gönderilemedi | user_id=%s | %s", current_user.id, exc)
+
+    logger.info("[PHONE_VERIFY] Doğrulama e-postası gönderildi | user_id=%s phone=%s", current_user.id, data.phone)
+    return {"message": "Doğrulama e-postası gönderildi"}
+
+
+@router.get("/phone-verify/confirm")
+async def confirm_phone_verification(
+    token: str,
+    action: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """E-postadaki 'Evet/Hayır' linkini işler. HTML sayfa döner."""
+    from fastapi.responses import HTMLResponse
+    import json as _json
+
+    redis = await get_redis()
+    raw = await redis.get(f"phone_verify:{token}")
+
+    if not raw:
+        return HTMLResponse(_phone_verify_html(
+            "Bağlantı Geçersiz",
+            "Bu doğrulama bağlantısı geçersiz ya da süresi dolmuş.",
+            "#ef4444", False,
+        ))
+
+    data = _json.loads(raw)
+    user_id = data["user_id"]
+    phone = data["phone"]
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        await redis.delete(f"phone_verify:{token}")
+        return HTMLResponse(_phone_verify_html(
+            "Hata", "Kullanıcı bulunamadı.", "#ef4444", False,
+        ))
+
+    if action == "yes":
+        if user.phone == phone:
+            user.phone_verified = True
+            await db.commit()
+        await redis.delete(f"phone_verify:{token}")
+        return HTMLResponse(_phone_verify_html(
+            "Telefon Doğrulandı ✓",
+            f"<strong>{phone}</strong> numarası başarıyla doğrulandı. Uygulamaya dönebilirsiniz.",
+            "#0d9488", True,
+        ))
+    else:
+        # Hayır: telefonu temizle, kullanıcı profil sayfasından güncellesin
+        if user.phone == phone:
+            user.phone = None
+            user.phone_verified = False
+            await db.commit()
+        await redis.delete(f"phone_verify:{token}")
+        return HTMLResponse(_phone_verify_html(
+            "Numara Reddedildi",
+            "Telefon numarası hesabınızdan kaldırıldı. Uygulamadan profil sayfanıza gidip numaranızı güncelleyebilirsiniz.",
+            "#f59e0b", False,
+        ))
+
+
+def _phone_verify_html(title: str, body: str, color: str, success: bool) -> str:
+    icon = "✓" if success else "✕"
+    return f"""<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>teqlif — {title}</title>
+  <style>
+    body{{margin:0;background:#0f172a;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;}}
+    .card{{background:#1e293b;border-radius:20px;padding:40px 32px;max-width:380px;width:90%;text-align:center;box-shadow:0 8px 32px #00000066;}}
+    .icon{{width:72px;height:72px;border-radius:50%;background:{color}22;border:2px solid {color}66;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:32px;color:{color};}}
+    h2{{color:#f1f5f9;margin:0 0 12px;font-size:20px;}}
+    p{{color:#94a3b8;line-height:1.6;margin:0;font-size:14px;}}
+    .brand{{color:{color};font-weight:700;font-size:22px;margin-bottom:28px;}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">teqlif</div>
+    <div class="icon">{icon}</div>
+    <h2>{title}</h2>
+    <p>{body}</p>
+  </div>
+</body>
+</html>"""
 
 
 @router.post("/fcm-token")

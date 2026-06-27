@@ -46,6 +46,7 @@ class UserOut(BaseModel):
     is_active: bool
     is_verified: bool
     phone: Optional[str] = None
+    phone_verified: bool = False
     profile_image_url: Optional[str] = None
     profile_image_thumb_url: Optional[str] = None
     created_at: datetime

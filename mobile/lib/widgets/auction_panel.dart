@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
@@ -18,7 +19,6 @@ import 'shimmer_loading.dart';
 import 'smart_bid_picker.dart';
 import 'swipe_to_bid_button.dart';
 import '../utils/bid_calculator.dart';
-import '../screens/profile_screen.dart';
 
 class AuctionPanel extends ConsumerStatefulWidget {
   final int streamId;
@@ -1187,7 +1187,6 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
   void _showPhoneVerificationSheet() {
     if (!mounted) return;
-    final l = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E293B),
@@ -1195,92 +1194,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       isScrollControlled: true,
-      builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24, 8, 24, MediaQuery.of(sheetCtx).viewInsets.bottom + 32,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            // Ikon
-            Container(
-              width: 64, height: 64,
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
-              ),
-              child: const Icon(Icons.verified_user_rounded, color: Colors.amber, size: 30),
-            ),
-            const SizedBox(height: 18),
-            // Başlık
-            Text(
-              l.fraudShieldTitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Açıklama
-            Text(
-              l.fraudShieldDesc,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF94A3B8),
-                fontSize: 13,
-                height: 1.55,
-              ),
-            ),
-            const SizedBox(height: 28),
-            // Doğrula butonu
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(sheetCtx); // bottom sheet'i kapat
-                  Navigator.of(context, rootNavigator: true).push(
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
-                },
-                icon: const Icon(Icons.phone_android_rounded, size: 18),
-                label: Text(
-                  l.fraudShieldVerifyBtn,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber.shade600,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            // İptal
-            TextButton(
-              onPressed: () => Navigator.pop(sheetCtx),
-              child: Text(
-                l.fraudShieldDismiss,
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
-              ),
-            ),
-          ],
-        ),
+      builder: (sheetCtx) => _PhoneVerifySheet(
+        onClose: () => Navigator.pop(sheetCtx),
       ),
     );
   }
@@ -1973,6 +1888,207 @@ class _AuctionStatusBadge extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phone verification bottom sheet
+// ---------------------------------------------------------------------------
+
+class _PhoneVerifySheet extends StatefulWidget {
+  final VoidCallback onClose;
+  const _PhoneVerifySheet({required this.onClose});
+
+  @override
+  State<_PhoneVerifySheet> createState() => _PhoneVerifySheetState();
+}
+
+class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
+  final _phoneMask = MaskTextInputFormatter(
+    mask: '(###) ### ## ##',
+    filter: {'#': RegExp(r'[0-9]')},
+  );
+  final _ctrl = TextEditingController();
+  bool _loading = false;
+  bool _sent = false;
+  String? _error;
+
+  String _toE164(String masked) {
+    final digits = masked.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 10) return '+90$digits';
+    if (digits.length == 11 && digits.startsWith('0')) return '+9${digits.substring(1)}';
+    return '+90$digits';
+  }
+
+  Future<void> _sendVerification() async {
+    final phone = _toE164(_ctrl.text.trim());
+    if (phone.length < 13) {
+      setState(() => _error = 'Geçerli bir telefon numarası girin');
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final token = await StorageService.getToken();
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/auth/phone-verify/request'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'phone': phone}),
+      );
+      if (resp.statusCode == 202) {
+        setState(() { _sent = true; _loading = false; });
+      } else {
+        final msg = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String?
+            ?? 'Bir hata oluştu';
+        setState(() { _error = msg; _loading = false; });
+      }
+    } catch (_) {
+      setState(() { _error = 'Sunucuya bağlanılamadı'; _loading = false; });
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 32,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40, height: 4,
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            width: 64, height: 64,
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
+            ),
+            child: const Icon(Icons.verified_user_rounded, color: Colors.amber, size: 30),
+          ),
+          const SizedBox(height: 18),
+          if (_sent) ...[
+            const Icon(Icons.mark_email_read_outlined, color: Color(0xFF0D9488), size: 40),
+            const SizedBox(height: 14),
+            const Text(
+              'E-posta Gönderildi',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Kayıtlı e-posta adresinize doğrulama bağlantısı gönderdik. Lütfen gelen kutunuzu kontrol edin.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.55),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: widget.onClose,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9488),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Tamam', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              ),
+            ),
+          ] else ...[
+            const Text(
+              'Telefon Doğrulaması',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Yüksek tutarlı teklifler için telefon doğrulaması gerekiyor. Numaranızı girin, e-posta ile doğrulayın.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.55),
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _ctrl,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [_phoneMask],
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              decoration: InputDecoration(
+                hintText: '(5##) ### ## ##',
+                hintStyle: const TextStyle(color: Color(0xFF475569)),
+                filled: true,
+                fillColor: const Color(0xFF0F172A),
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('🇹🇷', style: TextStyle(fontSize: 18)),
+                      SizedBox(width: 6),
+                      Text('+90', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+                    ],
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF334155)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF334155)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF0D9488), width: 1.5),
+                ),
+                errorText: _error,
+                errorStyle: const TextStyle(color: Color(0xFFEF4444)),
+              ),
+              onChanged: (_) { if (_error != null) setState(() => _error = null); },
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _sendVerification,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber.shade600,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _loading
+                    ? const SizedBox(
+                        height: 20, width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                      )
+                    : const Text('Doğrulama E-postası Gönder',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: widget.onClose,
+              child: const Text('İptal', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
