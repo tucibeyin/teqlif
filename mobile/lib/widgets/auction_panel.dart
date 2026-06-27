@@ -13,6 +13,7 @@ import '../core/logger_service.dart';
 import '../models/auction.dart';
 import '../providers/auction_provider.dart';
 import '../services/auction_service.dart';
+import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../utils/price_formatter.dart';
 import 'shimmer_loading.dart';
@@ -1185,7 +1186,13 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     _setMsg(message, error: true);
   }
 
-  void _showPhoneVerificationSheet() {
+  Future<void> _showPhoneVerificationSheet() async {
+    if (!mounted) return;
+    String? existingPhone;
+    try {
+      final user = await AuthService.me();
+      if (!user.phoneVerified) existingPhone = user.phone;
+    } catch (_) {}
     if (!mounted) return;
     showModalBottomSheet(
       context: context,
@@ -1196,6 +1203,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
       isScrollControlled: true,
       builder: (sheetCtx) => _PhoneVerifySheet(
         onClose: () => Navigator.pop(sheetCtx),
+        existingPhone: existingPhone,
       ),
     );
   }
@@ -1898,7 +1906,8 @@ class _AuctionStatusBadge extends StatelessWidget {
 
 class _PhoneVerifySheet extends StatefulWidget {
   final VoidCallback onClose;
-  const _PhoneVerifySheet({required this.onClose});
+  final String? existingPhone;
+  const _PhoneVerifySheet({required this.onClose, this.existingPhone});
 
   @override
   State<_PhoneVerifySheet> createState() => _PhoneVerifySheetState();
@@ -1909,10 +1918,23 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
     mask: '(###) ### ## ##',
     filter: {'#': RegExp(r'[0-9]')},
   );
-  final _ctrl = TextEditingController();
+  late final TextEditingController _ctrl;
   bool _loading = false;
   bool _sent = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Kaydedilmiş ama doğrulanmamış telefonu göster (ör. token süresi dolduysa tekrar gönderim kolaylaşır)
+    final existing = widget.existingPhone;
+    if (existing != null && existing.startsWith('+90') && existing.length >= 12) {
+      final local = existing.substring(3); // +90 sonrası 10 hane
+      _ctrl = TextEditingController(text: _phoneMask.maskText(local));
+    } else {
+      _ctrl = TextEditingController();
+    }
+  }
 
   String _toE164(String masked) {
     final digits = masked.replaceAll(RegExp(r'\D'), '');
