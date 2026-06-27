@@ -2036,6 +2036,65 @@ class AppLocalizationsTr extends AppLocalizations {
   String get phoneInfoGotIt => 'Anladım';
 
   @override
+  String get boostOnlyPro => '⭐ İlan öne çıkarma yalnızca Pro üyelere özeldir.';
+
+  @override
+  String boostLimitExhausted(int limit) {
+    return 'Bu ay $limit boost hakkını kullandın. Yeni ay başında sıfırlanır.';
+  }
+
+  @override
+  String get boostDialogTitle => 'İlanı Öne Çıkar';
+
+  @override
+  String get boostDialogPlanLabel => 'Kampanya planı:';
+
+  @override
+  String get boostDialogTotalBudget => 'Toplam Bütçe';
+
+  @override
+  String get boostDialogTotalBudgetValue => '50 TUCi';
+
+  @override
+  String get boostDialogCpc => 'Tıklama Başı Maliyet';
+
+  @override
+  String get boostDialogCpcValue => '1 TUCi';
+
+  @override
+  String get boostDialogEstClicks => 'Tahmini Tıklama';
+
+  @override
+  String get boostDialogEstClicksValue => '~50 tıklama';
+
+  @override
+  String get boostDialogFeedHint =>
+      'İlanınız \"Sana Özel\" akışında öne çıkarılacak.';
+
+  @override
+  String boostDialogCredits(int remaining, int limit) {
+    return '⭐ Kalan boost hakkı: $remaining / $limit';
+  }
+
+  @override
+  String get boostDialogStart => 'Başlat';
+
+  @override
+  String get boostSuccess => '🔥 İlanınız öne çıkarıldı!';
+
+  @override
+  String get boostErrorDefault => 'Kampanya başlatılamadı.';
+
+  @override
+  String get boostErrorConnection => 'Bağlantı hatası. Lütfen tekrar deneyin.';
+
+  @override
+  String get boostBtnStart => 'İlanı Öne Çıkar';
+
+  @override
+  String get boostBtnReport => 'Reklam Performansını Gör';
+
+  @override
   String get adReportTitle => 'REKLAM RAPORU';
 
   @override

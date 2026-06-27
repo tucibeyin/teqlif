@@ -3892,6 +3892,114 @@ abstract class AppLocalizations {
   /// **'Anladım'**
   String get phoneInfoGotIt;
 
+  /// No description provided for @boostOnlyPro.
+  ///
+  /// In tr, this message translates to:
+  /// **'⭐ İlan öne çıkarma yalnızca Pro üyelere özeldir.'**
+  String get boostOnlyPro;
+
+  /// No description provided for @boostLimitExhausted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ay {limit} boost hakkını kullandın. Yeni ay başında sıfırlanır.'**
+  String boostLimitExhausted(int limit);
+
+  /// No description provided for @boostDialogTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanı Öne Çıkar'**
+  String get boostDialogTitle;
+
+  /// No description provided for @boostDialogPlanLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kampanya planı:'**
+  String get boostDialogPlanLabel;
+
+  /// No description provided for @boostDialogTotalBudget.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Bütçe'**
+  String get boostDialogTotalBudget;
+
+  /// No description provided for @boostDialogTotalBudgetValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'50 TUCi'**
+  String get boostDialogTotalBudgetValue;
+
+  /// No description provided for @boostDialogCpc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tıklama Başı Maliyet'**
+  String get boostDialogCpc;
+
+  /// No description provided for @boostDialogCpcValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'1 TUCi'**
+  String get boostDialogCpcValue;
+
+  /// No description provided for @boostDialogEstClicks.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tahmini Tıklama'**
+  String get boostDialogEstClicks;
+
+  /// No description provided for @boostDialogEstClicksValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'~50 tıklama'**
+  String get boostDialogEstClicksValue;
+
+  /// No description provided for @boostDialogFeedHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınız \"Sana Özel\" akışında öne çıkarılacak.'**
+  String get boostDialogFeedHint;
+
+  /// No description provided for @boostDialogCredits.
+  ///
+  /// In tr, this message translates to:
+  /// **'⭐ Kalan boost hakkı: {remaining} / {limit}'**
+  String boostDialogCredits(int remaining, int limit);
+
+  /// No description provided for @boostDialogStart.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlat'**
+  String get boostDialogStart;
+
+  /// No description provided for @boostSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'🔥 İlanınız öne çıkarıldı!'**
+  String get boostSuccess;
+
+  /// No description provided for @boostErrorDefault.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kampanya başlatılamadı.'**
+  String get boostErrorDefault;
+
+  /// No description provided for @boostErrorConnection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bağlantı hatası. Lütfen tekrar deneyin.'**
+  String get boostErrorConnection;
+
+  /// No description provided for @boostBtnStart.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanı Öne Çıkar'**
+  String get boostBtnStart;
+
+  /// No description provided for @boostBtnReport.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reklam Performansını Gör'**
+  String get boostBtnReport;
+
   /// No description provided for @adReportTitle.
   ///
   /// In tr, this message translates to:

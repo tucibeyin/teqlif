@@ -525,18 +525,19 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     } catch (_) {}
 
     if (!mounted) return;
+    final l = AppLocalizations.of(ctx)!;
 
     // Pro değilse veya kredit bittiyse direkt bilgilendir
     if (!isPro) {
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-        content: Text('⭐ İlan öne çıkarma yalnızca Pro üyelere özeldir.'),
-        backgroundColor: Color(0xFFF97316),
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content: Text(l.boostOnlyPro),
+        backgroundColor: const Color(0xFFF97316),
       ));
       return;
     }
     if (remaining <= 0) {
       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-        content: Text('Bu ay $limit boost hakkını kullandın. Yeni ay başında sıfırlanır.'),
+        content: Text(l.boostLimitExhausted(limit)),
         backgroundColor: const Color(0xFFDC2626),
       ));
       return;
@@ -544,48 +545,51 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
     final confirmed = await showDialog<bool>(
       context: ctx,
-      builder: (dlgCtx) => AlertDialog(
-        title: const Text('İlanı Öne Çıkar', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Kampanya planı:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-            const SizedBox(height: 10),
-            const _BoostRow(icon: Icons.account_balance_wallet_outlined, label: 'Toplam Bütçe', value: '50 TUCi'),
-            const _BoostRow(icon: Icons.ads_click, label: 'Tıklama Başı Maliyet', value: '1 TUCi'),
-            const _BoostRow(icon: Icons.touch_app_outlined, label: 'Tahmini Tıklama', value: '~50 tıklama'),
-            const SizedBox(height: 12),
-            Text(
-              'İlanınız "Sana Özel" akışında öne çıkarılacak.',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(8),
+      builder: (dlgCtx) {
+        final dl = AppLocalizations.of(dlgCtx)!;
+        return AlertDialog(
+          title: Text(dl.boostDialogTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(dl.boostDialogPlanLabel, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(height: 10),
+              _BoostRow(icon: Icons.account_balance_wallet_outlined, label: dl.boostDialogTotalBudget, value: dl.boostDialogTotalBudgetValue),
+              _BoostRow(icon: Icons.ads_click, label: dl.boostDialogCpc, value: dl.boostDialogCpcValue),
+              _BoostRow(icon: Icons.touch_app_outlined, label: dl.boostDialogEstClicks, value: dl.boostDialogEstClicksValue),
+              const SizedBox(height: 12),
+              Text(
+                dl.boostDialogFeedHint,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
-              child: Text(
-                '⭐ Kalan boost hakkı: $remaining / $limit',
-                style: const TextStyle(fontSize: 12, color: Color(0xFFF97316), fontWeight: FontWeight.w600),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  dl.boostDialogCredits(remaining, limit),
+                  style: const TextStyle(fontSize: 12, color: Color(0xFFF97316), fontWeight: FontWeight.w600),
+                ),
               ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: Text(dl.btnCancel)),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dlgCtx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF97316),
+                foregroundColor: Colors.white,
+              ),
+              child: Text(dl.boostDialogStart),
             ),
           ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: const Text('İptal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dlgCtx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF97316),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Başlat'),
-          ),
-        ],
-      ),
+        );
+      },
     );
 
     if (confirmed != true || !mounted) return;
@@ -605,23 +609,21 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         }),
       );
       if (!mounted) return;
+      final ll = AppLocalizations.of(context)!;
       if (resp.statusCode == 201) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        // Butonu hemen "Performansı Gör"e çevir — yeniden açmaya gerek yok
         setState(() {
           _campaignId = data['id'] as int?;
           widget.listing['campaign_id'] = _campaignId;
           widget.listing['is_sponsored'] = true;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🔥 İlanınız öne çıkarıldı!'),
-            backgroundColor: Color(0xFFF97316),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ll.boostSuccess),
+          backgroundColor: const Color(0xFFF97316),
+        ));
       } else {
         final body = jsonDecode(resp.body) as Map<String, dynamic>;
-        final msg = body['detail'] ?? 'Kampanya başlatılamadı.';
+        final msg = body['detail'] ?? ll.boostErrorDefault;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(msg.toString()),
           backgroundColor: resp.statusCode == 402 ? const Color(0xFFDC2626) : null,
@@ -629,8 +631,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       }
     } catch (_) {
       if (mounted) {
+        final ll = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bağlantı hatası. Lütfen tekrar deneyin.')),
+          SnackBar(content: Text(ll.boostErrorConnection)),
         );
       }
     }
@@ -1137,31 +1140,34 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           ? SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: _campaignId != null
-                    ? ElevatedButton.icon(
-                        onPressed: () => _openAdReport(context),
-                        icon: const Text('📊', style: TextStyle(fontSize: 16)),
-                        label: const Text('Reklam Performansını Gör'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6366F1),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                        ),
-                      )
-                    : ElevatedButton.icon(
-                        onPressed: () => _boostListing(context),
-                        icon: const Text('🔥', style: TextStyle(fontSize: 16)),
-                        label: const Text('İlanı Öne Çıkar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFF97316),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                        ),
-                      ),
+                child: Builder(builder: (ctx) {
+                    final l = AppLocalizations.of(ctx)!;
+                    return _campaignId != null
+                        ? ElevatedButton.icon(
+                            onPressed: () => _openAdReport(context),
+                            icon: const Text('📊', style: TextStyle(fontSize: 16)),
+                            label: Text(l.boostBtnReport),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF6366F1),
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                            ),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: () => _boostListing(context),
+                            icon: const Text('🔥', style: TextStyle(fontSize: 16)),
+                            label: Text(l.boostBtnStart),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF97316),
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                            ),
+                          );
+                  }),
               ),
             )
           : SafeArea(

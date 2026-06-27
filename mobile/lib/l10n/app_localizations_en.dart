@@ -2036,6 +2036,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get phoneInfoGotIt => 'Got it';
 
   @override
+  String get boostOnlyPro =>
+      '⭐ Promoting a listing is exclusive to Pro members.';
+
+  @override
+  String boostLimitExhausted(int limit) {
+    return 'You\'ve used all $limit boost credits this month. Resets at the start of next month.';
+  }
+
+  @override
+  String get boostDialogTitle => 'Promote Listing';
+
+  @override
+  String get boostDialogPlanLabel => 'Campaign plan:';
+
+  @override
+  String get boostDialogTotalBudget => 'Total Budget';
+
+  @override
+  String get boostDialogTotalBudgetValue => '50 TUCi';
+
+  @override
+  String get boostDialogCpc => 'Cost per Click';
+
+  @override
+  String get boostDialogCpcValue => '1 TUCi';
+
+  @override
+  String get boostDialogEstClicks => 'Estimated Clicks';
+
+  @override
+  String get boostDialogEstClicksValue => '~50 clicks';
+
+  @override
+  String get boostDialogFeedHint =>
+      'Your listing will be featured in the \"For You\" feed.';
+
+  @override
+  String boostDialogCredits(int remaining, int limit) {
+    return '⭐ Remaining boosts: $remaining / $limit';
+  }
+
+  @override
+  String get boostDialogStart => 'Start';
+
+  @override
+  String get boostSuccess => '🔥 Your listing is now featured!';
+
+  @override
+  String get boostErrorDefault => 'Could not start campaign.';
+
+  @override
+  String get boostErrorConnection => 'Connection error. Please try again.';
+
+  @override
+  String get boostBtnStart => 'Promote Listing';
+
+  @override
+  String get boostBtnReport => 'View Ad Performance';
+
+  @override
   String get adReportTitle => 'AD REPORT';
 
   @override

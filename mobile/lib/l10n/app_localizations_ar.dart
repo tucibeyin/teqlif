@@ -2020,6 +2020,64 @@ class AppLocalizationsAr extends AppLocalizations {
   String get phoneInfoGotIt => 'فهمت';
 
   @override
+  String get boostOnlyPro => '⭐ تمييز الإعلانات متاح لأعضاء Pro فقط.';
+
+  @override
+  String boostLimitExhausted(int limit) {
+    return 'لقد استنفدت $limit رصيداً لتمييز الإعلانات هذا الشهر. يُجدَّد في بداية الشهر القادم.';
+  }
+
+  @override
+  String get boostDialogTitle => 'تمييز الإعلان';
+
+  @override
+  String get boostDialogPlanLabel => 'خطة الحملة:';
+
+  @override
+  String get boostDialogTotalBudget => 'إجمالي الميزانية';
+
+  @override
+  String get boostDialogTotalBudgetValue => '50 TUCi';
+
+  @override
+  String get boostDialogCpc => 'التكلفة لكل نقرة';
+
+  @override
+  String get boostDialogCpcValue => '1 TUCi';
+
+  @override
+  String get boostDialogEstClicks => 'النقرات المتوقعة';
+
+  @override
+  String get boostDialogEstClicksValue => '~50 نقرة';
+
+  @override
+  String get boostDialogFeedHint => 'سيظهر إعلانك بشكل مميز في خلاصة \"لك\".';
+
+  @override
+  String boostDialogCredits(int remaining, int limit) {
+    return '⭐ الأرصدة المتبقية: $remaining / $limit';
+  }
+
+  @override
+  String get boostDialogStart => 'بدء';
+
+  @override
+  String get boostSuccess => '🔥 تم تمييز إعلانك!';
+
+  @override
+  String get boostErrorDefault => 'تعذّر بدء الحملة.';
+
+  @override
+  String get boostErrorConnection => 'خطأ في الاتصال. يرجى المحاولة مجدداً.';
+
+  @override
+  String get boostBtnStart => 'تمييز الإعلان';
+
+  @override
+  String get boostBtnReport => 'عرض أداء الإعلان';
+
+  @override
   String get adReportTitle => 'تقرير الإعلان';
 
   @override
