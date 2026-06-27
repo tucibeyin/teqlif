@@ -15,7 +15,7 @@ _WELCOME_COPY = {
         "phone_title": "Telefon Doğrulaması",
         "phone_no_body": "Yüksek tutarlı tekliflerde güvenli işlem yapabilmek için telefon numaranızı doğrulamanızı öneririz. Uygulamada <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından kolayca ekleyebilirsiniz.",
         "phone_yes_body": "Telefon numaranızı kayıt sırasında eklediniz. Güvenli teklif verebilmek için <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından doğrulamayı tamamlayın.",
-        "footer": "Sorularınız için her zaman buradayız.<br><strong style=\"color:#64748b\">teqlif ekibi</strong>",
+        "footer": "Sorularınız için her zaman buradayız.<br>Bize ulaşın: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">teqlif ekibi</strong>",
         "copyright": "© 2025 teqlif · Bu e-postayı almak istemiyorsanız hesap ayarlarınızdan bildirim tercihlerinizi güncelleyebilirsiniz.",
     },
     "en": {
@@ -30,7 +30,7 @@ _WELCOME_COPY = {
         "phone_title": "Phone Verification",
         "phone_no_body": "To place high-value bids securely, we recommend verifying your phone number. You can add it anytime from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> in the app.",
         "phone_yes_body": "You added a phone number during sign-up. Complete verification from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> to bid safely.",
-        "footer": "We're always here if you need us.<br><strong style=\"color:#64748b\">The teqlif team</strong>",
+        "footer": "We're always here if you need us.<br>Contact us: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">The teqlif team</strong>",
         "copyright": "© 2025 teqlif · You can update your notification preferences in account settings.",
     },
     "ar": {
@@ -45,7 +45,7 @@ _WELCOME_COPY = {
         "phone_title": "التحقق من الهاتف",
         "phone_no_body": "لإجراء مزايدات عالية القيمة بأمان، نوصيك بالتحقق من رقم هاتفك. يمكنك إضافته من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> في التطبيق.",
         "phone_yes_body": "أضفت رقم هاتفك أثناء التسجيل. أكمل التحقق من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> لتتمكن من المزايدة بأمان.",
-        "footer": "نحن هنا دائماً إذا احتجت إلى مساعدة.<br><strong style=\"color:#64748b\">فريق teqlif</strong>",
+        "footer": "نحن هنا دائماً إذا احتجت إلى مساعدة.<br>تواصل معنا: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">فريق teqlif</strong>",
         "copyright": "© 2025 teqlif · يمكنك تحديث تفضيلات الإشعارات من إعدادات الحساب.",
     },
 }
@@ -240,6 +240,7 @@ async def send_phone_verification_email(
     </a>
   </div>
   <p style="color:#64748b;font-size:12px">Bu bağlantı <strong>30 dakika</strong> geçerlidir. Bu isteği siz yapmadıysanız yok sayabilirsiniz.</p>
+  <p style="color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #1e293b;padding-top:16px">Sorularınız için: <a href="mailto:destek@teqlif.com" style="color:#06b6d4;text-decoration:none">destek@teqlif.com</a></p>
 </div>
 """,
     }
@@ -278,6 +279,7 @@ async def send_verification_code(email: str, full_name: str, code: str, *, has_p
             f"<p>Bu kod <strong>10 dakika</strong> geçerlidir.</p>"
             f"{phone_note}"
             f"<p>Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>"
+            f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>Sorularınız için: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a></p>"
         ),
     }
 
