@@ -723,6 +723,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.grid_off_outlined,
                               size: 52, color: Color(0xFFD1D5DB)),
@@ -754,6 +755,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.search_off_rounded, size: 52, color: Color(0xFFD1D5DB)),
                       SizedBox(height: 12),
