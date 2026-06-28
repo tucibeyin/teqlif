@@ -1196,11 +1196,16 @@ class _SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _biometricEnabled = false;
   bool _biometricAvailable = false;
+  // widget.user stale olabilir — StorageService'ten güncel değer okunur
+  bool _isPremium = false;
 
   @override
   void initState() {
     super.initState();
+    // widget.user'dan ön değer al (anlık gösterim için)
+    _isPremium = widget.user?['is_premium'] == true;
     _loadBiometricState();
+    _loadPremiumStatus();
   }
 
   Future<void> _loadBiometricState() async {
@@ -1211,6 +1216,16 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
         _biometricAvailable = available;
         _biometricEnabled = enabled;
       });
+    }
+  }
+
+  /// StorageService'ten güncel PRO statüsünü çeker.
+  /// Admin panelinden yapılan değişiklikler profil açılışında
+  /// saveUserInfo ile kaydedildiğinden burada güncel değer okunur.
+  Future<void> _loadPremiumStatus() async {
+    final info = await StorageService.getUserInfo();
+    if (mounted && info != null) {
+      setState(() => _isPremium = info['is_premium'] == true);
     }
   }
 
@@ -1545,7 +1560,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.workspace_premium_outlined,
                 iconColor: const Color(0xFF06B6D4),
                 label: '👑 ${l.proHubTitle}',
-                trailing: widget.user?['is_premium'] == true
+                trailing: _isPremium
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
@@ -1624,7 +1639,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => NotificationSettingsScreen(
-                      isPremium: widget.user?['is_premium'] == true,
+                      isPremium: _isPremium,
                     ),
                   ),
                 ),
