@@ -34,7 +34,7 @@ from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
-CONFIG_CACHE_TTL = 300   # 5 dakika
+CONFIG_CACHE_TTL = 120   # 2 dakika (daha sık güncelleme → seans içi davranış yansır)
 AFFINITY_CACHE_TTL = 900  # 15 dakika (worker tarafından yazılır)
 
 # ----------------------------  PUBLIC API  -----------------------------------
@@ -187,19 +187,24 @@ def _score_stream(
 
 
 def _compute_listings_per_group(listing_engagement: dict) -> int:
-    """CTR'a göre yayınlar arası ilan sayısı (0-3)."""
+    """CTR'a göre yayınlar arası ilan sayısı (0-3).
+
+    Eşikler daraltıldı: çoğunluk artık 2 bandında takılmıyor.
+    Soğuk başlanguç 1'e indirildi — yeterli veri gelince yukarı veya aşağı adapt eder.
+    """
     clicks = listing_engagement.get("clicks", 0)
     impressions = listing_engagement.get("impressions", 0)
-    if impressions < 5:
-        return 2  # soğuk başlangıç
+    if impressions < 3:
+        return 1  # soğuk başlanguç: nötr başlangıç noktası
     ctr = clicks / impressions
-    if ctr >= 0.15:
+    # CTR eşikleri: daha dar bantlar, daha hassas adaptasyon
+    if ctr >= 0.12:   # Aktif tıklayıcı → çok ilan göster
         return 3
-    if ctr >= 0.08:
+    if ctr >= 0.05:   # Orta ilgi → biraz ilan göster
         return 2
-    if ctr >= 0.03:
+    if ctr >= 0.02:   # Düşük ilgi → az ilan göster
         return 1
-    return 0
+    return 0           # İlan tıklamayan kullanıcı → ilan gösterme
 
 
 # ----------------------------  CLICKHOUSE QUERIES  --------------------------

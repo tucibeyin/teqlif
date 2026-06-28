@@ -159,7 +159,12 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   // Davranış takibi: yayın izleme süresine göre ilan sayısı güncellenir
   final List<int> _recentDwells = []; // son 10 yayın dwell süresi (ms)
-  int? _dwellStart; // mevcut yayın sayfasına girildiği an (ms epoch)
+  int? _dwellStart;        // mevcut yayın sayfasına girildiği an (ms epoch)
+  int? _listingPageStart;  // mevcut ilan sayfasına girildiği an (ms epoch)
+  // Seans içi hızlı ilan geçişi sayacı — ard arda kaç listing hızlı geçildi
+  int _fastListingStreak = 0;
+  // Hızlı geçiş eşiği (ms): bu süreden kısa geçişler "hızlı" sayılır
+  static const int _listingFastThresholdMs = 1500;
 
   // Kişiselleştirme — tercih edilen ilan kategorileri (backend'den gelir)
   List<String> _preferredListingCategories = [];
@@ -292,13 +297,14 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     if (_recentDwells.isEmpty) return 2; // soğuk başlangıç
     final avgMs = _recentDwells.fold(0, (a, b) => a + b) ~/ _recentDwells.length;
     // Eşikler gerçek kullanım davranışına göre ayarlandı:
-    // < 5s  → hızlı geziniyor, akışa dalmamış → max ilan göster
-    // 5-12s → normal izleme → orta
-    // 12-30s → yayınla meşgul → az ilan
-    // > 30s → yayına odaklanmış → ilan yok
-    if (avgMs < 5000) return 3;
-    if (avgMs < 12000) return 2;
-    if (avgMs < 30000) return 1;
+    // < 3s  → çok hızlı atladı, ilanlardan kaçıyor → max ilan göster (paradoks: az ilan göster
+    //          ki yayına bağlansın; daha fazla ilan göstermek anlamsız)
+    // 3-8s  → hızlı göz attı → fazla ilan göster
+    // 8-20s → ilgili izledi → orta ilan
+    // > 20s → yayına odaklandı → az/hiç ilan
+    if (avgMs < 3000) return 3;
+    if (avgMs < 8000) return 2;
+    if (avgMs < 20000) return 1;
     return 0;
   }
 
@@ -389,22 +395,45 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   }
 
   void _onPageChanged(int page) {
-    // Önceki sayfadan çıkılırken dwell süresi kaydet (stream sayfasıysa)
-    if (_dwellStart != null) {
-      final prevItem = _itemAt(_currentPage);
-      if (prevItem is _LiveItem) {
-        final dwellMs = DateTime.now().millisecondsSinceEpoch - _dwellStart!;
-        _trackStreamDwell(dwellMs);
-        _recordStreamEvent(prevItem.stream, dwellMs);
-      }
-      _dwellStart = null;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final prevItem = _itemAt(_currentPage);
+
+    // ── Önceki sayfa yayınsa: dwell ölç ──
+    if (_dwellStart != null && prevItem is _LiveItem) {
+      final dwellMs = now - _dwellStart!;
+      _trackStreamDwell(dwellMs);
+      _recordStreamEvent(prevItem.stream, dwellMs);
+      _fastListingStreak = 0; // yayın izlenince ilan hızı sıfırlanır
     }
+    _dwellStart = null;
+
+    // ── Önceki sayfa ilansa: hız ölç ──
+    if (_listingPageStart != null && prevItem is _ListingItem) {
+      final listingDwellMs = now - _listingPageStart!;
+      if (listingDwellMs < _listingFastThresholdMs) {
+        _fastListingStreak++;
+        // 3 veya daha fazla ilan ard arda hızla geçildiyse: kullanıcı ilanlardan
+        // kaçıyor demektir. Bu sinyali çok düşük bir dwell gibi işle → LPG azalır.
+        if (_fastListingStreak >= 3) {
+          debugPrint('[SwipeLive] fast listing streak=$_fastListingStreak → LPG sinyal ekle');
+          _trackStreamDwell(500); // yapay düşük dwell → LPG'yi aşağı çeker
+          _fastListingStreak = 0;
+        }
+      } else {
+        // İlana yeterince baktı — streak'i kır
+        _fastListingStreak = 0;
+      }
+    }
+    _listingPageStart = null;
 
     setState(() => _currentPage = page);
 
-    // Yeni sayfada stream varsa dwell ölçümü başlat
-    if (_itemAt(page) is _LiveItem) {
-      _dwellStart = DateTime.now().millisecondsSinceEpoch;
+    // Yeni sayfa için ölçüm başlat
+    final newItem = _itemAt(page);
+    if (newItem is _LiveItem) {
+      _dwellStart = now;
+    } else if (newItem is _ListingItem) {
+      _listingPageStart = now;
     }
 
     _evictStalePrefetches(page);
