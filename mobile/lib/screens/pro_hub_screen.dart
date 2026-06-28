@@ -35,6 +35,14 @@ class _ProHubScreenState extends State<ProHubScreen> {
       final user = await AuthService.me();
       if (mounted && user.isPremium != _isPremium) {
         setState(() => _isPremium = user.isPremium);
+        // Profil bilgisini locale kaydet ki kalıcı olsun
+        await StorageService.saveUserInfo(
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          fullName: user.fullName,
+          isPremium: user.isPremium,
+        );
       }
     } catch (_) {}
   }

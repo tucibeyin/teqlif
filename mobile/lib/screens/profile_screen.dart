@@ -168,6 +168,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (avatarUrl != null && avatarUrl.isNotEmpty) {
             StorageService.saveAvatarUrl(avatarUrl);
           }
+          
+          // Profil bilgisi güncellendiğinde, genel auth StorageService'ini de güncelle
+          if (userId != null && user['email'] != null) {
+            StorageService.saveUserInfo(
+              id: user['id'] as int? ?? userId,
+              email: user['email'] as String,
+              username: user['username'] as String? ?? username,
+              fullName: user['full_name'] as String? ?? user['username'] as String? ?? '',
+              isPremium: user['is_premium'] == true,
+            );
+          }
+          
           if (mounted) setState(() { _user = user; _loading = false; });
         },
         onError: (e) {

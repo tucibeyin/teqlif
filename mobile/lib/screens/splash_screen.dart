@@ -156,6 +156,16 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<Map<String, dynamic>?> _fetchUser(String token) async {
     try {
       final user = await AuthService.me();
+      
+      // Profil bilgisini locale kaydet ki session güncel kalsın
+      await StorageService.saveUserInfo(
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        isPremium: user.isPremium,
+      );
+      
       return {
         'profile_image_url': user.profileImageUrl,
         'profile_image_thumb_url': user.profileImageThumbUrl,
