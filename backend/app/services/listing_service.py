@@ -369,6 +369,9 @@ class ListingService:
                         impression_count += int(ch_res.result_rows[0][0])
                 except Exception as e:
                     logger.warning("[ListingService] ClickHouse ad_impression fetch failed in get_listing: %s", e)
+        
+        logger.info("[DEBUG-LOG] İlan Detayları -> listing_id: %s, toplam_gosterim: %s", listing.id, impression_count)
+        
         return _row_dict(
             listing, user,
             counts.get(listing.id, 0), listing.id in liked_set,

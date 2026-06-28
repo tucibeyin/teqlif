@@ -1382,6 +1382,9 @@ async def video_roi(
         for row in per_listing.result_rows:
             lid, ct, imp, clk, ctr = row
             info = listing_map.get(lid, {})
+            
+            logger.info("[DEBUG-LOG] İlan Analizleri (PRO) -> listing_id: %s, gosterim: %s", lid, imp)
+            
             by_listing.append({
                 "listing_id": lid,
                 "title": info.get("title", "—"),
