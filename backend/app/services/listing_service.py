@@ -185,6 +185,21 @@ class ListingService:
             for lid, cid in camp_result.all():
                 campaign_map.setdefault(lid, cid)
         badge_map, trending_cats = await _fetch_seller_meta(user_ids)
+
+        # Sadece mevcut kullanıcıya ait olan ilanların görüntülenmelerini çek
+        impression_map: dict[int, int] = {}
+        if current_user_id and listing_ids:
+            my_listing_ids = [l.id for l, u in rows if u.id == current_user_id]
+            if my_listing_ids:
+                imp_result = await self.db.execute(
+                    select(ListingImpression.listing_id, func.count())
+                    .select_from(ListingImpression)
+                    .where(ListingImpression.listing_id.in_(my_listing_ids))
+                    .group_by(ListingImpression.listing_id)
+                )
+                for lid, imp_count in imp_result.all():
+                    impression_map[lid] = imp_count
+
         return [
             _row_dict(
                 listing, user,
@@ -193,6 +208,7 @@ class ListingService:
                 campaign_id=campaign_map.get(listing.id),
                 seller_badge=badge_map.get(user.id),
                 is_trending=listing.category in trending_cats,
+                impression_count=impression_map.get(listing.id) if user.id == current_user_id else None,
             )
             for listing, user in rows
         ]
@@ -226,6 +242,19 @@ class ListingService:
             for lid, cid in camp_result.all():
                 campaign_map.setdefault(lid, cid)
         badge_map, trending_cats = await _fetch_seller_meta([current_user.id])
+
+        # Kullanıcının kendi ilanları olduğu için her birinin impression_count'unu al
+        impression_map: dict[int, int] = {}
+        if listing_ids:
+            imp_result = await self.db.execute(
+                select(ListingImpression.listing_id, func.count())
+                .select_from(ListingImpression)
+                .where(ListingImpression.listing_id.in_(listing_ids))
+                .group_by(ListingImpression.listing_id)
+            )
+            for lid, imp_count in imp_result.all():
+                impression_map[lid] = imp_count
+
         return [
             _row_dict(
                 listing, user,
@@ -234,6 +263,7 @@ class ListingService:
                 campaign_id=campaign_map.get(listing.id),
                 seller_badge=badge_map.get(user.id),
                 is_trending=listing.category in trending_cats,
+                impression_count=impression_map.get(listing.id, 0),
             )
             for listing, user in rows
         ]
