@@ -47,6 +47,7 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
     setState(() => _loading = true);
     try {
       await AuthService.seedOnboardingInterests(_selected.toList());
+      await AuthService.me(); // Update local user profile cache
     } catch (_) {
       // API hatası olsa bile devam et — feed popüler ilanlarla açılır
     }

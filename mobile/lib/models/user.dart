@@ -9,6 +9,7 @@ class User {
   final String? profileImageUrl;
   final String? profileImageThumbUrl;
   final bool isPremium;
+  final bool onboardingCompleted;
 
   User({
     required this.id,
@@ -21,6 +22,7 @@ class User {
     this.profileImageUrl,
     this.profileImageThumbUrl,
     this.isPremium = false,
+    this.onboardingCompleted = false,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class User {
       profileImageUrl: json['profile_image_url'] as String?,
       profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
       isPremium: json['is_premium'] as bool? ?? false,
+      onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
     );
   }
 }

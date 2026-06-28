@@ -71,6 +71,7 @@ class AuthService {
       username: user.username,
       fullName: user.fullName,
       isPremium: user.isPremium,
+      onboardingCompleted: user.onboardingCompleted,
     );
     return user;
   }
@@ -109,6 +110,7 @@ class AuthService {
       username: user.username,
       fullName: user.fullName,
       isPremium: user.isPremium,
+      onboardingCompleted: user.onboardingCompleted,
     );
     return user;
   }

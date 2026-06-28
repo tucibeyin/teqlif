@@ -159,9 +159,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() => _isLoggedIn = loggedIn);
 
     if (loggedIn) {
+      final userInfo = await StorageService.getUserInfo();
       final prefs = await SharedPreferences.getInstance();
-      final done = prefs.getBool('onboarding_done');
-      if (mounted) setState(() => _showOnboardingBanner = done != true);
+      final done = (userInfo?['onboarding_completed'] == true) || (prefs.getBool('onboarding_done') == true);
+      if (mounted) setState(() => _showOnboardingBanner = !done);
     }
 
     if (_hasFilter) {
@@ -467,10 +468,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           MaterialPageRoute(builder: (_) => const CategoryOnboardingScreen(fromBanner: true)),
                         );
                         // Ekrandan dönünce prefs'i yeniden oku
-                        // _continue() içinde async setBool yapıldığından
-                        // pop sonrasında değer güncel olacak
+                        // onboarding_completed AuthService.me() ile çekilmiş olabilir, 
+                        final userInfo = await StorageService.getUserInfo();
                         final prefs = await SharedPreferences.getInstance();
-                        final done = prefs.getBool('onboarding_done') == true;
+                        final done = (userInfo?['onboarding_completed'] == true) || (prefs.getBool('onboarding_done') == true);
                         if (mounted) setState(() => _showOnboardingBanner = !done);
                       },
                     ),

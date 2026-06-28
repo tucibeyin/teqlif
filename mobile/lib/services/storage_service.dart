@@ -64,6 +64,7 @@ class StorageService {
   static const _userFullNameKey = 'teqlif_user_fullname';
   static const _userPremiumKey = 'teqlif_user_premium';
   static const _userIdKey = 'teqlif_user_id';
+  static const _userOnboardingKey = 'teqlif_user_onboarding';
 
   static Future<void> saveToken(String token) async {
     await _secureStorage.write(key: _tokenKey, value: token);
@@ -87,14 +88,19 @@ class StorageService {
     required String username,
     required String fullName,
     required bool isPremium,
+    bool? onboardingCompleted,
   }) async {
-    await Future.wait([
+    final futures = <Future<void>>[
       _secureStorage.write(key: _userIdKey, value: id.toString()),
       _secureStorage.write(key: _userEmailKey, value: email),
       _secureStorage.write(key: _userNameKey, value: username),
       _secureStorage.write(key: _userFullNameKey, value: fullName),
       _secureStorage.write(key: _userPremiumKey, value: isPremium.toString()),
-    ]);
+    ];
+    if (onboardingCompleted != null) {
+      futures.add(_secureStorage.write(key: _userOnboardingKey, value: onboardingCompleted.toString()));
+    }
+    await Future.wait(futures);
   }
 
   static Future<Map<String, dynamic>?> getUserInfo() async {
@@ -104,12 +110,14 @@ class StorageService {
     final username = await _secureStorage.read(key: _userNameKey);
     final fullName = await _secureStorage.read(key: _userFullNameKey);
     final isPremium = await _secureStorage.read(key: _userPremiumKey);
+    final onboardingCompleted = await _secureStorage.read(key: _userOnboardingKey);
     return {
       'id': int.tryParse(id) ?? 0,
       'email': email ?? '',
       'username': username ?? '',
       'full_name': fullName ?? '',
       'is_premium': isPremium == 'true',
+      'onboarding_completed': onboardingCompleted == 'true',
     };
   }
 
