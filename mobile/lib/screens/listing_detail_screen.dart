@@ -120,6 +120,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           username: user.username,
           fullName: user.fullName,
           isPremium: user.isPremium,
+          isVerified: user.isVerified,
+          phoneVerified: user.phoneVerified,
         );
         userId = user.id;
       } catch (_) {}

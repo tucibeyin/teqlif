@@ -43,6 +43,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
           username: user.username,
           fullName: user.fullName,
           isPremium: user.isPremium,
+          isVerified: user.isVerified,
+          phoneVerified: user.phoneVerified,
         );
       }
     } catch (_) {}

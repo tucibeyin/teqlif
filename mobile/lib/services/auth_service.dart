@@ -72,6 +72,8 @@ class AuthService {
       fullName: user.fullName,
       isPremium: user.isPremium,
       onboardingCompleted: user.onboardingCompleted,
+      isVerified: user.isVerified,
+      phoneVerified: user.phoneVerified,
     );
     return user;
   }
@@ -111,6 +113,8 @@ class AuthService {
       fullName: user.fullName,
       isPremium: user.isPremium,
       onboardingCompleted: user.onboardingCompleted,
+      isVerified: user.isVerified,
+      phoneVerified: user.phoneVerified,
     );
     return user;
   }

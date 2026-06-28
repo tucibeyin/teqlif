@@ -65,6 +65,8 @@ class StorageService {
   static const _userPremiumKey = 'teqlif_user_premium';
   static const _userIdKey = 'teqlif_user_id';
   static const _userOnboardingKey = 'teqlif_user_onboarding';
+  static const _userIsVerifiedKey = 'teqlif_user_is_verified';
+  static const _userPhoneVerifiedKey = 'teqlif_user_phone_verified';
 
   static Future<void> saveToken(String token) async {
     await _secureStorage.write(key: _tokenKey, value: token);
@@ -89,6 +91,8 @@ class StorageService {
     required String fullName,
     required bool isPremium,
     bool? onboardingCompleted,
+    bool? isVerified,
+    bool? phoneVerified,
   }) async {
     final futures = <Future<void>>[
       _secureStorage.write(key: _userIdKey, value: id.toString()),
@@ -99,6 +103,12 @@ class StorageService {
     ];
     if (onboardingCompleted != null) {
       futures.add(_secureStorage.write(key: _userOnboardingKey, value: onboardingCompleted.toString()));
+    }
+    if (isVerified != null) {
+      futures.add(_secureStorage.write(key: _userIsVerifiedKey, value: isVerified.toString()));
+    }
+    if (phoneVerified != null) {
+      futures.add(_secureStorage.write(key: _userPhoneVerifiedKey, value: phoneVerified.toString()));
     }
     await Future.wait(futures);
   }
@@ -111,6 +121,8 @@ class StorageService {
     final fullName = await _secureStorage.read(key: _userFullNameKey);
     final isPremium = await _secureStorage.read(key: _userPremiumKey);
     final onboardingCompleted = await _secureStorage.read(key: _userOnboardingKey);
+    final isVerified = await _secureStorage.read(key: _userIsVerifiedKey);
+    final phoneVerified = await _secureStorage.read(key: _userPhoneVerifiedKey);
     return {
       'id': int.tryParse(id) ?? 0,
       'email': email ?? '',
@@ -118,6 +130,8 @@ class StorageService {
       'full_name': fullName ?? '',
       'is_premium': isPremium == 'true',
       'onboarding_completed': onboardingCompleted == 'true',
+      'is_verified': isVerified == 'true',
+      'phone_verified': phoneVerified == 'true',
     };
   }
 

@@ -167,6 +167,8 @@ class _SplashScreenState extends State<SplashScreen> {
         username: user.username,
         fullName: user.fullName,
         isPremium: user.isPremium,
+        isVerified: user.isVerified,
+        phoneVerified: user.phoneVerified,
       );
       
       return {

@@ -178,6 +178,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               username: user['username'] as String? ?? username ?? '',
               fullName: user['full_name'] as String? ?? '',
               isPremium: user['is_premium'] == true,
+              isVerified: user['is_verified'] == true,
+              phoneVerified: user['phone_verified'] == true,
             );
           }
           
@@ -268,6 +270,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final fullName = _user?['full_name'] ?? _user?['username'] ?? 'Kullanıcı';
     final username = _user?['username'] ?? '';
     final email = _user?['email'] ?? '';
+    final isVerified = _user?['is_verified'] == true;
+    final phoneVerified = _user?['phone_verified'] == true;
+    final isFullyVerified = isVerified && phoneVerified;
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
 
     return Scaffold(
@@ -354,9 +359,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             }
           },
         ),
-        title: Text(
-          '@$username',
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '@$username',
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+            ),
+            if (isFullyVerified) ...[
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.verified,
+                color: Colors.blue,
+                size: 18,
+              ),
+            ],
+          ],
         ),
         actions: [
           // Cüzdan
@@ -1994,6 +2012,8 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
         isPremium: updatedUser['is_premium'] as bool? ?? false,
+        isVerified: updatedUser['is_verified'] as bool? ?? false,
+        phoneVerified: updatedUser['phone_verified'] as bool? ?? false,
       );
       if (mounted) setState(() => _profileImageUrl = upload.url);
     } catch (e) {
@@ -2055,6 +2075,8 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
         isPremium: updatedUser['is_premium'] as bool? ?? false,
+        isVerified: updatedUser['is_verified'] as bool? ?? false,
+        phoneVerified: updatedUser['phone_verified'] as bool? ?? false,
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
