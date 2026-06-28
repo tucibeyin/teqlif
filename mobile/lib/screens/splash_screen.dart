@@ -73,13 +73,16 @@ class _SplashScreenState extends State<SplashScreen> {
     // Face ID kontrolü
     final biometricEnabled = await StorageService.isBiometricEnabled();
     if (biometricEnabled) {
-      final ok = await BiometricService.authenticate(
-        reason: 'teqlif hesabınıza giriş yapmak için doğrulayın',
-      );
-      if (!mounted) return;
-      if (!ok) {
-        Navigator.of(context).pushReplacementNamed('/login');
-        return;
+      bool ok = false;
+      while (!ok) {
+        ok = await BiometricService.authenticate(
+          reason: 'teqlif hesabınıza giriş yapmak için doğrulayın',
+        );
+        if (!mounted) return;
+        if (!ok) {
+          // İptal edilirse çıkış yapmak (logout) yerine tekrar soruyoruz
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
     }
 
