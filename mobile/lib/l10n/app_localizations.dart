@@ -4090,6 +4090,60 @@ abstract class AppLocalizations {
   /// **'Başlat'**
   String get boostDialogStart;
 
+  /// No description provided for @boostDialogPaidTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücretli Öne Çıkar'**
+  String get boostDialogPaidTitle;
+
+  /// No description provided for @boostDialogPaidBadge.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ay {limit} ücretsiz hakkını kullandın'**
+  String boostDialogPaidBadge(int limit);
+
+  /// No description provided for @boostDialogPaidDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücretli boost ile ilanın yine \"Sana Özel\" akışında öne çıkarılır.'**
+  String get boostDialogPaidDesc;
+
+  /// No description provided for @boostDialogPaidCost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Maliyet'**
+  String get boostDialogPaidCost;
+
+  /// No description provided for @boostDialogPaidCostValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'50 TUCi'**
+  String get boostDialogPaidCostValue;
+
+  /// No description provided for @boostDialogPaidBalance.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mevcut Bakiyeniz'**
+  String get boostDialogPaidBalance;
+
+  /// No description provided for @boostDialogPaidConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'50 TUCi Öde ve Başlat'**
+  String get boostDialogPaidConfirm;
+
+  /// No description provided for @boostSuccessFree.
+  ///
+  /// In tr, this message translates to:
+  /// **'🔥 İlanınız ücretsiz olarak öne çıkarıldı!'**
+  String get boostSuccessFree;
+
+  /// No description provided for @boostSuccessPaid.
+  ///
+  /// In tr, this message translates to:
+  /// **'🔥 İlanınız öne çıkarıldı! (50 TUCi harcandı)'**
+  String get boostSuccessPaid;
+
   /// No description provided for @boostSuccess.
   ///
   /// In tr, this message translates to:
@@ -4107,6 +4161,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bağlantı hatası. Lütfen tekrar deneyin.'**
   String get boostErrorConnection;
+
+  /// No description provided for @boostErrorInsufficientTuci.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yetersiz TUCi bakiyesi. Ücretli boost için 50 TUCi gerekiyor.'**
+  String get boostErrorInsufficientTuci;
 
   /// No description provided for @boostBtnStart.
   ///

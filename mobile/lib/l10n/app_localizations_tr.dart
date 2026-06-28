@@ -2165,6 +2165,37 @@ class AppLocalizationsTr extends AppLocalizations {
   String get boostDialogStart => 'Başlat';
 
   @override
+  String get boostDialogPaidTitle => 'Ücretli Öne Çıkar';
+
+  @override
+  String boostDialogPaidBadge(int limit) {
+    return 'Bu ay $limit ücretsiz hakkını kullandın';
+  }
+
+  @override
+  String get boostDialogPaidDesc =>
+      'Ücretli boost ile ilanın yine \"Sana Özel\" akışında öne çıkarılır.';
+
+  @override
+  String get boostDialogPaidCost => 'Maliyet';
+
+  @override
+  String get boostDialogPaidCostValue => '50 TUCi';
+
+  @override
+  String get boostDialogPaidBalance => 'Mevcut Bakiyeniz';
+
+  @override
+  String get boostDialogPaidConfirm => '50 TUCi Öde ve Başlat';
+
+  @override
+  String get boostSuccessFree => '🔥 İlanınız ücretsiz olarak öne çıkarıldı!';
+
+  @override
+  String get boostSuccessPaid =>
+      '🔥 İlanınız öne çıkarıldı! (50 TUCi harcandı)';
+
+  @override
   String get boostSuccess => '🔥 İlanınız öne çıkarıldı!';
 
   @override
@@ -2172,6 +2203,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get boostErrorConnection => 'Bağlantı hatası. Lütfen tekrar deneyin.';
+
+  @override
+  String get boostErrorInsufficientTuci =>
+      'Yetersiz TUCi bakiyesi. Ücretli boost için 50 TUCi gerekiyor.';
 
   @override
   String get boostBtnStart => 'İlanı Öne Çıkar';

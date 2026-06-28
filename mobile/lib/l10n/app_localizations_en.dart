@@ -2165,6 +2165,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get boostDialogStart => 'Start';
 
   @override
+  String get boostDialogPaidTitle => 'Paid Promotion';
+
+  @override
+  String boostDialogPaidBadge(int limit) {
+    return 'You\'ve used all $limit free boosts this month';
+  }
+
+  @override
+  String get boostDialogPaidDesc =>
+      'Your listing will still be featured in the \"For You\" feed.';
+
+  @override
+  String get boostDialogPaidCost => 'Cost';
+
+  @override
+  String get boostDialogPaidCostValue => '50 TUCi';
+
+  @override
+  String get boostDialogPaidBalance => 'Your Current Balance';
+
+  @override
+  String get boostDialogPaidConfirm => 'Pay 50 TUCi & Start';
+
+  @override
+  String get boostSuccessFree => '🔥 Your listing is now featured for free!';
+
+  @override
+  String get boostSuccessPaid =>
+      '🔥 Your listing is now featured! (50 TUCi spent)';
+
+  @override
   String get boostSuccess => '🔥 Your listing is now featured!';
 
   @override
@@ -2172,6 +2203,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get boostErrorConnection => 'Connection error. Please try again.';
+
+  @override
+  String get boostErrorInsufficientTuci =>
+      'Insufficient TUCi balance. 50 TUCi is required for a paid boost.';
 
   @override
   String get boostBtnStart => 'Promote Listing';

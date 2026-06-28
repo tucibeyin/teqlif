@@ -2148,6 +2148,35 @@ class AppLocalizationsAr extends AppLocalizations {
   String get boostDialogStart => 'بدء';
 
   @override
+  String get boostDialogPaidTitle => 'تمييز مدفوع';
+
+  @override
+  String boostDialogPaidBadge(int limit) {
+    return 'لقد استنفدت $limit تمييزاً مجانياً هذا الشهر';
+  }
+
+  @override
+  String get boostDialogPaidDesc => 'سيظهر إعلانك بشكل مميز في خلاصة \"لك\".';
+
+  @override
+  String get boostDialogPaidCost => 'التكلفة';
+
+  @override
+  String get boostDialogPaidCostValue => '50 TUCi';
+
+  @override
+  String get boostDialogPaidBalance => 'رصيدك الحالي';
+
+  @override
+  String get boostDialogPaidConfirm => 'ادفع 50 TUCi وابدأ';
+
+  @override
+  String get boostSuccessFree => '🔥 تم تمييز إعلانك مجاناً!';
+
+  @override
+  String get boostSuccessPaid => '🔥 تم تمييز إعلانك! (تم خصم 50 TUCi)';
+
+  @override
   String get boostSuccess => '🔥 تم تمييز إعلانك!';
 
   @override
@@ -2155,6 +2184,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get boostErrorConnection => 'خطأ في الاتصال. يرجى المحاولة مجدداً.';
+
+  @override
+  String get boostErrorInsufficientTuci =>
+      'رصيد TUCi غير كافٍ. يلزم 50 TUCi للتمييز المدفوع.';
 
   @override
   String get boostBtnStart => 'تمييز الإعلان';
