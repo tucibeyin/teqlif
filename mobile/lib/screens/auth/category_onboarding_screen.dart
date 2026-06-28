@@ -47,11 +47,14 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
     setState(() => _loading = true);
     try {
       await AuthService.seedOnboardingInterests(_selected.toList());
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('onboarding_done', true);
     } catch (_) {
-      // Hata olsa bile devam et — feed popüler ilanlarla açılır
+      // API hatası olsa bile devam et — feed popüler ilanlarla açılır
     }
+    // API başarılı olsun ya da olmasın, onboarding'i tamamlanmış işaretle.
+    // Önceden try içindeydi, API hatası alınca prefs hiç yazılmıyor
+    // ve banner bir daha kapanmıyordu.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_done', true);
     if (!mounted) return;
     if (widget.fromBanner) {
       Navigator.pop(context);
