@@ -70,6 +70,9 @@ class CampaignCreate(BaseModel):
 
 # ── Kampanya Oluştur ──────────────────────────────────────────────────────────
 
+_BOOST_PAID_COST = 50  # Aylık ücretsiz hak bitince ücretli boost maliyeti (TUCi)
+
+
 @router.post("/campaigns", status_code=201)
 async def create_campaign(
     body: CampaignCreate,
@@ -79,6 +82,9 @@ async def create_campaign(
     """
     Satıcı kendi ilanı için reklam kampanyası başlatır.
 
+    - Pro kullanıcılar ayda 20 boost hakkına sahiptir (ücretsiz).
+    - Aylık hak biterse TUCi bakiyesinden 50 TUCi düşürülerek boost yapılır.
+    - Ücretsiz hesaplar boost yapamaz.
     - İlanın sahibi olduğu doğrulanır.
     - AdCampaign kaydı oluşturulur (status='active').
     - Redis bütçe engine'ine yüklenir (anında aktif hale gelir).
@@ -91,11 +97,17 @@ async def create_campaign(
             detail="İlan öne çıkarma yalnızca Pro hesaplara özeldir. Pro'ya geçerek ayda 20 boost hakkı kazanabilirsin.",
         )
     boost_used = await _get_boost_used(current_user.id)
-    if boost_used >= boost_limit:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Bu ay {boost_limit} boost hakkını kullandın. Kalan: 0. Yeni ay başında sıfırlanır.",
-        )
+
+    # Aylık ücretsiz hak kaldı mı?
+    is_free = boost_used < boost_limit
+
+    # Ücretli modda: TUCi bakiyesi yeterli mi?
+    if not is_free:
+        if current_user.tuci_balance < _BOOST_PAID_COST:
+            raise HTTPException(
+                status_code=402,
+                detail=f"Bu ay {boost_limit} ücretsiz boost hakkını kullandın. Ücretli boost için {_BOOST_PAID_COST} TUCi gerekmekte, ancak bakiyeniz: {current_user.tuci_balance} TUCi.",
+            )
 
     # İlanın bu kullanıcıya ait olduğunu doğrula
     listing = await db.scalar(
@@ -108,13 +120,6 @@ async def create_campaign(
     if not listing:
         raise HTTPException(status_code=404, detail="İlan bulunamadı veya size ait değil")
 
-    # TUCi bakiye kontrolü — kampanya bütçesi peşin düşülür
-    if current_user.tuci_balance < body.total_budget:
-        raise HTTPException(
-            status_code=402,
-            detail=f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {body.total_budget} TUCi",
-        )
-
     campaign = AdCampaign(
         listing_id=body.listing_id,
         seller_id=current_user.id,
@@ -125,22 +130,26 @@ async def create_campaign(
     )
     db.add(campaign)
 
-    # TUCi düş + işlem logla
-    await db.execute(
-        sql_text("UPDATE users SET tuci_balance = tuci_balance - :cost WHERE id = :uid"),
-        {"cost": body.total_budget, "uid": current_user.id},
-    )
-    db.add(TuciTransaction(
-        user_id=current_user.id,
-        amount=-body.total_budget,
-        transaction_type="spend_ad_campaign",
-    ))
+    # TUCi düşme: yalnızca ücretli modda
+    tuci_cost = 0
+    if not is_free:
+        tuci_cost = _BOOST_PAID_COST
+        await db.execute(
+            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            {"cost": tuci_cost, "uid": current_user.id},
+        )
+        db.add(TuciTransaction(
+            user_id=current_user.id,
+            amount=-tuci_cost,
+            transaction_type="spend_boost_paid",
+        ))
 
     await db.commit()
     await db.refresh(campaign)
 
-    # Boost kredi sayacını artır
-    await _increment_boost(current_user.id)
+    # Boost kredi sayacını artır (ücretsiz hak kullanıldıysa)
+    if is_free:
+        await _increment_boost(current_user.id)
 
     # Redis'e anında yükle — cron'u beklemeye gerek yok
     try:
@@ -150,8 +159,8 @@ async def create_campaign(
         logger.warning("[Ads] Redis yükleme atlandı: %s", exc)
 
     logger.info(
-        "[Ads] Yeni kampanya oluşturuldu | id=%d listing_id=%d seller_id=%d budget=%d TUCi",
-        campaign.id, body.listing_id, current_user.id, body.total_budget,
+        "[Ads] Yeni kampanya oluşturuldu | id=%d listing_id=%d seller_id=%d is_free=%s tuci_cost=%d",
+        campaign.id, body.listing_id, current_user.id, is_free, tuci_cost,
     )
     return {
         "id": campaign.id,
@@ -159,6 +168,8 @@ async def create_campaign(
         "status": campaign.status,
         "total_budget": campaign.total_budget,
         "cpc_bid": campaign.cpc_bid,
+        "is_free": is_free,
+        "tuci_cost": tuci_cost,
     }
 
 

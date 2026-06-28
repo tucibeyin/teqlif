@@ -521,6 +521,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     int remaining = 0;
     int limit = 0;
     bool isPro = false;
+    int tuciBalance = 0;
     try {
       final token = await StorageService.getToken();
       final cr = await http.get(
@@ -532,13 +533,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         remaining = (d['remaining'] as num).toInt();
         limit     = (d['limit'] as num).toInt();
         isPro     = d['is_pro'] == true;
+        // TUCi bakiyesini de çek
+        final tokenInner = await StorageService.getToken();
+        final ur = await http.get(
+          Uri.parse('$kBaseUrl/users/me'),
+          headers: {if (tokenInner != null) 'Authorization': 'Bearer $tokenInner'},
+        );
+        if (ur.statusCode == 200) {
+          final ud = jsonDecode(ur.body) as Map<String, dynamic>;
+          tuciBalance = ((ud['wallet_balance'] ?? 0) as num).toInt();
+        }
       }
     } catch (_) {}
 
     if (!mounted) return;
     final l = AppLocalizations.of(ctx)!;
 
-    // Pro değilse veya kredit bittiyse direkt bilgilendir
+    // Pro değilse bilgilendir
     if (!isPro) {
       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
         content: Text(l.boostOnlyPro),
@@ -546,60 +557,110 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       ));
       return;
     }
-    if (remaining <= 0) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-        content: Text(l.boostLimitExhausted(limit)),
-        backgroundColor: const Color(0xFFDC2626),
-      ));
-      return;
-    }
+
+    // Ücretli veya ücretsiz boost dialog'ını göster
+    final bool isFreeMode = remaining > 0;
 
     final confirmed = await showDialog<bool>(
       context: ctx,
       builder: (dlgCtx) {
         final dl = AppLocalizations.of(dlgCtx)!;
-        return AlertDialog(
-          title: Text(dl.boostDialogTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(dl.boostDialogPlanLabel, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-              const SizedBox(height: 10),
-              _BoostRow(icon: Icons.account_balance_wallet_outlined, label: dl.boostDialogTotalBudget, value: dl.boostDialogTotalBudgetValue),
-              _BoostRow(icon: Icons.ads_click, label: dl.boostDialogCpc, value: dl.boostDialogCpcValue),
-              _BoostRow(icon: Icons.touch_app_outlined, label: dl.boostDialogEstClicks, value: dl.boostDialogEstClicksValue),
-              const SizedBox(height: 12),
-              Text(
-                dl.boostDialogFeedHint,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  borderRadius: BorderRadius.circular(8),
+        if (isFreeMode) {
+          // Ücretsiz boost dialog'ı
+          return AlertDialog(
+            title: Text(dl.boostDialogTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(dl.boostDialogPlanLabel, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 10),
+                _BoostRow(icon: Icons.account_balance_wallet_outlined, label: dl.boostDialogTotalBudget, value: dl.boostDialogTotalBudgetValue),
+                _BoostRow(icon: Icons.ads_click, label: dl.boostDialogCpc, value: dl.boostDialogCpcValue),
+                _BoostRow(icon: Icons.touch_app_outlined, label: dl.boostDialogEstClicks, value: dl.boostDialogEstClicksValue),
+                const SizedBox(height: 12),
+                Text(
+                  dl.boostDialogFeedHint,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
-                child: Text(
-                  dl.boostDialogCredits(remaining, limit),
-                  style: const TextStyle(fontSize: 12, color: Color(0xFFF97316), fontWeight: FontWeight.w600),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    dl.boostDialogCredits(remaining, limit),
+                    style: const TextStyle(fontSize: 12, color: Color(0xFFF97316), fontWeight: FontWeight.w600),
+                  ),
                 ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: Text(dl.btnCancel)),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dlgCtx, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF97316),
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(dl.boostDialogStart),
               ),
             ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: Text(dl.btnCancel)),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(dlgCtx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF97316),
-                foregroundColor: Colors.white,
-              ),
-              child: Text(dl.boostDialogStart),
+          );
+        } else {
+          // Ücretli boost dialog'ı — kredit bitti
+          return AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.monetization_on_rounded, color: Color(0xFF6366F1), size: 20),
+                const SizedBox(width: 8),
+                Text(dl.boostDialogPaidTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+              ],
             ),
-          ],
-        );
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    dl.boostDialogPaidBadge(limit),
+                    style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626), fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(dl.boostDialogPaidDesc, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                const SizedBox(height: 12),
+                _BoostRow(icon: Icons.price_change_outlined, label: dl.boostDialogPaidCost, value: dl.boostDialogPaidCostValue),
+                _BoostRow(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: dl.boostDialogPaidBalance,
+                  value: '$tuciBalance TUCi',
+                  valueColor: tuciBalance >= 50 ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: Text(dl.btnCancel)),
+              ElevatedButton(
+                onPressed: tuciBalance >= 50 ? () => Navigator.pop(dlgCtx, true) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                ),
+                child: Text(dl.boostDialogPaidConfirm),
+              ),
+            ],
+          );
+        }
       },
     );
 
@@ -623,13 +684,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       final ll = AppLocalizations.of(context)!;
       if (resp.statusCode == 201) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final wasFree = data['is_free'] == true;
         setState(() {
           _campaignId = data['id'] as int?;
           widget.listing['campaign_id'] = _campaignId;
           widget.listing['is_sponsored'] = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ll.boostSuccess),
+          content: Text(wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid),
           backgroundColor: const Color(0xFFF97316),
         ));
       } else {
@@ -1677,8 +1739,9 @@ class _BoostRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color? valueColor;
 
-  const _BoostRow({required this.icon, required this.label, required this.value});
+  const _BoostRow({required this.icon, required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -1690,9 +1753,10 @@ class _BoostRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(label, style: const TextStyle(fontSize: 13)),
           const Spacer(),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+          Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: valueColor)),
         ],
       ),
     );
+
   }
 }
