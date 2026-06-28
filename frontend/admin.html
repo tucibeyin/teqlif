@@ -269,6 +269,7 @@
             <div class="nav-item" id="navReports">🚩 Şikayetler</div>
             <div class="nav-item" id="navPush">🔔 Bildirim Gönder</div>
             <div class="nav-item" id="navAnalytics">📈 Analitik</div>
+            <div class="nav-item" id="navConfig">⚙️ Sürüm Yönetimi</div>
             <div class="divider"></div>
             <button id="btnAdminLogout" style="background: var(--admin-danger);">Güvenli Çıkış</button>
         </aside>
@@ -506,6 +507,44 @@
                         </thead>
                         <tbody id="analytics-table-body"></tbody>
                     </table>
+                </div>
+            </div>
+
+        
+            <!-- SÜRÜM YÖNETİMİ -->
+            <div id="panel-config" class="panel-content hidden" style="display:flex;flex-direction:column;height:100%;overflow-y:auto;">
+                <div class="header-bar">
+                    <h1>Mobil Sürüm Yönetimi</h1>
+                    <button id="btnLoadConfig" style="width:auto;background:#3b82f6;">🔄 Yenile</button>
+                </div>
+                <div style="background:var(--admin-bg);border:1px solid var(--admin-border);border-radius:0.75rem;padding:2rem;max-width:600px;margin-top:1rem;">
+                    <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:2rem;">Kullanıcıların mobil cihazlarında alacağı güncelleme bildirimlerini yönetin. <b>Zorunlu Sürüm (Min Version)</b> altındaki kullanıcılar uygulamayı açamaz. <b>Önerilen Sürüm (Latest Version)</b> altındaki kullanıcılar uygulamayı açtığında atlanabilir bir uyarı görür.</p>
+                    
+                    <h3 style="color:var(--admin-primary);margin-bottom:1rem;">🍏 iOS (App Store)</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;">
+                        <div>
+                            <label>Zorunlu Sürüm (Min)</label>
+                            <input type="text" id="configIosMin" placeholder="Örn: 1.0.0">
+                        </div>
+                        <div>
+                            <label>Önerilen Sürüm (Latest)</label>
+                            <input type="text" id="configIosLatest" placeholder="Örn: 1.0.5">
+                        </div>
+                    </div>
+
+                    <h3 style="color:#38bdf8;margin-bottom:1rem;">🤖 Android (Play Store)</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;">
+                        <div>
+                            <label>Zorunlu Sürüm (Min)</label>
+                            <input type="text" id="configAndroidMin" placeholder="Örn: 1.0.0">
+                        </div>
+                        <div>
+                            <label>Önerilen Sürüm (Latest)</label>
+                            <input type="text" id="configAndroidLatest" placeholder="Örn: 1.0.5">
+                        </div>
+                    </div>
+
+                    <button id="btnSaveConfig" style="background:var(--admin-primary);margin-top:1rem;">💾 Değişiklikleri Kaydet</button>
                 </div>
             </div>
 

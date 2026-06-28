@@ -564,3 +564,61 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btn) resolveReport(Number(btn.dataset.resolveReport));
     });
 });
+
+
+// SÜRÜM YÖNETİMİ BAŞLANGIÇ
+const btnLoadConfig = document.getElementById('btnLoadConfig');
+const btnSaveConfig = document.getElementById('btnSaveConfig');
+
+if(btnLoadConfig) btnLoadConfig.addEventListener('click', loadConfig);
+if(btnSaveConfig) btnSaveConfig.addEventListener('click', saveConfig);
+
+async function loadConfig() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/config/version`, {
+            headers: { 'Authorization': `Bearer ${getAdminToken()}` }
+        });
+        if (!res.ok) throw new Error('Ayar okuma hatası');
+        const data = await res.json();
+        
+        document.getElementById('configIosMin').value = data.ios.min_version || '';
+        document.getElementById('configIosLatest').value = data.ios.latest_version || '';
+        document.getElementById('configAndroidMin').value = data.android.min_version || '';
+        document.getElementById('configAndroidLatest').value = data.android.latest_version || '';
+        
+        showToast('Ayarlar yüklendi', 'success');
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+async function saveConfig() {
+    const payload = {
+        ios_min_version: document.getElementById('configIosMin').value.trim(),
+        ios_latest_version: document.getElementById('configIosLatest').value.trim(),
+        android_min_version: document.getElementById('configAndroidMin').value.trim(),
+        android_latest_version: document.getElementById('configAndroidLatest').value.trim()
+    };
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/config/version`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${getAdminToken()}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Kaydetme hatası');
+        showToast('Ayarlar başarıyla kaydedildi!', 'success');
+    } catch(e) {
+        showToast(e.message, 'error');
+    }
+}
+
+// Sekme değiştiğinde otomatik yükleme için hook (eğer mevcut switchPanel gibi bir fonksiyon varsa bu içine konabilir, ama biz manuel refresh butonunu koyduk)
+document.getElementById('navConfig')?.addEventListener('click', () => {
+    loadConfig();
+});
+// SÜRÜM YÖNETİMİ BİTİŞ
+
