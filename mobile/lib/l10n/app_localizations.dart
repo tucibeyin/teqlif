@@ -3313,7 +3313,7 @@ abstract class AppLocalizations {
   /// No description provided for @listingPerfTitle.
   ///
   /// In tr, this message translates to:
-  /// **'İlanlarınızın Performansı'**
+  /// **'İlanlarınızın PRO ile performansı'**
   String get listingPerfTitle;
 
   /// No description provided for @listingNoDataTitle.
