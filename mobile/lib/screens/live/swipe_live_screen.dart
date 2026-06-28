@@ -282,7 +282,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
           : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
       int? pinnedStreamId;
       if (validItems.isNotEmpty) {
-        final streamIdx = (groupIdx - _listingOnlyGroupCount).clamp(0, validItems.length - 1) % validItems.length;
+        final offset = groupIdx >= _listingOnlyGroupCount ? groupIdx - _listingOnlyGroupCount : 0;
+        final streamIdx = offset % validItems.length;
         pinnedStreamId = validItems[streamIdx].id;
       }
       _groupBoundaries.add((_nextGroupStartPage, _currentListingsPerGroup, pinnedStreamId));
@@ -1825,13 +1826,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   Future<void> _handleRaid(int targetStreamId) async {
     widget.onEngagementEvent?.call('raid_chose');
-    if (widget.swipeLiveMode) {
-      // SwipeLive'da baskın seçildi — uygulamadan çıkma, biten yayını listeden çıkar
-      // Hedef yayın zaten listede olabilir; kullanıcı swipe ederek ulaşabilir
-      widget.onStreamEnded?.call();
-      await _deactivate();
-      return;
-    }
+
     // Single mod: hedef yayına geç
     final bridgeEntry = widget.takePrefetch?.call(targetStreamId);
     if (bridgeEntry != null) {
