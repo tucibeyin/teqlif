@@ -120,6 +120,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           username: user.username,
           fullName: user.fullName,
           isPremium: user.isPremium,
+          onboardingCompleted: user.onboardingCompleted,
           isVerified: user.isVerified,
           phoneVerified: user.phoneVerified,
         );

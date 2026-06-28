@@ -47,7 +47,17 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
     setState(() => _loading = true);
     try {
       await AuthService.seedOnboardingInterests(_selected.toList());
-      await AuthService.me(); // Update local user profile cache
+      final user = await AuthService.me(); // Update local user profile cache
+      await StorageService.saveUserInfo(
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        isPremium: user.isPremium,
+        onboardingCompleted: user.onboardingCompleted,
+        isVerified: user.isVerified,
+        phoneVerified: user.phoneVerified,
+      );
     } catch (_) {
       // API hatası olsa bile devam et — feed popüler ilanlarla açılır
     }

@@ -178,6 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               username: user['username'] as String? ?? username ?? '',
               fullName: user['full_name'] as String? ?? '',
               isPremium: user['is_premium'] == true,
+              onboardingCompleted: user['onboarding_completed'] == true,
               isVerified: user['is_verified'] == true,
               phoneVerified: user['phone_verified'] == true,
             );
@@ -2012,6 +2013,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
         isPremium: updatedUser['is_premium'] as bool? ?? false,
+        onboardingCompleted: updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,
         phoneVerified: updatedUser['phone_verified'] as bool? ?? false,
       );
@@ -2075,6 +2077,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
         isPremium: updatedUser['is_premium'] as bool? ?? false,
+        onboardingCompleted: updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,
         phoneVerified: updatedUser['phone_verified'] as bool? ?? false,
       );
