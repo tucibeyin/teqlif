@@ -651,10 +651,21 @@ async def confirm_phone_verification(
 
 
 def _phone_verify_confirm_page(token: str, action: str) -> str:
-    """GET ile açılan ara sayfa.
-    Email tarayıcıları JS çalıştırmaz → token korunur.
-    Gerçek kullanıcı açınca JS formu anında POST eder → tek dokunuşta sonuç."""
-    label = "Telefonunuz doğrulanıyor..." if action == "yes" else "Telefon numaranız kaldırılıyor..."
+    """GET ile açılan onay sayfası — kullanıcı butona basana kadar hiçbir şey olmaz.
+    JS auto-submit yok: link prefetcher / Mail Privacy Protection koruması."""
+    if action == "yes":
+        icon = "📱"
+        heading = "Telefon Numaranızı Doğrulayın"
+        desc = "Bu telefon numarasını hesabınıza eklemek istediğinizi onaylayın."
+        btn_text = "Evet, Bu Numara Benim"
+        btn_color = "#0d9488"
+    else:
+        icon = "🚫"
+        heading = "Telefon Numarasını Reddet"
+        desc = "Bu numarayı siz eklemediyseniz aşağıdaki butona basın; numara hesabınızdan kaldırılacak."
+        btn_text = "Bu Numara Benim Değil"
+        btn_color = "#ef4444"
+
     return f"""<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -667,23 +678,27 @@ def _phone_verify_confirm_page(token: str, action: str) -> str:
          display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px;}}
     .card{{background:#1e293b;border-radius:24px;padding:40px 28px;max-width:400px;width:100%;
            text-align:center;box-shadow:0 8px 40px #00000080;}}
-    .brand{{color:#06b6d4;font-weight:800;font-size:24px;letter-spacing:-0.5px;margin-bottom:32px;}}
-    .spinner{{width:48px;height:48px;border:3px solid #1e3a5f;border-top-color:#06b6d4;
-              border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px;}}
-    @keyframes spin{{to{{transform:rotate(360deg)}}}}
-    p{{color:#94a3b8;font-size:15px;}}
+    .brand{{color:#06b6d4;font-weight:800;font-size:24px;letter-spacing:-0.5px;margin-bottom:24px;}}
+    .icon{{font-size:48px;margin-bottom:16px;}}
+    h2{{color:#f1f5f9;font-size:20px;font-weight:700;margin-bottom:12px;}}
+    p{{color:#94a3b8;font-size:14px;line-height:1.6;margin-bottom:28px;}}
+    .btn{{display:block;width:100%;padding:15px;background:{btn_color};color:#fff;
+          border:none;border-radius:14px;font-size:16px;font-weight:700;
+          cursor:pointer;text-decoration:none;}}
+    .btn:hover{{opacity:0.9;}}
   </style>
 </head>
 <body>
   <div class="card">
     <div class="brand">teqlif</div>
-    <div class="spinner"></div>
-    <p>{label}</p>
-    <form id="f" method="POST" action="/api/auth/phone-verify/confirm?action={action}" style="display:none">
-      <input type="hidden" name="token" id="tk" value="">
+    <div class="icon">{icon}</div>
+    <h2>{heading}</h2>
+    <p>{desc}</p>
+    <form method="POST" action="/api/auth/phone-verify/confirm?action={action}">
+      <input type="hidden" name="token" value="{token}">
+      <button type="submit" class="btn">{btn_text}</button>
     </form>
   </div>
-  <script>document.getElementById('tk').value='{token}';document.getElementById('f').submit();</script>
 </body>
 </html>"""
 
