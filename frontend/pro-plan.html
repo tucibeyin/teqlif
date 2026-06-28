@@ -15,13 +15,17 @@
             --pri-light:   #22d3ee;
             --pri-dim:     rgba(6,182,212,.10);
             --pro-bg:      #00141a;
+            --val-bg:      #0a1800;
             --surface:     #111118;
             --border-dark: #252530;
             --border-pri:  rgba(6,182,212,.30);
+            --border-val:  rgba(74,222,128,.25);
             --text-main:   #f0f0f0;
             --text-dim:    #7a7a8a;
             --green:       #4ade80;
+            --green-dim:   rgba(74,222,128,.10);
             --red:         #f87171;
+            --gold:        #fbbf24;
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -132,7 +136,7 @@
         /* ── Comparison table ──────────────────────────────────── */
         .ctable-wrap {
             width: 100%;
-            max-width: 720px;
+            max-width: 900px;
             border-radius: 16px;
             overflow: hidden;
             border: 1px solid var(--border-dark);
@@ -143,9 +147,10 @@
             border-collapse: collapse;
         }
 
-        .ctable .col-feat { width: 46%; }
-        .ctable .col-std  { width: 27%; }
-        .ctable .col-pro  { width: 27%; }
+        .ctable .col-feat { width: 36%; }
+        .ctable .col-std  { width: 16%; }
+        .ctable .col-pro  { width: 18%; }
+        .ctable .col-val  { width: 30%; }
 
         /* ── thead ─────────────────────────────────────────────── */
         .ctable thead th {
@@ -164,6 +169,13 @@
             background: var(--pro-bg) !important;
             border-left: 1px solid var(--border-pri);
             position: relative;
+        }
+        .th-val  {
+            color: var(--green);
+            background: var(--val-bg) !important;
+            border-left: 1px solid var(--border-val);
+            text-align: left !important;
+            padding-left: 1rem !important;
         }
 
         .pro-rec-pill {
@@ -185,9 +197,14 @@
             transition: background .12s;
         }
 
-        .ctable tbody tr.feat-row:hover td { background-color: rgba(255,255,255,.03) !important; }
+        .ctable tbody tr.feat-row:hover .td-feat,
+        .ctable tbody tr.feat-row:hover .td-std { background-color: rgba(255,255,255,.03) !important; }
+        .ctable tbody tr.feat-row:hover .td-pro  { background-color: rgba(6,182,212,.07) !important; }
+        .ctable tbody tr.feat-row:hover .td-val  { background-color: rgba(74,222,128,.07) !important; }
+
         .ctable tbody tr.feat-row.open .td-feat { background: rgba(6,182,212,.06); }
         .ctable tbody tr.feat-row.open .td-pro  { background: rgba(6,182,212,.10); }
+        .ctable tbody tr.feat-row.open .td-val  { background: rgba(74,222,128,.10); }
 
         .ctable tbody td {
             padding: .45rem 1rem;
@@ -216,6 +233,35 @@
             text-align: center;
             border-left: 1px solid var(--border-pri);
             font-weight: 600;
+        }
+
+        .td-val {
+            background: var(--val-bg);
+            border-left: 1px solid var(--border-val);
+            padding: .45rem .85rem;
+        }
+
+        /* Value card inside td-val */
+        .val-card {
+            display: flex;
+            flex-direction: column;
+            gap: .12rem;
+        }
+
+        .val-amount {
+            font-size: .88rem;
+            font-weight: 800;
+            color: var(--green);
+            line-height: 1.1;
+        }
+
+        .val-amount.val-gold { color: var(--gold); }
+        .val-amount.val-dim  { color: var(--text-dim); font-size: .8rem; font-weight: 600; }
+
+        .val-desc {
+            font-size: .68rem;
+            color: var(--text-dim);
+            line-height: 1.4;
         }
 
         /* Feature label row inner */
@@ -267,6 +313,76 @@
         /* Highlight row */
         .row-hi .td-feat { background: rgba(6,182,212,.04); }
         .row-hi .td-pro  { background: rgba(6,182,212,.08); }
+        .row-hi .td-val  { background: rgba(74,222,128,.06); }
+
+        /* ── Total value banner ─────────────────────────────────── */
+        .total-banner {
+            width: 100%;
+            max-width: 900px;
+            background: linear-gradient(135deg, rgba(74,222,128,.08), rgba(74,222,128,.04));
+            border: 1px solid var(--border-val);
+            border-radius: 14px;
+            padding: .85rem 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .total-banner-left {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .total-banner-icon {
+            font-size: 1.5rem;
+        }
+
+        .total-banner-text strong {
+            display: block;
+            font-size: .9rem;
+            font-weight: 800;
+            color: var(--green);
+            margin-bottom: .1rem;
+        }
+
+        .total-banner-text span {
+            font-size: .74rem;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+
+        .total-banner-right {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .total-val {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--green);
+            line-height: 1;
+        }
+
+        .total-sub {
+            font-size: .68rem;
+            color: var(--text-dim);
+            margin-top: .18rem;
+        }
+
+        .roi-pill {
+            display: inline-block;
+            background: rgba(74,222,128,.15);
+            border: 1px solid var(--border-val);
+            color: var(--green);
+            font-size: .68rem;
+            font-weight: 800;
+            padding: .15rem .6rem;
+            border-radius: 50px;
+            margin-top: .25rem;
+        }
 
         /* ── tfoot — price + CTA ───────────────────────────────── */
         .ctable tfoot td {
@@ -277,11 +393,31 @@
 
         .tfoot-std { background: #0e0e14 !important; text-align: center; border-left: 1px solid var(--border-dark); }
         .tfoot-pro { background: var(--pro-bg) !important; text-align: center; border-left: 1px solid var(--border-pri); }
+        .tfoot-val { background: var(--val-bg) !important; border-left: 1px solid var(--border-val); padding: .65rem .85rem !important; }
 
         .price-label { font-size: .68rem; color: var(--text-dim); margin-bottom: .15rem; }
         .price-val   { font-size: 1.35rem; font-weight: 900; color: var(--pri); line-height: 1.1; }
         .price-sub   { font-size: .65rem; color: var(--text-dim); margin-top: .12rem; min-height: .8rem; }
         .price-free  { font-size: 1.1rem; font-weight: 800; color: var(--text-dim); }
+
+        .tfoot-val-inner strong {
+            display: block;
+            font-size: .72rem;
+            color: var(--text-dim);
+            font-weight: 600;
+            margin-bottom: .2rem;
+        }
+        .tfoot-val-inner .tfoot-val-num {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: var(--green);
+            line-height: 1.1;
+        }
+        .tfoot-val-inner .tfoot-val-sub {
+            font-size: .62rem;
+            color: var(--text-dim);
+            margin-top: .1rem;
+        }
 
         .btn-free {
             width: 100%;
@@ -347,12 +483,20 @@
         .pro-toast-sub         { font-size: .74rem; color: var(--text-dim); line-height: 1.5; }
 
         /* ── Mobile ─────────────────────────────────────────────── */
-        @media (max-width: 560px) {
+        @media (max-width: 640px) {
             .ctable-wrap { border-radius: 12px; }
-            .ctable tbody td, .ctable tfoot td, .ctable thead th { padding: .4rem .65rem; font-size: .74rem; }
+            .ctable tbody td, .ctable tfoot td, .ctable thead th { padding: .38rem .55rem; font-size: .72rem; }
             .price-val { font-size: 1.1rem; }
             .page-header h1 { font-size: 1.2rem; }
             .desc-inner { font-size: .72rem; }
+            .val-amount { font-size: .8rem; }
+            .val-desc { font-size: .63rem; }
+            .total-banner { flex-direction: column; gap: .6rem; }
+            .total-banner-right { text-align: left; }
+        }
+        @media (max-width: 480px) {
+            .ctable .col-val { width: 28%; }
+            .val-desc { display: none; }
         }
     </style>
 </head>
@@ -385,18 +529,37 @@
         </button>
     </div>
 
+    <!-- Toplam değer özeti -->
+    <div class="total-banner">
+        <div class="total-banner-left">
+            <div class="total-banner-icon">💰</div>
+            <div class="total-banner-text">
+                <strong>Pro üyeliğin aylık toplam değeri</strong>
+                <span>Aylık ₺200 ödüyorsun, aylık <strong style="color:var(--green)">₺1.185+ değerinde</strong> avantaj kullanıyorsun.<br>
+                Yalnızca boost ve blast haklarını kullansen bile üyelik ücretini <strong style="color:var(--green)">5,9× katlıyorsun.</strong></span>
+            </div>
+        </div>
+        <div class="total-banner-right">
+            <div class="total-val">₺1.185+</div>
+            <div class="total-sub">aylık avantaj değeri</div>
+            <div class="roi-pill">ROI: 5,9× ✨</div>
+        </div>
+    </div>
+
     <div class="ctable-wrap">
         <table class="ctable">
             <colgroup>
                 <col class="col-feat">
                 <col class="col-std">
                 <col class="col-pro">
+                <col class="col-val">
             </colgroup>
             <thead>
                 <tr>
                     <th class="th-feat">Özellik</th>
                     <th class="th-std">Standart</th>
                     <th class="th-pro"><span class="pro-rec-pill">Önerilen</span>👑 Pro</th>
+                    <th class="th-val">💰 Pro ile Kazancın</th>
                 </tr>
             </thead>
             <tbody>
@@ -411,9 +574,15 @@
                     </td>
                     <td class="td-std"><span class="v-dim">%70</span></td>
                     <td class="td-pro"><span class="v-hi">🔥 %95</span></td>
+                    <td class="td-val">
+                        <div class="val-card">
+                            <div class="val-amount val-gold">+%25 ekstra</div>
+                            <div class="val-desc">1.000 TL hediyede<br>+250 TL cebinde kalır</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr class="desc-row" data-key="gift">
-                    <td colspan="3"><div class="desc-inner">Canlı yayında izleyicilerden aldığınız hediyeler TUCi'ye dönüştürülür. Standart hesaplarda platforma %30 komisyon kesilirken Pro'da bu oran yalnızca %5'e düşer — her yayında çok daha fazlası cebinizde kalır.</div></td>
+                    <td colspan="4"><div class="desc-inner">Canlı yayında izleyicilerden aldığınız hediyeler TUCi'ye dönüştürülür. Standart hesaplarda platforma %30 komisyon kesilirken Pro'da bu oran yalnızca %5'e düşer — her yayında çok daha fazlası cebinizde kalır.</div></td>
                 </tr>
 
                 <!-- 2 -->
@@ -426,9 +595,15 @@
                     </td>
                     <td class="td-std"><span class="v-no">🔒 Kilitli</span></td>
                     <td class="td-pro"><span class="v-ok">✔ Sınırsız</span></td>
+                    <td class="td-val">
+                        <div class="val-card">
+                            <div class="val-amount">Ölçülemez</div>
+                            <div class="val-desc">Doğru zamanda satmak<br>yüzlerce TL fark yaratır</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr class="desc-row" data-key="analytics">
-                    <td colspan="3"><div class="desc-inner">Hangi kategorilerde talep artıyor, benzer ürünler ne fiyata satıldı, rakip satıcılar ne zaman daha aktif — tüm bu verilere gerçek zamanlı erişin. Doğru zamanda doğru fiyatla sat.</div></td>
+                    <td colspan="4"><div class="desc-inner">Hangi kategorilerde talep artıyor, benzer ürünler ne fiyata satıldı, rakip satıcılar ne zaman daha aktif — tüm bu verilere gerçek zamanlı erişin. Doğru zamanda doğru fiyatla sat.</div></td>
                 </tr>
 
                 <!-- 3 -->
@@ -439,11 +614,17 @@
                             <span class="feat-chevron">▾</span>
                         </div>
                     </td>
-                    <td class="td-std"><span class="v-dim">Ücretli</span></td>
+                    <td class="td-std"><span class="v-dim">5 TUCi/kullanım</span></td>
                     <td class="td-pro"><span class="v-ok">⚡ Ücretsiz</span></td>
+                    <td class="td-val">
+                        <div class="val-card">
+                            <div class="val-amount">~₺100/ay</div>
+                            <div class="val-desc">20 kullanım × 5 TUCi<br>= 100 TL tasarruf</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr class="desc-row" data-key="ai">
-                    <td colspan="3"><div class="desc-inner">İlan oluştururken yapay zeka, platformdaki benzer ürünlerin geçmiş satışlarını analiz ederek size en rekabetçi fiyatı saniyeler içinde önerir. Standart kullanıcılar bu özellik için TUCi öderken Pro'da tamamen ücretsizdir.</div></td>
+                    <td colspan="4"><div class="desc-inner">İlan oluştururken yapay zeka, platformdaki benzer ürünlerin geçmiş satışlarını analiz ederek size en rekabetçi fiyatı saniyeler içinde önerir. Standart kullanıcılar bu özellik için TUCi öderken Pro'da tamamen ücretsizdir.</div></td>
                 </tr>
 
                 <!-- 4 -->
@@ -456,9 +637,15 @@
                     </td>
                     <td class="td-std"><span class="v-no">✘ Yok</span></td>
                     <td class="td-pro"><span class="v-ok">✔ Aktif</span></td>
+                    <td class="td-val">
+                        <div class="val-card">
+                            <div class="val-amount">Ölçülemez</div>
+                            <div class="val-desc">Tek bir balina satışı<br>üyelik bedelini karşılar</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr class="desc-row" data-key="whale">
-                    <td colspan="3"><div class="desc-inner">Platformun en yüksek bütçeli alıcıları — "Balinalar" — ilanınızı incelediğinde anında bildirim alırsınız. Bu alıcılar hızlı karar verir ve yüksek teklifler sunar; fırsatı kaçırmadan yanıt verin.</div></td>
+                    <td colspan="4"><div class="desc-inner">Platformun en yüksek bütçeli alıcıları — "Balinalar" — ilanınızı incelediğinde anında bildirim alırsınız. Bu alıcılar hızlı karar verir ve yüksek teklifler sunar; fırsatı kaçırmadan yanıt verin.</div></td>
                 </tr>
 
                 <!-- 5 -->
@@ -471,9 +658,15 @@
                     </td>
                     <td class="td-std"><span class="v-dim">0 adet / ay</span></td>
                     <td class="td-pro"><span class="v-ok">✔ 20 adet / ay</span></td>
+                    <td class="td-val">
+                        <div class="val-card">
+                            <div class="val-amount">₺1.000/ay</div>
+                            <div class="val-desc">20 boost × 50 TUCi<br>= 1.000 TL değer</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr class="desc-row" data-key="boost">
-                    <td colspan="3"><div class="desc-inner">Ayda 20 ilanınızı rakiplerinizin önüne geçirecek şekilde "Sana Özel" akışında öne çıkarabilirsiniz. Her boost 50 TUCi bütçeyle çalışır ve tıklama başına 1 TUCi harcar — bütçe bitene kadar ilanınız ön sırada görünür.</div></td>
+                    <td colspan="4"><div class="desc-inner">Ayda 20 ilanınızı rakiplerinizin önüne geçirecek şekilde "Sana Özel" akışında öne çıkarabilirsiniz. Her boost 50 TUCi bütçeyle çalışır ve tıklama başına 1 TUCi harcar — bütçe bitene kadar ilanınız ön sırada görünür.</div></td>
                 </tr>
 
                 <!-- 6 -->
@@ -486,9 +679,15 @@
                     </td>
                     <td class="td-std"><span class="v-no">✘ Yok</span></td>
                     <td class="td-pro"><span class="v-ok">✔ Profilde</span></td>
+                    <td class="td-val">
+                        <div class="val-card">
+                            <div class="val-amount">Güven → Satış</div>
+                            <div class="val-desc">Alıcı güveni artar;<br>teklif oranı yükselir</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr class="desc-row" data-key="badge">
-                    <td colspan="3"><div class="desc-inner">Profilinizde ve ilanlarınızın yanında görünen altın 👑 rozet, alıcılara ciddi ve güvenilir bir satıcıyla muhatap olduklarını gösterir. Güven arttıkça tıklanma ve teklif oranı da yükselir.</div></td>
+                    <td colspan="4"><div class="desc-inner">Profilinizde ve ilanlarınızın yanında görünen altın 👑 rozet, alıcılara ciddi ve güvenilir bir satıcıyla muhatap olduklarını gösterir. Güven arttıkça tıklanma ve teklif oranı da yükselir.</div></td>
                 </tr>
 
                 <!-- 7 -->
@@ -501,9 +700,15 @@
                     </td>
                     <td class="td-std"><span class="v-dim">3 adet / ay</span></td>
                     <td class="td-pro"><span class="v-ok">20 adet / ay</span></td>
+                    <td class="td-val">
+                        <div class="val-card">
+                            <div class="val-amount">~₺85/ay</div>
+                            <div class="val-desc">+17 ekstra blast × 5 TUCi<br>= 85 TL tasarruf</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr class="desc-row" data-key="blast">
-                    <td colspan="3"><div class="desc-inner">Seçtiğiniz kullanıcı segmentine (örneğin belirli bir kategoriyi takip edenler veya daha önce ilanlarınızı görüntüleyenler) toplu bildirim gönderin. Yeni bir ilan açtığınızda veya fiyat düştüğünde kitlenize anında duyurun.</div></td>
+                    <td colspan="4"><div class="desc-inner">Seçtiğiniz kullanıcı segmentine (örneğin belirli bir kategoriyi takip edenler veya daha önce ilanlarınızı görüntüleyenler) toplu bildirim gönderin. Yeni bir ilan açtığınızda veya fiyat düştüğünde kitlenize anında duyurun.</div></td>
                 </tr>
 
                 <!-- 8 -->
@@ -516,9 +721,15 @@
                     </td>
                     <td class="td-std"><span class="v-dim">Standart</span></td>
                     <td class="td-pro"><span class="v-ok">⚡ Öncelikli</span></td>
+                    <td class="td-val">
+                        <div class="val-card">
+                            <div class="val-amount val-dim">Zaman Tasarrufu</div>
+                            <div class="val-desc">Sorunlar hızlı çözülür,<br>ilan süresi korunur</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr class="desc-row" data-key="support">
-                    <td colspan="3"><div class="desc-inner">Pro kullanıcıların destek talepleri öncelikli sıraya alınır. Hesap sorunları, ödeme konuları veya ilanlarınızla ilgili her türlü sorunda standart bekleme süresinin çok önünde yanıt alırsınız.</div></td>
+                    <td colspan="4"><div class="desc-inner">Pro kullanıcıların destek talepleri öncelikli sıraya alınır. Hesap sorunları, ödeme konuları veya ilanlarınızla ilgili her türlü sorunda standart bekleme süresinin çok önünde yanıt alırsınız.</div></td>
                 </tr>
 
             </tbody>
@@ -533,6 +744,13 @@
                         <div class="price-val" id="planPrice">₺200</div>
                         <div class="price-sub" id="planSubPrice"></div>
                     </td>
+                    <td class="tfoot-val" style="padding:.6rem .85rem .3rem;">
+                        <div class="tfoot-val-inner">
+                            <strong>Toplam aylık değer</strong>
+                            <div class="tfoot-val-num">₺1.185+</div>
+                            <div class="tfoot-val-sub">sadece hesaplanabilir özellikler</div>
+                        </div>
+                    </td>
                 </tr>
                 <tr>
                     <td class="td-feat" style="padding:.3rem 1rem .75rem;border-bottom:none;"></td>
@@ -541,6 +759,12 @@
                     </td>
                     <td class="tfoot-pro" style="padding:.3rem 1rem .75rem;border-bottom:none;">
                         <button class="btn-pro" id="btnPro">Hemen Pro Ol 👑</button>
+                    </td>
+                    <td class="tfoot-val" style="padding:.3rem .85rem .75rem;border-bottom:none;">
+                        <div style="font-size:.7rem;color:var(--text-dim);line-height:1.5;">
+                            ₺200 yatır,<br><span style="color:var(--green);font-weight:700;">₺1.185+ kazan.</span><br>
+                            <span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>
+                        </div>
                     </td>
                 </tr>
             </tfoot>
