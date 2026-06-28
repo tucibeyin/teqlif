@@ -2180,4 +2180,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String adReportInsightVeryLow(int clicks, int impressions) {
     return '$impressions people saw your listing and it got $clicks clicks. We recommend reviewing your title, photos, and pricing.';
   }
+
+  @override
+  String get notInterested => 'Not interested';
+
+  @override
+  String get notInterestedConfirmed => 'You won\'t see this listing again.';
+
+  @override
+  String get proMetricAvgDwell => 'Avg. Browse Time';
+
+  @override
+  String get proMetricSearchVisibility => 'Search Visibility';
+
+  @override
+  String get proMetricBestHour => 'Best Posting Hour';
+
+  @override
+  String get proMetricReturnViewers => 'Return Viewers';
+
+  @override
+  String get adMetricDailyTrend => 'Daily CTR Trend';
+
+  @override
+  String get adMetricBestHour => 'Best Hour';
+
+  @override
+  String get adMetricCategoryAvgCtr => 'Category Avg CTR';
+
+  @override
+  String get adMetricBurnRate => 'Budget Burn Rate';
 }

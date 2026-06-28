@@ -17,6 +17,7 @@ import json
 import math
 import random
 import logging
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import text
@@ -86,7 +87,11 @@ async def get_personalized_feed(
 
     if user_id:
         interests = await get_user_interests(user_id, db)
-        listing_ids = await _score_and_rank(user_id, interests, offset, PAGE_SIZE, seed, db)
+        # "İlgilenmiyorum" listesini Redis'ten çek
+        redis = await get_redis()
+        excluded_raw = await redis.smembers(f"not_interested:{user_id}")
+        excluded_ids = [int(x) for x in excluded_raw] if excluded_raw else []
+        listing_ids = await _score_and_rank(user_id, interests, offset, PAGE_SIZE, seed, db, excluded_ids=excluded_ids)
     else:
         listing_ids = await _popular_feed(offset, PAGE_SIZE, db)
 
@@ -133,6 +138,7 @@ async def _score_and_rank(
     limit: int,
     seed: str,
     db: AsyncSession,
+    excluded_ids: list[int] | None = None,
 ) -> list[int]:
     """
     Aday ilanları puanlar ve sıralı ID listesi döndürür.
@@ -149,6 +155,13 @@ async def _score_and_rank(
     if not interests:
         return await _popular_feed(offset, limit, db)
 
+    # ── Saat dilimi bağlam sinyali ────────────────────────────────────────────
+    # Sabah 06-10: tazelik boost (yeni ilanlar öne çıksın)
+    # Akşam 19-23: sosyal sinyal boost (takip edilenler öne çıksın)
+    hour = datetime.now().hour
+    freshness_w = 0.28 if 6 <= hour <= 10 else 0.20
+    social_w    = 0.14 if 19 <= hour <= 23 else 0.10
+
     # Top-5 kategori ve skorları
     top_cats = sorted(interests.items(), key=lambda x: x[1], reverse=True)[:5]
     top_cat_names = [c for c, _ in top_cats]
@@ -163,6 +176,9 @@ async def _score_and_rank(
     # Exploration bonusu — top-5 dışındaki kategoriler
     exploration_expr = f"CASE WHEN l.category NOT IN ({','.join(repr(c) for c in top_cat_names)}) THEN 0.3 ELSE 0.0 END"
 
+    # "İlgilenmiyorum" filtresi — boşsa TRUE (filtre yok)
+    ni_filter = f"AND l.id NOT IN ({','.join(str(i) for i in excluded_ids)})" if excluded_ids else ""
+
     sql = text(f"""
         WITH candidates AS (
             -- Affinity pool: ilgi kategorilerinden yeni ilanlar
@@ -173,6 +189,7 @@ async def _score_and_rank(
                   AND l.is_deleted = FALSE
                   AND l.user_id != :uid
                   AND l.category IN :top_cats
+                  {ni_filter}
                 ORDER BY l.created_at DESC
                 LIMIT 250
             )
@@ -183,6 +200,7 @@ async def _score_and_rank(
                 FROM listings l
                 INNER JOIN follows f ON f.followed_id = l.user_id AND f.follower_id = :uid
                 WHERE l.is_active = TRUE AND l.is_deleted = FALSE
+                  {ni_filter}
                 ORDER BY l.created_at DESC
                 LIMIT 50
             )
@@ -196,6 +214,7 @@ async def _score_and_rank(
                   AND l.is_deleted = FALSE
                   AND l.user_id != :uid
                   AND l.category NOT IN :top_cats
+                  {ni_filter}
                 GROUP BY l.id
                 HAVING COUNT(ll.id) >= 1
                 ORDER BY l.created_at DESC
@@ -228,11 +247,12 @@ async def _score_and_rank(
         scored AS (
             SELECT
                 l.id,
+                l.category,
                 (
                     ({cat_affinity_expr}) * 0.40
                     + (LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0) * 0.25
-                    + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 604800.0) * 0.20
-                    + COALESCE(soc.is_followed, 0.0) * 0.10
+                    + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 604800.0) * {freshness_w}
+                    + COALESCE(soc.is_followed, 0.0) * {social_w}
                     + ({exploration_expr}) * 0.05
                     + (ABS(HASHTEXT(l.id::text || :seed)::float / 2147483647.0)) * 0.02
                     - COALESCE(imp.seen, 0.0) * 0.30
@@ -258,9 +278,16 @@ async def _score_and_rank(
             ) imp ON imp.listing_id = l.id
             LEFT JOIN host_quality hq ON hq.host_id = l.user_id
             LEFT JOIN seller_conv sc ON sc.seller_id = l.user_id
+        ),
+        -- Çeşitlilik kısıtı: bir kategoriden maksimum 3 ilan
+        diversified AS (
+            SELECT id, feed_score,
+                   ROW_NUMBER() OVER (PARTITION BY category ORDER BY feed_score DESC) AS cat_rank
+            FROM scored
         )
         SELECT id
-        FROM scored
+        FROM diversified
+        WHERE cat_rank <= 3
         ORDER BY feed_score DESC
         LIMIT :lim OFFSET :off
     """)
@@ -414,9 +441,11 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
 
 async def _get_sponsored_listings(db: AsyncSession) -> list[dict]:
     """
-    Redis'teki aktif kampanyalardan rastgele en fazla AD_SLOTS adet
-    sponsored ilan çeker. Bütçesi kalmayan kampanyaların key'leri
-    zaten Redis'te olmadığından otomatik olarak filtre dışı kalır.
+    CTR × bid skoru ile sıralı sponsored ilan seçimi.
+
+    Eski: random.sample → her gösterimde rastgele kampanyalar seçiliyordu.
+    Yeni: (geçmiş CTR × cpc_bid) skoru yüksek kampanyalar öncelikli seçilir.
+          %80 en yüksek skora sahip kampanyalardan, %20 keşif için rastgele seçilir.
     """
     redis = await get_redis()
 
@@ -426,28 +455,50 @@ async def _get_sponsored_listings(db: AsyncSession) -> list[dict]:
             campaign_ids.append(int(key.split(":")[-1]))
         except (ValueError, IndexError):
             continue
-        if len(campaign_ids) >= 50:  # tarama limiti
+        if len(campaign_ids) >= 50:
             break
 
     if not campaign_ids:
         return []
 
-    selected = random.sample(campaign_ids, min(len(AD_SLOTS), len(campaign_ids)))
-
-    result = await db.execute(
+    # Kampanyaları CTR × bid skoruna göre sırala
+    rows = await db.execute(
         select(AdCampaign, Listing, User)
         .join(Listing, Listing.id == AdCampaign.listing_id)
         .join(User, User.id == Listing.user_id)
         .where(
-            AdCampaign.id.in_(selected),
+            AdCampaign.id.in_(campaign_ids),
             AdCampaign.status == "active",
             Listing.is_active == True,   # noqa: E712
             Listing.is_deleted == False,  # noqa: E712
         )
     )
+    candidates = rows.all()
+    if not candidates:
+        return []
+
+    def _ad_score(campaign: AdCampaign) -> float:
+        impr = max(campaign.impressions or 0, 1)
+        ctr = (campaign.clicks or 0) / impr
+        return ctr * campaign.cpc_bid
+
+    scored = sorted(candidates, key=lambda t: _ad_score(t[0]), reverse=True)
+
+    # %80 exploit (en iyi skorlular), %20 keşif (rastgele)
+    n_slots = len(AD_SLOTS)
+    n_exploit = max(1, int(n_slots * 0.8))
+    top = scored[:n_exploit]
+    rest = scored[n_exploit:]
+    n_explore = n_slots - len(top)
+    if rest and n_explore > 0:
+        explore = random.sample(rest, min(n_explore, len(rest)))
+        selected_rows = top + explore
+    else:
+        selected_rows = top
+
     return [
         _row_dict(listing, user, 0, False, is_sponsored=True, campaign_id=campaign.id)
-        for campaign, listing, user in result.all()
+        for campaign, listing, user in selected_rows[:n_slots]
     ]
 
 

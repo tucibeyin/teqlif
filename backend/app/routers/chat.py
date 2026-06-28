@@ -185,6 +185,16 @@ async def _handle_chat_message(
         await safe_send_json(websocket, result)
         return
 
+    # ── Chat hızı sayacı (SwipeLive momentum için) ────────────────────────────
+    try:
+        from app.utils.redis_client import get_redis
+        _redis = await get_redis()
+        _tick_key = f"stream:chat_tick:{stream_id}"
+        await _redis.incr(_tick_key)
+        await _redis.expire(_tick_key, 90)  # 90s pencere
+    except Exception:
+        pass
+
     # ── Hype Meter: mesaj puanla, skoru güncelle, broadcast et ───────────────
     from app.core.hype_manager import hype_manager
     from app.utils.sentiment import calculate_message_hype

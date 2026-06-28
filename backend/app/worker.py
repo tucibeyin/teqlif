@@ -496,6 +496,29 @@ async def compute_user_interests_task(ctx: dict) -> None:
                       AND l.category IS NOT NULL
                     GROUP BY dm.sender_id, l.category
                 ),
+                -- Arama sinyali: kullanıcının kategori bazlı arama geçmişi
+                search_scores AS (
+                    SELECT
+                        ae.user_id,
+                        ae.event_metadata->>'category' AS category,
+                        SUM(
+                            CASE
+                                WHEN ae.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN ae.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * CASE
+                                WHEN (ae.event_metadata->>'result_count')::int > 0 THEN 2.0
+                                ELSE 1.0
+                            END
+                        ) AS raw_score
+                    FROM analytics_events ae
+                    WHERE ae.user_id IS NOT NULL
+                      AND ae.created_at > NOW() - INTERVAL '30 days'
+                      AND ae.event_type = 'search'
+                      AND ae.event_metadata->>'category' IS NOT NULL
+                      AND ae.event_metadata->>'category' != ''
+                    GROUP BY ae.user_id, ae.event_metadata->>'category'
+                ),
                 combined AS (
                     SELECT user_id, category, raw_score FROM analytics_scores WHERE raw_score > 0
                     UNION ALL
@@ -504,6 +527,8 @@ async def compute_user_interests_task(ctx: dict) -> None:
                     SELECT user_id, category, raw_score FROM fav_scores
                     UNION ALL
                     SELECT user_id, category, raw_score FROM msg_scores
+                    UNION ALL
+                    SELECT user_id, category, raw_score FROM search_scores WHERE raw_score > 0
                 ),
                 summed AS (
                     SELECT user_id, category, SUM(raw_score) AS total_score

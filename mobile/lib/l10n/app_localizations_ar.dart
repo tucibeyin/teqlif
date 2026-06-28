@@ -2162,4 +2162,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String adReportInsightVeryLow(int clicks, int impressions) {
     return 'شاهد $impressions شخصاً إعلانك وحصل على $clicks نقرة. ننصح بمراجعة العنوان والصور والسعر.';
   }
+
+  @override
+  String get notInterested => 'لست مهتمًا';
+
+  @override
+  String get notInterestedConfirmed => 'لن يظهر هذا الإعلان مرة أخرى.';
+
+  @override
+  String get proMetricAvgDwell => 'متوسط وقت التصفح';
+
+  @override
+  String get proMetricSearchVisibility => 'ظهور في البحث';
+
+  @override
+  String get proMetricBestHour => 'أفضل وقت للنشر';
+
+  @override
+  String get proMetricReturnViewers => 'المشاهدون العائدون';
+
+  @override
+  String get adMetricDailyTrend => 'اتجاه CTR اليومي';
+
+  @override
+  String get adMetricBestHour => 'أفضل ساعة';
+
+  @override
+  String get adMetricCategoryAvgCtr => 'متوسط CTR للفئة';
+
+  @override
+  String get adMetricBurnRate => 'معدل نفاد الميزانية';
 }

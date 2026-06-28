@@ -2180,4 +2180,34 @@ class AppLocalizationsTr extends AppLocalizations {
   String adReportInsightVeryLow(int clicks, int impressions) {
     return '$impressions kişi ilanınızı gördü, $clicks tıklama aldı. İlan başlığını, fotoğrafını ve fiyatını gözden geçirmenizi öneririz.';
   }
+
+  @override
+  String get notInterested => 'İlgilenmiyorum';
+
+  @override
+  String get notInterestedConfirmed => 'Bu ilan bir daha gösterilmeyecek.';
+
+  @override
+  String get proMetricAvgDwell => 'Ort. İnceleme Süresi';
+
+  @override
+  String get proMetricSearchVisibility => 'Arama Görünürlüğü';
+
+  @override
+  String get proMetricBestHour => 'En İyi Paylaşım Saati';
+
+  @override
+  String get proMetricReturnViewers => 'Geri Dönen İzleyiciler';
+
+  @override
+  String get adMetricDailyTrend => 'Günlük CTR Trendi';
+
+  @override
+  String get adMetricBestHour => 'En İyi Saat';
+
+  @override
+  String get adMetricCategoryAvgCtr => 'Kategori Ort. CTR';
+
+  @override
+  String get adMetricBurnRate => 'Bütçe Tükenme Hızı';
 }

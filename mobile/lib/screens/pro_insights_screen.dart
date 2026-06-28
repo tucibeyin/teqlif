@@ -13,6 +13,7 @@ class ProInsightsScreen extends StatefulWidget {
 
 class _ProInsightsScreenState extends State<ProInsightsScreen> {
   Map<String, dynamic>? _data;
+  Map<String, dynamic>? _metrics;
   bool _loading = true;
   bool _hasError = false;
 
@@ -24,12 +25,16 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
 
   Future<void> _load() async {
     setState(() { _loading = true; _hasError = false; });
-    final result = await AnalyticsService.getProInsights();
+    final results = await Future.wait([
+      AnalyticsService.getProInsights(),
+      AnalyticsService.getProMetrics(),
+    ]);
     if (mounted) {
       setState(() {
-        _data = result;
+        _data = results[0];
+        _metrics = results[1];
         _loading = false;
-        _hasError = result == null;
+        _hasError = results[0] == null;
       });
     }
   }
@@ -121,6 +126,13 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
           _SectionLabel(l.proSectionPeakHours),
           _SubLabel(l.proPeakHoursDesc),
           ..._buildPeakBars(peakHours, l),
+          const SizedBox(height: 20),
+        ],
+
+        if (_metrics != null) ...[
+          _SectionLabel('AI Metrikler'),
+          _ProMetricsCard(metrics: _metrics!, l: l),
+          const SizedBox(height: 20),
         ],
       ],
     );
@@ -727,6 +739,80 @@ class _PeakHourBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Text('$count ${l.proEngagements}', style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
+        ],
+      ),
+    );
+  }
+}
+
+// ── PRO Gelişmiş Metrikler Kartı ─────────────────────────────────────────────
+
+class _ProMetricsCard extends StatelessWidget {
+  final Map<String, dynamic> metrics;
+  final AppLocalizations l;
+  const _ProMetricsCard({required this.metrics, required this.l});
+
+  @override
+  Widget build(BuildContext context) {
+    final dwell = metrics['avg_detail_dwell_seconds'];
+    final bestHour = metrics['best_posting_hour'];
+    final returnRate = metrics['return_viewer_rate_pct'];
+    final searchVis = (metrics['search_visibility'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: AppColors.card(context), borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            _MetricChip(
+              label: l.proMetricAvgDwell,
+              value: dwell != null ? '${dwell.toStringAsFixed(0)}s' : '--',
+            ),
+            const SizedBox(width: 10),
+            _MetricChip(
+              label: l.proMetricBestHour,
+              value: bestHour != null ? '${bestHour}:00' : '--',
+            ),
+            const SizedBox(width: 10),
+            _MetricChip(
+              label: l.proMetricReturnViewers,
+              value: returnRate != null ? '%${returnRate.toStringAsFixed(1)}' : '--',
+            ),
+          ]),
+          if (searchVis.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(l.proMetricSearchVisibility,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context))),
+            const SizedBox(height: 6),
+            ...searchVis.map((e) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(children: [
+                Expanded(child: Text(e['category'] as String? ?? '', style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)))),
+                Text('${e['search_count']} arama', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+              ]),
+            )),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricChip extends StatelessWidget {
+  final String label;
+  final String value;
+  const _MetricChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary(context))),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context)), textAlign: TextAlign.center, maxLines: 2),
         ],
       ),
     );

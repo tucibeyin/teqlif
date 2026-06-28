@@ -321,12 +321,17 @@ async def get_campaign_report(
 
     actual_spent = round(max(0.0, campaign.total_budget - remaining_budget), 2)
 
-    # ClickHouse: gösterim + tıklama sayıları
+    # ClickHouse: gösterim + tıklama sayıları + zengin metrikler
     impressions = 0
     clicks = 0
+    daily_trend: list[dict] = []
+    best_hour: int | None = None
+    category_avg_ctr: float | None = None
     try:
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
+
+        # Toplam
         result = await ch.query(f"""
             SELECT
                 countIf(event_type = 'ad_impression') AS impressions,
@@ -338,10 +343,93 @@ async def get_campaign_report(
         row = result.result_rows[0] if result.result_rows else (0, 0)
         impressions = int(row[0] or 0)
         clicks = int(row[1] or 0)
+
+        # Günlük CTR trendi (son 30 gün)
+        trend_result = await ch.query(f"""
+            SELECT
+                toDate(timestamp) AS day,
+                countIf(event_type = 'ad_impression') AS impr,
+                countIf(event_type = 'ad_click')      AS clks
+            FROM user_events
+            WHERE item_id   = {campaign_id}
+              AND item_type = 'ad_campaign'
+              AND timestamp >= now() - INTERVAL 30 DAY
+            GROUP BY day
+            ORDER BY day
+        """)
+        daily_trend = [
+            {
+                "day": str(r[0]),
+                "impressions": int(r[1]),
+                "clicks": int(r[2]),
+                "ctr": round(int(r[2]) / max(int(r[1]), 1) * 100, 2),
+            }
+            for r in trend_result.result_rows
+        ]
+
+        # En iyi saat
+        hour_result = await ch.query(f"""
+            SELECT
+                toHour(timestamp) AS hr,
+                countIf(event_type = 'ad_impression') AS impr,
+                countIf(event_type = 'ad_click')      AS clks
+            FROM user_events
+            WHERE item_id   = {campaign_id}
+              AND item_type = 'ad_campaign'
+            GROUP BY hr
+            HAVING impr > 0
+            ORDER BY (clks / impr) DESC
+            LIMIT 1
+        """)
+        if hour_result.result_rows:
+            best_hour = int(hour_result.result_rows[0][0])
+
     except Exception as exc:
         logger.warning("[Ads] ClickHouse rapor sorgusu başarısız: %s", exc)
 
+    # Kategori ortalama CTR (PostgreSQL)
+    try:
+        cat_result = await db.execute(
+            select(Listing.category)
+            .where(Listing.id == campaign.listing_id)
+        )
+        listing_cat_row = cat_result.fetchone()
+        if listing_cat_row and listing_cat_row[0]:
+            cat_ctr_result = await db.execute(
+                sql_text("""
+                    SELECT
+                        AVG(CASE WHEN ac.impressions > 0 THEN ac.clicks::float / ac.impressions ELSE 0 END) * 100
+                    FROM ad_campaigns ac
+                    INNER JOIN listings l ON l.id = ac.listing_id
+                    WHERE l.category = :cat
+                      AND ac.impressions > 0
+                      AND ac.status IN ('active', 'ended')
+                """),
+                {"cat": listing_cat_row[0]},
+            )
+            cat_row = cat_ctr_result.fetchone()
+            if cat_row and cat_row[0]:
+                category_avg_ctr = round(float(cat_row[0]), 2)
+    except Exception as exc:
+        logger.warning("[Ads] Kategori CTR sorgusu başarısız: %s", exc)
+
     ctr = round(clicks / impressions * 100, 2) if impressions > 0 else 0.0
+
+    # Bütçe tükenme hızı: günlük ortalama harcama ve tahmini kalan gün
+    days_active = 0
+    daily_spend = 0.0
+    estimated_days_left: float | None = None
+    if campaign.created_at:
+        from datetime import datetime, timezone
+        now_utc = datetime.now(timezone.utc)
+        created = campaign.created_at
+        if created.tzinfo is None:
+            from datetime import timezone as tz
+            created = created.replace(tzinfo=tz.utc)
+        days_active = max(1, (now_utc - created).days)
+        daily_spend = round(actual_spent / days_active, 2)
+        if daily_spend > 0 and remaining_budget > 0:
+            estimated_days_left = round(remaining_budget / daily_spend, 1)
 
     return {
         "campaign_id": campaign.id,
@@ -355,4 +443,10 @@ async def get_campaign_report(
         "clicks": clicks,
         "ctr": ctr,
         "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
+        # Zengin metrikler
+        "daily_trend": daily_trend,
+        "best_hour": best_hour,
+        "category_avg_ctr": category_avg_ctr,
+        "daily_spend": daily_spend,
+        "estimated_days_left": estimated_days_left,
     }

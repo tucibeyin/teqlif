@@ -284,6 +284,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         pricePoint: pricePoint,
       );
     }
+    // Detail dwell: kullanıcı 30+ saniye harcadıysa güçlü ilgi sinyali
+    if (listingId != null && durationSec >= 30) {
+      AnalyticsService.logInteraction(
+        itemId: listingId,
+        itemType: 'listing',
+        interactionType: 'detail_dwell',
+        durationSeconds: durationSec,
+        pricePoint: pricePoint,
+      );
+    }
     // Photo swipe depth
     if (listingId != null && _maxPhotoReached > 0) {
       AnalyticsService.logInteraction(

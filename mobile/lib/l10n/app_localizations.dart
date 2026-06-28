@@ -4143,6 +4143,66 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'{impressions} kişi ilanınızı gördü, {clicks} tıklama aldı. İlan başlığını, fotoğrafını ve fiyatını gözden geçirmenizi öneririz.'**
   String adReportInsightVeryLow(int clicks, int impressions);
+
+  /// No description provided for @notInterested.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlgilenmiyorum'**
+  String get notInterested;
+
+  /// No description provided for @notInterestedConfirmed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ilan bir daha gösterilmeyecek.'**
+  String get notInterestedConfirmed;
+
+  /// No description provided for @proMetricAvgDwell.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ort. İnceleme Süresi'**
+  String get proMetricAvgDwell;
+
+  /// No description provided for @proMetricSearchVisibility.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arama Görünürlüğü'**
+  String get proMetricSearchVisibility;
+
+  /// No description provided for @proMetricBestHour.
+  ///
+  /// In tr, this message translates to:
+  /// **'En İyi Paylaşım Saati'**
+  String get proMetricBestHour;
+
+  /// No description provided for @proMetricReturnViewers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geri Dönen İzleyiciler'**
+  String get proMetricReturnViewers;
+
+  /// No description provided for @adMetricDailyTrend.
+  ///
+  /// In tr, this message translates to:
+  /// **'Günlük CTR Trendi'**
+  String get adMetricDailyTrend;
+
+  /// No description provided for @adMetricBestHour.
+  ///
+  /// In tr, this message translates to:
+  /// **'En İyi Saat'**
+  String get adMetricBestHour;
+
+  /// No description provided for @adMetricCategoryAvgCtr.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori Ort. CTR'**
+  String get adMetricCategoryAvgCtr;
+
+  /// No description provided for @adMetricBurnRate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bütçe Tükenme Hızı'**
+  String get adMetricBurnRate;
 }
 
 class _AppLocalizationsDelegate

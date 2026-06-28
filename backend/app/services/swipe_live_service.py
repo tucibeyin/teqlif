@@ -84,6 +84,21 @@ async def _build_config(user_id: int, db: AsyncSession) -> dict:
     except Exception as exc:
         logger.debug("[SwipeLive] ALS skor alınamadı: %s", exc)
 
+    # 4b. Chat hızı (son 90s mesaj sayısı) — momentum sinyali
+    chat_rates: dict[int, float] = {}
+    try:
+        from app.utils.redis_client import get_redis
+        _redis = await get_redis()
+        tick_keys = [f"stream:chat_tick:{sid}" for sid in stream_ids]
+        if tick_keys:
+            raw_ticks = await _redis.mget(*tick_keys)
+            max_tick = max((int(v or 0) for v in raw_ticks), default=1)
+            for sid, raw in zip(stream_ids, raw_ticks):
+                tick = int(raw or 0)
+                chat_rates[sid] = tick / max(max_tick, 1)
+    except Exception as exc:
+        logger.debug("[SwipeLive] Chat hızı alınamadı: %s", exc)
+
     # 5. Yayınları skorla ve sırala
     seen_categories: dict[str, int] = {}
     scored = []
@@ -91,6 +106,7 @@ async def _build_config(user_id: int, db: AsyncSession) -> dict:
         score = _score_stream(
             stream, interests, ch_engagement,
             als_scores, seen_categories,
+            chat_rate=chat_rates.get(stream.id, 0.0),
         )
         scored.append((score, stream))
         seen_categories[stream.category] = seen_categories.get(stream.category, 0) + 1
@@ -127,11 +143,12 @@ def _score_stream(
     ch_engagement: dict[int, dict],
     als_scores: dict[int, float],
     seen_categories: dict[str, int],
+    chat_rate: float = 0.0,
 ) -> float:
     # 1. Category affinity
     affinity = min(interests.get(stream.category, 0.05), 1.0)
 
-    # 2. Stream quality
+    # 2. Stream quality (viewer + like)
     viewer_score = math.log1p(getattr(stream, "viewer_count", 0)) / 10.0
     like_score = math.log1p(getattr(stream, "likes_count", 0)) / 8.0
     quality = min((viewer_score + like_score) / 2.0, 1.0)
@@ -151,16 +168,20 @@ def _score_stream(
     age_hours = (now - started).total_seconds() / 3600.0
     recency = max(0.0, 1.0 - age_hours / 2.0)
 
-    # 6. Çeşitlilik cezası — kategorinin kaçıncı tekrarı
+    # 6. Chat momentum (90s pencerede normalize edilmiş mesaj hızı)
+    momentum = min(chat_rate, 1.0)
+
+    # 7. Çeşitlilik cezası — kategorinin kaçıncı tekrarı
     repeat_count = seen_categories.get(stream.category, 0)
-    diversity_penalty = repeat_count * 0.08  # her tekrar -0.08
+    diversity_penalty = repeat_count * 0.08
 
     return (
-        affinity  * 0.35
-        + quality * 0.20
-        + ch_score * 0.20
-        + als      * 0.15
+        affinity  * 0.30
+        + quality * 0.18
+        + ch_score * 0.18
+        + als      * 0.14
         + recency  * 0.10
+        + momentum * 0.10
         - diversity_penalty
     )
 

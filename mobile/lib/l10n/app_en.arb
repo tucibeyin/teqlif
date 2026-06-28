@@ -913,5 +913,15 @@
   "adReportInsightLow": "{impressions} people saw your listing but only {clicks} clicked. Your cover photo or price may not be appealing enough to buyers.",
   "@adReportInsightLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
   "adReportInsightVeryLow": "{impressions} people saw your listing and it got {clicks} clicks. We recommend reviewing your title, photos, and pricing.",
-  "@adReportInsightVeryLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } }
+  "@adReportInsightVeryLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "notInterested": "Not interested",
+  "notInterestedConfirmed": "You won't see this listing again.",
+  "proMetricAvgDwell": "Avg. Browse Time",
+  "proMetricSearchVisibility": "Search Visibility",
+  "proMetricBestHour": "Best Posting Hour",
+  "proMetricReturnViewers": "Return Viewers",
+  "adMetricDailyTrend": "Daily CTR Trend",
+  "adMetricBestHour": "Best Hour",
+  "adMetricCategoryAvgCtr": "Category Avg CTR",
+  "adMetricBurnRate": "Budget Burn Rate"
 }

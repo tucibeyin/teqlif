@@ -166,6 +166,22 @@ class AnalyticsService {
     return null;
   }
 
+  /// PRO gelişmiş metrikler → `GET /api/analytics/pro/metrics`
+  static Future<Map<String, dynamic>?> getProMetrics() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/pro/metrics'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Sektörel pazar trendleri → `GET /api/analytics/market-trends`
   static Future<Map<String, dynamic>?> getMarketTrends() async {
     try {

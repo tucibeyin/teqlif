@@ -9,6 +9,7 @@ from app.services.recommendation_service import (
     get_personalized_feed as get_ch_personalized_feed,
     get_user_category_affinity,
 )
+from app.utils.redis_client import get_redis
 
 router = APIRouter(prefix="/api/feed", tags=["feed"])
 
@@ -56,6 +57,21 @@ async def get_affinity_profile(
     """Kullanıcının ClickHouse tabanlı kategori affinite profilini döndürür (debug/test için)."""
     affinity = await get_user_category_affinity(current_user.id, db)
     return {"user_id": current_user.id, "affinity": affinity, "cold_start": not affinity}
+
+
+@router.post("/not-interested/{listing_id}", status_code=204)
+async def mark_not_interested(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Bir ilanı 'ilgilenmiyorum' olarak işaretle — Redis set'e ekler.
+    Feed ve For-You sorgularında bu ilanlar filtrelenir (7 gün TTL).
+    """
+    redis = await get_redis()
+    key = f"not_interested:{current_user.id}"
+    await redis.sadd(key, listing_id)
+    await redis.expire(key, 7 * 86400)  # 7 gün
 
 
 @router.get("/for-you")

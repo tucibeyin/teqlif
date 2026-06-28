@@ -914,5 +914,15 @@
   "adReportInsightLow": "شاهد {impressions} شخصاً إعلانك لكن {clicks} فقط نقروا عليه. قد لا تكون الصورة الرئيسية أو السعر جذّابَيْن بما يكفي.",
   "@adReportInsightLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
   "adReportInsightVeryLow": "شاهد {impressions} شخصاً إعلانك وحصل على {clicks} نقرة. ننصح بمراجعة العنوان والصور والسعر.",
-  "@adReportInsightVeryLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } }
+  "@adReportInsightVeryLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "notInterested": "لست مهتمًا",
+  "notInterestedConfirmed": "لن يظهر هذا الإعلان مرة أخرى.",
+  "proMetricAvgDwell": "متوسط وقت التصفح",
+  "proMetricSearchVisibility": "ظهور في البحث",
+  "proMetricBestHour": "أفضل وقت للنشر",
+  "proMetricReturnViewers": "المشاهدون العائدون",
+  "adMetricDailyTrend": "اتجاه CTR اليومي",
+  "adMetricBestHour": "أفضل ساعة",
+  "adMetricCategoryAvgCtr": "متوسط CTR للفئة",
+  "adMetricBurnRate": "معدل نفاد الميزانية"
 }

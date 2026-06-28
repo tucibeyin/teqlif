@@ -275,6 +275,14 @@ class _AdReportScreenState extends State<AdReportScreen>
             ),
           ),
 
+          // ── Gelişmiş metrikler ────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: _AdvancedMetrics(report: r, l: l),
+            ),
+          ),
+
           // ── Geri Dön butonu ───────────────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
@@ -509,6 +517,85 @@ class _AdButton extends StatelessWidget {
         ),
         child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
       ),
+    );
+  }
+}
+
+// ── Gelişmiş Reklam Metrikleri ────────────────────────────────────────────────
+
+class _AdvancedMetrics extends StatelessWidget {
+  final Map<String, dynamic> report;
+  final AppLocalizations l;
+  const _AdvancedMetrics({required this.report, required this.l});
+
+  @override
+  Widget build(BuildContext context) {
+    final bestHour = report['best_hour'] as int?;
+    final catAvgCtr = report['category_avg_ctr'];
+    final dailySpend = report['daily_spend'];
+    final daysLeft = report['estimated_days_left'];
+
+    if (bestHour == null && catAvgCtr == null && daysLeft == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF334155).withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.adReportSmartAnalysis, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          Row(children: [
+            if (bestHour != null) Expanded(
+              child: _MiniStat(
+                icon: Icons.schedule,
+                label: l.adMetricBestHour,
+                value: '${bestHour}:00',
+              ),
+            ),
+            if (catAvgCtr != null) Expanded(
+              child: _MiniStat(
+                icon: Icons.bar_chart,
+                label: l.adMetricCategoryAvgCtr,
+                value: '%${(catAvgCtr as num).toStringAsFixed(1)}',
+              ),
+            ),
+            if (daysLeft != null) Expanded(
+              child: _MiniStat(
+                icon: Icons.local_fire_department,
+                label: l.adMetricBurnRate,
+                value: '~${(daysLeft as num).toStringAsFixed(0)} gün',
+              ),
+            ),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _MiniStat({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFF818CF8)),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 9), textAlign: TextAlign.center),
+      ],
     );
   }
 }

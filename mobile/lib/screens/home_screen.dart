@@ -735,6 +735,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       (ctx, i) => _GridItem(
                         key: Key('home_listing_filtered_${_recentListings[i]['id']}'),
                         listing: _recentListings[i],
+                        onRemove: () => setState(() => _recentListings.removeAt(i)),
                         onTap: () {
                           if (_recentListings[i]['is_sponsored'] == true) {
                             final cid = _recentListings[i]['campaign_id'];
@@ -924,6 +925,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       (ctx, i) => _GridItem(
                         key: Key('home_listing_item_${_recentListings[i]['id']}'),
                         listing: _recentListings[i],
+                        onRemove: () => setState(() => _recentListings.removeAt(i)),
                         onTap: () {
                           if (_recentListings[i]['is_sponsored'] == true) {
                             final cid = _recentListings[i]['campaign_id'];
@@ -1275,7 +1277,8 @@ class _ActiveFilterChip extends StatelessWidget {
 class _GridItem extends StatefulWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
-  const _GridItem({super.key, required this.listing, required this.onTap});
+  final VoidCallback? onRemove;
+  const _GridItem({super.key, required this.listing, required this.onTap, this.onRemove});
 
   @override
   State<_GridItem> createState() => _GridItemState();
@@ -1308,6 +1311,48 @@ class _GridItemState extends State<_GridItem> {
         if (cid != null) AnalyticsService.trackAdImpression(cid as int);
       }
     }
+  }
+
+  Future<void> _markNotInterested() async {
+    final l = AppLocalizations.of(context)!;
+    final listingId = widget.listing['id'] as int?;
+    if (listingId == null) return;
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final http.Response resp = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/api/feed/not-interested/$listingId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 204 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.notInterestedConfirmed), duration: const Duration(seconds: 2)),
+        );
+        widget.onRemove?.call();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _showLongPressMenu() async {
+    final l = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.thumb_down_alt_outlined),
+              title: Text(l.notInterested),
+              onTap: () {
+                Navigator.pop(context);
+                _markNotInterested();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _toggleLike() async {
@@ -1362,6 +1407,7 @@ class _GridItemState extends State<_GridItem> {
 
     return GestureDetector(
       onTap: widget.onTap,
+      onLongPress: _showLongPressMenu,
       child: Stack(
         fit: StackFit.expand,
         children: [

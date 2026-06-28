@@ -119,6 +119,22 @@ async def track_interaction(
     try:
         redis = await get_redis()
         await redis.rpush(INTERACTION_QUEUE, json.dumps(record))
+
+        # Cold start tetikleyici: ilk 5/10/20 etkileşimde interests hemen yenile
+        if user_id:
+            count_key = f"interaction_count:{user_id}"
+            count = await redis.incr(count_key)
+            if count == 1:
+                await redis.expire(count_key, 86400)  # 24h TTL
+            if count in {5, 10, 20}:
+                try:
+                    from arq import create_pool
+                    from app.worker import WorkerSettings
+                    pool = await create_pool(WorkerSettings.redis_settings)
+                    await pool.enqueue_job("compute_user_interests_task")
+                    await pool.aclose()
+                except Exception as arq_exc:
+                    logger.warning("[ANALYTICS] Cold start trigger başarısız: %s", arq_exc)
     except Exception as exc:
         logger.error("[ANALYTICS] Redis rpush başarısız: %s", exc)
 
@@ -1260,8 +1276,12 @@ async def my_feed_stats(
 async def track_search(
     body: SearchEventCreate,
     request: Request,
+    db: AsyncSession = Depends(get_db),
 ):
-    """Arama sorgularını search_events tablosuna yazar (Talep Radar için)."""
+    """
+    Arama sorgularını search_events tablosuna yazar (Talep Radar için).
+    Kategori varsa analytics_events'e de yazar → compute_user_interests feed döngüsünü kapatır.
+    """
     user_id = None
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
@@ -1281,6 +1301,19 @@ async def track_search(
         )
     except Exception as exc:
         logger.warning("[track-search] ClickHouse insert başarısız: %s", exc)
+
+    # Kategori varsa analytics_events'e yaz → feed kişiselleştirme döngüsünü kapatır
+    if user_id and body.category:
+        try:
+            event = AnalyticsEvent(
+                user_id=user_id,
+                event_type="search",
+                event_metadata={"category": body.category, "result_count": body.result_count},
+            )
+            db.add(event)
+            await db.commit()
+        except Exception as exc:
+            logger.warning("[track-search] PostgreSQL analytics_events yazılamadı: %s", exc)
 
 
 # ── Video ROI (video vs fotoğraf CTR) ─────────────────────────────────────────
@@ -1550,3 +1583,107 @@ async def demand_radar(
     except Exception as exc:
         logger.error("[demand-radar] ClickHouse sorgu hatası: %s", exc, exc_info=True)
         return {"top_queries": [], "by_category": [], "daily_volume": []}
+
+
+# ── PRO Metrik Endpointleri ───────────────────────────────────────────────────
+
+@router.get("/pro/metrics")
+async def get_pro_metrics(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    PRO kullanıcılar için gelişmiş metrikler:
+    - avg_detail_dwell: ilan detay sayfasında ortalama geçirilen süre (saniye)
+    - search_visibility: kullanıcının ilanlarının arama sonuçlarında toplam görünüm sayısı (son 30 gün)
+    - best_posting_hour: kullanıcının en yüksek CTR'a sahip ilan paylaşım saati
+    - return_viewer_rate: en az 2 kez yayınını izleyen kullanıcı oranı
+    """
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail="PRO üyelik gerekli")
+
+    uid = current_user.id
+
+    # 1. Ortalama detay inceleme süresi (analytics_events: detail_dwell event)
+    dwell_result = await db.execute(sql_text("""
+        SELECT AVG((event_metadata->>'duration_seconds')::float) AS avg_dwell
+        FROM analytics_events ae
+        INNER JOIN listings l ON l.id = (ae.event_metadata->>'item_id')::int
+        WHERE l.user_id = :uid
+          AND ae.event_type = 'detail_dwell'
+          AND ae.created_at > NOW() - INTERVAL '30 days'
+          AND ae.event_metadata->>'duration_seconds' IS NOT NULL
+    """), {"uid": uid})
+    dwell_row = dwell_result.fetchone()
+    avg_dwell = round(float(dwell_row[0]), 1) if dwell_row and dwell_row[0] else None
+
+    # 2. Arama görünürlüğü — kullanıcının kategorisinde kaç arama yapıldı (proxy)
+    vis_result = await db.execute(sql_text("""
+        SELECT l.category, COUNT(ae.id) AS search_count
+        FROM listings l
+        INNER JOIN analytics_events ae
+            ON ae.event_type = 'search'
+            AND ae.event_metadata->>'category' = l.category
+            AND ae.created_at > NOW() - INTERVAL '30 days'
+        WHERE l.user_id = :uid AND l.is_active = TRUE AND l.is_deleted = FALSE
+        GROUP BY l.category
+        ORDER BY search_count DESC
+        LIMIT 5
+    """), {"uid": uid})
+    search_visibility = [{"category": r[0], "search_count": int(r[1])} for r in vis_result.all()]
+
+    # 3. En iyi paylaşım saati — en yüksek CTR'a sahip saat
+    hour_result = await db.execute(sql_text("""
+        SELECT
+            EXTRACT(HOUR FROM l.created_at) AS hour,
+            COUNT(ae.id) AS clicks,
+            COUNT(DISTINCT imp.user_id) AS impressions
+        FROM listings l
+        LEFT JOIN analytics_events ae
+            ON ae.event_type = 'click'
+            AND ae.event_metadata->>'item_id' = l.id::text
+            AND ae.created_at > NOW() - INTERVAL '30 days'
+        LEFT JOIN listing_impressions imp ON imp.listing_id = l.id
+        WHERE l.user_id = :uid
+          AND l.created_at > NOW() - INTERVAL '90 days'
+        GROUP BY hour
+        HAVING COUNT(DISTINCT imp.user_id) > 0
+        ORDER BY (COUNT(ae.id)::float / NULLIF(COUNT(DISTINCT imp.user_id), 0)) DESC
+        LIMIT 1
+    """), {"uid": uid})
+    hour_row = hour_result.fetchone()
+    best_hour = int(hour_row[0]) if hour_row else None
+
+    # 4. Geri dönen izleyici oranı (yayın stream'lerinden)
+    return_result = await db.execute(sql_text("""
+        WITH viewer_counts AS (
+            SELECT user_id, COUNT(DISTINCT ls.id) AS stream_count
+            FROM live_stream_viewers lsv
+            INNER JOIN live_streams ls ON ls.id = lsv.stream_id AND ls.host_id = :uid
+            WHERE lsv.user_id != :uid
+            GROUP BY user_id
+        )
+        SELECT
+            COUNT(*) FILTER (WHERE stream_count >= 2)::float /
+            NULLIF(COUNT(*), 0) AS return_rate,
+            COUNT(*) AS total_viewers,
+            COUNT(*) FILTER (WHERE stream_count >= 2) AS return_viewers
+        FROM viewer_counts
+    """), {"uid": uid})
+    ret_row = return_result.fetchone()
+    return_viewer_rate = None
+    return_viewer_count = 0
+    total_viewer_count = 0
+    if ret_row and ret_row[0] is not None:
+        return_viewer_rate = round(float(ret_row[0]) * 100, 1)
+        total_viewer_count = int(ret_row[1])
+        return_viewer_count = int(ret_row[2])
+
+    return {
+        "avg_detail_dwell_seconds": avg_dwell,
+        "search_visibility": search_visibility,
+        "best_posting_hour": best_hour,
+        "return_viewer_rate_pct": return_viewer_rate,
+        "return_viewer_count": return_viewer_count,
+        "total_viewer_count": total_viewer_count,
+    }

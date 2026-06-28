@@ -914,5 +914,15 @@
   "adReportInsightLow": "{impressions} kişi ilanınızı gördü ama sadece {clicks}'i tıkladı. İlan kapak fotoğrafı veya fiyat, alıcıları yeterince çekmemiş olabilir.",
   "@adReportInsightLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
   "adReportInsightVeryLow": "{impressions} kişi ilanınızı gördü, {clicks} tıklama aldı. İlan başlığını, fotoğrafını ve fiyatını gözden geçirmenizi öneririz.",
-  "@adReportInsightVeryLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } }
+  "@adReportInsightVeryLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "notInterested": "İlgilenmiyorum",
+  "notInterestedConfirmed": "Bu ilan bir daha gösterilmeyecek.",
+  "proMetricAvgDwell": "Ort. İnceleme Süresi",
+  "proMetricSearchVisibility": "Arama Görünürlüğü",
+  "proMetricBestHour": "En İyi Paylaşım Saati",
+  "proMetricReturnViewers": "Geri Dönen İzleyiciler",
+  "adMetricDailyTrend": "Günlük CTR Trendi",
+  "adMetricBestHour": "En İyi Saat",
+  "adMetricCategoryAvgCtr": "Kategori Ort. CTR",
+  "adMetricBurnRate": "Bütçe Tükenme Hızı"
 }
