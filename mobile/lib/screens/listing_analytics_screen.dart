@@ -232,7 +232,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.card(context),
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24)],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: AppColors.isDark(context) ? 0.5 : 0.12), blurRadius: 24)],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

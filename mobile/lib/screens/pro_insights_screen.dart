@@ -600,7 +600,7 @@ class _PriceIntelRow extends StatelessWidget {
             children: [
               Expanded(child: _PriceBox(label: l.priceYours, value: '${yourPrice.toStringAsFixed(0)} ₺', color: sigColor)),
               const SizedBox(width: 10),
-              Expanded(child: _PriceBox(label: l.priceMarketAvg, value: '${marketAvg.toStringAsFixed(0)} ₺', color: const Color(0xFF64748B))),
+              Expanded(child: _PriceBox(label: l.priceMarketAvg, value: '${marketAvg.toStringAsFixed(0)} ₺', color: AppColors.textSecondary(context))),
               const SizedBox(width: 10),
               Expanded(child: _PriceBox(label: l.priceDiff, value: '${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%', color: sigColor)),
             ],
@@ -664,18 +664,18 @@ class _StreamStatsCard extends StatelessWidget {
               Row(
                 children: [
                   _StatBox(l.proStreamTotal, '$total'),
-                  _vDivider(),
+                  _vDivider(context),
                   _StatBox(l.proStreamThisMonth, '$s30'),
-                  _vDivider(),
+                  _vDivider(context),
                   _StatBox(l.proStreamAvgViewers, avgV.toStringAsFixed(1)),
-                  _vDivider(),
+                  _vDivider(context),
                   _StatBox(l.proStreamPeak, '$peakV'),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Icon(Icons.timer_outlined, size: 14, color: Color(0xFF64748B)),
+                  Icon(Icons.timer_outlined, size: 14, color: AppColors.textSecondary(context)),
                   const SizedBox(width: 6),
                   Text(l.proStreamAvgDuration(avgDur.toStringAsFixed(0)),
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
@@ -702,7 +702,7 @@ class _StreamStatsCard extends StatelessWidget {
     );
   }
 
-  Widget _vDivider() => Container(width: 1, height: 36, color: const Color(0x1A94A3B8), margin: const EdgeInsets.symmetric(horizontal: 8));
+  Widget _vDivider(BuildContext context) => Container(width: 1, height: 36, color: AppColors.divider(context), margin: const EdgeInsets.symmetric(horizontal: 8));
 }
 
 class _StatBox extends StatelessWidget {

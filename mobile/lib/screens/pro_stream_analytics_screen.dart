@@ -124,11 +124,11 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 40),
-                const Icon(Icons.schedule_outlined, size: 52, color: Color(0xFFD1D5DB)),
+                Icon(Icons.schedule_outlined, size: 52, color: AppColors.textTertiary(context)),
                 const SizedBox(height: 12),
-                Text(AppLocalizations.of(context)!.bestTimeNoData, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+                Text(l.bestTimeNoData, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15)),
                 const SizedBox(height: 4),
-                Text(AppLocalizations.of(context)!.bestTimeNoDataHint, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
+                Text(l.bestTimeNoDataHint, style: TextStyle(color: AppColors.textTertiary(context), fontSize: 13)),
               ],
             ),
           )
@@ -290,11 +290,11 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.pie_chart_outline, size: 52, color: Color(0xFFD1D5DB)),
+            Icon(Icons.pie_chart_outline, size: 52, color: AppColors.textTertiary(context)),
             const SizedBox(height: 12),
-            Text(l.conversionNoData, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+            Text(l.conversionNoData, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15)),
             const SizedBox(height: 4),
-            Text(l.conversionNoDataHint, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+            Text(l.conversionNoDataHint, style: TextStyle(color: AppColors.textTertiary(context), fontSize: 12)),
           ],
         ),
       );
