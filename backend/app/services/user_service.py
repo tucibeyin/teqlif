@@ -184,6 +184,8 @@ class UserService:
             "is_live": active_stream is not None,
             "active_stream_id": active_stream.id if active_stream else None,
             "is_premium": user.is_premium,
+            "is_verified": user.is_verified,
+            "phone_verified": user.phone_verified,
             "tuci_balance": user.tuci_balance,
             "bio": user.bio,
             "website_url": user.website_url,
