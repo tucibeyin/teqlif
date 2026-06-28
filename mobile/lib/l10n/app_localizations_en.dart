@@ -1783,6 +1783,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get metricClicked => 'clicked';
 
   @override
+  String listingReach(int count) {
+    return '$count people saw this';
+  }
+
+  @override
   String get listingPaywallDesc =>
       'Track how many people saw each listing, how many clicked, and how much interest it received.';
 

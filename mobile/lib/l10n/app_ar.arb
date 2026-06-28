@@ -771,6 +771,12 @@
   "listingGalleryShallow": "شاهد الصورة الأولى فقط",
   "metricViewed": "شاهد",
   "metricClicked": "نقر",
+  "listingReach": "شاهده {count} شخص",
+  "@listingReach": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "listingPaywallDesc": "تتبع كم شخصاً رأى كل إعلان، وكم نقر، ومدى الاهتمام به.",
 
   "onboardingTitle": "ما الذي يهمك؟",

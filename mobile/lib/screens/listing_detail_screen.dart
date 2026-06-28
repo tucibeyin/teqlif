@@ -872,28 +872,30 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           ),
                         ),
                       ),
-                      // Fiyat yanı — beğeni sayısı, kişisel beğeni durumu ve (varsa) gösterim sayısı
+                      // Fiyat yanı — beğeni sayısı, kişisel beğeni durumu ve (varsa) unique erişim
                       if (_likesCount > 0 || _isLiked || listing['impression_count'] != null)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (listing['impression_count'] != null) ...[
-                              Icon(
-                                Icons.visibility_outlined,
-                                color: AppColors.textSecondary(context),
-                                size: 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${listing['impression_count']}',
-                                style: TextStyle(
+                        Builder(builder: (ctx) {
+                          final l = AppLocalizations.of(ctx)!;
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (listing['impression_count'] != null) ...[
+                                Icon(
+                                  Icons.people_outline,
                                   color: AppColors.textSecondary(context),
-                                  fontSize: 13,
+                                  size: 16,
                                 ),
-                              ),
-                              if (_likesCount > 0 || _isLiked)
-                                const SizedBox(width: 12),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  l.listingReach(listing['impression_count'] as int),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(context),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                if (_likesCount > 0 || _isLiked)
+                                  const SizedBox(width: 12),
+                              ],
                             if (_likesCount > 0 || _isLiked) ...[
                               Icon(
                                 _isLiked ? Icons.favorite : Icons.favorite_border,
@@ -915,9 +917,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                                       : FontWeight.normal,
                                 ),
                               ),
+                              ],
                             ],
-                          ],
-                        ),
+                          );
+                        }),
                     ],
                   ),
                   if (listing['location'] != null) ...[

@@ -3418,6 +3418,12 @@ abstract class AppLocalizations {
   /// **'tıkladı'**
   String get metricClicked;
 
+  /// No description provided for @listingReach.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kişi gördü'**
+  String listingReach(int count);
+
   /// No description provided for @listingPaywallDesc.
   ///
   /// In tr, this message translates to:

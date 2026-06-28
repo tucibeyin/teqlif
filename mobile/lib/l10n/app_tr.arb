@@ -771,6 +771,12 @@
   "listingGalleryShallow": "Sadece ilk fotoğrafa baktı",
   "metricViewed": "gördü",
   "metricClicked": "tıkladı",
+  "listingReach": "{count} kişi gördü",
+  "@listingReach": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "listingPaywallDesc": "Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin.",
 
   "onboardingTitle": "Nelerle ilgileniyorsun?",

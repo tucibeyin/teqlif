@@ -1785,6 +1785,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get metricClicked => 'tıkladı';
 
   @override
+  String listingReach(int count) {
+    return '$count kişi gördü';
+  }
+
+  @override
   String get listingPaywallDesc =>
       'Her ilanınızın kaç kişiye ulaştığını, kaçının tıkladığını ve ne kadar ilgi gördüğünü takip edin.';
 

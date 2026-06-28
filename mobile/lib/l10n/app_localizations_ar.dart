@@ -1770,6 +1770,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get metricClicked => 'نقر';
 
   @override
+  String listingReach(int count) {
+    return 'شاهده $count شخص';
+  }
+
+  @override
   String get listingPaywallDesc =>
       'تتبع كم شخصاً رأى كل إعلان، وكم نقر، ومدى الاهتمام به.';
 

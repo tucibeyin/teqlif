@@ -770,6 +770,12 @@
   "listingGalleryShallow": "Viewed only the first photo",
   "metricViewed": "viewed",
   "metricClicked": "clicked",
+  "listingReach": "{count} people saw this",
+  "@listingReach": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "listingPaywallDesc": "Track how many people saw each listing, how many clicked, and how much interest it received.",
 
   "onboardingTitle": "What are you into?",

@@ -146,61 +146,20 @@ class ListingService:
         self.db = db
 
     @staticmethod
-    async def _fetch_total_impressions(db: AsyncSession, impression_map: dict[int, int], my_listing_ids: list[int]) -> None:
-        """ClickHouse'tan organik feed gösterimlerini ve reklam gösterimlerini toplayarak döndürür."""
-        if not my_listing_ids:
+    async def _fetch_unique_reach(db: AsyncSession, impression_map: dict[int, int], listing_ids: list[int]) -> None:
+        """listing_impressions tablosundan her ilanı kaç farklı kişinin gördüğünü döndürür (unique reach)."""
+        if not listing_ids:
             return
-        
         try:
-            from app.database_clickhouse import get_clickhouse_client
-            ch = await get_clickhouse_client()
-            
-            lids_str = ",".join(f"'{lid}'" for lid in my_listing_ids)
-            
-            # 1. Organik Gosterimler (feed_analytics)
-            ch_query_org = f"""
-                SELECT listing_id, count()
-                FROM feed_analytics
-                WHERE listing_id IN ({lids_str})
-                  AND event_type = 'impression'
-                GROUP BY listing_id
-            """
-            org_res = await ch.query(ch_query_org)
-            if org_res and org_res.result_rows:
-                for row in org_res.result_rows:
-                    lid = int(row[0])
-                    impression_map[lid] = impression_map.get(lid, 0) + int(row[1])
-            
-            # 2. Reklam Gosterimleri (user_events -> ad_impression)
-            camp_result = await db.execute(
-                select(AdCampaign.listing_id, AdCampaign.id)
-                .where(AdCampaign.listing_id.in_(my_listing_ids))
+            result = await db.execute(
+                select(ListingImpression.listing_id, func.count(ListingImpression.user_id))
+                .where(ListingImpression.listing_id.in_(listing_ids))
+                .group_by(ListingImpression.listing_id)
             )
-            all_camp_map = {}
-            for lid, cid in camp_result.all():
-                all_camp_map.setdefault(lid, []).append(cid)
-                
-            if all_camp_map:
-                all_cids = [cid for cids in all_camp_map.values() for cid in cids]
-                camp_ids_str = ",".join(map(str, all_cids))
-                ch_query_ad = f"""
-                    SELECT item_id, count()
-                    FROM user_events
-                    WHERE item_id IN ({camp_ids_str})
-                      AND item_type = 'ad_campaign'
-                      AND event_type = 'ad_impression'
-                    GROUP BY item_id
-                """
-                ad_res = await ch.query(ch_query_ad)
-                if ad_res and ad_res.result_rows:
-                    ad_imp_map = {int(row[0]): int(row[1]) for row in ad_res.result_rows}
-                    for lid, cids in all_camp_map.items():
-                        total_ad_imp = sum(ad_imp_map.get(cid, 0) for cid in cids)
-                        if total_ad_imp > 0:
-                            impression_map[lid] = impression_map.get(lid, 0) + total_ad_imp
-                            
+            for lid, count in result.all():
+                impression_map[lid] = count
         except Exception as e:
-            logger.warning("[ListingService] ClickHouse total impression fetch failed: %s", e)
+            logger.warning("[ListingService] Unique reach fetch failed: %s", e)
 
     # ── İlan Listele ─────────────────────────────────────────────────────────
     async def get_listings(
@@ -248,7 +207,7 @@ class ListingService:
         if current_user_id and listing_ids:
             my_listing_ids = [l.id for l, u in rows if u.id == current_user_id]
             if my_listing_ids:
-                await self._fetch_total_impressions(self.db, impression_map, my_listing_ids)
+                await self._fetch_unique_reach(self.db, impression_map, my_listing_ids)
 
         return [
             _row_dict(
@@ -295,7 +254,7 @@ class ListingService:
 
         impression_map: dict[int, int] = {}
         if listing_ids:
-            await self._fetch_total_impressions(self.db, impression_map, listing_ids)
+            await self._fetch_unique_reach(self.db, impression_map, listing_ids)
 
         return [
             _row_dict(
@@ -339,7 +298,7 @@ class ListingService:
         impression_count: Optional[int] = None
         if current_user_id == listing.user_id:
             imp_map = {}
-            await self._fetch_total_impressions(self.db, imp_map, [listing.id])
+            await self._fetch_unique_reach(self.db, imp_map, [listing.id])
             impression_count = imp_map.get(listing.id, 0)
         
         return _row_dict(
