@@ -61,10 +61,9 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);
-        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l.generalErrorTitle ?? 'Bir hata oluştu, lütfen daha sonra tekrar deneyin.'),
+          const SnackBar(
+            content: Text('Bir hata oluştu, lütfen daha sonra tekrar deneyin.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -117,6 +116,7 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
                 ),
               ],
             ),
+          ),
     );
   }
 

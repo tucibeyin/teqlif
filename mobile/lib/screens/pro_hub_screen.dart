@@ -641,7 +641,6 @@ class _BlastCreditCard extends StatelessWidget {
           ),
         ],
       ),
-      ),
     );
   }
 }
