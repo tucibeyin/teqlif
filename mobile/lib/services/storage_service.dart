@@ -58,9 +58,11 @@ class StorageService {
       return null;
     }
   }
+
   static const _userEmailKey = 'teqlif_user_email';
   static const _userNameKey = 'teqlif_user_name';
   static const _userFullNameKey = 'teqlif_user_fullname';
+  static const _userPremiumKey = 'teqlif_user_premium';
   static const _userIdKey = 'teqlif_user_id';
 
   static Future<void> saveToken(String token) async {
@@ -84,12 +86,14 @@ class StorageService {
     required String email,
     required String username,
     required String fullName,
+    required bool isPremium,
   }) async {
     await Future.wait([
       _secureStorage.write(key: _userIdKey, value: id.toString()),
       _secureStorage.write(key: _userEmailKey, value: email),
       _secureStorage.write(key: _userNameKey, value: username),
       _secureStorage.write(key: _userFullNameKey, value: fullName),
+      _secureStorage.write(key: _userPremiumKey, value: isPremium.toString()),
     ]);
   }
 
@@ -99,11 +103,13 @@ class StorageService {
     final email = await _secureStorage.read(key: _userEmailKey);
     final username = await _secureStorage.read(key: _userNameKey);
     final fullName = await _secureStorage.read(key: _userFullNameKey);
+    final isPremium = await _secureStorage.read(key: _userPremiumKey);
     return {
       'id': int.tryParse(id) ?? 0,
       'email': email ?? '',
       'username': username ?? '',
       'full_name': fullName ?? '',
+      'is_premium': isPremium == 'true',
     };
   }
 

@@ -8,6 +8,7 @@ class User {
   final bool phoneVerified;
   final String? profileImageUrl;
   final String? profileImageThumbUrl;
+  final bool isPremium;
 
   User({
     required this.id,
@@ -19,6 +20,7 @@ class User {
     this.phoneVerified = false,
     this.profileImageUrl,
     this.profileImageThumbUrl,
+    this.isPremium = false,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class User {
       phoneVerified: json['phone_verified'] as bool? ?? false,
       profileImageUrl: json['profile_image_url'] as String?,
       profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
+      isPremium: json['is_premium'] as bool? ?? false,
     );
   }
 }

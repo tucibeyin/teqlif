@@ -70,6 +70,7 @@ class AuthService {
       email: user.email,
       username: user.username,
       fullName: user.fullName,
+      isPremium: user.isPremium,
     );
     return user;
   }
@@ -107,6 +108,7 @@ class AuthService {
       email: user.email,
       username: user.username,
       fullName: user.fullName,
+      isPremium: user.isPremium,
     );
     return user;
   }

@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
+import '../services/auth_service.dart';
 import 'listing_analytics_screen.dart';
 import 'market_intelligence_screen.dart';
 import 'pro_insights_screen.dart';
@@ -19,11 +20,23 @@ class ProHubScreen extends StatefulWidget {
 
 class _ProHubScreenState extends State<ProHubScreen> {
   Map<String, dynamic>? _credits;
+  bool _isPremium = false;
 
   @override
   void initState() {
     super.initState();
+    _isPremium = widget.isPremium;
     _loadCredits();
+    _verifyPremium();
+  }
+
+  Future<void> _verifyPremium() async {
+    try {
+      final user = await AuthService.me();
+      if (mounted && user.isPremium != _isPremium) {
+        setState(() => _isPremium = user.isPremium);
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadCredits() async {
@@ -34,7 +47,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final isPremium = widget.isPremium;
+    final isPremium = _isPremium;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
