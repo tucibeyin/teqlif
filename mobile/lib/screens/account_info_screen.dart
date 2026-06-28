@@ -40,6 +40,9 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
   }
 
   Future<void> _loadUser() async {
+    if (_user == null) {
+      setState(() => _loading = true);
+    }
     try {
       final u = await AuthService.me();
       if (mounted) {
@@ -56,7 +59,16 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        final l = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l.generalErrorTitle ?? 'Bir hata oluştu, lütfen daha sonra tekrar deneyin.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -73,11 +85,14 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
         centerTitle: true,
         elevation: 0,
       ),
-      body: _loading
+      body: _loading && _user == null
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
+          : RefreshIndicator(
+              onRefresh: _loadUser,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
                 _SectionCard(
                   title: l.accountInfoSecuritySection,
                   child: Column(
