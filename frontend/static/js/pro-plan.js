@@ -13,9 +13,13 @@
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺1.200/yıl';
             document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '240 kullanım × 5 TUCi<br>= 1.200 TL tasarruf';
             
+            document.querySelector('tr[data-key="boost"] .td-std span').textContent = '0 adet / yıl';
+            document.querySelector('tr[data-key="boost"] .td-pro span').textContent = '✔ 240 adet / yıl';
             document.querySelector('tr[data-key="boost"] .val-amount').textContent = '₺12.000/yıl';
             document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '240 boost × 50 TUCi<br>= 12.000 TL değer';
             
+            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl';
+            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '240 adet / yıl';
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '~₺1.020/yıl';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+204 ekstra blast × 5 TUCi<br>= 1.020 TL tasarruf';
             
@@ -31,9 +35,13 @@
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺100/ay';
             document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '20 kullanım × 5 TUCi<br>= 100 TL tasarruf';
             
+            document.querySelector('tr[data-key="boost"] .td-std span').textContent = '0 adet / ay';
+            document.querySelector('tr[data-key="boost"] .td-pro span').textContent = '✔ 20 adet / ay';
             document.querySelector('tr[data-key="boost"] .val-amount').textContent = '₺1.000/ay';
             document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '20 boost × 50 TUCi<br>= 1.000 TL değer';
             
+            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay';
+            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '20 adet / ay';
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '~₺85/ay';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+17 ekstra blast × 5 TUCi<br>= 85 TL tasarruf';
             
