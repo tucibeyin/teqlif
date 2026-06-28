@@ -146,19 +146,28 @@ class ListingService:
         self.db = db
 
     @staticmethod
-    async def _add_ad_impressions(impression_map: dict[int, int], my_listing_ids: list[int], campaign_map: dict[int, int]) -> None:
+    async def _add_ad_impressions(db: AsyncSession, impression_map: dict[int, int], my_listing_ids: list[int]) -> None:
         """Kendi ilanlarımızın gösterim sayısına ClickHouse'daki reklam gösterimlerini (varsa) ekler."""
-        if not my_listing_ids or not campaign_map:
+        if not my_listing_ids:
             return
         
-        my_campaign_ids = [campaign_map[lid] for lid in my_listing_ids if lid in campaign_map]
-        if not my_campaign_ids:
-            return
-            
         try:
+            camp_result = await db.execute(
+                select(AdCampaign.listing_id, AdCampaign.id)
+                .where(AdCampaign.listing_id.in_(my_listing_ids))
+            )
+            all_camp_map = {}
+            for lid, cid in camp_result.all():
+                all_camp_map.setdefault(lid, []).append(cid)
+                
+            if not all_camp_map:
+                return
+
+            all_cids = [cid for cids in all_camp_map.values() for cid in cids]
+
             from app.database_clickhouse import get_clickhouse_client
             ch = await get_clickhouse_client()
-            camp_ids_str = ",".join(map(str, my_campaign_ids))
+            camp_ids_str = ",".join(map(str, all_cids))
             ch_query = f"""
                 SELECT item_id, count()
                 FROM user_events
@@ -170,10 +179,10 @@ class ListingService:
             ch_res = await ch.query(ch_query)
             if ch_res and ch_res.result_rows:
                 ad_imp_map = {int(row[0]): int(row[1]) for row in ch_res.result_rows}
-                for lid in my_listing_ids:
-                    cid = campaign_map.get(lid)
-                    if cid and cid in ad_imp_map:
-                        impression_map[lid] = impression_map.get(lid, 0) + ad_imp_map[cid]
+                for lid, cids in all_camp_map.items():
+                    total_ad_imp = sum(ad_imp_map.get(cid, 0) for cid in cids)
+                    if total_ad_imp > 0:
+                        impression_map[lid] = impression_map.get(lid, 0) + total_ad_imp
         except Exception as e:
             logger.warning("[ListingService] ClickHouse ad_impression fetch failed: %s", e)
 
@@ -231,7 +240,7 @@ class ListingService:
                 )
                 for lid, imp_count in imp_result.all():
                     impression_map[lid] = imp_count
-                await self._add_ad_impressions(impression_map, my_listing_ids, campaign_map)
+                await self._add_ad_impressions(self.db, impression_map, my_listing_ids)
 
         return [
             _row_dict(
@@ -287,7 +296,7 @@ class ListingService:
             )
             for lid, imp_count in imp_result.all():
                 impression_map[lid] = imp_count
-            await self._add_ad_impressions(impression_map, listing_ids, campaign_map)
+            await self._add_ad_impressions(self.db, impression_map, listing_ids)
 
         return [
             _row_dict(
@@ -337,14 +346,21 @@ class ListingService:
                 )
             )
             impression_count = imp_result.scalar() or 0
-            if campaign_id:
+            
+            all_camps = await self.db.execute(
+                select(AdCampaign.id).where(AdCampaign.listing_id == listing.id)
+            )
+            all_cids = [r for r, in all_camps.all()]
+            
+            if all_cids:
                 try:
                     from app.database_clickhouse import get_clickhouse_client
                     ch = await get_clickhouse_client()
+                    camp_ids_str = ",".join(map(str, all_cids))
                     ch_query = f"""
                         SELECT count()
                         FROM user_events
-                        WHERE item_id = {campaign_id}
+                        WHERE item_id IN ({camp_ids_str})
                           AND item_type = 'ad_campaign'
                           AND event_type = 'ad_impression'
                     """
