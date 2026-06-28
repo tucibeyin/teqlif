@@ -153,7 +153,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
               children: [
                 _SummaryTile(
                   label: l.listingTotalViews,
-                  value: '${_fmt(totalImp)}+',
+                  value: '+${_fmt(totalImp)}',
                   icon: Icons.visibility_outlined,
                   color: const Color(0xFF6366F1),
                 ),
@@ -525,7 +525,7 @@ class _ListingCard extends StatelessWidget {
             children: [
               _MetricPill(
                 icon: Icons.visibility_outlined,
-                value: '${_fmtNum(metric.impressions)}+',
+                value: '+${_fmtNum(metric.impressions)}',
                 label: l.metricViewed,
                 color: const Color(0xFF6366F1),
               ),
