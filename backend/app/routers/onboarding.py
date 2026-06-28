@@ -16,7 +16,7 @@ from app.models.user_interest import UserInterest
 from app.utils.auth import get_current_user
 from app.utils.redis_client import get_redis
 
-router = APIRouter(prefix="/onboarding", tags=["onboarding"])
+router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
 _VALID_CATEGORIES = {
     "elektronik", "vasita", "emlak", "giyim",
