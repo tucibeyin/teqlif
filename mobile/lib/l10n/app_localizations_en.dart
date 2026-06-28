@@ -1615,16 +1615,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proKpiTotalUnit => 'total';
 
   @override
-  String get proFunnelViews => 'How many people saw it';
+  String get proFunnelViews => 'Total Views';
 
   @override
-  String get proFunnelHesitation => 'How many hesitated';
+  String get proFunnelHesitation => 'Total Hesitations';
 
   @override
-  String get proFunnelBid => 'How many placed a bid';
+  String get proFunnelBid => 'Total Bids';
 
   @override
-  String get proFunnelSale => 'How many sales made';
+  String get proFunnelSale => 'Total Sales';
 
   @override
   String get proFunnelViewToBid => 'Of viewers, how many bid';

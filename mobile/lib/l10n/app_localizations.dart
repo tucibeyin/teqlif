@@ -3133,19 +3133,19 @@ abstract class AppLocalizations {
   /// No description provided for @proFunnelViews.
   ///
   /// In tr, this message translates to:
-  /// **'Kaç kişi gördü'**
+  /// **'Toplam Görüntülenme'**
   String get proFunnelViews;
 
   /// No description provided for @proFunnelHesitation.
   ///
   /// In tr, this message translates to:
-  /// **'Kaç kişi tereddüt etti'**
+  /// **'Toplam Tereddüt'**
   String get proFunnelHesitation;
 
   /// No description provided for @proFunnelBid.
   ///
   /// In tr, this message translates to:
-  /// **'Kaç kişi teklif verdi'**
+  /// **'Toplam Teklif'**
   String get proFunnelBid;
 
   /// No description provided for @proFunnelSale.

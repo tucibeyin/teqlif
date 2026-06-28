@@ -1604,16 +1604,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proKpiTotalUnit => 'إجمالي';
 
   @override
-  String get proFunnelViews => 'كم شخصاً رآه';
+  String get proFunnelViews => 'إجمالي المشاهدات';
 
   @override
-  String get proFunnelHesitation => 'كم شخصاً تردّد';
+  String get proFunnelHesitation => 'إجمالي الترددات';
 
   @override
-  String get proFunnelBid => 'كم شخصاً قدّم عرضاً';
+  String get proFunnelBid => 'إجمالي العروض';
 
   @override
-  String get proFunnelSale => 'كم عملية بيع تمّت';
+  String get proFunnelSale => 'إجمالي المبيعات';
 
   @override
   String get proFunnelViewToBid => 'من المشاهدين، كم قدّم عرضاً';

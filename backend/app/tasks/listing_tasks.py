@@ -69,9 +69,9 @@ async def deactivate_expired_listings_task(ctx: dict) -> None:
             logger.info("[ListingTasks] %d ilan pasife alındı | ids=%s", len(listing_ids), listing_ids[:10])
 
             # Kullanıcı başına hangi ilanlar pasife alındı
-            user_listing_map: dict[int, list[str]] = {}
+            user_listing_map: dict[int, list[tuple[int, str]]] = {}
             for l in listings:
-                user_listing_map.setdefault(l.user_id, []).append(l.title)
+                user_listing_map.setdefault(l.user_id, []).append((l.id, l.title))
 
         # Bildirimleri gönder
         await _notify_deactivated(user_ids, user_listing_map)
@@ -107,9 +107,9 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
 
             listing_ids = [l.id for l in listings]
             user_ids = list({l.user_id for l in listings})
-            user_listing_map: dict[int, list[str]] = {}
+            user_listing_map: dict[int, list[tuple[int, str]]] = {}
             for l in listings:
-                user_listing_map.setdefault(l.user_id, []).append(l.title)
+                user_listing_map.setdefault(l.user_id, []).append((l.id, l.title))
 
             await db.execute(
                 update(Listing)
@@ -130,25 +130,30 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
 
 async def _notify_deactivated(
     user_ids: list[int],
-    user_listing_map: dict[int, list[str]],
+    user_listing_map: dict[int, list[tuple[int, str]]],
 ) -> None:
     from app.routers.notifications import push_notification
 
     async def _notify(user_id: int) -> None:
-        titles = user_listing_map.get(user_id, [])
-        count = len(titles)
+        listings_data = user_listing_map.get(user_id, [])
+        count = len(listings_data)
+        
+        notif = {
+            "type": "listing_deactivated",
+            "title": "İlanınız Pasife Alındı",
+        }
+        
         if count == 1:
-            body = f'"{titles[0]}" adlı ilanınız 30 günlük ücretsiz süreyi doldurdu ve pasife alındı.'
+            listing_id, title = listings_data[0]
+            notif["body"] = f'"{title}" adlı ilanınız 30 günlük ücretsiz süreyi doldurdu ve pasife alındı.'
+            notif["related_id"] = listing_id
         else:
-            body = f'{count} ilanınız 30 günlük ücretsiz süreyi doldurdu ve pasife alındı.'
+            notif["body"] = f'{count} ilanınız 30 günlük ücretsiz süreyi doldurdu ve pasife alındı.'
+            
         try:
             await push_notification(
                 user_id=user_id,
-                notif={
-                    "type": "listing_deactivated",
-                    "title": "İlanınız Pasife Alındı",
-                    "body": body,
-                },
+                notif=notif,
                 pref_key=None,
             )
         except Exception as exc:
@@ -163,15 +168,16 @@ async def _notify_deactivated(
 
 async def _notify_deleted(
     user_ids: list[int],
-    user_listing_map: dict[int, list[str]],
+    user_listing_map: dict[int, list[tuple[int, str]]],
 ) -> None:
     from app.routers.notifications import push_notification
 
     async def _notify(user_id: int) -> None:
-        titles = user_listing_map.get(user_id, [])
-        count = len(titles)
+        listings_data = user_listing_map.get(user_id, [])
+        count = len(listings_data)
         if count == 1:
-            body = f'"{titles[0]}" adlı ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.'
+            _, title = listings_data[0]
+            body = f'"{title}" adlı ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.'
         else:
             body = f'{count} ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.'
         try:

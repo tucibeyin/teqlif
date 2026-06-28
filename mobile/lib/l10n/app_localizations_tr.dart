@@ -1616,13 +1616,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get proKpiTotalUnit => 'toplam';
 
   @override
-  String get proFunnelViews => 'Kaç kişi gördü';
+  String get proFunnelViews => 'Toplam Görüntülenme';
 
   @override
-  String get proFunnelHesitation => 'Kaç kişi tereddüt etti';
+  String get proFunnelHesitation => 'Toplam Tereddüt';
 
   @override
-  String get proFunnelBid => 'Kaç kişi teklif verdi';
+  String get proFunnelBid => 'Toplam Teklif';
 
   @override
   String get proFunnelSale => 'Kaç satış yapıldı';
