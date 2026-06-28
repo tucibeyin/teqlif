@@ -717,34 +717,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
               )
             else if (_selectedTab == 0 && _listings.isEmpty)
               SliverFillRemaining(
+                hasScrollBody: false,
                 child: Builder(
                   builder: (context) {
                     final l = AppLocalizations.of(context)!;
                     return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.grid_off_outlined,
-                              size: 52, color: Color(0xFFD1D5DB)),
-                          const SizedBox(height: 12),
-                          Text(
-                            l.emptyListings,
-                            style: const TextStyle(
-                              color: Color(0xFF6B7280),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.grid_off_outlined,
+                                size: 52, color: Color(0xFFD1D5DB)),
+                            const SizedBox(height: 12),
+                            Text(
+                              l.emptyListings,
+                              style: const TextStyle(
+                                color: Color(0xFF6B7280),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            l.profileFirstListing,
-                            style: const TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontSize: 13,
+                            const SizedBox(height: 4),
+                            Text(
+                              l.profileFirstListing,
+                              style: const TextStyle(
+                                color: Color(0xFF9CA3AF),
+                                fontSize: 13,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -752,22 +756,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               )
             else if (_selectedTab == 0 && _filteredListings.isEmpty)
               const SliverFillRemaining(
+                hasScrollBody: false,
                 child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.search_off_rounded, size: 52, color: Color(0xFFD1D5DB)),
-                      SizedBox(height: 12),
-                      Text(
-                        'Sonuç bulunamadı',
-                        style: TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.search_off_rounded, size: 52, color: Color(0xFFD1D5DB)),
+                        SizedBox(height: 12),
+                        Text(
+                          'Sonuç bulunamadı',
+                          style: TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               )
