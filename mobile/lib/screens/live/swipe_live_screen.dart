@@ -146,12 +146,14 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   // Oturum içinde sona erdiği tespit edilen yayınların ID'leri — döngüden çıkarılır
   final Set<int> _endedStreamIds = {};
   // Poll'dan tespit edilen biten current stream — child sayfaya isEnded ile geçirilir,
-  // raid overlay child tarafından gösterilir; kullanıcı kapatınca _endedStreamIds'e taşınır.
+  // raid overlay child tarafından gösterilir.
   int? _polledEndedStreamId;
 
   // Dinamik grup yapısı: her grup = 1 yayın + N ilan
-  // _groupBoundaries[i] = (startPage, listingCount) — lazy inşa edilir
-  final List<(int, int)> _groupBoundaries = [];
+  // _groupBoundaries[i] = (startPage, listingCount, pinnedStreamId)
+  // pinnedStreamId: grup inşa edilirken hangi yayına atandığı kalıcı olarak kaydedilir.
+  // Bu sayede yayın bittiğinde o grubun başka bir yayına kayması önlenir.
+  final List<(int, int, int?)> _groupBoundaries = [];
   int _nextGroupStartPage = 0;
   int _currentListingsPerGroup = 2; // initState'den itibaren 2; _trackStreamDwell ile güncellenir
 
@@ -265,9 +267,21 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   // ── Grup yönetimi ────────────────────────────────────────────────────────────
 
   /// targetGroupIdx'e kadar (dahil) grup sınırlarını lazy olarak inşa eder.
+  /// Her grup, inşa anındaki geçerli yayın listesinden bir yayın ID'si pin'ler.
+  /// Bu pin sayesinde yayın bitince grup başka bir yayına kaymaz, listing'e döner.
   void _ensureGroupsBuilt(int targetGroupIdx) {
     while (_groupBoundaries.length <= targetGroupIdx) {
-      _groupBoundaries.add((_nextGroupStartPage, _currentListingsPerGroup));
+      final groupIdx = _groupBoundaries.length;
+      // Grup inşa anında geçerli yayınları hesapla ve bu gruba bir yayın pin'le
+      final validItems = _endedStreamIds.isEmpty
+          ? _liveItems
+          : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
+      int? pinnedStreamId;
+      if (validItems.isNotEmpty) {
+        final streamIdx = (groupIdx - _listingOnlyGroupCount).clamp(0, validItems.length - 1) % validItems.length;
+        pinnedStreamId = validItems[streamIdx].id;
+      }
+      _groupBoundaries.add((_nextGroupStartPage, _currentListingsPerGroup, pinnedStreamId));
       _nextGroupStartPage += 1 + _currentListingsPerGroup;
     }
   }
@@ -304,7 +318,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     );
     if (firstFutureGroup > 0) {
       _groupBoundaries.removeRange(firstFutureGroup, _groupBoundaries.length);
-      _nextGroupStartPage = _groupBoundaries.last.$1 + 1 + _groupBoundaries.last.$2;
+      final last = _groupBoundaries.last;
+      _nextGroupStartPage = last.$1 + 1 + last.$2;
     }
   }
 
@@ -317,54 +332,59 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   /// Sayfa indeksine göre hangi feed öğesinin gösterileceğini hesaplar.
   /// Grup yapısı: her grup = 1 yayın + N ilan (N dinamik, _groupBoundaries'da kayıtlı).
+  /// Her grubun pinnedStreamId'si inşa anında sabitleniyor — dinamik modülo kayması yok.
   _FeedItem _itemAt(int pageIndex) {
     // pageIndex'i içeren grubu bul (lazy build)
     int groupIdx = 0;
     while (true) {
       _ensureGroupsBuilt(groupIdx);
-      final (startPage, listingCount) = _groupBoundaries[groupIdx];
+      final (startPage, listingCount, _) = _groupBoundaries[groupIdx];
       if (pageIndex < startPage + 1 + listingCount) break;
       groupIdx++;
     }
-    final (groupStart, listingCount) = _groupBoundaries[groupIdx];
+    final (groupStart, listingCount, pinnedStreamId) = _groupBoundaries[groupIdx];
     final posInGroup = pageIndex - groupStart;
-
-    // Sona eren yayınları filtrele
-    final validItems = _endedStreamIds.isEmpty
-        ? _liveItems
-        : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
 
     // Listing-only modunda inşa edilmiş gruplar dondurulur:
     // yeni yayın gelse bile bu gruplar listing göstermeye devam eder.
     final isListingOnlyGroup = _listingOnlyGroupCount > 0 && groupIdx < _listingOnlyGroupCount;
 
-    // Hiç geçerli yayın kalmadıysa veya donmuş listing zonundaysak listing göster
-    if (validItems.isEmpty || isListingOnlyGroup) {
+    // Bu grubun pin'lendiği yayını bul
+    // Pin'lenen yayın bitmişse veya hiç pin yoksa → bu grup listing gösterir
+    StreamOut? pinnedStream;
+    if (!isListingOnlyGroup && pinnedStreamId != null) {
+      try {
+        pinnedStream = _liveItems.firstWhere(
+          (s) => s.id == pinnedStreamId && !_endedStreamIds.contains(s.id),
+        );
+      } catch (_) {
+        pinnedStream = null; // Bitti veya listede yok → listing'e düş
+      }
+    }
+
+    // Hiç geçerli yayın pin'i yoksa listing göster
+    if (pinnedStream == null) {
       if (_listingPool.isEmpty) {
-        debugPrint('[SwipeLive] _itemAt($pageIndex) → loading (no streams, no listings)');
+        debugPrint('[SwipeLive] _itemAt($pageIndex) → loading (pinned stream ended or no listings)');
         return const _LoadingListingItem();
       }
       final listingIdx =
           (groupIdx * (_currentListingsPerGroup + 1) + posInGroup) % _listingPool.length;
       final item = _listingPool[listingIdx];
-      debugPrint('[SwipeLive] _itemAt($pageIndex) → listing id=${item["id"]} ${isListingOnlyGroup ? "(frozen zone)" : "(no live streams)"}');
+      debugPrint('[SwipeLive] _itemAt($pageIndex) → listing id=${item["id"]} (pin=$pinnedStreamId ended/missing)');
       return _ListingItem(item, slotIndex: pageIndex, streamCategory: '');
     }
 
-    // Donmuş listing grupları sayılmadan stream seçimi yapılır
-    final streamIdx = (groupIdx - _listingOnlyGroupCount) % validItems.length;
-    final streamForGroup = validItems[streamIdx];
-
-    if (posInGroup == 0) return _LiveItem(streamForGroup);
+    if (posInGroup == 0) return _LiveItem(pinnedStream);
     // İlan slotu ama havuz henüz boş → placeholder (stream widget değil)
     if (_listingPool.isEmpty) return const _LoadingListingItem();
-    // Ilan slotu: posInGroup 1..listingCount
+    // İlan slotu: posInGroup 1..listingCount
     // Her grup ve her slot için farklı ilan seç
     final listingIdx = (groupIdx * 3 + posInGroup - 1) % _listingPool.length;
     return _ListingItem(
       _listingPool[listingIdx],
       slotIndex: pageIndex,
-      streamCategory: streamForGroup.category,
+      streamCategory: pinnedStream.category,
     );
   }
 
@@ -560,26 +580,18 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     return item is _LiveItem ? item.stream : null;
   }
 
-  /// Bir yayının sona erdiği bildirildiğinde döngüden çıkarılır.
-  /// Mevcut sayfanın yayınıysa sayfa değişimine kadar beklenir.
+  /// Bir yayının sona erdiği bildirildiğinde _endedStreamIds'e eklenir.
+  /// Group-pinning sayesinde overlay bozulmaz: mevcut sayfanın grubu pin'li yayını
+  /// göstermeye devam eder. Ancak bir sonraki döngüde bu grup listing'e düşer.
   void _onStreamEnded(int streamId) {
     if (_endedStreamIds.contains(streamId)) return;
-    _endedStreamIds.add(streamId);
     if (_polledEndedStreamId == streamId) _polledEndedStreamId = null;
+    _endedStreamIds.add(streamId);
     if (!mounted) return;
 
     final remaining = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-    debugPrint('[SwipeLive] stream_ended id=$streamId | remaining=${remaining.length} | currentStream=${_getCurrentStream()?.id}');
-
-    if (remaining.isEmpty) {
-      // Son yayın da bitti — mevcut sayfayı da rebuild et, ilanlar gösterilsin
-      debugPrint('[SwipeLive] Tüm yayınlar bitti, ilanlar gösteriliyor');
-      setState(() {});
-    } else if (_getCurrentStream()?.id != streamId) {
-      // Başka bir sayfanın yayını bitti — sadece o sayfayı güncelle
-      setState(() {});
-    }
-    // else: mevcut sayfanın yayını bitti ama başka yayın var → raid overlay korunur
+    debugPrint('[SwipeLive] stream_ended id=$streamId | remaining=${remaining.length}');
+    setState(() {});
   }
 
   /// API'den güncel yayın listesini çekip _liveItems'ı günceller.
@@ -608,10 +620,12 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
           for (final s in _liveItems) {
             if (!freshIds.contains(s.id) && !_endedStreamIds.contains(s.id)) {
               if (s.id == currentStreamId) {
-                // İzlenen yayın bitti: hemen swap etmek yerine child'a isEnded sinyali gönder,
-                // child raid overlay'i göstersin; kullanıcı kapattıkça _endedStreamIds'e geçer.
+                // İzlenen yayın bitti: child'a isEnded sinyali gönder (raid overlay).
+                // Group-pinning sayesinde _endedStreamIds'e hemen eklesek de
+                // bu grubun pin'i değişmez — overlay görünmeye devam eder.
                 debugPrint('[SwipeLive] refresh: stream ${s.id} bitti (izleniyor) → raid overlay tetikleniyor');
                 _polledEndedStreamId = s.id;
+                _endedStreamIds.add(s.id);
               } else {
                 debugPrint('[SwipeLive] refresh: stream ${s.id} aktif listede yok → ended');
                 _endedStreamIds.add(s.id);
@@ -1299,6 +1313,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
           } else {
             setState(() { _remoteVideoTrack = null; _streamEnded = true; });
             widget.onEngagementEvent?.call('raid_view');
+            widget.onStreamEnded?.call();
           }
         } else {
           setState(() => _remoteVideoTrack = null);
