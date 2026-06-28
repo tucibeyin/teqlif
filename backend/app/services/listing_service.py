@@ -21,6 +21,7 @@ from app.models.listing import Listing
 from app.models.listing_offer import ListingOffer
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
+from app.models.listing_impression import ListingImpression
 from app.services.like_service import LikeService
 from app.schemas.stream import VALID_CATEGORIES
 from app.core.exceptions import (
@@ -63,6 +64,7 @@ def _row_dict(
     campaign_id: Optional[int] = None,
     seller_badge: str | None = None,
     is_trending: bool = False,
+    impression_count: Optional[int] = None,
 ) -> dict:
     return {
         "id": listing.id,
@@ -85,6 +87,7 @@ def _row_dict(
         "seller_is_premium": user.is_premium,
         "seller_badge": seller_badge,
         "is_trending": is_trending,
+        "impression_count": impression_count,
     }
 
 
@@ -261,6 +264,15 @@ class ListingService:
         )
         campaign_id = camp_result.scalar_one_or_none()
         badge_map, trending_cats = await _fetch_seller_meta([user.id])
+        # İlan sahibi görüntüleme sayısını talep ediyorsa (kendi ilanı)
+        impression_count: Optional[int] = None
+        if current_user_id == listing.user_id:
+            imp_result = await self.db.execute(
+                select(func.count()).select_from(ListingImpression).where(
+                    ListingImpression.listing_id == listing.id
+                )
+            )
+            impression_count = imp_result.scalar() or 0
         return _row_dict(
             listing, user,
             counts.get(listing.id, 0), listing.id in liked_set,
@@ -268,6 +280,7 @@ class ListingService:
             campaign_id=campaign_id,
             seller_badge=badge_map.get(user.id),
             is_trending=listing.category in trending_cats,
+            impression_count=impression_count,
         )
 
     # ── İlan Oluştur ─────────────────────────────────────────────────────────

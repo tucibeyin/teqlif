@@ -872,31 +872,50 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           ),
                         ),
                       ),
-                      // Fiyat yanı — beğeni sayısı ve kişisel beğeni durumu
-                      if (_likesCount > 0 || _isLiked)
+                      // Fiyat yanı — beğeni sayısı, kişisel beğeni durumu ve (varsa) gösterim sayısı
+                      if (_likesCount > 0 || _isLiked || listing['impression_count'] != null)
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              _isLiked ? Icons.favorite : Icons.favorite_border,
-                              color: _isLiked
-                                  ? Colors.red
-                                  : Colors.red.withValues(alpha: 0.5),
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$_likesCount',
-                              style: TextStyle(
+                            if (listing['impression_count'] != null) ...[
+                              Icon(
+                                Icons.visibility_outlined,
+                                color: AppColors.textSecondary(context),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${listing['impression_count']}',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary(context),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              if (_likesCount > 0 || _isLiked)
+                                const SizedBox(width: 12),
+                            ],
+                            if (_likesCount > 0 || _isLiked) ...[
+                              Icon(
+                                _isLiked ? Icons.favorite : Icons.favorite_border,
                                 color: _isLiked
                                     ? Colors.red
-                                    : AppColors.textSecondary(context),
-                                fontSize: 13,
-                                fontWeight: _isLiked
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
+                                    : Colors.red.withValues(alpha: 0.5),
+                                size: 16,
                               ),
-                            ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$_likesCount',
+                                style: TextStyle(
+                                  color: _isLiked
+                                      ? Colors.red
+                                      : AppColors.textSecondary(context),
+                                  fontSize: 13,
+                                  fontWeight: _isLiked
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                     ],
