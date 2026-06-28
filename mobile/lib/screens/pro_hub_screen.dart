@@ -4,6 +4,7 @@ import '../config/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 import 'listing_analytics_screen.dart';
 import 'market_intelligence_screen.dart';
 import 'pro_insights_screen.dart';
