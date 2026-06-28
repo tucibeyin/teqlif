@@ -169,13 +169,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             StorageService.saveAvatarUrl(avatarUrl);
           }
           
-          // Profil bilgisi güncellendiğinde, genel auth StorageService'ini de güncelle
-          if (userId != null && user['email'] != null) {
+          // Profil bilgisi güncellenince is_premium dahil tüm bilgileri locale kaydet.
+          // /users/{username} endpoint'i email döndurmüyor, localInfo'dan alıyoruz.
+          if (userId != null) {
             StorageService.saveUserInfo(
               id: user['id'] as int? ?? userId,
-              email: user['email'] as String,
-              username: user['username'] as String? ?? username,
-              fullName: user['full_name'] as String? ?? user['username'] as String? ?? '',
+              email: localInfo?['email'] as String? ?? '',
+              username: user['username'] as String? ?? username ?? '',
+              fullName: user['full_name'] as String? ?? '',
               isPremium: user['is_premium'] == true,
             );
           }
@@ -1561,12 +1562,17 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         ),
                         child: const Text('PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
                       ),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProHubScreen(isPremium: widget.user?['is_premium'] == true),
-                  ),
-                ),
+                onTap: () async {
+                  // StorageService'ten güncel is_premium oku — widget.user stale olabilir
+                  final freshInfo = await StorageService.getUserInfo();
+                  if (!context.mounted) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProHubScreen(isPremium: freshInfo?['is_premium'] == true),
+                    ),
+                  );
+                },
               ),
             ],
           ),
