@@ -3463,7 +3463,7 @@ abstract class AppLocalizations {
   /// No description provided for @metricViewed.
   ///
   /// In tr, this message translates to:
-  /// **'gördü'**
+  /// **'görülme'**
   String get metricViewed;
 
   /// No description provided for @metricClicked.

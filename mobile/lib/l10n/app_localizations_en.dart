@@ -1814,7 +1814,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listingGalleryShallow => 'Viewed only the first photo';
 
   @override
-  String get metricViewed => 'viewed';
+  String get metricViewed => 'views';
 
   @override
   String get metricClicked => 'clicked';

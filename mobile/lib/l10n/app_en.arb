@@ -792,7 +792,7 @@
     }
   },
   "listingGalleryShallow": "Viewed only the first photo",
-  "metricViewed": "views",
+  "metricViewed": "impressions",
   "metricClicked": "clicked",
   "listingReach": "{count} people saw this",
   "@listingReach": {

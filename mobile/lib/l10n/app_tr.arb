@@ -793,7 +793,7 @@
     }
   },
   "listingGalleryShallow": "Sadece ilk fotoğrafa baktı",
-  "metricViewed": "gördü",
+  "metricViewed": "gösterim",
   "metricClicked": "tıkladı",
   "listingReach": "{count} kişi gördü",
   "@listingReach": {
