@@ -145,6 +145,38 @@ class ListingService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    @staticmethod
+    async def _add_ad_impressions(impression_map: dict[int, int], my_listing_ids: list[int], campaign_map: dict[int, int]) -> None:
+        """Kendi ilanlarımızın gösterim sayısına ClickHouse'daki reklam gösterimlerini (varsa) ekler."""
+        if not my_listing_ids or not campaign_map:
+            return
+        
+        my_campaign_ids = [campaign_map[lid] for lid in my_listing_ids if lid in campaign_map]
+        if not my_campaign_ids:
+            return
+            
+        try:
+            from app.database_clickhouse import get_clickhouse_client
+            ch = await get_clickhouse_client()
+            camp_ids_str = ",".join(map(str, my_campaign_ids))
+            ch_query = f"""
+                SELECT item_id, count()
+                FROM user_events
+                WHERE item_id IN ({camp_ids_str})
+                  AND item_type = 'ad_campaign'
+                  AND event_type = 'ad_impression'
+                GROUP BY item_id
+            """
+            ch_res = await ch.query(ch_query)
+            if ch_res and ch_res.result_rows:
+                ad_imp_map = {int(row[0]): int(row[1]) for row in ch_res.result_rows}
+                for lid in my_listing_ids:
+                    cid = campaign_map.get(lid)
+                    if cid and cid in ad_imp_map:
+                        impression_map[lid] = impression_map.get(lid, 0) + ad_imp_map[cid]
+        except Exception as e:
+            logger.warning("[ListingService] ClickHouse ad_impression fetch failed: %s", e)
+
     # ── İlan Listele ─────────────────────────────────────────────────────────
     async def get_listings(
         self,
@@ -199,6 +231,7 @@ class ListingService:
                 )
                 for lid, imp_count in imp_result.all():
                     impression_map[lid] = imp_count
+                await self._add_ad_impressions(impression_map, my_listing_ids, campaign_map)
 
         return [
             _row_dict(
@@ -254,6 +287,7 @@ class ListingService:
             )
             for lid, imp_count in imp_result.all():
                 impression_map[lid] = imp_count
+            await self._add_ad_impressions(impression_map, listing_ids, campaign_map)
 
         return [
             _row_dict(
@@ -303,6 +337,22 @@ class ListingService:
                 )
             )
             impression_count = imp_result.scalar() or 0
+            if campaign_id:
+                try:
+                    from app.database_clickhouse import get_clickhouse_client
+                    ch = await get_clickhouse_client()
+                    ch_query = f"""
+                        SELECT count()
+                        FROM user_events
+                        WHERE item_id = {campaign_id}
+                          AND item_type = 'ad_campaign'
+                          AND event_type = 'ad_impression'
+                    """
+                    ch_res = await ch.query(ch_query)
+                    if ch_res and ch_res.result_rows:
+                        impression_count += int(ch_res.result_rows[0][0])
+                except Exception as e:
+                    logger.warning("[ListingService] ClickHouse ad_impression fetch failed in get_listing: %s", e)
         return _row_dict(
             listing, user,
             counts.get(listing.id, 0), listing.id in liked_set,
