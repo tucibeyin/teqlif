@@ -54,6 +54,7 @@ function showPanel(panel) {
         campaigns: 'navCampaigns', streams: 'navStreams',
         'stream-history': 'navStreamHistory', listings: 'navListings',
         reports: 'navReports', push: 'navPush', analytics: 'navAnalytics',
+        config: 'navConfig'
     };
     const navEl = document.getElementById(navMap[panel]);
     if (navEl) navEl.classList.add('active');
@@ -67,6 +68,7 @@ function showPanel(panel) {
     if (panel === 'listings') loadListings();
     if (panel === 'reports') loadReports();
     if (panel === 'analytics') loadAnalytics();
+    if (panel === 'config') loadConfig();
 }
 
 // ── SEARCH / FILTER ───────────────────────────────────────────────────────────
@@ -494,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('navReports')?.addEventListener('click', () => showPanel('reports'));
     document.getElementById('navPush')?.addEventListener('click', () => showPanel('push'));
     document.getElementById('navAnalytics')?.addEventListener('click', () => showPanel('analytics'));
+    document.getElementById('navConfig')?.addEventListener('click', () => showPanel('config'));
 
     // Reload buttons
     document.getElementById('btnLoadDashboard')?.addEventListener('click', loadDashboard);
@@ -616,9 +619,5 @@ async function saveConfig() {
     }
 }
 
-// Sekme değiştiğinde otomatik yükleme için hook (eğer mevcut switchPanel gibi bir fonksiyon varsa bu içine konabilir, ama biz manuel refresh butonunu koyduk)
-document.getElementById('navConfig')?.addEventListener('click', () => {
-    loadConfig();
-});
 // SÜRÜM YÖNETİMİ BİTİŞ
 
