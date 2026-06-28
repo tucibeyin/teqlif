@@ -45,7 +45,9 @@ class _SmartBidPickerState extends State<SmartBidPicker> {
       _bids = generateNextBids(widget.currentHighestBid, _count);
       _selectedIndex = 0;
       _scrollCtrl.jumpToItem(0);
-      widget.onBidSelected(_bids[0]);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onBidSelected(_bids[0]);
+      });
     }
   }
 
