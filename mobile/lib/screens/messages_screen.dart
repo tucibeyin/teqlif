@@ -537,6 +537,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
             builder: (_) => SwipeLiveScreen.single(streamId: relatedId),
           ));
         }
+      case 'listing_deactivated':
       case 'auction_won':
         if (relatedId != null) {
           Navigator.push(context, MaterialPageRoute(
