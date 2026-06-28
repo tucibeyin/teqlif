@@ -257,8 +257,8 @@ async def _fetch_ch_listing_engagement(user_id: int) -> dict:
         r1 = await ch.query(
             """
             SELECT
-                countIf(event_type = 'listing_tap')        AS clicks,
-                countIf(event_type = 'listing_impression') AS impressions
+                countIf(event_type = 'listing_tap')                              AS clicks,
+                countIf(event_type IN ('listing_impression', 'listing_skip'))    AS impressions
             FROM swipe_live_events
             WHERE user_id = {uid:UInt32}
               AND timestamp >= now() - INTERVAL 30 DAY

@@ -783,12 +783,13 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 onEngagementEvent: (type) => _recordEngagementEvent(stream, type),
               ),
             _ListingItem(:final listing, :final slotIndex, :final streamCategory) =>
-              _ListingVideoPage(
+            _ListingVideoPage(
                 key: ValueKey('listing_${listing['id']}_$i'),
                 listing: listing,
                 isActive: i == _currentPage,
                 slotIndex: slotIndex,
                 streamCategory: streamCategory,
+                onSwipeLiveEvent: _recordListingEvent,
               ),
             _LoadingListingItem() => ColoredBox(
                 key: ValueKey('loading_$i'),
@@ -2322,6 +2323,8 @@ class _ListingVideoPage extends StatefulWidget {
   final bool isActive;
   final int slotIndex;
   final String streamCategory;
+  // Parent'tan gelen swipe_live_events yazıcısı — LPG CTR hesabı için
+  final void Function(int listingId, String eventType, {int dwellMs, String listingCategory, int slotIndex})? onSwipeLiveEvent;
 
   const _ListingVideoPage({
     super.key,
@@ -2329,6 +2332,7 @@ class _ListingVideoPage extends StatefulWidget {
     required this.isActive,
     this.slotIndex = 0,
     this.streamCategory = '',
+    this.onSwipeLiveEvent,
   });
 
   @override
@@ -2354,8 +2358,12 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
     _eventLogged = true;
     final ms = _stopwatch.elapsedMilliseconds;
     final lid = (widget.listing['id'] ?? '').toString();
+    final lidInt = int.tryParse(lid) ?? 0;
+    final category = (widget.listing['category'] as String?) ?? '';
     final hasVideo = (widget.listing['video_url'] as String?) != null &&
         (widget.listing['video_url'] as String).isNotEmpty;
+
+    // feed_analytics'e yaz (FeedTelemetryService — mevcut)
     FeedTelemetryService.instance.logEvent(
       listingId: lid,
       eventType: ms < 2000 ? 'skip' : 'impression',
@@ -2364,6 +2372,17 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
       slotIndex: widget.slotIndex,
       streamCategory: widget.streamCategory,
     );
+
+    // swipe_live_events'e de yaz — LPG CTR hesabının veri kaynağı
+    if (lidInt > 0) {
+      widget.onSwipeLiveEvent?.call(
+        lidInt,
+        ms < 2000 ? 'listing_skip' : 'listing_impression',
+        dwellMs: ms,
+        listingCategory: category,
+        slotIndex: widget.slotIndex,
+      );
+    }
   }
 
   @override
@@ -2412,14 +2431,32 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
     _ctrl?.pause();
     final hasVideo = (widget.listing['video_url'] as String?) != null &&
         (widget.listing['video_url'] as String).isNotEmpty;
+    final lid = (widget.listing['id'] ?? '').toString();
+    final lidInt = int.tryParse(lid) ?? 0;
+    final category = (widget.listing['category'] as String?) ?? '';
+    final dwellMs = _stopwatch.elapsedMilliseconds;
+
+    // feed_analytics'e tıklama yaz
     FeedTelemetryService.instance.logEvent(
-      listingId: (widget.listing['id'] ?? '').toString(),
+      listingId: lid,
       eventType: 'click',
-      dwellTimeMs: _stopwatch.elapsedMilliseconds,
+      dwellTimeMs: dwellMs,
       contentType: hasVideo ? 'video' : 'photo',
       slotIndex: widget.slotIndex,
       streamCategory: widget.streamCategory,
     );
+
+    // swipe_live_events'e de yaz — LPG CTR için
+    if (lidInt > 0) {
+      widget.onSwipeLiveEvent?.call(
+        lidInt,
+        'listing_tap',
+        dwellMs: dwellMs,
+        listingCategory: category,
+        slotIndex: widget.slotIndex,
+      );
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
