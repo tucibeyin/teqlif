@@ -766,6 +766,9 @@
   "onboardingMinHint": "En az 3 kategori seç",
   "onboardingContinue": "Devam Et",
   "onboardingSkip": "Şimdilik Atla",
+  "onboardingBannerTitle": "Sana özel ilanlar gösterelim",
+  "onboardingBannerSubtitle": "İlgi alanlarını seç, feed'in kişiselleşsin.",
+  "onboardingBannerCta": "Seç",
 
   "updateRequiredTitle": "Güncelleme Gerekli",
   "updateRequiredDesc": "Uygulamanın en iyi şekilde çalışması için lütfen güncel sürüme geçin.",

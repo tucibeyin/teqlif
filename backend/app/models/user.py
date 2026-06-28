@@ -34,3 +34,4 @@ class User(Base):
     bio: Mapped[str | None] = mapped_column(String(150), nullable=True)
     website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
+    onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")

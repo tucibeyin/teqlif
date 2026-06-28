@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
@@ -14,6 +15,7 @@ import '../services/feed_telemetry_service.dart';
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
+import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
@@ -47,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedCity;
   List<String> _cities = [];
   final ScrollController _scrollCtrl = ScrollController();
+
+  bool _showOnboardingBanner = false;
 
   // ForYou yatay scroll — dwell tracking
   final ScrollController _forYouScrollCtrl = ScrollController();
@@ -153,6 +157,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final token = await StorageService.getToken();
     final loggedIn = token != null;
     if (mounted) setState(() => _isLoggedIn = loggedIn);
+
+    if (loggedIn) {
+      final prefs = await SharedPreferences.getInstance();
+      final done = prefs.getBool('onboarding_done');
+      if (mounted) setState(() => _showOnboardingBanner = done != true);
+    }
 
     if (_hasFilter) {
       await _loadFiltered(token);
@@ -448,6 +458,24 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── Onboarding banner ────────────────────────────
+                  if (_showOnboardingBanner)
+                    _OnboardingBanner(
+                      onDismiss: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('onboarding_done', false);
+                        if (mounted) setState(() => _showOnboardingBanner = false);
+                      },
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CategoryOnboardingScreen(fromBanner: true)),
+                        );
+                        final prefs = await SharedPreferences.getInstance();
+                        final done = prefs.getBool('onboarding_done');
+                        if (mounted) setState(() => _showOnboardingBanner = done != true);
+                      },
+                    ),
                   // ── Kategori ikonları ────────────────────────────
                   SizedBox(
                     height: 90,
@@ -1478,4 +1506,71 @@ class _GridItemState extends State<_GridItem> {
               size: 28, color: AppColors.border(context)),
         ),
       );
+}
+
+class _OnboardingBanner extends StatelessWidget {
+  final VoidCallback onDismiss;
+  final VoidCallback onTap;
+
+  const _OnboardingBanner({required this.onDismiss, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF06B6D4).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.tune_rounded, color: Color(0xFF06B6D4), size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GestureDetector(
+              onTap: onTap,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.onboardingBannerTitle,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF06B6D4),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l.onboardingBannerSubtitle,
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onTap,
+            child: Text(
+              l.onboardingBannerCta,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF06B6D4),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: onDismiss,
+            child: const Icon(Icons.close, size: 16, color: Color(0xFF94A3B8)),
+          ),
+        ],
+      ),
+    );
+  }
 }

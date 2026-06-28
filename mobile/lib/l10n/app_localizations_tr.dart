@@ -1772,6 +1772,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get onboardingSkip => 'Şimdilik Atla';
 
   @override
+  String get onboardingBannerTitle => 'Sana özel ilanlar gösterelim';
+
+  @override
+  String get onboardingBannerSubtitle =>
+      'İlgi alanlarını seç, feed\'in kişiselleşsin.';
+
+  @override
+  String get onboardingBannerCta => 'Seç';
+
+  @override
   String get updateRequiredTitle => 'Güncelleme Gerekli';
 
   @override

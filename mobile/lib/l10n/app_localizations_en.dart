@@ -1772,6 +1772,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingSkip => 'Skip for now';
 
   @override
+  String get onboardingBannerTitle => 'Let us personalise your feed';
+
+  @override
+  String get onboardingBannerSubtitle =>
+      'Pick your interests and see listings made for you.';
+
+  @override
+  String get onboardingBannerCta => 'Pick';
+
+  @override
   String get updateRequiredTitle => 'Update Required';
 
   @override

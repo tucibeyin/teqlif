@@ -3412,6 +3412,24 @@ abstract class AppLocalizations {
   /// **'Şimdilik Atla'**
   String get onboardingSkip;
 
+  /// No description provided for @onboardingBannerTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sana özel ilanlar gösterelim'**
+  String get onboardingBannerTitle;
+
+  /// No description provided for @onboardingBannerSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlgi alanlarını seç, feed\'in kişiselleşsin.'**
+  String get onboardingBannerSubtitle;
+
+  /// No description provided for @onboardingBannerCta.
+  ///
+  /// In tr, this message translates to:
+  /// **'Seç'**
+  String get onboardingBannerCta;
+
   /// No description provided for @updateRequiredTitle.
   ///
   /// In tr, this message translates to:

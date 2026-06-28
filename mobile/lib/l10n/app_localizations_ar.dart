@@ -1757,6 +1757,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onboardingSkip => 'تخطي الآن';
 
   @override
+  String get onboardingBannerTitle => 'دعنا نخصّص تغذيتك';
+
+  @override
+  String get onboardingBannerSubtitle =>
+      'اختر اهتماماتك لنعرض لك إعلانات مناسبة.';
+
+  @override
+  String get onboardingBannerCta => 'اختر';
+
+  @override
   String get updateRequiredTitle => 'تحديث مطلوب';
 
   @override

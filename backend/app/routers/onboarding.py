@@ -6,6 +6,7 @@ Mevcut kayıtların üzerine yazmaz (ON CONFLICT DO NOTHING).
 """
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, field_validator
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -60,6 +61,9 @@ async def seed_interests(
         .on_conflict_do_nothing(constraint="uq_user_interest")
     )
     await db.execute(stmt)
+    await db.execute(
+        sa_update(User).where(User.id == current_user.id).values(onboarding_completed=True)
+    )
     await db.commit()
 
     # Feed cache'i geçersiz kıl — yeni interests hemen etkili olsun

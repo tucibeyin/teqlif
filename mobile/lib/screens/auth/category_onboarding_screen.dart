@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
 
 class CategoryOnboardingScreen extends StatefulWidget {
-  const CategoryOnboardingScreen({super.key});
+  final bool fromBanner;
+  const CategoryOnboardingScreen({super.key, this.fromBanner = false});
 
   @override
   State<CategoryOnboardingScreen> createState() =>
@@ -45,14 +47,26 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
     setState(() => _loading = true);
     try {
       await AuthService.seedOnboardingInterests(_selected.toList());
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('onboarding_done', true);
     } catch (_) {
       // Hata olsa bile devam et — feed popüler ilanlarla açılır
     }
-    if (mounted) Navigator.pushReplacementNamed(context, '/home');
+    if (!mounted) return;
+    if (widget.fromBanner) {
+      Navigator.pop(context);
+    } else {
+      Navigator.pushReplacementNamed(context, '/home');
+    }
   }
 
   void _skip() {
-    Navigator.pushReplacementNamed(context, '/home');
+    SharedPreferences.getInstance().then((p) => p.setBool('onboarding_done', false));
+    if (widget.fromBanner) {
+      Navigator.pop(context);
+    } else {
+      Navigator.pushReplacementNamed(context, '/home');
+    }
   }
 
   @override

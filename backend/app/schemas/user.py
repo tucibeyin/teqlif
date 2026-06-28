@@ -53,6 +53,7 @@ class UserOut(BaseModel):
     is_premium: bool = False
     bio: Optional[str] = None
     website_url: Optional[str] = None
+    onboarding_completed: bool = False
 
     model_config = {"from_attributes": True}
 
