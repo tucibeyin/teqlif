@@ -4,6 +4,7 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
+import '../../services/storage_service.dart';
 
 class CategoryOnboardingScreen extends StatefulWidget {
   final bool fromBanner;
