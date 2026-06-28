@@ -578,8 +578,8 @@ if(btnSaveConfig) btnSaveConfig.addEventListener('click', saveConfig);
 
 async function loadConfig() {
     try {
-        const res = await fetch(`${API_BASE_URL}/config/version`, {
-            headers: { 'Authorization': `Bearer ${getAdminToken()}` }
+        const res = await fetch('/api/config/version', {
+            headers: getAuthHeaders()
         });
         if (!res.ok) throw new Error('Ayar okuma hatası');
         const data = await res.json();
@@ -604,12 +604,9 @@ async function saveConfig() {
     };
     
     try {
-        const res = await fetch(`${API_BASE_URL}/config/version`, {
+        const res = await fetch('/api/config/version', {
             method: 'POST',
-            headers: { 
-                'Authorization': `Bearer ${getAdminToken()}`,
-                'Content-Type': 'application/json'
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error('Kaydetme hatası');
