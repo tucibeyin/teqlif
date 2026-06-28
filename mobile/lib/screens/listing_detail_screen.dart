@@ -1167,7 +1167,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         ),
       ),
       bottomNavigationBar: isMine
-          ? ((!_isActive && _campaignId == null)
+          ? (!_isActive && _campaignId == null)
               ? const SizedBox.shrink()
               : SafeArea(
                   child: Padding(
