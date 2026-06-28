@@ -1816,7 +1816,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listingGalleryShallow => 'Sadece ilk fotoğrafa baktı';
 
   @override
-  String get metricViewed => 'görülme';
+  String get metricViewed => 'gösterim';
 
   @override
   String get metricClicked => 'tıkladı';

@@ -1801,7 +1801,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listingGalleryShallow => 'شاهد الصورة الأولى فقط';
 
   @override
-  String get metricViewed => 'مشاهدة';
+  String get metricViewed => 'مرات الظهور';
 
   @override
   String get metricClicked => 'نقر';
