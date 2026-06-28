@@ -262,19 +262,35 @@ async function loadTuci() {
 }
 
 function openAirdropModal() {
-    document.getElementById('airdrop-user-id').value = '';
+    document.getElementById('airdrop-username').value = '';
     document.getElementById('airdrop-amount').value = '';
     document.getElementById('airdrop-modal').classList.remove('hidden');
+    document.getElementById('airdrop-username').focus();
 }
 function closeAirdropModal() { document.getElementById('airdrop-modal').classList.add('hidden'); }
 
 async function submitAirdrop() {
-    const userId = parseInt(document.getElementById('airdrop-user-id').value);
+    const username = document.getElementById('airdrop-username').value.trim().replace(/^@/, '');
     const amount = parseInt(document.getElementById('airdrop-amount').value);
-    if (!userId || !amount || amount < 1) { alert("Geçerli kullanıcı ID ve miktar girin."); return; }
-    const res = await fetch('/api/admin-data/tuci/airdrop', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ user_id: userId, amount }) });
-    if (res.ok) { const d = await res.json(); alert(d.message); closeAirdropModal(); loadTuci(); }
-    else { const err = await res.json(); alert("Hata: " + (err.detail || "Airdrop başarısız.")); }
+    if (!username) { alert("Kullanıcı adı girin."); return; }
+    if (!amount || amount < 1) { alert("Geçerli bir miktar girin."); return; }
+    const btn = document.getElementById('btnSubmitAirdrop');
+    btn.disabled = true;
+    btn.textContent = '⏳ Yükleniyor…';
+    try {
+        const res = await fetch('/api/admin-data/tuci/airdrop', { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ username, amount }) });
+        const d = await res.json();
+        if (res.ok) {
+            alert(`✅ ${d.message}\nYeni bakiye: ${d.new_balance} TUCi`);
+            closeAirdropModal();
+            loadTuci();
+        } else {
+            alert("Hata: " + (d.detail || "Airdrop başarısız."));
+        }
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🎁 Airdrop Et';
+    }
 }
 
 // ── REKLAM KAMPANYALARI ───────────────────────────────────────────────────────

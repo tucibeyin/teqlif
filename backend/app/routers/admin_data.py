@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func, cast, Date
+from sqlalchemy import select, desc, func, cast, Date, text
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone, timedelta
@@ -460,7 +460,7 @@ async def purge_user(
 # 5. TUCi EKONOMİSİ
 # ==========================================
 class TuciAirdropRequest(BaseModel):
-    user_id: int
+    username: str = Field(min_length=1, max_length=50)
     amount: int = Field(gt=0)
     note: str = ""
 
@@ -517,15 +517,20 @@ async def get_tuci_summary(limit: int = 100, db: AsyncSession = Depends(get_db),
 
 @router.post("/tuci/airdrop")
 async def admin_tuci_airdrop(data: TuciAirdropRequest, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
-    user = await db.get(User, data.user_id)
+    result = await db.execute(select(User).where(User.username == data.username))
+    user = result.scalar_one_or_none()
     if not user:
-        raise NotFoundException("Kullanıcı bulunamadı")
-    user.tuci_balance += data.amount
-    tx = TuciTransaction(user_id=data.user_id, amount=data.amount, transaction_type="airdrop")
-    db.add(tx)
+        raise NotFoundException(f"'{data.username}' kullanıcısı bulunamadı")
+    # Atomic UPDATE — race condition'a karşı güvenli
+    await db.execute(
+        text("UPDATE users SET tuci_balance = tuci_balance + :amount WHERE id = :uid"),
+        {"amount": data.amount, "uid": user.id},
+    )
+    db.add(TuciTransaction(user_id=user.id, amount=data.amount, transaction_type="airdrop"))
     await db.commit()
-    logger.info("[ADMIN] TUCi airdrop | user=%s | amount=%s | admin=%s", user.username, data.amount, admin.email)
-    return {"message": f"{user.username} kullanıcısına {data.amount} TUCi airdrop edildi.", "new_balance": user.tuci_balance}
+    await db.refresh(user)
+    logger.info("[ADMIN] TUCi airdrop | user=%s | amount=%s | new_balance=%s | admin=%s", user.username, data.amount, user.tuci_balance, admin.email)
+    return {"message": f"{user.username} kullanıcısına {data.amount} TUCi yüklendi.", "new_balance": user.tuci_balance, "username": user.username}
 
 
 # ==========================================
