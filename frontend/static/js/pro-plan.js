@@ -9,15 +9,7 @@
         document.getElementById('btnMonthly').classList.toggle('active', !isYearly);
         document.getElementById('btnYearly').classList.toggle('active', isYearly);
 
-        var periodEl   = document.getElementById('planPeriodLabel');
-        var priceEl    = document.getElementById('planPrice');
-        var subPriceEl = document.getElementById('planSubPrice');
-
         if (isYearly) {
-            periodEl.textContent   = 'Yıllık';
-            priceEl.textContent    = '₺2.000';
-            subPriceEl.textContent = '≈ ₺167/ay · 2 ay bedava';
-            
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺1.200/yıl';
             document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '240 kullanım × 5 TUCi<br>= 1.200 TL tasarruf';
             
@@ -27,19 +19,15 @@
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '~₺1.020/yıl';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+204 ekstra blast × 5 TUCi<br>= 1.020 TL tasarruf';
             
-            document.querySelector('.tfoot-val-num').textContent = '₺14.220+';
-            document.querySelector('.tfoot-val-sub').textContent = 'yıllık avantaj değeri (hesaplanabilir)';
-            
-            document.querySelector('.tfoot-val > div').innerHTML = '₺2.000 yatır,<br><span style="color:var(--green);font-weight:700;">₺14.220+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+            var tfootValueText = document.getElementById('tfootValueText');
+            if (tfootValueText) {
+                tfootValueText.innerHTML = '₺2.000 yatır,<br><span style="color:var(--green);font-weight:700;">₺14.220+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+            }
             
             document.querySelector('.total-banner-text > span').innerHTML = 'Boost ve blast haklarınızı kullandığınızda ₺2.000 ödeyip <strong style="color:var(--green)">₺14.220+ değer</strong> elde edersiniz.';
             document.querySelector('.total-val').textContent = '₺14.220+';
             document.querySelector('.total-sub').textContent = 'yıllık avantaj değeri';
         } else {
-            periodEl.textContent   = 'Aylık';
-            priceEl.textContent    = '₺200';
-            subPriceEl.textContent = '';
-            
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺100/ay';
             document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '20 kullanım × 5 TUCi<br>= 100 TL tasarruf';
             
@@ -49,10 +37,10 @@
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '~₺85/ay';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+17 ekstra blast × 5 TUCi<br>= 85 TL tasarruf';
             
-            document.querySelector('.tfoot-val-num').textContent = '₺1.185+';
-            document.querySelector('.tfoot-val-sub').textContent = 'aylık avantaj değeri (hesaplanabilir)';
-            
-            document.querySelector('.tfoot-val > div').innerHTML = '₺200 yatır,<br><span style="color:var(--green);font-weight:700;">₺1.185+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+            var tfootValueText = document.getElementById('tfootValueText');
+            if (tfootValueText) {
+                tfootValueText.innerHTML = '₺200 yatır,<br><span style="color:var(--green);font-weight:700;">₺1.185+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+            }
             
             document.querySelector('.total-banner-text > span').innerHTML = 'Boost ve blast haklarınızı kullandığınızda ₺200 ödeyip <strong style="color:var(--green)">₺1.185+ değer</strong> elde edersiniz.';
             document.querySelector('.total-val').textContent = '₺1.185+';
