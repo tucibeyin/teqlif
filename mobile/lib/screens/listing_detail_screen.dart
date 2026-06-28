@@ -119,6 +119,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           email: user.email,
           username: user.username,
           fullName: user.fullName,
+          isPremium: user.isPremium,
         );
         userId = user.id;
       } catch (_) {}

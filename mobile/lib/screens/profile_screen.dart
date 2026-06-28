@@ -1950,6 +1950,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         email: updatedUser['email'] as String,
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
+        isPremium: updatedUser['is_premium'] as bool? ?? false,
       );
       if (mounted) setState(() => _profileImageUrl = upload.url);
     } catch (e) {
@@ -2010,6 +2011,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         email: updatedUser['email'] as String,
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
+        isPremium: updatedUser['is_premium'] as bool? ?? false,
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
