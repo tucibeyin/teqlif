@@ -21,7 +21,7 @@ class _AdReportScreenState extends State<AdReportScreen>
     with SingleTickerProviderStateMixin {
   Map<String, dynamic>? _report;
   bool _loading = true;
-  String? _error;
+  bool _hasError = false;
 
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
@@ -41,13 +41,12 @@ class _AdReportScreenState extends State<AdReportScreen>
   }
 
   Future<void> _loadReport() async {
-    final l = AppLocalizations.of(context)!;
     final report = await AnalyticsService.getCampaignReport(widget.campaignId);
     if (!mounted) return;
     setState(() {
       _report = report;
       _loading = false;
-      _error = report == null ? l.adReportLoadError : null;
+      _hasError = report == null;
     });
     if (report != null) _fadeCtrl.forward();
   }
@@ -98,7 +97,7 @@ class _AdReportScreenState extends State<AdReportScreen>
       body: SafeArea(
         child: _loading
             ? _buildLoading()
-            : _error != null
+            : _hasError
                 ? _buildError()
                 : _buildReport(),
       ),
@@ -133,7 +132,7 @@ class _AdReportScreenState extends State<AdReportScreen>
             const Icon(Icons.wifi_off_rounded, color: Color(0xFF475569), size: 52),
             const SizedBox(height: 16),
             Text(
-              _error!,
+              l.adReportLoadError,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 15),
             ),
@@ -142,7 +141,7 @@ class _AdReportScreenState extends State<AdReportScreen>
               label: l.btnRetry,
               color: kPrimary,
               onTap: () {
-                setState(() { _loading = true; _error = null; });
+                setState(() { _loading = true; _hasError = false; });
                 _loadReport();
               },
             ),

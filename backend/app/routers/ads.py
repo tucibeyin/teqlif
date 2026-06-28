@@ -298,6 +298,7 @@ async def get_sponsored_listings(
 
 @router.get("/campaigns/{campaign_id}/report")
 async def get_campaign_report(
+    request: Request,
     campaign_id: int,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -328,7 +329,8 @@ async def get_campaign_report(
         if budget_str is not None:
             remaining_budget = max(0.0, float(budget_str))
     except Exception as exc:
-        logger.warning("[Ads] Redis bütçe okuması başarısız: %s", exc)
+        client = f"{request.client.host}:{request.client.port}" if request.client else "unknown:0"
+        logger.error(f'[Ads] Redis bütçe okuması başarısız: {client} - "{request.method} {request.url.path} HTTP/1.1" 500 Internal Server Error - {exc}')
 
     actual_spent = round(max(0.0, campaign.total_budget - remaining_budget), 2)
 
@@ -396,7 +398,8 @@ async def get_campaign_report(
             best_hour = int(hour_result.result_rows[0][0])
 
     except Exception as exc:
-        logger.warning("[Ads] ClickHouse rapor sorgusu başarısız: %s", exc)
+        client = f"{request.client.host}:{request.client.port}" if request.client else "unknown:0"
+        logger.error(f'[Ads] ClickHouse rapor sorgusu başarısız: {client} - "{request.method} {request.url.path} HTTP/1.1" 500 Internal Server Error - {exc}')
 
     # Kategori ortalama CTR (PostgreSQL)
     try:
@@ -422,7 +425,8 @@ async def get_campaign_report(
             if cat_row and cat_row[0]:
                 category_avg_ctr = round(float(cat_row[0]), 2)
     except Exception as exc:
-        logger.warning("[Ads] Kategori CTR sorgusu başarısız: %s", exc)
+        client = f"{request.client.host}:{request.client.port}" if request.client else "unknown:0"
+        logger.error(f'[Ads] Kategori CTR sorgusu başarısız: {client} - "{request.method} {request.url.path} HTTP/1.1" 500 Internal Server Error - {exc}')
 
     ctr = round(clicks / impressions * 100, 2) if impressions > 0 else 0.0
 
