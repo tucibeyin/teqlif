@@ -277,7 +277,6 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   void _ensureGroupsBuilt(int targetGroupIdx) {
     while (_groupBoundaries.length <= targetGroupIdx) {
       final groupIdx = _groupBoundaries.length;
-      // Grup inşa anında geçerli yayınları hesapla ve bu gruba bir yayın pin'le
       final validItems = _endedStreamIds.isEmpty
           ? _liveItems
           : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
@@ -318,14 +317,31 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     debugPrint('[SwipeLive] dwell=${dwellMs}ms avg=${avgMs}ms lpg: $_currentListingsPerGroup → $newN');
     if (newN == _currentListingsPerGroup) return;
     _currentListingsPerGroup = newN;
-    // Mevcut sayfa ötesindeki grupları yeniden inşa et
-    final firstFutureGroup = _groupBoundaries.indexWhere(
-      (g) => g.$1 > _currentPage,
+    
+    // Mevcut grubu bul ve eğer doğrudan yayın sayfasındaysak (ilanlarda değilsek),
+    // bu grubun ilan sayısını hemen güncelle ki anında etki etsin.
+    final currentGroupIdx = _groupBoundaries.indexWhere(
+      (g) => _currentPage >= g.$1 && _currentPage <= g.$1 + g.$2,
     );
-    if (firstFutureGroup > 0) {
-      _groupBoundaries.removeRange(firstFutureGroup, _groupBoundaries.length);
+    
+    int truncateFrom = _groupBoundaries.length;
+    if (currentGroupIdx >= 0 && _currentPage == _groupBoundaries[currentGroupIdx].$1) {
+      final g = _groupBoundaries[currentGroupIdx];
+      _groupBoundaries[currentGroupIdx] = (g.$1, _currentListingsPerGroup, g.$3);
+      truncateFrom = currentGroupIdx + 1;
+    } else {
+      final firstFutureGroup = _groupBoundaries.indexWhere((g) => g.$1 > _currentPage);
+      if (firstFutureGroup > 0) truncateFrom = firstFutureGroup;
+    }
+
+    if (truncateFrom < _groupBoundaries.length) {
+      _groupBoundaries.removeRange(truncateFrom, _groupBoundaries.length);
+    }
+    if (_groupBoundaries.isNotEmpty) {
       final last = _groupBoundaries.last;
       _nextGroupStartPage = last.$1 + 1 + last.$2;
+    } else {
+      _nextGroupStartPage = 0;
     }
   }
 
@@ -360,11 +376,9 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     StreamOut? pinnedStream;
     if (!isListingOnlyGroup && pinnedStreamId != null) {
       try {
-        pinnedStream = _liveItems.firstWhere(
-          (s) => s.id == pinnedStreamId && !_endedStreamIds.contains(s.id),
-        );
+        pinnedStream = _liveItems.firstWhere((s) => s.id == pinnedStreamId);
       } catch (_) {
-        pinnedStream = null; // Bitti veya listede yok → listing'e düş
+        pinnedStream = null; // Listede yok → listing'e düş
       }
     }
 
@@ -640,14 +654,19 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
         // Yeni yayınları ekle
         final existingIds = _liveItems.map((s) => s.id).toSet();
+        bool hasChanges = false;
         for (final s in fresh) {
-          if (!existingIds.contains(s.id)) _liveItems.add(s);
+          if (!existingIds.contains(s.id)) {
+            _liveItems.add(s);
+            hasChanges = true;
+          }
         }
         if (fresh.isNotEmpty) {
           // Aktif listede olmayan yayınlar gerçekten bitmiş
           final currentStreamId = _getCurrentStream()?.id;
           for (final s in _liveItems) {
             if (!freshIds.contains(s.id) && !_endedStreamIds.contains(s.id)) {
+              hasChanges = true;
               if (s.id == currentStreamId) {
                 // İzlenen yayın bitti: child'a isEnded sinyali gönder (raid overlay).
                 // Group-pinning sayesinde _endedStreamIds'e hemen eklesek de
@@ -665,9 +684,21 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
           // Boş liste + bazı yayınlar zaten bitmişse: tüm kalan yayınlar da bitmiş
           for (final s in _liveItems) {
             if (!_endedStreamIds.contains(s.id)) {
+              hasChanges = true;
               debugPrint('[SwipeLive] refresh: stream ${s.id} → boş liste + önceki bitişler → ended');
               _endedStreamIds.add(s.id);
             }
+          }
+        }
+
+        // Eğer feed döngüsünde değişiklik olduysa, gelecek grupları temizle
+        // ki yeni döngüye göre (yeni yayınlarla / biten yayınlar olmadan) tekrar inşa edilsin.
+        if (hasChanges) {
+          final firstFutureGroup = _groupBoundaries.indexWhere((g) => g.$1 > _currentPage);
+          if (firstFutureGroup > 0) {
+            _groupBoundaries.removeRange(firstFutureGroup, _groupBoundaries.length);
+            final last = _groupBoundaries.last;
+            _nextGroupStartPage = last.$1 + 1 + last.$2;
           }
         }
 

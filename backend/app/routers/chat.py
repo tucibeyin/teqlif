@@ -312,9 +312,16 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
             )
             stream = stream_result.scalar_one_or_none()
             if stream:
+                if not stream.is_live:
+                    await safe_send_json(websocket, {"type": WS.STREAM_ENDED})
+                    await websocket.close(code=1000)
+                    return
                 is_host = stream.host_id == user_id
                 room_name = stream.room_name
                 host_id = stream.host_id
+            else:
+                await websocket.close(code=_WS_CODE_UNAUTHORIZED)
+                return
     except Exception as exc:
         logger.error(
             "[CHAT WS] DB doğrulama hatası | stream_id=%s user_id=%s | %s",
