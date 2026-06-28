@@ -138,6 +138,7 @@ async def get_recent_users(limit: int = 50, db: AsyncSession = Depends(get_db), 
             "full_name": u.full_name,
             "is_active": u.is_active,
             "is_verified": u.is_verified,
+            "is_premium": u.is_premium,
             "is_shadowbanned": u.is_shadowbanned,
             "deleted_at": u.deleted_at.isoformat() if u.deleted_at else None,
             "tuci_balance": u.tuci_balance,
@@ -159,6 +160,21 @@ async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession
     if data.is_active is not None: user.is_active = data.is_active
     await db.commit()
     return {"message": "Bilgiler güncellendi."}
+
+@router.post("/users/{user_id}/toggle-pro")
+async def toggle_pro(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(check_admin_access),
+):
+    user = await db.get(User, user_id)
+    if not user:
+        raise NotFoundException("Kullanıcı bulunamadı")
+    user.is_premium = not user.is_premium
+    await db.commit()
+    status = "PRO verildi" if user.is_premium else "PRO kaldırıldı"
+    logger.info("[ADMIN] %s → %s | admin=%s", user.username, status, admin.email)
+    return {"user_id": user_id, "username": user.username, "is_premium": user.is_premium}
 
 @router.post("/users/{user_id}/shadowban")
 async def toggle_shadowban(

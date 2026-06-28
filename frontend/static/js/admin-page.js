@@ -122,6 +122,7 @@ async function loadUsers() {
         } else {
             statusPills.push('<span class="status-pill" style="background:#10b981;color:#0f172a;">✅ Aktif</span>');
         }
+        if (u.is_premium) statusPills.push('<span class="status-pill" style="background:#f59e0b;color:#0f172a;">⭐ PRO</span>');
         if (u.is_shadowbanned) statusPills.push('<span class="status-pill" style="background:#7c3aed;color:white;">👁 Gizli Kısıtlı</span>');
         if (!u.is_verified && !u.deleted_at) statusPills.push('<span class="status-pill" style="background:#f59e0b;color:#0f172a;">✉ Doğrulanmamış</span>');
         return `
@@ -143,6 +144,7 @@ async function loadUsers() {
                     data-modal-email="${u.email}"
                     data-modal-active="${u.is_active}"
                     data-modal-shadow="${u.is_shadowbanned}"
+                    data-modal-pro="${u.is_premium}"
                     class="action-btn">Yönet</button>
             </td>
         </tr>`;
@@ -150,7 +152,7 @@ async function loadUsers() {
     document.getElementById("search-users").value = "";
 }
 
-function openModal(id, un, fn, email, act, shadow) {
+function openModal(id, un, fn, email, act, shadow, isPro) {
     currentUserId = id;
     document.getElementById("modal-title").innerText = "@" + un;
     document.getElementById("edit-fullname").value = fn === 'null' ? '' : fn;
@@ -160,6 +162,9 @@ function openModal(id, un, fn, email, act, shadow) {
     const shadowBtn = document.getElementById("btnToggleShadowban");
     shadowBtn.textContent = shadow ? '👁 Gizli Kısıtlamayı Kaldır' : '👁 Gizli Kısıtlama (Shadowban) Uygula';
     shadowBtn.style.background = shadow ? '#6b7280' : '#7c3aed';
+    const proBtn = document.getElementById("btnTogglePro");
+    proBtn.textContent = isPro ? '⭐ PRO Kaldır' : '⭐ PRO Ver';
+    proBtn.style.background = isPro ? '#6b7280' : '#d97706';
     document.getElementById("user-modal").classList.remove("hidden");
 }
 function closeModal() { document.getElementById("user-modal").classList.add("hidden"); currentUserId = null; }
@@ -176,6 +181,12 @@ async function toggleShadowban() {
     if (!currentUserId) return;
     const res = await fetch(`/api/admin-data/users/${currentUserId}/shadowban`, { method: 'POST', headers: getAuthHeaders() });
     if (res.ok) { const d = await res.json(); alert(`@${d.username} → ${d.is_shadowbanned ? 'Shadowban uygulandı' : 'Shadowban kaldırıldı'}`); closeModal(); loadUsers(); }
+}
+
+async function togglePro() {
+    if (!currentUserId) return;
+    const res = await fetch(`/api/admin-data/users/${currentUserId}/toggle-pro`, { method: 'POST', headers: getAuthHeaders() });
+    if (res.ok) { const d = await res.json(); alert(`@${d.username} → ${d.is_premium ? '⭐ PRO verildi' : 'PRO kaldırıldı'}`); closeModal(); loadUsers(); }
 }
 
 async function submitPasswordReset() {
@@ -492,6 +503,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // User modal
     document.getElementById('btnCloseEditModal')?.addEventListener('click', closeModal);
     document.getElementById('btnSubmitUserUpdate')?.addEventListener('click', submitUserUpdate);
+    document.getElementById('btnTogglePro')?.addEventListener('click', togglePro);
     document.getElementById('btnToggleShadowban')?.addEventListener('click', toggleShadowban);
     document.getElementById('btnSoftDeleteUser')?.addEventListener('click', () => { if (currentUserId) deleteUser(currentUserId, (document.getElementById('modal-title')?.innerText || '').replace('@','')); });
     document.getElementById('btnPurgeUser')?.addEventListener('click', () => { if (currentUserId) purgeUser(currentUserId, (document.getElementById('modal-title')?.innerText || '').replace('@','')); });
@@ -511,7 +523,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Event delegation — dynamic table buttons
     document.getElementById('user-table-body')?.addEventListener('click', e => {
         const openBtn = e.target.closest('[data-open-modal]');
-        if (openBtn) { openModal(Number(openBtn.dataset.openModal), openBtn.dataset.modalUn, openBtn.dataset.modalFn, openBtn.dataset.modalEmail, openBtn.dataset.modalActive === 'true', openBtn.dataset.modalShadow === 'true'); return; }
+        if (openBtn) { openModal(Number(openBtn.dataset.openModal), openBtn.dataset.modalUn, openBtn.dataset.modalFn, openBtn.dataset.modalEmail, openBtn.dataset.modalActive === 'true', openBtn.dataset.modalShadow === 'true', openBtn.dataset.modalPro === 'true'); return; }
     });
 
     document.getElementById('stream-table-body')?.addEventListener('click', e => {
