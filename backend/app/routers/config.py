@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from app.database import get_db
 from app.models.app_config import AppConfig
-from app.security import get_current_user
+from app.utils.auth import get_current_user
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
