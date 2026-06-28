@@ -108,13 +108,32 @@ async def get_personalized_feed(
 
     counts, liked_set = await LikeService.batch_listing_likes(db, listing_ids, user_id)
 
+    # Eğer kullanıcının kendi ilanı denk geldiyse impression_count çek
+    impression_map: dict[int, int] = {}
+    if user_id and listing_ids:
+        from sqlalchemy import func
+        from app.models.listing_impression import ListingImpression
+        my_listing_ids = [lid for lid in listing_ids if lid in rows and rows[lid][1].id == user_id]
+        if my_listing_ids:
+            imp_result = await db.execute(
+                select(ListingImpression.listing_id, func.count())
+                .select_from(ListingImpression)
+                .where(ListingImpression.listing_id.in_(my_listing_ids))
+                .group_by(ListingImpression.listing_id)
+            )
+            for lid, imp_count in imp_result.all():
+                impression_map[lid] = imp_count
+
     # Sıralamayı koru (scoring'den gelen sıra)
     result = []
     for lid in listing_ids:
         if lid not in rows:
             continue
         listing, user = rows[lid]
-        result.append(_row_dict(listing, user, counts.get(lid, 0), lid in liked_set))
+        result.append(_row_dict(
+            listing, user, counts.get(lid, 0), lid in liked_set,
+            impression_count=impression_map.get(lid) if user.id == user_id else None
+        ))
 
     # Görüldü olarak işaretle (arka planda, hata olursa sessizce geç)
     if user_id and result:
@@ -380,12 +399,31 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
     rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
     counts, liked_set = await LikeService.batch_listing_likes(db, listing_ids, user_id)
 
+    # Kendi ilanıysa impression_count al
+    impression_map: dict[int, int] = {}
+    if user_id and listing_ids:
+        from sqlalchemy import func
+        from app.models.listing_impression import ListingImpression
+        my_listing_ids = [lid for lid in listing_ids if lid in rows and rows[lid][1].id == user_id]
+        if my_listing_ids:
+            imp_result = await db.execute(
+                select(ListingImpression.listing_id, func.count())
+                .select_from(ListingImpression)
+                .where(ListingImpression.listing_id.in_(my_listing_ids))
+                .group_by(ListingImpression.listing_id)
+            )
+            for lid, imp_count in imp_result.all():
+                impression_map[lid] = imp_count
+
     result = []
     for lid in listing_ids:
         if lid not in rows:
             continue
         listing, user = rows[lid]
-        result.append(_row_dict(listing, user, counts.get(lid, 0), lid in liked_set))
+        result.append(_row_dict(
+            listing, user, counts.get(lid, 0), lid in liked_set,
+            impression_count=impression_map.get(lid) if user.id == user_id else None
+        ))
 
     # Sponsored ilan enjeksiyonu — sadece ilk sayfa
     if page == 0:
