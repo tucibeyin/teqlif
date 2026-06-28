@@ -11,7 +11,7 @@ from app.utils.auth import get_current_user
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/config", tags=["config"])
+router = APIRouter(prefix="/api/config", tags=["config"])
 
 class VersionConfigRequest(BaseModel):
     ios_min_version: str
