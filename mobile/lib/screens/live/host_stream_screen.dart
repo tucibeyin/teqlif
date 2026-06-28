@@ -669,6 +669,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       _log.captureException(e, stackTrace: st, tag: 'HostStream.endStream');
     }
 
+    // Odayı bilerek kapattığımız için otomatik kapanma dinleyicisini kaldırıyoruz
+    // Böylece RoomDisconnectedEvent tetiklenip bizi /home sayfasına yönlendirmeyecek
+    _listener?.dispose();
     await _room?.disconnect();
     if (mounted) {
       // Yayın analiz ekranına yönlendir; geri tuşu ana sayfaya döner
