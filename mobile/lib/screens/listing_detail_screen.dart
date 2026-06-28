@@ -1167,10 +1167,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         ),
       ),
       bottomNavigationBar: isMine
-          ? SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Builder(builder: (ctx) {
+          ? ((!_isActive && _campaignId == null)
+              ? const SizedBox.shrink()
+              : SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Builder(builder: (ctx) {
                     final l = AppLocalizations.of(ctx)!;
                     return _campaignId != null
                         ? ElevatedButton.icon(
