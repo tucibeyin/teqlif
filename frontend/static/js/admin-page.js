@@ -589,9 +589,9 @@ async function loadConfig() {
         document.getElementById('configAndroidMin').value = data.android.min_version || '';
         document.getElementById('configAndroidLatest').value = data.android.latest_version || '';
         
-        showToast('Ayarlar yüklendi', 'success');
+        alert('Ayarlar yüklendi');
     } catch (e) {
-        showToast(e.message, 'error');
+        alert(e.message);
     }
 }
 
@@ -613,9 +613,9 @@ async function saveConfig() {
             body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error('Kaydetme hatası');
-        showToast('Ayarlar başarıyla kaydedildi!', 'success');
+        alert('Ayarlar başarıyla kaydedildi!');
     } catch(e) {
-        showToast(e.message, 'error');
+        alert(e.message);
     }
 }
 
