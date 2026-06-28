@@ -793,7 +793,7 @@
     }
   },
   "listingGalleryShallow": "شاهد الصورة الأولى فقط",
-  "metricViewed": "شاهد",
+  "metricViewed": "مشاهدة",
   "metricClicked": "نقر",
   "listingReach": "شاهده {count} شخص",
   "@listingReach": {
