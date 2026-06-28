@@ -208,7 +208,7 @@ class ListingService:
                 campaign_id=campaign_map.get(listing.id),
                 seller_badge=badge_map.get(user.id),
                 is_trending=listing.category in trending_cats,
-                impression_count=impression_map.get(listing.id) if user.id == current_user_id else None,
+                impression_count=impression_map.get(listing.id, 0) if user.id == current_user_id else None,
             )
             for listing, user in rows
         ]

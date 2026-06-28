@@ -132,7 +132,7 @@ async def get_personalized_feed(
         listing, user = rows[lid]
         result.append(_row_dict(
             listing, user, counts.get(lid, 0), lid in liked_set,
-            impression_count=impression_map.get(lid) if user.id == user_id else None
+            impression_count=impression_map.get(lid, 0) if user.id == user_id else None
         ))
 
     # Görüldü olarak işaretle (arka planda, hata olursa sessizce geç)
@@ -422,7 +422,7 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
         listing, user = rows[lid]
         result.append(_row_dict(
             listing, user, counts.get(lid, 0), lid in liked_set,
-            impression_count=impression_map.get(lid) if user.id == user_id else None
+            impression_count=impression_map.get(lid, 0) if user.id == user_id else None
         ))
 
     # Sponsored ilan enjeksiyonu — sadece ilk sayfa
