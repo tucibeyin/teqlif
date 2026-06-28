@@ -728,7 +728,7 @@
   },
   "marketGrowthSub": "متوسط مبلغ الشراء مقارنة بالـ30 يوماً السابقة",
   "marketPaywallDesc": "شاهد ما يبحث عنه المشترون، ومتى يتسوقون، وأي الفئات ترتفع.",
-  "listingPerfTitle": "أداء إعلاناتك",
+  "listingPerfTitle": "أداء إعلاناتك مع PRO",
   "listingNoDataTitle": "لا توجد بيانات بعد",
   "listingNoDataDesc": "ستظهر البيانات حين تُعرض إعلاناتك في الخلاصة.",
   "listingDayFilterN": "آخر {n} يوماً",

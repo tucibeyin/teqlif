@@ -1719,7 +1719,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor, hangi kategoriler yükseliyor — hepsini görün.';
 
   @override
-  String get listingPerfTitle => 'İlanlarınızın PRO ile performansı';
+  String get listingPerfTitle => 'İlanlarınızın PRO ile Performansı';
 
   @override
   String get listingNoDataTitle => 'Henüz veri yok';

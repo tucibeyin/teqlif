@@ -1717,7 +1717,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'See what buyers search for, when they shop, and which categories are trending.';
 
   @override
-  String get listingPerfTitle => 'Your Listings\' Performance';
+  String get listingPerfTitle => 'Your Listings\' PRO Performance';
 
   @override
   String get listingNoDataTitle => 'No Data Yet';

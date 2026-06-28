@@ -1705,7 +1705,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'شاهد ما يبحث عنه المشترون، ومتى يتسوقون، وأي الفئات ترتفع.';
 
   @override
-  String get listingPerfTitle => 'أداء إعلاناتك';
+  String get listingPerfTitle => 'أداء إعلاناتك مع PRO';
 
   @override
   String get listingNoDataTitle => 'لا توجد بيانات بعد';
