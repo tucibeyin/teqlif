@@ -643,6 +643,30 @@
       "remaining": { "type": "int" }
     }
   },
+  "blastConfirmCostFreeLabel": "Cost",
+  "blastConfirmCostPaidLabel": "TUCi Cost",
+  "blastSubtitleFree": "Push notification when stream starts • Free",
+  "blastSubtitlePaid": "Push notification when stream starts • {cost} TUCi",
+  "@blastSubtitlePaid": { "placeholders": { "cost": { "type": "int" } } },
+  "blastConfirmCostFree": "Deducted from your free quota",
+  "blastBtnFree": "{count} Ready Buyers — Send Notification (Free)",
+  "@blastBtnFree": { "placeholders": { "count": { "type": "int" } } },
+  "blastBtnPaid": "{count} Ready Buyers — Send Notification ({cost} TUCi)",
+  "@blastBtnPaid": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "cost": { "type": "int" }
+    }
+  },
+  "blastConfirmBodyFree": "{count} ready buyers will be notified.\n\nThis will use one of your free blasts.",
+  "@blastConfirmBodyFree": { "placeholders": { "count": { "type": "int" } } },
+  "blastConfirmBodyPaid": "{count} ready buyers will be notified.\n\nTotal cost: {cost} TUCi",
+  "@blastConfirmBodyPaid": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "cost": { "type": "int" }
+    }
+  },
   "proAnalyticsTitle": "Pro Analytics",
   "proSectionOverview": "My Sales Summary",
   "proSectionFunnel": "How Many People Placed a Bid?",

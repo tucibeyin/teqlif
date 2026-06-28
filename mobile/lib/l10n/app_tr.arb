@@ -644,6 +644,30 @@
       "remaining": { "type": "int" }
     }
   },
+  "blastConfirmCostFreeLabel": "Ücret",
+  "blastConfirmCostPaidLabel": "TUCi Maliyeti",
+  "blastSubtitleFree": "Yayın başladığında push bildirim • Ücretsiz",
+  "blastSubtitlePaid": "Yayın başladığında push bildirim • {cost} TUCi",
+  "@blastSubtitlePaid": { "placeholders": { "cost": { "type": "int" } } },
+  "blastConfirmCostFree": "Ücretsiz hakkınızdan düşülür",
+  "blastBtnFree": "{count} Hazır Alıcı — Bildirim Gönder (Ücretsiz)",
+  "@blastBtnFree": { "placeholders": { "count": { "type": "int" } } },
+  "blastBtnPaid": "{count} Hazır Alıcı — Bildirim Gönder ({cost} TUCi)",
+  "@blastBtnPaid": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "cost": { "type": "int" }
+    }
+  },
+  "blastConfirmBodyFree": "{count} hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz blast hakkınızdan düşülecek.",
+  "@blastConfirmBodyFree": { "placeholders": { "count": { "type": "int" } } },
+  "blastConfirmBodyPaid": "{count} hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: {cost} TUCi",
+  "@blastConfirmBodyPaid": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "cost": { "type": "int" }
+    }
+  },
   "proAnalyticsTitle": "Pro Analitik",
   "proSectionOverview": "Satış Özetim",
   "proSectionFunnel": "Kaç Kişi Teklif Verdi?",

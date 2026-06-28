@@ -1516,6 +1516,43 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get blastConfirmCostFreeLabel => 'Cost';
+
+  @override
+  String get blastConfirmCostPaidLabel => 'TUCi Cost';
+
+  @override
+  String get blastSubtitleFree => 'Push notification when stream starts • Free';
+
+  @override
+  String blastSubtitlePaid(int cost) {
+    return 'Push notification when stream starts • $cost TUCi';
+  }
+
+  @override
+  String get blastConfirmCostFree => 'Deducted from your free quota';
+
+  @override
+  String blastBtnFree(int count) {
+    return '$count Ready Buyers — Send Notification (Free)';
+  }
+
+  @override
+  String blastBtnPaid(int count, int cost) {
+    return '$count Ready Buyers — Send Notification ($cost TUCi)';
+  }
+
+  @override
+  String blastConfirmBodyFree(int count) {
+    return '$count ready buyers will be notified.\n\nThis will use one of your free blasts.';
+  }
+
+  @override
+  String blastConfirmBodyPaid(int count, int cost) {
+    return '$count ready buyers will be notified.\n\nTotal cost: $cost TUCi';
+  }
+
+  @override
   String get proAnalyticsTitle => 'Pro Analytics';
 
   @override

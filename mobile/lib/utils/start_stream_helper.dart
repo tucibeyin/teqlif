@@ -186,7 +186,9 @@ Future<void> showStartStreamDialog(
                               ),
                             ),
                             Text(
-                              'Yayın başladığında push bildirim • ${audienceCost.toInt()} TUCi',
+                              audienceCost == 0
+                                  ? l.blastSubtitleFree
+                                  : l.blastSubtitlePaid(audienceCost.toInt()),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: kPrimary.withValues(alpha: 0.7),
@@ -320,9 +322,12 @@ Future<bool?> _showBlastConfirmDialog(
   required int audienceSize,
   required int audienceCost,
 }) {
+  final isFree = audienceCost == 0;
   return showDialog<bool>(
     context: ctx,
-    builder: (dlgCtx) => AlertDialog(
+    builder: (dlgCtx) {
+      final l = AppLocalizations.of(dlgCtx)!;
+      return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text(
         '🎯 Kitleyi Davet Et',
@@ -354,13 +359,21 @@ Future<bool?> _showBlastConfirmDialog(
                   color: const Color(0xFF3B82F6),
                 ),
                 const SizedBox(height: 10),
-                _InfoRow(
-                  icon: Icons.account_balance_wallet_outlined,
-                  label: 'TUCi Maliyeti',
-                  value: '$audienceCost TUCi',
-                  color: const Color(0xFFB8860B),
-                  bold: true,
-                ),
+                isFree
+                    ? _InfoRow(
+                        icon: Icons.check_circle_outline,
+                        label: l.blastConfirmCostFreeLabel,
+                        value: l.blastConfirmCostFree,
+                        color: const Color(0xFF22C55E),
+                        bold: true,
+                      )
+                    : _InfoRow(
+                        icon: Icons.account_balance_wallet_outlined,
+                        label: l.blastConfirmCostPaidLabel,
+                        value: '$audienceCost TUCi',
+                        color: const Color(0xFFB8860B),
+                        bold: true,
+                      ),
               ],
             ),
           ),
@@ -383,7 +396,8 @@ Future<bool?> _showBlastConfirmDialog(
           child: const Text('Onayla ve Başlat'),
         ),
       ],
-    ),
+    );
+    },
   );
 }
 

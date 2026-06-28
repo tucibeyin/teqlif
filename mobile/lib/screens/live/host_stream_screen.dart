@@ -149,6 +149,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   }
 
   Future<void> _sendLeadBlast() async {
+    final l = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -156,7 +157,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Bildirim Gönder', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
         content: Text(
-          '$_audienceSize hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: ${_audienceCost.toInt()} TUCi',
+          _audienceCost == 0
+              ? l.blastConfirmBodyFree(_audienceSize)
+              : l.blastConfirmBodyPaid(_audienceSize, _audienceCost.toInt()),
           style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
         ),
         actions: [
@@ -708,6 +711,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
     final screenH = MediaQuery.of(context).size.height;
@@ -983,7 +987,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                           style: TextStyle(fontSize: 14)),
                                       const SizedBox(width: 6),
                                       Text(
-                                        '$_audienceSize Hazır Alıcı Bekliyor — Bildirim Gönder (${_audienceCost.toInt()} TUCi)',
+                                        _audienceCost == 0
+                                            ? l.blastBtnFree(_audienceSize)
+                                            : l.blastBtnPaid(_audienceSize, _audienceCost.toInt()),
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 12,

@@ -2956,6 +2956,60 @@ abstract class AppLocalizations {
   /// **'{used} duyuru gönderdiniz, {remaining} hakkınız kaldı.'**
   String blastCreditUsed(int used, int remaining);
 
+  /// No description provided for @blastConfirmCostFreeLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücret'**
+  String get blastConfirmCostFreeLabel;
+
+  /// No description provided for @blastConfirmCostPaidLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'TUCi Maliyeti'**
+  String get blastConfirmCostPaidLabel;
+
+  /// No description provided for @blastSubtitleFree.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın başladığında push bildirim • Ücretsiz'**
+  String get blastSubtitleFree;
+
+  /// No description provided for @blastSubtitlePaid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın başladığında push bildirim • {cost} TUCi'**
+  String blastSubtitlePaid(int cost);
+
+  /// No description provided for @blastConfirmCostFree.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücretsiz hakkınızdan düşülür'**
+  String get blastConfirmCostFree;
+
+  /// No description provided for @blastBtnFree.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} Hazır Alıcı — Bildirim Gönder (Ücretsiz)'**
+  String blastBtnFree(int count);
+
+  /// No description provided for @blastBtnPaid.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} Hazır Alıcı — Bildirim Gönder ({cost} TUCi)'**
+  String blastBtnPaid(int count, int cost);
+
+  /// No description provided for @blastConfirmBodyFree.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz blast hakkınızdan düşülecek.'**
+  String blastConfirmBodyFree(int count);
+
+  /// No description provided for @blastConfirmBodyPaid.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: {cost} TUCi'**
+  String blastConfirmBodyPaid(int count, int cost);
+
   /// No description provided for @proAnalyticsTitle.
   ///
   /// In tr, this message translates to:

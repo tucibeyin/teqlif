@@ -1516,6 +1516,43 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get blastConfirmCostFreeLabel => 'Ücret';
+
+  @override
+  String get blastConfirmCostPaidLabel => 'TUCi Maliyeti';
+
+  @override
+  String get blastSubtitleFree => 'Yayın başladığında push bildirim • Ücretsiz';
+
+  @override
+  String blastSubtitlePaid(int cost) {
+    return 'Yayın başladığında push bildirim • $cost TUCi';
+  }
+
+  @override
+  String get blastConfirmCostFree => 'Ücretsiz hakkınızdan düşülür';
+
+  @override
+  String blastBtnFree(int count) {
+    return '$count Hazır Alıcı — Bildirim Gönder (Ücretsiz)';
+  }
+
+  @override
+  String blastBtnPaid(int count, int cost) {
+    return '$count Hazır Alıcı — Bildirim Gönder ($cost TUCi)';
+  }
+
+  @override
+  String blastConfirmBodyFree(int count) {
+    return '$count hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz blast hakkınızdan düşülecek.';
+  }
+
+  @override
+  String blastConfirmBodyPaid(int count, int cost) {
+    return '$count hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: $cost TUCi';
+  }
+
+  @override
   String get proAnalyticsTitle => 'Pro Analitik';
 
   @override

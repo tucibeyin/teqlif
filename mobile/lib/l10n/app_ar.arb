@@ -644,6 +644,30 @@
       "remaining": { "type": "int" }
     }
   },
+  "blastConfirmCostFreeLabel": "التكلفة",
+  "blastConfirmCostPaidLabel": "تكلفة TUCi",
+  "blastSubtitleFree": "إشعار عند بدء البث • مجاني",
+  "blastSubtitlePaid": "إشعار عند بدء البث • {cost} TUCi",
+  "@blastSubtitlePaid": { "placeholders": { "cost": { "type": "int" } } },
+  "blastConfirmCostFree": "يُخصم من حصتك المجانية",
+  "blastBtnFree": "{count} مشترٍ جاهز — أرسل إشعاراً (مجاني)",
+  "@blastBtnFree": { "placeholders": { "count": { "type": "int" } } },
+  "blastBtnPaid": "{count} مشترٍ جاهز — أرسل إشعاراً ({cost} TUCi)",
+  "@blastBtnPaid": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "cost": { "type": "int" }
+    }
+  },
+  "blastConfirmBodyFree": "سيتم إشعار {count} مشترٍ جاهز.\n\nسيُستخدم أحد بلاستاتك المجانية.",
+  "@blastConfirmBodyFree": { "placeholders": { "count": { "type": "int" } } },
+  "blastConfirmBodyPaid": "سيتم إشعار {count} مشترٍ جاهز.\n\nالتكلفة الإجمالية: {cost} TUCi",
+  "@blastConfirmBodyPaid": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "cost": { "type": "int" }
+    }
+  },
   "proAnalyticsTitle": "تحليلات Pro",
   "proSectionOverview": "ملخص مبيعاتي",
   "proSectionFunnel": "كم شخصاً قدّم عرضاً؟",

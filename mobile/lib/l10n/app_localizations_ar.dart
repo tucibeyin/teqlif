@@ -1504,6 +1504,43 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get blastConfirmCostFreeLabel => 'التكلفة';
+
+  @override
+  String get blastConfirmCostPaidLabel => 'تكلفة TUCi';
+
+  @override
+  String get blastSubtitleFree => 'إشعار عند بدء البث • مجاني';
+
+  @override
+  String blastSubtitlePaid(int cost) {
+    return 'إشعار عند بدء البث • $cost TUCi';
+  }
+
+  @override
+  String get blastConfirmCostFree => 'يُخصم من حصتك المجانية';
+
+  @override
+  String blastBtnFree(int count) {
+    return '$count مشترٍ جاهز — أرسل إشعاراً (مجاني)';
+  }
+
+  @override
+  String blastBtnPaid(int count, int cost) {
+    return '$count مشترٍ جاهز — أرسل إشعاراً ($cost TUCi)';
+  }
+
+  @override
+  String blastConfirmBodyFree(int count) {
+    return 'سيتم إشعار $count مشترٍ جاهز.\n\nسيُستخدم أحد بلاستاتك المجانية.';
+  }
+
+  @override
+  String blastConfirmBodyPaid(int count, int cost) {
+    return 'سيتم إشعار $count مشترٍ جاهز.\n\nالتكلفة الإجمالية: $cost TUCi';
+  }
+
+  @override
   String get proAnalyticsTitle => 'تحليلات Pro';
 
   @override
