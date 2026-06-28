@@ -20,17 +20,18 @@
             
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl';
             document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '240 adet / yıl';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '~₺1.020/yıl';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+204 ekstra blast × 5 TUCi<br>= 1.020 TL tasarruf';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = 'Ölçülemez';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+204 ekstra ücretsiz duyuru hakkı ile on binlerce kullanıcıya bedava ulaşın';
             
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺2.000 yatır,<br><span style="color:var(--green);font-weight:700;">₺14.220+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺2.000 yatır,<br><span style="color:var(--green);font-weight:700;">₺13.200+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
             }
             
-            document.querySelector('.total-banner-text > span').innerHTML = 'Boost ve blast haklarınızı kullandığınızda ₺2.000 ödeyip <strong style="color:var(--green)">₺14.220+ değer</strong> elde edersiniz.';
-            document.querySelector('.total-val').textContent = '₺14.220+';
+            document.querySelector('.total-banner-text').innerHTML = '<strong>Ödediğinizin 6.5 katını geri alırsınız</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost ve diğer haklarınızı kullandığınızda ₺2.000 ödeyip <strong style="color:var(--green)">₺13.200+ değer</strong> elde edersiniz.</span>';
+            document.querySelector('.total-val').textContent = '₺13.200+';
             document.querySelector('.total-sub').textContent = 'yıllık avantaj değeri';
+            document.querySelector('.roi-pill').textContent = 'Paranın 6.5 katı değer 🎯';
         } else {
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺100/ay';
             document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '20 kullanım × 5 TUCi<br>= 100 TL tasarruf';
@@ -42,17 +43,18 @@
             
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay';
             document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '20 adet / ay';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '~₺85/ay';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+17 ekstra blast × 5 TUCi<br>= 85 TL tasarruf';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = 'Ölçülemez';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+17 ekstra ücretsiz duyuru hakkı ile binlerce kullanıcıya bedava ulaşın';
             
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺200 yatır,<br><span style="color:var(--green);font-weight:700;">₺1.185+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺200 yatır,<br><span style="color:var(--green);font-weight:700;">₺1.100+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
             }
             
-            document.querySelector('.total-banner-text > span').innerHTML = 'Boost ve blast haklarınızı kullandığınızda ₺200 ödeyip <strong style="color:var(--green)">₺1.185+ değer</strong> elde edersiniz.';
-            document.querySelector('.total-val').textContent = '₺1.185+';
+            document.querySelector('.total-banner-text').innerHTML = '<strong>Ödediğinizin 5.5 katını geri alırsınız</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost ve diğer haklarınızı kullandığınızda ₺200 ödeyip <strong style="color:var(--green)">₺1.100+ değer</strong> elde edersiniz.</span>';
+            document.querySelector('.total-val').textContent = '₺1.100+';
             document.querySelector('.total-sub').textContent = 'aylık avantaj değeri';
+            document.querySelector('.roi-pill').textContent = 'Paranın 5.5 katı değer 🎯';
         }
     }
 
