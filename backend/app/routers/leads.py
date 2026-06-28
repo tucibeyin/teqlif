@@ -40,7 +40,7 @@ def _blast_redis_key(user_id: int) -> str:
 
 async def _get_blast_used(user_id: int) -> int:
     try:
-        from app.database_redis import get_redis
+        from app.utils.redis_client import get_redis
         redis = await get_redis()
         val = await redis.get(_blast_redis_key(user_id))
         return int(val) if val else 0
@@ -50,7 +50,7 @@ async def _get_blast_used(user_id: int) -> int:
 
 async def _increment_blast(user_id: int) -> None:
     try:
-        from app.database_redis import get_redis
+        from app.utils.redis_client import get_redis
         redis = await get_redis()
         key = _blast_redis_key(user_id)
         count = await redis.incr(key)
