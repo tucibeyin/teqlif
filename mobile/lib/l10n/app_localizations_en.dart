@@ -2331,4 +2331,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String boostCreditUsed(int used, int remaining) {
     return 'Used $used boosts, $remaining remaining.';
   }
+
+  @override
+  String get softUpdateTitle => 'New Version Available';
+
+  @override
+  String get softUpdateMessage =>
+      'A new version of the app is available. Please update for a better experience.';
+
+  @override
+  String get softUpdateUpdateNow => 'Update Now';
+
+  @override
+  String get softUpdateLater => 'Later';
 }

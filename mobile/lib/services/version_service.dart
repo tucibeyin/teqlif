@@ -1,47 +1,58 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import '../config/api.dart';
 
-// App Store'daki bundle ID — iTunes Lookup API bu değerle sorgulanır.
-const _kIosBundleId = 'teqlif';
+enum VersionStatus { upToDate, softUpdate, forceUpdate }
 
 class VersionService {
-  // iTunes lookup'tan dinamik olarak alınan App Store URL'si.
-  // ForceUpdateScreen bu değeri kullanır.
   static String _iosStoreUrl = 'https://apps.apple.com/app/teqlif';
+  static String _androidStoreUrl = 'https://play.google.com/store/apps/details?id=com.teqlif.app';
 
   static String get iosStoreUrl => _iosStoreUrl;
+  static String get androidStoreUrl => _androidStoreUrl;
 
-  /// App Store'daki güncel versiyon mevcut versiyondan yüksekse true döner.
-  /// Ağ hatası / timeout → false (fail-open: güncelleme zorlanmaz).
-  static Future<bool> isIosUpdateRequired() async {
+  static Future<VersionStatus> checkVersion() async {
     try {
       final info = await PackageInfo.fromPlatform();
       final resp = await http
-          .get(Uri.parse(
-            'https://itunes.apple.com/lookup?bundleId=$_kIosBundleId&country=tr',
-          ))
+          .get(Uri.parse('$kBaseUrl/config/version'))
           .timeout(const Duration(seconds: 5));
 
-      if (resp.statusCode != 200) return false;
+      if (resp.statusCode != 200) return VersionStatus.upToDate;
 
       final body = jsonDecode(resp.body) as Map<String, dynamic>;
-      final results = body['results'] as List?;
-      if (results == null || results.isEmpty) return false;
+      final platformKey = Platform.isIOS ? 'ios' : 'android';
+      final config = body[platformKey] as Map<String, dynamic>?;
 
-      final entry = results[0] as Map<String, dynamic>;
-      final storeVersion = entry['version'] as String?;
-      if (storeVersion == null) return false;
+      if (config == null) return VersionStatus.upToDate;
 
-      // trackId'den dinamik App Store linki oluştur
-      final trackId = entry['trackId'];
-      if (trackId != null) {
-        _iosStoreUrl = 'https://apps.apple.com/app/id$trackId';
+      final minVersion = config['min_version'] as String?;
+      final latestVersion = config['latest_version'] as String?;
+      final storeUrl = config['store_url'] as String?;
+
+      if (storeUrl != null && storeUrl.isNotEmpty) {
+        if (Platform.isIOS) {
+          _iosStoreUrl = storeUrl;
+        } else {
+          _androidStoreUrl = storeUrl;
+        }
       }
 
-      return _isLessThan(_parse(info.version), _parse(storeVersion));
+      final appV = _parse(info.version);
+
+      if (minVersion != null && _isLessThan(appV, _parse(minVersion))) {
+        return VersionStatus.forceUpdate;
+      }
+
+      if (latestVersion != null && _isLessThan(appV, _parse(latestVersion))) {
+        return VersionStatus.softUpdate;
+      }
+
+      return VersionStatus.upToDate;
     } catch (_) {
-      return false;
+      return VersionStatus.upToDate; // Fail open
     }
   }
 

@@ -16,6 +16,7 @@ import '../services/push_notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/version_service.dart';
 import 'force_update_screen.dart';
+import '../widgets/soft_update_dialog.dart';
 import 'package:http/http.dart' as http;
 
 class SplashScreen extends StatefulWidget {
@@ -36,21 +37,44 @@ class _SplashScreenState extends State<SplashScreen> {
     final token = await StorageService.getToken();
     FlutterNativeSplash.remove();
 
-    // Versiyon kontrolü
-    if (Platform.isIOS) {
-      // iOS: iTunes Lookup API ile App Store'daki güncel versiyon karşılaştırılır
-      final needsUpdate = await VersionService.isIosUpdateRequired();
-      if (!mounted) return;
-      if (needsUpdate) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ForceUpdateScreen()),
-        );
-        return;
+    final updateStatus = await VersionService.checkVersion();
+    if (!mounted) return;
+
+    if (updateStatus == VersionStatus.forceUpdate) {
+      if (Platform.isAndroid) {
+        try {
+          final info = await InAppUpdate.checkForUpdate();
+          if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+            await InAppUpdate.performImmediateUpdate();
+            // If it succeeds, the app restarts. If user cancels, we fall back to ForceUpdateScreen.
+          }
+        } catch (_) {}
       }
-    } else if (Platform.isAndroid) {
-      // Android: Google Play In-App Update (Immediate mod — tam ekran overlay)
-      await _checkAndroidUpdate();
       if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const ForceUpdateScreen()),
+      );
+      return;
+    } else if (updateStatus == VersionStatus.softUpdate) {
+      if (Platform.isAndroid) {
+        try {
+          final info = await InAppUpdate.checkForUpdate();
+          if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+            await InAppUpdate.startFlexibleUpdate();
+            await InAppUpdate.completeFlexibleUpdate();
+          }
+        } catch (_) {}
+      }
+      
+      if (Platform.isIOS || true) {
+        // We show the custom dialog on iOS (or if Android flexible update wasn't supported/failed but we still want to inform them)
+        // Actually, let's just always show the SoftUpdateDialog for a consistent experience if they don't update immediately via Google Play.
+        await showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (_) => const SoftUpdateDialog(),
+        );
+      }
     }
 
     // Rozeti sıfırla (non-blocking)

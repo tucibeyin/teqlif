@@ -4383,6 +4383,30 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'{used} öne çıkarma kullandınız, {remaining} hakkınız kaldı.'**
   String boostCreditUsed(int used, int remaining);
+
+  /// No description provided for @softUpdateTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni Sürüm Mevcut'**
+  String get softUpdateTitle;
+
+  /// No description provided for @softUpdateMessage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulamanın yeni bir sürümü yayınlandı. Daha iyi bir deneyim için hemen güncelleyebilirsiniz.'**
+  String get softUpdateMessage;
+
+  /// No description provided for @softUpdateUpdateNow.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şimdi Güncelle'**
+  String get softUpdateUpdateNow;
+
+  /// No description provided for @softUpdateLater.
+  ///
+  /// In tr, this message translates to:
+  /// **'Daha Sonra'**
+  String get softUpdateLater;
 }
 
 class _AppLocalizationsDelegate

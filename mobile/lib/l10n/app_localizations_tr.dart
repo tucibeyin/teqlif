@@ -2332,4 +2332,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String boostCreditUsed(int used, int remaining) {
     return '$used öne çıkarma kullandınız, $remaining hakkınız kaldı.';
   }
+
+  @override
+  String get softUpdateTitle => 'Yeni Sürüm Mevcut';
+
+  @override
+  String get softUpdateMessage =>
+      'Uygulamanın yeni bir sürümü yayınlandı. Daha iyi bir deneyim için hemen güncelleyebilirsiniz.';
+
+  @override
+  String get softUpdateUpdateNow => 'Şimdi Güncelle';
+
+  @override
+  String get softUpdateLater => 'Daha Sonra';
 }

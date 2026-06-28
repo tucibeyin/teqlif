@@ -1,33 +1,28 @@
 {
   "@@locale": "ar",
-
   "appName": "teqlif",
-
   "navLive": "مباشر",
   "navListings": "الإعلانات",
   "navSearch": "بحث",
   "navMessages": "الرسائل",
   "navProfile": "ملفي",
   "navSettings": "الإعدادات",
-
   "loginWelcome": "مرحباً",
   "loginSubtitle": "تسجيل الدخول إلى حسابك",
   "loginNoAccount": "ليس لديك حساب؟ ",
   "loginRegisterLink": "سجّل الآن",
   "loginFaceId": "🔒 تسجيل الدخول بـ Face ID",
   "loginFaceIdDesc": "يمكنك تسجيل الدخول بسرعة باستخدام Face ID في المرة القادمة دون إدخال كلمة المرور.",
-
   "registerTitle": "إنشاء حساب",
   "registerSubtitle": "إنشاء حساب جديد",
   "registerJoin": "انضم إلى teqlif",
   "registerHaveAccount": "لديك حساب بالفعل؟ ",
   "registerLoginLink": "تسجيل الدخول",
-
   "fieldEmail": "البريد الإلكتروني",
   "fieldEmailHint": "أدخل البريد الإلكتروني",
   "fieldPassword": "كلمة المرور",
   "fieldPasswordConfirm": "تأكيد كلمة المرور",
-  "fieldPasswordConfirmHint": "أعد إدخال كلمة المرور",
+  "fieldPasswordConfirmHint": "أدخل كلمة المرور للتأكيد",
   "validPasswordMismatch": "كلمتا المرور غير متطابقتين",
   "fieldPasswordHint": "أدخل كلمة المرور",
   "fieldFullName": "الاسم الكامل",
@@ -39,7 +34,6 @@
   "fieldNewPassword": "كلمة المرور الجديدة",
   "fieldNewPasswordConfirm": "كلمة المرور الجديدة (تأكيد)",
   "fieldEmailCode": "رمز التحقق عبر البريد الإلكتروني",
-  "fieldPasswordConfirmHint": "أدخل كلمة المرور للتأكيد",
   "fieldListingTitle": "عنوان الإعلان",
   "fieldListingTitleHint": "أدخل العنوان",
   "fieldCategory": "الفئة",
@@ -51,7 +45,6 @@
   "fieldDescription": "الوصف",
   "fieldDescriptionHint": "أدخل الوصف",
   "fieldCity": "المدينة",
-
   "btnLogin": "تسجيل الدخول",
   "btnNotNow": "ليس الآن",
   "btnEnable": "تفعيل",
@@ -76,12 +69,10 @@
   "btnDeactivate": "إلغاء التنشيط",
   "btnActivate": "تنشيط",
   "btnRemoveFavorite": "إزالة من المفضلة",
-
   "homeRecentListings": "آخر الإعلانات",
   "searchHint": "جارٍ البحث...",
   "citySelectTitle": "اختر المدينة",
   "cityAll": "جميع المدن",
-
   "catElectronics": "إلكترونيات",
   "catVehicles": "مركبات",
   "catRealEstate": "عقارات",
@@ -90,7 +81,6 @@
   "catBooks": "كتب",
   "catHomeLife": "منزل وحياة",
   "catOther": "أخرى",
-
   "profileUsername": "المستخدم",
   "profileListingCount": "إعلانات",
   "profileFollowers": "متابعون",
@@ -114,14 +104,11 @@
   "profileChangePassword": "تغيير كلمة المرور",
   "profileDeleteAccount": "حذف الحساب نهائياً",
   "profileDeleteAccountDesc": "لا يمكن التراجع عن هذا الإجراء. ستُحذف جميع بياناتك نهائياً خلال 30 يوماً.",
-
   "sectionPhotos": "الصور",
   "photoCover": "غلاف",
   "listingMaxPhotos": "يمكنك إضافة 10 صور كحد أقصى",
-
   "statusOn": "مفعّل",
   "statusOff": "معطّل",
-
   "notifSettingsTitle": "إعدادات الإشعارات",
   "notifMessagesTitle": "الرسائل",
   "notifMessagesDesc": "عند وصول رسالة مباشرة جديدة",
@@ -137,7 +124,6 @@
   "notifNewBidDesc": "عند وصول عرض على إعلانك",
   "notifBidOutbidTitle": "تجاوز العرض",
   "notifBidOutbidDesc": "عندما يتجاوز أحدهم عرضك في المزاد",
-
   "validFullNameMin": "يجب أن يتكون الاسم الكامل من حرفين على الأقل",
   "validFullNameMax": "يجب ألا يتجاوز الاسم الكامل 100 حرف",
   "validUsernameMin": "يجب أن يتكون من 3 أحرف على الأقل",
@@ -153,48 +139,40 @@
   "validVerificationCode": "أدخل رمز التحقق.",
   "validAllFields": "املأ جميع الحقول.",
   "validTermsRequired": "يجب قبول شروط الاستخدام.",
-
   "usernameChecking": "جارٍ التحقق من اسم المستخدم...",
   "usernameCheckingWait": "جارٍ التحقق من اسم المستخدم، يرجى الانتظار...",
-
   "fieldPhone": "رقم الهاتف (اختياري)",
   "fieldPhoneHint": "0### ### ## ##",
-
   "emptyListings": "لا توجد إعلانات بعد",
   "emptyFilteredListings": "لم يُعثر على إعلانات بهذا الفلتر",
   "emptyActiveListings": "لا توجد إعلانات نشطة",
   "emptyPassiveListings": "لا توجد إعلانات معلّقة",
   "emptyFavorites": "لا توجد إعلانات مفضّلة بعد",
-
   "errorConnection": "خطأ في الاتصال",
   "errorListingsLoad": "تعذّر تحميل الإعلانات",
   "errorPhotoUpload": "تعذّر رفع الصورة. حاول مجدداً.",
   "errorCaptchaFailed": "فشل التحقق الأمني. يرجى المحاولة مجدداً.",
   "errorTooFast": "أنت تُجري العمليات بسرعة كبيرة. يرجى الانتظار قليلاً.",
-
   "msgPasswordChanged": "تم تغيير كلمة المرور بنجاح.",
   "msgListingPublished": "تم نشر الإعلان!",
-
   "dialogDeleteListingTitle": "حذف الإعلان",
   "dialogDeleteListingDesc": "هل تريد حذف هذا الإعلان نهائياً؟",
   "dialogFaceIdActivateTitle": "تحقق لتفعيل Face ID",
-
   "settingsLanguage": "اللغة",
-
   "homeAppBarTitle": "الإعلانات",
   "homeSearchingHeader": "جارٍ البحث...",
   "homeResultsCount": "تم العثور على {count} إعلان",
   "@homeResultsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "searchUserHint": "ابحث عن مستخدم...",
   "searchNoUser": "لم يُعثر على مستخدم",
   "searchLiveStreams": "البثوث المباشرة",
   "searchNoContent": "لا يوجد محتوى بعد",
-
   "msgTabMessages": "الرسائل",
   "msgTabNotifications": "الإشعارات",
   "msgNoMessages": "لا توجد رسائل بعد",
@@ -203,27 +181,25 @@
   "msgWriteHint": "اكتب رسالة...",
   "msgNoChat": "لا توجد رسائل بعد.\nأرسل أول رسالة!",
   "msgGoToListing": "📌 الانتقال إلى الإعلان",
-
   "notifNone": "لا توجد إشعارات",
   "notifNoneDesc": "ستظهر الإشعارات الجديدة هنا",
   "notificationsTitle": "الإشعارات",
   "notificationsMarkAllRead": "تعليم الكل كمقروء",
-
   "blockedUsersTitle": "المستخدمون المحظورون",
   "blockedNone": "لا يوجد مستخدمون محظورون",
   "blockedUnblock": "رفع الحظر",
   "blockedActionFailed": "تعذّر تنفيذ الإجراء",
-
   "followNoFollowers": "لا يوجد متابعون بعد",
   "followNoFollowing": "لا يوجد متابَعون بعد",
   "followBtnFollowing": "يتابعك",
   "followBtnFollow": "متابعة",
-
   "pubProfileUserNotFound": "لم يُعثر على المستخدم",
   "pubProfileListingsCount": "إعلاناته ({count})",
   "@pubProfileListingsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "pubProfileStatListings": "الإعلانات",
@@ -239,7 +215,6 @@
   "pubProfileUnblock": "رفع الحظر",
   "pubProfileActionFailed": "تعذّر تنفيذ الإجراء",
   "pubProfileNoReview": "لا توجد تقييمات بعد",
-
   "ratingVeryBad": "سيء جداً",
   "ratingBad": "سيء",
   "ratingMedium": "متوسط",
@@ -252,32 +227,40 @@
   "ratingCount": "{count} تقييم",
   "@ratingCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "ratingStarCount": "({count} تقييم)",
   "@ratingStarCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "createListingPhotoCount": "الصور ({count}/{max})",
   "@createListingPhotoCount": {
     "placeholders": {
-      "count": { "type": "int" },
-      "max": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "createListingSelectOption": "-- اختر --",
   "createListingPhotoUploadFailed": "تعذّر رفع الصورة: {error}",
   "@createListingPhotoUploadFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "createListingConnError": "خطأ في الاتصال. يرجى المحاولة مجدداً.",
-
   "notifSettingsMessagesTitle": "الرسائل",
   "notifSettingsMessagesDesc": "عند وصول رسالة مباشرة جديدة",
   "notifSettingsFollowsTitle": "متابع جديد",
@@ -292,11 +275,9 @@
   "notifSettingsNewBidDesc": "عند وصول عرض على إعلانك",
   "notifSettingsOutbidTitle": "تجاوز العرض",
   "notifSettingsOutbidDesc": "عندما يتجاوز أحدهم عرضك في المزاد",
-
   "btnOk": "موافق",
   "btnGoBack": "العودة",
   "errorGeneric": "حدث خطأ ما",
-
   "listingPriceNotSet": "السعر غير محدد",
   "listingMsgLoginRequired": "يجب تسجيل الدخول لإرسال رسالة",
   "listingMsgOwnListing": "لا يمكنك إرسال رسالة لإعلانك الخاص",
@@ -321,7 +302,6 @@
   "listingReportSelectRequired": "يرجى اختيار سبب",
   "listingReportSuccess": "تم استلام بلاغك. شكراً لك.",
   "listingDescriptionLabel": "الوصف",
-
   "liveStreamsTitle": "البثوث المباشرة",
   "liveStartStream": "بدء البث",
   "liveAllCategory": "الكل",
@@ -347,7 +327,9 @@
   "liveViewersTitle": "👁 المشاهدون ({count})",
   "@liveViewersTitle": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "liveNoViewers": "لا يوجد مشاهدون بعد",
@@ -367,16 +349,19 @@
   "liveModDemotedSelf": "تم إلغاء صلاحيات الإشراف بواسطة @{username}.",
   "@liveModDemotedSelf": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "liveModPromotedSelf": "⭐ جعلك @{username} مشرفاً! يمكنك الآن إدارة المشاهدين.",
   "@liveModPromotedSelf": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
-
   "modTitle": "🛡 الإشراف",
   "modMute": "كتم",
   "modUnmute": "إلغاء الكتم",
@@ -386,51 +371,63 @@
   "modMutedMsg": "تم كتم @{username}",
   "@modMutedMsg": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modUnmutedMsg": "تم إلغاء الكتم",
   "modPromotedMsg": "تم تعيين @{username} مشرفاً",
   "@modPromotedMsg": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modDemotedMsg": "تم إلغاء إشراف @{username}",
   "@modDemotedMsg": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modKickedMsg": "تم طرد @{username} من البث",
   "@modKickedMsg": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modPromotedSnack": "⭐ تم تعيين @{username} مشرفاً!",
   "@modPromotedSnack": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modDemotedSnack": "✖ تم إلغاء إشراف @{username}",
   "@modDemotedSnack": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
-
   "chatMessageHint": "اكتب رسالة...",
   "chatMutedHint": "🔇 تم كتمك",
   "chatHistoryTitle": "سجل المحادثة",
   "chatHistoryCount": "آخر {count} رسالة",
   "@chatHistoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "auctionTitle": "مزاد علني",
   "auctionBidsHeader": "العروض",
   "auctionAcceptBidTitle": "✅ قبول العرض",
@@ -469,7 +466,9 @@
   "auctionInProgressDesc": "جارٍ إتمام الشراء الفوري مع @{username}.",
   "@auctionInProgressDesc": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "auctionInProgressNoBid": "لا يمكنك تقديم عرض حتى تنتهي العملية.",
@@ -477,14 +476,18 @@
   "auctionBoughtBy": "تم الشراء الفوري بواسطة @{username}",
   "@auctionBoughtBy": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "auctionBuyNowCongrats": "🎉 تهانينا! اكتمل الشراء.",
   "auctionBuyNowSoldOther": "🛒 تم بيع المنتج فوراً! اشتراه @{buyer}.",
   "@auctionBuyNowSoldOther": {
     "placeholders": {
-      "buyer": {"type": "String"}
+      "buyer": {
+        "type": "String"
+      }
     }
   },
   "auctionBinRejected": "تم رفض طلب الشراء الفوري، المزاد مستمر.",
@@ -498,13 +501,17 @@
   "auctionHighestBidder": "@{username} صاحب أعلى عرض",
   "@auctionHighestBidder": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "auctionBidCount": "{count} عرض",
   "@auctionBidCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "auctionManualEntry": "إدخال يدوي",
@@ -517,8 +524,12 @@
   "auctionBuyNowCompleted": "🛒 اكتمل الشراء الفوري! @{buyer} — ₺{price}",
   "@auctionBuyNowCompleted": {
     "placeholders": {
-      "buyer": {"type": "String"},
-      "price": {"type": "String"}
+      "buyer": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
     }
   },
   "offerHistory": "سجل العروض",
@@ -529,11 +540,9 @@
   "offerInvalidAmount": "أدخل مبلغاً صالحاً.",
   "offerEmpty": "لا توجد عروض بعد.",
   "offerLoginRequired": "يجب تسجيل الدخول لتقديم عرض.",
-
   "storyTrayTitle": "من تتابعهم",
   "storyTrayEmpty": "لا أحد من متابَعيك يبث الآن.",
   "storyTrayError": "تعذّر التحميل",
-
   "storyMyStory": "قصتي",
   "storyProcessing": "جارٍ معالجة الفيديو...",
   "storyTooLong": "الفيديو طويل جداً (15 ثانية كحد أقصى)",
@@ -548,9 +557,7 @@
   "storyDelete": "حذف القصة",
   "storyDeleteConfirm": "هل أنت متأكد من حذف هذه القصة؟",
   "storyDeleteFailed": "تعذّر حذف القصة",
-
   "offlineBannerMessage": "لا يوجد اتصال بالإنترنت، أنت في وضع غير متصل.",
-
   "editProfileBio": "عن نفسي",
   "editProfileBioHint": "اكتب نبذة مختصرة عن نفسك...",
   "editProfileBioHelper": "بحد أقصى 60 حرفاً",
@@ -558,10 +565,8 @@
   "editProfileLinkHint": "https://...",
   "editProfileLinkHelper": "يجب أن يبدأ بـ https://",
   "editProfileLinkError": "يجب أن يبدأ الرابط بـ http:// أو https://",
-
   "settingsProTools": "📈 أدوات Pro",
   "settingsProActive": "نشط",
-
   "walletTitle": "محفظة TUCi الخاصة بي",
   "walletBalance": "الرصيد الحالي",
   "walletRecentTxns": "آخر المعاملات",
@@ -577,7 +582,6 @@
   "walletComingSoonLabel": "شراء TUCi قريباً!",
   "walletComingSoonDesc": "جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TUCi كرصيد بداية.",
   "walletBuyBtn": "شراء TUCi قريباً",
-
   "reportLoading": "جارٍ إعداد تحليل البث...",
   "reportLoadFailed": "تعذّر تحميل التقرير.",
   "reportRetry": "حاول مجدداً",
@@ -605,14 +609,15 @@
   "reportHesitation": "{count} عرض متردد — هؤلاء المشاهدون كانوا قريبين من السعر لكنهم لم يتحولوا.",
   "@reportHesitation": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "reportSmartInsight": "توصية ذكية",
   "reportDurationMin": "د",
   "reportDurationHour": "س",
   "reportDurationLess": "< 1 د",
-
   "proLoadFailed": "فشل تحميل البيانات.",
   "proUpgradeTitle": "ميزة Pro",
   "proUpgradeBtn": "👑 الترقية إلى Pro",
@@ -640,32 +645,62 @@
   "blastCreditUsed": "أرسلت {used} إشعاراً، {remaining} متبقٍ.",
   "@blastCreditUsed": {
     "placeholders": {
-      "used": { "type": "int" },
-      "remaining": { "type": "int" }
+      "used": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
     }
   },
   "blastConfirmCostFreeLabel": "التكلفة",
   "blastConfirmCostPaidLabel": "تكلفة TUCi",
   "blastSubtitleFree": "إشعار عند بدء البث • مجاني",
   "blastSubtitlePaid": "إشعار عند بدء البث • {cost} TUCi",
-  "@blastSubtitlePaid": { "placeholders": { "cost": { "type": "int" } } },
+  "@blastSubtitlePaid": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "blastConfirmCostFree": "يُخصم من حصتك المجانية",
   "blastBtnFree": "{count} مشترٍ جاهز — أرسل إشعاراً (مجاني)",
-  "@blastBtnFree": { "placeholders": { "count": { "type": "int" } } },
+  "@blastBtnFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "blastBtnPaid": "{count} مشترٍ جاهز — أرسل إشعاراً ({cost} TUCi)",
   "@blastBtnPaid": {
     "placeholders": {
-      "count": { "type": "int" },
-      "cost": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
     }
   },
   "blastConfirmBodyFree": "سيتم إشعار {count} مشترٍ جاهز.\n\nسيُستخدم أحد بلاستاتك المجانية.",
-  "@blastConfirmBodyFree": { "placeholders": { "count": { "type": "int" } } },
+  "@blastConfirmBodyFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "blastConfirmBodyPaid": "سيتم إشعار {count} مشترٍ جاهز.\n\nالتكلفة الإجمالية: {cost} TUCi",
   "@blastConfirmBodyPaid": {
     "placeholders": {
-      "count": { "type": "int" },
-      "cost": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
     }
   },
   "proAnalyticsTitle": "تحليلات Pro",
@@ -708,27 +743,67 @@
   "proStreamAvgDuration": "متوسط مدة البث: {dur} دقيقة",
   "@proStreamAvgDuration": {
     "placeholders": {
-      "dur": { "type": "String" }
+      "dur": {
+        "type": "String"
+      }
     }
   },
   "proEngagements": "تفاعل",
   "proShowAll": "عرض {count} المزيد",
-  "@proShowAll": { "placeholders": { "count": { "type": "int" } } },
+  "@proShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "proShowLess": "عرض أقل",
   "proStreamRowStats": "{viewers} مشاهد · {bids} عرض · {dur} د",
-  "@proStreamRowStats": { "placeholders": { "viewers": { "type": "int" }, "bids": { "type": "int" }, "dur": { "type": "int" } } },
+  "@proStreamRowStats": {
+    "placeholders": {
+      "viewers": {
+        "type": "int"
+      },
+      "bids": {
+        "type": "int"
+      },
+      "dur": {
+        "type": "int"
+      }
+    }
+  },
   "proLoadError": "تعذّر تحميل البيانات. يرجى المحاولة مرة أخرى.",
   "hotLeadViewed": "شوهد {count} مرة",
-  "@hotLeadViewed": { "placeholders": { "count": { "type": "int" } } },
+  "@hotLeadViewed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "hotLeadHesitated": "{count} أشخاص تردّدوا",
-  "@hotLeadHesitated": { "placeholders": { "count": { "type": "int" } } },
+  "@hotLeadHesitated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listingCtrExplain": "{ctr} نقرة لكل 100 مشاهدة",
-  "@listingCtrExplain": { "placeholders": { "ctr": { "type": "String" } } },
+  "@listingCtrExplain": {
+    "placeholders": {
+      "ctr": {
+        "type": "String"
+      }
+    }
+  },
   "marketSearchTitle": "ما يبحث عنه الناس",
   "marketDayFilter": "{days} يوم",
   "@marketDayFilter": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "marketNoSearchData": "لا توجد بيانات بحث بعد. ستظهر عندما يبحث المستخدمون.",
@@ -741,13 +816,17 @@
   "marketGrowthPos": "النمو العام للمنصة: +{pct}%",
   "@marketGrowthPos": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "marketGrowthNeg": "التراجع العام للمنصة: {pct}%",
   "@marketGrowthNeg": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "marketGrowthSub": "متوسط مبلغ الشراء مقارنة بالـ30 يوماً السابقة",
@@ -758,7 +837,9 @@
   "listingDayFilterN": "آخر {n} يوماً",
   "@listingDayFilterN": {
     "placeholders": {
-      "n": { "type": "int" }
+      "n": {
+        "type": "int"
+      }
     }
   },
   "listingTotalViews": "إجمالي المشاهدات",
@@ -766,13 +847,17 @@
   "listingVideoBeatsPhoto": "🎬 إعلانات الفيديو تحصل على {x}× نقرات أكثر من الصور.",
   "@listingVideoBeatsPhoto": {
     "placeholders": {
-      "x": { "type": "String" }
+      "x": {
+        "type": "String"
+      }
     }
   },
   "listingPhotoBeatsVideo": "📸 إعلانات الصور تحصل على {x}× نقرات أكثر من الفيديو.",
   "@listingPhotoBeatsVideo": {
     "placeholders": {
-      "x": { "type": "String" }
+      "x": {
+        "type": "String"
+      }
     }
   },
   "listingMediaEqual": "إعلانات الفيديو والصور تحظى باهتمام مماثل.",
@@ -782,14 +867,18 @@
   "listingWatchedPct": "تمت مشاهدة {pct}%",
   "@listingWatchedPct": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "listingGalleryLabel": "اهتمام المعرض",
   "listingGalleryDeep": "تمرير حتى الصورة {n}",
   "@listingGalleryDeep": {
     "placeholders": {
-      "n": { "type": "String" }
+      "n": {
+        "type": "String"
+      }
     }
   },
   "listingGalleryShallow": "شاهد الصورة الأولى فقط",
@@ -798,11 +887,12 @@
   "listingReach": "شاهده {count} شخص",
   "@listingReach": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "listingPaywallDesc": "تتبع كم شخصاً رأى كل إعلان، وكم نقر، ومدى الاهتمام به.",
-
   "onboardingTitle": "ما الذي يهمك؟",
   "onboardingSubtitle": "دعنا نعرض لك إعلانات وبثاً مباشراً مخصصاً لك",
   "onboardingMinHint": "اختر 3 فئات على الأقل",
@@ -811,44 +901,49 @@
   "onboardingBannerTitle": "دعنا نخصّص تغذيتك",
   "onboardingBannerSubtitle": "اختر اهتماماتك لنعرض لك إعلانات مناسبة.",
   "onboardingBannerCta": "اختر",
-
   "updateRequiredTitle": "تحديث مطلوب",
   "updateRequiredDesc": "يرجى تحديث التطبيق إلى أحدث إصدار للحصول على أفضل تجربة.",
   "updateRequiredBtn": "تحديث الآن",
-
   "chatRateLimited": "تمهّل قليلاً 🐢",
   "fraudInvalidBid": "إجراء غير صالح",
   "fraudShieldTitle": "التحقق الأمني مطلوب",
   "fraudShieldDesc": "لتقديم عرض بهذا المبلغ الكبير، نحتاج إلى التحقق من أن حسابك يخص شخصاً حقيقياً. لن يستغرق ذلك سوى دقيقة واحدة.",
   "fraudShieldVerifyBtn": "تحقق من هاتفي",
   "fraudShieldDismiss": "ليس الآن",
-
   "tabListings": "الإعلانات",
   "tabPurchases": "المشتريات",
   "purchasesEmpty": "لا توجد مشتريات بعد",
   "purchasesEmptyHint": "شارك في المزادات المباشرة لشراء المنتجات",
-
   "badgeTrustedSeller": "✅ موثوق",
   "badgeActiveSeller": "⭐ نشط",
   "badgeTrending": "🔥 رائج",
-
   "searchAlertTitle": "تنبيه البحث",
   "searchAlertBody": "احصل على إشعار عند إضافة إعلان جديد يطابق \"{query}\".",
-  "@searchAlertBody": { "placeholders": { "query": { "type": "String" } } },
+  "@searchAlertBody": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "searchAlertCreate": "إنشاء تنبيه",
   "searchAlertCreated": "تم إنشاء تنبيه البحث ✓",
   "searchAlertFailed": "فشل إنشاء التنبيه، حاول مجدداً",
   "searchAlertTooltip": "إنشاء تنبيه بحث",
-
   "audienceInsightsTitle": "تحليل ميزانية الجمهور",
   "audienceInsightsViewers": "{count} مشاهد",
-  "@audienceInsightsViewers": { "placeholders": { "count": { "type": "int" } } },
+  "@audienceInsightsViewers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "audienceAvgBudget": "متوسط الميزانية",
   "audienceProViewers": "مشاهدون Pro",
   "audienceHighBudget": "ميزانية عالية (+1000₺)",
   "audienceMedBudget": "ميزانية متوسطة (250-999₺)",
   "audienceLowBudget": "ميزانية منخفضة (<250₺)",
-
   "proToolBestTimeTitle": "أفضل وقت للبث",
   "proToolBestTimeDesc": "اعرف الأيام والأوقات ذات أعلى معدل تحويل بناءً على بياناتك السابقة.",
   "proToolConversionTitle": "تحليل التحويلات",
@@ -857,17 +952,46 @@
   "bestTimeNoDataHint": "سيكون التحليل جاهزاً بعد بث واحد على الأقل",
   "bestTimeSlotsHeader": "أفضل الأوقات",
   "bestTimeSlotStats": "{wins} مبيعة / {count} بث",
-  "@bestTimeSlotStats": { "placeholders": { "wins": { "type": "int" }, "count": { "type": "int" } } },
+  "@bestTimeSlotStats": {
+    "placeholders": {
+      "wins": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "conversionNoData": "لا توجد بيانات مبيعات بعد",
   "conversionNoDataHint": "بعد إجراء مزادات مباشرة، ستظهر هنا مبيعاتك حسب الفئة",
   "conversionSectionHeader": "أي فئة تبيع أكثر؟ (آخر 90 يوماً)",
   "conversionCategoryCount": "إجمالي {count} فئة",
-  "@conversionCategoryCount": { "placeholders": { "count": { "type": "int" } } },
+  "@conversionCategoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "conversionCategorySales": "{won}/{total} مبيعة",
-  "@conversionCategorySales": { "placeholders": { "won": { "type": "int" }, "total": { "type": "int" } } },
+  "@conversionCategorySales": {
+    "placeholders": {
+      "won": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "conversionAvgPrice": "متوسط {price} ₺",
-  "@conversionAvgPrice": { "placeholders": { "price": { "type": "String" } } },
-
+  "@conversionAvgPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "accountInfoTitle": "معلوماتي",
   "accountInfoBasicSection": "المعلومات الأساسية",
   "accountInfoSecuritySection": "أمان الحساب",
@@ -885,7 +1009,13 @@
   "accountInfoSaved": "تم تحديث المعلومات",
   "accountInfoEmailChangeTitle": "تغيير البريد الإلكتروني",
   "accountInfoEmailCurrent": "الحالي: {email}",
-  "@accountInfoEmailCurrent": { "placeholders": { "email": { "type": "String" } } },
+  "@accountInfoEmailCurrent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "accountInfoNewEmail": "عنوان البريد الإلكتروني الجديد",
   "accountInfoVerifyCode": "رمز التحقق",
   "accountInfoSendCode": "إرسال الرمز",
@@ -896,7 +1026,13 @@
   "accountInfoPhoneAddTitle": "إضافة هاتف",
   "accountInfoPhoneChangeTitle": "تغيير الهاتف",
   "accountInfoPhoneCurrent": "الحالي: {phone}",
-  "@accountInfoPhoneCurrent": { "placeholders": { "phone": { "type": "String" } } },
+  "@accountInfoPhoneCurrent": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
   "accountInfoPhoneSendVerify": "إرسال بريد التحقق",
   "accountInfoEmailSent": "تم إرسال البريد",
   "accountInfoEmailSentDesc": "أرسلنا رابط التحقق إلى بريدك المسجّل. انقر الرابط للتحقق من رقم هاتفك.",
@@ -904,14 +1040,18 @@
   "accountInfoOk": "حسناً",
   "accountInfoConnectError": "تعذّر الاتصال بالخادم",
   "accountInfoMenuLabel": "معلوماتي",
-
   "phoneInfoTitle": "لماذا رقم الهاتف؟",
   "phoneInfoBody": "يُستخدم رقم هاتفك لتأمين حسابك عند تقديم عروض بقيم عالية. نحتاج إلى التحقق منه لمنع العروض الوهمية وللتواصل معك عند فوزك. لن يُشارك رقمك مع أي جهة خارجية.",
   "phoneInfoGotIt": "فهمت",
-
   "boostOnlyPro": "⭐ تمييز الإعلانات متاح لأعضاء Pro فقط.",
   "boostLimitExhausted": "لقد استنفدت {limit} رصيداً لتمييز الإعلانات هذا الشهر. يُجدَّد في بداية الشهر القادم.",
-  "@boostLimitExhausted": { "placeholders": { "limit": { "type": "int" } } },
+  "@boostLimitExhausted": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "boostDialogTitle": "تمييز الإعلان",
   "boostDialogPlanLabel": "خطة الحملة:",
   "boostDialogTotalBudget": "إجمالي الميزانية",
@@ -922,11 +1062,26 @@
   "boostDialogEstClicksValue": "~50 نقرة",
   "boostDialogFeedHint": "سيظهر إعلانك بشكل مميز في خلاصة \"لك\".",
   "boostDialogCredits": "⭐ الأرصدة المتبقية: {remaining} / {limit}",
-  "@boostDialogCredits": { "placeholders": { "remaining": { "type": "int" }, "limit": { "type": "int" } } },
+  "@boostDialogCredits": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "boostDialogStart": "بدء",
   "boostDialogPaidTitle": "تمييز مدفوع",
   "boostDialogPaidBadge": "لقد استنفدت {limit} تمييزاً مجانياً هذا الشهر",
-  "@boostDialogPaidBadge": { "placeholders": { "limit": { "type": "int" } } },
+  "@boostDialogPaidBadge": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "boostDialogPaidDesc": "سيظهر إعلانك بشكل مميز في خلاصة \"لك\".",
   "boostDialogPaidCost": "التكلفة",
   "boostDialogPaidCostValue": "50 TUCi",
@@ -940,7 +1095,6 @@
   "boostErrorInsufficientTuci": "رصيد TUCi غير كافٍ. يلزم 50 TUCi للتمييز المدفوع.",
   "boostBtnStart": "تمييز الإعلان",
   "boostBtnReport": "عرض أداء الإعلان",
-
   "adReportTitle": "تقرير الإعلان",
   "adReportSubtitle": "أداء حملتك الإعلانية في الوقت الفعلي",
   "adReportLoading": "جارٍ تحليل الإعلان…",
@@ -953,21 +1107,69 @@
   "adReportMetricClicks": "النقرات",
   "adReportMetricClickRate": "عدد النقرات\nلكل 100 مشاهدة",
   "adReportMetricClickRateHint": "{clicks} نقرة / {impressions} مشاهدة",
-  "@adReportMetricClickRateHint": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "@adReportMetricClickRateHint": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
   "adReportMetricActiveDays": "مدة\nالنشاط",
   "adReportMetricActiveDaysLessThan1": "أقل من يوم",
   "adReportMetricActiveDaysValue": "{days} أيام",
-  "@adReportMetricActiveDaysValue": { "placeholders": { "days": { "type": "int" } } },
+  "@adReportMetricActiveDaysValue": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "adReportSmartAnalysis": "تحليل ذكي",
   "adReportInsightNoImpressions": "لم يرَ أحد إعلانك بعد. ستُحدَّث هذه الصفحة فور دخول الإعلان إلى الخلاصة.",
   "adReportInsightGreat": "رائع! نقر {clicks} من كل 100 شخص رأوا إعلانك — هذه نسبة تفاعل ممتازة. العنوان والصورة يجذبان المشترين.",
-  "@adReportInsightGreat": { "placeholders": { "clicks": { "type": "int" } } },
+  "@adReportInsightGreat": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      }
+    }
+  },
   "adReportInsightGood": "أداء جيد. شاهد {impressions} شخصاً إعلانك وتفاعل معه {clicks}. تحسين الصور أو العنوان قد يجلب اهتماماً أكبر.",
-  "@adReportInsightGood": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "@adReportInsightGood": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
   "adReportInsightLow": "شاهد {impressions} شخصاً إعلانك لكن {clicks} فقط نقروا عليه. قد لا تكون الصورة الرئيسية أو السعر جذّابَيْن بما يكفي.",
-  "@adReportInsightLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "@adReportInsightLow": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
   "adReportInsightVeryLow": "شاهد {impressions} شخصاً إعلانك وحصل على {clicks} نقرة. ننصح بمراجعة العنوان والصور والسعر.",
-  "@adReportInsightVeryLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "@adReportInsightVeryLow": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
   "notInterested": "لست مهتمًا",
   "notInterestedConfirmed": "لن يظهر هذا الإعلان مرة أخرى.",
   "proMetricAvgDwell": "متوسط وقت التصفح",
@@ -977,15 +1179,22 @@
   "adMetricDailyTrend": "اتجاه CTR اليومي",
   "adMetricBestHour": "أفضل ساعة",
   "adMetricCategoryAvgCtr": "متوسط CTR للفئة",
-  "adMetricBurnRate": "معدل نفاد الميزانية"
-,
+  "adMetricBurnRate": "معدل نفاد الميزانية",
   "proBoostSection": "رصيد الإعلان المميز",
   "boostCreditEmpty": "استنفدت رصيد الإعلان المميز هذا الشهر. يتجدد الشهر القادم.",
   "boostCreditUsed": "استخدمت {used} إعلان مميز، {remaining} متبقٍ.",
   "@boostCreditUsed": {
     "placeholders": {
-      "used": { "type": "int" },
-      "remaining": { "type": "int" }
+      "used": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
     }
-  }
+  },
+  "softUpdateTitle": "إصدار جديد متاح",
+  "softUpdateMessage": "يتوفر إصدار جديد من التطبيق. يرجى التحديث للحصول على تجربة أفضل.",
+  "softUpdateUpdateNow": "تحديث الآن",
+  "softUpdateLater": "لاحقاً"
 }

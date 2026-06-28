@@ -1,33 +1,28 @@
 {
   "@@locale": "en",
-
   "appName": "teqlif",
-
   "navLive": "Live",
   "navListings": "Listings",
   "navSearch": "Search",
   "navMessages": "Messages",
   "navProfile": "Profile",
   "navSettings": "Settings",
-
   "loginWelcome": "Welcome back",
   "loginSubtitle": "Sign in to your account",
   "loginNoAccount": "Don't have an account? ",
   "loginRegisterLink": "Sign up",
   "loginFaceId": "🔒 Sign in with Face ID",
   "loginFaceIdDesc": "You can sign in quickly with Face ID on your next login without entering your password.",
-
   "registerTitle": "Sign Up",
   "registerSubtitle": "Create account",
   "registerJoin": "Join teqlif",
   "registerHaveAccount": "Already have an account? ",
   "registerLoginLink": "Sign in",
-
   "fieldEmail": "Email",
   "fieldEmailHint": "Enter your email",
   "fieldPassword": "Password",
   "fieldPasswordConfirm": "Confirm Password",
-  "fieldPasswordConfirmHint": "Re-enter your password",
+  "fieldPasswordConfirmHint": "Enter your password to confirm",
   "validPasswordMismatch": "Passwords do not match",
   "fieldPasswordHint": "Enter your password",
   "fieldFullName": "Full Name",
@@ -39,7 +34,6 @@
   "fieldNewPassword": "New Password",
   "fieldNewPasswordConfirm": "New Password (Confirm)",
   "fieldEmailCode": "Email Verification Code",
-  "fieldPasswordConfirmHint": "Enter your password to confirm",
   "fieldListingTitle": "Listing Title",
   "fieldListingTitleHint": "Enter a title",
   "fieldCategory": "Category",
@@ -53,7 +47,6 @@
   "fieldCity": "City",
   "fieldPhone": "Phone Number (Optional)",
   "fieldPhoneHint": "0### ### ## ##",
-
   "btnLogin": "Sign In",
   "btnNotNow": "Not Now",
   "btnEnable": "Enable",
@@ -78,12 +71,10 @@
   "btnDeactivate": "Deactivate",
   "btnActivate": "Activate",
   "btnRemoveFavorite": "Remove from Favorites",
-
   "homeRecentListings": "Recent Listings",
   "searchHint": "Searching...",
   "citySelectTitle": "Select City",
   "cityAll": "All Cities",
-
   "catElectronics": "Electronics",
   "catVehicles": "Vehicles",
   "catRealEstate": "Real Estate",
@@ -92,7 +83,6 @@
   "catBooks": "Books",
   "catHomeLife": "Home & Living",
   "catOther": "Other",
-
   "profileUsername": "User",
   "profileListingCount": "Listing",
   "profileFollowers": "Followers",
@@ -116,14 +106,11 @@
   "profileChangePassword": "Change Password",
   "profileDeleteAccount": "Permanently Delete Account",
   "profileDeleteAccountDesc": "This action cannot be undone. All your data will be permanently deleted within 30 days.",
-
   "sectionPhotos": "Photos",
   "photoCover": "Cover",
   "listingMaxPhotos": "You can add up to 10 photos",
-
   "statusOn": "On",
   "statusOff": "Off",
-
   "notifSettingsTitle": "Notification Settings",
   "notifMessagesTitle": "Messages",
   "notifMessagesDesc": "When a new direct message arrives",
@@ -139,7 +126,6 @@
   "notifNewBidDesc": "When your listing receives a bid",
   "notifBidOutbidTitle": "Bid Outbid",
   "notifBidOutbidDesc": "When your bid is outbid in an auction",
-
   "validFullNameMin": "Full name must be at least 2 characters",
   "validFullNameMax": "Full name must be at most 100 characters",
   "validUsernameMin": "Must be at least 3 characters",
@@ -155,45 +141,38 @@
   "validVerificationCode": "Enter the verification code.",
   "validAllFields": "Please fill in all fields.",
   "validTermsRequired": "You must accept the Terms of Service.",
-
   "usernameChecking": "Checking username...",
   "usernameCheckingWait": "Checking username, please wait...",
-
   "emptyListings": "No listings yet",
   "emptyFilteredListings": "No listings found with this filter",
   "emptyActiveListings": "No active listings",
   "emptyPassiveListings": "No inactive listings",
   "emptyFavorites": "No favorite listings yet",
-
   "errorConnection": "Connection error",
   "errorListingsLoad": "Failed to load listings",
   "errorPhotoUpload": "Failed to upload photo. Try again.",
   "errorCaptchaFailed": "Security verification failed. Please try again.",
   "errorTooFast": "You are acting too fast. Please wait a moment.",
-
   "msgPasswordChanged": "Your password has been changed successfully.",
   "msgListingPublished": "Listing published!",
-
   "dialogDeleteListingTitle": "Delete Listing",
   "dialogDeleteListingDesc": "Are you sure you want to permanently delete this listing?",
   "dialogFaceIdActivateTitle": "Verify to enable Face ID",
-
   "settingsLanguage": "Language",
-
   "homeAppBarTitle": "Listings",
   "homeSearchingHeader": "Searching...",
   "homeResultsCount": "{count} listings found",
   "@homeResultsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "searchUserHint": "Search users...",
   "searchNoUser": "No users found",
   "searchLiveStreams": "Live Streams",
   "searchNoContent": "No content yet",
-
   "msgTabMessages": "Messages",
   "msgTabNotifications": "Notifications",
   "msgNoMessages": "No messages yet",
@@ -202,27 +181,25 @@
   "msgWriteHint": "Write a message...",
   "msgNoChat": "No messages yet.\nSend the first message!",
   "msgGoToListing": "📌 Go to Listing",
-
   "notifNone": "No notifications",
   "notifNoneDesc": "New notifications will appear here",
   "notificationsTitle": "Notifications",
   "notificationsMarkAllRead": "Mark all read",
-
   "blockedUsersTitle": "Blocked Users",
   "blockedNone": "No blocked users",
   "blockedUnblock": "Unblock",
   "blockedActionFailed": "Action could not be completed",
-
   "followNoFollowers": "No followers yet",
   "followNoFollowing": "No following yet",
   "followBtnFollowing": "Following",
   "followBtnFollow": "Follow",
-
   "pubProfileUserNotFound": "User not found",
   "pubProfileListingsCount": "Listings ({count})",
   "@pubProfileListingsCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "pubProfileStatListings": "Listings",
@@ -238,7 +215,6 @@
   "pubProfileUnblock": "Unblock",
   "pubProfileActionFailed": "Action could not be completed",
   "pubProfileNoReview": "No reviews yet",
-
   "ratingVeryBad": "Very Bad",
   "ratingBad": "Bad",
   "ratingMedium": "Average",
@@ -251,32 +227,40 @@
   "ratingCount": "{count} reviews",
   "@ratingCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "ratingStarCount": "({count} ratings)",
   "@ratingStarCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "createListingPhotoCount": "Photos ({count}/{max})",
   "@createListingPhotoCount": {
     "placeholders": {
-      "count": { "type": "int" },
-      "max": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "createListingSelectOption": "-- Select --",
   "createListingPhotoUploadFailed": "Failed to upload photo: {error}",
   "@createListingPhotoUploadFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "createListingConnError": "Connection error. Please try again.",
-
   "notifSettingsMessagesTitle": "Messages",
   "notifSettingsMessagesDesc": "When a new direct message arrives",
   "notifSettingsFollowsTitle": "New Follower",
@@ -291,11 +275,9 @@
   "notifSettingsNewBidDesc": "When your listing receives a bid",
   "notifSettingsOutbidTitle": "Bid Outbid",
   "notifSettingsOutbidDesc": "When your bid is outbid in an auction",
-
   "btnOk": "OK",
   "btnGoBack": "Go Back",
   "errorGeneric": "An error occurred",
-
   "listingPriceNotSet": "Price Not Set",
   "listingMsgLoginRequired": "You need to sign in to send a message",
   "listingMsgOwnListing": "You cannot message your own listing",
@@ -320,7 +302,6 @@
   "listingReportSelectRequired": "Please select a reason",
   "listingReportSuccess": "Your report has been received. Thank you.",
   "listingDescriptionLabel": "Description",
-
   "liveStreamsTitle": "Live Streams",
   "liveStartStream": "Go Live",
   "liveAllCategory": "All",
@@ -346,7 +327,9 @@
   "liveViewersTitle": "👁 Viewers ({count})",
   "@liveViewersTitle": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "liveNoViewers": "No viewers yet",
@@ -366,16 +349,19 @@
   "liveModDemotedSelf": "Your moderator role was removed by @{username}.",
   "@liveModDemotedSelf": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "liveModPromotedSelf": "⭐ @{username} made you a moderator! You can now manage viewers.",
   "@liveModPromotedSelf": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
-
   "modTitle": "🛡 Moderation",
   "modMute": "Mute",
   "modUnmute": "Unmute",
@@ -385,51 +371,63 @@
   "modMutedMsg": "@{username} was muted",
   "@modMutedMsg": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modUnmutedMsg": "Mute removed",
   "modPromotedMsg": "@{username} was made a moderator",
   "@modPromotedMsg": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modDemotedMsg": "@{username} was removed as moderator",
   "@modDemotedMsg": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modKickedMsg": "@{username} was kicked from the stream",
   "@modKickedMsg": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modPromotedSnack": "⭐ @{username} is now a moderator!",
   "@modPromotedSnack": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "modDemotedSnack": "✖ @{username} was removed as moderator",
   "@modDemotedSnack": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
-
   "chatMessageHint": "Write a message...",
   "chatMutedHint": "🔇 You are muted",
   "chatHistoryTitle": "Chat History",
   "chatHistoryCount": "Last {count} messages",
   "@chatHistoryCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "auctionTitle": "Auction",
   "auctionBidsHeader": "BIDS",
   "auctionAcceptBidTitle": "✅ Accept Bid",
@@ -468,7 +466,9 @@
   "auctionInProgressDesc": "Buy Now transaction with @{username} in progress.",
   "@auctionInProgressDesc": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "auctionInProgressNoBid": "You cannot bid until this is resolved.",
@@ -476,14 +476,18 @@
   "auctionBoughtBy": "Bought Now by @{username}",
   "@auctionBoughtBy": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "auctionBuyNowCongrats": "🎉 Congratulations! Purchase complete.",
   "auctionBuyNowSoldOther": "🛒 Item Sold via Buy Now! Bought by @{buyer}.",
   "@auctionBuyNowSoldOther": {
     "placeholders": {
-      "buyer": {"type": "String"}
+      "buyer": {
+        "type": "String"
+      }
     }
   },
   "auctionBinRejected": "Your Buy Now request was rejected. Auction continues.",
@@ -497,13 +501,17 @@
   "auctionHighestBidder": "@{username} is the highest bidder",
   "@auctionHighestBidder": {
     "placeholders": {
-      "username": {"type": "String"}
+      "username": {
+        "type": "String"
+      }
     }
   },
   "auctionBidCount": "{count} bids",
   "@auctionBidCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "auctionManualEntry": "Enter Manually",
@@ -516,8 +524,12 @@
   "auctionBuyNowCompleted": "🛒 Buy Now complete! @{buyer} — ₺{price}",
   "@auctionBuyNowCompleted": {
     "placeholders": {
-      "buyer": {"type": "String"},
-      "price": {"type": "String"}
+      "buyer": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
     }
   },
   "offerHistory": "Offer History",
@@ -528,11 +540,9 @@
   "offerInvalidAmount": "Please enter a valid amount.",
   "offerEmpty": "No offers yet.",
   "offerLoginRequired": "Login to make an offer.",
-
   "storyTrayTitle": "Following",
   "storyTrayEmpty": "Nobody you follow is live right now.",
   "storyTrayError": "Could not load",
-
   "storyMyStory": "Your Story",
   "storyProcessing": "Processing video...",
   "storyTooLong": "Video is too long (max 15 seconds)",
@@ -547,9 +557,7 @@
   "storyDelete": "Delete Story",
   "storyDeleteConfirm": "Are you sure you want to delete this story?",
   "storyDeleteFailed": "Could not delete story",
-
   "offlineBannerMessage": "No internet connection, you are in offline mode.",
-
   "editProfileBio": "About Me",
   "editProfileBioHint": "Write a short bio about yourself…",
   "editProfileBioHelper": "Max. 60 characters",
@@ -557,10 +565,8 @@
   "editProfileLinkHint": "https://...",
   "editProfileLinkHelper": "Must start with https://",
   "editProfileLinkError": "Link must start with http:// or https://",
-
   "settingsProTools": "📈 Pro Tools",
   "settingsProActive": "ACTIVE",
-
   "walletTitle": "My TUCi Wallet",
   "walletBalance": "Current Balance",
   "walletRecentTxns": "Recent Transactions",
@@ -576,7 +582,6 @@
   "walletComingSoonLabel": "TUCi Purchase Coming Soon!",
   "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 TUCi balance.",
   "walletBuyBtn": "TUCi Purchase Coming Soon",
-
   "reportLoading": "Preparing stream analysis…",
   "reportLoadFailed": "Could not load report.",
   "reportRetry": "Try Again",
@@ -604,14 +609,15 @@
   "reportHesitation": "{count} hesitant bid(s) — these viewers were close to the price point but didn't convert.",
   "@reportHesitation": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "reportSmartInsight": "Smart Insight",
   "reportDurationMin": "min",
   "reportDurationHour": "h",
   "reportDurationLess": "< 1 min",
-
   "proLoadFailed": "Failed to load data.",
   "proUpgradeTitle": "Pro Feature",
   "proUpgradeBtn": "👑 Go Pro",
@@ -639,32 +645,62 @@
   "blastCreditUsed": "Sent {used} notifications, {remaining} remaining.",
   "@blastCreditUsed": {
     "placeholders": {
-      "used": { "type": "int" },
-      "remaining": { "type": "int" }
+      "used": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
     }
   },
   "blastConfirmCostFreeLabel": "Cost",
   "blastConfirmCostPaidLabel": "TUCi Cost",
   "blastSubtitleFree": "Push notification when stream starts • Free",
   "blastSubtitlePaid": "Push notification when stream starts • {cost} TUCi",
-  "@blastSubtitlePaid": { "placeholders": { "cost": { "type": "int" } } },
+  "@blastSubtitlePaid": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "blastConfirmCostFree": "Deducted from your free quota",
   "blastBtnFree": "{count} Ready Buyers — Send Notification (Free)",
-  "@blastBtnFree": { "placeholders": { "count": { "type": "int" } } },
+  "@blastBtnFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "blastBtnPaid": "{count} Ready Buyers — Send Notification ({cost} TUCi)",
   "@blastBtnPaid": {
     "placeholders": {
-      "count": { "type": "int" },
-      "cost": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
     }
   },
   "blastConfirmBodyFree": "{count} ready buyers will be notified.\n\nThis will use one of your free blasts.",
-  "@blastConfirmBodyFree": { "placeholders": { "count": { "type": "int" } } },
+  "@blastConfirmBodyFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "blastConfirmBodyPaid": "{count} ready buyers will be notified.\n\nTotal cost: {cost} TUCi",
   "@blastConfirmBodyPaid": {
     "placeholders": {
-      "count": { "type": "int" },
-      "cost": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
     }
   },
   "proAnalyticsTitle": "Pro Analytics",
@@ -707,27 +743,67 @@
   "proStreamAvgDuration": "Avg. stream duration: {dur} min",
   "@proStreamAvgDuration": {
     "placeholders": {
-      "dur": { "type": "String" }
+      "dur": {
+        "type": "String"
+      }
     }
   },
   "proEngagements": "eng.",
   "proShowAll": "See {count} more",
-  "@proShowAll": { "placeholders": { "count": { "type": "int" } } },
+  "@proShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "proShowLess": "Show less",
   "proStreamRowStats": "{viewers} viewers · {bids} bids · {dur} min",
-  "@proStreamRowStats": { "placeholders": { "viewers": { "type": "int" }, "bids": { "type": "int" }, "dur": { "type": "int" } } },
+  "@proStreamRowStats": {
+    "placeholders": {
+      "viewers": {
+        "type": "int"
+      },
+      "bids": {
+        "type": "int"
+      },
+      "dur": {
+        "type": "int"
+      }
+    }
+  },
   "proLoadError": "Could not load data. Please try again.",
   "hotLeadViewed": "Viewed {count} times",
-  "@hotLeadViewed": { "placeholders": { "count": { "type": "int" } } },
+  "@hotLeadViewed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "hotLeadHesitated": "{count} people hesitated",
-  "@hotLeadHesitated": { "placeholders": { "count": { "type": "int" } } },
+  "@hotLeadHesitated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listingCtrExplain": "{ctr} clicks per 100 views",
-  "@listingCtrExplain": { "placeholders": { "ctr": { "type": "String" } } },
+  "@listingCtrExplain": {
+    "placeholders": {
+      "ctr": {
+        "type": "String"
+      }
+    }
+  },
   "marketSearchTitle": "People are searching for",
   "marketDayFilter": "{days} days",
   "@marketDayFilter": {
     "placeholders": {
-      "days": { "type": "int" }
+      "days": {
+        "type": "int"
+      }
     }
   },
   "marketNoSearchData": "No search data yet. Will appear as users search.",
@@ -740,13 +816,17 @@
   "marketGrowthPos": "Platform overall growth: +{pct}%",
   "@marketGrowthPos": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "marketGrowthNeg": "Platform overall decline: {pct}%",
   "@marketGrowthNeg": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "marketGrowthSub": "Avg. purchase amount vs previous 30 days",
@@ -757,7 +837,9 @@
   "listingDayFilterN": "Last {n} Days",
   "@listingDayFilterN": {
     "placeholders": {
-      "n": { "type": "int" }
+      "n": {
+        "type": "int"
+      }
     }
   },
   "listingTotalViews": "Total Views",
@@ -765,13 +847,17 @@
   "listingVideoBeatsPhoto": "🎬 Video listings get {x}× more clicks than photo listings.",
   "@listingVideoBeatsPhoto": {
     "placeholders": {
-      "x": { "type": "String" }
+      "x": {
+        "type": "String"
+      }
     }
   },
   "listingPhotoBeatsVideo": "📸 Photo listings get {x}× more clicks than video listings.",
   "@listingPhotoBeatsVideo": {
     "placeholders": {
-      "x": { "type": "String" }
+      "x": {
+        "type": "String"
+      }
     }
   },
   "listingMediaEqual": "Video and photo listings get similar attention.",
@@ -781,14 +867,18 @@
   "listingWatchedPct": "{pct}% watched",
   "@listingWatchedPct": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "listingGalleryLabel": "Gallery interest",
   "listingGalleryDeep": "Scrolled to photo {n}",
   "@listingGalleryDeep": {
     "placeholders": {
-      "n": { "type": "String" }
+      "n": {
+        "type": "String"
+      }
     }
   },
   "listingGalleryShallow": "Viewed only the first photo",
@@ -797,11 +887,12 @@
   "listingReach": "{count} people saw this",
   "@listingReach": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "listingPaywallDesc": "Track how many people saw each listing, how many clicked, and how much interest it received.",
-
   "onboardingTitle": "What are you into?",
   "onboardingSubtitle": "Let us show you personalised listings and streams",
   "onboardingMinHint": "Pick at least 3 categories",
@@ -810,44 +901,49 @@
   "onboardingBannerTitle": "Let us personalise your feed",
   "onboardingBannerSubtitle": "Pick your interests and see listings made for you.",
   "onboardingBannerCta": "Pick",
-
   "updateRequiredTitle": "Update Required",
   "updateRequiredDesc": "Please update the app to the latest version for the best experience.",
   "updateRequiredBtn": "Update Now",
-
   "chatRateLimited": "Slow down a bit 🐢",
   "fraudInvalidBid": "Invalid Action",
   "fraudShieldTitle": "Security Verification Required",
   "fraudShieldDesc": "To place such a high bid, we need to verify that your account belongs to a real person. This only takes 1 minute.",
   "fraudShieldVerifyBtn": "Verify My Phone",
   "fraudShieldDismiss": "Not now",
-
   "tabListings": "Listings",
   "tabPurchases": "Purchases",
   "purchasesEmpty": "No purchases yet",
   "purchasesEmptyHint": "Join live auctions to buy items",
-
   "badgeTrustedSeller": "✅ Trusted",
   "badgeActiveSeller": "⭐ Active",
   "badgeTrending": "🔥 Trending",
-
   "searchAlertTitle": "Search Alert",
   "searchAlertBody": "Get notified when a new listing matches \"{query}\".",
-  "@searchAlertBody": { "placeholders": { "query": { "type": "String" } } },
+  "@searchAlertBody": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "searchAlertCreate": "Create Alert",
   "searchAlertCreated": "Search alert created ✓",
   "searchAlertFailed": "Failed to create alert, try again",
   "searchAlertTooltip": "Create Search Alert",
-
   "audienceInsightsTitle": "Audience Budget Analysis",
   "audienceInsightsViewers": "{count} viewers",
-  "@audienceInsightsViewers": { "placeholders": { "count": { "type": "int" } } },
+  "@audienceInsightsViewers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "audienceAvgBudget": "Average Budget",
   "audienceProViewers": "Pro Viewers",
   "audienceHighBudget": "High Budget (1000₺+)",
   "audienceMedBudget": "Mid Budget (250-999₺)",
   "audienceLowBudget": "Low Budget (<250₺)",
-
   "proToolBestTimeTitle": "Best Stream Time",
   "proToolBestTimeDesc": "See the days and hours with the highest conversion rate based on your past streams.",
   "proToolConversionTitle": "Conversion Analysis",
@@ -856,17 +952,46 @@
   "bestTimeNoDataHint": "Analysis will be ready after at least 1 stream",
   "bestTimeSlotsHeader": "Best Time Slots",
   "bestTimeSlotStats": "{wins} sales / {count} streams",
-  "@bestTimeSlotStats": { "placeholders": { "wins": { "type": "int" }, "count": { "type": "int" } } },
+  "@bestTimeSlotStats": {
+    "placeholders": {
+      "wins": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "conversionNoData": "No sales data yet",
   "conversionNoDataHint": "After you run live auctions, your sales by category will appear here",
   "conversionSectionHeader": "Which Category Sells Best? (Last 90 Days)",
   "conversionCategoryCount": "Total {count} categories",
-  "@conversionCategoryCount": { "placeholders": { "count": { "type": "int" } } },
+  "@conversionCategoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "conversionCategorySales": "{won}/{total} sales",
-  "@conversionCategorySales": { "placeholders": { "won": { "type": "int" }, "total": { "type": "int" } } },
+  "@conversionCategorySales": {
+    "placeholders": {
+      "won": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "conversionAvgPrice": "Avg. {price} ₺",
-  "@conversionAvgPrice": { "placeholders": { "price": { "type": "String" } } },
-
+  "@conversionAvgPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "accountInfoTitle": "My Information",
   "accountInfoBasicSection": "Basic Information",
   "accountInfoSecuritySection": "Account Security",
@@ -884,7 +1009,13 @@
   "accountInfoSaved": "Information updated",
   "accountInfoEmailChangeTitle": "Change Email",
   "accountInfoEmailCurrent": "Current: {email}",
-  "@accountInfoEmailCurrent": { "placeholders": { "email": { "type": "String" } } },
+  "@accountInfoEmailCurrent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "accountInfoNewEmail": "New email address",
   "accountInfoVerifyCode": "Verification code",
   "accountInfoSendCode": "Send Code",
@@ -895,7 +1026,13 @@
   "accountInfoPhoneAddTitle": "Add Phone",
   "accountInfoPhoneChangeTitle": "Change Phone",
   "accountInfoPhoneCurrent": "Current: {phone}",
-  "@accountInfoPhoneCurrent": { "placeholders": { "phone": { "type": "String" } } },
+  "@accountInfoPhoneCurrent": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
   "accountInfoPhoneSendVerify": "Send Verification Email",
   "accountInfoEmailSent": "Email Sent",
   "accountInfoEmailSentDesc": "We sent a verification link to your registered email. Click the link to verify your phone number.",
@@ -903,14 +1040,18 @@
   "accountInfoOk": "OK",
   "accountInfoConnectError": "Could not connect to server",
   "accountInfoMenuLabel": "My Information",
-
   "phoneInfoTitle": "Why phone number?",
   "phoneInfoBody": "Your phone number helps us secure your account for high-value bids. We need to verify it to prevent fake bids and to reach you when you win. Your number is never shared with third parties.",
   "phoneInfoGotIt": "Got it",
-
   "boostOnlyPro": "⭐ Promoting a listing is exclusive to Pro members.",
   "boostLimitExhausted": "You've used all {limit} boost credits this month. Resets at the start of next month.",
-  "@boostLimitExhausted": { "placeholders": { "limit": { "type": "int" } } },
+  "@boostLimitExhausted": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "boostDialogTitle": "Promote Listing",
   "boostDialogPlanLabel": "Campaign plan:",
   "boostDialogTotalBudget": "Total Budget",
@@ -921,11 +1062,26 @@
   "boostDialogEstClicksValue": "~50 clicks",
   "boostDialogFeedHint": "Your listing will be featured in the \"For You\" feed.",
   "boostDialogCredits": "⭐ Remaining boosts: {remaining} / {limit}",
-  "@boostDialogCredits": { "placeholders": { "remaining": { "type": "int" }, "limit": { "type": "int" } } },
+  "@boostDialogCredits": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "boostDialogStart": "Start",
   "boostDialogPaidTitle": "Paid Promotion",
   "boostDialogPaidBadge": "You've used all {limit} free boosts this month",
-  "@boostDialogPaidBadge": { "placeholders": { "limit": { "type": "int" } } },
+  "@boostDialogPaidBadge": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "boostDialogPaidDesc": "Your listing will still be featured in the \"For You\" feed.",
   "boostDialogPaidCost": "Cost",
   "boostDialogPaidCostValue": "50 TUCi",
@@ -939,7 +1095,6 @@
   "boostErrorInsufficientTuci": "Insufficient TUCi balance. 50 TUCi is required for a paid boost.",
   "boostBtnStart": "Promote Listing",
   "boostBtnReport": "View Ad Performance",
-
   "adReportTitle": "AD REPORT",
   "adReportSubtitle": "Real-time performance of your campaign",
   "adReportLoading": "Preparing ad analysis…",
@@ -952,21 +1107,69 @@
   "adReportMetricClicks": "Clicks",
   "adReportMetricClickRate": "Clicks per\n100 Views",
   "adReportMetricClickRateHint": "{clicks} clicks / {impressions} views",
-  "@adReportMetricClickRateHint": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "@adReportMetricClickRateHint": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
   "adReportMetricActiveDays": "Active\nDuration",
   "adReportMetricActiveDaysLessThan1": "<1 day",
   "adReportMetricActiveDaysValue": "{days} days",
-  "@adReportMetricActiveDaysValue": { "placeholders": { "days": { "type": "int" } } },
+  "@adReportMetricActiveDaysValue": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "adReportSmartAnalysis": "Smart Analysis",
   "adReportInsightNoImpressions": "No one has seen your listing yet. This will update once the listing enters the feed.",
   "adReportInsightGreat": "Great! {clicks} out of every 100 people who saw your listing clicked on it — that's an excellent engagement rate. Your title and photo are attracting buyers.",
-  "@adReportInsightGreat": { "placeholders": { "clicks": { "type": "int" } } },
+  "@adReportInsightGreat": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      }
+    }
+  },
   "adReportInsightGood": "Going well. {impressions} people saw your listing and {clicks} checked it out. Improving your photos or title can drive even more interest.",
-  "@adReportInsightGood": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "@adReportInsightGood": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
   "adReportInsightLow": "{impressions} people saw your listing but only {clicks} clicked. Your cover photo or price may not be appealing enough to buyers.",
-  "@adReportInsightLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "@adReportInsightLow": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
   "adReportInsightVeryLow": "{impressions} people saw your listing and it got {clicks} clicks. We recommend reviewing your title, photos, and pricing.",
-  "@adReportInsightVeryLow": { "placeholders": { "clicks": { "type": "int" }, "impressions": { "type": "int" } } },
+  "@adReportInsightVeryLow": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
   "notInterested": "Not interested",
   "notInterestedConfirmed": "You won't see this listing again.",
   "proMetricAvgDwell": "Avg. Browse Time",
@@ -976,15 +1179,22 @@
   "adMetricDailyTrend": "Daily CTR Trend",
   "adMetricBestHour": "Best Hour",
   "adMetricCategoryAvgCtr": "Category Avg CTR",
-  "adMetricBurnRate": "Budget Burn Rate"
-,
+  "adMetricBurnRate": "Budget Burn Rate",
   "proBoostSection": "Promoted Listing Credits",
   "boostCreditEmpty": "Your listing boost credits are used up for this month. Renewed next month.",
   "boostCreditUsed": "Used {used} boosts, {remaining} remaining.",
   "@boostCreditUsed": {
     "placeholders": {
-      "used": { "type": "int" },
-      "remaining": { "type": "int" }
+      "used": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
     }
-  }
+  },
+  "softUpdateTitle": "New Version Available",
+  "softUpdateMessage": "A new version of the app is available. Please update for a better experience.",
+  "softUpdateUpdateNow": "Update Now",
+  "softUpdateLater": "Later"
 }

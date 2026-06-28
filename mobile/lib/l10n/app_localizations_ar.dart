@@ -2312,4 +2312,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String boostCreditUsed(int used, int remaining) {
     return 'استخدمت $used إعلان مميز، $remaining متبقٍ.';
   }
+
+  @override
+  String get softUpdateTitle => 'إصدار جديد متاح';
+
+  @override
+  String get softUpdateMessage =>
+      'يتوفر إصدار جديد من التطبيق. يرجى التحديث للحصول على تجربة أفضل.';
+
+  @override
+  String get softUpdateUpdateNow => 'تحديث الآن';
+
+  @override
+  String get softUpdateLater => 'لاحقاً';
 }
