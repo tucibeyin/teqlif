@@ -20,7 +20,7 @@
             
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl';
             document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '240 adet / yıl';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = 'Ölçülemez';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = 'Maksimum Etki';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+204 ekstra ücretsiz duyuru hakkı ile on binlerce kullanıcıya bedava ulaşın';
             
             var tfootValueText = document.getElementById('tfootValueText');
@@ -43,7 +43,7 @@
             
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay';
             document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '20 adet / ay';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = 'Ölçülemez';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = 'Maksimum Etki';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+17 ekstra ücretsiz duyuru hakkı ile binlerce kullanıcıya bedava ulaşın';
             
             var tfootValueText = document.getElementById('tfootValueText');
