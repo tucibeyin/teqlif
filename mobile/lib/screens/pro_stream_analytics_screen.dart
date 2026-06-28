@@ -39,7 +39,9 @@ class BestStreamTimeScreen extends StatefulWidget {
 class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
   Map<String, dynamic>? _data;
   bool _loading = true;
-  String? _error;
+  bool _hasError = false;
+  bool _showAllSlots = false;
+  static const int _kMax = 5;
 
   @override
   void initState() {
@@ -48,32 +50,47 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
   }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _hasError = false; });
     try {
       final d = await _fetchBestStreamTime();
       if (mounted) setState(() { _data = d; _loading = false; });
-    } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _hasError = true; _loading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.proToolBestTimeTitle),
+        title: Text(l.proToolBestTimeTitle),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text('Hata: $_error', style: const TextStyle(color: Colors.red)))
+          : _hasError
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textSecondary(context)),
+                      const SizedBox(height: 12),
+                      Text(l.proLoadError, style: TextStyle(color: AppColors.textSecondary(context))),
+                      const SizedBox(height: 16),
+                      FilledButton(onPressed: _load, child: Text(l.btnRetry)),
+                    ],
+                  ),
+                )
               : _buildContent(context),
     );
   }
 
   Widget _buildContent(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final slots = (_data!['slots'] as List? ?? []);
     final recommendation = _data!['recommendation'] as String? ?? '';
 
@@ -117,11 +134,11 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
           )
         else ...[
           Text(
-            AppLocalizations.of(context)!.bestTimeSlotsHeader,
+            l.bestTimeSlotsHeader,
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
           ),
           const SizedBox(height: 12),
-          ...slots.asMap().entries.map((e) {
+          ...(_showAllSlots ? slots : slots.take(_kMax).toList()).asMap().entries.map((e) {
             final i = e.key;
             final s = e.value as Map<String, dynamic>;
             final conv = s['conversion_rate'] as num? ?? 0;
@@ -167,7 +184,7 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF10B981)),
                       ),
                       Text(
-                        AppLocalizations.of(context)!.bestTimeSlotStats(wins, count),
+                        l.bestTimeSlotStats(wins, count),
                         style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
                       ),
                     ],
@@ -180,6 +197,25 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
               ),
             );
           }),
+          if (slots.length > _kMax)
+            GestureDetector(
+              onTap: () => setState(() => _showAllSlots = !_showAllSlots),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _showAllSlots ? l.proShowLess : l.proShowAll(slots.length - _kMax),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context)),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(_showAllSlots ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 16, color: AppColors.textSecondary(context)),
+                  ],
+                ),
+              ),
+            ),
         ],
       ],
     );
@@ -198,7 +234,9 @@ class ConversionBreakdownScreen extends StatefulWidget {
 class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
   List<dynamic> _data = [];
   bool _loading = true;
-  String? _error;
+  bool _hasError = false;
+  bool _showAll = false;
+  static const int _kMax = 5;
 
   @override
   void initState() {
@@ -207,32 +245,46 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
   }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _hasError = false; });
     try {
       final d = await _fetchConversionBreakdown();
       if (mounted) setState(() { _data = d; _loading = false; });
-    } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _hasError = true; _loading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.proToolConversionTitle),
+        title: Text(l.proToolConversionTitle),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text('Hata: $_error', style: const TextStyle(color: Colors.red)))
-              : _buildContent(context),
+          : _hasError
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textSecondary(context)),
+                      const SizedBox(height: 12),
+                      Text(l.proLoadError, style: TextStyle(color: AppColors.textSecondary(context))),
+                      const SizedBox(height: 16),
+                      FilledButton(onPressed: _load, child: Text(l.btnRetry)),
+                    ],
+                  ),
+                )
+              : _buildContent(context, l),
     );
   }
 
-  Widget _buildContent(BuildContext context) {
+  Widget _buildContent(BuildContext context, AppLocalizations l) {
     if (_data.isEmpty) {
       return Center(
         child: Column(
@@ -240,26 +292,27 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
           children: [
             const Icon(Icons.pie_chart_outline, size: 52, color: Color(0xFFD1D5DB)),
             const SizedBox(height: 12),
-            Text(AppLocalizations.of(context)!.conversionNoData, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+            Text(l.conversionNoData, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
             const SizedBox(height: 4),
-            Text(AppLocalizations.of(context)!.conversionNoDataHint, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+            Text(l.conversionNoDataHint, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
           ],
         ),
       );
     }
 
+    final visible = _showAll ? _data : _data.take(_kMax).toList();
     final maxConv = (_data.map((r) => (r['conversion_rate'] as num? ?? 0).toDouble()).reduce((a, b) => a > b ? a : b)).toDouble();
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(AppLocalizations.of(context)!.conversionSectionHeader,
+        Text(l.conversionSectionHeader,
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
         const SizedBox(height: 4),
-        Text(AppLocalizations.of(context)!.conversionCategoryCount(_data.length),
+        Text(l.conversionCategoryCount(_data.length),
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
         const SizedBox(height: 16),
-        ..._data.map((row) {
+        ...visible.map((row) {
           final r = row as Map<String, dynamic>;
           final conv = (r['conversion_rate'] as num? ?? 0).toDouble();
           final barWidth = maxConv > 0 ? conv / maxConv : 0.0;
@@ -305,10 +358,10 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Text(AppLocalizations.of(context)!.conversionCategorySales(won, total), style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
+                    Text(l.conversionCategorySales(won, total), style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
                     const Spacer(),
                     if (avgPrice > 0)
-                      Text(AppLocalizations.of(context)!.conversionAvgPrice(avgPrice.toStringAsFixed(0)),
+                      Text(l.conversionAvgPrice(avgPrice.toStringAsFixed(0)),
                           style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
                   ],
                 ),
@@ -316,6 +369,25 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
             ),
           );
         }),
+        if (_data.length > _kMax)
+          GestureDetector(
+            onTap: () => setState(() => _showAll = !_showAll),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _showAll ? l.proShowLess : l.proShowAll(_data.length - _kMax),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context)),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(_showAll ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      size: 16, color: AppColors.textSecondary(context)),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }

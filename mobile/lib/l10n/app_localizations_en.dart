@@ -1519,36 +1519,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proAnalyticsTitle => 'Pro Analytics';
 
   @override
-  String get proSectionOverview => '📊 Overview';
+  String get proSectionOverview => 'My Sales Summary';
 
   @override
-  String get proSectionFunnel => '🔽 Conversion Funnel';
+  String get proSectionFunnel => 'How Many People Placed a Bid?';
 
   @override
   String get proSectionTips => '🤖 Smart Suggestions';
 
   @override
-  String get proSectionHotLeads => '🔥 Hot Leads';
+  String get proSectionHotLeads => 'Don\'t Miss the Sale';
 
   @override
   String get proHotLeadsDesc =>
-      'Viewed but no bid placed — buyers close to buying';
+      'These buyers checked your listing but didn\'t bid — lower your price or boost it';
 
   @override
-  String get proSectionPriceIntel => '💎 Price Intelligence';
+  String get proSectionPriceIntel => 'Where Does Your Price Stand?';
 
   @override
-  String get proPriceIntelDesc => 'ML — comparison with similar listings';
+  String get proPriceIntelDesc =>
+      'Find the right price by comparing with similar listings';
 
   @override
-  String get proSectionStreamPerf => '📡 Stream Performance';
+  String get proSectionStreamPerf => 'How Are My Streams Doing?';
 
   @override
-  String get proSectionPeakHours => '⏰ Platform Peak Hours';
+  String get proSectionPeakHours => 'When Is the Platform Most Active?';
 
   @override
-  String get proPeakHoursDesc =>
-      'Hours with most engagement in the last 30 days';
+  String get proPeakHoursDesc => 'Go live at these times to reach more viewers';
 
   @override
   String get proKpiRevenue30d => 'Last 30-Day Revenue';
@@ -1578,22 +1578,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proKpiTotalUnit => 'total';
 
   @override
-  String get proFunnelViews => '👁 Views';
+  String get proFunnelViews => 'How many people saw it';
 
   @override
-  String get proFunnelHesitation => '🤔 Inspected (hesitation)';
+  String get proFunnelHesitation => 'How many hesitated';
 
   @override
-  String get proFunnelBid => '🔨 Bid';
+  String get proFunnelBid => 'How many placed a bid';
 
   @override
-  String get proFunnelSale => '✅ Sale';
+  String get proFunnelSale => 'How many sales made';
 
   @override
-  String get proFunnelViewToBid => 'View → Bid';
+  String get proFunnelViewToBid => 'Of viewers, how many bid';
 
   @override
-  String get proFunnelBidToSale => 'Bid → Sale';
+  String get proFunnelBidToSale => 'Of bids, how many became sales';
 
   @override
   String get priceSignalExpensive => '⬆ Expensive';
@@ -1626,7 +1626,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proStreamAvgViewers => 'Avg. Viewers';
 
   @override
-  String get proStreamPeak => 'Peak';
+  String get proStreamPeak => 'Highest';
 
   @override
   String proStreamAvgDuration(String dur) {
@@ -1635,6 +1635,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get proEngagements => 'eng.';
+
+  @override
+  String proShowAll(int count) {
+    return 'See $count more';
+  }
+
+  @override
+  String get proShowLess => 'Show less';
+
+  @override
+  String proStreamRowStats(int viewers, int bids, int dur) {
+    return '$viewers viewers · $bids bids · $dur min';
+  }
+
+  @override
+  String get proLoadError => 'Could not load data. Please try again.';
+
+  @override
+  String hotLeadViewed(int count) {
+    return 'Viewed $count times';
+  }
+
+  @override
+  String hotLeadHesitated(int count) {
+    return '$count people hesitated';
+  }
+
+  @override
+  String listingCtrExplain(String ctr) {
+    return '$ctr clicks per 100 views';
+  }
 
   @override
   String get marketSearchTitle => 'People are searching for';
@@ -1904,14 +1935,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get conversionNoData => 'No auction data yet';
+  String get conversionNoData => 'No sales data yet';
 
   @override
   String get conversionNoDataHint =>
-      'You need to run live auctions in the last 90 days';
+      'After you run live auctions, your sales by category will appear here';
 
   @override
-  String get conversionSectionHeader => 'Category Conversion (Last 90 Days)';
+  String get conversionSectionHeader =>
+      'Which Category Sells Best? (Last 90 Days)';
 
   @override
   String conversionCategoryCount(int count) {

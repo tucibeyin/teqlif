@@ -1321,7 +1321,7 @@ class _GridItemState extends State<_GridItem> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final http.Response resp = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/feed/not-interested/$listingId'),
+        Uri.parse('$kBaseUrl/feed/not-interested/$listingId'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 204 && mounted) {

@@ -2965,13 +2965,13 @@ abstract class AppLocalizations {
   /// No description provided for @proSectionOverview.
   ///
   /// In tr, this message translates to:
-  /// **'📊 Genel Bakış'**
+  /// **'Satış Özetim'**
   String get proSectionOverview;
 
   /// No description provided for @proSectionFunnel.
   ///
   /// In tr, this message translates to:
-  /// **'🔽 Dönüşüm Hunisi'**
+  /// **'Kaç Kişi Teklif Verdi?'**
   String get proSectionFunnel;
 
   /// No description provided for @proSectionTips.
@@ -2983,43 +2983,43 @@ abstract class AppLocalizations {
   /// No description provided for @proSectionHotLeads.
   ///
   /// In tr, this message translates to:
-  /// **'🔥 Sıcak Talepler'**
+  /// **'Fırsatı Kaçırma'**
   String get proSectionHotLeads;
 
   /// No description provided for @proHotLeadsDesc.
   ///
   /// In tr, this message translates to:
-  /// **'İncelendi ama teklif verilmedi — satın almaya yakın alıcılar'**
+  /// **'Bu alıcılar ilanına baktı ama teklif vermedi — fiyatı düşür veya öne çıkar'**
   String get proHotLeadsDesc;
 
   /// No description provided for @proSectionPriceIntel.
   ///
   /// In tr, this message translates to:
-  /// **'💎 Fiyat Zekası'**
+  /// **'Fiyatın Piyasada Nerede?'**
   String get proSectionPriceIntel;
 
   /// No description provided for @proPriceIntelDesc.
   ///
   /// In tr, this message translates to:
-  /// **'ML — benzer ilanlarla karşılaştırma'**
+  /// **'Benzer ilanlarla karşılaştırarak doğru fiyatı bul'**
   String get proPriceIntelDesc;
 
   /// No description provided for @proSectionStreamPerf.
   ///
   /// In tr, this message translates to:
-  /// **'📡 Yayın Performansı'**
+  /// **'Yayınlarım Nasıl Gidiyor?'**
   String get proSectionStreamPerf;
 
   /// No description provided for @proSectionPeakHours.
   ///
   /// In tr, this message translates to:
-  /// **'⏰ Platform Zirve Saatleri'**
+  /// **'Platform En Çok Kaçta Aktif?'**
   String get proSectionPeakHours;
 
   /// No description provided for @proPeakHoursDesc.
   ///
   /// In tr, this message translates to:
-  /// **'Son 30 günde en çok etkileşim yaşanan saatler'**
+  /// **'Bu saatlerde yayın yap, daha fazla izleyiciye ulaş'**
   String get proPeakHoursDesc;
 
   /// No description provided for @proKpiRevenue30d.
@@ -3079,37 +3079,37 @@ abstract class AppLocalizations {
   /// No description provided for @proFunnelViews.
   ///
   /// In tr, this message translates to:
-  /// **'👁 Görüntüleme'**
+  /// **'Kaç kişi gördü'**
   String get proFunnelViews;
 
   /// No description provided for @proFunnelHesitation.
   ///
   /// In tr, this message translates to:
-  /// **'🤔 İnceledi (hesitation)'**
+  /// **'Kaç kişi tereddüt etti'**
   String get proFunnelHesitation;
 
   /// No description provided for @proFunnelBid.
   ///
   /// In tr, this message translates to:
-  /// **'🔨 Teklif'**
+  /// **'Kaç kişi teklif verdi'**
   String get proFunnelBid;
 
   /// No description provided for @proFunnelSale.
   ///
   /// In tr, this message translates to:
-  /// **'✅ Satış'**
+  /// **'Kaç satış yapıldı'**
   String get proFunnelSale;
 
   /// No description provided for @proFunnelViewToBid.
   ///
   /// In tr, this message translates to:
-  /// **'Görüntüleme → Teklif'**
+  /// **'Görenlerin kaçı teklif verdi'**
   String get proFunnelViewToBid;
 
   /// No description provided for @proFunnelBidToSale.
   ///
   /// In tr, this message translates to:
-  /// **'Teklif → Satış'**
+  /// **'Tekliflerin kaçı satışa döndü'**
   String get proFunnelBidToSale;
 
   /// No description provided for @priceSignalExpensive.
@@ -3169,13 +3169,13 @@ abstract class AppLocalizations {
   /// No description provided for @proStreamAvgViewers.
   ///
   /// In tr, this message translates to:
-  /// **'Ort. İzleyici'**
+  /// **'Ort. İzleyen'**
   String get proStreamAvgViewers;
 
   /// No description provided for @proStreamPeak.
   ///
   /// In tr, this message translates to:
-  /// **'Zirve'**
+  /// **'En Yüksek'**
   String get proStreamPeak;
 
   /// No description provided for @proStreamAvgDuration.
@@ -3189,6 +3189,48 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'etk.'**
   String get proEngagements;
+
+  /// No description provided for @proShowAll.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} tanesini daha gör'**
+  String proShowAll(int count);
+
+  /// No description provided for @proShowLess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Daha az göster'**
+  String get proShowLess;
+
+  /// No description provided for @proStreamRowStats.
+  ///
+  /// In tr, this message translates to:
+  /// **'{viewers} izleyici · {bids} teklif · {dur} dk'**
+  String proStreamRowStats(int viewers, int bids, int dur);
+
+  /// No description provided for @proLoadError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Veriler yüklenemedi. Lütfen tekrar deneyin.'**
+  String get proLoadError;
+
+  /// No description provided for @hotLeadViewed.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kez bakıldı'**
+  String hotLeadViewed(int count);
+
+  /// No description provided for @hotLeadHesitated.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kişi tereddüt etti'**
+  String hotLeadHesitated(int count);
+
+  /// No description provided for @listingCtrExplain.
+  ///
+  /// In tr, this message translates to:
+  /// **'Her 100 görüntülemede {ctr} tıklama'**
+  String listingCtrExplain(String ctr);
 
   /// No description provided for @marketSearchTitle.
   ///
@@ -3655,19 +3697,19 @@ abstract class AppLocalizations {
   /// No description provided for @conversionNoData.
   ///
   /// In tr, this message translates to:
-  /// **'Henüz açık artırma verisi yok'**
+  /// **'Henüz satış verisi yok'**
   String get conversionNoData;
 
   /// No description provided for @conversionNoDataHint.
   ///
   /// In tr, this message translates to:
-  /// **'Son 90 günde canlı yayında açık artırma düzenlemelisiniz'**
+  /// **'Canlı yayında açık artırma düzenledikten sonra burada satışlarını göreceksin'**
   String get conversionNoDataHint;
 
   /// No description provided for @conversionSectionHeader.
   ///
   /// In tr, this message translates to:
-  /// **'Kategori Bazlı Dönüşüm (Son 90 Gün)'**
+  /// **'Hangi Kategoride Daha Çok Satıyorsun? (Son 90 Gün)'**
   String get conversionSectionHeader;
 
   /// No description provided for @conversionCategoryCount.

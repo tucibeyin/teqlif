@@ -16,6 +16,9 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
   Map<String, dynamic>? _metrics;
   bool _loading = true;
   bool _hasError = false;
+  final Map<String, bool> _showAll = {};
+
+  static const int _kMaxVisible = 5;
 
   @override
   void initState() {
@@ -107,25 +110,50 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
         if (hotLeads.isNotEmpty) ...[
           _SectionLabel(l.proSectionHotLeads),
           _SubLabel(l.proHotLeadsDesc),
-          ...hotLeads.map((lead) => _HotLeadRow(lead: lead)),
+          ..._limited('hotLeads', hotLeads).map((lead) => _HotLeadRow(lead: lead, l: l)),
+          _ShowMoreBtn(
+            total: hotLeads.length,
+            visible: _visibleCount('hotLeads', hotLeads.length),
+            sectionKey: 'hotLeads',
+            showAll: _showAll['hotLeads'] ?? false,
+            onToggle: () => setState(() => _showAll['hotLeads'] = !(_showAll['hotLeads'] ?? false)),
+            l: l,
+          ),
           const SizedBox(height: 20),
         ],
 
         if (priceIntel.isNotEmpty) ...[
           _SectionLabel(l.proSectionPriceIntel),
           _SubLabel(l.proPriceIntelDesc),
-          ...priceIntel.map((p) => _PriceIntelRow(item: p, l: l)),
+          ..._limited('priceIntel', priceIntel).map((p) => _PriceIntelRow(item: p, l: l)),
+          _ShowMoreBtn(
+            total: priceIntel.length,
+            visible: _visibleCount('priceIntel', priceIntel.length),
+            sectionKey: 'priceIntel',
+            showAll: _showAll['priceIntel'] ?? false,
+            onToggle: () => setState(() => _showAll['priceIntel'] = !(_showAll['priceIntel'] ?? false)),
+            l: l,
+          ),
           const SizedBox(height: 20),
         ],
 
         _SectionLabel(l.proSectionStreamPerf),
-        _StreamStatsCard(stats: streamStats, l: l),
+        _StreamStatsCard(stats: streamStats, l: l, showAll: _showAll['streams'] ?? false,
+          onToggleAll: () => setState(() => _showAll['streams'] = !(_showAll['streams'] ?? false))),
         const SizedBox(height: 20),
 
         if (peakHours.isNotEmpty) ...[
           _SectionLabel(l.proSectionPeakHours),
           _SubLabel(l.proPeakHoursDesc),
-          ..._buildPeakBars(peakHours, l),
+          ..._buildPeakBars(_limited('peakHours', peakHours), l),
+          _ShowMoreBtn(
+            total: peakHours.length,
+            visible: _visibleCount('peakHours', peakHours.length),
+            sectionKey: 'peakHours',
+            showAll: _showAll['peakHours'] ?? false,
+            onToggle: () => setState(() => _showAll['peakHours'] = !(_showAll['peakHours'] ?? false)),
+            l: l,
+          ),
           const SizedBox(height: 20),
         ],
 
@@ -137,6 +165,14 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
       ],
     );
   }
+
+  List<T> _limited<T>(String key, List<T> items) {
+    if (_showAll[key] == true) return items;
+    return items.take(_kMaxVisible).toList();
+  }
+
+  int _visibleCount(String key, int total) =>
+      _showAll[key] == true ? total : total.clamp(0, _kMaxVisible);
 
   List<Widget> _buildPeakBars(List<Map<String, dynamic>> hours, AppLocalizations l) {
     final maxCount = hours.map((h) => (h['count'] as int? ?? 0)).reduce((a, b) => a > b ? a : b);
@@ -453,7 +489,8 @@ class _TipCard extends StatelessWidget {
 
 class _HotLeadRow extends StatelessWidget {
   final Map<String, dynamic> lead;
-  const _HotLeadRow({required this.lead});
+  final AppLocalizations l;
+  const _HotLeadRow({required this.lead, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -494,9 +531,9 @@ class _HotLeadRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _Chip('👁 $views', const Color(0xFF3B82F6)),
+              _Chip(l.hotLeadViewed(views), const Color(0xFF3B82F6)),
               const SizedBox(height: 4),
-              _Chip('🤔 $hes', const Color(0xFFF59E0B)),
+              _Chip(l.hotLeadHesitated(hes), const Color(0xFFF59E0B)),
             ],
           ),
         ],
@@ -596,7 +633,9 @@ class _PriceBox extends StatelessWidget {
 class _StreamStatsCard extends StatelessWidget {
   final Map<String, dynamic> stats;
   final AppLocalizations l;
-  const _StreamStatsCard({required this.stats, required this.l});
+  final bool showAll;
+  final VoidCallback onToggleAll;
+  const _StreamStatsCard({required this.stats, required this.l, this.showAll = false, required this.onToggleAll});
 
   @override
   Widget build(BuildContext context) {
@@ -647,7 +686,17 @@ class _StreamStatsCard extends StatelessWidget {
         ),
         if (best.isNotEmpty) ...[
           const SizedBox(height: 8),
-          ...best.asMap().entries.map((e) => _BestStreamRow(rank: e.key + 1, stream: e.value)),
+          ...( showAll ? best : best.take(5).toList())
+              .asMap().entries.map((e) => _BestStreamRow(rank: e.key + 1, stream: e.value, l: l)),
+          if (best.length > 5)
+            _ShowMoreBtn(
+              total: best.length,
+              visible: showAll ? best.length : best.length.clamp(0, 5),
+              sectionKey: 'streams',
+              showAll: showAll,
+              onToggle: onToggleAll,
+              l: l,
+            ),
         ],
       ],
     );
@@ -677,21 +726,27 @@ class _StatBox extends StatelessWidget {
 class _BestStreamRow extends StatelessWidget {
   final int rank;
   final Map<String, dynamic> stream;
-  const _BestStreamRow({required this.rank, required this.stream});
+  final AppLocalizations l;
+  const _BestStreamRow({required this.rank, required this.stream, required this.l});
 
   @override
   Widget build(BuildContext context) {
     final medals = ['🥇', '🥈', '🥉'];
+    final medal = rank <= 3 ? medals[rank - 1] : '#$rank';
+    final viewers = stream['viewers'] as int? ?? 0;
+    final bids = stream['bids'] as int? ?? 0;
+    final dur = stream['duration_min'] as int? ?? 0;
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(color: AppColors.card(context), borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          Text(medals[rank - 1], style: const TextStyle(fontSize: 16)),
+          Text(medal, style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 10),
           Expanded(child: Text(stream['title'] as String? ?? '', style: TextStyle(fontSize: 13, color: AppColors.textPrimary(context)), maxLines: 1, overflow: TextOverflow.ellipsis)),
-          Text('👁 ${stream['viewers']}  🔨 ${stream['bids']}  ⏱ ${stream['duration_min']}dk',
+          const SizedBox(width: 8),
+          Text(l.proStreamRowStats(viewers, bids, dur),
               style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
         ],
       ),
@@ -814,6 +869,58 @@ class _MetricChip extends StatelessWidget {
           const SizedBox(height: 2),
           Text(label, style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context)), textAlign: TextAlign.center, maxLines: 2),
         ],
+      ),
+    );
+  }
+}
+
+// ── "Daha fazla gör" butonu ───────────────────────────────────────────────────
+
+class _ShowMoreBtn extends StatelessWidget {
+  final int total;
+  final int visible;
+  final String sectionKey;
+  final bool showAll;
+  final VoidCallback onToggle;
+  final AppLocalizations l;
+
+  const _ShowMoreBtn({
+    required this.total,
+    required this.visible,
+    required this.sectionKey,
+    required this.showAll,
+    required this.onToggle,
+    required this.l,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (total <= visible && !showAll) return const SizedBox.shrink();
+    if (total <= 5) return const SizedBox.shrink();
+    final remaining = total - 5;
+    return GestureDetector(
+      onTap: onToggle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              showAll ? l.proShowLess : l.proShowAll(remaining),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary(context),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              showAll ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              size: 16,
+              color: AppColors.textSecondary(context),
+            ),
+          ],
+        ),
       ),
     );
   }

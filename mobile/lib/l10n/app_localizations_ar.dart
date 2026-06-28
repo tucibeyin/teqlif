@@ -1507,35 +1507,37 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proAnalyticsTitle => 'تحليلات Pro';
 
   @override
-  String get proSectionOverview => '📊 نظرة عامة';
+  String get proSectionOverview => 'ملخص مبيعاتي';
 
   @override
-  String get proSectionFunnel => '🔽 مسار التحويل';
+  String get proSectionFunnel => 'كم شخصاً قدّم عرضاً؟';
 
   @override
   String get proSectionTips => '🤖 اقتراحات ذكية';
 
   @override
-  String get proSectionHotLeads => '🔥 العملاء المحتملون';
+  String get proSectionHotLeads => 'لا تفوّت الفرصة';
 
   @override
   String get proHotLeadsDesc =>
-      'تمت المعاينة بدون عرض — مشترون قريبون من الشراء';
+      'هؤلاء المشترون نظروا إلى إعلانك ولم يقدّموا عرضاً — خفّض السعر أو روّج للإعلان';
 
   @override
-  String get proSectionPriceIntel => '💎 استخبارات الأسعار';
+  String get proSectionPriceIntel => 'أين يقع سعرك في السوق؟';
 
   @override
-  String get proPriceIntelDesc => 'ML — مقارنة مع إعلانات مشابهة';
+  String get proPriceIntelDesc =>
+      'اعثر على السعر المناسب بالمقارنة مع إعلانات مشابهة';
 
   @override
-  String get proSectionStreamPerf => '📡 أداء البث';
+  String get proSectionStreamPerf => 'كيف تسير بثوثي؟';
 
   @override
-  String get proSectionPeakHours => '⏰ ساعات الذروة في المنصة';
+  String get proSectionPeakHours => 'متى تكون المنصة أكثر نشاطاً؟';
 
   @override
-  String get proPeakHoursDesc => 'الساعات الأكثر تفاعلاً في آخر 30 يوماً';
+  String get proPeakHoursDesc =>
+      'ابثّ في هذه الأوقات للوصول إلى المزيد من المشاهدين';
 
   @override
   String get proKpiRevenue30d => 'إيرادات آخر 30 يوماً';
@@ -1565,22 +1567,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proKpiTotalUnit => 'إجمالي';
 
   @override
-  String get proFunnelViews => '👁 المشاهدات';
+  String get proFunnelViews => 'كم شخصاً رآه';
 
   @override
-  String get proFunnelHesitation => '🤔 فحص (تردد)';
+  String get proFunnelHesitation => 'كم شخصاً تردّد';
 
   @override
-  String get proFunnelBid => '🔨 عرض';
+  String get proFunnelBid => 'كم شخصاً قدّم عرضاً';
 
   @override
-  String get proFunnelSale => '✅ بيع';
+  String get proFunnelSale => 'كم عملية بيع تمّت';
 
   @override
-  String get proFunnelViewToBid => 'مشاهدة → عرض';
+  String get proFunnelViewToBid => 'من المشاهدين، كم قدّم عرضاً';
 
   @override
-  String get proFunnelBidToSale => 'عرض → بيع';
+  String get proFunnelBidToSale => 'من العروض، كم أصبح بيعاً';
 
   @override
   String get priceSignalExpensive => '⬆ مرتفع';
@@ -1613,7 +1615,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proStreamAvgViewers => 'متوسط المشاهدين';
 
   @override
-  String get proStreamPeak => 'الذروة';
+  String get proStreamPeak => 'الأعلى';
 
   @override
   String proStreamAvgDuration(String dur) {
@@ -1622,6 +1624,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get proEngagements => 'تفاعل';
+
+  @override
+  String proShowAll(int count) {
+    return 'عرض $count المزيد';
+  }
+
+  @override
+  String get proShowLess => 'عرض أقل';
+
+  @override
+  String proStreamRowStats(int viewers, int bids, int dur) {
+    return '$viewers مشاهد · $bids عرض · $dur د';
+  }
+
+  @override
+  String get proLoadError => 'تعذّر تحميل البيانات. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String hotLeadViewed(int count) {
+    return 'شوهد $count مرة';
+  }
+
+  @override
+  String hotLeadHesitated(int count) {
+    return '$count أشخاص تردّدوا';
+  }
+
+  @override
+  String listingCtrExplain(String ctr) {
+    return '$ctr نقرة لكل 100 مشاهدة';
+  }
 
   @override
   String get marketSearchTitle => 'ما يبحث عنه الناس';
@@ -1888,14 +1921,14 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get conversionNoData => 'لا توجد بيانات مزاد بعد';
+  String get conversionNoData => 'لا توجد بيانات مبيعات بعد';
 
   @override
   String get conversionNoDataHint =>
-      'تحتاج إلى إجراء مزادات مباشرة خلال الـ 90 يوماً الماضية';
+      'بعد إجراء مزادات مباشرة، ستظهر هنا مبيعاتك حسب الفئة';
 
   @override
-  String get conversionSectionHeader => 'التحويل حسب الفئة (90 يومًا)';
+  String get conversionSectionHeader => 'أي فئة تبيع أكثر؟ (آخر 90 يوماً)';
 
   @override
   String conversionCategoryCount(int count) {

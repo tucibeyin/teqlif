@@ -1519,36 +1519,37 @@ class AppLocalizationsTr extends AppLocalizations {
   String get proAnalyticsTitle => 'Pro Analitik';
 
   @override
-  String get proSectionOverview => '📊 Genel Bakış';
+  String get proSectionOverview => 'Satış Özetim';
 
   @override
-  String get proSectionFunnel => '🔽 Dönüşüm Hunisi';
+  String get proSectionFunnel => 'Kaç Kişi Teklif Verdi?';
 
   @override
   String get proSectionTips => '🤖 Akıllı Öneriler';
 
   @override
-  String get proSectionHotLeads => '🔥 Sıcak Talepler';
+  String get proSectionHotLeads => 'Fırsatı Kaçırma';
 
   @override
   String get proHotLeadsDesc =>
-      'İncelendi ama teklif verilmedi — satın almaya yakın alıcılar';
+      'Bu alıcılar ilanına baktı ama teklif vermedi — fiyatı düşür veya öne çıkar';
 
   @override
-  String get proSectionPriceIntel => '💎 Fiyat Zekası';
+  String get proSectionPriceIntel => 'Fiyatın Piyasada Nerede?';
 
   @override
-  String get proPriceIntelDesc => 'ML — benzer ilanlarla karşılaştırma';
+  String get proPriceIntelDesc =>
+      'Benzer ilanlarla karşılaştırarak doğru fiyatı bul';
 
   @override
-  String get proSectionStreamPerf => '📡 Yayın Performansı';
+  String get proSectionStreamPerf => 'Yayınlarım Nasıl Gidiyor?';
 
   @override
-  String get proSectionPeakHours => '⏰ Platform Zirve Saatleri';
+  String get proSectionPeakHours => 'Platform En Çok Kaçta Aktif?';
 
   @override
   String get proPeakHoursDesc =>
-      'Son 30 günde en çok etkileşim yaşanan saatler';
+      'Bu saatlerde yayın yap, daha fazla izleyiciye ulaş';
 
   @override
   String get proKpiRevenue30d => 'Son 30 Gün Gelir';
@@ -1578,22 +1579,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String get proKpiTotalUnit => 'toplam';
 
   @override
-  String get proFunnelViews => '👁 Görüntüleme';
+  String get proFunnelViews => 'Kaç kişi gördü';
 
   @override
-  String get proFunnelHesitation => '🤔 İnceledi (hesitation)';
+  String get proFunnelHesitation => 'Kaç kişi tereddüt etti';
 
   @override
-  String get proFunnelBid => '🔨 Teklif';
+  String get proFunnelBid => 'Kaç kişi teklif verdi';
 
   @override
-  String get proFunnelSale => '✅ Satış';
+  String get proFunnelSale => 'Kaç satış yapıldı';
 
   @override
-  String get proFunnelViewToBid => 'Görüntüleme → Teklif';
+  String get proFunnelViewToBid => 'Görenlerin kaçı teklif verdi';
 
   @override
-  String get proFunnelBidToSale => 'Teklif → Satış';
+  String get proFunnelBidToSale => 'Tekliflerin kaçı satışa döndü';
 
   @override
   String get priceSignalExpensive => '⬆ Pahalı';
@@ -1623,10 +1624,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get proStreamThisMonth => 'Bu Ay';
 
   @override
-  String get proStreamAvgViewers => 'Ort. İzleyici';
+  String get proStreamAvgViewers => 'Ort. İzleyen';
 
   @override
-  String get proStreamPeak => 'Zirve';
+  String get proStreamPeak => 'En Yüksek';
 
   @override
   String proStreamAvgDuration(String dur) {
@@ -1635,6 +1636,37 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get proEngagements => 'etk.';
+
+  @override
+  String proShowAll(int count) {
+    return '$count tanesini daha gör';
+  }
+
+  @override
+  String get proShowLess => 'Daha az göster';
+
+  @override
+  String proStreamRowStats(int viewers, int bids, int dur) {
+    return '$viewers izleyici · $bids teklif · $dur dk';
+  }
+
+  @override
+  String get proLoadError => 'Veriler yüklenemedi. Lütfen tekrar deneyin.';
+
+  @override
+  String hotLeadViewed(int count) {
+    return '$count kez bakıldı';
+  }
+
+  @override
+  String hotLeadHesitated(int count) {
+    return '$count kişi tereddüt etti';
+  }
+
+  @override
+  String listingCtrExplain(String ctr) {
+    return 'Her 100 görüntülemede $ctr tıklama';
+  }
 
   @override
   String get marketSearchTitle => 'İnsanlar şunları arıyor';
@@ -1904,14 +1936,15 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get conversionNoData => 'Henüz açık artırma verisi yok';
+  String get conversionNoData => 'Henüz satış verisi yok';
 
   @override
   String get conversionNoDataHint =>
-      'Son 90 günde canlı yayında açık artırma düzenlemelisiniz';
+      'Canlı yayında açık artırma düzenledikten sonra burada satışlarını göreceksin';
 
   @override
-  String get conversionSectionHeader => 'Kategori Bazlı Dönüşüm (Son 90 Gün)';
+  String get conversionSectionHeader =>
+      'Hangi Kategoride Daha Çok Satıyorsun? (Son 90 Gün)';
 
   @override
   String conversionCategoryCount(int count) {

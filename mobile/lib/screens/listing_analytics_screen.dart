@@ -17,6 +17,8 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   int _days = 30;
   bool _loading = true;
   bool _hasError = false;
+  bool _showAllListings = false;
+  static const int _kMax = 5;
 
   List<_ListingMetric> _listings = [];
   double _videoCtr = 0;
@@ -186,8 +188,31 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
               title: l.listingNoDataTitle,
               subtitle: l.listingNoDataDesc,
             )
-          else
-            ..._listings.map((m) => _ListingCard(metric: m, l: l)),
+          else ...[
+            ...( _showAllListings ? _listings : _listings.take(_kMax).toList())
+                .map((m) => _ListingCard(metric: m, l: l)),
+            if (_listings.length > _kMax)
+              GestureDetector(
+                onTap: () => setState(() => _showAllListings = !_showAllListings),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _showAllListings
+                            ? l.proShowLess
+                            : l.proShowAll(_listings.length - _kMax),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context)),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(_showAllListings ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          size: 16, color: AppColors.textSecondary(context)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );
@@ -263,7 +288,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
   String _fmt(int n) {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}B';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)} bin';
     return '$n';
   }
 }
@@ -508,7 +533,7 @@ class _ListingCard extends StatelessWidget {
               _MetricPill(
                 icon: Icons.ads_click_outlined,
                 value: '%${metric.ctr.toStringAsFixed(1)}',
-                label: l.metricClicked,
+                label: l.listingCtrExplain(metric.ctr.toStringAsFixed(1)),
                 color: ctrColor,
               ),
               if (extraValue != null) ...[
@@ -538,7 +563,7 @@ class _ListingCard extends StatelessWidget {
   }
 
   String _fmtNum(int n) {
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}B';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)} bin';
     return '$n';
   }
 }
