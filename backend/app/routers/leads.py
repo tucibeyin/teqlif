@@ -116,8 +116,13 @@ async def audience_size(
     if ch_count == 0:
         ch_count = min(len(listing_ids) * 3, 200)
 
+    limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
+    used  = await _get_blast_used(current_user.id)
+    is_free = used < limit
+
     reachable = int(ch_count * 0.60)
-    estimated_cost = reachable * COST_PER_PERSON
+    raw_cost = reachable * COST_PER_PERSON
+    estimated_cost = 0 if is_free else raw_cost
 
     return {
         "audience_size": reachable,
@@ -149,7 +154,7 @@ class BlastRequest(BaseModel):
     category: str = Field(default="")
     listing_id: int | None = Field(default=None)
     stream_id: int | None = Field(default=None)
-    estimated_cost: int = Field(gt=0)
+    estimated_cost: int = Field(ge=0)
 
 
 @router.post("/send-blast", status_code=202)
@@ -166,19 +171,24 @@ async def send_blast(
     3. PostgreSQL → FCM tokenları al.
     4. Firebase → toplu push gönder.
     """
-    # ── Aylık blast kredi kontrolü ────────────────────────────────────────────
+    # ── Aylık blast kredi kontrolü ve TUCi hesaplama ────────────────────────
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
     used  = await _get_blast_used(current_user.id)
-    if used >= limit:
-        tip = "" if current_user.is_premium else " Pro'ya geçerek aylık 20 hakka sahip olabilirsiniz."
-        raise HTTPException(
-            status_code=429,
-            detail=f"Bu ay için blast krediniz doldu ({used}/{limit}). Yeni ay başında yenilenir.{tip}",
-        )
+    is_free = used < limit
+    
+    if is_free:
+        tuci_cost = 0
+    else:
+        tuci_cost = body.estimated_cost
+        if tuci_cost <= 0:
+            tip = "" if current_user.is_premium else " Pro'ya geçerek aylık 20 hakka sahip olabilirsiniz."
+            raise HTTPException(
+                status_code=429,
+                detail=f"Bu ay için ücretsiz blast krediniz doldu ({used}/{limit}). TUCi ödeyerek göndermeye devam edebilirsiniz.{tip}",
+            )
 
     # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
-    tuci_cost = body.estimated_cost
-    if current_user.tuci_balance < tuci_cost:
+    if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
         raise HTTPException(
             status_code=402,
             detail=f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {tuci_cost} TUCi",
@@ -284,17 +294,20 @@ async def send_blast(
     )
 
     # ── TUCi düş + işlem logla + kredi say ───────────────────────────────────
-    await db.execute(
-        sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-        {"cost": tuci_cost, "uid": current_user.id},
-    )
-    db.add(TuciTransaction(
-        user_id=current_user.id,
-        amount=-tuci_cost,
-        transaction_type="spend_lead_gen",
-    ))
-    await db.commit()
-    await _increment_blast(current_user.id)
+    if tuci_cost > 0:
+        await db.execute(
+            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            {"cost": tuci_cost, "uid": current_user.id},
+        )
+        db.add(TuciTransaction(
+            user_id=current_user.id,
+            amount=-tuci_cost,
+            transaction_type="spend_lead_gen",
+        ))
+        await db.commit()
+        
+    if is_free:
+        await _increment_blast(current_user.id)
 
     return {
         "sent": sent,

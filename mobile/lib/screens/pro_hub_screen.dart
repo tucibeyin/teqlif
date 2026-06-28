@@ -64,8 +64,10 @@ class _ProHubScreenState extends State<ProHubScreen> {
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      body: RefreshIndicator(
+        onRefresh: _loadCredits,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
           if (isPremium) _ProStatusCard() else _UpgradeBanner(),
@@ -178,6 +180,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
             _BenefitRow(icon: Icons.search_outlined,        text: l.proBenefit4),
           ],
         ],
+        ),
       ),
     );
   }
