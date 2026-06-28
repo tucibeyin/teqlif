@@ -370,7 +370,7 @@ class ListingService:
                 except Exception as e:
                     logger.warning("[ListingService] ClickHouse ad_impression fetch failed in get_listing: %s", e)
         
-        logger.info("[DEBUG-LOG] İlan Detayları -> listing_id: %s, toplam_gosterim: %s", listing.id, impression_count)
+        logger.warning("[DEBUG-LOG] İlan Detayları -> listing_id: %s, toplam_gosterim: %s", listing.id, impression_count)
         
         return _row_dict(
             listing, user,

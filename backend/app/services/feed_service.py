@@ -516,9 +516,8 @@ async def _get_sponsored_listings(db: AsyncSession) -> list[dict]:
         return []
 
     def _ad_score(campaign: AdCampaign) -> float:
-        impr = max(campaign.impressions or 0, 1)
-        ctr = (campaign.clicks or 0) / impr
-        return ctr * campaign.cpc_bid
+        # ClickHouse'tan CTR çekmek maliyetli olduğu için şimdilik sadece TBM (cpc_bid) bazlı sıralıyoruz.
+        return float(campaign.cpc_bid)
 
     scored = sorted(candidates, key=lambda t: _ad_score(t[0]), reverse=True)
 
