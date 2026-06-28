@@ -461,19 +461,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   // ── Onboarding banner ────────────────────────────
                   if (_showOnboardingBanner)
                     _OnboardingBanner(
-                      onDismiss: () async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('onboarding_done', false);
-                        if (mounted) setState(() => _showOnboardingBanner = false);
-                      },
                       onTap: () async {
                         await Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const CategoryOnboardingScreen(fromBanner: true)),
                         );
+                        // Ekrandan dönünce prefs'i yeniden oku
+                        // _continue() içinde async setBool yapıldığından
+                        // pop sonrasında değer güncel olacak
                         final prefs = await SharedPreferences.getInstance();
-                        final done = prefs.getBool('onboarding_done');
-                        if (mounted) setState(() => _showOnboardingBanner = done != true);
+                        final done = prefs.getBool('onboarding_done') == true;
+                        if (mounted) setState(() => _showOnboardingBanner = !done);
                       },
                     ),
                   // ── Kategori ikonları ────────────────────────────
@@ -1555,10 +1553,9 @@ class _GridItemState extends State<_GridItem> {
 }
 
 class _OnboardingBanner extends StatelessWidget {
-  final VoidCallback onDismiss;
   final VoidCallback onTap;
 
-  const _OnboardingBanner({required this.onDismiss, required this.onTap});
+  const _OnboardingBanner({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1609,11 +1606,6 @@ class _OnboardingBanner extends StatelessWidget {
                 color: Color(0xFF06B6D4),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: onDismiss,
-            child: const Icon(Icons.close, size: 16, color: Color(0xFF94A3B8)),
           ),
         ],
       ),
