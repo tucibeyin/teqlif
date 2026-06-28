@@ -211,7 +211,7 @@ class _SubLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10, top: -4),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(text, style: TextStyle(
         fontSize: 12, color: AppColors.textSecondary(context),
       )),
