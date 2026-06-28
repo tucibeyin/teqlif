@@ -2320,4 +2320,16 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get adMetricBurnRate => 'Bütçe Tükenme Hızı';
+
+  @override
+  String get proBoostSection => 'Öne Çıkarılmış İlan Kredisi';
+
+  @override
+  String get boostCreditEmpty =>
+      'Bu ay ilan öne çıkarma krediniz doldu. Yeni ayda yenilenir.';
+
+  @override
+  String boostCreditUsed(int used, int remaining) {
+    return '$used öne çıkarma kullandınız, $remaining hakkınız kaldı.';
+  }
 }

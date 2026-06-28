@@ -977,4 +977,14 @@
   "adMetricBestHour": "Best Hour",
   "adMetricCategoryAvgCtr": "Category Avg CTR",
   "adMetricBurnRate": "Budget Burn Rate"
+,
+  "proBoostSection": "Promoted Listing Credits",
+  "boostCreditEmpty": "Your listing boost credits are used up for this month. Renewed next month.",
+  "boostCreditUsed": "Used {used} boosts, {remaining} remaining.",
+  "@boostCreditUsed": {
+    "placeholders": {
+      "used": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  }
 }

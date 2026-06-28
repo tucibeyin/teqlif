@@ -978,4 +978,14 @@
   "adMetricBestHour": "أفضل ساعة",
   "adMetricCategoryAvgCtr": "متوسط CTR للفئة",
   "adMetricBurnRate": "معدل نفاد الميزانية"
+,
+  "proBoostSection": "رصيد الإعلان المميز",
+  "boostCreditEmpty": "استنفدت رصيد الإعلان المميز هذا الشهر. يتجدد الشهر القادم.",
+  "boostCreditUsed": "استخدمت {used} إعلان مميز، {remaining} متبقٍ.",
+  "@boostCreditUsed": {
+    "placeholders": {
+      "used": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  }
 }

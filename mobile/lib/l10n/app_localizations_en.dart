@@ -2319,4 +2319,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adMetricBurnRate => 'Budget Burn Rate';
+
+  @override
+  String get proBoostSection => 'Promoted Listing Credits';
+
+  @override
+  String get boostCreditEmpty =>
+      'Your listing boost credits are used up for this month. Renewed next month.';
+
+  @override
+  String boostCreditUsed(int used, int remaining) {
+    return 'Used $used boosts, $remaining remaining.';
+  }
 }

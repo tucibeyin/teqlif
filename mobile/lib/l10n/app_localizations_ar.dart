@@ -2300,4 +2300,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get adMetricBurnRate => 'معدل نفاد الميزانية';
+
+  @override
+  String get proBoostSection => 'رصيد الإعلان المميز';
+
+  @override
+  String get boostCreditEmpty =>
+      'استنفدت رصيد الإعلان المميز هذا الشهر. يتجدد الشهر القادم.';
+
+  @override
+  String boostCreditUsed(int used, int remaining) {
+    return 'استخدمت $used إعلان مميز، $remaining متبقٍ.';
+  }
 }

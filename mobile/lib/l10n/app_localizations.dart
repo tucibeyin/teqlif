@@ -4365,6 +4365,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bütçe Tükenme Hızı'**
   String get adMetricBurnRate;
+
+  /// No description provided for @proBoostSection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Öne Çıkarılmış İlan Kredisi'**
+  String get proBoostSection;
+
+  /// No description provided for @boostCreditEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ay ilan öne çıkarma krediniz doldu. Yeni ayda yenilenir.'**
+  String get boostCreditEmpty;
+
+  /// No description provided for @boostCreditUsed.
+  ///
+  /// In tr, this message translates to:
+  /// **'{used} öne çıkarma kullandınız, {remaining} hakkınız kaldı.'**
+  String boostCreditUsed(int used, int remaining);
 }
 
 class _AppLocalizationsDelegate

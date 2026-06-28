@@ -977,5 +977,14 @@
   "adMetricDailyTrend": "Günlük CTR Trendi",
   "adMetricBestHour": "En İyi Saat",
   "adMetricCategoryAvgCtr": "Kategori Ort. CTR",
-  "adMetricBurnRate": "Bütçe Tükenme Hızı"
+  "adMetricBurnRate": "Bütçe Tükenme Hızı",
+  "proBoostSection": "Öne Çıkarılmış İlan Kredisi",
+  "boostCreditEmpty": "Bu ay ilan öne çıkarma krediniz doldu. Yeni ayda yenilenir.",
+  "boostCreditUsed": "{used} öne çıkarma kullandınız, {remaining} hakkınız kaldı.",
+  "@boostCreditUsed": {
+    "placeholders": {
+      "used": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  }
 }
