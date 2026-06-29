@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/price_formatter.dart';
 import 'listing_detail_screen.dart';
@@ -6,6 +7,7 @@ import 'public_profile_screen.dart';
 import '../../services/listing_service.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
+import '../../config/api.dart';
 
 class PurchaseDetailScreen extends StatelessWidget {
   final Map<String, dynamic> purchase;
@@ -125,22 +127,19 @@ class PurchaseDetailScreen extends StatelessWidget {
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  proofImageUrl,
+                child: CachedNetworkImage(
+                  imageUrl: imgUrl(proofImageUrl),
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+                  errorWidget: (context, url, error) => Container(
                     height: 200,
                     color: Colors.black26,
                     child: const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 50)),
                   ),
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      color: Colors.black12,
-                      child: const Center(child: CircularProgressIndicator()),
-                    );
-                  },
+                  placeholder: (context, url) => Container(
+                    height: 200,
+                    color: Colors.black12,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
                 ),
               ),
             ]

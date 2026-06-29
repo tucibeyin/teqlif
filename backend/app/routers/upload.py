@@ -225,8 +225,10 @@ async def upload_image(
         logger.error("Thumbnail oluşturulamadı: %s", str(e), exc_info=True)
         capture_exception(e)
         # Thumbnail başarısız olsa bile orijinali döndür; thumb_url None
+        logger.info("[DEBUG_PROOF] Image uploaded successfully (no thumb). size=%s ext=%s url=/uploads/%s", len(data), ext, filename)
         return {"url": f"/uploads/{filename}", "thumb_url": None}
 
+    logger.info("[DEBUG_PROOF] Image uploaded successfully. size=%s ext=%s url=/uploads/%s", len(data), ext, filename)
     return {
         "url": f"/uploads/{filename}",
         "thumb_url": f"/uploads/{thumb_filename}",

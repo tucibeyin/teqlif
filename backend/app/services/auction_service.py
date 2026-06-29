@@ -489,6 +489,8 @@ class AuctionService:
                 raise ForbiddenException("Kullanıcı belirtilmedi")
             await self._require_host(stream_id, user)
             
+        logger.info(f"[DEBUG_PROOF] end_auction called for stream {stream_id}. proof_image_url={proof_image_url}")
+            
         redis = await get_redis()
         key = auction_key(stream_id)
 
@@ -776,6 +778,8 @@ class AuctionService:
         await self._require_host(stream_id, user)
         redis = await get_redis()
         key = auction_key(stream_id)
+        
+        logger.info(f"[DEBUG_PROOF] accept_buy_it_now called for stream {stream_id}. proof_image_url={proof_image_url}")
 
         val = await redis.eval(_BUY_IT_NOW_ACCEPT_SCRIPT, 1, key)
         ok = int(val[0])

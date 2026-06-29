@@ -375,13 +375,24 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     // Satış kanıtı popup'ı (eğer widget.captureProofImage sağlanmışsa)
     String? proofUrl;
     if (widget.captureProofImage != null) {
+      debugPrint('[DEBUG_PROOF] Calling _showProofCaptureDialog from _endAuction');
       proofUrl = await _showProofCaptureDialog();
+      debugPrint('[DEBUG_PROOF] _showProofCaptureDialog returned: $proofUrl');
       // Dialog dışına tıklanarak kapatılırsa iptal etmiş sayılır (barrierDismissible false ama önlem olarak)
-      if (proofUrl == null) return; 
-      if (proofUrl.isEmpty) proofUrl = null;
+      if (proofUrl == null) {
+        debugPrint('[DEBUG_PROOF] User cancelled proof capture for _endAuction');
+        return; 
+      }
+      if (proofUrl.isEmpty) {
+        debugPrint('[DEBUG_PROOF] User skipped proof capture for _endAuction');
+        proofUrl = null;
+      }
+    } else {
+      debugPrint('[DEBUG_PROOF] widget.captureProofImage is null in _endAuction');
     }
 
     try {
+      debugPrint('[DEBUG_PROOF] Calling AuctionService.endAuction with proofImageUrl: $proofUrl');
       final newState = await AuctionService.endAuction(widget.streamId, proofImageUrl: proofUrl);
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
@@ -1211,16 +1222,28 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   Future<void> _buyItNowAccept() async {
     if (_binLoading) return;
     
+    debugPrint('[DEBUG_PROOF] _buyItNowAccept started');
     String? proofUrl;
     if (widget.captureProofImage != null) {
+      debugPrint('[DEBUG_PROOF] Calling _showProofCaptureDialog from _buyItNowAccept');
       proofUrl = await _showProofCaptureDialog();
+      debugPrint('[DEBUG_PROOF] _showProofCaptureDialog returned: $proofUrl');
       // If proofUrl is null, user pressed outside or cancelled.
-      if (proofUrl == null) return;
-      if (proofUrl.isEmpty) proofUrl = null; // Skipped
+      if (proofUrl == null) {
+        debugPrint('[DEBUG_PROOF] User cancelled proof capture for Buy It Now');
+        return;
+      }
+      if (proofUrl.isEmpty) {
+        debugPrint('[DEBUG_PROOF] User skipped proof capture for Buy It Now');
+        proofUrl = null; // Skipped
+      }
+    } else {
+      debugPrint('[DEBUG_PROOF] widget.captureProofImage is null in _buyItNowAccept');
     }
 
     setState(() => _binLoading = true);
     try {
+      debugPrint('[DEBUG_PROOF] Calling AuctionService.acceptBuyItNow with proofImageUrl: $proofUrl');
       await AuctionService.acceptBuyItNow(widget.streamId, proofImageUrl: proofUrl);
       if (mounted) {
         final l = AppLocalizations.of(context)!;

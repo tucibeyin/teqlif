@@ -250,31 +250,46 @@
 
     // ── Otomatik Satış Kanıt Fotoğrafı Çekimi ────────────────────────────────
     async function _captureProofSilently() {
+        console.log('[DEBUG_PROOF] _captureProofSilently started');
         let video = document.querySelector('.cohost-pip video');
         if (!video || video.readyState < 2 || video.videoWidth === 0) {
+            console.log('[DEBUG_PROOF] pip video not ready/found, falling back to mainVideo');
             video = document.getElementById('mainVideo');
         }
-        if (!video || video.readyState < 2 || video.videoWidth === 0) return null;
+        if (!video || video.readyState < 2 || video.videoWidth === 0) {
+            console.log('[DEBUG_PROOF] mainVideo also not ready/found, returning null');
+            return null;
+        }
         try {
             const canvas = document.createElement('canvas');
             canvas.width = Math.round(video.videoWidth);
             canvas.height = Math.round(video.videoHeight);
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            console.log(`[DEBUG_PROOF] Canvas created with size: ${canvas.width}x${canvas.height}`);
             const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-            if (!blob) return null;
+            if (!blob) {
+                console.log('[DEBUG_PROOF] canvas.toBlob returned null');
+                return null;
+            }
+            console.log(`[DEBUG_PROOF] Blob generated, size: ${blob.size} bytes`);
             const form = new FormData();
             form.append('file', blob, 'proof.jpg');
             const token = Auth.getToken();
+            console.log('[DEBUG_PROOF] Uploading proof to /api/upload...');
             const res = await fetch(`/api/upload`, {
                 method: 'POST',
                 headers: token ? { 'Authorization': 'Bearer ' + token } : {},
                 body: form,
             });
-            if (!res.ok) return null;
+            if (!res.ok) {
+                console.log(`[DEBUG_PROOF] Upload failed with status: ${res.status}`);
+                return null;
+            }
             const data = await res.json();
+            console.log(`[DEBUG_PROOF] Upload successful, returning URL: ${data.url}`);
             return data.url; // ör: /static/uploads/...
         } catch (e) {
-            console.error('Proof capture error:', e);
+            console.error('[DEBUG_PROOF] Proof capture error:', e);
             return null;
         }
     }
