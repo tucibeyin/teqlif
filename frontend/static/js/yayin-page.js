@@ -276,10 +276,42 @@
         }
     }
 
-    async function showProofCaptureDialog(callback) {
-        // Önceden bir modal'ımız vardı, artık sessizce arkaplanda çekip callback'i çağırıyoruz.
-        const proofUrl = await _captureProofSilently();
-        await callback(proofUrl);
+    function showProofCaptureDialog(callback) {
+        const modal = document.getElementById('proofCaptureModal');
+        const btnCapture = document.getElementById('proofCaptureBtn');
+        const btnSkip = document.getElementById('proofSkipBtn');
+
+        if (!modal || !btnCapture || !btnSkip) {
+            _captureProofSilently().then(url => callback(url));
+            return;
+        }
+
+        // Event listener'ları tek seferlik çalışacak şekilde kopyalayarak temizle
+        const newBtnCapture = btnCapture.cloneNode(true);
+        btnCapture.parentNode.replaceChild(newBtnCapture, btnCapture);
+        const newBtnSkip = btnSkip.cloneNode(true);
+        btnSkip.parentNode.replaceChild(newBtnSkip, btnSkip);
+
+        modal.style.display = 'flex';
+
+        newBtnCapture.addEventListener('click', async () => {
+            newBtnCapture.disabled = true;
+            newBtnCapture.textContent = 'Çekiliyor...';
+            try {
+                const proofUrl = await _captureProofSilently();
+                modal.style.display = 'none';
+                await callback(proofUrl);
+            } catch (e) {
+                console.error(e);
+                modal.style.display = 'none';
+                await callback(null);
+            }
+        });
+
+        newBtnSkip.addEventListener('click', async () => {
+            modal.style.display = 'none';
+            await callback(null);
+        });
     }
 
     // Yayını Bitir (Host)
@@ -1206,12 +1238,23 @@
     });
 
     document.getElementById('acceptModalConfirm')?.addEventListener('click', async () => {
-        document.getElementById('acceptModal').style.display = 'none';
-        try {
-            await Auction.acceptBid();
-            setAuctionMsg('Teklif kabul edildi! Özet sohbete gönderildi.', 'success');
-            setTimeout(() => setAuctionMsg('', ''), 5000);
-        } catch (e) { setAuctionMsg(e.message, 'error'); }
+        const btn = document.getElementById('acceptModalConfirm');
+        btn.disabled = true;
+        btn.textContent = 'İşleniyor...';
+        showProofCaptureDialog(async (proofUrl) => {
+            try {
+                // Not: Auction.acceptBid(), proofUrl'i payload olarak destekleyecek şekilde güncellenmeli.
+                // Eğer desteklemiyorsa, backend tarafı ignore edecektir. Biz yine de gönderelim.
+                await Auction.acceptBid(proofUrl);
+                document.getElementById('acceptModal').style.display = 'none';
+                setAuctionMsg('Teklif kabul edildi! Özet sohbete gönderildi.', 'success');
+                setTimeout(() => setAuctionMsg('', ''), 5000);
+            } catch (e) {
+                setAuctionMsg(e.message, 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Devam Et'; }
+            }
+        });
     });
 
     // Modal dışına tıklayınca kapat

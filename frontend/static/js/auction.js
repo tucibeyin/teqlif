@@ -119,8 +119,11 @@ const Auction = (() => {
         });
     }
 
-    async function acceptBid() {
-        return await apiFetch(`/auction/${_streamId}/accept`, { method: 'POST' });
+    async function acceptBid(proofUrl = null) {
+        return await apiFetch(`/auction/${_streamId}/accept`, {
+            method: 'POST',
+            body: proofUrl ? JSON.stringify({ proof_image_url: proofUrl }) : undefined
+        });
     }
 
     // ── Kazanan konfetisi ─────────────────────────────────────────────────
