@@ -664,16 +664,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   bool get wantKeepAlive => widget.session.isConnected;
 
   @override
-  void didUpdateWidget(covariant _SwipeLivePage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isActive != oldWidget.isActive && widget.isActive) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) widget.onCoHostStateChanged?.call(_isSelfCoHost);
-      });
-    }
-  }
-
-  @override
   void initState() {
     super.initState();
     StorageService.getUserInfo().then((info) {
@@ -708,6 +698,9 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     
     if (widget.isActive && !old.isActive) {
       widget.onPipActionChanged?.call(_pipForBackGesture);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onCoHostStateChanged?.call(_isSelfCoHost);
+      });
       if (widget.session.isConnected) {
         AnalyticsService.logInteraction(
           itemId: widget.stream.id,
@@ -1253,8 +1246,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
               ),
             ),
           ),
-
-        if (widget.session.token != null && !widget.session.streamEnded && !widget.isEnded)
+        if (widget.isActive && widget.session.token != null && !widget.session.streamEnded && !widget.isEnded)
           Positioned(
             bottom: 0,
             left: 0,
