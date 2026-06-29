@@ -1191,7 +1191,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         );
       }
     } catch (e, st) {
-      _log.captureException(e, stackTrace: st, tag: 'AuctionPanel._buyItNowAccept');
+      LoggerService.instance.captureException(e, stackTrace: st, tag: 'AuctionPanel._buyItNowAccept');
     } finally {
       if (mounted) setState(() => _binLoading = false);
     }
@@ -1214,26 +1214,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         );
       }
     } catch (e, st) {
-      _log.captureException(e, stackTrace: st, tag: 'AuctionPanel._buyItNowReject');
+      LoggerService.instance.captureException(e, stackTrace: st, tag: 'AuctionPanel._buyItNowReject');
     } finally {
       if (mounted) setState(() => _binLoading = false);
     }
-  }
-
-  Widget _pillBtn(String label, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-        decoration:
-            BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
-        child: Text(label,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700)),
-      ),
-    );
   }
 }
 
