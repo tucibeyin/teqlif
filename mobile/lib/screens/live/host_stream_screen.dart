@@ -720,7 +720,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           _videoKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;
       final image = await boundary.toImage(pixelRatio: 1.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.jpeg);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return null;
       
       final result = await UploadService.uploadBytes(

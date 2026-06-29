@@ -38,6 +38,21 @@ class ListingService {
     );
   }
 
+  static Future<Map<String, dynamic>?> getListingById(int listingId) async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/$listingId'),
+        headers: await _headers(auth: true),
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// İlana ait teklifleri miktara göre büyükten küçüğe döner.
   static Future<List<ListingOffer>> getOffers(int listingId) async {
     try {

@@ -3,7 +3,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/price_formatter.dart';
 import 'listing_detail_screen.dart';
 import 'public_profile_screen.dart';
-import 'package:cached_network_image/flutter_network_image.dart';
+import '../../services/listing_service.dart';
 
 class PurchaseDetailScreen extends StatelessWidget {
   final Map<String, dynamic> purchase;
@@ -89,11 +89,25 @@ class PurchaseDetailScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ListingDetailScreen(listingId: listingId)),
+                onPressed: () async {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(child: CircularProgressIndicator()),
                   );
+                  final listing = await ListingService.getListingById(listingId);
+                  if (!context.mounted) return;
+                  Navigator.pop(context); // close loading
+                  if (listing != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing)),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('İlan bulunamadı.')),
+                    );
+                  }
                 },
               ),
 
