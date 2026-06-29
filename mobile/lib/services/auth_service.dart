@@ -233,12 +233,12 @@ class AuthService {
   }
 
   static Future<List<Map<String, dynamic>>> getMyPurchases() async {
-    final body = await apiCall(
+    final body = await apiCallList(
       () async => http.get(
         Uri.parse('$kBaseUrl/auth/me/purchases'),
         headers: await _headers(auth: true),
       ),
     );
-    return List<Map<String, dynamic>>.from(body as List);
+    return List<Map<String, dynamic>>.from(body);
   }
 }
