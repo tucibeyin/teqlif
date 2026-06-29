@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
@@ -32,13 +34,18 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
           _loading = false;
         });
       }
-    } catch (e) {
+    } catch (e, st) {
+      log('Error loading purchases: $e', error: e, stackTrace: st);
       if (mounted) {
         setState(() {
           _loading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Alışverişler yüklenemedi: $e')),
+          SnackBar(
+            content: Text('Alışverişler yüklenemedi:\n$e'),
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
