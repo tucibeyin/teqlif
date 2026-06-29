@@ -1042,6 +1042,36 @@ abstract class AppLocalizations {
   /// **'Bakiye Yükle'**
   String get giftLoadBalanceButton;
 
+  /// No description provided for @purchaseLoadError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alışverişleriniz yüklenirken bir sorun oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.'**
+  String get purchaseLoadError;
+
+  /// No description provided for @purchaseEmptyState.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz alışverişiniz bulunmuyor.'**
+  String get purchaseEmptyState;
+
+  /// No description provided for @purchaseUnknownItem.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilinmeyen Ürün'**
+  String get purchaseUnknownItem;
+
+  /// No description provided for @purchaseUnknownSeller.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilinmeyen Satıcı'**
+  String get purchaseUnknownSeller;
+
+  /// No description provided for @purchaseListingNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan bulunamadı.'**
+  String get purchaseListingNotFound;
+
   /// No description provided for @dialogDeleteListingTitle.
   ///
   /// In tr, this message translates to:

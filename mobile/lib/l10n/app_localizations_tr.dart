@@ -488,6 +488,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String get giftLoadBalanceButton => 'Bakiye Yükle';
 
   @override
+  String get purchaseLoadError =>
+      'Alışverişleriniz yüklenirken bir sorun oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.';
+
+  @override
+  String get purchaseEmptyState => 'Henüz alışverişiniz bulunmuyor.';
+
+  @override
+  String get purchaseUnknownItem => 'Bilinmeyen Ürün';
+
+  @override
+  String get purchaseUnknownSeller => 'Bilinmeyen Satıcı';
+
+  @override
+  String get purchaseListingNotFound => 'İlan bulunamadı.';
+
+  @override
   String get dialogDeleteListingTitle => 'İlanı Sil';
 
   @override

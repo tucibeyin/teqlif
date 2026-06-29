@@ -15,8 +15,8 @@ class PurchaseDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final itemName = purchase['item_name'] ?? 'Bilinmeyen Ürün';
-    final sellerUsername = purchase['seller_username'] ?? 'Bilinmeyen Satıcı';
+    final itemName = purchase['item_name'] ?? l.purchaseUnknownItem;
+    final sellerUsername = purchase['seller_username'] ?? l.purchaseUnknownSeller;
     final price = (purchase['final_price'] as num?)?.toDouble() ?? 0.0;
     final proofImageUrl = purchase['proof_image_url'] as String?;
     final listingId = purchase['listing_id'] as int?;
@@ -108,7 +108,7 @@ class PurchaseDetailScreen extends StatelessWidget {
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('İlan bulunamadı.')),
+                      SnackBar(content: Text(l.purchaseListingNotFound)),
                     );
                   }
                 },

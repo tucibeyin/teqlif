@@ -489,6 +489,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get giftLoadBalanceButton => 'Load Balance';
 
   @override
+  String get purchaseLoadError =>
+      'An error occurred while loading your purchases. Please check your internet connection and try again.';
+
+  @override
+  String get purchaseEmptyState => 'You don\'t have any purchases yet.';
+
+  @override
+  String get purchaseUnknownItem => 'Unknown Item';
+
+  @override
+  String get purchaseUnknownSeller => 'Unknown Seller';
+
+  @override
+  String get purchaseListingNotFound => 'Listing not found.';
+
+  @override
   String get dialogDeleteListingTitle => 'Delete Listing';
 
   @override

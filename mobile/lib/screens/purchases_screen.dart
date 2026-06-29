@@ -42,8 +42,8 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Alışverişler yüklenemedi:\n$e'),
-            duration: const Duration(seconds: 5),
+            content: Text(AppLocalizations.of(context)!.purchaseLoadError),
+            duration: const Duration(seconds: 4),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -68,7 +68,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
           : _purchases.isEmpty
               ? Center(
                   child: Text(
-                    'Henüz alışverişiniz bulunmuyor.',
+                    l.purchaseEmptyState,
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16),
                   ),
                 )
@@ -77,7 +77,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                   itemCount: _purchases.length,
                   itemBuilder: (context, index) {
                     final item = _purchases[index];
-                    final itemName = item['item_name'] ?? 'Bilinmeyen Ürün';
+                    final itemName = item['item_name'] ?? l.purchaseUnknownItem;
                     final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
                     
                     return Card(
@@ -101,7 +101,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                           style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
-                          '@${item['seller_username'] ?? 'Bilinmeyen Satıcı'}',
+                          '@${item['seller_username'] ?? l.purchaseUnknownSeller}',
                           style: TextStyle(color: AppColors.textSecondary(context)),
                         ),
                         trailing: Row(

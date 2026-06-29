@@ -488,6 +488,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get giftLoadBalanceButton => 'شحن الرصيد';
 
   @override
+  String get purchaseLoadError =>
+      'حدث خطأ أثناء تحميل مشترياتك. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.';
+
+  @override
+  String get purchaseEmptyState => 'ليس لديك أي مشتريات حتى الآن.';
+
+  @override
+  String get purchaseUnknownItem => 'عنصر غير معروف';
+
+  @override
+  String get purchaseUnknownSeller => 'بائع غير معروف';
+
+  @override
+  String get purchaseListingNotFound => 'لم يتم العثور على الإعلان.';
+
+  @override
   String get dialogDeleteListingTitle => 'حذف الإعلان';
 
   @override
