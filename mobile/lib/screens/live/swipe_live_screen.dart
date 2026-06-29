@@ -283,8 +283,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     _updateViewportConnections();
 
     // İlanlar için pagination
-    if (_feedManager.needsMoreListings && !_isLoadingMoreListings) {
-      _loadListingFeed(isLoadMore: true);
+    if (_feedManager.needsMoreListings) {
+      _loadListingFeed(loadMore: true);
     }
     
     // Canlı yayınlar için pagination (feed sona yaklaştığında)
@@ -312,10 +312,11 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       if (i < 0) continue;
       final item = _feedManager.getItemAt(i);
       if (item is LiveFeedItem) {
-        if ((i - _currentPage).abs() <= 2) {
-          if (i == _currentPage) {
+        final dist = (i - _currentPage).abs();
+        if (dist <= 4) {
+          if (dist == 0) {
             activeId = item.stream.id;
-          } else if ((i - _currentPage).abs() == 1) {
+          } else if (dist <= 2) {
             nextIds.add(item.stream.id);
           } else {
             farIds.add(item.stream.id);
