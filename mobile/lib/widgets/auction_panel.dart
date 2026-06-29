@@ -231,8 +231,17 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       ),
     );
     if (ok != true) return;
+    
+    String? proofUrl;
+    if (widget.captureProofImage != null) {
+      proofUrl = await _showProofCaptureDialog();
+      // If proofUrl is null, user pressed outside or cancelled.
+      if (proofUrl == null) return;
+      if (proofUrl.isEmpty) proofUrl = null; // Skipped
+    }
+
     try {
-      final newState = await AuctionService.acceptBid(widget.streamId);
+      final newState = await AuctionService.acceptBid(widget.streamId, proofImageUrl: proofUrl);
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
       _setMsg(l.auctionAccepted);
     } catch (e) {
@@ -1172,12 +1181,17 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Future<void> _buyItNowAccept() async {
     if (_binLoading) return;
+    
+    String? proofUrl;
+    if (widget.captureProofImage != null) {
+      proofUrl = await _showProofCaptureDialog();
+      // If proofUrl is null, user pressed outside or cancelled.
+      if (proofUrl == null) return;
+      if (proofUrl.isEmpty) proofUrl = null; // Skipped
+    }
+
     setState(() => _binLoading = true);
     try {
-      String? proofUrl;
-      if (widget.captureProofImage != null) {
-        proofUrl = await widget.captureProofImage!.call();
-      }
       await AuctionService.acceptBuyItNow(widget.streamId, proofImageUrl: proofUrl);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
