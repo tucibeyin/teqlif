@@ -337,7 +337,7 @@ async def send_reset_password_email(email: str, full_name: str, code: str, lang:
         "subject": c["subject"],
         "htmlContent": (
             f"<div{dir_attr}>"
-            f"<p>{c['greeting']}</p>"
+            f"<p>{c['greeting'].format(full_name=full_name)}</p>"
             f"<p>{c['body']}</p>"
             f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
             f"<p>{c['validity']}</p>"
