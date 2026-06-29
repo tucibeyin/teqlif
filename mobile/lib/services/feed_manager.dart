@@ -44,6 +44,7 @@ class SwipeFeedManager {
 
   bool get needsMoreListings => _listingPool.isNotEmpty && _nextListingIndex >= _listingPool.length - 5;
   List<StreamOut> get activeStreams => _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
+  bool get needsMoreLiveStreams => activeStreams.isEmpty || _nextStreamIndex >= activeStreams.length;
 
   void init({
     required List<StreamOut> initialStreams,

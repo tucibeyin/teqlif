@@ -38,6 +38,7 @@ import '../../services/analytics_service.dart';
 import '../../services/feed_manager.dart';
 import '../../services/listing_video_manager.dart';
 import '../../services/stream_connection_manager.dart';
+import '../../services/push_notification_service.dart';
 
 // ── SwipeLiveScreen ──────────────────────────────────────────────────────────
 
@@ -112,6 +113,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
 
   Timer? _streamCheckTimer;
+  StreamSubscription<Map<String, dynamic>>? _notifSub;
+  bool _isRefreshingLive = false;
 
   VoidCallback? _pipAction;
 
@@ -149,9 +152,17 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     _updateViewportConnections();
     
     _fetchPersonalizedConfig();
-    // Her 30 saniyede canlı yayın durumunu kontrol et (WS gecikmesine karşı)
-    _streamCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) _refreshLiveStreams();
+    // Her 15 saniyede canlı yayın durumunu kontrol et (daha hızlı güncellemeler için)
+    _streamCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted && !_isRefreshingLive) _refreshLiveStreams();
+    });
+
+    _notifSub = PushNotificationService.notificationStream.stream.listen((data) {
+      // Eğer foreground (boş map) veya stream_started bildirimi gelirse feed'i güncelle
+      final type = data['type'] as String?;
+      if ((data.isEmpty || type == 'stream_started') && mounted && !_isRefreshingLive) {
+        _refreshLiveStreams();
+      }
     });
   }
 
@@ -197,6 +208,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   @override
   void dispose() {
     activeScreenCount--;
+    _notifSub?.cancel();
     _streamCheckTimer?.cancel();
     _pageCtrl.dispose();
     WakelockPlus.disable();
@@ -270,10 +282,16 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     // Viewport hesaplama ve ConnectionManager'ı güncelleme
     _updateViewportConnections();
 
-    // Liste biterken yeni verileri çek (Infinite Pagination)
-    if (_feedManager.needsMoreListings) {
-      _loadListingFeed(loadMore: true);
+    // İlanlar için pagination
+    if (_feedManager.needsMoreListings && !_isLoadingMoreListings) {
+      _loadListingFeed(isLoadMore: true);
     }
+    
+    // Canlı yayınlar için pagination (feed sona yaklaştığında)
+    if (_feedManager.needsMoreLiveStreams && !_isRefreshingLive) {
+      _refreshLiveStreams();
+    }
+    
     // Her 20 event'te batch gönder
     if (_pendingEvents.length >= 20) _flushPendingEvents();
   }
@@ -418,18 +436,25 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   }
 
   Future<void> _refreshLiveStreams() async {
+    if (_isRefreshingLive) return;
     try {
+      _isRefreshingLive = true;
       final fresh = await StreamService.getActiveStreams();
-      setState(() {
-        _feedManager.updateConfig(
-          streams: fresh,
-          listingsPerGroup: 2,
-          preferredCategories: _preferredListingCategories,
-          currentIndex: _currentPage,
-        );
-      });
-      _updateViewportConnections();
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _feedManager.updateConfig(
+            streams: fresh,
+            listingsPerGroup: 2,
+            preferredCategories: _preferredListingCategories,
+            currentIndex: _currentPage,
+          );
+        });
+        _updateViewportConnections();
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) _isRefreshingLive = false;
+    }
   }
 
   Future<void> _expandFromSingleMode(int targetId) async {
