@@ -4407,6 +4407,48 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Daha Sonra'**
   String get softUpdateLater;
+
+  /// No description provided for @forgotPassword.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifremi Unuttum'**
+  String get forgotPassword;
+
+  /// No description provided for @resetPasswordDescription.
+  ///
+  /// In tr, this message translates to:
+  /// **'Lütfen hesabınıza kayıtlı e-posta adresini girin.'**
+  String get resetPasswordDescription;
+
+  /// No description provided for @sendResetCode.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kodu Gönder'**
+  String get sendResetCode;
+
+  /// No description provided for @enterResetCode.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-postanıza gelen 6 haneli kodu girin'**
+  String get enterResetCode;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni Şifre'**
+  String get newPassword;
+
+  /// No description provided for @newPasswordConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni Şifre (Tekrar)'**
+  String get newPasswordConfirm;
+
+  /// No description provided for @passwordResetSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.'**
+  String get passwordResetSuccess;
 }
 
 class _AppLocalizationsDelegate

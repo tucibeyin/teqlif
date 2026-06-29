@@ -35,70 +35,9 @@ import '../listing_detail_screen.dart';
 import '../../services/feed_telemetry_service.dart';
 import '../../services/analytics_service.dart';
 
-// ── Feed item tipleri ────────────────────────────────────────────────────────
-
-sealed class _FeedItem {
-  const _FeedItem();
-}
-
-// ── Parent prefetch cache entry ──────────────────────────────────────────────
-// Parent _SwipeLiveScreenState tarafından 2 sayfa ilerisine önceden
-// bağlanılır; child bunu bulunca sadece listener kurup audio'yu açar.
-class _PrefetchEntry {
-  final Room room;
-  final JoinTokenOut token;
-  final EventsListener<RoomEvent> listener;
-  _PrefetchEntry({required this.room, required this.token, required this.listener});
-  void dispose() {
-    listener.dispose();
-    room.disconnect();
-  }
-}
-
-// ── Raid köprüsü ─────────────────────────────────────────────────────────────
-// Eski SwipeLiveScreen dispose olmadan önce raid hedefinin prefetch bağlantısını
-// burada saklar; yeni ekranın _activate() bunu bulunca anında kullanır.
-class _RaidPrefetchBridge {
-  static int? _streamId;
-  static _PrefetchEntry? _entry;
-
-  static void put(int streamId, _PrefetchEntry entry) {
-    _entry?.dispose(); // önceki varsa temizle
-    _streamId = streamId;
-    _entry = entry;
-  }
-
-  static _PrefetchEntry? take(int streamId) {
-    if (_streamId == streamId) {
-      final e = _entry;
-      _streamId = null;
-      _entry = null;
-      return e;
-    }
-    // Başka stream için saklanmış → artık geçersiz, temizle
-    _entry?.dispose();
-    _streamId = null;
-    _entry = null;
-    return null;
-  }
-}
-
-class _LiveItem extends _FeedItem {
-  final StreamOut stream;
-  const _LiveItem(this.stream);
-}
-
-class _ListingItem extends _FeedItem {
-  final Map<String, dynamic> listing;
-  final int slotIndex;
-  final String streamCategory;
-  const _ListingItem(this.listing, {this.slotIndex = 0, this.streamCategory = ''});
-}
-
-// İlan havuzu henüz yüklenmedi: siyah placeholder (stream widget değil).
-class _LoadingListingItem extends _FeedItem {
-  const _LoadingListingItem();
-}
+import '../../services/feed_manager.dart';
+import '../../services/listing_video_manager.dart';
+import '../../services/stream_connection_manager.dart';
 
 // ── SwipeLiveScreen ──────────────────────────────────────────────────────────
 
@@ -139,60 +78,37 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   late final PageController _pageCtrl;
   int _currentPage = 0;
 
-  // Sonsuz swipe: canlı yayınlar güncellenir, ilanlar büyüyen havuzdan beslenir
-  late List<StreamOut> _liveItems;
-  final List<Map<String, dynamic>> _listingPool = [];
-  bool _fetchingListings = false;
-  // Oturum içinde sona erdiği tespit edilen yayınların ID'leri — döngüden çıkarılır
-  final Set<int> _endedStreamIds = {};
-  // Poll'dan tespit edilen biten current stream — child sayfaya isEnded ile geçirilir,
-  // raid overlay child tarafından gösterilir.
-  int? _polledEndedStreamId;
+  final SwipeFeedManager _feedManager = SwipeFeedManager();
+  final StreamConnectionManager _connectionManager = StreamConnectionManager();
 
-  // Dinamik grup yapısı: her grup = 1 yayın + N ilan
-  // _groupBoundaries[i] = (startPage, listingCount, pinnedStreamId)
-  // pinnedStreamId: grup inşa edilirken hangi yayına atandığı kalıcı olarak kaydedilir.
-  // Bu sayede yayın bittiğinde o grubun başka bir yayına kayması önlenir.
-  final List<(int, int, int?)> _groupBoundaries = [];
-  int _nextGroupStartPage = 0;
-  int _currentListingsPerGroup = 2; // initState'den itibaren 2; _trackStreamDwell ile güncellenir
+  bool _fetchingListings = false;
+  int? _polledEndedStreamId;
 
   // Davranış takibi: yayın izleme süresine göre ilan sayısı güncellenir
   final List<int> _recentDwells = []; // son 10 yayın dwell süresi (ms)
   int? _dwellStart;        // mevcut yayın sayfasına girildiği an (ms epoch)
   int? _listingPageStart;  // mevcut ilan sayfasına girildiği an (ms epoch)
-  // Seans içi hızlı ilan geçişi sayacı — ard arda kaç listing hızlı geçildi
   int _fastListingStreak = 0;
-  // Hızlı geçiş eşiği (ms): bu süreden kısa geçişler "hızlı" sayılır
   static const int _listingFastThresholdMs = 1500;
 
+  int _listingPage = 0;
+  bool _hasMoreListings = true;
+  
   // Kişiselleştirme — tercih edilen ilan kategorileri (backend'den gelir)
   List<String> _preferredListingCategories = [];
   // Backend'e gönderilmeyi bekleyen event batch
   final List<Map<String, dynamic>> _pendingEvents = [];
-  // Oturum ID'si (backend'de kullanıcı seansını ayırt eder)
   final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
 
-  // Periyodik canlı yayın kontrol timer'ı
   Timer? _streamCheckTimer;
 
-  // Listing-only modunda inşa edilen grup sayısı.
-  // Bu indeksten küçük gruplar yayın geri gelse bile listing gösterir
-  // → yeni yayınlar kullanıcının mevcut konumunu bozmadan ileride çıkar.
-  int _listingOnlyGroupCount = 0;
-
-  // ── Parent-level prefetch: child ±1 bağlanırken parent +2/+3'ü hazırlar ──
-  final Map<int, _PrefetchEntry> _prefetchCache = {};
-  // Aktif sayfanın PiP aksiyonu — iOS back gesture intercept için
   VoidCallback? _pipAction;
-  final Set<int> _prefetchConnecting = {};
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
-    // Aktif PiP varsa bu yayın ekranı açılmadan önce kapat
     if (PipService.isVisible) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -202,18 +118,24 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         PipService.hidePip();
       });
     }
-    _liveItems = widget.streams;
-    _currentPage = _pageForLiveIndex(widget.initialIndex);
+    
+    _feedManager.init(
+      initialStreams: widget.streams, 
+      initialIndex: widget.initialIndex,
+    );
+    _currentPage = _feedManager.getPageForLiveIndex(widget.initialIndex);
     _pageCtrl = PageController(initialPage: _currentPage);
+    
     _loadListingFeed();
     _dwellStart = DateTime.now().millisecondsSinceEpoch;
-    // Bildirimden gelirken single mod: arka planda tam listeyi çek
+    
     if (widget.streams.length == 1 && widget.streams[0].roomName.isEmpty) {
       _expandFromSingleMode(widget.streams[0].id);
-    } else {
-      _schedulePrefetch(_currentPage);
     }
-    // Kişiselleştirilmiş sıralama + listings_per_group backend'den çek
+    
+    // Uygulama ilk açıldığında aktif ve prefetch yayınlarını anında bağla
+    _updateViewportConnections();
+    
     _fetchPersonalizedConfig();
     // Her 30 saniyede canlı yayın durumunu kontrol et (WS gecikmesine karşı)
     _streamCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -226,34 +148,34 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     if (!mounted || config == null) return;
     final isSingle = widget.streams.length == 1 && widget.streams[0].roomName.isEmpty;
     setState(() {
-      if (!isSingle && config.streams.isNotEmpty) {
-        _liveItems = config.streams;
-        // _currentPage DEĞİŞTİRME — PageController ile senkron kalmalı.
-        // Kullanıcı zaten sayfaları kaydırmaya başlamış olabilir;
-        // _currentPage=0 yapmak aktif stream widget'ını isActive=false yaparak
-        // 403 algılamasını bozuyor ve bağlantı döngüsüne neden oluyor.
-        if (_currentPage == 0) {
-          _groupBoundaries.clear();
-          _nextGroupStartPage = 0;
+      int lpg = 2;
+      if (_recentDwells.isEmpty) {
+        lpg = config.listingsPerGroup;
+      } else {
+        final avgMs = _recentDwells.reduce((a, b) => a + b) / _recentDwells.length;
+        if (avgMs > 15000) {
+          lpg = 1;
+        } else if (avgMs < 3000) {
+          lpg = 3;
+        } else {
+          lpg = 2;
         }
       }
-      // Backend lpg'yi sadece local dwell verisi yoksa kullan.
-      // _recentDwells doluysa kullanıcı zaten adapt edilmiş değere sahip;
-      // backend override etmemeli.
-      if (_recentDwells.isEmpty) {
-        _currentListingsPerGroup = config.listingsPerGroup;
+      
+      if (!isSingle && config.streams.isNotEmpty) {
+        _feedManager.updateConfig(
+          streams: config.streams,
+          listingsPerGroup: lpg,
+          preferredCategories: config.preferredListingCategories,
+          currentIndex: _currentPage,
+        );
       }
       _preferredListingCategories = config.preferredListingCategories;
     });
-    if (!isSingle) _schedulePrefetch(_currentPage);
   }
 
   @override
   void dispose() {
-    for (final e in _prefetchCache.values) {
-      e.dispose();
-    }
-    _prefetchCache.clear();
     _streamCheckTimer?.cancel();
     _pageCtrl.dispose();
     WakelockPlus.disable();
@@ -269,197 +191,138 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     StreamService.sendSwipeLiveEvents(toSend);
   }
 
-  // ── Grup yönetimi ────────────────────────────────────────────────────────────
-
-  /// targetGroupIdx'e kadar (dahil) grup sınırlarını lazy olarak inşa eder.
-  /// Her grup, inşa anındaki geçerli yayın listesinden bir yayın ID'si pin'ler.
-  /// Bu pin sayesinde yayın bitince grup başka bir yayına kaymaz, listing'e döner.
-  void _ensureGroupsBuilt(int targetGroupIdx) {
-    while (_groupBoundaries.length <= targetGroupIdx) {
-      final groupIdx = _groupBoundaries.length;
-      final validItems = _endedStreamIds.isEmpty
-          ? _liveItems
-          : _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-      int? pinnedStreamId;
-      if (validItems.isNotEmpty) {
-        final offset = groupIdx >= _listingOnlyGroupCount ? groupIdx - _listingOnlyGroupCount : 0;
-        final streamIdx = offset % validItems.length;
-        pinnedStreamId = validItems[streamIdx].id;
-      }
-      _groupBoundaries.add((_nextGroupStartPage, _currentListingsPerGroup, pinnedStreamId));
-      _nextGroupStartPage += 1 + _currentListingsPerGroup;
-    }
-  }
-
-  /// Son izleme sürelerine göre grup başına ilan sayısını hesaplar (0–3).
-  /// İlk yayından itibaren adapte eder; daha fazla veriyle daha kararlı hale gelir.
-  int _computeListingsPerGroup() {
-    if (_recentDwells.isEmpty) return 2; // soğuk başlangıç
-    final avgMs = _recentDwells.fold(0, (a, b) => a + b) ~/ _recentDwells.length;
-    // Eşikler gerçek kullanım davranışına göre ayarlandı:
-    // < 3s  → çok hızlı atladı, ilanlardan kaçıyor → max ilan göster (paradoks: az ilan göster
-    //          ki yayına bağlansın; daha fazla ilan göstermek anlamsız)
-    // 3-8s  → hızlı göz attı → fazla ilan göster
-    // 8-20s → ilgili izledi → orta ilan
-    // > 20s → yayına odaklandı → az/hiç ilan
-    if (avgMs < 3000) return 3;
-    if (avgMs < 8000) return 2;
-    if (avgMs < 20000) return 1;
-    return 0;
-  }
-
-  /// Bir yayın sayfasından çıkılınca dwell süresi kaydedilir, N güncellenir.
-  /// N değişirse öndeki (henüz görülmemiş) gruplar da yeniden hesaplanır.
   void _trackStreamDwell(int dwellMs) {
     _recentDwells.add(dwellMs);
     if (_recentDwells.length > 10) _recentDwells.removeAt(0);
-    final newN = _computeListingsPerGroup();
-    final avgMs = _recentDwells.fold(0, (a, b) => a + b) ~/ _recentDwells.length;
-    debugPrint('[SwipeLive] dwell=${dwellMs}ms avg=${avgMs}ms lpg: $_currentListingsPerGroup → $newN');
-    if (newN == _currentListingsPerGroup) return;
-    _currentListingsPerGroup = newN;
-    
-    // Mevcut grubu bul ve eğer doğrudan yayın sayfasındaysak (ilanlarda değilsek),
-    // bu grubun ilan sayısını hemen güncelle ki anında etki etsin.
-    final currentGroupIdx = _groupBoundaries.indexWhere(
-      (g) => _currentPage >= g.$1 && _currentPage <= g.$1 + g.$2,
-    );
-    
-    int truncateFrom = _groupBoundaries.length;
-    if (currentGroupIdx >= 0 && _currentPage == _groupBoundaries[currentGroupIdx].$1) {
-      final g = _groupBoundaries[currentGroupIdx];
-      _groupBoundaries[currentGroupIdx] = (g.$1, _currentListingsPerGroup, g.$3);
-      truncateFrom = currentGroupIdx + 1;
-    } else {
-      final firstFutureGroup = _groupBoundaries.indexWhere((g) => g.$1 > _currentPage);
-      if (firstFutureGroup > 0) truncateFrom = firstFutureGroup;
-    }
-
-    if (truncateFrom < _groupBoundaries.length) {
-      _groupBoundaries.removeRange(truncateFrom, _groupBoundaries.length);
-    }
-    if (_groupBoundaries.isNotEmpty) {
-      final last = _groupBoundaries.last;
-      _nextGroupStartPage = last.$1 + 1 + last.$2;
-    } else {
-      _nextGroupStartPage = 0;
-    }
-  }
-
-  /// initialIndex numaralı canlı yayının hangi PageView sayfasında olduğunu hesaplar.
-  int _pageForLiveIndex(int liveIdx) {
-    if (liveIdx < 0) return 0;
-    _ensureGroupsBuilt(liveIdx);
-    return _groupBoundaries[liveIdx].$1;
-  }
-
-  /// Sayfa indeksine göre hangi feed öğesinin gösterileceğini hesaplar.
-  /// Grup yapısı: her grup = 1 yayın + N ilan (N dinamik, _groupBoundaries'da kayıtlı).
-  /// Her grubun pinnedStreamId'si inşa anında sabitleniyor — dinamik modülo kayması yok.
-  _FeedItem _itemAt(int pageIndex) {
-    // pageIndex'i içeren grubu bul (lazy build)
-    int groupIdx = 0;
-    while (true) {
-      _ensureGroupsBuilt(groupIdx);
-      final (startPage, listingCount, _) = _groupBoundaries[groupIdx];
-      if (pageIndex < startPage + 1 + listingCount) break;
-      groupIdx++;
-    }
-    final (groupStart, listingCount, pinnedStreamId) = _groupBoundaries[groupIdx];
-    final posInGroup = pageIndex - groupStart;
-
-    // Listing-only modunda inşa edilmiş gruplar dondurulur:
-    // yeni yayın gelse bile bu gruplar listing göstermeye devam eder.
-    final isListingOnlyGroup = _listingOnlyGroupCount > 0 && groupIdx < _listingOnlyGroupCount;
-
-    // Bu grubun pin'lendiği yayını bul
-    // Pin'lenen yayın bitmişse veya hiç pin yoksa → bu grup listing gösterir
-    StreamOut? pinnedStream;
-    if (!isListingOnlyGroup && pinnedStreamId != null) {
-      try {
-        pinnedStream = _liveItems.firstWhere((s) => s.id == pinnedStreamId);
-      } catch (_) {
-        pinnedStream = null; // Listede yok → listing'e düş
-      }
-    }
-
-    // Hiç geçerli yayın pin'i yoksa listing göster
-    if (pinnedStream == null) {
-      if (_listingPool.isEmpty) {
-        debugPrint('[SwipeLive] _itemAt($pageIndex) → loading (pinned stream ended or no listings)');
-        return const _LoadingListingItem();
-      }
-      final listingIdx =
-          (groupIdx * (_currentListingsPerGroup + 1) + posInGroup) % _listingPool.length;
-      final item = _listingPool[listingIdx];
-      debugPrint('[SwipeLive] _itemAt($pageIndex) → listing id=${item["id"]} (pin=$pinnedStreamId ended/missing)');
-      return _ListingItem(item, slotIndex: pageIndex, streamCategory: '');
-    }
-
-    if (posInGroup == 0) return _LiveItem(pinnedStream);
-    // İlan slotu ama havuz henüz boş → placeholder (stream widget değil)
-    if (_listingPool.isEmpty) return const _LoadingListingItem();
-    // İlan slotu: posInGroup 1..listingCount
-    // Her grup ve her slot için farklı ilan seç
-    final listingIdx = (groupIdx * 3 + posInGroup - 1) % _listingPool.length;
-    return _ListingItem(
-      _listingPool[listingIdx],
-      slotIndex: pageIndex,
-      streamCategory: pinnedStream.category,
-    );
   }
 
   void _onPageChanged(int page) {
+    final direction = page > _currentPage ? 'SWIPE_UP' : 'SWIPE_DOWN';
+    debugPrint('[${DateTime.now().toString()}] [EVENT: $direction] from index: $_currentPage to index: $page');
+    if (_currentPage == page) return;
     final now = DateTime.now().millisecondsSinceEpoch;
-    final prevItem = _itemAt(_currentPage);
+    final prevItem = _feedManager.getItemAt(_currentPage);
 
     // ── Önceki sayfa yayınsa: dwell ölç ──
-    if (_dwellStart != null && prevItem is _LiveItem) {
+    if (_dwellStart != null && prevItem is LiveFeedItem) {
       final dwellMs = now - _dwellStart!;
       _trackStreamDwell(dwellMs);
       _recordStreamEvent(prevItem.stream, dwellMs);
-      _fastListingStreak = 0; // yayın izlenince ilan hızı sıfırlanır
-    }
-    _dwellStart = null;
-
-    // ── Önceki sayfa ilansa: hız ölç ──
-    if (_listingPageStart != null && prevItem is _ListingItem) {
-      final listingDwellMs = now - _listingPageStart!;
-      if (listingDwellMs < _listingFastThresholdMs) {
-        _fastListingStreak++;
-        // 3 veya daha fazla ilan ard arda hızla geçildiyse: kullanıcı ilanlardan
-        // kaçıyor demektir. Bu sinyali çok düşük bir dwell gibi işle → LPG azalır.
-        if (_fastListingStreak >= 3) {
-          debugPrint('[SwipeLive] fast listing streak=$_fastListingStreak → LPG sinyal ekle');
-          _trackStreamDwell(500); // yapay düşük dwell → LPG'yi aşağı çeker
-          _fastListingStreak = 0;
-        }
-      } else {
-        // İlana yeterince baktı — streak'i kır
-        _fastListingStreak = 0;
+      
+      // Eğer ayrıldığımız yayın bittiyse feed'den sil
+      if (prevItem.stream.id == _polledEndedStreamId) {
+        _feedManager.removeStream(_polledEndedStreamId!);
+        _polledEndedStreamId = null;
       }
     }
-    _listingPageStart = null;
-
-    setState(() => _currentPage = page);
-
-    // Yeni sayfa için ölçüm başlat
-    final newItem = _itemAt(page);
-    if (newItem is _LiveItem) {
-      _dwellStart = now;
-    } else if (newItem is _ListingItem) {
-      _listingPageStart = now;
+    
+    // ── Önceki sayfa ilansa ──
+    if (_listingPageStart != null && prevItem is ListingFeedItem) {
+      final dwellMs = now - _listingPageStart!;
+      final isFast = dwellMs < _listingFastThresholdMs;
+      if (isFast) {
+        _fastListingStreak++;
+      } else {
+        _fastListingStreak = 0;
+      }
+      _recordListingEvent(prevItem.data['id'], isFast ? 'skip' : 'dwell', dwellMs: dwellMs, slotIndex: _currentPage);
     }
 
-    _evictStalePrefetches(page);
-    _schedulePrefetch(page);
-    // Her 15 sayfada bir yenile (~5 grup)
-    if (page > 0 && page % 15 == 0) {
-      _loadListingFeed();
-      _refreshLiveStreams();
+    setState(() {
+      _currentPage = page;
+    });
+    _dwellStart = now;
+    _listingPageStart = now;
+
+    // Viewport hesaplama ve ConnectionManager'ı güncelleme
+    _updateViewportConnections();
+
+    // Liste biterken yeni verileri çek (Infinite Pagination)
+    if (_feedManager.needsMoreListings) {
+      _loadListingFeed(loadMore: true);
     }
     // Her 20 event'te batch gönder
     if (_pendingEvents.length >= 20) _flushPendingEvents();
+  }
+
+  void _updateViewportConnections() {
+    debugPrint('[${DateTime.now().toString()}] [EVENT: VIEWPORT_UPDATE_CALLED] for _currentPage: $_currentPage');
+    
+    int activeId = -1;
+    final nextIds = <int>{};
+    final farIds = <int>{};
+
+    int activeListingId = -1;
+    final nextListingIds = <int>{};
+    final cacheListingIds = <int>{};
+    final listingUrls = <int, String>{};
+
+    for (int i = _currentPage - 5; i <= _currentPage + 5; i++) {
+      if (i < 0) continue;
+      final item = _feedManager.getItemAt(i);
+      if (item is LiveFeedItem) {
+        if ((i - _currentPage).abs() <= 2) {
+          if (i == _currentPage) {
+            activeId = item.stream.id;
+          } else if ((i - _currentPage).abs() == 1) {
+            nextIds.add(item.stream.id);
+          } else {
+            farIds.add(item.stream.id);
+          }
+        }
+      } else if (item is ListingFeedItem) {
+        final lidStr = item.data['id']?.toString() ?? '0';
+        final lid = int.tryParse(lidStr) ?? 0;
+        
+        String? videoUrl = item.data['video_url'] as String?;
+        if (videoUrl == null || videoUrl.isEmpty) {
+          if (item.data['media'] != null && item.data['media'] is List) {
+            final mediaList = item.data['media'] as List;
+            for (final m in mediaList) {
+              if (m['media_type'] == 'video') {
+                videoUrl = m['media_url'];
+                break;
+              }
+            }
+          }
+        }
+        
+        if (lid > 0 && videoUrl != null && videoUrl.isNotEmpty) {
+          listingUrls[lid] = videoUrl;
+          cacheListingIds.add(lid);
+          
+          if (i == _currentPage) {
+            activeListingId = lid;
+          } else if ((i - _currentPage).abs() <= 2) {
+            nextListingIds.add(lid);
+          }
+        }
+      }
+    }
+
+    // ── Eğer mevcut yayın bittiyse (Raid ekranı gösterilecekse) Raid hedeflerini prefetch et ──
+    final isActiveStreamEnded = activeId > 0 && _feedManager.isStreamEnded(activeId);
+    if (isActiveStreamEnded) {
+      final raidTargets = _feedManager.activeStreams;
+      for (int i = 0; i < raidTargets.length && i < 4; i++) {
+        if (raidTargets[i].id != activeId) {
+          nextIds.add(raidTargets[i].id);
+        }
+      }
+    }
+
+    _connectionManager.updateViewport(
+      activeStreamId: activeId,
+      nextStreamIds: nextIds,
+      farStreamIds: farIds,
+    );
+
+    ListingVideoManager.instance.updateViewport(
+      activeId: activeListingId,
+      nextIds: nextListingIds,
+      cacheIds: cacheListingIds,
+      urls: listingUrls,
+    );
   }
 
   void _recordStreamEvent(StreamOut stream, int dwellMs) {
@@ -470,7 +333,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       'dwell_ms': dwellMs,
       'stream_category': stream.category,
       'listing_category': '',
-      'listings_seen': _currentListingsPerGroup,
+      'listings_seen': 0,
       'slot_index': _currentPage,
       'session_id': _sessionId,
     });
@@ -491,12 +354,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     if (_pendingEvents.length >= 20) _flushPendingEvents();
   }
 
-  void _recordListingEvent(int listingId, String eventType, {
-    int dwellMs = 0,
-    String listingCategory = '',
-    int slotIndex = 0,
-  }) {
-    // Mevcut aktif yayın kategorisi
+  void _recordListingEvent(int listingId, String eventType, {int dwellMs = 0, String listingCategory = '', int slotIndex = 0}) {
     final streamCategory = _getCurrentStream()?.category ?? '';
     _pendingEvents.add({
       'stream_id': 0,
@@ -504,261 +362,93 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       'event_type': eventType,
       'dwell_ms': dwellMs,
       'stream_category': streamCategory,
-      'listing_category': listingCategory,
+      'listing_category': '',
       'listings_seen': 0,
-      'slot_index': slotIndex,
+      'slot_index': _currentPage,
       'session_id': _sessionId,
     });
   }
 
-  // ── Parent prefetch yönetimi ─────────────────────────────────────────────
-
-  /// ±2 ve ±3 konumundaki live yayınları önceden bağlar.
-  /// ±1 ve mevcut sayfa çocuk widget'lar tarafından yönetilir — parent bunları
-  /// atlamalıdır. Aksi hâlde az yayın olduğunda (ör. 2 yayın, listing yok)
-  /// aynı LiveKit odasına eş zamanlı iki bağlantı açılarak ICE yarışı oluşur.
-  void _schedulePrefetch(int page) {
-    // Çocuk widget'ların sorumluluğundaki stream ID'leri (mevcut ±1)
-    final childStreams = <int>{};
-    for (final d in [-1, 0, 1]) {
-      final p = page + d;
-      if (p < 0) continue;
-      try {
-        final item = _itemAt(p);
-        if (item is _LiveItem) childStreams.add(item.stream.id);
-      } catch (_) {}
-    }
-
-    for (final delta in [2, 3, 4, -2, -3, -4]) {
-      final target = page + delta;
-      if (target < 0) continue;
-      try {
-        final item = _itemAt(target);
-        if (item is _LiveItem && !childStreams.contains(item.stream.id)) {
-          _startParentPrefetch(item.stream);
-        }
-      } catch (_) {}
-    }
-  }
-
-  Future<void> _startParentPrefetch(StreamOut stream) async {
-    final id = stream.id;
-    if (_prefetchCache.containsKey(id) || _prefetchConnecting.contains(id)) return;
-    _prefetchConnecting.add(id);
-    try {
-      final token = await StreamService.joinStream(id);
-      if (!mounted) { _prefetchConnecting.remove(id); return; }
-      final room = Room();
-      final evListener = room.createListener();
-      // Prefetch modda sadece video track'leri subscribe et
-      evListener.on<TrackPublishedEvent>((e) {
-        if (e.publication.kind == TrackType.VIDEO && !e.publication.subscribed) {
-          e.publication.subscribe();
-        }
-      });
-      await room.connect(
-        token.livekitUrl,
-        token.token,
-        connectOptions: const ConnectOptions(autoSubscribe: false),
-      );
-      if (!mounted) {
-        evListener.dispose();
-        room.disconnect();
-        _prefetchConnecting.remove(id);
-        return;
-      }
-      // Mevcut katılımcıların video track'lerini hemen subscribe et
-      for (final p in room.remoteParticipants.values) {
-        for (final pub in p.videoTrackPublications) {
-          if (!pub.subscribed) pub.subscribe();
-        }
-      }
-      if (mounted) {
-        _prefetchCache[id] = _PrefetchEntry(room: room, token: token, listener: evListener);
-      } else {
-        evListener.dispose();
-        room.disconnect();
-      }
-    } catch (_) {
-      // Prefetch başarısız — child kendi _prefetchConnect()'ini kullanır
-    } finally {
-      _prefetchConnecting.remove(id);
-    }
-  }
-
-  /// Child, kendi initState/prefetchConnect'inde bunu çağırarak hazır odayı alır.
-  _PrefetchEntry? takePrefetchEntry(int streamId) {
-    return _prefetchCache.remove(streamId);
-  }
-
-  /// Artık görünmeyecek yayınlara ait hazır odaları temizle.
-  void _evictStalePrefetches(int currentPage) {
-    final keepIds = <int>{};
-    for (int delta = -4; delta <= 5; delta++) {
-      try {
-        final item = _itemAt(currentPage + delta);
-        if (item is _LiveItem) keepIds.add(item.stream.id);
-      } catch (_) {}
-    }
-    final staleIds = _prefetchCache.keys.where((id) => !keepIds.contains(id)).toList();
-    for (final id in staleIds) {
-      _prefetchCache.remove(id)?.dispose();
-    }
-  }
-
-  /// Child widget evict edilirken kendi Room'unu buraya depolar.
-  /// Aynı stream'in bir sonraki page slot'u bunu takePrefetchEntry ile alır → yeniden bağlanmaz.
-  bool _depositRoom(int streamId, _PrefetchEntry entry) {
-    if (_prefetchCache.containsKey(streamId)) {
-      entry.dispose(); // zaten var, yenisini reddet
-      return false;
-    }
-    _prefetchCache[streamId] = entry;
-    return true;
-  }
-
-  /// O an aktif olan sayfanın stream'ini döner (listing slotundaysa null).
-  StreamOut? _getCurrentStream() {
-    if (_liveItems.isEmpty) return null;
-    final item = _itemAt(_currentPage);
-    return item is _LiveItem ? item.stream : null;
-  }
-
-  /// Bir yayının sona erdiği bildirildiğinde _endedStreamIds'e eklenir.
-  /// Group-pinning sayesinde overlay bozulmaz: mevcut sayfanın grubu pin'li yayını
-  /// göstermeye devam eder. Ancak bir sonraki döngüde bu grup listing'e düşer.
   void _onStreamEnded(int streamId) {
-    if (_endedStreamIds.contains(streamId)) return;
-    if (_polledEndedStreamId == streamId) _polledEndedStreamId = null;
-    _endedStreamIds.add(streamId);
-    if (!mounted) return;
-
-    final remaining = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-    debugPrint('[SwipeLive] stream_ended id=$streamId | remaining=${remaining.length}');
-    setState(() {});
+    setState(() {
+      _polledEndedStreamId = streamId;
+    });
   }
 
-  /// API'den güncel yayın listesini çekip _liveItems'ı günceller.
-  /// Sadece yeni yayın ekler; silme işlemi yalnızca güvenilir sinyallerden
-  /// (403 hatası veya WS stream_ended eventi) tetiklenir.
-  /// Polling tabanlı silme false-positive üretiyordu: liste geçici eksik
-  /// döndüğünde aktif yayınlar kaybolup geri gelmiyordu.
+  StreamOut? _getCurrentStream() {
+    final item = _feedManager.getItemAt(_currentPage);
+    return item is LiveFeedItem ? item.stream : null;
+  }
+
   Future<void> _refreshLiveStreams() async {
     try {
       final fresh = await StreamService.getActiveStreams();
-      if (!mounted) return;
-      final freshIds = fresh.map((s) => s.id).toSet();
-      bool needsPrefetch = false;
       setState(() {
-        // Bu refresh öncesi geçerli yayın sayısı
-        final validBefore = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-
-        // Yeni yayınları ekle
-        final existingIds = _liveItems.map((s) => s.id).toSet();
-        bool hasChanges = false;
-        for (final s in fresh) {
-          if (!existingIds.contains(s.id)) {
-            _liveItems.add(s);
-            hasChanges = true;
-          }
-        }
-        if (fresh.isNotEmpty) {
-          // Aktif listede olmayan yayınlar gerçekten bitmiş
-          final currentStreamId = _getCurrentStream()?.id;
-          for (final s in _liveItems) {
-            if (!freshIds.contains(s.id) && !_endedStreamIds.contains(s.id)) {
-              hasChanges = true;
-              if (s.id == currentStreamId) {
-                // İzlenen yayın bitti: child'a isEnded sinyali gönder (raid overlay).
-                // Group-pinning sayesinde _endedStreamIds'e hemen eklesek de
-                // bu grubun pin'i değişmez — overlay görünmeye devam eder.
-                debugPrint('[SwipeLive] refresh: stream ${s.id} bitti (izleniyor) → raid overlay tetikleniyor');
-                _polledEndedStreamId = s.id;
-                _endedStreamIds.add(s.id);
-              } else {
-                debugPrint('[SwipeLive] refresh: stream ${s.id} aktif listede yok → ended');
-                _endedStreamIds.add(s.id);
-              }
-            }
-          }
-        } else if (_endedStreamIds.isNotEmpty) {
-          // Boş liste + bazı yayınlar zaten bitmişse: tüm kalan yayınlar da bitmiş
-          for (final s in _liveItems) {
-            if (!_endedStreamIds.contains(s.id)) {
-              hasChanges = true;
-              debugPrint('[SwipeLive] refresh: stream ${s.id} → boş liste + önceki bitişler → ended');
-              _endedStreamIds.add(s.id);
-            }
-          }
-        }
-
-        // Eğer feed döngüsünde değişiklik olduysa, gelecek grupları temizle
-        // ki yeni döngüye göre (yeni yayınlarla / biten yayınlar olmadan) tekrar inşa edilsin.
-        if (hasChanges) {
-          final firstFutureGroup = _groupBoundaries.indexWhere((g) => g.$1 > _currentPage);
-          if (firstFutureGroup > 0) {
-            _groupBoundaries.removeRange(firstFutureGroup, _groupBoundaries.length);
-            final last = _groupBoundaries.last;
-            _nextGroupStartPage = last.$1 + 1 + last.$2;
-          }
-        }
-
-        // Listing-only → yayın var geçişi: mevcut grupları dondur
-        // Böylece yeni yayınlar kullanıcının bulunduğu konumu bozmaz,
-        // sadece ilerleyen sayfalarda organik olarak çıkar.
-        final validAfter = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-        if (validBefore.isEmpty && validAfter.isNotEmpty) {
-          _listingOnlyGroupCount = _groupBoundaries.length;
-          needsPrefetch = true;
-          debugPrint(
-            '[SwipeLive] refresh: ${validAfter.length} yeni yayın geldi, '
-            '$_listingOnlyGroupCount grup listing-only donduruldu, page=$_currentPage',
-          );
-        }
+        _feedManager.updateConfig(
+          streams: fresh,
+          listingsPerGroup: 2,
+          preferredCategories: _preferredListingCategories,
+          currentIndex: _currentPage,
+        );
       });
-      if (needsPrefetch && mounted) _schedulePrefetch(_currentPage);
+      _updateViewportConnections();
     } catch (_) {}
   }
 
-  /// Bildirimden gelinen tek-yayın modunu tam listeye yükseltir.
-  /// Hedef yayın başa alınır, diğerleri arkasına eklenir.
   Future<void> _expandFromSingleMode(int targetId) async {
     try {
       final fresh = await StreamService.getActiveStreams();
-      if (!mounted || fresh.isEmpty) return;
-      // Hedef yayını bulun (API'de varsa gerçek verisini kullan, yoksa stub'ı koru)
       final target = fresh.firstWhere(
         (s) => s.id == targetId,
-        orElse: () => _liveItems[0],
+        orElse: () => widget.streams[0],
       );
       final others = fresh.where((s) => s.id != targetId).toList();
       final expanded = [target, ...others];
-      setState(() => _liveItems = expanded);
+      setState(() {
+        _feedManager.updateConfig(
+          streams: expanded,
+          listingsPerGroup: 2,
+          preferredCategories: _preferredListingCategories,
+          currentIndex: _currentPage,
+        );
+      });
       _loadListingFeed();
-      _schedulePrefetch(_currentPage);
     } catch (_) {}
   }
 
-  Future<void> _loadListingFeed() async {
-    if (_fetchingListings) return;
+  Future<void> _loadListingFeed({bool loadMore = false}) async {
+    if (_fetchingListings || !_hasMoreListings) return;
     _fetchingListings = true;
     try {
+      if (loadMore) {
+        _listingPage++;
+      } else {
+        _listingPage = 0;
+      }
+      
       final token = await StorageService.getToken();
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/swipe-feed?limit=10'),
+        Uri.parse('$kBaseUrl/listings/swipe-feed?limit=10&page=$_listingPage'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 5));
-      debugPrint('[SwipeLive] listing feed HTTP ${resp.statusCode}');
-      if (resp.statusCode != 200) return;
+      
+      if (resp.statusCode != 200) {
+        if (loadMore) _listingPage--;
+        return;
+      }
+      
       final List<dynamic> raw = jsonDecode(resp.body) as List<dynamic>;
-      debugPrint('[SwipeLive] listing feed ${raw.length} ilan, page=$_currentPage lpg=$_currentListingsPerGroup');
-      if (raw.isEmpty || !mounted) return;
+      if (raw.isEmpty) {
+        _hasMoreListings = false;
+        if (!mounted) return;
+      }
+      
+      if (!mounted) return;
       setState(() {
         final newItems = raw.cast<Map<String, dynamic>>();
-        // Tercih edilen kategoriler öne, diğerleri arkaya (kararlı sıralama)
         if (_preferredListingCategories.isNotEmpty) {
           newItems.sort((a, b) {
             final catA = a['category']?.toString() ?? '';
@@ -768,13 +458,13 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
             return (rankA < 0 ? 999 : rankA).compareTo(rankB < 0 ? 999 : rankB);
           });
         }
-        _listingPool.addAll(newItems);
-        // _LoadingListingItem slotları otomatik olarak yeniden çizilir:
-        // _itemAt artık _listingPool.isNotEmpty olduğundan _ListingItem döndürür.
+        _feedManager.addListings(newItems);
       });
-      if (mounted) _schedulePrefetch(_currentPage);
+      // Feed güncellendiyse (viewport'a ilan girdiyse) videoları pre-initialize et
+      _updateViewportConnections();
     } catch (e) {
       debugPrint('[SwipeLive] listing feed hata: $e');
+      if (loadMore) _listingPage--;
     } finally {
       _fetchingListings = false;
     }
@@ -790,45 +480,67 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       child: Scaffold(
       backgroundColor: Colors.black,
       resizeToAvoidBottomInset: false,
-      body: PageView.builder(
-        controller: _pageCtrl,
-        scrollDirection: Axis.vertical,
-        physics: const PageScrollPhysics(),
-        onPageChanged: _onPageChanged,
-        // itemCount: null → sonsuz scroll
-        itemCount: null,
-        itemBuilder: (_, i) {
-          final item = _itemAt(i);
+      body: NotificationListener<ScrollUpdateNotification>(
+        onNotification: (info) {
+          if (info.metrics.axis == Axis.vertical) {
+            final page = _pageCtrl.page;
+            if (page != null) {
+              final isDragging = (page - page.roundToDouble()).abs() > 0.01;
+              final activeItem = _feedManager.getItemAt(_currentPage);
+              if (activeItem is ListingFeedItem) {
+                final lidStr = activeItem.data['id']?.toString() ?? '0';
+                final lid = int.tryParse(lidStr) ?? 0;
+                final ctrl = ListingVideoManager.instance.getController(lid);
+                if (isDragging) {
+                  ctrl?.setVolume(0.0); // Kaydırma anında sesi şak diye kes
+                } else {
+                  ctrl?.setVolume(1.0); // Bırakırsa geri aç
+                }
+              }
+            }
+          }
+          return false;
+        },
+        child: PageView.builder(
+          controller: _pageCtrl,
+          scrollDirection: Axis.vertical,
+          physics: const PageScrollPhysics(),
+          onPageChanged: _onPageChanged,
+          itemCount: null,
+          itemBuilder: (_, i) {
+            final item = _feedManager.getItemAt(i);
           return switch (item) {
-            _LiveItem(:final stream) => _SwipeLivePage(
+            LiveFeedItem(:final stream) => _SwipeLivePage(
                 key: ValueKey('live_${stream.id}_$i'),
                 stream: stream,
+                session: _connectionManager.getSession(stream.id),
                 isActive: i == _currentPage,
-                isPrefetch: (i - _currentPage).abs() == 1,
-                isLast: false,
-                swipeLiveMode: true,
                 isEnded: _polledEndedStreamId == stream.id,
                 onStreamEnded: () => _onStreamEnded(stream.id),
-                takePrefetch: takePrefetchEntry,
-                onRoomDeposit: _depositRoom,
                 onPipActionChanged: (cb) { _pipAction = cb; },
                 onEngagementEvent: (type) => _recordEngagementEvent(stream, type),
+                onRaidTargetSelected: (targetId) {
+                  final targetPage = _feedManager.getNextPageForStreamId(targetId, _currentPage);
+                  if (targetPage != null) {
+                    _pageCtrl.jumpToPage(targetPage);
+                  }
+                },
               ),
-            _ListingItem(:final listing, :final slotIndex, :final streamCategory) =>
-            _ListingVideoPage(
-                key: ValueKey('listing_${listing['id']}_$i'),
-                listing: listing,
+            ListingFeedItem(:final data) => _ListingVideoPage(
+                key: ValueKey('listing_${data['id']}_$i'),
+                listing: data,
                 isActive: i == _currentPage,
-                slotIndex: slotIndex,
-                streamCategory: streamCategory,
+                slotIndex: i,
+                streamCategory: _getCurrentStream()?.category ?? '',
                 onSwipeLiveEvent: _recordListingEvent,
               ),
-            _LoadingListingItem() => ColoredBox(
+            LoadingFeedItem() => ColoredBox(
                 key: ValueKey('loading_$i'),
                 color: Colors.black,
               ),
           };
         },
+      ),
       ),
       ),
     );
@@ -839,34 +551,24 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
 class _SwipeLivePage extends ConsumerStatefulWidget {
   final StreamOut stream;
+  final LiveSession session;
   final bool isActive;
-  final bool isPrefetch;
-  final bool isLast;
   final VoidCallback? onStreamEnded;
-  final _PrefetchEntry? Function(int streamId)? takePrefetch;
   final void Function(VoidCallback?)? onPipActionChanged;
-  // Evict edilirken Room'u parent cache'e devret → aynı stream bir sonraki grupta anında hazır
-  final bool Function(int streamId, _PrefetchEntry entry)? onRoomDeposit;
-  // Etkileşim eventi — parent'a ML sinyali gönderir
   final void Function(String eventType)? onEngagementEvent;
-  // true = çok yayınlı SwipeLive modu; davranış farklılaşır
-  final bool swipeLiveMode;
-  // Parent'tan gelen "yayın bitti" sinyali (poll tespiti) — child raid overlay gösterir
+  final void Function(int targetStreamId)? onRaidTargetSelected;
   final bool isEnded;
 
   const _SwipeLivePage({
     super.key,
     required this.stream,
+    required this.session,
     required this.isActive,
-    required this.isLast,
-    this.isPrefetch = false,
     this.isEnded = false,
     this.onStreamEnded,
-    this.takePrefetch,
     this.onPipActionChanged,
-    this.onRoomDeposit,
     this.onEngagementEvent,
-    this.swipeLiveMode = false,
+    this.onRaidTargetSelected,
   });
 
   @override
@@ -875,49 +577,26 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
 
 class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     with AutomaticKeepAliveClientMixin {
-  Room? _room;
-  EventsListener<RoomEvent>? _listener;
-  JoinTokenOut? _token;
-  VideoTrack? _remoteVideoTrack;       // Ana ekran — host'un video track'i
-  VideoTrack? _coHostVideoTrack;       // PiP — başka birinin co-host track'i
-  LocalVideoTrack? _localVideoTrack;   // PiP — kendim co-host olduğumda kamera
-  String? _hostParticipantSid;         // İlk video track'i kimin olduğunu takip eder
-  bool _loading = false;
-  bool _streamEnded = false;
-  int _viewerCount = 0;
+  
+  bool _isCoHost = false;
+  bool _isSelfCoHost = false;
   bool _selfMuted = false;
   bool _kicked = false;
-  bool _isCoHost = false;
-  bool _isSelfCoHost = false;          // Ben sahneye çıktım → local kamera açık
-  double? _pipTop;                     // Sürüklenebilir PiP konumu
+  
+  double? _pipTop;
   double? _pipLeft;
   final Set<String> _coHostMutedUsers = {};
   final _heartsKey = GlobalKey<FloatingHeartsState>();
   Timer? _likeThrottleTimer;
   bool _likeThrottlePending = false;
+  
+  LocalVideoTrack? _localVideoTrack;
+  int _viewerCount = 0;
+  String? _myUsername;
   // single() modunda token geldikten sonra doldurulur
   String? _resolvedTitle;
   String? _resolvedHostUsername;
-  // Sahne daveti kontrol için kendi kullanıcı adım
-  String? _myUsername;
-  // leaveStream'in çift çağrılmasını önler
-  bool _leftStream = false;
-  // PiP moduna geçilirken dispose'un Room'u kesmesini önler
-  bool _enteringPip = false;
-  // _activate() / _deactivate() race condition koruması
-  int _activationGen = 0;
-  // Bağlantı devam ederken veya room mevcut iken widget'ı PageView evict etme
-  bool _keepAlive = false;
-
-  @override
-  bool get wantKeepAlive => _keepAlive || _room != null;
-
-  void _setKeepAlive(bool v) {
-    _keepAlive = v;
-    if (mounted) updateKeepAlive();
-  }
-  // Prefetch modunda sadece video subscribe edilir, ses kapalı
-  bool _isPrefetchMode = false;
+  
   // Kazanan konfetisi
   late ConfettiController _confettiController;
   // Hediye HUD overlay
@@ -926,63 +605,70 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   final _hypeScore = ValueNotifier<int>(0);
 
   @override
+  bool get wantKeepAlive => widget.session.isConnected;
+
+  @override
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    widget.session.addListener(_onSessionUpdated);
     if (widget.isActive) {
       widget.onPipActionChanged?.call(_pipForBackGesture);
-      _activate();
-    } else if (widget.isPrefetch) {
-      _prefetchConnect();
     }
   }
 
   @override
   void didUpdateWidget(_SwipeLivePage old) {
     super.didUpdateWidget(old);
-    // Parent poll'dan gelen "yayın bitti" sinyali: raid overlay göster
-    if (widget.isEnded && !old.isEnded && !_streamEnded) {
-      setState(() { _remoteVideoTrack = null; _streamEnded = true; });
-      widget.onEngagementEvent?.call('raid_view');
+    if (old.session != widget.session) {
+      if (!old.session.isDisposed) {
+        old.session.removeListener(_onSessionUpdated);
+      }
+      widget.session.addListener(_onSessionUpdated);
     }
+    
     if (widget.isActive && !old.isActive) {
       widget.onPipActionChanged?.call(_pipForBackGesture);
-      // Sayfa aktif oldu
-      if (_room != null) {
-        _promoteToActive();  // zaten pre-bağlı → sesi aç
-      } else {
-        _activate();
+      if (widget.session.isConnected) {
+        AnalyticsService.logInteraction(
+          itemId: widget.stream.id,
+          itemType: 'stream',
+          interactionType: 'swipe_impression',
+        );
       }
     } else if (!widget.isActive && old.isActive) {
       widget.onPipActionChanged?.call(null);
-      // Sayfa aktif değil oldu
-      if (widget.isPrefetch) {
-        _demoteToPrefetch();  // komşu kalıyor → sesi kapat, video bağlı
-      } else {
-        if (!_tryDepositRoom()) _deactivate();
-      }
-    } else if (widget.isPrefetch && !old.isPrefetch && !widget.isActive && _room == null) {
-      // Prefetch'e girdi, henüz bağlı değil
-      _prefetchConnect();
-    } else if (!widget.isPrefetch && !widget.isActive && (old.isPrefetch || old.isActive) && _room != null) {
-      // Artık ne active ne prefetch → room'u parent'a devretmeyi dene, yoksa kapat
-      if (!_tryDepositRoom()) _deactivate();
+    }
+  }
+
+  void _onSessionUpdated() {
+    if (!mounted) return;
+    setState(() {});
+    updateKeepAlive();
+    
+    if (_resolvedTitle == null && widget.session.token != null) {
+      setState(() {
+        _resolvedTitle = widget.session.token?.title;
+        _resolvedHostUsername = widget.session.token?.hostUsername;
+      });
     }
   }
 
   @override
   void dispose() {
+    if (!widget.session.isDisposed) {
+      widget.session.removeListener(_onSessionUpdated);
+    }
     _confettiController.dispose();
     _giftHudTimer?.cancel();
     _giftHudEntry?.remove();
     _hypeScore.dispose();
     _likeThrottleTimer?.cancel();
-    if (!_enteringPip) _deactivateSync();
     super.dispose();
   }
 
   void _showGiftHud(String sender, String giftName, int cost) {
-    if (!mounted) return;
+    if (!mounted || !widget.isActive) return;
     _giftHudTimer?.cancel();
     _giftHudEntry?.remove();
     _giftHudEntry = null;
@@ -1019,457 +705,16 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   }
 
   void _onAuctionWon() {
+    if (!widget.isActive) return;
     _confettiController.play();
     HapticFeedback.heavyImpact();
     Future.delayed(const Duration(milliseconds: 200), HapticFeedback.vibrate);
   }
 
-  // ── Ön yükleme (prefetch) ─────────────────────────────────────────────────
-
-  /// Parent tarafından 2 sayfa ilerisinde önceden bağlanılmış bir oda varsa
-  /// onu devralır: listener kurulur, mevcut track'ler state'e yazılır.
-  /// Yoksa normal _prefetchConnect akışı devam eder.
-  Future<void> _setupFromPrefetchEntry(_PrefetchEntry entry, {bool activate = false}) async {
-    if (!mounted) { entry.dispose(); return; }
-    final myGen = ++_activationGen;
-    final room = entry.room;
-    final token = entry.token;
-
-    _resolvedTitle ??= token.title;
-    _resolvedHostUsername ??= token.hostUsername;
-
-    // Parent'ın minimal listener'ını değiştir, tam listener kur
-    entry.listener.dispose();
-    _listener = room.createListener();
-
-    _listener!.on<TrackPublishedEvent>((e) {
-      final shouldSub = e.publication.kind == TrackType.VIDEO || !_isPrefetchMode;
-      if (shouldSub && !e.publication.subscribed) e.publication.subscribe();
-    });
-    _listener!.on<TrackSubscribedEvent>((e) {
-      if (!mounted || e.track is! VideoTrack) return;
-      final vTrack = e.track as VideoTrack;
-      final isHost = e.participant.identity == token.hostLivekitIdentity;
-      if (isHost) {
-        setState(() { _remoteVideoTrack = vTrack; _hostParticipantSid = e.participant.sid; });
-      } else if (e.participant.sid != _hostParticipantSid) {
-        setState(() => _coHostVideoTrack = vTrack);
-      }
-    });
-    _listener!.on<TrackUnsubscribedEvent>((e) {
-      if (!mounted) return;
-      if (e.track == _remoteVideoTrack) setState(() => _remoteVideoTrack = null);
-      else if (e.track == _coHostVideoTrack) setState(() => _coHostVideoTrack = null);
-    });
-    _listener!.on<RoomDisconnectedEvent>((e) {
-      if (!mounted) return;
-      if (e.reason == DisconnectReason.roomDeleted) {
-        if (widget.swipeLiveMode && !widget.isActive) {
-          // Arka planda biten yayın → sessizce listeden çıkar
-          setState(() => _remoteVideoTrack = null);
-          widget.onStreamEnded?.call();
-        } else {
-          // Aktif sayfa veya single mod → overlay göster
-          setState(() { _remoteVideoTrack = null; _streamEnded = true; });
-          widget.onEngagementEvent?.call('raid_view');
-        }
-      } else {
-        setState(() => _remoteVideoTrack = null);
-      }
-    });
-
-    if (!mounted || _activationGen != myGen) { room.disconnect(); return; }
-
-    // Mevcut katılımcılardan track'leri topla; aktiveyse audio da subscribe et
-    VideoTrack? hostVideo;
-    VideoTrack? coHostVideo;
-    String? hostSid;
-    for (final p in room.remoteParticipants.values) {
-      final isHost = p.identity == token.hostLivekitIdentity;
-      if (isHost) hostSid = p.sid;
-      for (final pub in p.videoTrackPublications) {
-        if (!pub.subscribed) pub.subscribe();
-        if (pub.track != null) {
-          if (isHost) hostVideo = pub.track as VideoTrack;
-          else coHostVideo = pub.track as VideoTrack;
-        }
-      }
-      if (activate) {
-        for (final pub in p.audioTrackPublications) {
-          if (!pub.subscribed) await pub.subscribe();
-        }
-      }
-    }
-
-    if (!mounted || _activationGen != myGen) { room.disconnect(); return; }
-
-    _isPrefetchMode = !activate;
-    if (_myUsername == null) {
-      final info = await StorageService.getUserInfo();
-      _myUsername = info?['username'] as String?;
-    }
-
-    setState(() {
-      _token = token;
-      _room = room;
-      _loading = false;
-      _streamEnded = false;
-      if (hostSid != null) _hostParticipantSid = hostSid;
-      if (hostVideo != null) _remoteVideoTrack = hostVideo;
-      if (coHostVideo != null) _coHostVideoTrack = coHostVideo;
-    });
-
-    if (activate) {
-      _leftStream = false;
-      if (mounted) AnalyticsService.logInteraction(
-        itemId: widget.stream.id,
-        itemType: 'stream',
-        interactionType: 'swipe_impression',
-      );
-    }
-  }
-
-  /// Evict edilirken mevcut Room'u parent'ın prefetch cache'ine devret.
-  /// Başarılı olursa _room/_token/_listener temizlenir (disconnect edilmez),
-  /// _leftStream=true yapılarak dispose'da leaveStream çağrılması önlenir.
-  bool _tryDepositRoom() {
-    if (_room == null || _token == null || _listener == null) return false;
-    final entry = _PrefetchEntry(room: _room!, token: _token!, listener: _listener!);
-    // Önce temizle: kabul veya ret olsun, bu slot artık room sahibi değil
-    _activationGen++;
-    _room = null;
-    _token = null;
-    _listener = null;
-    _leftStream = true; // leaveStream başka slot üstlendi
-    final accepted = widget.onRoomDeposit?.call(widget.stream.id, entry);
-    if (accepted == true) return true;
-    // Ret: başka bir slot zaten cache'e yazmış — entry.dispose() _depositRoom'da çağrıldı
-    return false;
-  }
-
-  /// Kullanıcı henüz bu sayfaya gelmeden arka planda LiveKit'e bağlanır.
-  /// Ses kapalıdır; video track gelir ve renderer hazır olur.
-  /// Sayfa aktif olduğunda _promoteToActive() ile ses de açılır → anında izleme.
-  Future<void> _prefetchConnect() async {
-    if (!mounted || _room != null) return;
-
-    // Parent 2 sayfa ilerisini önceden bağlamışsa kullan — çok daha hızlı
-    final cached = widget.takePrefetch?.call(widget.stream.id);
-    if (cached != null) {
-      await _setupFromPrefetchEntry(cached, activate: false);
-      return;
-    }
-
-    final myGen = ++_activationGen;
-
-    try {
-      if (_myUsername == null) {
-        final info = await StorageService.getUserInfo();
-        _myUsername = info?['username'] as String?;
-      }
-      if (!mounted || _activationGen != myGen) return;
-
-      final token = await StreamService.joinStream(widget.stream.id);
-      if (!mounted || _activationGen != myGen) return;
-
-      if (_resolvedTitle == null) {
-        _resolvedTitle = token.title;
-        _resolvedHostUsername = token.hostUsername;
-      }
-
-      _isPrefetchMode = true;
-      final room = Room();
-      _listener = room.createListener();
-
-      // Yeni track publish olduğunda: prefetch modda sadece video, active modda her şey
-      _listener!.on<TrackPublishedEvent>((e) {
-        if (e.publication.kind == TrackType.VIDEO || !_isPrefetchMode) {
-          e.publication.subscribe();
-        }
-      });
-      _listener!.on<TrackSubscribedEvent>((e) {
-        if (e.track is VideoTrack && mounted) {
-          final vTrack = e.track as VideoTrack;
-          final isHost = e.participant.identity == token.hostLivekitIdentity;
-          if (isHost) {
-            setState(() {
-              _remoteVideoTrack = vTrack;
-              _hostParticipantSid = e.participant.sid;
-            });
-          } else if (e.participant.sid != _hostParticipantSid) {
-            setState(() => _coHostVideoTrack = vTrack);
-          }
-        }
-      });
-      _listener!.on<TrackUnsubscribedEvent>((e) {
-        if (e.track is VideoTrack && mounted) {
-          if (e.track == _remoteVideoTrack) setState(() => _remoteVideoTrack = null);
-          else if (e.track == _coHostVideoTrack) setState(() => _coHostVideoTrack = null);
-        }
-      });
-      _listener!.on<RoomDisconnectedEvent>((e) {
-        if (!mounted) return;
-        if (e.reason == DisconnectReason.roomDeleted) {
-          setState(() { _remoteVideoTrack = null; _streamEnded = true; });
-        } else {
-          setState(() => _remoteVideoTrack = null);
-        }
-      });
-
-      await room.connect(
-        token.livekitUrl,
-        token.token,
-        connectOptions: const ConnectOptions(autoSubscribe: false),
-      );
-      if (!mounted || _activationGen != myGen) {
-        room.disconnect();
-        return;
-      }
-
-      // Zaten stream'de olan katılımcıların video track'lerini subscribe et
-      for (final p in room.remoteParticipants.values) {
-        final isHost = p.identity == token.hostLivekitIdentity;
-        if (isHost) _hostParticipantSid = p.sid;
-        for (final pub in p.videoTrackPublications) {
-          if (!pub.subscribed) pub.subscribe();
-        }
-      }
-      if (!mounted || _activationGen != myGen) {
-        room.disconnect();
-        return;
-      }
-
-      setState(() { _token = token; _room = room; });
-
-    } on AppException catch (e) {
-      if (e.statusCode == 400 && mounted) _leave();
-      else if (e.statusCode == 403 || e.statusCode == 404) widget.onStreamEnded?.call();
-    } catch (_) {
-      // Prefetch başarısız — kullanıcı sayfaya gelince _activate() yeniden dener
-    }
-  }
-
-  /// Prefetch bağlantısı üzerinden tam izlemeye geç: audio subscribe et.
-  Future<void> _promoteToActive() async {
-    if (!mounted || _room == null) return;
-    _leftStream = false;
-    _isPrefetchMode = false;
-    // Oda silindiyse (roomDeleted) _streamEnded sıfırlanmamalı
-    if (mounted && !_streamEnded) setState(() => _streamEnded = false);
-
-    final room = _room!;
-    for (final p in room.remoteParticipants.values) {
-      for (final pub in p.audioTrackPublications) {
-        if (!pub.subscribed) await pub.subscribe();
-      }
-    }
-
-    if (mounted) {
-      AnalyticsService.logInteraction(
-        itemId: widget.stream.id,
-        itemType: 'stream',
-        interactionType: 'swipe_impression',
-      );
-    }
-  }
-
-  /// Aktif sayfadan komşu sayfaya geç: audio unsubscribe et, video bağlı kalır.
-  Future<void> _demoteToPrefetch() async {
-    if (!mounted || _room == null) return;
-    _isPrefetchMode = true;
-
-    final room = _room!;
-    for (final p in room.remoteParticipants.values) {
-      for (final pub in p.audioTrackPublications) {
-        if (pub.subscribed) await pub.unsubscribe();
-      }
-    }
-  }
-
-  Future<void> _activate([int attempt = 0]) async {
-    if (!mounted) return;
-
-    // Raid köprüsünden bağlantı aktar (eski ekrandan kurtarıldıysa) — debounce yok
-    final bridged = _RaidPrefetchBridge.take(widget.stream.id);
-    if (bridged != null) {
-      await _setupFromPrefetchEntry(bridged, activate: true);
-      return;
-    }
-
-    // Parent hızlı yoldan bağlamışsa doğrudan aktiflere geç — debounce yok
-    final cached = widget.takePrefetch?.call(widget.stream.id);
-    if (cached != null) {
-      await _setupFromPrefetchEntry(cached, activate: true);
-      return;
-    }
-
-    // Hızlı geçişlerde ICE başlatma: kullanıcı 300ms bu sayfada kalmazsa
-    // bağlantıya gerek yok (activationGen ilerlediyse zaten iptal olur).
-    // Widget evict edilse bile bağlantı tamamlanana dek keepAlive ile hayatta kalır.
-    if (attempt == 0) { _keepAlive = true; updateKeepAlive(); }
-    final myGen = ++_activationGen;
-    if (attempt == 0) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (!mounted || _activationGen != myGen) return;
-    }
-    _leftStream = false;
-    setState(() {
-      _loading = true;
-      _remoteVideoTrack = null;
-      _coHostVideoTrack = null;
-      _streamEnded = false;
-    });
-
-    // Kendi kullanıcı adını yükle (sahne daveti kontrolü için)
-    if (_myUsername == null) {
-      final info = await StorageService.getUserInfo();
-      _myUsername = info?['username'] as String?;
-    }
-    if (!mounted || _activationGen != myGen) return;
-
-    try {
-      final token = await StreamService.joinStream(widget.stream.id);
-      if (!mounted || _activationGen != myGen) return;
-
-      // single() modu: stub'daki boş title/username'i token'dan doldur
-      if (_resolvedTitle == null) {
-        setState(() {
-          _resolvedTitle = token.title;
-          _resolvedHostUsername = token.hostUsername;
-        });
-      }
-
-      final room = Room();
-      _listener = room.createListener();
-
-      _listener!.on<TrackSubscribedEvent>((e) {
-        if (e.track is VideoTrack && mounted) {
-          final vTrack = e.track as VideoTrack;
-          final isHostTrack = e.participant.identity == token.hostLivekitIdentity;
-          if (isHostTrack) {
-            setState(() {
-              _remoteVideoTrack = vTrack;
-              _hostParticipantSid = e.participant.sid;
-            });
-          } else if (e.participant.sid != _hostParticipantSid) {
-            // Farklı katılımcı = co-host → PiP'e
-            setState(() => _coHostVideoTrack = vTrack);
-          }
-        }
-      });
-      _listener!.on<TrackUnsubscribedEvent>((e) {
-        if (e.track is VideoTrack && mounted) {
-          if (e.track == _remoteVideoTrack) {
-            setState(() => _remoteVideoTrack = null);
-          } else if (e.track == _coHostVideoTrack) {
-            setState(() => _coHostVideoTrack = null);
-          }
-        }
-      });
-      _listener!.on<RoomDisconnectedEvent>((e) {
-        if (!mounted) return;
-        if (e.reason == DisconnectReason.roomDeleted) {
-          if (widget.swipeLiveMode && !widget.isActive) {
-            setState(() => _remoteVideoTrack = null);
-            widget.onStreamEnded?.call();
-          } else {
-            setState(() { _remoteVideoTrack = null; _streamEnded = true; });
-            widget.onEngagementEvent?.call('raid_view');
-            widget.onStreamEnded?.call();
-          }
-        } else {
-          setState(() => _remoteVideoTrack = null);
-        }
-      });
-
-      await room.connect(
-        token.livekitUrl,
-        token.token,
-        connectOptions: const ConnectOptions(autoSubscribe: true),
-      );
-
-      // _deactivate() bağlantı süresinde çağrıldıysa room'u temizle
-      if (!mounted || _activationGen != myGen) {
-        room.disconnect();
-        return;
-      }
-
-      // Zaten yayında olan track'leri kontrol et
-      for (final p in room.remoteParticipants.values) {
-        final isHostParticipant = p.identity == token.hostLivekitIdentity;
-        if (isHostParticipant) _hostParticipantSid = p.sid;
-        for (final pub in p.videoTrackPublications) {
-          if (pub.track != null) {
-            final vTrack = pub.track as VideoTrack;
-            if (isHostParticipant) {
-              _remoteVideoTrack = vTrack;
-            } else {
-              _coHostVideoTrack = vTrack;
-            }
-          }
-        }
-      }
-
-      if (mounted && _activationGen == myGen) {
-        setState(() {
-          _token = token;
-          _room = room;
-          _loading = false;
-        });
-
-        _setKeepAlive(false); // _room != null keepAlive'ı sürdürür
-
-        // Bağlantı sırasında widget evict edildiyse: room'u parent cache'e bırak
-        if (!widget.isActive && !widget.isPrefetch) {
-          if (!_tryDepositRoom()) _deactivate();
-          return;
-        }
-
-        AnalyticsService.logInteraction(
-          itemId: widget.stream.id,
-          itemType: 'stream',
-          interactionType: 'swipe_impression',
-        );
-      }
-    } on AppException catch (e) {
-      _setKeepAlive(false);
-      if (!mounted) return;
-      setState(() => _loading = false);
-      if (e.statusCode == 400) {
-        // Kendi yayınına viewer olarak katılma denemesi — sessizce geri dön
-        _leave();
-      } else if (e.statusCode == 403 || e.statusCode == 404) {
-        final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.liveEnded), behavior: SnackBarBehavior.floating),
-        );
-        setState(() => _streamEnded = true);
-        widget.onStreamEnded?.call();
-      } else {
-        showErrorSnackbar(context, e);
-      }
-    } catch (e, st) {
-      _setKeepAlive(false);
-      LoggerService.instance.captureException(e, stackTrace: st, tag: 'SwipeLivePage._activate');
-      // Network/ICE geçici hatası: sayfa hâlâ aktifse otomatik yeniden dene (max 2 kez)
-      // Spinner bekleme süresince görünür kalır; başarısız olursa loading temizlenir.
-      if (mounted && widget.isActive && attempt < 2) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted && widget.isActive) {
-          _keepAlive = true; // yeniden dene — keepAlive tekrar ayarla
-          _activate(attempt + 1);
-        } else {
-          if (mounted) setState(() => _loading = false);
-        }
-      } else {
-        if (mounted) setState(() => _loading = false);
-      }
-    }
-  }
-
   void _handleMuted() {
     if (!mounted) return;
     setState(() => _selfMuted = true);
+    if (!widget.isActive) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('🔇 Bu yayında susturuldunuz'),
@@ -1482,6 +727,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   void _handleUnmuted() {
     if (!mounted) return;
     setState(() => _selfMuted = false);
+    if (!widget.isActive) return;
     final l = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1495,7 +741,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   void _handleKicked() {
     if (!mounted || _kicked) return;
     _kicked = true;
-    _room?.disconnect();
+    widget.session.room?.disconnect();
+    if (!widget.isActive) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('🚫 Bu yayından atıldınız'),
@@ -1509,6 +756,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   void _handleModPromotedSelf(String promotedBy) {
     if (!mounted || _isCoHost) return;
     setState(() => _isCoHost = true);
+    if (!widget.isActive) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('⭐ @$promotedBy sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.'),
@@ -1521,6 +769,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   void _handleModDemotedSelf(String demotedBy) {
     if (!mounted) return;
     setState(() => _isCoHost = false);
+    if (!widget.isActive) return;
     final l = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1532,6 +781,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   }
 
   void _showCoHostInviteDialog(String hostUsername) {
+    if (!widget.isActive) return;
     showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -1575,10 +825,9 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   void _handleCoHostRemoved() {
     if (!mounted) return;
     // Kamerayı kapat, local track'i temizle
-    _room?.localParticipant?.setCameraEnabled(false);
-    _room?.localParticipant?.setMicrophoneEnabled(false);
+    widget.session.room?.localParticipant?.setCameraEnabled(false);
+    widget.session.room?.localParticipant?.setMicrophoneEnabled(false);
     setState(() {
-      _localVideoTrack = null;
       _isSelfCoHost = false;
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1591,102 +840,10 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   }
 
   Future<void> _acceptCoHostInvite() async {
-    // 1. Kamera ve mikrofon izni iste
-    final camStatus = await Permission.camera.request();
-    final micStatus = await Permission.microphone.request();
-    if (!mounted) return;
-    if (camStatus.isDenied || micStatus.isDenied) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sahneye çıkmak için kamera ve mikrofon izni gerekli'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // 2. Yeni can_publish=true token al
-    late StreamTokenOut newToken;
-    try {
-      newToken = await StreamService.acceptCoHostInvite(widget.stream.id);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sahne bağlantısı kurulamadı: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-    if (!mounted) return;
-
-    // 3. Mevcut odadan çık (leaveStream çağırmıyoruz, yeniden join edeceğiz)
-    _listener?.dispose();
-    _listener = null;
-    await _room?.disconnect();
-    _room = null;
-    _hostParticipantSid = null;
-    _coHostVideoTrack = null;
-
-    // 4. Yeni token ile odaya yayıncı olarak bağlan
-    try {
-      final room = Room();
-      _listener = room.createListener();
-
-      // Host'un track'ini ana ekrana bağla
-      _listener!.on<TrackSubscribedEvent>((e) {
-        if (e.track is VideoTrack && mounted) {
-          setState(() {
-            _remoteVideoTrack = e.track as VideoTrack;
-            _hostParticipantSid = e.participant.sid;
-          });
-        }
-      });
-      _listener!.on<TrackUnsubscribedEvent>((e) {
-        if (e.track is VideoTrack && e.track == _remoteVideoTrack && mounted) {
-          setState(() => _remoteVideoTrack = null);
-        }
-      });
-      _listener!.on<LocalTrackPublishedEvent>((e) {
-        if (e.publication.track is LocalVideoTrack && mounted) {
-          setState(() => _localVideoTrack = e.publication.track as LocalVideoTrack);
-        }
-      });
-      _listener!.on<RoomDisconnectedEvent>((e) {
-        if (!mounted) return;
-        if (e.reason == DisconnectReason.roomDeleted) {
-          setState(() { _remoteVideoTrack = null; _localVideoTrack = null; _isSelfCoHost = false; _streamEnded = true; });
-        } else {
-          setState(() { _remoteVideoTrack = null; _localVideoTrack = null; _isSelfCoHost = false; });
-        }
-      });
-
-      await room.connect(
-        newToken.livekitUrl,
-        newToken.token,
-        connectOptions: const ConnectOptions(autoSubscribe: true),
-      );
-      await room.localParticipant?.setCameraEnabled(true);
-      await room.localParticipant?.setMicrophoneEnabled(true);
-
-      if (mounted) {
-        setState(() {
-          _room = room;
-          _isSelfCoHost = true;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sahneye bağlanılamadı: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    // TODO: Implement co-host upgrade with StreamConnectionManager
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Co-host upgrade not implemented in Zero-Latency feed yet.')),
+    );
   }
 
   void _showCoHostModSheet(String targetUsername) {
@@ -1704,55 +861,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     );
   }
 
-  Future<void> _deactivate() async {
-    _setKeepAlive(false);
-    _activationGen++;
-    _listener?.dispose();
-    _listener = null;
-    final room = _room;
-    _room = null;
-    _token = null;
-    // Sesi/videoyu hemen kes — network çağrısını bekletme
-    room?.disconnect();
-    if (mounted) {
-      setState(() {
-        _remoteVideoTrack = null;
-        _coHostVideoTrack = null;
-        _localVideoTrack = null;
-        _hostParticipantSid = null;
-        _isSelfCoHost = false;
-      });
-    }
-    // Backend'e ayrılma bildirimi fire-and-forget
-    if (!_leftStream) {
-      _leftStream = true;
-      StreamService.leaveStream(widget.stream.id).catchError((e) {
-        LoggerService.instance.warning('SwipeLivePage._deactivate', 'leaveStream başarısız: $e');
-      });
-    }
-  }
 
-  // dispose'da await kullanamayız, senkron temizlik
-  void _deactivateSync() {
-    _keepAlive = false; // mounted olmayabilir, updateKeepAlive çağırmıyoruz
-    _activationGen++;
-    _likeThrottleTimer?.cancel();
-    _listener?.dispose();
-    _listener = null;
-    final room = _room;
-    _room = null;
-    _token = null;
-    _hostParticipantSid = null;
-    room?.disconnect();
-    if (!_leftStream) {
-      _leftStream = true;
-      try {
-        StreamService.leaveStream(widget.stream.id);
-      } catch (e) {
-        LoggerService.instance.warning('SwipeLivePage._deactivateSync', 'leaveStream başarısız: $e');
-      }
-    }
-  }
 
   void _onHeartTap() {
     HapticFeedback.lightImpact();
@@ -1776,15 +885,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   }
 
   Future<void> _leave({bool fromOverlay = false}) async {
-    if (widget.swipeLiveMode && fromOverlay) {
-      // SwipeLive'da raid overlay'i kapattı — uygulamadan çıkma, yayını listeden çıkar
-      widget.onEngagementEvent?.call('raid_close');
-      widget.onStreamEnded?.call();
-      await _deactivate();
-      return;
-    }
     widget.onStreamEnded?.call();
-    await _deactivate();
     if (mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     }
@@ -1792,13 +893,10 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   // iOS back gesture veya ← button'dan PiP kurulumu (senkron)
   void _pipForBackGesture() {
-    if (_enteringPip || _leftStream) return; // Zaten işleniyor
-    final track = _remoteVideoTrack;
-    final room = _room;
+    final track = widget.session.hostVideoTrack;
+    final room = widget.session.room;
     if (track == null || room == null) return; // Video yok, PiP açılamaz
 
-    _enteringPip = true;
-    _leftStream = true;
     StreamService.pipEnter(widget.stream.id);
 
     ref.read(pipProvider.notifier).enablePip(
@@ -1814,8 +912,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   // ← butonu için: PiP kur + geri git
   Future<void> _enterPip() async {
-    final track = _remoteVideoTrack;
-    final room = _room;
+    final track = widget.session.hostVideoTrack;
+    final room = widget.session.room;
     if (track == null || room == null) {
       await _leave();
       return;
@@ -1826,22 +924,9 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   Future<void> _handleRaid(int targetStreamId) async {
     widget.onEngagementEvent?.call('raid_chose');
-
-    // Single mod: hedef yayına geç
-    final bridgeEntry = widget.takePrefetch?.call(targetStreamId);
-    if (bridgeEntry != null) {
-      _RaidPrefetchBridge.put(targetStreamId, bridgeEntry);
-    }
+    
+    // SwipeLive'da baskın seçildi — uygulamadan çıkma, biten yayını listeden çıkar
     widget.onStreamEnded?.call();
-    await _deactivate();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SwipeLiveScreen.single(streamId: targetStreamId),
-        ),
-      );
-    }
   }
 
   @override
@@ -1853,13 +938,34 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     final hasThumbnail =
         widget.stream.thumbnailUrl != null && widget.stream.thumbnailUrl!.isNotEmpty;
 
+    if (widget.isEnded) {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: LIVE_UI_ENDED_OVERLAY] Showing RaidEndedOverlay for stream: ${widget.stream.id}');
+      return RaidEndedOverlay(
+        streamId: widget.stream.id,
+        hostUsername: widget.stream.host.username,
+        onClose: () {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+        },
+        onRaid: (targetStreamId) {
+          debugPrint('[${DateTime.now().toString()}] [EVENT: LIVE_UI_RAID_JOINED] User clicked Raid Target: $targetStreamId');
+          widget.onRaidTargetSelected?.call(targetStreamId);
+        },
+      );
+    }
+    
+    if (widget.session.room == null) {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: LIVE_UI_LOADING] Showing FullScreenLoading for stream: ${widget.stream.id}');
+      return const Center(child: CircularProgressIndicator(color: Colors.white));
+    }
+
+    debugPrint('[${DateTime.now().toString()}] [EVENT: LIVE_UI_ACTIVE] Showing LIVE ROOM for stream: ${widget.stream.id}');
     return Stack(
       children: [
         // ── Arka plan: video veya thumbnail ──────────────────────────────
-        if (_remoteVideoTrack != null)
+        if (widget.session.hostVideoTrack != null)
           Positioned.fill(
             child: VideoTrackRenderer(
-              _remoteVideoTrack!,
+              widget.session.hostVideoTrack!,
               fit: VideoViewFit.contain,
               mirrorMode: VideoViewMirrorMode.mirror,
             ),
@@ -1877,7 +983,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
           Positioned.fill(child: _darkBg()),
 
         // ── Yükleniyor ───────────────────────────────────────────────────
-        if (_loading)
+        if (widget.session.isConnecting)
           Positioned.fill(
             child: ColoredBox(
               color: hasThumbnail ? Colors.black38 : Colors.black54,
@@ -1886,7 +992,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
           ),
 
         // ── Yayın sona erdi overlay ─────────────────────────────────────────
-        if (_streamEnded)
+        if (widget.session.streamEnded || widget.isEnded)
           Positioned.fill(
             child: RaidEndedOverlay(
               streamId: widget.stream.id,
@@ -1904,13 +1010,13 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
           right: 0,
           child: ViewerTopBar(
             topPad: topPad,
-            viewerCount: _viewerCount,
+            viewerCount: widget.stream.viewerCount,
             title: _resolvedTitle ?? widget.stream.title,
             hostUsername: _resolvedHostUsername ?? widget.stream.host.username,
             isCoHost: _isCoHost,
-            streamEnded: _streamEnded,
+            streamEnded: widget.session.streamEnded || widget.isEnded,
             onLeave: _leave,
-            onEnterPip: _streamEnded ? null : _enterPip,
+            onEnterPip: (widget.session.streamEnded || widget.isEnded) ? null : _enterPip,
             streamId: widget.stream.id,
             thumbnailUrl: widget.stream.thumbnailUrl,
           ),
@@ -1961,7 +1067,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                         right: 0,
                         child: GestureDetector(
                           onTap: () async {
-                            final sid = _token?.streamId;
+                            final sid = widget.session.token?.streamId;
                             if (sid != null) {
                               try { await StreamService.leaveCoHost(sid); } catch (_) {}
                             }
@@ -1988,7 +1094,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
               ),
             ),
           )
-        else if (!_isSelfCoHost && _coHostVideoTrack != null)
+        else if (!_isSelfCoHost && widget.session.coHostVideoTrack != null)
           Positioned(
             top: _pipTop ?? (topPad + 70),
             left: _pipLeft ?? (MediaQuery.of(context).size.width - 110 - 16),
@@ -2010,7 +1116,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: VideoTrackRenderer(
-                    _coHostVideoTrack!,
+                    widget.session.coHostVideoTrack!,
                     fit: VideoViewFit.contain,
                     mirrorMode: VideoViewMirrorMode.mirror,
                   ),
@@ -2019,8 +1125,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
             ),
           ),
 
-        // ── Swipe ipucu (son sayfa değilse) ─────────────────────────────
-        if (!widget.isLast && !_streamEnded)
+        if (!widget.session.streamEnded && !widget.isEnded)
           Positioned(
             bottom: botPad + 104,
             left: 0,
@@ -2038,8 +1143,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
             ),
           ),
 
-        // ── Alt panel: sohbet + açık artırma ────────────────────────────
-        if (widget.isActive && _token != null && !_streamEnded)
+        if (widget.session.token != null && !widget.session.streamEnded && !widget.isEnded)
           Positioned(
             bottom: 0,
             left: 0,
@@ -2061,10 +1165,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                   ChatPanel(
                     streamId: widget.stream.id,
                     onStreamEnded: () {
-                      if (widget.swipeLiveMode && !widget.isActive) {
-                        widget.onStreamEnded?.call();
-                      } else {
-                        setState(() => _streamEnded = true);
+                      widget.onStreamEnded?.call();
+                      if (widget.isActive) {
                         widget.onEngagementEvent?.call('raid_view');
                       }
                     },
@@ -2148,13 +1250,13 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                       ],
                     ),
                   ),
-                  if ((_token?.category ?? widget.stream.category) != 'sohbet')
+                  if ((widget.session.token?.category ?? widget.stream.category) != 'sohbet')
                     AuctionPanel(
                       streamId: widget.stream.id,
                       isHost: false,
                       isCoHost: _isCoHost,
                       enabled: !_selfMuted,
-                      hostUserId: int.tryParse(_token?.hostLivekitIdentity ?? ''),
+                      hostUserId: int.tryParse(widget.session.token?.hostLivekitIdentity ?? ''),
                       myUsername: _myUsername,
                       onWin: _onAuctionWon,
                     ),
@@ -2419,27 +1521,75 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
   }
 
   Future<void> _initVideo() async {
-    final videoUrl = widget.listing['video_url'] as String?;
+    debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_INIT_STARTED] for listing: ${widget.listing['id']}');
+    String? videoUrl = widget.listing['video_url'] as String?;
     if (videoUrl == null || videoUrl.isEmpty) {
-      // Video yok — fotoğraf direkt gösterilecek, spinner'a gerek yok
+      if (widget.listing['media'] != null && widget.listing['media'] is List) {
+        final mediaList = widget.listing['media'] as List;
+        for (final m in mediaList) {
+          if (m['media_type'] == 'video') {
+            videoUrl = m['media_url'];
+            break;
+          }
+        }
+      }
+    }
+
+    if (videoUrl == null || videoUrl.isEmpty) {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_NO_VIDEO_URL] for listing: ${widget.listing['id']}');
       if (mounted) setState(() => _initialized = true);
       return;
     }
-    _ctrl = VideoPlayerController.networkUrl(Uri.parse(imgUrl(videoUrl)));
-    await _ctrl!.initialize();
-    _ctrl!.setLooping(true);
-    if (!mounted) return;
-    setState(() => _initialized = true);
-    if (widget.isActive) _ctrl!.play();
+    
+    final lidStr = widget.listing['id']?.toString() ?? '0';
+    final lidInt = int.tryParse(lidStr) ?? 0;
+    
+    _ctrl = ListingVideoManager.instance.getOrCreateController(lidInt, videoUrl);
+    
+    if (_ctrl!.value.isInitialized) {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_INSTANT_PLAY_READY] Video already initialized for: $lidInt');
+      setState(() => _initialized = true);
+    } else {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_WAITING_INIT] Waiting for video initialization for: $lidInt');
+      void listener() {
+        if (_ctrl?.value.isInitialized ?? false) {
+          debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_INIT_CALLBACK] Video initialized for: $lidInt');
+          _ctrl?.removeListener(listener);
+          if (mounted) {
+            setState(() => _initialized = true);
+            if (widget.isActive) {
+              debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_AUTO_PLAYING] Autoplaying after init for: $lidInt');
+              _ctrl?.setVolume(1.0);
+              _ctrl?.play();
+            }
+          }
+        }
+      }
+      _ctrl!.addListener(listener);
+    }
+    
+    if (widget.isActive && _initialized) {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_AUTO_PLAYING] Autoplaying instantly for: $lidInt');
+      _ctrl!.setVolume(1.0);
+      _ctrl!.play();
+    }
   }
 
   @override
   void didUpdateWidget(_ListingVideoPage old) {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
-      _ctrl?.play();
+      debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BECAME_ACTIVE] for listing: ${widget.listing['id']}');
+      if (_initialized) {
+        debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_PLAY_COMMAND] Playing video for listing: ${widget.listing['id']}');
+        _ctrl?.setVolume(1.0);
+        _ctrl?.play();
+      } else {
+        debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_ACTIVE_BUT_NOT_READY] Video NOT INITIALIZED YET for listing: ${widget.listing['id']}');
+      }
       _startWatch();
     } else if (!widget.isActive && old.isActive) {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BECAME_INACTIVE] for listing: ${widget.listing['id']}');
       _ctrl?.pause();
       _stopAndLog();
     }
@@ -2448,7 +1598,8 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
   @override
   void dispose() {
     _stopAndLog();
-    _ctrl?.dispose();
+    _ctrl?.pause(); // Oynatma sürüyorsa kapat
+    // _ctrl, ListingVideoManager tarafından dispose edilecektir (fallback harici ama şimdilik okey)
     super.dispose();
   }
 
@@ -2522,19 +1673,29 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
         fit: StackFit.expand,
         children: [
           // ── Video veya thumbnail ──────────────────────────────────────────
-          if (_initialized && _ctrl != null)
-            FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: _ctrl!.value.size.width,
-                height: _ctrl!.value.size.height,
-                child: VideoPlayer(_ctrl!),
-              ),
-            )
-          else if (thumbUrl.isNotEmpty)
-            CachedNetworkImage(imageUrl: imgUrl(thumbUrl), fit: BoxFit.cover)
-          else
-            const ColoredBox(color: Colors.black),
+          if (_initialized && _ctrl != null) ...[
+            Builder(builder: (_) {
+              debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_READY] Showing VIDEO PLAYER for listing: ${listing['id']}');
+              return FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _ctrl!.value.size.width,
+                  height: _ctrl!.value.size.height,
+                  child: VideoPlayer(_ctrl!),
+                ),
+              );
+            })
+          ] else if (thumbUrl.isNotEmpty) ...[
+            Builder(builder: (_) {
+              debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_FALLBACK] Showing THUMBNAIL for listing: ${listing['id']}');
+              return CachedNetworkImage(imageUrl: imgUrl(thumbUrl), fit: BoxFit.cover);
+            })
+          ] else ...[
+            Builder(builder: (_) {
+              debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_LOADING] Showing BLACK SCREEN for listing: ${listing['id']}');
+              return const ColoredBox(color: Colors.black);
+            })
+          ],
 
           // ── Yüklenme göstergesi ───────────────────────────────────────────
           if (!_initialized)

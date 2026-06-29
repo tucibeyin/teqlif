@@ -12,6 +12,7 @@ import '../../services/storage_service.dart';
 import '../../utils/error_helper.dart';
 import 'register_screen.dart';
 import 'verify_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -176,6 +177,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               validator: (v) =>
                                   v == null || v.isEmpty ? l.fieldPasswordHint : null,
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                                  );
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  l.forgotPassword,
+                                  style: const TextStyle(
+                                    color: kPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 24),
                             ElevatedButton(

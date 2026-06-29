@@ -2344,4 +2344,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get softUpdateLater => 'Later';
+
+  @override
+  String get forgotPassword => 'Forgot Password?';
+
+  @override
+  String get resetPasswordDescription =>
+      'Please enter the email address registered to your account.';
+
+  @override
+  String get sendResetCode => 'Send Code';
+
+  @override
+  String get enterResetCode => 'Enter the 6-digit code sent to your email';
+
+  @override
+  String get newPassword => 'New Password';
+
+  @override
+  String get newPasswordConfirm => 'Confirm New Password';
+
+  @override
+  String get passwordResetSuccess =>
+      'Your password has been successfully reset. You can now login.';
 }

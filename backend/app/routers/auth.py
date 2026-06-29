@@ -9,9 +9,9 @@ from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS
+from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS, ForgotPassword, ResetPassword
 from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, set_auth_cookies, clear_auth_cookies
-from app.utils.email import send_verification_code, send_phone_verification_email
+from app.utils.email import send_verification_code, send_phone_verification_email, send_reset_password_email
 from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException, ConflictException
 from app.core.logger import get_logger, capture_exception
@@ -180,6 +180,54 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
     await _send_verification_email(request, data.email, user.full_name, code, raise_on_failure=True)
     return {"message": "Kod tekrar gönderildi"}
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, data: ForgotPassword, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+    
+    # We return 200 even if user doesn't exist to prevent email enumeration
+    if not user:
+        return {"message": "Şifre sıfırlama e-postası gönderildi"}
+        
+    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
+    redis = await get_redis()
+    await redis.setex(f"reset_pwd:{data.email}", VERIFY_CODE_TTL, code)
+    
+    lang = _detect_lang(request)
+    try:
+        await send_reset_password_email(data.email, user.full_name, code, lang)
+    except Exception as e:
+        logger.error(f"Reset password email failed for {data.email}: {e}")
+        capture_exception(e)
+        raise ServiceException("E-posta gönderilemedi, lütfen daha sonra tekrar deneyin.")
+        
+    return {"message": "Şifre sıfırlama e-postası gönderildi"}
+
+
+@router.post("/reset-password")
+@limiter.limit("5/minute")
+async def reset_password(request: Request, data: ResetPassword, db: AsyncSession = Depends(get_db)):
+    redis = await get_redis()
+    key = f"reset_pwd:{data.email}"
+    stored_code = await redis.get(key)
+    
+    if not stored_code or stored_code != data.code:
+        raise BadRequestException("Geçersiz veya süresi dolmuş kod")
+        
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise BadRequestException("Geçersiz veya süresi dolmuş kod")
+        
+    user.hashed_password = hash_password(data.new_password)
+    await db.commit()
+    await redis.delete(key)
+    
+    return {"message": "Şifreniz başarıyla sıfırlandı"}
 
 
 @router.get("/check-username")

@@ -156,7 +156,34 @@ class AuthService {
       _refreshInProgress!.complete(false);
       _refreshInProgress = null;
       return false;
-    }
+  }
+  
+  static Future<void> requestPasswordReset(String email) async {
+    await ApiService.execute(
+      () => http.post(
+        Uri.parse('$kBaseUrl/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      ),
+    );
+  }
+
+  static Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    await ApiService.execute(
+      () => http.post(
+        Uri.parse('$kBaseUrl/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'code': code,
+          'new_password': newPassword,
+        }),
+      ),
+    );
   }
 
   static Future<User> me() async {

@@ -1196,5 +1196,12 @@
   "softUpdateTitle": "إصدار جديد متاح",
   "softUpdateMessage": "يتوفر إصدار جديد من التطبيق. يرجى التحديث للحصول على تجربة أفضل.",
   "softUpdateUpdateNow": "تحديث الآن",
-  "softUpdateLater": "لاحقاً"
+  "softUpdateLater": "لاحقاً",
+  "forgotPassword": "هل نسيت كلمة المرور؟",
+  "resetPasswordDescription": "يرجى إدخال عنوان البريد الإلكتروني المسجل في حسابك.",
+  "sendResetCode": "أرسل الرمز",
+  "enterResetCode": "أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك الإلكتروني",
+  "newPassword": "كلمة المرور الجديدة",
+  "newPasswordConfirm": "تأكيد كلمة المرور الجديدة",
+  "passwordResetSuccess": "تمت إعادة تعيين كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن."
 }

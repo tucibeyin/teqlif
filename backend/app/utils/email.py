@@ -294,3 +294,67 @@ async def send_verification_code(email: str, full_name: str, code: str, *, has_p
             timeout=10.0,
         )
         response.raise_for_status()
+
+
+_RESET_PWD_COPY = {
+    "tr": {
+        "subject": "teqlif - Şifre Sıfırlama Kodu",
+        "greeting": "Merhaba <strong>{full_name}</strong>,",
+        "body": "teqlif hesabınızın şifresini sıfırlamak için aşağıdaki kodu kullanın:",
+        "validity": "Bu kod <strong>10 dakika</strong> geçerlidir.",
+        "ignore": "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilir ve şifrenizi güvende tutabilirsiniz.",
+        "footer": "Sorularınız için: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>"
+    },
+    "en": {
+        "subject": "teqlif - Password Reset Code",
+        "greeting": "Hello <strong>{full_name}</strong>,",
+        "body": "Use the code below to reset the password for your teqlif account:",
+        "validity": "This code is valid for <strong>10 minutes</strong>.",
+        "ignore": "If you did not request this, you can safely ignore this email.",
+        "footer": "Questions? Contact us: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>"
+    },
+    "ar": {
+        "subject": "teqlif - رمز إعادة تعيين كلمة المرور",
+        "greeting": "مرحباً <strong>{full_name}</strong>،",
+        "body": "استخدم الرمز أدناه لإعادة تعيين كلمة مرور حساب teqlif الخاص بك:",
+        "validity": "هذا الرمز صالح لمدة <strong>10 دقائق</strong>.",
+        "ignore": "إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة الإلكترونية بأمان.",
+        "footer": "للاستفسارات: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>"
+    }
+}
+
+
+async def send_reset_password_email(email: str, full_name: str, code: str, lang: str = "tr") -> None:
+    c = _RESET_PWD_COPY.get(lang, _RESET_PWD_COPY["tr"])
+    dir_attr = " dir='rtl'" if lang == "ar" else ""
+    
+    payload = {
+        "sender": {
+            "name": settings.brevo_sender_name,
+            "email": settings.brevo_sender_email,
+        },
+        "to": [{"email": email, "name": full_name}],
+        "subject": c["subject"],
+        "htmlContent": (
+            f"<div{dir_attr}>"
+            f"<p>{c['greeting']}</p>"
+            f"<p>{c['body']}</p>"
+            f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
+            f"<p>{c['validity']}</p>"
+            f"<p>{c['ignore']}</p>"
+            f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>{c['footer']}</p>"
+            f"</div>"
+        ),
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers={
+                "api-key": settings.brevo_api_key,
+                "Content-Type": "application/json",
+            },
+            timeout=10.0,
+        )
+        response.raise_for_status()

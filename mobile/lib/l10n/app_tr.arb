@@ -1196,5 +1196,12 @@
   "softUpdateTitle": "Yeni Sürüm Mevcut",
   "softUpdateMessage": "Uygulamanın yeni bir sürümü yayınlandı. Daha iyi bir deneyim için hemen güncelleyebilirsiniz.",
   "softUpdateUpdateNow": "Şimdi Güncelle",
-  "softUpdateLater": "Daha Sonra"
+  "softUpdateLater": "Daha Sonra",
+  "forgotPassword": "Şifremi Unuttum",
+  "resetPasswordDescription": "Lütfen hesabınıza kayıtlı e-posta adresini girin.",
+  "sendResetCode": "Kodu Gönder",
+  "enterResetCode": "E-postanıza gelen 6 haneli kodu girin",
+  "newPassword": "Yeni Şifre",
+  "newPasswordConfirm": "Yeni Şifre (Tekrar)",
+  "passwordResetSuccess": "Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz."
 }

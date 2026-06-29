@@ -2325,4 +2325,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get softUpdateLater => 'لاحقاً';
+
+  @override
+  String get forgotPassword => 'هل نسيت كلمة المرور؟';
+
+  @override
+  String get resetPasswordDescription =>
+      'يرجى إدخال عنوان البريد الإلكتروني المسجل في حسابك.';
+
+  @override
+  String get sendResetCode => 'أرسل الرمز';
+
+  @override
+  String get enterResetCode =>
+      'أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك الإلكتروني';
+
+  @override
+  String get newPassword => 'كلمة المرور الجديدة';
+
+  @override
+  String get newPasswordConfirm => 'تأكيد كلمة المرور الجديدة';
+
+  @override
+  String get passwordResetSuccess =>
+      'تمت إعادة تعيين كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.';
 }

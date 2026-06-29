@@ -125,3 +125,20 @@ class ChangePasswordConfirm(BaseModel):
         if len(v) < 8:
             raise ValueError("Şifre en az 8 karakter olmalı")
         return v
+
+
+class ForgotPassword(BaseModel):
+    email: EmailStr
+
+
+class ResetPassword(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strong(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Şifre en az 8 karakter olmalı")
+        return v

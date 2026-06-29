@@ -1196,5 +1196,12 @@
   "softUpdateTitle": "New Version Available",
   "softUpdateMessage": "A new version of the app is available. Please update for a better experience.",
   "softUpdateUpdateNow": "Update Now",
-  "softUpdateLater": "Later"
+  "softUpdateLater": "Later",
+  "forgotPassword": "Forgot Password?",
+  "resetPasswordDescription": "Please enter the email address registered to your account.",
+  "sendResetCode": "Send Code",
+  "enterResetCode": "Enter the 6-digit code sent to your email",
+  "newPassword": "New Password",
+  "newPasswordConfirm": "Confirm New Password",
+  "passwordResetSuccess": "Your password has been successfully reset. You can now login."
 }

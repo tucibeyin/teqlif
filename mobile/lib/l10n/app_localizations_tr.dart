@@ -2345,4 +2345,27 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get softUpdateLater => 'Daha Sonra';
+
+  @override
+  String get forgotPassword => 'Şifremi Unuttum';
+
+  @override
+  String get resetPasswordDescription =>
+      'Lütfen hesabınıza kayıtlı e-posta adresini girin.';
+
+  @override
+  String get sendResetCode => 'Kodu Gönder';
+
+  @override
+  String get enterResetCode => 'E-postanıza gelen 6 haneli kodu girin';
+
+  @override
+  String get newPassword => 'Yeni Şifre';
+
+  @override
+  String get newPasswordConfirm => 'Yeni Şifre (Tekrar)';
+
+  @override
+  String get passwordResetSuccess =>
+      'Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.';
 }
