@@ -76,7 +76,7 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
   }
 
   void _skip() {
-    SharedPreferences.getInstance().then((p) => p.setBool('onboarding_done', false));
+    SharedPreferences.getInstance().then((p) => p.setBool('onboarding_skipped', true));
     if (widget.fromBanner) {
       Navigator.pop(context);
     } else {

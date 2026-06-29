@@ -865,11 +865,10 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   void _handleCoHostRemoved() {
     if (!mounted) return;
-    // Kamerayı kapat, local track'i temizle
-    widget.session.room?.localParticipant?.setCameraEnabled(false);
-    widget.session.room?.localParticipant?.setMicrophoneEnabled(false);
+    StreamConnectionManager.instance.downgradeFromCoHost(widget.stream.id);
     setState(() {
       _isSelfCoHost = false;
+      _localVideoTrack = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -881,10 +880,22 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   }
 
   Future<void> _acceptCoHostInvite() async {
-    // TODO: Implement co-host upgrade with StreamConnectionManager
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Co-host upgrade not implemented in Zero-Latency feed yet.')),
-    );
+    try {
+      final newToken = await StreamService.acceptCoHostInvite(widget.stream.id);
+      await StreamConnectionManager.instance.upgradeToCoHost(widget.stream.id, newToken);
+      if (mounted) {
+        setState(() {
+          _isSelfCoHost = true;
+          _localVideoTrack = widget.session.localVideoTrack;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hata: $e')),
+        );
+      }
+    }
   }
 
   void _showCoHostModSheet(String targetUsername) {

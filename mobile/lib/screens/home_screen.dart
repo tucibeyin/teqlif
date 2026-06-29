@@ -162,7 +162,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final userInfo = await StorageService.getUserInfo();
       final prefs = await SharedPreferences.getInstance();
       final done = (userInfo?['onboarding_completed'] == true) || (prefs.getBool('onboarding_done') == true);
-      if (mounted) setState(() => _showOnboardingBanner = !done);
+      final skipped = prefs.getBool('onboarding_skipped') == true;
+      if (mounted) setState(() => _showOnboardingBanner = !(done || skipped));
     }
 
     if (_hasFilter) {
@@ -472,7 +473,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         final userInfo = await StorageService.getUserInfo();
                         final prefs = await SharedPreferences.getInstance();
                         final done = (userInfo?['onboarding_completed'] == true) || (prefs.getBool('onboarding_done') == true);
-                        if (mounted) setState(() => _showOnboardingBanner = !done);
+                        final skipped = prefs.getBool('onboarding_skipped') == true;
+                        if (mounted) setState(() => _showOnboardingBanner = !(done || skipped));
                       },
                     ),
                   // ── Kategori ikonları ────────────────────────────

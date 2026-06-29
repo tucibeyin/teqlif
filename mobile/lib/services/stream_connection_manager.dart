@@ -22,6 +22,8 @@ class LiveSession extends ChangeNotifier {
   VideoTrack? coHostVideoTrack;
   String? hostParticipantSid;
   
+  LocalVideoTrack? localVideoTrack;
+  
   SessionState state = SessionState.none;
   bool isConnecting = false;
   bool isConnected = false;
@@ -290,6 +292,56 @@ class StreamConnectionManager with WidgetsBindingObserver {
       session.dispose();
     }
   }
+
+  Future<void> upgradeToCoHost(int streamId, StreamTokenOut newToken) async {
+    final session = getSession(streamId);
+    if (session.room == null) return;
+    
+    // Bağlantı çakışmalarını önlemek için lock koyalım
+    if (_connectionLocks.contains(streamId)) return;
+    _connectionLocks.add(streamId);
+    
+    try {
+      // room.disconnect() tetiklendiğinde listener isConnected = false yapacak.
+      await session.room!.disconnect();
+      await session.room!.connect(
+        newToken.livekitUrl,
+        newToken.token,
+        connectOptions: const ConnectOptions(autoSubscribe: true),
+      );
+
+      // Yeniden bağlandığımız için state'i onarmalıyız ki updateViewport bizi tekrar viewer yapmasın
+      session.isConnected = true;
+      session.state = SessionState.active;
+
+      await session.room!.localParticipant?.setCameraEnabled(true);
+      await session.room!.localParticipant?.setMicrophoneEnabled(true);
+
+      final pub = session.room!.localParticipant?.videoTrackPublications.firstOrNull;
+      if (pub?.track is LocalVideoTrack) {
+        session.localVideoTrack = pub!.track as LocalVideoTrack;
+      }
+      session.update();
+    } catch (e) {
+      debugPrint('[StreamConnectionManager] upgradeToCoHost failed: $e');
+    } finally {
+      _connectionLocks.remove(streamId);
+    }
+  }
+
+  Future<void> downgradeFromCoHost(int streamId) async {
+    final session = getSession(streamId);
+    if (session.room == null) return;
+    try {
+      await session.room!.localParticipant?.setCameraEnabled(false);
+      await session.room!.localParticipant?.setMicrophoneEnabled(false);
+      session.localVideoTrack = null;
+      session.update();
+    } catch (e) {
+      debugPrint('[StreamConnectionManager] downgradeFromCoHost failed: $e');
+    }
+  }
+
 
   
   void clearViewport({int? excludeStreamId}) {
