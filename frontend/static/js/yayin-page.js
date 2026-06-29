@@ -753,6 +753,11 @@
                 document.getElementById('btnAuctionResume').style.display = 'none';
                 document.getElementById('btnAuctionAccept').style.display = 'none';
                 document.getElementById('btnAuctionEnd').style.display = 'none';
+                
+                document.getElementById('auctionItemName').textContent = state.item_name || 'Hemen Al Bekleniyor';
+                document.getElementById('auctionPrice').textContent = state.buy_it_now_price ? '₺' + Number(state.buy_it_now_price).toLocaleString('tr-TR') : '—';
+                document.getElementById('auctionBidder').textContent = state.bin_buyer_username ? '@' + state.bin_buyer_username : '—';
+                document.getElementById('auctionBidCount').textContent = '';
             } else if (state.status === 'idle' || state.status === 'ended') {
                 hostSetup.style.display = 'flex';
                 document.getElementById('btnAuctionQuickStart').style.display = '';

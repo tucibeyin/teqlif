@@ -251,23 +251,52 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Future<String?> _showProofCaptureDialog() async {
     final l = AppLocalizations.of(context)!;
-    return showDialog<String?>(
+    return showModalBottomSheet<String?>(
       context: context,
-      barrierDismissible: false,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         bool isLoading = false;
         return StatefulBuilder(
           builder: (ctx, setLocalState) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1E293B),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text('📷 ${l.hostAcceptSaleDialogTitle}', 
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              content: Column(
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                left: 20,
+                right: 20,
+                top: 24,
+              ),
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(l.hostAcceptSaleDialogBody, 
-                    style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14)),
+                  Text('📷 ${l.hostAcceptSaleDialogTitle}', 
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEA580C).withOpacity(0.15),
+                      border: Border.all(color: const Color(0xFFEA580C).withOpacity(0.5)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.camera_alt, color: Color(0xFFEA580C), size: 28),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            l.hostAcceptSaleDialogBody, 
+                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   if (isLoading)
                     const Center(child: CircularProgressIndicator(color: Color(0xFFEA580C)))
@@ -279,7 +308,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFEA580C),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: widget.captureProofImage == null ? null : () async {
                             setLocalState(() => isLoading = true);
@@ -297,18 +326,18 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                         OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFF475569)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: () => Navigator.pop(ctx, ''),
-                          child: Text(l.hostAcceptSaleBtnSkip, style: const TextStyle(color: Color(0xFF94A3B8))),
+                          child: Text(l.hostAcceptSaleBtnSkip, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
                 ],
               ),
             );
-          }
+          },
         );
       },
     );
