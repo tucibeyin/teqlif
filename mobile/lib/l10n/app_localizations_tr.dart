@@ -1050,6 +1050,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get auctionAccepted => 'Teklif kabul edildi! Özet sohbete gönderildi.';
 
   @override
+  String get buyItNowAccepted => 'Hemen Al talebi onaylandı!';
+
+  @override
+  String get errorPhotoCapture => 'Fotoğraf çekilemedi.';
+
+  @override
   String get auctionEndTitle => 'Açık Artırmayı Bitir';
 
   @override

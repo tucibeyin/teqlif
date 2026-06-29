@@ -445,6 +445,8 @@
   "auctionCancelBtn": "İptal Et",
   "auctionContinueBtn": "Devam Et",
   "auctionAccepted": "Teklif kabul edildi! Özet sohbete gönderildi.",
+  "buyItNowAccepted": "Hemen Al talebi onaylandı!",
+  "errorPhotoCapture": "Fotoğraf çekilemedi.",
   "auctionEndTitle": "Açık Artırmayı Bitir",
   "auctionEndDesc": "Sonuç kaydedilecek ve artırma kapanacak.",
   "auctionEndBtn": "Bitir",

@@ -445,6 +445,8 @@
   "auctionCancelBtn": "إلغاء",
   "auctionContinueBtn": "متابعة",
   "auctionAccepted": "تم قبول العرض! تم إرسال الملخص إلى المحادثة.",
+  "buyItNowAccepted": "تمت الموافقة على طلب الشراء الآن!",
+  "errorPhotoCapture": "تعذر التقاط الصورة.",
   "auctionEndTitle": "إنهاء المزاد",
   "auctionEndDesc": "سيُحفظ النتيجة وسيُغلق المزاد.",
   "auctionEndBtn": "إنهاء",

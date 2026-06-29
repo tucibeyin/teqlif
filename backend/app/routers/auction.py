@@ -16,7 +16,7 @@ import asyncio
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut, BidOut, EndAuctionIn
+from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut, BidOut, EndAuctionIn, AcceptBidIn
 from app.utils.auth import get_current_user, decode_token
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
@@ -146,10 +146,12 @@ async def buy_it_now_reject(
 @router.post("/{stream_id}/accept", response_model=AuctionStateOut)
 async def accept_bid(
     stream_id: int,
+    data: Optional[AcceptBidIn] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await AuctionService(db).accept_bid(stream_id, current_user)
+    proof_image_url = data.proof_image_url if data else None
+    return await AuctionService(db).accept_bid(stream_id, current_user, proof_image_url=proof_image_url)
 
 
 # ── WebSocket endpoint ────────────────────────────────────────────────────────

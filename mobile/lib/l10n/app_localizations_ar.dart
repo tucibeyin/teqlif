@@ -1043,6 +1043,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get auctionAccepted => 'تم قبول العرض! تم إرسال الملخص إلى المحادثة.';
 
   @override
+  String get buyItNowAccepted => 'تمت الموافقة على طلب الشراء الآن!';
+
+  @override
+  String get errorPhotoCapture => 'تعذر التقاط الصورة.';
+
+  @override
   String get auctionEndTitle => 'إنهاء المزاد';
 
   @override

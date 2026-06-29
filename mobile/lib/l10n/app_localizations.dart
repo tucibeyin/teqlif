@@ -2080,6 +2080,18 @@ abstract class AppLocalizations {
   /// **'Teklif kabul edildi! Özet sohbete gönderildi.'**
   String get auctionAccepted;
 
+  /// No description provided for @buyItNowAccepted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hemen Al talebi onaylandı!'**
+  String get buyItNowAccepted;
+
+  /// No description provided for @errorPhotoCapture.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fotoğraf çekilemedi.'**
+  String get errorPhotoCapture;
+
   /// No description provided for @auctionEndTitle.
   ///
   /// In tr, this message translates to:

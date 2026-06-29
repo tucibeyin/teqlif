@@ -445,6 +445,8 @@
   "auctionCancelBtn": "Cancel",
   "auctionContinueBtn": "Continue",
   "auctionAccepted": "Bid accepted! Summary sent to chat.",
+  "buyItNowAccepted": "Buy It Now request approved!",
+  "errorPhotoCapture": "Could not capture photo.",
   "auctionEndTitle": "End Auction",
   "auctionEndDesc": "The result will be saved and the auction will close.",
   "auctionEndBtn": "End",

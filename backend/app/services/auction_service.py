@@ -969,7 +969,7 @@ class AuctionService:
         return state
 
     # ── Teklif Kabul ─────────────────────────────────────────────────────────
-    async def accept_bid(self, stream_id: int, user: User) -> dict:
+    async def accept_bid(self, stream_id: int, user: User, proof_image_url: Optional[str] = None) -> dict:
         from app.routers.notifications import push_notification
 
         await self._require_host(stream_id, user)
@@ -997,6 +997,13 @@ class AuctionService:
             f"💰 Kazanan fiyat: {fmt_price(final_price)}"
             f"{listing_line}"
         )
+        
+        listing: Listing | None = None
+        if listing_id:
+            listing_result = await self.db.execute(
+                select(Listing).where(Listing.id == listing_id).with_for_update()
+            )
+            listing = listing_result.scalar_one_or_none()
 
         auction = Auction(
             stream_id=stream_id,
@@ -1009,13 +1016,29 @@ class AuctionService:
             bid_count=int(data.get("bid_count", 0)),
             status="completed",
             ended_at=datetime.now(timezone.utc),
+            proof_image_url=proof_image_url,
         )
         self.db.add(auction)
+        await self.db.flush()
+
+        if listing:
+            listing.is_active = False
 
         winner_user_id: int | None = None
         if winner_id_str:
             try:
                 winner_user_id = int(winner_id_str)
+                
+                if listing_id:
+                    purchase = Purchase(
+                        buyer_id=winner_user_id,
+                        listing_id=listing_id,
+                        auction_id=auction.id,
+                        price=final_price,
+                        purchase_type="AUCTION_WIN",
+                    )
+                    self.db.add(purchase)
+                
                 dm = DirectMessage(
                     sender_id=user.id,
                     receiver_id=winner_user_id,

@@ -73,3 +73,6 @@ class AuctionStateOut(BaseModel):
 
 class EndAuctionIn(BaseModel):
     proof_image_url: Optional[str] = None
+
+class AcceptBidIn(BaseModel):
+    proof_image_url: Optional[str] = None

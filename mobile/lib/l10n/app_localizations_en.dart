@@ -1050,6 +1050,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auctionAccepted => 'Bid accepted! Summary sent to chat.';
 
   @override
+  String get buyItNowAccepted => 'Buy It Now request approved!';
+
+  @override
+  String get errorPhotoCapture => 'Could not capture photo.';
+
+  @override
   String get auctionEndTitle => 'End Auction';
 
   @override

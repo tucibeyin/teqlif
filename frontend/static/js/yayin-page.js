@@ -250,7 +250,10 @@
 
     // ── Otomatik Satış Kanıt Fotoğrafı Çekimi ────────────────────────────────
     async function _captureProofSilently() {
-        const video = document.getElementById('mainVideo');
+        let video = document.querySelector('.cohost-pip video');
+        if (!video || video.readyState < 2 || video.videoWidth === 0) {
+            video = document.getElementById('mainVideo');
+        }
         if (!video || video.readyState < 2 || video.videoWidth === 0) return null;
         try {
             const canvas = document.createElement('canvas');

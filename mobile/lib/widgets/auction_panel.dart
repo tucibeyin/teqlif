@@ -288,7 +288,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                               if (context.mounted) Navigator.pop(ctx, url ?? '');
                             } catch (e) {
                               setLocalState(() => isLoading = false);
-                              _setMsg('Fotoğraf çekilemedi.', error: true);
+                              _setMsg(l.errorPhotoCapture, error: true);
                             }
                           },
                           child: Text(l.hostAcceptSaleBtnCapture, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -1194,8 +1194,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     try {
       await AuctionService.acceptBuyItNow(widget.streamId, proofImageUrl: proofUrl);
       if (mounted) {
+        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Hemen Al talebi onaylandı!')),
+          SnackBar(content: Text(l.buyItNowAccepted)),
         );
       }
     } on AppException catch (e) {
