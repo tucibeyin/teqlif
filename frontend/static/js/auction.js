@@ -84,8 +84,12 @@ const Auction = (() => {
         return await apiFetch(`/auction/${_streamId}/buy-it-now`, { method: 'POST' });
     }
 
-    async function acceptBuyItNow() {
-        return await apiFetch(`/auction/${_streamId}/buy-it-now/accept`, { method: 'POST' });
+    async function acceptBuyItNow(proof_image_url = null) {
+        let options = { method: 'POST' };
+        if (proof_image_url) {
+            options.body = JSON.stringify({ proof_image_url });
+        }
+        return await apiFetch(`/auction/${_streamId}/buy-it-now/accept`, options);
     }
 
     async function rejectBuyItNow() {
@@ -100,8 +104,12 @@ const Auction = (() => {
         return await apiFetch(`/auction/${_streamId}/resume`, { method: 'POST' });
     }
 
-    async function endAuction() {
-        return await apiFetch(`/auction/${_streamId}/end`, { method: 'POST' });
+    async function endAuction(proof_image_url = null) {
+        let options = { method: 'POST' };
+        if (proof_image_url) {
+            options.body = JSON.stringify({ proof_image_url });
+        }
+        return await apiFetch(`/auction/${_streamId}/end`, options);
     }
 
     async function placeBid(amount) {

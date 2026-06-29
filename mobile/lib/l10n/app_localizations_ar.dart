@@ -2355,4 +2355,35 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get passwordResetSuccess =>
       'تمت إعادة تعيين كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.';
+
+  @override
+  String get settingsMyPurchases => 'مشترياتي';
+
+  @override
+  String get purchaseDetailTitle => 'تفاصيل الشراء';
+
+  @override
+  String get purchaseSeller => 'البائع';
+
+  @override
+  String get purchaseProofImage => 'صورة إثبات البيع';
+
+  @override
+  String get purchaseViewListing => 'عرض القائمة';
+
+  @override
+  String get purchaseViewSeller => 'الذهاب إلى ملف البائع';
+
+  @override
+  String get hostAcceptSaleDialogTitle => 'تأكيد البيع';
+
+  @override
+  String get hostAcceptSaleDialogBody =>
+      'يرجى عرض العنصر للكاميرا والتقاط صورة إثبات.';
+
+  @override
+  String get hostAcceptSaleBtnCapture => 'التقاط وتأكيد';
+
+  @override
+  String get hostAcceptSaleBtnSkip => 'تأكيد بدون صورة';
 }

@@ -37,6 +37,8 @@ class AuctionPanel extends ConsumerStatefulWidget {
   final String? myUsername;
   /// İhaleyi kazandığında tetiklenir (konfeti/titreşim için)
   final VoidCallback? onWin;
+  /// Kanıt görselini yakalayıp yüklemek için fonksiyon
+  final Future<String?> Function()? captureProofImage;
 
   const AuctionPanel({
     super.key,
@@ -49,6 +51,7 @@ class AuctionPanel extends ConsumerStatefulWidget {
     this.hostUserId,
     this.myUsername,
     this.onWin,
+    this.captureProofImage,
   });
 
   @override
@@ -237,6 +240,71 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     }
   }
 
+  Future<String?> _showProofCaptureDialog() async {
+    final l = AppLocalizations.of(context)!;
+    return showDialog<String?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        bool isLoading = false;
+        return StatefulBuilder(
+          builder: (ctx, setLocalState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1E293B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('📷 ${l.hostAcceptSaleDialogTitle}', 
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l.hostAcceptSaleDialogBody, 
+                    style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14)),
+                  const SizedBox(height: 24),
+                  if (isLoading)
+                    const Center(child: CircularProgressIndicator(color: Color(0xFFEA580C)))
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEA580C),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: widget.captureProofImage == null ? null : () async {
+                            setLocalState(() => isLoading = true);
+                            try {
+                              final url = await widget.captureProofImage!.call();
+                              if (context.mounted) Navigator.pop(ctx, url ?? '');
+                            } catch (e) {
+                              setLocalState(() => isLoading = false);
+                              _setMsg('Fotoğraf çekilemedi.', error: true);
+                            }
+                          },
+                          child: Text(l.hostAcceptSaleBtnCapture, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFF475569)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => Navigator.pop(ctx, ''),
+                          child: Text(l.hostAcceptSaleBtnSkip, style: const TextStyle(color: Color(0xFF94A3B8))),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
   Future<void> _endAuction() async {
     final l = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
@@ -265,8 +333,18 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       ),
     );
     if (ok != true) return;
+    
+    // Satış kanıtı popup'ı (eğer widget.captureProofImage sağlanmışsa)
+    String? proofUrl;
+    if (widget.captureProofImage != null) {
+      proofUrl = await _showProofCaptureDialog();
+      // Dialog dışına tıklanarak kapatılırsa iptal etmiş sayılır (barrierDismissible false ama önlem olarak)
+      if (proofUrl == null) return; 
+      if (proofUrl.isEmpty) proofUrl = null;
+    }
+
     try {
-      final newState = await AuctionService.endAuction(widget.streamId);
+      final newState = await AuctionService.endAuction(widget.streamId, proofImageUrl: proofUrl);
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
@@ -944,8 +1022,16 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       ),
     );
     if (ok == true) {
+      // Satış kanıtı popup'ı
+      String? proofUrl;
+      if (widget.captureProofImage != null) {
+        proofUrl = await _showProofCaptureDialog();
+        if (proofUrl == null) return;
+        if (proofUrl.isEmpty) proofUrl = null;
+      }
+
       try {
-        await AuctionService.acceptBuyItNow(widget.streamId);
+        await AuctionService.acceptBuyItNow(widget.streamId, proofImageUrl: proofUrl);
       } on AppException catch (e) {
         _setMsg(e.message, error: true);
       } catch (e, st) {

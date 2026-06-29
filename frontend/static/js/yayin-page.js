@@ -1224,17 +1224,19 @@
         const btn = document.getElementById('binReqModalAccept');
         btn.disabled = true;
         btn.textContent = 'İşleniyor...';
-        try {
-            await Auction.acceptBuyItNow();
-            _closeBuyItNowRequestModal();
-        } catch (e) {
-            console.error('[Auction] Hemen Al kabul hatası:', e);
-            if (window.Sentry) Sentry.captureException(e);
-            _closeBuyItNowRequestModal();
-            setAuctionMsg(e.detail || e.message || 'Hata oluştu', 'error');
-        } finally {
-            if (btn) { btn.disabled = false; btn.textContent = 'Onayla'; }
-        }
+        showProofCaptureDialog(async (proofUrl) => {
+            try {
+                await Auction.acceptBuyItNow(proofUrl);
+                _closeBuyItNowRequestModal();
+            } catch (e) {
+                console.error('[Auction] Hemen Al kabul hatası:', e);
+                if (window.Sentry) Sentry.captureException(e);
+                _closeBuyItNowRequestModal();
+                setAuctionMsg(e.detail || e.message || 'Hata oluştu', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Onayla'; }
+            }
+        });
     });
 
     document.getElementById('binRequestModal')?.addEventListener('click', (e) => {
@@ -1303,8 +1305,13 @@
     // HOST: Bitir
     document.getElementById('btnAuctionEnd')?.addEventListener('click', async () => {
         if (!confirm('Açık artırmayı bitirmek istediğinizden emin misiniz?')) return;
-        try { await Auction.endAuction(); setAuctionMsg('Açık artırma tamamlandı', ''); }
-        catch (e) { setAuctionMsg(e.message, 'error'); }
+        showProofCaptureDialog(async (proofUrl) => {
+            try { 
+                await Auction.endAuction(proofUrl); 
+                setAuctionMsg('Açık artırma tamamlandı', ''); 
+            }
+            catch (e) { setAuctionMsg(e.message, 'error'); }
+        });
     });
 
     // VIEWER: Preset teklif

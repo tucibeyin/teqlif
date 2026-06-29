@@ -73,4 +73,30 @@ class UploadService {
       thumbUrl: json['thumb_url'] as String?,
     );
   }
+
+  static Future<UploadResult> uploadBytes(Uint8List bytes, String filename) async {
+    final token = await StorageService.getToken();
+    if (token == null) throw Exception('Oturum açık değil');
+
+    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
+    req.headers['Authorization'] = 'Bearer $token';
+    req.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+
+    final streamed = await req.send();
+    final body = await streamed.stream.bytesToString();
+
+    if (streamed.statusCode != 200) {
+      String detail = body;
+      try {
+        detail = (jsonDecode(body) as Map)['detail']?.toString() ?? body;
+      } catch (_) {}
+      throw Exception('Yükleme başarısız: $detail');
+    }
+
+    final json = jsonDecode(body) as Map<String, dynamic>;
+    return (
+      url: json['url'] as String,
+      thumbUrl: json['thumb_url'] as String?,
+    );
+  }
 }

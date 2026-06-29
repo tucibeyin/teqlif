@@ -29,6 +29,7 @@ import 'create_listing_screen.dart';
 import 'pro_hub_screen.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
+import 'purchases_screen.dart';
 import 'account_info_screen.dart';
 import '../services/wallet_service.dart';
 
@@ -45,7 +46,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<dynamic> _purchases = [];
   bool _loading = true;
   bool _purchasesLoading = false;
-  int _selectedTab = 0; // 0 = İlanlar, 1 = Alışverişler
+  int _purchasesPage = 1;
+  bool _purchasesHasMore = false;
   int? _tuciBalance;
   List<dynamic> _tuciHistory = [];
 
@@ -648,25 +650,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // ── Sekme seçici: İlanlar / Alışverişler ──
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: Row(
-                  children: [
-                    _TabChip(label: AppLocalizations.of(context)!.tabListings, selected: _selectedTab == 0, onTap: () => setState(() => _selectedTab = 0)),
-                    const SizedBox(width: 8),
-                    _TabChip(label: AppLocalizations.of(context)!.tabPurchases, selected: _selectedTab == 1, onTap: () {
-                      setState(() => _selectedTab = 1);
-                      if (_purchases.isEmpty) _loadPurchases();
-                    }),
-                  ],
-                ),
-              ),
-            ),
-
-            // ── Arama & Kategori filtresi (sadece İlanlar sekmesinde) ──
-            if (_selectedTab == 0 && (!_loading || _listings.isNotEmpty))
+            // ── Arama & Kategori filtresi ──
+            if (!_loading || _listings.isNotEmpty)
               SliverToBoxAdapter(
                 child: ListingFilter(
                   searchCtrl: _searchCtrl,
@@ -683,41 +668,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
 
-            // ── Alışverişler listesi ──
-            if (_selectedTab == 1) ...[
-              if (_purchasesLoading && _purchases.isEmpty)
-                const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_purchases.isEmpty)
-                SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.shopping_bag_outlined, size: 52, color: Color(0xFFD1D5DB)),
-                        const SizedBox(height: 12),
-                        Text(AppLocalizations.of(context)!.purchasesEmpty, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
-                        const SizedBox(height: 4),
-                        Text(AppLocalizations.of(context)!.purchasesEmptyHint, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.all(12),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => _PurchaseItem(purchase: _purchases[i]),
-                      childCount: _purchases.length,
-                    ),
-                  ),
-                ),
-            ],
-
             // ── İlanlar grid ──
-            if (_selectedTab == 0 && _loading)
+            if (_loading)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 sliver: SliverGrid(
@@ -734,7 +686,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               )
-            else if (_selectedTab == 0 && _listings.isEmpty)
+            else if (_listings.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Builder(
@@ -773,7 +725,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
               )
-            else if (_selectedTab == 0 && _filteredListings.isEmpty)
+            else if (_filteredListings.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
@@ -798,7 +750,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               )
-            else if (_selectedTab == 0)
+            else
               SliverGrid(
                 delegate: SliverChildBuilderDelegate(
                   (ctx, i) => _ListingGridItem(
@@ -821,118 +773,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// ── Tab seçici chip ────────────────────────────────────────────────────────
-class _TabChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const _TabChip({required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? kPrimary : AppColors.surfaceVariant(context),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : AppColors.textSecondary(context),
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Satın alma geçmişi list item ───────────────────────────────────────────
-class _PurchaseItem extends StatelessWidget {
-  final Map<String, dynamic> purchase;
-  const _PurchaseItem({required this.purchase});
-
-  @override
-  Widget build(BuildContext context) {
-    final imgRaw = purchase['thumbnail_url'] as String? ?? purchase['image_url'] as String?;
-    final img = imgRaw != null ? imgUrl(imgRaw) : null;
-    final price = purchase['final_price'];
-    final priceStr = price != null ? '${(price as num).toInt()} ₺' : '';
-    final date = purchase['ended_at'] as String?;
-    String dateStr = '';
-    if (date != null) {
-      try {
-        final dt = DateTime.parse(date).toLocal();
-        dateStr = '${dt.day}.${dt.month}.${dt.year}';
-      } catch (_) {}
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5)],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
-            child: img != null
-                ? CachedNetworkImage(imageUrl: img, width: 72, height: 72, fit: BoxFit.cover)
-                : Container(
-                    width: 72,
-                    height: 72,
-                    color: AppColors.surfaceVariant(context),
-                    child: Icon(Icons.shopping_bag_outlined, color: AppColors.border(context)),
-                  ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  purchase['item_name'] as String? ?? '',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (purchase['category'] != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    purchase['category'] as String,
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
-                  ),
-                ],
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    if (priceStr.isNotEmpty)
-                      Text(priceStr, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kPrimary)),
-                    const Spacer(),
-                    if (dateStr.isNotEmpty)
-                      Text(dateStr, style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Arama + Kategori filtresi widget'ı (ProfileScreen & PublicProfileScreen) ──
 
-class ListingFilter extends StatelessWidget {
+class ListingFilter extends StatefulWidget {
   final TextEditingController searchCtrl;
   final String searchQuery;
   final String? selectedCategory;
@@ -942,6 +785,7 @@ class ListingFilter extends StatelessWidget {
   final ValueChanged<String?> onCategorySelected;
 
   const ListingFilter({
+    super.key,
     required this.searchCtrl,
     required this.searchQuery,
     required this.selectedCategory,
@@ -952,70 +796,109 @@ class ListingFilter extends StatelessWidget {
   });
 
   @override
+  State<ListingFilter> createState() => _ListingFilterState();
+}
+
+class _ListingFilterState extends State<ListingFilter> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-          child: TextField(
-            controller: searchCtrl,
-            onChanged: onSearchChanged,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: 'İlan başlığı ara...',
-              hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary(context)),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: onSearchCleared,
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.border(context)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.border(context)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: kPrimary),
-              ),
-              filled: true,
-              fillColor: AppColors.surface(context),
-            ),
-          ),
-        ),
-        if (categories.isNotEmpty)
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
               children: [
-                _CategoryChip(
-                  label: 'Tümü',
-                  selected: selectedCategory == null,
-                  onTap: () => onCategorySelected(null),
+                const Icon(Icons.filter_list, size: 20, color: Colors.white70),
+                const SizedBox(width: 8),
+                const Text(
+                  'Filtre',
+                  style: TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w600),
                 ),
-                ...categories.map((cat) => _CategoryChip(
-                      label: cat,
-                      selected: selectedCategory == cat,
-                      onTap: () => onCategorySelected(cat),
-                    )),
+                const Spacer(),
+                Icon(
+                  _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  color: Colors.white70,
+                ),
               ],
             ),
           ),
-        const SizedBox(height: 6),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox(height: 0, width: double.infinity),
+          secondChild: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: TextField(
+                  controller: widget.searchCtrl,
+                  onChanged: widget.onSearchChanged,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'İlan başlığı ara...',
+                    hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary(context)),
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: widget.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: widget.onSearchCleared,
+                          )
+                        : null,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.border(context)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.border(context)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: kPrimary),
+                    ),
+                    filled: true,
+                    fillColor: AppColors.surface(context),
+                  ),
+                ),
+              ),
+              if (widget.categories.isNotEmpty)
+                SizedBox(
+                  height: 36,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      _CategoryChip(
+                        label: 'Tümü',
+                        selected: widget.selectedCategory == null,
+                        onTap: () => widget.onCategorySelected(null),
+                      ),
+                      ...widget.categories.map((cat) => _CategoryChip(
+                            label: cat,
+                            selected: widget.selectedCategory == cat,
+                            onTap: () => widget.onCategorySelected(cat),
+                          )),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+            ],
+          ),
+          crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 200),
+        ),
       ],
     );
   }
 }
+
 
 class _CategoryChip extends StatelessWidget {
   final String label;
@@ -1641,6 +1524,12 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 label: l.profileFavorites,
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const _FavoritesScreen())),
+              ),
+              _SettingsTile(
+                icon: Icons.shopping_bag_outlined,
+                label: l.settingsMyPurchases,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const PurchasesScreen())),
               ),
             ],
           ),

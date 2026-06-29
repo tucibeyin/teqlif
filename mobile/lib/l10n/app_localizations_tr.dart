@@ -2375,4 +2375,35 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get passwordResetSuccess =>
       'Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.';
+
+  @override
+  String get settingsMyPurchases => 'Alışverişlerim';
+
+  @override
+  String get purchaseDetailTitle => 'Alışveriş Detayı';
+
+  @override
+  String get purchaseSeller => 'Satıcı';
+
+  @override
+  String get purchaseProofImage => 'Satış Onay Görseli';
+
+  @override
+  String get purchaseViewListing => 'İlanı Görüntüle';
+
+  @override
+  String get purchaseViewSeller => 'Satıcı Profiline Git';
+
+  @override
+  String get hostAcceptSaleDialogTitle => 'Satışı Onaylıyorsunuz';
+
+  @override
+  String get hostAcceptSaleDialogBody =>
+      'Lütfen sattığınız ürünü kameraya gösterin ve onay fotoğrafını çekin.';
+
+  @override
+  String get hostAcceptSaleBtnCapture => 'Çek ve Onayla';
+
+  @override
+  String get hostAcceptSaleBtnSkip => 'Çekmeden Onayla';
 }

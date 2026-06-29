@@ -1205,5 +1205,15 @@
   "enterResetCode": "أدخل الرمز المكون من 6 أرقام المرسل إلى بريدك الإلكتروني",
   "newPassword": "كلمة المرور الجديدة",
   "newPasswordConfirm": "تأكيد كلمة المرور الجديدة",
-  "passwordResetSuccess": "تمت إعادة تعيين كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن."
+  "passwordResetSuccess": "تمت إعادة تعيين كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.",
+  "settingsMyPurchases": "مشترياتي",
+  "purchaseDetailTitle": "تفاصيل الشراء",
+  "purchaseSeller": "البائع",
+  "purchaseProofImage": "صورة إثبات البيع",
+  "purchaseViewListing": "عرض القائمة",
+  "purchaseViewSeller": "الذهاب إلى ملف البائع",
+  "hostAcceptSaleDialogTitle": "تأكيد البيع",
+  "hostAcceptSaleDialogBody": "يرجى عرض العنصر للكاميرا والتقاط صورة إثبات.",
+  "hostAcceptSaleBtnCapture": "التقاط وتأكيد",
+  "hostAcceptSaleBtnSkip": "تأكيد بدون صورة"
 }

@@ -54,11 +54,13 @@ class AuctionService {
     );
   }
 
-  static Future<void> acceptBuyItNow(int streamId) async {
+  static Future<void> acceptBuyItNow(int streamId, {String? proofImageUrl}) async {
+    final bodyStr = proofImageUrl != null ? jsonEncode({'proof_image_url': proofImageUrl}) : null;
     await apiCall(
       () async => http.post(
         Uri.parse('$kBaseUrl/auction/$streamId/buy-it-now/accept'),
         headers: await _headers(),
+        body: bodyStr,
       ),
     );
   }
@@ -86,9 +88,14 @@ class AuctionService {
     return AuctionState.fromJson(body);
   }
 
-  static Future<AuctionState> endAuction(int streamId) async {
+  static Future<AuctionState> endAuction(int streamId, {String? proofImageUrl}) async {
+    final bodyStr = proofImageUrl != null ? jsonEncode({'proof_image_url': proofImageUrl}) : null;
     final body = await apiCall(
-      () async => http.post(Uri.parse('$kBaseUrl/auction/$streamId/end'), headers: await _headers()),
+      () async => http.post(
+        Uri.parse('$kBaseUrl/auction/$streamId/end'), 
+        headers: await _headers(),
+        body: bodyStr,
+      ),
     );
     return AuctionState.fromJson(body);
   }

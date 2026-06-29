@@ -11,11 +11,12 @@ app.services.auction_service.AuctionService'e taşınmıştır.
 """
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
 import asyncio
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut, BidOut
+from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut, BidOut, EndAuctionIn
 from app.utils.auth import get_current_user, decode_token
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
@@ -87,10 +88,12 @@ async def resume_auction(
 @router.post("/{stream_id}/end", response_model=AuctionStateOut)
 async def end_auction(
     stream_id: int,
+    data: Optional[EndAuctionIn] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await AuctionService(db).end_auction(stream_id, current_user)
+    proof_image_url = data.proof_image_url if data else None
+    return await AuctionService(db).end_auction(stream_id, current_user, proof_image_url=proof_image_url)
 
 
 @router.post("/{stream_id}/bid", response_model=AuctionStateOut)
@@ -121,11 +124,13 @@ async def buy_it_now_request(
 @router.post("/{stream_id}/buy-it-now/accept", response_model=AuctionStateOut)
 async def buy_it_now_accept(
     stream_id: int,
+    data: Optional[EndAuctionIn] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Host Hemen Al talebini kabul eder. Satın alma tamamlanır."""
-    return await AuctionService(db).accept_buy_it_now(stream_id, current_user)
+    proof_image_url = data.proof_image_url if data else None
+    return await AuctionService(db).accept_buy_it_now(stream_id, current_user, proof_image_url=proof_image_url)
 
 
 @router.post("/{stream_id}/buy-it-now/reject", response_model=AuctionStateOut)

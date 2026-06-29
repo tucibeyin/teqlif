@@ -4461,6 +4461,66 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.'**
   String get passwordResetSuccess;
+
+  /// No description provided for @settingsMyPurchases.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alışverişlerim'**
+  String get settingsMyPurchases;
+
+  /// No description provided for @purchaseDetailTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alışveriş Detayı'**
+  String get purchaseDetailTitle;
+
+  /// No description provided for @purchaseSeller.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satıcı'**
+  String get purchaseSeller;
+
+  /// No description provided for @purchaseProofImage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış Onay Görseli'**
+  String get purchaseProofImage;
+
+  /// No description provided for @purchaseViewListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanı Görüntüle'**
+  String get purchaseViewListing;
+
+  /// No description provided for @purchaseViewSeller.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satıcı Profiline Git'**
+  String get purchaseViewSeller;
+
+  /// No description provided for @hostAcceptSaleDialogTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satışı Onaylıyorsunuz'**
+  String get hostAcceptSaleDialogTitle;
+
+  /// No description provided for @hostAcceptSaleDialogBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Lütfen sattığınız ürünü kameraya gösterin ve onay fotoğrafını çekin.'**
+  String get hostAcceptSaleDialogBody;
+
+  /// No description provided for @hostAcceptSaleBtnCapture.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çek ve Onayla'**
+  String get hostAcceptSaleBtnCapture;
+
+  /// No description provided for @hostAcceptSaleBtnSkip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çekmeden Onayla'**
+  String get hostAcceptSaleBtnSkip;
 }
 
 class _AppLocalizationsDelegate

@@ -23,3 +23,4 @@ class Auction(Base):
     status: Mapped[str] = mapped_column(String(20), default="completed")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    proof_image_url: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)

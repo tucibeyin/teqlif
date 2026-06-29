@@ -1898,7 +1898,36 @@
         </div>
     </div>
 
-    <script src="/static/js/yayin-page.js?v=14"></script>
+    <!-- Satış Kanıt Görseli Modalı -->
+    <div id="proofCaptureModal" style="
+        display:none; position:fixed; inset:0; z-index:10000;
+        background:rgba(0,0,0,0.4);
+        align-items:flex-end; justify-content:center; padding-bottom: 20px;">
+        <div style="
+            background:rgba(30,41,59,0.85); backdrop-filter:blur(10px); border:1px solid #334155; border-radius:16px;
+            padding:20px; max-width:340px; width:90%; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+            <div style="font-size:1.05rem; font-weight:700; color:#fff; margin-bottom:12px;">📷 Satışı Onaylıyorsunuz</div>
+            <p style="color:#cbd5e1; font-size:0.85rem; margin:0 0 16px; line-height:1.4;">
+                Lütfen sattığınız ürünü kameraya gösterin ve onay fotoğrafını çekin.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button id="proofCaptureBtn" style="
+                    padding:12px; border:none; background:#ea580c;
+                    color:#fff; border-radius:10px; cursor:pointer; font-size:0.9rem; font-weight:700;"
+                    data-track-id="yayin-modal-btn-cek-ve-onayla">
+                    Çek ve Onayla
+                </button>
+                <button id="proofSkipBtn" style="
+                    padding:10px; border:1px solid #475569; background:transparent;
+                    color:#94a3b8; border-radius:10px; cursor:pointer; font-size:0.85rem; font-weight:600;"
+                    data-track-id="yayin-modal-btn-cekmeden-onayla">
+                    Çekmeden Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/yayin-page.js?v=15"></script>
 </body>
 
 </html>

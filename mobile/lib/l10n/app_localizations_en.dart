@@ -2374,4 +2374,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get passwordResetSuccess =>
       'Your password has been successfully reset. You can now login.';
+
+  @override
+  String get settingsMyPurchases => 'My Purchases';
+
+  @override
+  String get purchaseDetailTitle => 'Purchase Detail';
+
+  @override
+  String get purchaseSeller => 'Seller';
+
+  @override
+  String get purchaseProofImage => 'Sale Proof Image';
+
+  @override
+  String get purchaseViewListing => 'View Listing';
+
+  @override
+  String get purchaseViewSeller => 'Go to Seller Profile';
+
+  @override
+  String get hostAcceptSaleDialogTitle => 'Confirming Sale';
+
+  @override
+  String get hostAcceptSaleDialogBody =>
+      'Please show the item to the camera and take a proof photo.';
+
+  @override
+  String get hostAcceptSaleBtnCapture => 'Capture & Confirm';
+
+  @override
+  String get hostAcceptSaleBtnSkip => 'Confirm Without Photo';
 }

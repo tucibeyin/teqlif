@@ -1205,5 +1205,15 @@
   "enterResetCode": "E-postanıza gelen 6 haneli kodu girin",
   "newPassword": "Yeni Şifre",
   "newPasswordConfirm": "Yeni Şifre (Tekrar)",
-  "passwordResetSuccess": "Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz."
+  "passwordResetSuccess": "Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.",
+  "settingsMyPurchases": "Alışverişlerim",
+  "purchaseDetailTitle": "Alışveriş Detayı",
+  "purchaseSeller": "Satıcı",
+  "purchaseProofImage": "Satış Onay Görseli",
+  "purchaseViewListing": "İlanı Görüntüle",
+  "purchaseViewSeller": "Satıcı Profiline Git",
+  "hostAcceptSaleDialogTitle": "Satışı Onaylıyorsunuz",
+  "hostAcceptSaleDialogBody": "Lütfen sattığınız ürünü kameraya gösterin ve onay fotoğrafını çekin.",
+  "hostAcceptSaleBtnCapture": "Çek ve Onayla",
+  "hostAcceptSaleBtnSkip": "Çekmeden Onayla"
 }

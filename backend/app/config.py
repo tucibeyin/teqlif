@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    upload_dir: str = "/var/www/teqlif/uploads"
+    upload_dir: str = "/var/www/teqlif.com/uploads"
     brevo_api_key: str = ""
     brevo_sender_email: str = "noreply@teqlif.com"
     brevo_sender_name: str = "teqlif"

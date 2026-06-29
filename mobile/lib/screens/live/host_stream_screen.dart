@@ -19,6 +19,7 @@ import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 import '../../services/moderation_service.dart';
 import '../../services/auction_service.dart';
+import '../../services/upload_service.dart';
 import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/gift_hud.dart';
 import '../../widgets/live/host_top_bar.dart';
@@ -712,6 +713,28 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     }
   }
 
+  Future<String?> _captureProofImageHelper() async {
+    if (!mounted || _localVideoTrack == null) return null;
+    try {
+      final boundary =
+          _videoKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final image = await boundary.toImage(pixelRatio: 1.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.jpeg);
+      if (byteData == null) return null;
+      
+      final result = await UploadService.uploadBytes(
+        byteData.buffer.asUint8List(),
+        'proof.jpg',
+      );
+      return result.url;
+    } catch (e, st) {
+      _log.captureException(e,
+          stackTrace: st, tag: 'HostStream.proofCapture', shouldCapture: true);
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -1057,6 +1080,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                         isHost: true,
                         onBidAdded: _onBidAdded,
                         onAuctionReset: _onAuctionReset,
+                        captureProofImage: _captureProofImageHelper,
                       ),
                     const SizedBox(height: 4),
                   ],

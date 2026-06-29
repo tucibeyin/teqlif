@@ -1205,5 +1205,15 @@
   "enterResetCode": "Enter the 6-digit code sent to your email",
   "newPassword": "New Password",
   "newPasswordConfirm": "Confirm New Password",
-  "passwordResetSuccess": "Your password has been successfully reset. You can now login."
+  "passwordResetSuccess": "Your password has been successfully reset. You can now login.",
+  "settingsMyPurchases": "My Purchases",
+  "purchaseDetailTitle": "Purchase Detail",
+  "purchaseSeller": "Seller",
+  "purchaseProofImage": "Sale Proof Image",
+  "purchaseViewListing": "View Listing",
+  "purchaseViewSeller": "Go to Seller Profile",
+  "hostAcceptSaleDialogTitle": "Confirming Sale",
+  "hostAcceptSaleDialogBody": "Please show the item to the camera and take a proof photo.",
+  "hostAcceptSaleBtnCapture": "Capture & Confirm",
+  "hostAcceptSaleBtnSkip": "Confirm Without Photo"
 }

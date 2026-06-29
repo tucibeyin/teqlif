@@ -70,3 +70,6 @@ class AuctionStateOut(BaseModel):
     bid_count: int = 0
     listing_id: Optional[int] = None
     bin_buyer_username: Optional[str] = None
+
+class EndAuctionIn(BaseModel):
+    proof_image_url: Optional[str] = None

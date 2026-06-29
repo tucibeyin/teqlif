@@ -482,7 +482,7 @@ class AuctionService:
         return state
 
     # ── Bitir ────────────────────────────────────────────────────────────────
-    async def end_auction(self, stream_id: int, user: Optional[User] = None, force_system: bool = False) -> dict:
+    async def end_auction(self, stream_id: int, user: Optional[User] = None, force_system: bool = False, proof_image_url: Optional[str] = None) -> dict:
         if not force_system:
             if not user:
                 from app.core.exceptions import ForbiddenException
@@ -513,6 +513,7 @@ class AuctionService:
             bid_count=int(data.get("bid_count", 0)),
             status="completed",
             ended_at=datetime.now(timezone.utc),
+            proof_image_url=proof_image_url,
         )
         self.db.add(auction)
         try:
@@ -769,7 +770,7 @@ class AuctionService:
         return {"detail": "Talebiniz iletildi, host onayı bekleniyor"}
 
     # ── Hemen Al Kabul ───────────────────────────────────────────────────────
-    async def accept_buy_it_now(self, stream_id: int, user: User) -> dict:
+    async def accept_buy_it_now(self, stream_id: int, user: User, proof_image_url: Optional[str] = None) -> dict:
         from app.routers.notifications import push_notification
 
         await self._require_host(stream_id, user)
@@ -831,6 +832,7 @@ class AuctionService:
                 status="completed",
                 is_bought_it_now=True,
                 ended_at=datetime.now(timezone.utc),
+                proof_image_url=proof_image_url,
             )
             self.db.add(auction)
             await self.db.flush()

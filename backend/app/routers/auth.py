@@ -334,24 +334,33 @@ async def my_purchases(
     """Kullanıcının açık artırmada kazandığı ürünlerin geçmişi (son 50 kayıt)."""
     from app.models.auction import Auction
     from app.models.listing import Listing as ListingModel
+    from app.models.stream import LiveStream
+    from app.models.user import User
 
     result = await db.execute(
         select(
             Auction.id,
             Auction.item_name,
+            Auction.start_price,
             Auction.final_price,
             Auction.is_bought_it_now,
             Auction.bid_count,
+            Auction.started_at,
             Auction.ended_at,
             Auction.listing_id,
+            Auction.stream_id,
+            Auction.proof_image_url,
             ListingModel.image_url,
             ListingModel.category,
             ListingModel.thumbnail_url,
+            User.username.label("seller_username"),
         )
         .join(ListingModel, ListingModel.id == Auction.listing_id, isouter=True)
+        .join(LiveStream, LiveStream.id == Auction.stream_id, isouter=True)
+        .join(User, User.id == LiveStream.host_id, isouter=True)
         .where(
             Auction.winner_id == current_user.id,
-            Auction.status == "ended",
+            Auction.status == "completed",
         )
         .order_by(Auction.ended_at.desc())
         .limit(50)
@@ -360,15 +369,20 @@ async def my_purchases(
     return [
         {
             "auction_id": r.id,
+            "stream_id": r.stream_id,
             "item_name": r.item_name,
+            "start_price": r.start_price,
             "final_price": r.final_price,
             "is_bought_it_now": r.is_bought_it_now,
             "bid_count": r.bid_count,
+            "started_at": r.started_at.isoformat() if r.started_at else None,
             "ended_at": r.ended_at.isoformat() if r.ended_at else None,
             "listing_id": r.listing_id,
             "image_url": r.image_url,
             "thumbnail_url": r.thumbnail_url,
+            "proof_image_url": r.proof_image_url,
             "category": r.category,
+            "seller_username": r.seller_username,
         }
         for r in rows
     ]
