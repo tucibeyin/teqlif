@@ -262,8 +262,12 @@ class StreamConnectionManager with WidgetsBindingObserver {
 
   void _deactivateSession(int id) {
     final session = _sessions[id];
-    if (session != null && session.state != SessionState.none) {
+    if (session != null) {
       debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] Deactivating stream: $id');
+      
+      // state kontrolü (session.state != SessionState.none) YAPMIYORUZ!
+      // Çünkü LiveKit RoomDisconnectedEvent zaten none yapmış olabilir,
+      // yine de room'u null yapıp UI'ın Loading veya Overlay'a düşmesini sağlamalıyız.
       session.state = SessionState.none;
       if (session.isConnected) {
         StreamService.leaveStream(id).catchError((_) {});
@@ -302,18 +306,8 @@ class StreamConnectionManager with WidgetsBindingObserver {
     _connectionLocks.add(streamId);
     
     try {
-      // room.disconnect() tetiklendiğinde listener isConnected = false yapacak.
-      await session.room!.disconnect();
-      await session.room!.connect(
-        newToken.livekitUrl,
-        newToken.token,
-        connectOptions: const ConnectOptions(autoSubscribe: true),
-      );
-
-      // Yeniden bağlandığımız için state'i onarmalıyız ki updateViewport bizi tekrar viewer yapmasın
-      session.isConnected = true;
-      session.state = SessionState.active;
-
+      // Best Practice: Backend yetkiyi güncellediği için disconnect/connect yapmamıza gerek yok!
+      // LiveKit SDK arkada yetki güncellemesini alacak, biz direkt kamerayı açabiliriz.
       await session.room!.localParticipant?.setCameraEnabled(true);
       await session.room!.localParticipant?.setMicrophoneEnabled(true);
 

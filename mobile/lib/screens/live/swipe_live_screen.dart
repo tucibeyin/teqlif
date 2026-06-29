@@ -394,6 +394,10 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   void _onStreamEnded(int streamId) {
     setState(() {
+      final session = _connectionManager.getSession(streamId);
+      session.streamEnded = true;
+      session.update();
+      _feedManager.markStreamEnded(streamId);
       _polledEndedStreamId = streamId;
     });
   }
@@ -538,7 +542,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 stream: stream,
                 session: _connectionManager.getSession(stream.id),
                 isActive: i == _currentPage,
-                isEnded: _polledEndedStreamId == stream.id,
+                isEnded: _feedManager.isStreamEnded(stream.id),
                 onStreamEnded: () => _onStreamEnded(stream.id),
                 onPipActionChanged: (cb) { _pipAction = cb; },
                 onEngagementEvent: (type) => _recordEngagementEvent(stream, type),

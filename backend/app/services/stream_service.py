@@ -690,16 +690,42 @@ class StreamService:
 
         await redis.delete(invite_key)
 
-        token = make_livekit_token(stream.room_name, current_user, can_publish=True)
+        from app.config import settings
+        from livekit.api.room_service import RoomService, UpdateParticipantRequest
+        from livekit.protocol.models import ParticipantPermission
+        
+        svc = RoomService(
+            settings.livekit_url,
+            settings.livekit_api_key,
+            settings.livekit_api_secret
+        )
+        try:
+            req = UpdateParticipantRequest(
+                room=stream.room_name,
+                identity=str(current_user.id),
+                permission=ParticipantPermission(
+                    can_publish=True,
+                    can_subscribe=True,
+                    can_publish_data=True
+                )
+            )
+            await svc.update_participant(req)
+        except Exception as e:
+            logger.error("[COHOST] Yetki yükseltilirken hata: %s", str(e))
+        finally:
+            await svc.close()
 
         await publish_chat(stream_id, {
             "type": WS.COHOST_ACCEPTED,
             "username": current_user.username,
         })
         logger.info(
-            "[COHOST] Davet kabul edildi | stream_id=%s user=%s",
+            "[COHOST] Davet kabul edildi ve yetki anlık yükseltildi | stream_id=%s user=%s",
             stream_id, current_user.username,
         )
+        # Token döndürmemize gerek yok ama mobil taraf geriye StreamTokenOut bekliyorsa boş veya eski token dönebiliriz.
+        # En temizi, mevcut token yapısını bozmamak için can_publish=True ile token döndürebiliriz ama mobil taraf bunu kullanıp reconnect yapmayacak.
+        token = make_livekit_token(stream.room_name, current_user, can_publish=True)
         return StreamTokenOut(
             stream_id=stream.id,
             room_name=stream.room_name,
@@ -724,12 +750,42 @@ class StreamService:
         if stream.host_id != host.id:
             raise ForbiddenException("Sadece yayın sahibi sahne konuğunu kaldırabilir")
 
+        from app.config import settings
+        from livekit.api.room_service import RoomService, UpdateParticipantRequest
+        from livekit.protocol.models import ParticipantPermission
+        from app.models.user import User as UserModel
+        
+        target_user_result = await self.db.execute(select(UserModel).where(UserModel.username == target_username))
+        target_user = target_user_result.scalar_one_or_none()
+        
+        if target_user:
+            svc = RoomService(
+                settings.livekit_url,
+                settings.livekit_api_key,
+                settings.livekit_api_secret
+            )
+            try:
+                req = UpdateParticipantRequest(
+                    room=stream.room_name,
+                    identity=str(target_user.id),
+                    permission=ParticipantPermission(
+                        can_publish=False,
+                        can_subscribe=True,
+                        can_publish_data=False
+                    )
+                )
+                await svc.update_participant(req)
+            except Exception as e:
+                logger.error("[COHOST] Konuk yetkisi düşürülürken hata: %s", str(e))
+            finally:
+                await svc.close()
+
         await publish_chat(stream_id, {
             "type": WS.COHOST_REMOVED,
             "target_username": target_username,
         })
         logger.info(
-            "[COHOST] Konuk sahneden kaldırıldı | stream_id=%s host=%s target=%s",
+            "[COHOST] Konuk yetkisi düşürüldü ve sahneden kaldırıldı | stream_id=%s host=%s target=%s",
             stream_id, host.username, target_username,
         )
         return {"message": f"@{target_username} sahneden kaldırıldı"}
@@ -743,6 +799,31 @@ class StreamService:
         stream = result.scalar_one_or_none()
         if not stream or not stream.is_live:
             raise NotFoundException("Aktif yayın bulunamadı")
+
+        from app.config import settings
+        from livekit.api.room_service import RoomService, UpdateParticipantRequest
+        from livekit.protocol.models import ParticipantPermission
+
+        svc = RoomService(
+            settings.livekit_url,
+            settings.livekit_api_key,
+            settings.livekit_api_secret
+        )
+        try:
+            req = UpdateParticipantRequest(
+                room=stream.room_name,
+                identity=str(current_user.id),
+                permission=ParticipantPermission(
+                    can_publish=False,
+                    can_subscribe=True,
+                    can_publish_data=False
+                )
+            )
+            await svc.update_participant(req)
+        except Exception as e:
+            logger.error("[COHOST] Konuk yetkisi düşürülürken hata: %s", str(e))
+        finally:
+            await svc.close()
 
         await publish_chat(stream_id, {
             "type": WS.COHOST_REMOVED,
