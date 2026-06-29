@@ -1541,6 +1541,8 @@
                     <button class="btn btn-slate" id="btnAuctionResume" style="display:none;" data-track-id="yayin-btn-acik-artirma-devam">▶ Devam</button>
                     <button class="btn btn-success" id="btnAuctionAccept" style="display:none;" data-track-id="yayin-btn-acik-artirma-kabul-et">✅ Kabul Et</button>
                     <button class="btn btn-danger" id="btnAuctionEnd" style="display:none;" data-track-id="yayin-btn-acik-artirma-bitir">⏹ Bitir</button>
+                    <button class="btn btn-danger" id="btnBuyItNowRejectInline" style="display:none;" data-track-id="yayin-btn-hemen-al-reddet-inline">❌ Reddet</button>
+                    <button class="btn btn-success" id="btnBuyItNowAcceptInline" style="display:none;" data-track-id="yayin-btn-hemen-al-onayla-inline">✅ Onayla</button>
                 </div>
 
                 <!-- VIEWER: teklif butonları -->
@@ -1552,6 +1554,11 @@
                     <input type="text" inputmode="numeric" id="customBidInput" placeholder="Özel (₺)" autocomplete="off" data-track-id="yayin-input-ozel-teklif">
                     <button class="btn btn-green" id="btnCustomBid" data-track-id="yayin-btn-ozel-teklif-ver">Teklif Ver</button>
                     <button class="btn btn-orange" id="btnBuyItNow" style="display:none;" data-track-id="yayin-btn-hemen-al">⚡ Hemen Al</button>
+                </div>
+                
+                <!-- Viewer Pending Banner -->
+                <div id="viewerPendingBanner" style="display:none; padding:10px; background:rgba(234, 88, 12, 0.2); border:1px solid #ea580c; border-radius:8px; color:#ea580c; text-align:center; margin-top:10px; font-weight:700;">
+                    ⏳ Başka bir kullanıcı ile Hemen Al işlemi yapılıyor.
                 </div>
 
                 <!-- SATILDI banner (Hemen Al ile kapanınca görünür) -->
@@ -1730,54 +1737,11 @@
     <script src="/static/js/auth.js?v=5"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/confetti.min.js"></script>
-    <script src="/static/js/stream.js?v=7"></script>
-    <script src="/static/js/auction.js?v=9"></script>
+    <script src="/static/js/stream.js?v=9"></script>
+    <script src="/static/js/auction.js?v=11"></script>
     <script src="/static/js/chat.js?v=10"></script>
 
-    <!-- Host: Hemen Al Talep Onay Modalı -->
-    <div id="binRequestModal" style="
-        display:none; position:fixed; inset:0; z-index:9999;
-        background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
-        align-items:center; justify-content:center;">
-        <div style="
-            background:#1e293b; border:1px solid #334155; border-radius:16px;
-            padding:28px 24px; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
-            <div style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:18px;">⚡ Hemen Al Talebi</div>
-            <div style="background:#0f172a; border-radius:12px; padding:16px; margin-bottom:20px; display:flex; flex-direction:column; gap:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="color:#64748b; font-size:0.78rem;">Ürün</span>
-                    <span id="binReqModalItem" style="color:#e2e8f0; font-weight:600; font-size:0.88rem; text-align:right; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</span>
-                </div>
-                <div style="height:1px; background:#1e293b;"></div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="color:#64748b; font-size:0.78rem;">Hemen Al Fiyatı</span>
-                    <span id="binReqModalPrice" style="color:#f97316; font-weight:800; font-size:1.05rem;">—</span>
-                </div>
-                <div style="height:1px; background:#1e293b;"></div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="color:#64748b; font-size:0.78rem;">Talep Eden</span>
-                    <span id="binReqModalBuyer" style="color:#e2e8f0; font-weight:600; font-size:0.88rem;">—</span>
-                </div>
-            </div>
-            <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 20px; line-height:1.5;">
-                Bu kişinin Hemen Al talebini onaylıyor musun? Artırma sona erecek.
-            </p>
-            <div style="display:flex; gap:10px;">
-                <button id="binReqModalReject" style="
-                    flex:1; padding:11px; border:1px solid #ef4444; background:transparent;
-                    color:#f87171; border-radius:10px; cursor:pointer; font-size:0.88rem; font-weight:600;"
-                    data-track-id="yayin-modal-btn-hemen-al-talep-reddet">
-                    Reddet
-                </button>
-                <button id="binReqModalAccept" style="
-                    flex:1; padding:11px; border:none; background:#ea580c;
-                    color:#fff; border-radius:10px; cursor:pointer; font-size:0.88rem; font-weight:700;"
-                    data-track-id="yayin-modal-btn-hemen-al-talep-onayla">
-                    Onayla
-                </button>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Hemen Al Onay Modalı -->
     <div id="buyItNowModal" style="
@@ -1927,7 +1891,7 @@
         </div>
     </div>
 
-    <script src="/static/js/yayin-page.js?v=16"></script>
+    <script src="/static/js/yayin-page.js?v=18"></script>
 </body>
 
 </html>

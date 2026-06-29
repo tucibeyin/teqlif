@@ -248,6 +248,40 @@
         }, 5000);
     }
 
+    // ── Otomatik Satış Kanıt Fotoğrafı Çekimi ────────────────────────────────
+    async function _captureProofSilently() {
+        const video = document.getElementById('mainVideo');
+        if (!video || video.readyState < 2 || video.videoWidth === 0) return null;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(video.videoWidth);
+            canvas.height = Math.round(video.videoHeight);
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            if (!blob) return null;
+            const form = new FormData();
+            form.append('file', blob, 'proof.jpg');
+            const token = Auth.getToken();
+            const res = await fetch(`/api/upload`, {
+                method: 'POST',
+                headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+                body: form,
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            return data.url; // ör: /static/uploads/...
+        } catch (e) {
+            console.error('Proof capture error:', e);
+            return null;
+        }
+    }
+
+    async function showProofCaptureDialog(callback) {
+        // Önceden bir modal'ımız vardı, artık sessizce arkaplanda çekip callback'i çağırıyoruz.
+        const proofUrl = await _captureProofSilently();
+        await callback(proofUrl);
+    }
+
     // Yayını Bitir (Host)
     document.getElementById('btnEndStream').addEventListener('click', async () => {
         const btn = document.getElementById('btnEndStream');
@@ -514,30 +548,6 @@
     }
 
     function updateAuctionUI(msg) {
-        if (msg.type === 'buy_it_now_requested') {
-            if (_isHostPage) {
-                _showBuyItNowRequestModal(
-                    msg.buyer?.username || '?',
-                    msg.price,
-                    msg.item_name || _currentItemName || ''
-                );
-            } else if (_iAmBinBuyer) {
-                // Sadece BIN talebini başlatan viewer — bekleme mesajı
-                const binBtn = document.getElementById('btnBuyItNow');
-                if (binBtn) binBtn.style.display = 'none';
-                setAuctionMsg('⚡ Talebiniz iletildi, host onayı bekleniyor...', '');
-            } else {
-                // Diğer viewer'lar — teklif alanı devre dışı + bilgi mesajı
-                const binBtn = document.getElementById('btnBuyItNow');
-                if (binBtn) binBtn.style.display = 'none';
-                const bidInput = document.getElementById('bidInput');
-                if (bidInput) bidInput.disabled = true;
-                const btnPlaceBid = document.getElementById('btnPlaceBid');
-                if (btnPlaceBid) btnPlaceBid.disabled = true;
-                setAuctionMsg('⏳ Başka bir kullanıcı ile Hemen Al işlemi yapılıyor.', '');
-            }
-            return;
-        }
 
         if (msg.type === 'buy_it_now_rejected') {
             if (!_isHostPage) {
@@ -695,7 +705,20 @@
 
         if (isHost) {
             hostControls.style.display = 'flex';
-            if (state.status === 'idle' || state.status === 'ended') {
+            const isPending = state.status === 'buy_it_now_pending';
+            
+            document.getElementById('btnBuyItNowAcceptInline').style.display = isPending ? '' : 'none';
+            document.getElementById('btnBuyItNowRejectInline').style.display = isPending ? '' : 'none';
+
+            if (isPending) {
+                hostSetup.style.display = 'none';
+                document.getElementById('btnAuctionQuickStart').style.display = 'none';
+                document.getElementById('btnAuctionStart').style.display = 'none';
+                document.getElementById('btnAuctionPause').style.display = 'none';
+                document.getElementById('btnAuctionResume').style.display = 'none';
+                document.getElementById('btnAuctionAccept').style.display = 'none';
+                document.getElementById('btnAuctionEnd').style.display = 'none';
+            } else if (state.status === 'idle' || state.status === 'ended') {
                 hostSetup.style.display = 'flex';
                 document.getElementById('btnAuctionQuickStart').style.display = '';
                 document.getElementById('btnAuctionStart').style.display = '';
@@ -726,9 +749,13 @@
             const showViewer = state.status === 'active' && !_isBoughtItNow;
             viewerControls.style.display = showViewer ? 'flex' : 'none';
 
-            // Başka kullanıcı BIN işlemi yapıyorsa diğer viewer'lara bilgi ver
-            if (state.status === 'buy_it_now_pending' && !_iAmBinBuyer) {
-                setAuctionMsg('⏳ Başka bir kullanıcı ile Hemen Al işlemi yapılıyor.', '');
+            const pendingBanner = document.getElementById('viewerPendingBanner');
+            if (pendingBanner) {
+                if (state.status === 'buy_it_now_pending' && !_iAmBinBuyer) {
+                    pendingBanner.style.display = 'block';
+                } else {
+                    pendingBanner.style.display = 'none';
+                }
             }
 
             // Hemen Al butonu: BIN varsa ve currentBid < BIN ise göster
@@ -1195,24 +1222,11 @@
 
     // ── VIEWER: Hemen Al ──────────────────────────────────────────────
 
-    function _showBuyItNowRequestModal(buyerUsername, price, itemName) {
-        document.getElementById('binReqModalItem').textContent = itemName || '—';
-        document.getElementById('binReqModalPrice').textContent = price != null
-            ? '₺' + Number(price).toLocaleString('tr-TR')
-            : '—';
-        document.getElementById('binReqModalBuyer').textContent = '@' + buyerUsername;
-        document.getElementById('binRequestModal').style.display = 'flex';
-    }
-
-    function _closeBuyItNowRequestModal() {
-        document.getElementById('binRequestModal').style.display = 'none';
-    }
-
-    document.getElementById('binReqModalReject')?.addEventListener('click', async () => {
-        _closeBuyItNowRequestModal();
+    // ── HOST: Hemen Al Inline Onay/Red ──────────────────────────────
+    document.getElementById('btnBuyItNowRejectInline')?.addEventListener('click', async () => {
         try {
             await Auction.rejectBuyItNow();
-            setAuctionMsg('Hemen Al talebi reddedildi.', '');
+            setAuctionMsg('Hemen Al talebi reddedildi.', 'success');
         } catch (e) {
             console.error('[Auction] Hemen Al red hatası:', e);
             if (window.Sentry) Sentry.captureException(e);
@@ -1220,27 +1234,22 @@
         }
     });
 
-    document.getElementById('binReqModalAccept')?.addEventListener('click', async () => {
-        const btn = document.getElementById('binReqModalAccept');
+    document.getElementById('btnBuyItNowAcceptInline')?.addEventListener('click', async () => {
+        const btn = document.getElementById('btnBuyItNowAcceptInline');
         btn.disabled = true;
         btn.textContent = 'İşleniyor...';
         showProofCaptureDialog(async (proofUrl) => {
             try {
                 await Auction.acceptBuyItNow(proofUrl);
-                _closeBuyItNowRequestModal();
+                setAuctionMsg('Hemen Al talebi onaylandı!', 'success');
             } catch (e) {
                 console.error('[Auction] Hemen Al kabul hatası:', e);
                 if (window.Sentry) Sentry.captureException(e);
-                _closeBuyItNowRequestModal();
                 setAuctionMsg(e.detail || e.message || 'Hata oluştu', 'error');
             } finally {
-                if (btn) { btn.disabled = false; btn.textContent = 'Onayla'; }
+                if (btn) { btn.disabled = false; btn.textContent = '✅ Onayla'; }
             }
         });
-    });
-
-    document.getElementById('binRequestModal')?.addEventListener('click', (e) => {
-        if (e.target === document.getElementById('binRequestModal')) _closeBuyItNowRequestModal();
     });
 
     let _binModalWaiting = false;
