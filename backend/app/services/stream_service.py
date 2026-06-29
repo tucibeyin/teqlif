@@ -690,30 +690,31 @@ class StreamService:
 
         await redis.delete(invite_key)
 
+        import aiohttp
         from app.config import settings
         from livekit.api.room_service import RoomService, UpdateParticipantRequest
         from livekit.protocol.models import ParticipantPermission
         
-        svc = RoomService(
-            settings.livekit_url,
-            settings.livekit_api_key,
-            settings.livekit_api_secret
-        )
-        try:
-            req = UpdateParticipantRequest(
-                room=stream.room_name,
-                identity=str(current_user.id),
-                permission=ParticipantPermission(
-                    can_publish=True,
-                    can_subscribe=True,
-                    can_publish_data=True
-                )
+        async with aiohttp.ClientSession() as session:
+            svc = RoomService(
+                session,
+                settings.livekit_api_base,
+                settings.livekit_api_key,
+                settings.livekit_api_secret
             )
-            await svc.update_participant(req)
-        except Exception as e:
-            logger.error("[COHOST] Yetki yükseltilirken hata: %s", str(e))
-        finally:
-            await svc.close()
+            try:
+                req = UpdateParticipantRequest(
+                    room=stream.room_name,
+                    identity=str(current_user.id),
+                    permission=ParticipantPermission(
+                        can_publish=True,
+                        can_subscribe=True,
+                        can_publish_data=True
+                    )
+                )
+                await svc.update_participant(req)
+            except Exception as e:
+                logger.error("[COHOST] Yetki yükseltilirken hata: %s", str(e))
 
         await publish_chat(stream_id, {
             "type": WS.COHOST_ACCEPTED,
@@ -750,6 +751,7 @@ class StreamService:
         if stream.host_id != host.id:
             raise ForbiddenException("Sadece yayın sahibi sahne konuğunu kaldırabilir")
 
+        import aiohttp
         from app.config import settings
         from livekit.api.room_service import RoomService, UpdateParticipantRequest
         from livekit.protocol.models import ParticipantPermission
@@ -759,26 +761,26 @@ class StreamService:
         target_user = target_user_result.scalar_one_or_none()
         
         if target_user:
-            svc = RoomService(
-                settings.livekit_url,
-                settings.livekit_api_key,
-                settings.livekit_api_secret
-            )
-            try:
-                req = UpdateParticipantRequest(
-                    room=stream.room_name,
-                    identity=str(target_user.id),
-                    permission=ParticipantPermission(
-                        can_publish=False,
-                        can_subscribe=True,
-                        can_publish_data=False
-                    )
+            async with aiohttp.ClientSession() as session:
+                svc = RoomService(
+                    session,
+                    settings.livekit_api_base,
+                    settings.livekit_api_key,
+                    settings.livekit_api_secret
                 )
-                await svc.update_participant(req)
-            except Exception as e:
-                logger.error("[COHOST] Konuk yetkisi düşürülürken hata: %s", str(e))
-            finally:
-                await svc.close()
+                try:
+                    req = UpdateParticipantRequest(
+                        room=stream.room_name,
+                        identity=str(target_user.id),
+                        permission=ParticipantPermission(
+                            can_publish=False,
+                            can_subscribe=True,
+                            can_publish_data=False
+                        )
+                    )
+                    await svc.update_participant(req)
+                except Exception as e:
+                    logger.error("[COHOST] Konuk yetkisi düşürülürken hata: %s", str(e))
 
         await publish_chat(stream_id, {
             "type": WS.COHOST_REMOVED,
@@ -800,30 +802,31 @@ class StreamService:
         if not stream or not stream.is_live:
             raise NotFoundException("Aktif yayın bulunamadı")
 
+        import aiohttp
         from app.config import settings
         from livekit.api.room_service import RoomService, UpdateParticipantRequest
         from livekit.protocol.models import ParticipantPermission
 
-        svc = RoomService(
-            settings.livekit_url,
-            settings.livekit_api_key,
-            settings.livekit_api_secret
-        )
-        try:
-            req = UpdateParticipantRequest(
-                room=stream.room_name,
-                identity=str(current_user.id),
-                permission=ParticipantPermission(
-                    can_publish=False,
-                    can_subscribe=True,
-                    can_publish_data=False
-                )
+        async with aiohttp.ClientSession() as session:
+            svc = RoomService(
+                session,
+                settings.livekit_api_base,
+                settings.livekit_api_key,
+                settings.livekit_api_secret
             )
-            await svc.update_participant(req)
-        except Exception as e:
-            logger.error("[COHOST] Konuk yetkisi düşürülürken hata: %s", str(e))
-        finally:
-            await svc.close()
+            try:
+                req = UpdateParticipantRequest(
+                    room=stream.room_name,
+                    identity=str(current_user.id),
+                    permission=ParticipantPermission(
+                        can_publish=False,
+                        can_subscribe=True,
+                        can_publish_data=False
+                    )
+                )
+                await svc.update_participant(req)
+            except Exception as e:
+                logger.error("[COHOST] Konuk yetkisi düşürülürken hata: %s", str(e))
 
         await publish_chat(stream_id, {
             "type": WS.COHOST_REMOVED,
