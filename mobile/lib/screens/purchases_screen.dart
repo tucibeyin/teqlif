@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
 import '../../utils/price_formatter.dart';
+import '../../config/app_colors.dart';
+import '../../config/theme.dart';
 import 'purchase_detail_screen.dart';
 
 class PurchasesScreen extends StatefulWidget {
@@ -46,20 +48,21 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         title: Text(l.settingsMyPurchases),
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppColors.surface(context),
+        foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
         centerTitle: true,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF6366f1)))
+          ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _purchases.isEmpty
               ? Center(
                   child: Text(
                     'Henüz alışverişiniz bulunmuyor.',
-                    style: TextStyle(color: Colors.white54, fontSize: 16),
+                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16),
                   ),
                 )
               : ListView.builder(
@@ -71,7 +74,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                     final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
                     
                     return Card(
-                      color: const Color(0xFF1E293B),
+                      color: AppColors.card(context),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -88,11 +91,11 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         title: Text(
                           itemName,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
                           '@${item['seller_username'] ?? 'Bilinmeyen Satıcı'}',
-                          style: const TextStyle(color: Colors.white54),
+                          style: TextStyle(color: AppColors.textSecondary(context)),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -106,7 +109,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(Icons.chevron_right, color: Colors.white54),
+                            Icon(Icons.chevron_right, color: AppColors.iconSecondary(context)),
                           ],
                         ),
                       ),

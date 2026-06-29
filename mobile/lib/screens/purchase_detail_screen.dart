@@ -4,6 +4,8 @@ import '../../utils/price_formatter.dart';
 import 'listing_detail_screen.dart';
 import 'public_profile_screen.dart';
 import '../../services/listing_service.dart';
+import '../../config/app_colors.dart';
+import '../../config/theme.dart';
 
 class PurchaseDetailScreen extends StatelessWidget {
   final Map<String, dynamic> purchase;
@@ -20,10 +22,11 @@ class PurchaseDetailScreen extends StatelessWidget {
     final listingId = purchase['listing_id'] as int?;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         title: Text(l.purchaseDetailTitle),
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppColors.surface(context),
+        foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
         centerTitle: true,
       ),
@@ -36,7 +39,7 @@ class PurchaseDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
+                color: AppColors.card(context),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -44,12 +47,12 @@ class PurchaseDetailScreen extends StatelessWidget {
                 children: [
                   Text(
                     itemName,
-                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppColors.textPrimary(context), fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '${l.purchaseSeller}: @$sellerUsername',
-                    style: const TextStyle(color: Colors.white70, fontSize: 16),
+                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -66,7 +69,7 @@ class PurchaseDetailScreen extends StatelessWidget {
               icon: const Icon(Icons.person, color: Colors.white),
               label: Text(l.purchaseViewSeller, style: const TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6366f1),
+                backgroundColor: kPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
@@ -82,10 +85,10 @@ class PurchaseDetailScreen extends StatelessWidget {
             // İlanı Görüntüle butonu
             if (listingId != null)
               OutlinedButton.icon(
-                icon: const Icon(Icons.article, color: Colors.white70),
-                label: Text(l.purchaseViewListing, style: const TextStyle(color: Colors.white)),
+                icon: Icon(Icons.article, color: AppColors.textSecondary(context)),
+                label: Text(l.purchaseViewListing, style: TextStyle(color: AppColors.textPrimary(context))),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF475569)),
+                  side: BorderSide(color: AppColors.border(context)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
@@ -117,7 +120,7 @@ class PurchaseDetailScreen extends StatelessWidget {
             if (proofImageUrl != null && proofImageUrl.isNotEmpty) ...[
               Text(
                 l.purchaseProofImage,
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               ClipRRect(
