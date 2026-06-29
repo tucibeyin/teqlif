@@ -1030,6 +1030,18 @@ abstract class AppLocalizations {
   /// **'İlan yayına alındı!'**
   String get msgListingPublished;
 
+  /// No description provided for @giftInsufficientBalance.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.'**
+  String get giftInsufficientBalance;
+
+  /// No description provided for @giftLoadBalanceButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bakiye Yükle'**
+  String get giftLoadBalanceButton;
+
   /// No description provided for @dialogDeleteListingTitle.
   ///
   /// In tr, this message translates to:

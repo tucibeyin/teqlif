@@ -19,6 +19,7 @@ import 'services/storage_service.dart';
 import 'services/feed_telemetry_service.dart';
 import 'services/offline_queue_service.dart';
 import 'services/push_notification_service.dart';
+import 'services/background_audio_handler.dart';
 import 'widgets/global_keyboard_accessory.dart';
 
 void main() async {
@@ -57,6 +58,7 @@ void main() async {
       // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
       PushNotificationService.initEarly();
       FeedTelemetryService.instance.init();
+      await initBackgroundAudio();
 
       // Sentry appRunner zaten runZonedGuarded ile sarılı olduğundan
       // async hataları da Sentry tarafından yakalanır.

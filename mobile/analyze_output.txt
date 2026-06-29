@@ -1,0 +1,248 @@
+Analyzing mobile...                                             
+
+   info • The imported package 'flutter_native_splash' isn't a dependency of the importing package • lib/main.dart:5:8 • depend_on_referenced_packages
+   info • Dangling library doc comment • lib/models/story.dart:1:1 • dangling_library_doc_comments
+warning • The value of the local variable 'dailySpend' isn't used • lib/screens/ad_report_screen.dart:534:11 • unused_local_variable
+   info • Unnecessary braces in a string interpolation • lib/screens/ad_report_screen.dart:558:25 • unnecessary_brace_in_string_interps
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/forgot_password_screen.dart:75:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/auth/reset_password_screen.dart:94:39 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/blocked_users_screen.dart:104:41 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/blocked_users_screen.dart:127:53 • deprecated_member_use
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/screens/create_listing_screen.dart:530:13 • use_null_aware_elements
+   info • Unnecessary use of multiple underscores • lib/screens/create_listing_screen.dart:630:47 • unnecessary_underscores
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/create_listing_screen.dart:792:21 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/create_listing_screen.dart:824:21 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/follow_list_screen.dart:124:41 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/follow_list_screen.dart:145:53 • deprecated_member_use
+warning • The value of the field '_categoryMeta' isn't used • lib/screens/home_screen.dart:60:16 • unused_field
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:380:39 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:703:27 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:789:46 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:884:27 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:1162:46 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:1417:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:1418:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/home_screen.dart:1418:40 • unnecessary_underscores
+   info • Statements in an if should be enclosed in a block • lib/screens/listing_detail_screen.dart:192:20 • curly_braces_in_flow_control_structures
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/listing_detail_screen.dart:493:23 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/listing_detail_screen.dart:496:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/listing_detail_screen.dart:500:39 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/listing_detail_screen.dart:501:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/listing_detail_screen.dart:553:35 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/listing_detail_screen.dart:557:28 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/listing_detail_screen.dart:568:7 • use_build_context_synchronously
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/listing_detail_screen.dart:743:17 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/listing_detail_screen.dart:1395:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/listing_detail_screen.dart:1457:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/listing_detail_screen.dart:1648:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/listing_detail_screen.dart:1650:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/listing_detail_screen.dart:1650:36 • unnecessary_underscores
+warning • Unused import: 'dart:typed_data' • lib/screens/live/host_stream_screen.dart:2:8 • unused_import
+   info • The imported package 'flutter_webrtc' isn't a dependency of the importing package • lib/screens/live/host_stream_screen.dart:7:8 • depend_on_referenced_packages
+warning • The value of the field '_connecting' isn't used • lib/screens/live/host_stream_screen.dart:66:8 • unused_field
+   info • Unnecessary use of multiple underscores • lib/screens/live/host_stream_screen.dart:857:41 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:887:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:1258:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:1403:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:1405:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:1460:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:1511:44 • deprecated_member_use
+warning • A value for optional parameter 'key' isn't ever given • lib/screens/live/host_stream_screen.dart:1549:11 • unused_element_parameter
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:1559:38 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:1575:35 • deprecated_member_use
+   info • Unnecessary 'const' keyword • lib/screens/live/host_stream_screen.dart:1642:18 • unnecessary_const
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:1923:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:1967:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/host_stream_screen.dart:2009:56 • deprecated_member_use
+   info • Use 'isNotEmpty' instead of 'length' to test whether the collection is empty • lib/screens/live/live_list_screen.dart:185:37 • prefer_is_empty
+   info • Use interpolation to compose strings and values • lib/screens/live/live_list_screen.dart:327:25 • prefer_interpolation_to_compose_strings
+   info • Unnecessary use of multiple underscores • lib/screens/live/live_list_screen.dart:527:40 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/live/live_list_screen.dart:529:40 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/live/live_list_screen.dart:529:44 • unnecessary_underscores
+warning • A value for optional parameter 'hint' isn't ever given • lib/screens/live/seller_report_screen.dart:460:10 • unused_element_parameter
+warning • Unused import: 'package:permission_handler/permission_handler.dart' • lib/screens/live/swipe_live_screen.dart:11:8 • unused_import
+warning • Unused import: '../../core/app_exception.dart' • lib/screens/live/swipe_live_screen.dart:16:8 • unused_import
+warning • Unused import: '../../core/logger_service.dart' • lib/screens/live/swipe_live_screen.dart:17:8 • unused_import
+warning • The value of the field '_fastListingStreak' isn't used • lib/screens/live/swipe_live_screen.dart:99:7 • unused_field
+   info • 'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre • lib/screens/live/swipe_live_screen.dart:500:7 • deprecated_member_use
+warning • The value of the field '_viewerCount' isn't used • lib/screens/live/swipe_live_screen.dart:617:7 • unused_field
+   info • Unnecessary use of multiple underscores • lib/screens/live/swipe_live_screen.dart:1015:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/live/swipe_live_screen.dart:1016:32 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/live/swipe_live_screen.dart:1016:36 • unnecessary_underscores
+   info • Statements in an if should be enclosed in a block • lib/screens/live/swipe_live_screen.dart:1219:25 • curly_braces_in_flow_control_structures
+   info • Unnecessary use of multiple underscores • lib/screens/live/swipe_live_screen.dart:1221:39 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/swipe_live_screen.dart:1441:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/live/swipe_live_screen.dart:1442:54 • deprecated_member_use
+  error • The getter 'giftInsufficientBalance' isn't defined for the type 'AppLocalizations' • lib/screens/live/swipe_live_screen.dart:1450:51 • undefined_getter
+  error • The getter 'giftLoadBalanceButton' isn't defined for the type 'AppLocalizations' • lib/screens/live/swipe_live_screen.dart:1464:53 • undefined_getter
+   info • Unnecessary use of multiple underscores • lib/screens/messages_screen.dart:284:31 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/messages_screen.dart:297:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/messages_screen.dart:372:28 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/messages_screen.dart:594:31 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/messages_screen.dart:1015:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/messages_screen.dart:1027:66 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/messages_screen.dart:1030:70 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/messages_screen.dart:1235:20 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/messages_screen.dart:1246:33 • deprecated_member_use
+warning • The declaration '_ProfileView' isn't referenced • lib/screens/messages_screen.dart:1258:7 • unused_element
+   info • The private field _prefs could be 'final' • lib/screens/notification_settings_screen.dart:24:21 • prefer_final_fields
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/notification_settings_screen.dart:475:27 • deprecated_member_use
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/notification_settings_screen.dart:626:9 • deprecated_member_use
+   info • Unnecessary braces in a string interpolation • lib/screens/pro_insights_screen.dart:831:42 • unnecessary_brace_in_string_interps
+warning • The operand can't be 'null', so the condition is always 'true' • lib/screens/profile_screen.dart:174:22 • unnecessary_null_comparison
+warning • Dead code • lib/screens/profile_screen.dart:178:65 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/screens/profile_screen.dart:178:68 • dead_null_aware_expression
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:249:26 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:250:27 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:250:31 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:732:25 • unnecessary_underscores
+   info • Constructors for public widgets should have a named 'key' parameter • lib/screens/profile_screen.dart:944:9 • use_key_in_widget_constructors
+   info • The local variable '_raw' starts with an underscore • lib/screens/profile_screen.dart:1097:11 • no_leading_underscores_for_local_identifiers
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:1121:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:1123:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:1123:40 • unnecessary_underscores
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/profile_screen.dart:1285:35 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/profile_screen.dart:1288:7 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/profile_screen.dart:1456:50 • use_build_context_synchronously
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/profile_screen.dart:1699:19 • deprecated_member_use
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/screens/profile_screen.dart:1711:17 • deprecated_member_use
+warning • A value for optional parameter 'labelColor' isn't ever given • lib/screens/profile_screen.dart:1866:10 • unused_element_parameter
+   info • Don't use 'BuildContext's across async gaps • lib/screens/profile_screen.dart:2058:27 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/profile_screen.dart:2058:66 • use_build_context_synchronously
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:2205:33 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:2376:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:2393:54 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:2397:54 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:2397:58 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:2536:43 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:2553:54 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:2557:54 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/profile_screen.dart:2557:58 • unnecessary_underscores
+warning • The value of the field '_blockLoading' isn't used • lib/screens/public_profile_screen.dart:37:8 • unused_field
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/public_profile_screen.dart:326:45 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/public_profile_screen.dart:575:50 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/public_profile_screen.dart:577:50 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/public_profile_screen.dart:577:54 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/public_profile_screen.dart:635:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/public_profile_screen.dart:687:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/public_profile_screen.dart:985:57 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/public_profile_screen.dart:1171:47 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/public_profile_screen.dart:1203:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/public_profile_screen.dart:1328:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/public_profile_screen.dart:1334:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/public_profile_screen.dart:1388:54 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/search_screen.dart:122:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/search_screen.dart:123:56 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/search_screen.dart:126:32 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/search_screen.dart:127:56 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/search_screen.dart:133:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/screens/search_screen.dart:134:54 • use_build_context_synchronously
+   info • The local variable '_firstDataArrived' starts with an underscore • lib/screens/search_screen.dart:183:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_maybeStopLoading' starts with an underscore • lib/screens/search_screen.dart:184:10 • no_leading_underscores_for_local_identifiers
+   info • Unnecessary use of multiple underscores • lib/screens/search_screen.dart:873:34 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/search_screen.dart:875:34 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/search_screen.dart:875:38 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/search_screen.dart:996:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/search_screen.dart:998:36 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/search_screen.dart:998:40 • unnecessary_underscores
+   info • The imported package 'flutter_native_splash' isn't a dependency of the importing package • lib/screens/splash_screen.dart:7:8 • depend_on_referenced_packages
+   info • Don't use 'BuildContext's across async gaps • lib/screens/splash_screen.dart:73:11 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/splash_screen.dart:124:18 • use_build_context_synchronously
+warning • The declaration '_checkAndroidUpdate' isn't referenced • lib/screens/splash_screen.dart:127:16 • unused_element
+   info • Don't use 'BuildContext's across async gaps • lib/screens/story/story_viewer_screen.dart:505:35 • use_build_context_synchronously
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:675:38 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:763:28 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:767:28 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:767:32 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/story/story_viewer_screen.dart:811:56 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:823:46 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:823:50 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:1075:40 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:1075:44 • unnecessary_underscores
+warning • A value for optional parameter 'key' isn't ever given • lib/screens/story/story_viewer_screen.dart:1158:11 • unused_element_parameter
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:1173:27 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/screens/story/story_viewer_screen.dart:1185:22 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/story/story_viewer_screen.dart:1332:54 • deprecated_member_use
+   info • The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' • lib/services/analytics_service.dart:4:8 • unnecessary_import
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/analytics_service.dart:108:11 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/analytics_service.dart:109:11 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/analytics_service.dart:283:9 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/analytics_service.dart:284:9 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/analytics_service.dart:285:9 • use_null_aware_elements
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • lib/services/analytics_service.dart:465:74 • invalid_null_aware_operator
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/auth_service.dart:39:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/client_logger.dart:57:9 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if' • lib/services/client_logger.dart:58:9 • use_null_aware_elements
+warning • The name StreamSubscription is shown, but isn't used • lib/services/connectivity_service.dart:1:52 • unused_shown_name
+   info • The local variable '_wasOnline' starts with an underscore • lib/services/offline_queue_service.dart:96:10 • no_leading_underscores_for_local_identifiers
+   info • The imported package 'http_parser' isn't a dependency of the importing package • lib/services/story_service.dart:5:8 • depend_on_referenced_packages
+   info • The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' • lib/services/stream_connection_manager.dart:1:8 • unnecessary_import
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart' • lib/services/stream_service.dart:2:8 • unnecessary_import
+   info • The 'if' statement could be replaced by a null-aware assignment • lib/services/video_cache_manager.dart:39:5 • prefer_conditional_assignment
+   info • The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/widgets.dart' • lib/services/ws_service.dart:3:8 • unnecessary_import
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/utils/start_stream_helper.dart:97:15 • deprecated_member_use
+   info • The local variable '_palette' starts with an underscore • lib/utils/username_color.dart:6:9 • no_leading_underscores_for_local_identifiers
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/auction_panel.dart:416:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/auction_panel.dart:419:57 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/widgets/auction_panel.dart:461:25 • use_build_context_synchronously
+   info • Unnecessary use of multiple underscores • lib/widgets/auction_panel.dart:529:48 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/auction_panel.dart:530:48 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/auction_panel.dart:530:52 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/auction_panel.dart:1068:24 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/auction_panel.dart:1070:43 • deprecated_member_use
+   info • Unnecessary use of string interpolation • lib/widgets/auction_panel.dart:1461:30 • unnecessary_string_interpolations
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/auction_panel.dart:1708:58 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/widgets/auction_panel.dart:1728:58 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/auction_panel.dart:1731:58 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/auction_panel.dart:1731:62 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/auction_panel.dart:1820:36 • deprecated_member_use
+   info • The local variable '_eventType' starts with an underscore • lib/widgets/chat_panel.dart:368:19 • no_leading_underscores_for_local_identifiers
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:509:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:510:37 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:517:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:518:37 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:529:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:530:42 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:535:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:536:41 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:540:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:541:36 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:547:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:548:37 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:554:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:555:46 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:558:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:559:40 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:562:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:563:37 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:569:47 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/widgets/chat_panel.dart:570:43 • unnecessary_non_null_assertion
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/chat_panel.dart:652:48 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/widgets/chat_panel.dart:742:40 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/chat_panel.dart:1040:26 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/chat_panel.dart:1041:26 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/chat_panel.dart:1041:30 • unnecessary_underscores
+warning • Unused import: 'dart:async' • lib/widgets/live/floating_hearts.dart:1:8 • unused_import
+   info • Unnecessary use of multiple underscores • lib/widgets/live/floating_hearts.dart:157:22 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/live/host_bottom_controls.dart:77:55 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/widgets/live/host_top_bar.dart:257:24 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/hype_meter_widget.dart:25:27 • unnecessary_underscores
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/live/hype_meter_widget.dart:80:44 • deprecated_member_use
+   info • Unnecessary use of multiple underscores • lib/widgets/live/raid_ended_overlay.dart:193:53 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/raid_ended_overlay.dart:215:29 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/raid_ended_overlay.dart:216:24 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/raid_ended_overlay.dart:257:40 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/raid_ended_overlay.dart:257:44 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/raid_ended_overlay.dart:332:42 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/raid_ended_overlay.dart:336:42 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/raid_ended_overlay.dart:336:46 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/story_tray.dart:196:24 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/story_tray.dart:536:48 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/story_tray.dart:540:48 • unnecessary_underscores
+   info • Unnecessary use of multiple underscores • lib/widgets/live/story_tray.dart:540:52 • unnecessary_underscores
+warning • Dead code • lib/widgets/soft_update_dialog.dart:33:33 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/widgets/soft_update_dialog.dart:33:36 • dead_null_aware_expression
+warning • The left operand can't be null, so the right operand is never executed • lib/widgets/soft_update_dialog.dart:39:38 • dead_null_aware_expression
+warning • The left operand can't be null, so the right operand is never executed • lib/widgets/soft_update_dialog.dart:52:54 • dead_null_aware_expression
+warning • The left operand can't be null, so the right operand is never executed • lib/widgets/soft_update_dialog.dart:59:38 • dead_null_aware_expression
+

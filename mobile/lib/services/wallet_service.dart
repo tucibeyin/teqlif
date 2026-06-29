@@ -31,7 +31,7 @@ class WalletService {
         return {'ok': true, ...(jsonDecode(resp.body) as Map<String, dynamic>)};
       }
       final body = jsonDecode(resp.body) as Map<String, dynamic>?;
-      return {'ok': false, 'error': body?['detail'] ?? 'Bir hata oluştu.'};
+      return {'ok': false, 'error': body?['detail'] ?? 'Bir hata oluştu.', 'status_code': resp.statusCode};
     } catch (_) {
       return {'ok': false, 'error': 'Bağlantı hatası.'};
     }

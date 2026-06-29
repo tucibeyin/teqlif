@@ -1,8 +1,9 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
 import '../models/stream.dart';
 import 'stream_service.dart';
+import 'background_audio_handler.dart';
 
 enum SessionState {
   none,
@@ -46,15 +47,59 @@ class LiveSession extends ChangeNotifier {
 
 /// TikTok tarzı dikey kaydırmada ±2 mesafesindeki canlı yayınların
 /// WebRTC bağlantılarını akıllıca yöneten merkezi servis.
-class StreamConnectionManager {
+class StreamConnectionManager with WidgetsBindingObserver {
   static final StreamConnectionManager instance = StreamConnectionManager._internal();
   
-  StreamConnectionManager._internal();
+  StreamConnectionManager._internal() {
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   final Map<int, LiveSession> _sessions = {};
   
   // Her stream için bağımsız bir lock
   final Set<int> _connectionLocks = {};
+  
+  int _currentActiveStreamId = -1;
+  bool _isBackground = false;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
+      if (!_isBackground) {
+        _isBackground = true;
+        _handleBackgroundTransition();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      if (_isBackground) {
+        _isBackground = false;
+        _handleForegroundTransition();
+      }
+    }
+  }
+
+  void _handleBackgroundTransition() {
+    if (_currentActiveStreamId != -1) {
+      final session = _sessions[_currentActiveStreamId];
+      if (session != null && session.isConnected) {
+        bgAudioHandler.startService(
+          session.streamId, 
+          session.token?.title ?? 'Canlı Yayın', 
+          session.token?.hostUsername ?? 'Yayıncı'
+        );
+        _applyTrackSubscriptions(session);
+      }
+    }
+  }
+
+  void _handleForegroundTransition() {
+    bgAudioHandler.stopService();
+    if (_currentActiveStreamId != -1) {
+      final session = _sessions[_currentActiveStreamId];
+      if (session != null && session.isConnected) {
+        _applyTrackSubscriptions(session);
+      }
+    }
+  }
 
   LiveSession getSession(int streamId) {
     return _sessions.putIfAbsent(streamId, () => LiveSession(streamId));
@@ -74,13 +119,15 @@ class StreamConnectionManager {
     required Set<int> nextStreamIds,
     required Set<int> farStreamIds,
   }) async {
+    _currentActiveStreamId = activeStreamId;
+
     final toKeep = {activeStreamId, ...nextStreamIds, ...farStreamIds};
     toKeep.remove(-1); // -1 geçerli değil
 
-    // 1. Görüş alanından çıkan yayınları temizle
+    // 1. Görüş alanından çıkan yayınları temizle (Dispose etme, sadece bağlantıyı kopar)
     final toRemove = _sessions.keys.where((id) => !toKeep.contains(id)).toList();
     for (final id in toRemove) {
-      _disconnect(id);
+      _deactivateSession(id);
     }
 
     // 2. ±2 (Uzak) yayınlar -> Sadece handshake (bağlan ama track indirme)
@@ -103,7 +150,13 @@ class StreamConnectionManager {
 
   Future<void> _setSessionState(int id, SessionState targetState) async {
     final session = getSession(id);
-    if (session.state == targetState) return;
+    if (session.state == targetState) {
+      // Eğer durum aynı ama bağlantı kopuksa ve state > none ise tekrar bağlanmayı dene
+      if (targetState != SessionState.none && !session.isConnected && !_connectionLocks.contains(id)) {
+        _connectRoom(session);
+      }
+      return;
+    }
     
     session.state = targetState;
 
@@ -181,6 +234,7 @@ class StreamConnectionManager {
       }
       session.hostVideoTrack = null;
       session.isConnected = false;
+      session.state = SessionState.none;
       session.update();
     });
   }
@@ -188,7 +242,8 @@ class StreamConnectionManager {
   void _applyTrackSubscriptions(LiveSession session) {
     if (!session.isConnected || session.room == null) return;
     
-    final wantVideo = session.state == SessionState.prefetched || session.state == SessionState.active;
+    // Arka planda (Background) video indirme (Veri tasarrufu)
+    final wantVideo = (!_isBackground) && (session.state == SessionState.prefetched || session.state == SessionState.active);
     final wantAudio = session.state == SessionState.active;
     
     for (final p in session.room!.remoteParticipants.values) {
@@ -203,9 +258,31 @@ class StreamConnectionManager {
     }
   }
 
+  void _deactivateSession(int id) {
+    final session = _sessions[id];
+    if (session != null && session.state != SessionState.none) {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] Deactivating stream: $id');
+      session.state = SessionState.none;
+      if (session.isConnected) {
+        StreamService.leaveStream(id).catchError((_) {});
+      }
+      session.isConnected = false;
+      session.isConnecting = false;
+      session.listener?.dispose();
+      session.listener = null;
+      session.room?.disconnect();
+      session.room = null;
+      session.hostVideoTrack = null;
+      session.coHostVideoTrack = null;
+      session.hostParticipantSid = null;
+      session.update();
+    }
+  }
+
   void _disconnect(int id) {
     final session = _sessions.remove(id);
     if (session != null) {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] Disconnecting stream: $id');
       session.state = SessionState.none;
       if (session.isConnected) {
         StreamService.leaveStream(id).catchError((_) {});
@@ -215,9 +292,18 @@ class StreamConnectionManager {
   }
 
   
-  void clearViewport() {
+  void clearViewport({int? excludeStreamId}) {
+    debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] clearViewport called. excludeStreamId: $excludeStreamId');
     for (final id in _sessions.keys.toList()) {
+      if (id == excludeStreamId) {
+        debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] clearViewport skipping excluded stream: $id');
+        continue;
+      }
       _disconnect(id);
+    }
+    _currentActiveStreamId = excludeStreamId ?? -1;
+    if (_currentActiveStreamId == -1 && _isBackground) {
+      bgAudioHandler.stopService();
     }
   }
 

@@ -482,6 +482,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get msgListingPublished => 'تم نشر الإعلان!';
 
   @override
+  String get giftInsufficientBalance => 'رصيد غير كاف. شراء TUCi لإرسال هدية.';
+
+  @override
+  String get giftLoadBalanceButton => 'شحن الرصيد';
+
+  @override
   String get dialogDeleteListingTitle => 'حذف الإعلان';
 
   @override

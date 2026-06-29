@@ -53,7 +53,10 @@ class VideoCacheManager {
       if (path != null) {
         final file = File(path);
         if (file.existsSync()) {
-          file.delete().catchError((e) => debugPrint('[VideoCacheManager] Silme hatası: $e'));
+          file.delete().catchError((e) {
+            debugPrint('[VideoCacheManager] Silme hatası: $e');
+            return file;
+          });
         }
       }
     }

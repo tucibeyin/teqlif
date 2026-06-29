@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from livekit.api import WebhookReceiver, TokenVerifier
@@ -10,6 +10,9 @@ from app.database import get_db
 from app.models.stream import LiveStream
 from app.utils.redis_client import get_redis
 from app.config import settings
+import asyncio
+import aiohttp
+from livekit.api import RoomService, ListRoomsRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
@@ -23,7 +26,7 @@ async def livekit_webhook_probe():
 
 
 @router.post("/livekit", include_in_schema=False)
-async def livekit_webhook(request: Request):
+async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
     body = await request.body()
     auth_header = request.headers.get("Authorization", "")
 
@@ -39,11 +42,30 @@ async def livekit_webhook(request: Request):
     logger.info("LiveKit webhook alındı | event=%s room=%s", event_type, room_name)
 
     if event_type == "room_finished" and room_name:
-        async for db in get_db():
-            await _close_stream(db, room_name)
+        background_tasks.add_task(_delayed_close_stream, room_name)
 
     return {"ok": True}
 
+
+async def _delayed_close_stream(room_name: str) -> None:
+    await asyncio.sleep(60)  # Grace period: Wait 60 seconds
+    try:
+        async with aiohttp.ClientSession() as session:
+            svc = RoomService(
+                session,
+                settings.livekit_api_base,
+                settings.livekit_api_key,
+                settings.livekit_api_secret,
+            )
+            res = await svc.list_rooms(ListRoomsRequest())
+            if any(r.name == room_name for r in res.rooms):
+                logger.info("LiveKit webhook: %s odası hala/yeniden aktif, kapatma iptal edildi.", room_name)
+                return
+    except Exception:
+        logger.warning("LiveKit API check failed for %s, proceeding to close stream", room_name)
+
+    async for db in get_db():
+        await _close_stream(db, room_name)
 
 async def _close_stream(db: AsyncSession, room_name: str) -> None:
     from app.services.auction_service import AuctionService

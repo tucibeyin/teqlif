@@ -465,7 +465,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorListingsLoad => 'Failed to load listings';
 
   @override
-  String get errorPhotoUpload => 'Failed to upload photo. Try again.';
+  String get errorPhotoUpload => 'Fotoğraf yüklenemedi. Tekrar deneyin.';
 
   @override
   String get errorCaptchaFailed =>
@@ -480,6 +480,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get msgListingPublished => 'Listing published!';
+
+  @override
+  String get giftInsufficientBalance =>
+      'Insufficient balance. Purchase TUCi to send a gift.';
+
+  @override
+  String get giftLoadBalanceButton => 'Load Balance';
 
   @override
   String get dialogDeleteListingTitle => 'Delete Listing';

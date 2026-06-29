@@ -32,8 +32,11 @@ class PipProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void disablePip() {
-    _room?.disconnect();
+  void disablePip({bool disconnectRoom = true}) {
+    debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] disablePip called. disconnectRoom: $disconnectRoom');
+    if (disconnectRoom) {
+      _room?.disconnect();
+    }
     _isActive = false;
     _currentStreamId = null;
     _currentRoomName = null;

@@ -67,10 +67,11 @@
 				</array>
 			</dict>
 		</dict>
-		<key>UIBackgroundModes</key>
+	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 		<string>fetch</string>
+		<string>audio</string>
 	</array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Hesabınıza hızlı ve güvenli giriş yapmak için Face ID kullanılır</string>

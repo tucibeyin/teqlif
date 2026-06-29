@@ -149,6 +149,8 @@
   "emptyPassiveListings": "لا توجد إعلانات معلّقة",
   "emptyFavorites": "لا توجد إعلانات مفضّلة بعد",
   "errorConnection": "خطأ في الاتصال",
+  "giftInsufficientBalance": "رصيد غير كاف. شراء TUCi لإرسال هدية.",
+  "giftLoadBalanceButton": "شحن الرصيد",
   "errorListingsLoad": "تعذّر تحميل الإعلانات",
   "errorPhotoUpload": "تعذّر رفع الصورة. حاول مجدداً.",
   "errorCaptchaFailed": "فشل التحقق الأمني. يرجى المحاولة مجدداً.",

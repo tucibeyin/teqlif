@@ -20,7 +20,6 @@ import '../../services/stream_service.dart';
 import '../../services/wallet_service.dart';
 import '../../widgets/live/gift_hud.dart';
 import '../../widgets/live/hype_meter_widget.dart';
-import '../../utils/error_helper.dart';
 import '../../widgets/auction_panel.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/chat_panel.dart';
@@ -31,6 +30,7 @@ import '../../widgets/live/viewer_top_bar.dart';
 import '../../providers/pip_provider.dart';
 import '../../services/pip_service.dart';
 import '../public_profile_screen.dart';
+import '../profile_screen.dart';
 import '../listing_detail_screen.dart';
 import '../../services/feed_telemetry_service.dart';
 import '../../services/analytics_service.dart';
@@ -182,6 +182,14 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     });
   }
 
+  ProviderContainer? _container;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _container ??= ProviderScope.containerOf(context, listen: false);
+  }
+
   @override
   void dispose() {
     _streamCheckTimer?.cancel();
@@ -189,7 +197,13 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _flushPendingEvents(); // oturum kapanırken bekleyen eventleri gönder
-    _connectionManager.clearViewport(); // Singleton olduğu için çıkışta temizle
+    
+    // PiP aktifse, ilgili yayını korumak için exclude listesine al
+    final pip = _container?.read(pipProvider);
+    final pipStreamId = (pip?.isActive ?? false) ? pip?.currentStreamId : null;
+    debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] SwipeLiveScreen dispose. pipStreamId to exclude: $pipStreamId');
+    
+    _connectionManager.clearViewport(excludeStreamId: pipStreamId); // Singleton olduğu için çıkışta temizle
     super.dispose();
   }
 
@@ -619,6 +633,11 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   @override
   void initState() {
     super.initState();
+    StorageService.getUserInfo().then((info) {
+      if (mounted && info != null) {
+        setState(() => _myUsername = info['username'] as String?);
+      }
+    });
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     widget.session.addListener(_onSessionUpdated);
     if (widget.isActive) {
@@ -709,8 +728,21 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
         streamId: widget.stream.id,
         receiverUsername: hostUsername,
         gifts: gifts,
+        onLoadBalanceRequired: () {
+          Navigator.pop(ctx);
+          _handleLoadBalance();
+        },
       ),
     );
+  }
+
+  void _handleLoadBalance() {
+    // 1. Get the root navigator before we are popped by PiP
+    final nav = Navigator.of(context, rootNavigator: true);
+    // 2. Enter PiP (which also pops the current SwipeLiveScreen)
+    _enterPip();
+    // 3. Push the Wallet screen on top
+    nav.push(MaterialPageRoute(builder: (_) => const WalletScreen()));
   }
 
   void _onAuctionWon() {
@@ -906,6 +938,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     final room = widget.session.room;
     if (track == null || room == null) return; // Video yok, PiP açılamaz
 
+    debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] _pipForBackGesture called for stream: ${widget.stream.id}');
     StreamService.pipEnter(widget.stream.id);
 
     ref.read(pipProvider.notifier).enablePip(
@@ -1316,11 +1349,13 @@ class _GiftSheet extends StatefulWidget {
   final int streamId;
   final String receiverUsername;
   final List<(String, int)> gifts;
+  final VoidCallback? onLoadBalanceRequired;
 
   const _GiftSheet({
     required this.streamId,
     required this.receiverUsername,
     required this.gifts,
+    this.onLoadBalanceRequired,
   });
 
   @override
@@ -1329,6 +1364,7 @@ class _GiftSheet extends StatefulWidget {
 
 class _GiftSheetState extends State<_GiftSheet> {
   bool _sending = false;
+  bool _insufficientBalance = false;
 
   Future<void> _send(String giftName, int cost) async {
     if (_sending) return;
@@ -1351,13 +1387,20 @@ class _GiftSheetState extends State<_GiftSheet> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['error'] as String? ?? 'Hata oluştu.'),
-          backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      final isInsufficient = result['status_code'] == 402 || 
+          (result['error']?.toString().toLowerCase().contains('yetersiz') ?? false);
+          
+      if (isInsufficient) {
+        setState(() => _insufficientBalance = true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['error'] as String? ?? 'Hata oluştu.'),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -1395,6 +1438,40 @@ class _GiftSheetState extends State<_GiftSheet> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: CircularProgressIndicator(color: Color(0xFF6D28D9)),
+            )
+          else if (_insufficientBalance)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 32),
+                  const SizedBox(height: 8),
+                  Text(
+                    AppLocalizations.of(context)?.giftInsufficientBalance ?? 'Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: widget.onLoadBalanceRequired,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6D28D9),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      minimumSize: const Size(double.infinity, 44),
+                    ),
+                    child: Text(
+                      AppLocalizations.of(context)?.giftLoadBalanceButton ?? 'Bakiye Yükle',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
             )
           else
             Row(

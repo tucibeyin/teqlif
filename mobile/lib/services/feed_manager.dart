@@ -183,6 +183,10 @@ class SwipeFeedManager {
       } else if (unshownStreams.isNotEmpty) {
         streamId = unshownStreams[_nextStreamIndex % unshownStreams.length].id;
         _nextStreamIndex++;
+      } else if (activeStreams.isNotEmpty) {
+        // Tüm yayınlar gösterildiyse, başa sarıp tekrar göster
+        streamId = activeStreams[_nextStreamIndex % activeStreams.length].id;
+        _nextStreamIndex++;
       }
       
       if (streamId != null) {

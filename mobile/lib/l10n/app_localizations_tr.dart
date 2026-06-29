@@ -481,6 +481,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get msgListingPublished => 'İlan yayına alındı!';
 
   @override
+  String get giftInsufficientBalance =>
+      'Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.';
+
+  @override
+  String get giftLoadBalanceButton => 'Bakiye Yükle';
+
+  @override
   String get dialogDeleteListingTitle => 'İlanı Sil';
 
   @override

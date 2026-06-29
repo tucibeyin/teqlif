@@ -155,6 +155,8 @@
   "errorTooFast": "Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.",
   "msgPasswordChanged": "Şifreniz başarıyla değiştirildi.",
   "msgListingPublished": "İlan yayına alındı!",
+  "giftInsufficientBalance": "Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.",
+  "giftLoadBalanceButton": "Bakiye Yükle",
   "dialogDeleteListingTitle": "İlanı Sil",
   "dialogDeleteListingDesc": "Bu ilanı kalıcı olarak silmek istiyor musunuz?",
   "dialogFaceIdActivateTitle": "Face ID'yi etkinleştirmek için doğrulayın",
