@@ -16,6 +16,7 @@ import '../../services/storage_service.dart';
 import '../../models/stream.dart';
 import '../../services/story_service.dart';
 import '../../services/stream_service.dart';
+import '../../services/stream_connection_manager.dart';
 import '../live/swipe_live_screen.dart';
 import '../public_profile_screen.dart';
 
@@ -577,6 +578,10 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     if (!mounted) return;
 
     final idx = streams.indexWhere((s) => s.id == streamId);
+    
+    // Erken bağlantı başlat
+    StreamConnectionManager.instance.prefetchForImmediateJoin(streamId);
+    
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => idx != -1

@@ -47,6 +47,10 @@ class LiveSession extends ChangeNotifier {
 /// TikTok tarzı dikey kaydırmada ±2 mesafesindeki canlı yayınların
 /// WebRTC bağlantılarını akıllıca yöneten merkezi servis.
 class StreamConnectionManager {
+  static final StreamConnectionManager instance = StreamConnectionManager._internal();
+  
+  StreamConnectionManager._internal();
+
   final Map<int, LiveSession> _sessions = {};
   
   // Her stream için bağımsız bir lock
@@ -54,6 +58,11 @@ class StreamConnectionManager {
 
   LiveSession getSession(int streamId) {
     return _sessions.putIfAbsent(streamId, () => LiveSession(streamId));
+  }
+
+  /// Ekran açılmadan hemen önce erken bağlantı başlatır
+  void prefetchForImmediateJoin(int streamId) {
+    updateViewport(activeStreamId: streamId, nextStreamIds: {}, farStreamIds: {});
   }
 
   /// PageView kaydırıldıkça (veya feed yenilendikçe) çağrılır.
@@ -204,10 +213,15 @@ class StreamConnectionManager {
       session.dispose();
     }
   }
+
   
-  void dispose() {
+  void clearViewport() {
     for (final id in _sessions.keys.toList()) {
       _disconnect(id);
     }
+  }
+
+  void dispose() {
+    clearViewport();
   }
 }

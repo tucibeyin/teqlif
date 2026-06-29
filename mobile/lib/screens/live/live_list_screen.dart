@@ -11,6 +11,7 @@ import '../../services/connectivity_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/ws_service.dart';
+import '../../services/stream_connection_manager.dart';
 import '../../utils/start_stream_helper.dart';
 import '../../providers/story_provider.dart';
 import '../../widgets/live/story_tray.dart';
@@ -151,11 +152,14 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     if (!mounted) return;
     // Çevrimdışıyken yayına girmeyi engelle
     if (_isOffline) return;
-    // ID ile ara: farklı liste örneklerinden gelen stream objelerini referans değil ID ile eşleştir
+    
+    // Erken bağlantı (Early Connection) - WebRTC handshake'i animasyon süresince başlat
+    StreamConnectionManager.instance.prefetchForImmediateJoin(stream.id);
+    
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => SwipeLiveScreen.single(streamId: stream.id),
+        builder: (_) => SwipeLiveScreen.fromStream(stream),
       ),
     ).then((_) => _load(bypassCache: true));
   }

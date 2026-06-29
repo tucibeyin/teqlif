@@ -70,6 +70,14 @@ class SwipeLiveScreen extends StatefulWidget {
     );
   }
 
+  /// Tam veriyle doğrudan yayına katılmak için kullanılır.
+  factory SwipeLiveScreen.fromStream(StreamOut stream) {
+    return SwipeLiveScreen(
+      streams: [stream],
+      initialIndex: 0,
+    );
+  }
+
   @override
   State<SwipeLiveScreen> createState() => _SwipeLiveScreenState();
 }
@@ -79,7 +87,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   int _currentPage = 0;
 
   final SwipeFeedManager _feedManager = SwipeFeedManager();
-  final StreamConnectionManager _connectionManager = StreamConnectionManager();
+  final StreamConnectionManager _connectionManager = StreamConnectionManager.instance;
 
   bool _fetchingListings = false;
   int? _polledEndedStreamId;
@@ -129,7 +137,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     _loadListingFeed();
     _dwellStart = DateTime.now().millisecondsSinceEpoch;
     
-    if (widget.streams.length == 1 && widget.streams[0].roomName.isEmpty) {
+    if (widget.streams.length == 1) {
       _expandFromSingleMode(widget.streams[0].id);
     }
     
@@ -181,6 +189,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _flushPendingEvents(); // oturum kapanırken bekleyen eventleri gönder
+    _connectionManager.clearViewport(); // Singleton olduğu için çıkışta temizle
     super.dispose();
   }
 
