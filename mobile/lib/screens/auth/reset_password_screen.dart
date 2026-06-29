@@ -70,7 +70,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final l = AppLocalizations.of(context)!;
     
     return Scaffold(
-      backgroundColor: AppColors.background(context),
+      backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
