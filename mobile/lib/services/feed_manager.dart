@@ -212,19 +212,6 @@ class SwipeFeedManager {
       if (streamId == null) {
         // Yayın kalmadıysa mecbur ilan göstereceğiz
         listingsInThisGroup = _listingsPerGroup > 0 ? _listingsPerGroup : 2;
-      } else {
-        if (_listingOnlyGroupCount >= 2) {
-          listingsInThisGroup = 0;
-          _listingOnlyGroupCount = 0;
-        } else if (rand.nextDouble() < 0.2) {
-          listingsInThisGroup = 0;
-          _listingOnlyGroupCount++;
-        } else if (rand.nextDouble() < 0.3) {
-          listingsInThisGroup = _listingsPerGroup + 1;
-          _listingOnlyGroupCount = 0;
-        } else {
-          _listingOnlyGroupCount = 0;
-        }
       }
 
       for (int i = 0; i < listingsInThisGroup; i++) {

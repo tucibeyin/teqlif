@@ -98,6 +98,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   // Davranış takibi: yayın izleme süresine göre ilan sayısı güncellenir
   final List<int> _recentDwells = []; // son 10 yayın dwell süresi (ms)
+  int _currentListingsPerGroup = 2;
   int? _dwellStart;        // mevcut yayın sayfasına girildiği an (ms epoch)
   int? _listingPageStart;  // mevcut ilan sayfasına girildiği an (ms epoch)
   int _fastListingStreak = 0;
@@ -186,9 +187,10 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       }
       
       if (!isSingle && config.streams.isNotEmpty) {
+        _currentListingsPerGroup = lpg;
         _feedManager.updateConfig(
           streams: config.streams,
-          listingsPerGroup: lpg,
+          listingsPerGroup: _currentListingsPerGroup,
           preferredCategories: config.preferredListingCategories,
           currentIndex: _currentPage,
         );
@@ -445,7 +447,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         setState(() {
           _feedManager.updateConfig(
             streams: fresh,
-            listingsPerGroup: 2,
+            listingsPerGroup: _currentListingsPerGroup,
             preferredCategories: _preferredListingCategories,
             currentIndex: _currentPage,
           );
@@ -470,7 +472,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       setState(() {
         _feedManager.updateConfig(
           streams: expanded,
-          listingsPerGroup: 2,
+          listingsPerGroup: _currentListingsPerGroup,
           preferredCategories: _preferredListingCategories,
           currentIndex: _currentPage,
         );
