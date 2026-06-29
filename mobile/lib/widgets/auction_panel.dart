@@ -740,6 +740,13 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
       ]);
     }
+    if (state.isPending) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        _pillBtn(l.auctionBuyNowRejectInline, Colors.red, _buyItNowReject),
+        const SizedBox(width: 6),
+        _pillBtn(l.auctionBuyNowAcceptInline, Colors.green, _buyItNowAccept),
+      ]);
+    }
     return const SizedBox.shrink();
   }
 
@@ -749,7 +756,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     final bin = state.buyItNowPrice;
     final showBin = enabled &&
         bin != null &&
-        (state.currentBid == null || state.currentBid! < bin);
+        (state.currentBid == null || state.currentBid! < bin) &&
+        !state.isPending;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1159,6 +1167,74 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       ),
     );
   }
+
+  bool _binLoading = false;
+
+  Future<void> _buyItNowAccept() async {
+    if (_binLoading) return;
+    setState(() => _binLoading = true);
+    try {
+      String? proofUrl;
+      if (widget.captureProofImage != null) {
+        proofUrl = await widget.captureProofImage!.call();
+      }
+      await AuctionService.acceptBuyItNow(widget.streamId, proofImageUrl: proofUrl);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hemen Al talebi onaylandı!')),
+        );
+      }
+    } on AppException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (e, st) {
+      _log.captureException(e, stackTrace: st, tag: 'AuctionPanel._buyItNowAccept');
+    } finally {
+      if (mounted) setState(() => _binLoading = false);
+    }
+  }
+
+  Future<void> _buyItNowReject() async {
+    if (_binLoading) return;
+    setState(() => _binLoading = true);
+    try {
+      await AuctionService.rejectBuyItNow(widget.streamId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Hemen Al talebi reddedildi.')),
+        );
+      }
+    } on AppException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (e, st) {
+      _log.captureException(e, stackTrace: st, tag: 'AuctionPanel._buyItNowReject');
+    } finally {
+      if (mounted) setState(() => _binLoading = false);
+    }
+  }
+
+  Widget _pillBtn(String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        decoration:
+            BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+        child: Text(label,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
 }
 
 // ── Viewer teklif verme sheet içeriği ─────────────────────────────────────────
@@ -1299,9 +1375,20 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     setState(() => _loading = true);
     try {
       await AuctionService.buyItNow(widget.streamId);
-      // WS broadcast state güncelleyecek
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.auctionBuyNowRequestSent),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } on AppException catch (e) {
-      _setMsg(e.message, error: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        );
+      }
     } catch (e, st) {
       LoggerService.instance.captureException(e,
           stackTrace: st, tag: '_BidSheetContent._buyItNow');

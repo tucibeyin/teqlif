@@ -2134,6 +2134,36 @@ abstract class AppLocalizations {
   /// **'AÇIK ARTIRMA'**
   String get auctionStatusIdle;
 
+  /// No description provided for @auctionBuyNowRequestSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Talebiniz satıcıya iletildi, onay bekleniyor...'**
+  String get auctionBuyNowRequestSent;
+
+  /// No description provided for @auctionBuyNowOtherUser.
+  ///
+  /// In tr, this message translates to:
+  /// **'⏳ Başka bir kullanıcı ile Hemen Al işlemi yapılıyor.'**
+  String get auctionBuyNowOtherUser;
+
+  /// No description provided for @auctionBuyNowAcceptInline.
+  ///
+  /// In tr, this message translates to:
+  /// **'Onayla'**
+  String get auctionBuyNowAcceptInline;
+
+  /// No description provided for @auctionBuyNowRejectInline.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reddet'**
+  String get auctionBuyNowRejectInline;
+
+  /// No description provided for @errorInsufficientBalance.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bakiyeniz yetersiz. Lütfen bakiye yükleyin.'**
+  String get errorInsufficientBalance;
+
   /// No description provided for @auctionStartBtn.
   ///
   /// In tr, this message translates to:

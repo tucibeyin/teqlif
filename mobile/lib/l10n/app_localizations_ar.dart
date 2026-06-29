@@ -1070,6 +1070,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get auctionStatusIdle => 'مزاد علني';
 
   @override
+  String get auctionBuyNowRequestSent =>
+      'تم إرسال الطلب إلى البائع، بانتظار الموافقة...';
+
+  @override
+  String get auctionBuyNowOtherUser => '⏳ مستخدم آخر يقوم بعملية الشراء الآن.';
+
+  @override
+  String get auctionBuyNowAcceptInline => 'موافقة';
+
+  @override
+  String get auctionBuyNowRejectInline => 'رفض';
+
+  @override
+  String get errorInsufficientBalance =>
+      'Bakiyeniz yetersiz. Lütfen bakiye yükleyin.';
+
+  @override
   String get auctionStartBtn => '▶ ابدأ';
 
   @override

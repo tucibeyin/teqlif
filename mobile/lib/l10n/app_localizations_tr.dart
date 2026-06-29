@@ -1077,6 +1077,24 @@ class AppLocalizationsTr extends AppLocalizations {
   String get auctionStatusIdle => 'AÇIK ARTIRMA';
 
   @override
+  String get auctionBuyNowRequestSent =>
+      'Talebiniz satıcıya iletildi, onay bekleniyor...';
+
+  @override
+  String get auctionBuyNowOtherUser =>
+      '⏳ Başka bir kullanıcı ile Hemen Al işlemi yapılıyor.';
+
+  @override
+  String get auctionBuyNowAcceptInline => 'Onayla';
+
+  @override
+  String get auctionBuyNowRejectInline => 'Reddet';
+
+  @override
+  String get errorInsufficientBalance =>
+      'Bakiyeniz yetersiz. Lütfen bakiye yükleyin.';
+
+  @override
   String get auctionStartBtn => '▶ Başlat';
 
   @override

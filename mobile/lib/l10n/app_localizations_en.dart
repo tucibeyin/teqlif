@@ -1078,6 +1078,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auctionStatusIdle => 'AUCTION';
 
   @override
+  String get auctionBuyNowRequestSent =>
+      'Request sent to seller, waiting for approval...';
+
+  @override
+  String get auctionBuyNowOtherUser =>
+      '⏳ Another user is processing Buy It Now.';
+
+  @override
+  String get auctionBuyNowAcceptInline => 'Approve';
+
+  @override
+  String get auctionBuyNowRejectInline => 'Reject';
+
+  @override
+  String get errorInsufficientBalance =>
+      'Bakiyeniz yetersiz. Lütfen bakiye yükleyin.';
+
+  @override
   String get auctionStartBtn => '▶ Start';
 
   @override
