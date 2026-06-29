@@ -12,7 +12,7 @@ from app.utils.redis_client import get_redis
 from app.config import settings
 import asyncio
 import aiohttp
-from livekit.api import RoomService, ListRoomsRequest
+from livekit.api.room_service import RoomService, ListRoomsRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
