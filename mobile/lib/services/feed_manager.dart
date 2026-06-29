@@ -124,6 +124,18 @@ class SwipeFeedManager {
     _endedStreamIds.add(streamId);
   }
   
+  void replaceStreamWithListing(int streamId) {
+    debugPrint('[${DateTime.now().toString()}] [EVENT: STREAM_REPLACED] streamId: $streamId replaced with listing');
+    _liveItems.removeWhere((s) => s.id == streamId);
+    _endedStreamIds.add(streamId);
+    
+    for (int i = 0; i < _slots.length; i++) {
+      if (_slots[i].isStream && _slots[i].streamId == streamId) {
+        _slots[i] = FeedSlot.listing(_nextListingIndex++);
+      }
+    }
+  }
+  
   bool isStreamEnded(int streamId) => _endedStreamIds.contains(streamId);
 
   FeedItem getItemAt(int index) {

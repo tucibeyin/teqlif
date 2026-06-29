@@ -83,6 +83,9 @@ class SwipeLiveScreen extends StatefulWidget {
 }
 
 class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
+  static int activeScreenCount = 0;
+  bool _isCoHostLocked = false;
+
   late final PageController _pageCtrl;
   int _currentPage = 0;
 
@@ -115,6 +118,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   @override
   void initState() {
     super.initState();
+    activeScreenCount++;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     if (PipService.isVisible) {
@@ -122,7 +126,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         if (!mounted) return;
         ProviderScope.containerOf(context, listen: false)
             .read(pipProvider.notifier)
-            .disablePip();
+            .disablePip(disconnectRoom: false);
         PipService.hidePip();
       });
     }
@@ -192,6 +196,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   @override
   void dispose() {
+    activeScreenCount--;
     _streamCheckTimer?.cancel();
     _pageCtrl.dispose();
     WakelockPlus.disable();
@@ -203,7 +208,11 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     final pipStreamId = (pip?.isActive ?? false) ? pip?.currentStreamId : null;
     debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] SwipeLiveScreen dispose. pipStreamId to exclude: $pipStreamId');
     
-    _connectionManager.clearViewport(excludeStreamId: pipStreamId); // Singleton olduğu için çıkışta temizle
+    if (activeScreenCount == 0) {
+      _connectionManager.clearViewport(excludeStreamId: pipStreamId); // Singleton olduğu için çıkışta temizle
+    } else {
+      debugPrint('[${DateTime.now().toString()}] [EVENT: PIP_DEBUG] SwipeLiveScreen dispose skipped clearViewport because activeScreenCount is $activeScreenCount');
+    }
     super.dispose();
   }
 
@@ -232,9 +241,10 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       _trackStreamDwell(dwellMs);
       _recordStreamEvent(prevItem.stream, dwellMs);
       
-      // Eğer ayrıldığımız yayın bittiyse feed'den sil
+      // Kullanıcı biten yayını geçiyorsa, artık o yayını feed'de ilan ile değiştir.
+      // Böylece geri döndüğünde kapanmış yayın değil, yerine gelen yeni ilanı görecek.
       if (prevItem.stream.id == _polledEndedStreamId) {
-        _feedManager.removeStream(_polledEndedStreamId!);
+        _feedManager.replaceStreamWithListing(_polledEndedStreamId!);
         _polledEndedStreamId = null;
       }
     }
@@ -531,7 +541,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         child: PageView.builder(
           controller: _pageCtrl,
           scrollDirection: Axis.vertical,
-          physics: const PageScrollPhysics(),
+          physics: _isCoHostLocked ? const NeverScrollableScrollPhysics() : const PageScrollPhysics(),
           onPageChanged: _onPageChanged,
           itemCount: null,
           itemBuilder: (_, i) {
@@ -546,6 +556,11 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
                 onStreamEnded: () => _onStreamEnded(stream.id),
                 onPipActionChanged: (cb) { _pipAction = cb; },
                 onEngagementEvent: (type) => _recordEngagementEvent(stream, type),
+                onCoHostStateChanged: (locked) {
+                  if (mounted && _isCoHostLocked != locked) {
+                    setState(() => _isCoHostLocked = locked);
+                  }
+                },
                 onRaidTargetSelected: (targetId) {
                   final targetPage = _feedManager.getNextPageForStreamId(targetId, _currentPage);
                   if (targetPage != null) {
@@ -584,6 +599,7 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
   final void Function(VoidCallback?)? onPipActionChanged;
   final void Function(String eventType)? onEngagementEvent;
   final void Function(int targetStreamId)? onRaidTargetSelected;
+  final ValueChanged<bool>? onCoHostStateChanged;
   final bool isEnded;
 
   const _SwipeLivePage({
@@ -596,6 +612,7 @@ class _SwipeLivePage extends ConsumerStatefulWidget {
     this.onPipActionChanged,
     this.onEngagementEvent,
     this.onRaidTargetSelected,
+    this.onCoHostStateChanged,
   });
 
   @override
@@ -606,7 +623,19 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     with AutomaticKeepAliveClientMixin {
   
   bool _isCoHost = false;
-  bool _isSelfCoHost = false;
+  bool _isSelfCoHostValue = false;
+  bool get _isSelfCoHost => _isSelfCoHostValue;
+  set _isSelfCoHost(bool val) {
+    if (_isSelfCoHostValue != val) {
+      _isSelfCoHostValue = val;
+      if (widget.isActive) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) widget.onCoHostStateChanged?.call(val);
+        });
+      }
+    }
+  }
+
   bool _selfMuted = false;
   bool _kicked = false;
   
@@ -635,6 +664,16 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   bool get wantKeepAlive => widget.session.isConnected;
 
   @override
+  void didUpdateWidget(covariant _SwipeLivePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive && widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onCoHostStateChanged?.call(_isSelfCoHost);
+      });
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     StorageService.getUserInfo().then((info) {
@@ -642,6 +681,14 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
         setState(() => _myUsername = info['username'] as String?);
       }
     });
+    
+    // Eğer oturum daha önceden yetkilendirilmişse (örn: PiP'den dönüldüğünde)
+    // Co-host state'ini mevcut session'dan geri yükle
+    if (widget.session.localVideoTrack != null) {
+      _isSelfCoHost = true;
+      _localVideoTrack = widget.session.localVideoTrack;
+    }
+    
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     widget.session.addListener(_onSessionUpdated);
     if (widget.isActive) {
@@ -675,6 +722,12 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 
   void _onSessionUpdated() {
     if (!mounted) return;
+
+    if (widget.session.localVideoTrack != null && (_localVideoTrack == null || !_isSelfCoHost)) {
+      _isSelfCoHost = true;
+      _localVideoTrack = widget.session.localVideoTrack;
+    }
+
     setState(() {});
     updateKeepAlive();
     
@@ -1116,6 +1169,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                     children: [
                       VideoTrackRenderer(
                         _localVideoTrack!,
+                        key: ValueKey(_localVideoTrack.hashCode),
                         fit: VideoViewFit.contain,
                       ),
                       Positioned(
