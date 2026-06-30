@@ -47,20 +47,23 @@ class _ChatWsManager {
         onData,
         onDone: _handleDisconnect,
         onError: (error, StackTrace stack) {
-          _log.captureException(error,
-              stackTrace: stack, tag: 'ChatWsManager', shouldCapture: false);
+          _log.captureException(
+            error,
+            stackTrace: stack,
+            tag: 'ChatWsManager',
+            shouldCapture: false,
+          );
           _handleDisconnect();
         },
         cancelOnError: false,
       );
-      _heartbeat = Timer.periodic(
-        const Duration(seconds: _kHeartbeatSeconds),
-        (_) {
-          try {
-            _channel?.sink.add('ping');
-          } catch (_) {} // ping fire-and-forget
-        },
-      );
+      _heartbeat = Timer.periodic(const Duration(seconds: _kHeartbeatSeconds), (
+        _,
+      ) {
+        try {
+          _channel?.sink.add('ping');
+        } catch (_) {} // ping fire-and-forget
+      });
     } catch (e, st) {
       _log.captureException(e, stackTrace: st, tag: 'ChatWsManager.connect');
       _handleDisconnect();
@@ -105,14 +108,14 @@ class _ChatWsManager {
 }
 
 // ── Chat sabitleri ─────────────────────────────────────────────────────────────
-const _kMessageProtectedCount = 5;    // en son N mesaj expire edilmez
-const _kMaxVisibleMessages    = 20;   // ListView'de gösterilen max mesaj sayısı
-const _kHistoryCapacity       = 50;   // geçmiş listesinde tutulan max mesaj sayısı
-const _kMessageExpireSeconds  = 6;    // mesaj ekranda kalma süresi (saniye)
-const _kFadeMilliseconds      = 700;  // mesaj kaybolma animasyon süresi (ms)
-const _kHeartbeatSeconds      = 25;   // WebSocket ping aralığı (saniye)
-const _kReconnectSeconds      = 4;    // bağlantı kopunca yeniden bağlanma gecikmesi
-const _kMessageRowHeight      = 22.0; // chat satırı yüksekliği (piksel)
+const _kMessageProtectedCount = 5; // en son N mesaj expire edilmez
+const _kMaxVisibleMessages = 20; // ListView'de gösterilen max mesaj sayısı
+const _kHistoryCapacity = 50; // geçmiş listesinde tutulan max mesaj sayısı
+const _kMessageExpireSeconds = 6; // mesaj ekranda kalma süresi (saniye)
+const _kFadeMilliseconds = 700; // mesaj kaybolma animasyon süresi (ms)
+const _kHeartbeatSeconds = 25; // WebSocket ping aralığı (saniye)
+const _kReconnectSeconds = 4; // bağlantı kopunca yeniden bağlanma gecikmesi
+const _kMessageRowHeight = 22.0; // chat satırı yüksekliği (piksel)
 
 class _TimedMessage {
   final ChatMessage message;
@@ -120,7 +123,11 @@ class _TimedMessage {
   bool _disposed = false;
   bool _permanent = false; // true → timer expired but last-3 protection kept it
 
-  _TimedMessage(this.message, {required bool Function() shouldRemove, required VoidCallback onExpired}) {
+  _TimedMessage(
+    this.message, {
+    required bool Function() shouldRemove,
+    required VoidCallback onExpired,
+  }) {
     Future.delayed(const Duration(seconds: _kMessageExpireSeconds), () {
       if (_disposed) return;
       if (!shouldRemove()) {
@@ -144,21 +151,28 @@ class ChatPanel extends StatefulWidget {
   final int streamId;
   final VoidCallback? onStreamEnded;
   final void Function(int count)? onViewerCountChanged;
+
   /// Host için: kullanıcı adına tıklanınca çağrılır
   final void Function(String username)? onUsernameTap;
+
   /// Viewer için: susturulunca çağrılır
   final VoidCallback? onMuted;
+
   /// Viewer için: susturma kaldırılınca çağrılır
   final VoidCallback? onUnmuted;
+
   /// Viewer için: yayından atılınca çağrılır
   final VoidCallback? onKicked;
+
   /// Tüm izleyicilere broadcast — birisi moderatör yapıldı (rozet gösterimi için).
   final void Function(String targetUsername, String promotedBy)? onModPromoted;
+
   /// Tüm izleyicilere broadcast — birinin moderatörlüğü kaldırıldı.
   final void Function(String targetUsername, String demotedBy)? onModDemoted;
 
   /// Sadece bu kullanıcıya hedefli — BEN moderatör yapıldım.
   final void Function(String promotedBy)? onModPromotedSelf;
+
   /// Sadece bu kullanıcıya hedefli — benim moderatörlüğüm kaldırıldı.
   final void Function(String demotedBy)? onModDemotedSelf;
 
@@ -171,7 +185,8 @@ class ChatPanel extends StatefulWidget {
 
   /// Host, birini sahneye davet ettiğinde tüm odaya gelir.
   /// [hostUsername] daveti gönderen host, [targetUsername] davet edilen kullanıcı.
-  final void Function(String hostUsername, String targetUsername)? onCoHostInvite;
+  final void Function(String hostUsername, String targetUsername)?
+  onCoHostInvite;
 
   /// Host, sahnedeki konuğu kaldırdığında tüm odaya gelir.
   final void Function(String targetUsername)? onCoHostRemoved;
@@ -365,217 +380,249 @@ class ChatPanelState extends State<ChatPanel> {
       onDone: (closeCode) => _scheduleReconnect(closeCode: closeCode),
       onData: (data) {
         if (!mounted) return;
-          String? _eventType;
-          try {
-            final json = jsonDecode(data as String) as Map<String, dynamic>;
-            if (json['type'] == 'message') {
-              _addMessage(ChatMessage.fromJson(json));
-            } else if (json['type'] == 'system_join') {
-              final uname = json['username'] as String? ?? '';
-              _addMessage(ChatMessage(
+        String? _eventType;
+        try {
+          final json = jsonDecode(data as String) as Map<String, dynamic>;
+          if (json['type'] == 'message') {
+            _addMessage(ChatMessage.fromJson(json));
+          } else if (json['type'] == 'system_join') {
+            final uname = json['username'] as String? ?? '';
+            _addMessage(
+              ChatMessage(
                 id: 'join_${DateTime.now().millisecondsSinceEpoch}',
                 username: uname,
                 content: 'yayına katıldı',
                 createdAt: DateTime.now(),
                 isSystem: true,
-              ));
-            } else if (json['type'] == 'history') {
-              final msgs = (json['messages'] as List)
-                  .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
-                  .toList();
-              for (final m in msgs) {
-                _addMessage(m);
-              }
-            } else if (json['type'] == 'viewer_count') {
-              final count = (json['count'] as num?)?.toInt() ?? 0;
-              widget.onViewerCountChanged?.call(count);
-            } else if (json['type'] == 'stream_ended') {
-              _streamEnded = true;
-              _eventType = 'stream_ended';
-            } else if (json['type'] == 'muted') {
-              if (mounted) setState(() => _selfMuted = true);
-              _eventType = 'muted';
-            } else if (json['type'] == 'unmuted') {
-              if (mounted) setState(() => _selfMuted = false);
-              _eventType = 'unmuted';
-            } else if (json['type'] == 'kicked') {
-              _streamEnded = true;
-              _eventType = 'kicked';
-            } else if (json['type'] == 'mod_promoted') {
-              final target   = json['username'] as String? ?? '';
-              final by       = json['promoted_by'] as String? ?? '';
-              final targetId = (json['user_id'] as num?)?.toInt();
-              _eventType = 'mod_promoted:$target:$by';
-              // user_id eşleşirse hedefli self eventi tetikle (backend deploy beklenmeden)
-              if (_myUserId != null && targetId != null && targetId == _myUserId) {
-                debugPrint('[CHAT] mod_promoted self-match via user_id=$targetId');
-                _eventType = 'mod_promoted_self:$by';
-              }
-            } else if (json['type'] == 'mod_demoted') {
-              final target   = json['username'] as String? ?? '';
-              final by       = json['demoted_by'] as String? ?? '';
-              final targetId = (json['user_id'] as num?)?.toInt();
-              _eventType = 'mod_demoted:$target:$by';
-              if (_myUserId != null && targetId != null && targetId == _myUserId) {
-                debugPrint('[CHAT] mod_demoted self-match via user_id=$targetId');
-                _eventType = 'mod_demoted_self:$by';
-              }
-            } else if (json['type'] == 'mod_status') {
-              // Yeniden bağlanmada mevcut mod durumu — sessiz geri yükleme
-              final isMod = json['is_mod'] as bool? ?? false;
-              if (isMod) _eventType = 'mod_status_restored';
-            } else if (json['type'] == 'mod_promoted_self') {
-              // Hedefli event — sadece atanan kullanıcı alır
-              final by = json['promoted_by'] as String? ?? '';
+              ),
+            );
+          } else if (json['type'] == 'history') {
+            final msgs = (json['messages'] as List)
+                .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
+                .toList();
+            for (final m in msgs) {
+              _addMessage(m);
+            }
+          } else if (json['type'] == 'viewer_count') {
+            final count = (json['count'] as num?)?.toInt() ?? 0;
+            widget.onViewerCountChanged?.call(count);
+          } else if (json['type'] == 'stream_ended') {
+            _streamEnded = true;
+            _eventType = 'stream_ended';
+          } else if (json['type'] == 'muted') {
+            if (mounted) setState(() => _selfMuted = true);
+            _eventType = 'muted';
+          } else if (json['type'] == 'unmuted') {
+            if (mounted) setState(() => _selfMuted = false);
+            _eventType = 'unmuted';
+          } else if (json['type'] == 'kicked') {
+            _streamEnded = true;
+            _eventType = 'kicked';
+          } else if (json['type'] == 'mod_promoted') {
+            final target = json['username'] as String? ?? '';
+            final by = json['promoted_by'] as String? ?? '';
+            final targetId = (json['user_id'] as num?)?.toInt();
+            _eventType = 'mod_promoted:$target:$by';
+            // user_id eşleşirse hedefli self eventi tetikle (backend deploy beklenmeden)
+            if (_myUserId != null &&
+                targetId != null &&
+                targetId == _myUserId) {
+              debugPrint(
+                '[CHAT] mod_promoted self-match via user_id=$targetId',
+              );
               _eventType = 'mod_promoted_self:$by';
-            } else if (json['type'] == 'mod_demoted_self') {
-              // Hedefli event — sadece etkilenen kullanıcı alır
-              final by = json['demoted_by'] as String? ?? '';
+            }
+          } else if (json['type'] == 'mod_demoted') {
+            final target = json['username'] as String? ?? '';
+            final by = json['demoted_by'] as String? ?? '';
+            final targetId = (json['user_id'] as num?)?.toInt();
+            _eventType = 'mod_demoted:$target:$by';
+            if (_myUserId != null &&
+                targetId != null &&
+                targetId == _myUserId) {
+              debugPrint('[CHAT] mod_demoted self-match via user_id=$targetId');
               _eventType = 'mod_demoted_self:$by';
-            } else if (json['type'] == 'host_pin') {
-              final content = json['content'] as String? ?? '';
-              if (mounted) {
-                // Boş string = sabiti kaldır; dolu string = sabitle
-                setState(() => _pinnedMessage = content.isEmpty ? null : content);
-              }
-            } else if (json['type'] == 'stream_like') {
-              final likeUserId = (json['user_id'] as num?)?.toInt() ?? 0;
-              final likeUsername = json['username'] as String? ?? '';
-              // Kendi gönderdiğimiz kalpleri tekrar gösterme
-              if (_myUserId == null || likeUserId != _myUserId) {
-                _eventType = 'stream_like:$likeUserId:$likeUsername';
-              }
-            } else if (json['type'] == 'cohost_invite') {
-              final hostUsername   = json['host_username'] as String? ?? '';
-              final targetUsername = json['target_username'] as String? ?? '';
-              _eventType = 'cohost_invite:$hostUsername:$targetUsername';
-            } else if (json['type'] == 'cohost_removed') {
-              final targetUsername = json['target_username'] as String? ?? '';
-              _eventType = 'cohost_removed:$targetUsername';
-            } else if (json['type'] == 'cohost_accepted') {
-              final username = json['username'] as String? ?? '';
-              _eventType = 'cohost_accepted:$username';
-            } else if (json['type'] == 'WHALE_ALERT') {
-              final username = json['username'] as String? ?? '';
-              final tier = json['tier'] as String? ?? 'VIP';
-              _eventType = 'whale_alert:$username:$tier';
-            } else if (json['type'] == 'gift') {
-              final sender   = json['sender'] as String? ?? '';
-              final giftName = json['gift_name'] as String? ?? '';
-              final cost     = (json['cost'] as num?)?.toInt() ?? 0;
-              _eventType = 'gift:$sender:$giftName:$cost';
-            } else if (json['type'] == 'hype_update') {
-              final score = (json['score'] as num?)?.toInt() ?? 0;
-              widget.onHypeUpdate?.call(score);
-            } else if (json['type'] == 'hype_alert') {
-              final message = json['message'] as String? ?? '';
-              widget.onHypeAlert?.call(message);
-            } else if (json['type'] == 'error') {
-              final code = json['code'] as String? ?? '';
-              if (code == 'rate_limited' && mounted) {
-                // Metni geri yükle — kullanıcı yeniden gönderebilsin
-                if (_lastSentText != null && _lastSentText!.isNotEmpty) {
-                  _inputCtrl.text = _lastSentText!;
-                  _inputCtrl.selection = TextSelection.fromPosition(
-                    TextPosition(offset: _inputCtrl.text.length),
-                  );
-                }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      AppLocalizations.of(context)!.chatRateLimited,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                    ),
-                    backgroundColor: Colors.red.shade700,
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
+            }
+          } else if (json['type'] == 'mod_status') {
+            // Yeniden bağlanmada mevcut mod durumu — sessiz geri yükleme
+            final isMod = json['is_mod'] as bool? ?? false;
+            if (isMod) _eventType = 'mod_status_restored';
+          } else if (json['type'] == 'mod_promoted_self') {
+            // Hedefli event — sadece atanan kullanıcı alır
+            final by = json['promoted_by'] as String? ?? '';
+            _eventType = 'mod_promoted_self:$by';
+          } else if (json['type'] == 'mod_demoted_self') {
+            // Hedefli event — sadece etkilenen kullanıcı alır
+            final by = json['demoted_by'] as String? ?? '';
+            _eventType = 'mod_demoted_self:$by';
+          } else if (json['type'] == 'host_pin') {
+            final content = json['content'] as String? ?? '';
+            if (mounted) {
+              // Boş string = sabiti kaldır; dolu string = sabitle
+              setState(() => _pinnedMessage = content.isEmpty ? null : content);
+            }
+          } else if (json['type'] == 'stream_like') {
+            final likeUserId = (json['user_id'] as num?)?.toInt() ?? 0;
+            final likeUsername = json['username'] as String? ?? '';
+            // Kendi gönderdiğimiz kalpleri tekrar gösterme
+            if (_myUserId == null || likeUserId != _myUserId) {
+              _eventType = 'stream_like:$likeUserId:$likeUsername';
+            }
+          } else if (json['type'] == 'cohost_invite') {
+            final hostUsername = json['host_username'] as String? ?? '';
+            final targetUsername = json['target_username'] as String? ?? '';
+            _eventType = 'cohost_invite:$hostUsername:$targetUsername';
+          } else if (json['type'] == 'cohost_removed') {
+            final targetUsername = json['target_username'] as String? ?? '';
+            _eventType = 'cohost_removed:$targetUsername';
+          } else if (json['type'] == 'cohost_accepted') {
+            final username = json['username'] as String? ?? '';
+            _eventType = 'cohost_accepted:$username';
+          } else if (json['type'] == 'WHALE_ALERT') {
+            final username = json['username'] as String? ?? '';
+            final tier = json['tier'] as String? ?? 'VIP';
+            _eventType = 'whale_alert:$username:$tier';
+          } else if (json['type'] == 'gift') {
+            final sender = json['sender'] as String? ?? '';
+            final giftName = json['gift_name'] as String? ?? '';
+            final cost = (json['cost'] as num?)?.toInt() ?? 0;
+            _eventType = 'gift:$sender:$giftName:$cost';
+          } else if (json['type'] == 'hype_update') {
+            final score = (json['score'] as num?)?.toInt() ?? 0;
+            widget.onHypeUpdate?.call(score);
+          } else if (json['type'] == 'hype_alert') {
+            final message = json['message'] as String? ?? '';
+            widget.onHypeAlert?.call(message);
+          } else if (json['type'] == 'error') {
+            final code = json['code'] as String? ?? '';
+            if (code == 'rate_limited' && mounted) {
+              // Metni geri yükle — kullanıcı yeniden gönderebilsin
+              if (_lastSentText != null && _lastSentText!.isNotEmpty) {
+                _inputCtrl.text = _lastSentText!;
+                _inputCtrl.selection = TextSelection.fromPosition(
+                  TextPosition(offset: _inputCtrl.text.length),
                 );
               }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(context)!.chatRateLimited,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  backgroundColor: Colors.red.shade700,
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              );
             }
-          } catch (e) {
-            debugPrint('[CHAT] JSON parse hatası: $e');
           }
-          // Callback'leri try-catch dışında çağır — exception gizlenmesin
-          if (_eventType == 'stream_ended') widget.onStreamEnded?.call();
-          if (_eventType == 'muted') widget.onMuted?.call();
-          if (_eventType == 'unmuted') widget.onUnmuted?.call();
-          if (_eventType == 'kicked') {
-            debugPrint('[CHAT] kicked — onKicked null:${widget.onKicked == null}');
-            widget.onKicked?.call();
-          }
-          if (_eventType != null && _eventType!.startsWith('mod_promoted:')) {
-            final rest  = _eventType!.substring('mod_promoted:'.length);
-            final colon = rest.indexOf(':');
-            final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
-            final promotedBy     = colon >= 0 ? rest.substring(colon + 1) : '';
-            debugPrint('[CHAT] mod_promoted — target:$targetUsername promotedBy:$promotedBy myUserId:$_myUserId');
-            widget.onModPromoted?.call(targetUsername, promotedBy);
-          }
-          if (_eventType != null && _eventType!.startsWith('mod_demoted:')) {
-            final rest  = _eventType!.substring('mod_demoted:'.length);
-            final colon = rest.indexOf(':');
-            final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
-            final demotedBy      = colon >= 0 ? rest.substring(colon + 1) : '';
-            debugPrint('[CHAT] mod_demoted — target:$targetUsername demotedBy:$demotedBy myUserId:$_myUserId');
-            widget.onModDemoted?.call(targetUsername, demotedBy);
-          }
-          if (_eventType == 'mod_status_restored') {
-            debugPrint('[CHAT] mod_status_restored — sessiz geri yükleme');
-            widget.onModRestored?.call();
-          }
-          if (_eventType != null && _eventType!.startsWith('mod_promoted_self:')) {
-            final promotedBy = _eventType!.substring('mod_promoted_self:'.length);
-            debugPrint('[CHAT] mod_promoted_self — promotedBy:$promotedBy | onModPromotedSelf null:${widget.onModPromotedSelf == null}');
-            widget.onModPromotedSelf?.call(promotedBy);
-            debugPrint('[CHAT] mod_promoted_self — callback çağrısı tamamlandı');
-          }
-          if (_eventType != null && _eventType!.startsWith('mod_demoted_self:')) {
-            final demotedBy = _eventType!.substring('mod_demoted_self:'.length);
-            debugPrint('[CHAT] mod_demoted_self — demotedBy:$demotedBy');
-            widget.onModDemotedSelf?.call(demotedBy);
-          }
-          if (_eventType != null && _eventType!.startsWith('stream_like:')) {
-            final rest = _eventType!.substring('stream_like:'.length);
-            final colon = rest.indexOf(':');
-            final likeUserId = colon >= 0 ? int.tryParse(rest.substring(0, colon)) ?? 0 : 0;
-            final likeUsername = colon >= 0 ? rest.substring(colon + 1) : '';
-            widget.onStreamLike?.call(likeUserId, likeUsername);
-          }
-          if (_eventType != null && _eventType!.startsWith('cohost_invite:')) {
-            final rest  = _eventType!.substring('cohost_invite:'.length);
-            final colon = rest.indexOf(':');
-            final hostUsername   = colon >= 0 ? rest.substring(0, colon) : rest;
-            final targetUsername = colon >= 0 ? rest.substring(colon + 1) : '';
-            widget.onCoHostInvite?.call(hostUsername, targetUsername);
-          }
-          if (_eventType != null && _eventType!.startsWith('cohost_removed:')) {
-            final targetUsername = _eventType!.substring('cohost_removed:'.length);
-            widget.onCoHostRemoved?.call(targetUsername);
-          }
-          if (_eventType != null && _eventType!.startsWith('cohost_accepted:')) {
-            final username = _eventType!.substring('cohost_accepted:'.length);
-            widget.onCoHostAccepted?.call(username);
-          }
-          if (_eventType != null && _eventType!.startsWith('whale_alert:')) {
-            final rest  = _eventType!.substring('whale_alert:'.length);
-            final colon = rest.indexOf(':');
-            final username = colon >= 0 ? rest.substring(0, colon) : rest;
-            final tier     = colon >= 0 ? rest.substring(colon + 1) : 'VIP';
-            widget.onWhaleAlert?.call(username, tier);
-          }
-          if (_eventType != null && _eventType!.startsWith('gift:')) {
-            final rest        = _eventType!.substring('gift:'.length);
-            final firstColon  = rest.indexOf(':');
-            final sender      = firstColon >= 0 ? rest.substring(0, firstColon) : rest;
-            final remainder   = firstColon >= 0 ? rest.substring(firstColon + 1) : '';
-            final lastColon   = remainder.lastIndexOf(':');
-            final giftName    = lastColon >= 0 ? remainder.substring(0, lastColon) : remainder;
-            final cost        = lastColon >= 0 ? int.tryParse(remainder.substring(lastColon + 1)) ?? 0 : 0;
-            widget.onGift?.call(sender, giftName, cost);
-          }
+        } catch (e) {
+          debugPrint('[CHAT] JSON parse hatası: $e');
+        }
+        // Callback'leri try-catch dışında çağır — exception gizlenmesin
+        if (_eventType == 'stream_ended') widget.onStreamEnded?.call();
+        if (_eventType == 'muted') widget.onMuted?.call();
+        if (_eventType == 'unmuted') widget.onUnmuted?.call();
+        if (_eventType == 'kicked') {
+          debugPrint(
+            '[CHAT] kicked — onKicked null:${widget.onKicked == null}',
+          );
+          widget.onKicked?.call();
+        }
+        if (_eventType != null && _eventType!.startsWith('mod_promoted:')) {
+          final rest = _eventType!.substring('mod_promoted:'.length);
+          final colon = rest.indexOf(':');
+          final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
+          final promotedBy = colon >= 0 ? rest.substring(colon + 1) : '';
+          debugPrint(
+            '[CHAT] mod_promoted — target:$targetUsername promotedBy:$promotedBy myUserId:$_myUserId',
+          );
+          widget.onModPromoted?.call(targetUsername, promotedBy);
+        }
+        if (_eventType != null && _eventType!.startsWith('mod_demoted:')) {
+          final rest = _eventType!.substring('mod_demoted:'.length);
+          final colon = rest.indexOf(':');
+          final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
+          final demotedBy = colon >= 0 ? rest.substring(colon + 1) : '';
+          debugPrint(
+            '[CHAT] mod_demoted — target:$targetUsername demotedBy:$demotedBy myUserId:$_myUserId',
+          );
+          widget.onModDemoted?.call(targetUsername, demotedBy);
+        }
+        if (_eventType == 'mod_status_restored') {
+          debugPrint('[CHAT] mod_status_restored — sessiz geri yükleme');
+          widget.onModRestored?.call();
+        }
+        if (_eventType != null &&
+            _eventType!.startsWith('mod_promoted_self:')) {
+          final promotedBy = _eventType!.substring('mod_promoted_self:'.length);
+          debugPrint(
+            '[CHAT] mod_promoted_self — promotedBy:$promotedBy | onModPromotedSelf null:${widget.onModPromotedSelf == null}',
+          );
+          widget.onModPromotedSelf?.call(promotedBy);
+          debugPrint('[CHAT] mod_promoted_self — callback çağrısı tamamlandı');
+        }
+        if (_eventType != null && _eventType!.startsWith('mod_demoted_self:')) {
+          final demotedBy = _eventType!.substring('mod_demoted_self:'.length);
+          debugPrint('[CHAT] mod_demoted_self — demotedBy:$demotedBy');
+          widget.onModDemotedSelf?.call(demotedBy);
+        }
+        if (_eventType != null && _eventType!.startsWith('stream_like:')) {
+          final rest = _eventType!.substring('stream_like:'.length);
+          final colon = rest.indexOf(':');
+          final likeUserId = colon >= 0
+              ? int.tryParse(rest.substring(0, colon)) ?? 0
+              : 0;
+          final likeUsername = colon >= 0 ? rest.substring(colon + 1) : '';
+          widget.onStreamLike?.call(likeUserId, likeUsername);
+        }
+        if (_eventType != null && _eventType!.startsWith('cohost_invite:')) {
+          final rest = _eventType!.substring('cohost_invite:'.length);
+          final colon = rest.indexOf(':');
+          final hostUsername = colon >= 0 ? rest.substring(0, colon) : rest;
+          final targetUsername = colon >= 0 ? rest.substring(colon + 1) : '';
+          widget.onCoHostInvite?.call(hostUsername, targetUsername);
+        }
+        if (_eventType != null && _eventType!.startsWith('cohost_removed:')) {
+          final targetUsername = _eventType!.substring(
+            'cohost_removed:'.length,
+          );
+          widget.onCoHostRemoved?.call(targetUsername);
+        }
+        if (_eventType != null && _eventType!.startsWith('cohost_accepted:')) {
+          final username = _eventType!.substring('cohost_accepted:'.length);
+          widget.onCoHostAccepted?.call(username);
+        }
+        if (_eventType != null && _eventType!.startsWith('whale_alert:')) {
+          final rest = _eventType!.substring('whale_alert:'.length);
+          final colon = rest.indexOf(':');
+          final username = colon >= 0 ? rest.substring(0, colon) : rest;
+          final tier = colon >= 0 ? rest.substring(colon + 1) : 'VIP';
+          widget.onWhaleAlert?.call(username, tier);
+        }
+        if (_eventType != null && _eventType!.startsWith('gift:')) {
+          final rest = _eventType!.substring('gift:'.length);
+          final firstColon = rest.indexOf(':');
+          final sender = firstColon >= 0 ? rest.substring(0, firstColon) : rest;
+          final remainder = firstColon >= 0
+              ? rest.substring(firstColon + 1)
+              : '';
+          final lastColon = remainder.lastIndexOf(':');
+          final giftName = lastColon >= 0
+              ? remainder.substring(0, lastColon)
+              : remainder;
+          final cost = lastColon >= 0
+              ? int.tryParse(remainder.substring(lastColon + 1)) ?? 0
+              : 0;
+          widget.onGift?.call(sender, giftName, cost);
+        }
       },
     );
     _ws!.connect();
@@ -583,6 +630,13 @@ class ChatPanelState extends State<ChatPanel> {
 
   void _scheduleReconnect({int? closeCode}) {
     if (_streamEnded || !mounted) return;
+    if (closeCode == 1000) {
+      _streamEnded = true;
+      if (mounted) {
+        widget.onStreamEnded?.call();
+      }
+      return;
+    }
     if (closeCode == 4001) {
       _reconnectAfterAuthError();
       return;
@@ -703,7 +757,8 @@ class ChatPanelState extends State<ChatPanel> {
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
               if (n is ScrollUpdateNotification) {
-                final atBottom = _scrollController.hasClients &&
+                final atBottom =
+                    _scrollController.hasClients &&
                     _scrollController.position.pixels <= 32;
                 if (_autoScroll != atBottom) {
                   _autoScroll = atBottom;
@@ -749,10 +804,7 @@ class ChatPanelState extends State<ChatPanel> {
                       ),
                     );
                   }
-                  return _MessageItem(
-                    msg,
-                    onUsernameTap: widget.onUsernameTap,
-                  );
+                  return _MessageItem(msg, onUsernameTap: widget.onUsernameTap);
                 },
               ),
             ),
@@ -776,8 +828,11 @@ class ChatPanelState extends State<ChatPanel> {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white24),
                         ),
-                        child: const Icon(Icons.history_rounded,
-                            color: Colors.white70, size: 18),
+                        child: const Icon(
+                          Icons.history_rounded,
+                          color: Colors.white70,
+                          size: 18,
+                        ),
                       ),
                     ),
                   ),
@@ -802,8 +857,9 @@ class ChatPanelState extends State<ChatPanel> {
                       focusNode: _focusNode,
                       enabled: !_selfMuted,
                       style: TextStyle(
-                          color: _selfMuted ? Colors.white38 : Colors.white,
-                          fontSize: 13),
+                        color: _selfMuted ? Colors.white38 : Colors.white,
+                        fontSize: 13,
+                      ),
                       maxLength: 200,
                       maxLines: 1,
                       textInputAction: TextInputAction.send,
@@ -811,7 +867,8 @@ class ChatPanelState extends State<ChatPanel> {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (_inputScrollCtrl.hasClients) {
                             _inputScrollCtrl.jumpTo(
-                                _inputScrollCtrl.position.maxScrollExtent);
+                              _inputScrollCtrl.position.maxScrollExtent,
+                            );
                           }
                         });
                       },
@@ -820,11 +877,15 @@ class ChatPanelState extends State<ChatPanel> {
                             ? AppLocalizations.of(context)!.chatMutedHint
                             : AppLocalizations.of(context)!.chatMessageHint,
                         hintStyle: const TextStyle(
-                            color: Color(0xFF94A3B8), fontSize: 12),
+                          color: Color(0xFF94A3B8),
+                          fontSize: 12,
+                        ),
                         counterText: '',
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                       ),
                       onSubmitted: (_) => _sendMessage(),
                     ),
@@ -838,16 +899,14 @@ class ChatPanelState extends State<ChatPanel> {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: _selfMuted
-                          ? const Color(0x44000000)
-                          : kPrimary,
+                      color: _selfMuted ? const Color(0x44000000) : kPrimary,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.send_rounded,
-                        color: _selfMuted
-                            ? Colors.white24
-                            : Colors.white,
-                        size: 16),
+                    child: Icon(
+                      Icons.send_rounded,
+                      color: _selfMuted ? Colors.white24 : Colors.white,
+                      size: 16,
+                    ),
                   ),
                 ),
               ],
@@ -903,8 +962,11 @@ class _HistorySheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Row(
                 children: [
-                  const Icon(Icons.history_rounded,
-                      color: Colors.white54, size: 18),
+                  const Icon(
+                    Icons.history_rounded,
+                    color: Colors.white54,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     l.chatHistoryTitle,
@@ -917,8 +979,7 @@ class _HistorySheet extends StatelessWidget {
                   const Spacer(),
                   Text(
                     l.chatHistoryCount(history.length),
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12),
+                    style: const TextStyle(color: Colors.white38, fontSize: 12),
                   ),
                 ],
               ),
@@ -929,7 +990,9 @@ class _HistorySheet extends StatelessWidget {
               child: ListView.builder(
                 controller: controller,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: history.length,
                 itemBuilder: (_, i) {
                   final msg = history[i];
@@ -963,7 +1026,8 @@ class _HistorySheet extends StatelessWidget {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => PublicProfileScreen(
-                                        username: msg.username),
+                                      username: msg.username,
+                                    ),
                                   ),
                                 );
                               },
@@ -1112,7 +1176,10 @@ class _MessageItem extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 3),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF16A34A),
                       borderRadius: BorderRadius.circular(3),
@@ -1138,7 +1205,10 @@ class _MessageItem extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 3),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEA580C),
                       borderRadius: BorderRadius.circular(3),
@@ -1170,12 +1240,12 @@ class _MessageItem extends StatelessWidget {
                 ..onTap = onUsernameTap != null
                     ? () => onUsernameTap!(message.username)
                     : () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                PublicProfileScreen(username: message.username),
-                          ),
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              PublicProfileScreen(username: message.username),
                         ),
+                      ),
             ),
             TextSpan(
               text: message.content,

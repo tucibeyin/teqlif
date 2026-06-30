@@ -5,14 +5,17 @@ import '../models/stream.dart';
 sealed class FeedItem {
   const FeedItem();
 }
+
 class LiveFeedItem extends FeedItem {
   final StreamOut stream;
   const LiveFeedItem(this.stream);
 }
+
 class ListingFeedItem extends FeedItem {
   final Map<String, dynamic> data;
   const ListingFeedItem(this.data);
 }
+
 class LoadingFeedItem extends FeedItem {
   const LoadingFeedItem();
 }
@@ -30,9 +33,9 @@ class FeedSlot {
 class SwipeFeedManager {
   List<StreamOut> _liveItems = [];
   final List<Map<String, dynamic>> _listingPool = [];
-  
+
   int _listingsPerGroup = 2;
-  
+
   final List<FeedSlot> _slots = [];
   int _nextListingIndex = 0;
   int _nextStreamIndex = 0;
@@ -42,9 +45,12 @@ class SwipeFeedManager {
   final List<int> _priorityStreamIds = [];
   final Set<int> _shownStreamIds = {};
 
-  bool get needsMoreListings => _listingPool.isNotEmpty && _nextListingIndex >= _listingPool.length - 5;
-  List<StreamOut> get activeStreams => _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-  bool get needsMoreLiveStreams => activeStreams.isEmpty || _nextStreamIndex >= activeStreams.length;
+  bool get needsMoreListings =>
+      _listingPool.isNotEmpty && _nextListingIndex >= _listingPool.length - 5;
+  List<StreamOut> get activeStreams =>
+      _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
+  bool get needsMoreLiveStreams =>
+      activeStreams.isEmpty || _nextStreamIndex >= activeStreams.length;
 
   void init({
     required List<StreamOut> initialStreams,
@@ -61,93 +67,119 @@ class SwipeFeedManager {
     required List<String> preferredCategories,
     required int currentIndex,
   }) {
-    debugPrint('[${DateTime.now().toString()}] [EVENT: FEED_UPDATE] streams: ${streams.length} | listingsPerGroup: $listingsPerGroup');
+    debugPrint(
+      '[${DateTime.now().toString()}] [EVENT: FEED_UPDATE] streams: ${streams.length} | listingsPerGroup: $listingsPerGroup',
+    );
     _listingsPerGroup = listingsPerGroup;
-    
+
     // Sadece henüz bitmemiş yeni yayınları al
     final freshIds = streams.map((s) => s.id).toSet();
-    
+
     // Eski listede olup yeni listede olmayanlar (bitti)
     final newLiveItems = <StreamOut>[];
     for (final s in _liveItems) {
       if (!freshIds.contains(s.id)) {
-        debugPrint('[${DateTime.now().toString()}] [EVENT: STREAM_ENDED] Stream not in freshIds, keeping in feed: ${s.id}');
+        debugPrint(
+          '[${DateTime.now().toString()}] [EVENT: STREAM_ENDED] Stream not in freshIds, keeping in feed: ${s.id}',
+        );
         _endedStreamIds.add(s.id);
-        newLiveItems.add(s); // Kullanıcı hala bu sayfada olabilir, listeden çıkarma!
+        newLiveItems.add(
+          s,
+        ); // Kullanıcı hala bu sayfada olabilir, listeden çıkarma!
       } else {
         // Güncel veriyi al
         newLiveItems.add(streams.firstWhere((x) => x.id == s.id));
       }
     }
-    
+
     final newlyAddedStreams = <StreamOut>[];
-    
+
     // Yepyeni yayınları ekle
     for (final s in streams) {
       if (!_liveItems.any((old) => old.id == s.id)) {
-        debugPrint('[${DateTime.now().toString()}] [EVENT: STREAM_ADDED] New stream added: ${s.id}');
+        debugPrint(
+          '[${DateTime.now().toString()}] [EVENT: STREAM_ADDED] New stream added: ${s.id}',
+        );
         newLiveItems.add(s);
         newlyAddedStreams.add(s);
       }
     }
-    
+
     _liveItems = newLiveItems;
-    
+
     // Yeni eklenen yayınları priority kuyruğuna ekle ki bir sonraki FeedSlot üretilirken öncelikli seçilsinler
     for (final s in newlyAddedStreams) {
       if (!_priorityStreamIds.contains(s.id)) {
         _priorityStreamIds.add(s.id);
       }
     }
-    
+
     // Gelecekteki önbelleğe alınmış slotları temizle ki yeni yayın 10-15 swipe sonraya kalmasın.
     // O anki swipe animasyonunu bozmamak için kullanıcının bulunduğu +1 sonrasını koruyoruz.
     if (newlyAddedStreams.isNotEmpty && _slots.length > currentIndex + 2) {
       _slots.removeRange(currentIndex + 2, _slots.length);
     }
-    
-    debugPrint('[${DateTime.now().toString()}] [EVENT: FEED_UPDATE_COMPLETE] _liveItems: ${_liveItems.length} | endedStreamIds: $_endedStreamIds');
+
+    debugPrint(
+      '[${DateTime.now().toString()}] [EVENT: FEED_UPDATE_COMPLETE] _liveItems: ${_liveItems.length} | endedStreamIds: $_endedStreamIds',
+    );
   }
 
   void addListings(List<Map<String, dynamic>> newListings) {
-    debugPrint('[${DateTime.now().toString()}] [EVENT: LISTINGS_ADDED] Count: ${newListings.length} | pool_size_before: ${_listingPool.length}');
+    debugPrint(
+      '[${DateTime.now().toString()}] [EVENT: LISTINGS_ADDED] Count: ${newListings.length} | pool_size_before: ${_listingPool.length}',
+    );
     _listingPool.addAll(newListings);
   }
 
   void markStreamEnded(int streamId) {
-    debugPrint('[${DateTime.now().toString()}] [EVENT: STREAM_MARKED_ENDED] streamId: $streamId');
+    debugPrint(
+      '[${DateTime.now().toString()}] [EVENT: STREAM_MARKED_ENDED] streamId: $streamId',
+    );
     _endedStreamIds.add(streamId);
   }
-  
+
   void removeStream(int streamId) {
-    debugPrint('[${DateTime.now().toString()}] [EVENT: STREAM_REMOVED] streamId: $streamId');
+    debugPrint(
+      '[${DateTime.now().toString()}] [EVENT: STREAM_REMOVED] streamId: $streamId',
+    );
     _liveItems.removeWhere((s) => s.id == streamId);
     _endedStreamIds.add(streamId);
   }
-  
+
   void replaceStreamWithListing(int streamId) {
-    debugPrint('[${DateTime.now().toString()}] [EVENT: STREAM_REPLACED] streamId: $streamId replaced with listing');
+    debugPrint(
+      '[${DateTime.now().toString()}] [EVENT: STREAM_REPLACED] streamId: $streamId replaced with listing',
+    );
     _liveItems.removeWhere((s) => s.id == streamId);
     _endedStreamIds.add(streamId);
-    
+
     for (int i = 0; i < _slots.length; i++) {
       if (_slots[i].isStream && _slots[i].streamId == streamId) {
         _slots[i] = FeedSlot.listing(_nextListingIndex++);
       }
     }
   }
-  
+
   bool isStreamEnded(int streamId) => _endedStreamIds.contains(streamId);
 
   FeedItem getItemAt(int index) {
     if (index >= _slots.length) {
       _extendGroupsUpTo(index + 5);
     }
-    
+
+    // If _extendGroupsUpTo decided not to add more slots (e.g. out of content), return a loading or empty item
+    if (index >= _slots.length) {
+      return const LoadingFeedItem();
+    }
+
     final slot = _slots[index];
     if (slot.isStream) {
       if (_liveItems.isEmpty) return const LoadingFeedItem();
-      final stream = _liveItems.firstWhere((s) => s.id == slot.streamId, orElse: () => _liveItems.first);
+      final stream = _liveItems.firstWhere(
+        (s) => s.id == slot.streamId,
+        orElse: () => _liveItems.first,
+      );
       return LiveFeedItem(stream);
     } else {
       if (_listingPool.isEmpty) return const LoadingFeedItem();
@@ -171,11 +203,13 @@ class SwipeFeedManager {
   }
 
   int? getNextPageForStreamId(int streamId, int currentIndex) {
-    final activeCount = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).length;
+    final activeCount = _liveItems
+        .where((s) => !_endedStreamIds.contains(s.id))
+        .length;
     if (activeCount == 0) return null;
-    
+
     _extendGroupsUpTo(currentIndex + (activeCount * 5));
-    
+
     for (int i = currentIndex; i < _slots.length; i++) {
       if (_slots[i].isStream && _slots[i].streamId == streamId) {
         return i;
@@ -188,9 +222,13 @@ class SwipeFeedManager {
     final rand = Random();
     while (_slots.length <= targetPage) {
       int? streamId;
-      final activeStreams = _liveItems.where((s) => !_endedStreamIds.contains(s.id)).toList();
-      final unshownStreams = activeStreams.where((s) => !_shownStreamIds.contains(s.id)).toList();
-      
+      final activeStreams = _liveItems
+          .where((s) => !_endedStreamIds.contains(s.id))
+          .toList();
+      final unshownStreams = activeStreams
+          .where((s) => !_shownStreamIds.contains(s.id))
+          .toList();
+
       if (_priorityStreamIds.isNotEmpty) {
         streamId = _priorityStreamIds.removeAt(0);
       } else if (unshownStreams.isNotEmpty) {
@@ -201,11 +239,23 @@ class SwipeFeedManager {
         streamId = activeStreams[_nextStreamIndex % activeStreams.length].id;
         _nextStreamIndex++;
       }
-      
+
       if (streamId != null) {
+        // Prevent back-to-back duplicate streams when there are no listings
+        if (_slots.isNotEmpty &&
+            _slots.last.isStream &&
+            _slots.last.streamId == streamId &&
+            _listingsPerGroup == 0 &&
+            activeStreams.length == 1) {
+          // No more content to show, stop extending the feed
+          break;
+        }
+
         _shownStreamIds.add(streamId);
         _slots.add(FeedSlot.stream(streamId));
-        debugPrint('[${DateTime.now().toString()}] [EVENT: GROUP_EXTENDED] streamAt: ${_slots.length - 1}');
+        debugPrint(
+          '[${DateTime.now().toString()}] [EVENT: GROUP_EXTENDED] streamAt: ${_slots.length - 1}',
+        );
       }
 
       int listingsInThisGroup = _listingsPerGroup;
