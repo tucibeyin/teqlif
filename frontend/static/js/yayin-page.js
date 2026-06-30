@@ -618,6 +618,12 @@
             return;
         }
 
+        if (msg.type === 'buy_it_now_requested') {
+            // We already received the state message right before this, so we can ignore it
+            // or just use it to log. It has no status field so it shouldn't fall through.
+            return;
+        }
+
         // auction_ended_by_buy_it_now event'i — özel SATILDI overlay
         if (msg.type === 'auction_ended_by_buy_it_now') {
             const wasBuyer = _iAmBinBuyer; // close öncesi kaydet
