@@ -241,16 +241,6 @@ class SwipeFeedManager {
       }
 
       if (streamId != null) {
-        // Prevent back-to-back duplicate streams when there are no listings
-        if (_slots.isNotEmpty &&
-            _slots.last.isStream &&
-            _slots.last.streamId == streamId &&
-            _listingsPerGroup == 0 &&
-            activeStreams.length == 1) {
-          // No more content to show, stop extending the feed
-          break;
-        }
-
         _shownStreamIds.add(streamId);
         _slots.add(FeedSlot.stream(streamId));
         debugPrint(
@@ -262,6 +252,10 @@ class SwipeFeedManager {
       if (streamId == null) {
         // Yayın kalmadıysa mecbur ilan göstereceğiz
         listingsInThisGroup = _listingsPerGroup > 0 ? _listingsPerGroup : 2;
+      } else if (activeStreams.length == 1 && _listingsPerGroup == 0) {
+        // Tek yayın varsa ve CTR düşük diye ilan kapatıldıysa bile,
+        // yayının arka arkaya sonsuz kopyalanmasını engellemek için araya mecburi ilan koy
+        listingsInThisGroup = 2;
       }
 
       for (int i = 0; i < listingsInThisGroup; i++) {
