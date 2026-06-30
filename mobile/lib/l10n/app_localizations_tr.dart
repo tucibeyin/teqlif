@@ -504,6 +504,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get purchaseListingNotFound => 'İlan bulunamadı.';
 
   @override
+  String get saleLoadError =>
+      'Satışlarınız yüklenirken bir sorun oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.';
+
+  @override
+  String get saleEmptyState => 'Henüz satışınız bulunmuyor.';
+
+  @override
+  String get saleUnknownBuyer => 'Bilinmeyen Alıcı';
+
+  @override
   String get dialogDeleteListingTitle => 'İlanı Sil';
 
   @override
@@ -2433,6 +2443,18 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get purchaseViewSeller => 'Satıcı Profiline Git';
+
+  @override
+  String get settingsMySales => 'Satışlarım';
+
+  @override
+  String get saleDetailTitle => 'Satış Detayı';
+
+  @override
+  String get saleBuyerLabel => 'Alıcı';
+
+  @override
+  String get saleMessageBuyer => 'Alıcıya Mesaj Gönder';
 
   @override
   String get hostAcceptSaleDialogTitle => 'Satışı Onaylıyorsunuz';

@@ -505,6 +505,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get purchaseListingNotFound => 'Listing not found.';
 
   @override
+  String get saleLoadError =>
+      'An error occurred while loading your sales. Please check your internet connection and try again.';
+
+  @override
+  String get saleEmptyState => 'You don\'t have any sales yet.';
+
+  @override
+  String get saleUnknownBuyer => 'Unknown Buyer';
+
+  @override
   String get dialogDeleteListingTitle => 'Delete Listing';
 
   @override
@@ -2432,6 +2442,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get purchaseViewSeller => 'Go to Seller Profile';
+
+  @override
+  String get settingsMySales => 'My Sales';
+
+  @override
+  String get saleDetailTitle => 'Sale Detail';
+
+  @override
+  String get saleBuyerLabel => 'Buyer';
+
+  @override
+  String get saleMessageBuyer => 'Message Buyer';
 
   @override
   String get hostAcceptSaleDialogTitle => 'Confirming Sale';

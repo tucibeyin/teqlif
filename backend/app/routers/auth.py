@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 
 from app.database import get_db
 from app.models.user import User
@@ -383,6 +383,75 @@ async def my_purchases(
             "proof_image_url": r.proof_image_url,
             "category": r.category,
             "seller_username": r.seller_username,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/me/sales")
+async def my_sales(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kullanıcının (Host) sattığı ürünlerin geçmişi (son 50 kayıt)."""
+    from app.models.auction import Auction
+    from app.models.listing import Listing as ListingModel
+    from app.models.stream import LiveStream
+    from app.models.user import User
+
+    # The seller is either the stream host or the listing user
+    result = await db.execute(
+        select(
+            Auction.id,
+            Auction.item_name,
+            Auction.start_price,
+            Auction.final_price,
+            Auction.is_bought_it_now,
+            Auction.bid_count,
+            Auction.started_at,
+            Auction.ended_at,
+            Auction.listing_id,
+            Auction.stream_id,
+            Auction.proof_image_url,
+            ListingModel.image_url,
+            ListingModel.category,
+            ListingModel.thumbnail_url,
+            User.username.label("buyer_username"),
+        )
+        .join(ListingModel, ListingModel.id == Auction.listing_id, isouter=True)
+        .join(LiveStream, LiveStream.id == Auction.stream_id, isouter=True)
+        .join(User, User.id == Auction.winner_id, isouter=True)
+        .where(
+            # the current user is the host of the stream where it was sold
+            # OR the current user is the owner of the listing
+            or_(
+                LiveStream.host_id == current_user.id,
+                ListingModel.user_id == current_user.id
+            ),
+            Auction.status == "completed",
+            Auction.winner_id.is_not(None)
+        )
+        .order_by(Auction.ended_at.desc())
+        .limit(50)
+    )
+    rows = result.fetchall()
+    return [
+        {
+            "auction_id": r.id,
+            "stream_id": r.stream_id,
+            "item_name": r.item_name,
+            "start_price": r.start_price,
+            "final_price": r.final_price,
+            "is_bought_it_now": r.is_bought_it_now,
+            "bid_count": r.bid_count,
+            "started_at": r.started_at.isoformat() if r.started_at else None,
+            "ended_at": r.ended_at.isoformat() if r.ended_at else None,
+            "listing_id": r.listing_id,
+            "image_url": r.image_url,
+            "thumbnail_url": r.thumbnail_url,
+            "proof_image_url": r.proof_image_url,
+            "category": r.category,
+            "buyer_username": r.buyer_username,
         }
         for r in rows
     ]

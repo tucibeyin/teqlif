@@ -241,4 +241,14 @@ class AuthService {
     );
     return List<Map<String, dynamic>>.from(body);
   }
+
+  static Future<List<Map<String, dynamic>>> getMySales() async {
+    final body = await apiCallList(
+      () async => http.get(
+        Uri.parse('$kBaseUrl/auth/me/sales'),
+        headers: await _headers(auth: true),
+      ),
+    );
+    return List<Map<String, dynamic>>.from(body);
+  }
 }

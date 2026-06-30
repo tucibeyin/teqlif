@@ -29,8 +29,10 @@ import 'create_listing_screen.dart';
 import 'pro_hub_screen.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
-import 'purchases_screen.dart';
 import 'account_info_screen.dart';
+import 'purchases_screen.dart';
+import 'sales_screen.dart';
+import 'public_profile_screen.dart';
 import '../services/wallet_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -1530,6 +1532,12 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 label: l.settingsMyPurchases,
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const PurchasesScreen())),
+              ),
+              _SettingsTile(
+                icon: Icons.sell_outlined,
+                label: l.settingsMySales,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const SalesScreen())),
               ),
             ],
           ),

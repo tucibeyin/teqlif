@@ -504,6 +504,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get purchaseListingNotFound => 'لم يتم العثور على الإعلان.';
 
   @override
+  String get saleLoadError =>
+      'حدث خطأ أثناء تحميل مبيعاتك. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.';
+
+  @override
+  String get saleEmptyState => 'ليس لديك أي مبيعات حتى الآن.';
+
+  @override
+  String get saleUnknownBuyer => 'مشتري غير معروف';
+
+  @override
   String get dialogDeleteListingTitle => 'حذف الإعلان';
 
   @override
@@ -2412,6 +2422,18 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get purchaseViewSeller => 'الذهاب إلى ملف البائع';
+
+  @override
+  String get settingsMySales => 'مبيعاتي';
+
+  @override
+  String get saleDetailTitle => 'تفاصيل البيع';
+
+  @override
+  String get saleBuyerLabel => 'المشتري';
+
+  @override
+  String get saleMessageBuyer => 'رسالة للمشتري';
 
   @override
   String get hostAcceptSaleDialogTitle => 'تأكيد البيع';

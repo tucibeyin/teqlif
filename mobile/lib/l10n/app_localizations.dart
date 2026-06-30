@@ -1072,6 +1072,24 @@ abstract class AppLocalizations {
   /// **'İlan bulunamadı.'**
   String get purchaseListingNotFound;
 
+  /// No description provided for @saleLoadError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satışlarınız yüklenirken bir sorun oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.'**
+  String get saleLoadError;
+
+  /// No description provided for @saleEmptyState.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz satışınız bulunmuyor.'**
+  String get saleEmptyState;
+
+  /// No description provided for @saleUnknownBuyer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilinmeyen Alıcı'**
+  String get saleUnknownBuyer;
+
   /// No description provided for @dialogDeleteListingTitle.
   ///
   /// In tr, this message translates to:
@@ -4569,6 +4587,30 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Satıcı Profiline Git'**
   String get purchaseViewSeller;
+
+  /// No description provided for @settingsMySales.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satışlarım'**
+  String get settingsMySales;
+
+  /// No description provided for @saleDetailTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış Detayı'**
+  String get saleDetailTitle;
+
+  /// No description provided for @saleBuyerLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcı'**
+  String get saleBuyerLabel;
+
+  /// No description provided for @saleMessageBuyer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcıya Mesaj Gönder'**
+  String get saleMessageBuyer;
 
   /// No description provided for @hostAcceptSaleDialogTitle.
   ///
