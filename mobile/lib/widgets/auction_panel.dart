@@ -74,6 +74,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   @override
   void dispose() {
+    if (_binDialogCtx != null && _binDialogCtx!.mounted) {
+      Navigator.of(_binDialogCtx!).pop();
+      _binDialogCtx = null;
+    }
     super.dispose();
   }
 

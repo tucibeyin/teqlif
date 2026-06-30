@@ -1307,10 +1307,12 @@
     });
 
     document.getElementById('btnBuyItNowAcceptInline')?.addEventListener('click', async () => {
+        console.log('[DEBUG_PROOF] btnBuyItNowAcceptInline clicked');
         const btn = document.getElementById('btnBuyItNowAcceptInline');
         btn.disabled = true;
         btn.textContent = 'İşleniyor...';
         showProofCaptureDialog(async (proofUrl) => {
+            console.log('[DEBUG_PROOF] showProofCaptureDialog returned for BuyItNow:', proofUrl);
             try {
                 await Auction.acceptBuyItNow(proofUrl);
                 setAuctionMsg('Hemen Al talebi onaylandı!', 'success');
