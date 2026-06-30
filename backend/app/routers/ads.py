@@ -401,29 +401,61 @@ async def get_campaign_report(
         client = f"{request.client.host}:{request.client.port}" if request.client else "unknown:0"
         logger.error(f'[Ads] ClickHouse rapor sorgusu başarısız: {client} - "{request.method} {request.url.path} HTTP/1.1" 500 Internal Server Error - {exc}')
 
-    # Kategori ortalama CTR (PostgreSQL)
+    # Kategori ortalama CTR (PostgreSQL + ClickHouse)
     try:
+        # 1. PostgreSQL'den ilanın kategorisini bul
         cat_result = await db.execute(
             select(Listing.category)
             .where(Listing.id == campaign.listing_id)
         )
         listing_cat_row = cat_result.fetchone()
+        
         if listing_cat_row and listing_cat_row[0]:
-            cat_ctr_result = await db.execute(
+            category_name = listing_cat_row[0]
+            
+            # 2. Bu kategoriye ait aktif veya bitmiş tüm kampanyaların ID'lerini çek
+            campaigns_query = await db.execute(
                 sql_text("""
-                    SELECT
-                        AVG(CASE WHEN ac.impressions > 0 THEN ac.clicks::float / ac.impressions ELSE 0 END) * 100
+                    SELECT ac.id 
                     FROM ad_campaigns ac
                     INNER JOIN listings l ON l.id = ac.listing_id
                     WHERE l.category = :cat
-                      AND ac.impressions > 0
                       AND ac.status IN ('active', 'ended')
                 """),
-                {"cat": listing_cat_row[0]},
+                {"cat": category_name},
             )
-            cat_row = cat_ctr_result.fetchone()
-            if cat_row and cat_row[0]:
-                category_avg_ctr = round(float(cat_row[0]), 2)
+            cat_campaign_ids = [row[0] for row in campaigns_query.fetchall()]
+            
+            # 3. Eğer bu kategoride reklamı yapılan kampanya varsa, CTR'ı ClickHouse'dan hesapla
+            if cat_campaign_ids:
+                from app.database_clickhouse import get_clickhouse_client
+                ch = await get_clickhouse_client()
+                
+                # ID'leri SQL IN formatına uygun hale getir (ör: "1,2,3")
+                id_list = ",".join(map(str, cat_campaign_ids))
+                
+                # ClickHouse üzerinden bu kampanyaların ortalama CTR'ını al
+                cat_ctr_result = await ch.query(f"""
+                    SELECT 
+                        AVG(
+                            CASE WHEN impr > 0 THEN clks / impr ELSE 0 END
+                        ) * 100 AS avg_ctr
+                    FROM (
+                        SELECT 
+                            item_id,
+                            countIf(event_type = 'ad_impression') AS impr,
+                            countIf(event_type = 'ad_click') AS clks
+                        FROM user_events
+                        WHERE item_id IN ({id_list})
+                          AND item_type = 'ad_campaign'
+                        GROUP BY item_id
+                    )
+                    WHERE impr > 0
+                """)
+                
+                if cat_ctr_result.result_rows and cat_ctr_result.result_rows[0][0] is not None:
+                    category_avg_ctr = round(float(cat_ctr_result.result_rows[0][0]), 2)
+                    
     except Exception as exc:
         client = f"{request.client.host}:{request.client.port}" if request.client else "unknown:0"
         logger.error(f'[Ads] Kategori CTR sorgusu başarısız: {client} - "{request.method} {request.url.path} HTTP/1.1" 500 Internal Server Error - {exc}')
