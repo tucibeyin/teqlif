@@ -310,6 +310,12 @@
         const newBtnSkip = btnSkip.cloneNode(true);
         btnSkip.parentNode.replaceChild(newBtnSkip, btnSkip);
 
+        // Reset button states just in case they were left disabled from a previous run
+        newBtnCapture.disabled = false;
+        newBtnCapture.textContent = 'Çek ve Onayla';
+        newBtnSkip.disabled = false;
+        newBtnSkip.textContent = 'Görselsiz Onayla';
+
         modal.style.display = 'flex';
 
         newBtnCapture.addEventListener('click', async () => {
