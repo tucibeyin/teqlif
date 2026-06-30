@@ -186,8 +186,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         }
       }
       
+      _currentListingsPerGroup = lpg;
       if (!isSingle && config.streams.isNotEmpty) {
-        _currentListingsPerGroup = lpg;
         _feedManager.updateConfig(
           streams: config.streams,
           listingsPerGroup: _currentListingsPerGroup,
@@ -240,6 +240,30 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   void _trackStreamDwell(int dwellMs) {
     _recentDwells.add(dwellMs);
     if (_recentDwells.length > 10) _recentDwells.removeAt(0);
+
+    // Dinamik listingsPerGroup güncellemesi
+    final avgMs = _recentDwells.reduce((a, b) => a + b) / _recentDwells.length;
+    int newLpg = 2;
+    if (avgMs > 15000) {
+      newLpg = 1;
+    } else if (avgMs < 3000) {
+      newLpg = 3;
+    } else {
+      newLpg = 2;
+    }
+
+    if (_currentListingsPerGroup != newLpg) {
+      setState(() {
+        _currentListingsPerGroup = newLpg;
+        _feedManager.updateConfig(
+          streams: _feedManager.activeStreams,
+          listingsPerGroup: _currentListingsPerGroup,
+          preferredCategories: _preferredListingCategories,
+          currentIndex: _currentPage,
+        );
+      });
+      debugPrint('[${DateTime.now().toString()}] [EVENT: CTR_UPDATE] listingsPerGroup updated to $_currentListingsPerGroup based on avg dwell: $avgMs ms');
+    }
   }
 
   void _onPageChanged(int page) {
