@@ -22,15 +22,16 @@ class OfflineQueueService {
   }
 
   /// Mesajı kuyruğa ekler; benzersiz [localId] döner.
-  static Future<String> enqueue(int receiverId, String content) async {
+  static Future<String> enqueue(int receiverId, String content, {int? listingId}) async {
     final localId = 'q_${DateTime.now().millisecondsSinceEpoch}';
-    final payload = jsonEncode({
+    final data = {
       'local_id': localId,
       'receiver_id': receiverId,
       'content': content,
       'queued_at': DateTime.now().millisecondsSinceEpoch,
-    });
-    await _box?.put(localId, payload);
+      if (listingId != null) 'listing_id': listingId,
+    };
+    await _box?.put(localId, jsonEncode(data));
     debugPrint('[OfflineQueue] enqueue: localId=$localId receiver=$receiverId');
     return localId;
   }
@@ -74,7 +75,8 @@ class OfflineQueueService {
         final data = jsonDecode(kv.value) as Map<String, dynamic>;
         final receiverId = data['receiver_id'] as int;
         final content    = data['content'] as String;
-        final ok = await NotificationService.sendMessage(receiverId, content);
+        final listingId  = data['listing_id'] as int?;
+        final ok = await NotificationService.sendMessage(receiverId, content, listingId: listingId);
         if (ok) {
           await box.delete(kv.key);
           debugPrint('[OfflineQueue] gönderildi + silindi: ${kv.key}');

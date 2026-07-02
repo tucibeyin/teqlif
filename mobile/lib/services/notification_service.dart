@@ -85,13 +85,15 @@ class NotificationService {
   }
 
   /// Mesaj gönder — hata durumunda false döner ve loglama yapılır.
-  static Future<bool> sendMessage(int receiverId, String content) async {
+  static Future<bool> sendMessage(int receiverId, String content, {int? listingId}) async {
     try {
+      final body = <String, dynamic>{'receiver_id': receiverId, 'content': content};
+      if (listingId != null) body['listing_id'] = listingId;
       await apiCall(
         () async => http.post(
           Uri.parse('$kBaseUrl/messages/send'),
           headers: await _headers(),
-          body: jsonEncode({'receiver_id': receiverId, 'content': content}),
+          body: jsonEncode(body),
         ),
       );
       return true;

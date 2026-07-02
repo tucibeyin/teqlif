@@ -448,6 +448,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           displayName: user['full_name'] as String? ??
               user['username'] as String? ?? '',
           otherHandle: user['username'] as String? ?? '',
+          listingId: widget.listing['id'] as int?,
         ),
       ),
     );

@@ -669,12 +669,14 @@ class DirectChatScreen extends StatefulWidget {
   final int otherUserId;
   final String displayName;
   final String otherHandle;
+  final int? listingId;
 
   const DirectChatScreen({
     super.key,
     required this.otherUserId,
     required this.displayName,
     required this.otherHandle,
+    this.listingId,
   });
 
   @override
@@ -864,7 +866,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     // Çevrimdışıysa doğrudan kuyruğa yaz
     final isOnline = await ConnectivityService().isConnected;
     if (!isOnline) {
-      final localId = await OfflineQueueService.enqueue(widget.otherUserId, text);
+      final localId = await OfflineQueueService.enqueue(widget.otherUserId, text, listingId: widget.listingId);
       if (mounted) {
         setState(() {
           _sending = false;
@@ -878,12 +880,12 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     }
 
     // Çevrimiçi → API'ye gönder
-    final ok = await NotificationService.sendMessage(widget.otherUserId, text);
+    final ok = await NotificationService.sendMessage(widget.otherUserId, text, listingId: widget.listingId);
     if (mounted) {
       setState(() => _sending = false);
       if (!ok) {
         // API başarısız → kuyruğa ekle, pending göster
-        final localId = await OfflineQueueService.enqueue(widget.otherUserId, text);
+        final localId = await OfflineQueueService.enqueue(widget.otherUserId, text, listingId: widget.listingId);
         setState(() {
           final idx = _messages.indexWhere((m) => m['id'] == tempId);
           if (idx >= 0) {
