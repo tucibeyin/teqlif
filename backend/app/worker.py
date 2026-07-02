@@ -372,6 +372,86 @@ async def flush_interactions_to_db(ctx: dict) -> None:
         raise
 
 
+# ── Task: SwipeLive → user_interests köprüsü ─────────────────────────────────
+
+async def sync_swipelive_interests_task(ctx: dict) -> None:
+    """
+    Her 20 dakikada bir çalışır.
+    Son 22 dakikadaki swipe_live_events (ClickHouse) → analytics_events (PostgreSQL).
+
+    listing_category önceliği; yoksa stream_category kullanılır.
+    Yazılan event_type='swipelive_dwell', compute_user_interests_task bu sinyali işler.
+    ClickHouse erişilemezse sessizce geçer — kritik değil.
+    """
+    from datetime import datetime, timezone
+    from app.database import AsyncSessionLocal
+    from app.models.analytics import AnalyticsEvent
+
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        if ch is None:
+            return
+
+        result = await ch.query("""
+            SELECT
+                user_id,
+                if(listing_category != '', listing_category, stream_category) AS category,
+                countIf(event_type = 'dwell')                                 AS dwells,
+                avgIf(dwell_ms, event_type = 'dwell')                         AS avg_dwell_ms,
+                countIf(event_type = 'stream_heart')                          AS hearts,
+                countIf(event_type IN ('stream_gift', 'stream_bid'))          AS strong_eng,
+                countIf(event_type = 'listing_tap')                           AS listing_taps
+            FROM swipe_live_events
+            WHERE timestamp >= now() - INTERVAL 22 MINUTE
+              AND user_id > 0
+              AND (listing_category != '' OR stream_category != '')
+            GROUP BY user_id, category
+            HAVING dwells + hearts + strong_eng + listing_taps > 0
+        """)
+
+        rows = result.result_rows
+        if not rows:
+            return
+
+        now = datetime.now(timezone.utc)
+        events = []
+        for row in rows:
+            uid, category, dwells, avg_dwell_ms, hearts, strong_eng, listing_taps = row
+            try:
+                uid = int(uid)
+                if not category:
+                    continue
+                events.append(AnalyticsEvent(
+                    user_id=uid,
+                    event_type="swipelive_dwell",
+                    event_metadata={
+                        "category": str(category),
+                        "dwells": int(dwells or 0),
+                        "avg_dwell_ms": float(avg_dwell_ms or 0),
+                        "hearts": int(hearts or 0),
+                        "strong_eng": int(strong_eng or 0),
+                        "listing_taps": int(listing_taps or 0),
+                    },
+                    created_at=now,
+                ))
+            except (ValueError, TypeError):
+                continue
+
+        if not events:
+            return
+
+        async with AsyncSessionLocal() as db:
+            db.add_all(events)
+            await db.commit()
+
+        logger.info("[Worker] sync_swipelive_interests_task: %d kayıt yazıldı", len(events))
+
+    except Exception as exc:
+        logger.error("[Worker] sync_swipelive_interests_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
 # ── Task: Kullanıcı İlgi Skorlarını Güncelle ─────────────────────────────────
 
 async def compute_user_interests_task(ctx: dict) -> None:
@@ -519,6 +599,32 @@ async def compute_user_interests_task(ctx: dict) -> None:
                       AND ae.event_metadata->>'category' != ''
                     GROUP BY ae.user_id, ae.event_metadata->>'category'
                 ),
+                -- SwipeLive sinyali: canlı yayın izlerken gösterilen kategori tercihleri
+                swipelive_scores AS (
+                    SELECT
+                        ae.user_id,
+                        ae.event_metadata->>'category' AS category,
+                        SUM(
+                            CASE
+                                WHEN ae.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN ae.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * (
+                                COALESCE((ae.event_metadata->>'strong_eng')::float, 0) * 4.0
+                                + COALESCE((ae.event_metadata->>'hearts')::float, 0) * 2.0
+                                + COALESCE((ae.event_metadata->>'listing_taps')::float, 0) * 3.0
+                                + LEAST(COALESCE((ae.event_metadata->>'avg_dwell_ms')::float, 0) / 5000.0, 2.0)
+                                + COALESCE((ae.event_metadata->>'dwells')::float, 0) * 0.5
+                                + 1.0
+                            )
+                        ) AS raw_score
+                    FROM analytics_events ae
+                    WHERE ae.user_id IS NOT NULL
+                      AND ae.created_at > NOW() - INTERVAL '30 days'
+                      AND ae.event_type = 'swipelive_dwell'
+                      AND ae.event_metadata->>'category' IS NOT NULL
+                    GROUP BY ae.user_id, ae.event_metadata->>'category'
+                ),
                 combined AS (
                     SELECT user_id, category, raw_score FROM analytics_scores WHERE raw_score > 0
                     UNION ALL
@@ -529,6 +635,8 @@ async def compute_user_interests_task(ctx: dict) -> None:
                     SELECT user_id, category, raw_score FROM msg_scores
                     UNION ALL
                     SELECT user_id, category, raw_score FROM search_scores WHERE raw_score > 0
+                    UNION ALL
+                    SELECT user_id, category, raw_score FROM swipelive_scores WHERE raw_score > 0
                 ),
                 summed AS (
                     SELECT user_id, category, SUM(raw_score) AS total_score
@@ -1227,6 +1335,7 @@ class WorkerSettings:
         send_budget_match_notifications_task,
         invalidate_swipe_live_configs_task,
         train_swipe_live_als_task,
+        sync_swipelive_interests_task,
     ]
 
     cron_jobs = [
@@ -1266,6 +1375,8 @@ class WorkerSettings:
         cron(compute_trending_categories_task, hour={0, 6, 12, 18}, minute=0),
         # Her gece 03:15 — SwipeLive ALS collaborative filtering modeli eğit
         cron(train_swipe_live_als_task, hour=3, minute=15),
+        # Her 20 dakikada SwipeLive olaylarını kullanıcı ilgi sinyaline dönüştür
+        cron(sync_swipelive_interests_task, minute={0, 20, 40}),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

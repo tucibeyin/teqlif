@@ -91,7 +91,16 @@ async def get_personalized_feed(
         redis = await get_redis()
         excluded_raw = await redis.smembers(f"not_interested:{user_id}")
         excluded_ids = [int(x) for x in excluded_raw] if excluded_raw else []
-        listing_ids = await _score_and_rank(user_id, interests, offset, PAGE_SIZE, seed, db, excluded_ids=excluded_ids)
+        # Kullanıcı embedding ve max_budget'ı al (pgvector scoring + bütçe filtresi için)
+        _user = await db.scalar(select(User).where(User.id == user_id))
+        user_embedding = _user.preference_embedding if _user else None
+        max_budget = _user.max_budget if _user else None
+        listing_ids = await _score_and_rank(
+            user_id, interests, offset, PAGE_SIZE, seed, db,
+            excluded_ids=excluded_ids,
+            user_embedding=user_embedding,
+            max_budget=max_budget,
+        )
     else:
         listing_ids = await _popular_feed(offset, PAGE_SIZE, db)
 
@@ -158,45 +167,96 @@ async def _score_and_rank(
     seed: str,
     db: AsyncSession,
     excluded_ids: list[int] | None = None,
+    user_embedding: list[float] | None = None,
+    max_budget: float | None = None,
 ) -> list[int]:
     """
     Aday ilanları puanlar ve sıralı ID listesi döndürür.
 
-    feed_score =
-      category_affinity × 0.40
-      + listing_quality  × 0.25   (log-normalize beğeni sayısı)
-      + freshness        × 0.20   (e^(-age_days/7), 7 günde yarıya düşer)
-      + social_signal    × 0.10   (takip edilen satıcı ise +1)
-      + exploration      × 0.05   (ilgi dışı kategori ise +0.3)
-      + random_jitter    × 0.02   (seed tabanlı küçük çeşitlilik)
-      - seen_penalty     × 0.30   (daha önce görüldüyse)
+    Embedding varsa:
+      pgvector_similarity × 0.20  (cosine similarity, 0–1)
+      category_affinity   × 0.30
+      listing_quality     × 0.20  (log-normalize beğeni)
+      freshness           × 0.22/0.15  (saat dilimine göre)
+      social_signal       × 0.12/0.08
+      exploration         × 0.04
+      random_jitter       × 0.02
+      host_quality        × 0.04
+      seller_conv         × 0.06
+      seen_penalty        × -0.25
+
+    Embedding yoksa: pgvector terimi = 0, ağırlıklar orijinal değerlere döner.
+    max_budget varsa: price <= max_budget × 1.2 filtresi tüm candidate pool'lara uygulanır.
     """
     if not interests:
         return await _popular_feed(offset, limit, db)
 
     # ── Saat dilimi bağlam sinyali ────────────────────────────────────────────
-    # Sabah 06-10: tazelik boost (yeni ilanlar öne çıksın)
-    # Akşam 19-23: sosyal sinyal boost (takip edilenler öne çıksın)
     hour = datetime.now().hour
-    freshness_w = 0.28 if 6 <= hour <= 10 else 0.20
-    social_w    = 0.14 if 19 <= hour <= 23 else 0.10
+    if user_embedding:
+        freshness_w = 0.22 if 6 <= hour <= 10 else 0.15
+        social_w    = 0.12 if 19 <= hour <= 23 else 0.08
+        cat_w, quality_w, explore_w, host_w, conv_w, seen_w = 0.30, 0.20, 0.04, 0.04, 0.06, 0.25
+    else:
+        freshness_w = 0.28 if 6 <= hour <= 10 else 0.20
+        social_w    = 0.14 if 19 <= hour <= 23 else 0.10
+        cat_w, quality_w, explore_w, host_w, conv_w, seen_w = 0.40, 0.25, 0.05, 0.05, 0.08, 0.30
 
     # Top-5 kategori ve skorları
     top_cats = sorted(interests.items(), key=lambda x: x[1], reverse=True)[:5]
     top_cat_names = [c for c, _ in top_cats]
 
-    # Affinity skoru için CASE ifadesi oluştur
+    # Affinity skoru için CASE ifadesi
     cat_cases = " ".join(
         f"WHEN l.category = '{cat}' THEN {score:.4f}"
         for cat, score in top_cats
     )
     cat_affinity_expr = f"CASE {cat_cases} ELSE 0.0 END"
 
-    # Exploration bonusu — top-5 dışındaki kategoriler
+    # Exploration bonusu — top-5 dışı
     exploration_expr = f"CASE WHEN l.category NOT IN ({','.join(repr(c) for c in top_cat_names)}) THEN 0.3 ELSE 0.0 END"
 
-    # "İlgilenmiyorum" filtresi — boşsa TRUE (filtre yok)
+    # Filtreler
     ni_filter = f"AND l.id NOT IN ({','.join(str(i) for i in excluded_ids)})" if excluded_ids else ""
+
+    budget_clause = ""
+    params: dict = {
+        "uid": user_id,
+        "top_cats": tuple(top_cat_names),
+        "seed": seed,
+        "lim": limit,
+        "off": offset,
+    }
+    if max_budget is not None:
+        budget_clause = "AND (l.price IS NULL OR l.price <= :price_ceiling)"
+        params["price_ceiling"] = max_budget * 1.2
+
+    # pgvector desteği — embedding varsa pool + scoring terimi eklenir
+    pgvec_pool_sql = ""
+    pgvec_score_term = "0.0"
+    if user_embedding:
+        vec_str = "[" + ",".join(f"{x:.8f}" for x in user_embedding) + "]"
+        params["vec"] = vec_str
+        pgvec_pool_sql = f"""
+            UNION
+            -- pgvector pool: semantik benzerlik (embedding tabanlı)
+            (
+                SELECT l.id
+                FROM listings l
+                WHERE l.is_active = TRUE
+                  AND l.is_deleted = FALSE
+                  AND l.embedding IS NOT NULL
+                  AND l.user_id != :uid
+                  {ni_filter}
+                  {budget_clause}
+                ORDER BY l.embedding <=> :vec::vector
+                LIMIT 80
+            )
+        """
+        pgvec_score_term = (
+            "CASE WHEN l.embedding IS NOT NULL "
+            "THEN (1.0 - (l.embedding <=> :vec::vector)) * 0.20 ELSE 0.0 END"
+        )
 
     sql = text(f"""
         WITH candidates AS (
@@ -209,6 +269,7 @@ async def _score_and_rank(
                   AND l.user_id != :uid
                   AND l.category IN :top_cats
                   {ni_filter}
+                  {budget_clause}
                 ORDER BY l.created_at DESC
                 LIMIT 250
             )
@@ -220,11 +281,12 @@ async def _score_and_rank(
                 INNER JOIN follows f ON f.followed_id = l.user_id AND f.follower_id = :uid
                 WHERE l.is_active = TRUE AND l.is_deleted = FALSE
                   {ni_filter}
+                  {budget_clause}
                 ORDER BY l.created_at DESC
                 LIMIT 50
             )
             UNION
-            -- Exploration pool: kaliteli ama farklı kategorilerden ilanlar
+            -- Exploration pool: farklı kategorilerden kaliteli ilanlar
             (
                 SELECT l.id
                 FROM listings l
@@ -234,11 +296,13 @@ async def _score_and_rank(
                   AND l.user_id != :uid
                   AND l.category NOT IN :top_cats
                   {ni_filter}
+                  {budget_clause}
                 GROUP BY l.id
                 HAVING COUNT(ll.id) >= 1
                 ORDER BY l.created_at DESC
                 LIMIT 100
             )
+            {pgvec_pool_sql}
         ),
         -- Host kalitesi: son 30 gündeki ortalama yayın süresi (2 saat = tam puan)
         host_quality AS (
@@ -253,7 +317,7 @@ async def _score_and_rank(
               AND started_at > NOW() - INTERVAL '30 days'
             GROUP BY host_id
         ),
-        -- Satıcı conversion oranı: son 30 gündeki kabul edilen / toplam açık artırma
+        -- Satıcı conversion oranı: son 30 gündeki kazanılan / toplam açık artırma
         seller_conv AS (
             SELECT li.user_id AS seller_id,
                    COUNT(CASE WHEN a.winner_id IS NOT NULL THEN 1 END)::float /
@@ -268,15 +332,16 @@ async def _score_and_rank(
                 l.id,
                 l.category,
                 (
-                    ({cat_affinity_expr}) * 0.40
-                    + (LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0) * 0.25
+                    ({cat_affinity_expr}) * {cat_w}
+                    + {pgvec_score_term}
+                    + (LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0) * {quality_w}
                     + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 604800.0) * {freshness_w}
                     + COALESCE(soc.is_followed, 0.0) * {social_w}
-                    + ({exploration_expr}) * 0.05
+                    + ({exploration_expr}) * {explore_w}
                     + (ABS(HASHTEXT(l.id::text || :seed)::float / 2147483647.0)) * 0.02
-                    - COALESCE(imp.seen, 0.0) * 0.30
-                    + COALESCE(hq.quality, 0.0) * 0.05
-                    + COALESCE(sc.conv_rate, 0.0) * 0.08
+                    - COALESCE(imp.seen, 0.0) * {seen_w}
+                    + COALESCE(hq.quality, 0.0) * {host_w}
+                    + COALESCE(sc.conv_rate, 0.0) * {conv_w}
                 ) AS feed_score
             FROM candidates c
             INNER JOIN listings l ON l.id = c.id
@@ -311,13 +376,7 @@ async def _score_and_rank(
         LIMIT :lim OFFSET :off
     """)
 
-    result = await db.execute(sql, {
-        "uid": user_id,
-        "top_cats": tuple(top_cat_names),
-        "seed": seed,
-        "lim": limit,
-        "off": offset,
-    })
+    result = await db.execute(sql, params)
     return [row.id for row in result]
 
 
@@ -439,10 +498,17 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
 async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> list[int]:
     """
     Kullanıcının preference_embedding'ine en yakın ilan ID'lerini döndürür.
-    - Embedding yoksa popüler ilanlar döner (cold start).
-    - user.max_budget varsa: price <= max_budget * 1.2 filtresi uygulanır.
-      (Bütçenin %20 üstüne kadar tolerans — kullanıcıyı tamamen kesmez.)
+
+    Strateji:
+      - pgvector pool (semantic, limit*2 aday) + sosyal pool (takip edilen satıcılar, 30 aday)
+      - UNION sonrası lightweight re-ranking: sim_score × 0.55 + freshness × 0.15
+        + social_bonus × 0.12 + quality × 0.10 − seen_recently_penalty × 0.20
+      - 'not_interested' Redis seti hariç tutulur.
+      - max_budget varsa price <= max_budget × 1.2 filtresi uygulanır.
+      - Son 3 günde görülen ilanlar yumuşak cezalandırılır (hard filter değil).
+      - Embedding yoksa cold start (popüler ilanlar).
     """
+    redis = await get_redis()
     user = await db.scalar(select(User).where(User.id == user_id))
 
     if user is None or user.preference_embedding is None:
@@ -450,23 +516,83 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
 
     vec_str = "[" + ",".join(f"{x:.8f}" for x in user.preference_embedding) + "]"
 
-    # Bütçe filtresi — max_budget NULL ise WHERE koşulu eklenmez
+    # not_interested filtresi (Redis)
+    excluded_raw = await redis.smembers(f"not_interested:{user_id}")
+    excluded_ids = [int(x) for x in excluded_raw] if excluded_raw else []
+    ni_filter = f"AND l.id NOT IN ({','.join(str(i) for i in excluded_ids)})" if excluded_ids else ""
+
+    # Bütçe filtresi (max_budget × 1.2 tolerans)
     budget_clause = ""
-    params: dict = {"uid": user_id, "vec": vec_str, "lim": limit}
+    params: dict = {
+        "uid": user_id,
+        "vec": vec_str,
+        "lim": limit,
+        "pgvec_lim": limit * 2,
+    }
     if user.max_budget is not None:
-        budget_clause = "AND (price IS NULL OR price <= :price_ceiling)"
+        budget_clause = "AND (l.price IS NULL OR l.price <= :price_ceiling)"
         params["price_ceiling"] = user.max_budget * 1.2
 
     result = await db.execute(
         text(f"""
-            SELECT id
-            FROM listings
-            WHERE is_active = TRUE
-              AND is_deleted = FALSE
-              AND embedding IS NOT NULL
-              AND user_id != :uid
-              {budget_clause}
-            ORDER BY embedding <=> :vec::vector
+            WITH pgvec_pool AS (
+                -- Semantik benzerlik: embedding'e en yakın ilanlar
+                SELECT l.id,
+                       (1.0 - (l.embedding <=> :vec::vector)) AS sim_score
+                FROM listings l
+                WHERE l.is_active = TRUE
+                  AND l.is_deleted = FALSE
+                  AND l.embedding IS NOT NULL
+                  AND l.user_id != :uid
+                  {ni_filter}
+                  {budget_clause}
+                ORDER BY l.embedding <=> :vec::vector
+                LIMIT :pgvec_lim
+            ),
+            social_pool AS (
+                -- Takip edilen satıcıların son ilanları (sosyal sinyal)
+                SELECT l.id, 0.0 AS sim_score
+                FROM listings l
+                INNER JOIN follows f ON f.followed_id = l.user_id AND f.follower_id = :uid
+                WHERE l.is_active = TRUE AND l.is_deleted = FALSE
+                  {ni_filter}
+                ORDER BY l.created_at DESC
+                LIMIT 30
+            ),
+            all_candidates AS (
+                SELECT id, sim_score FROM pgvec_pool
+                UNION
+                SELECT id, sim_score FROM social_pool
+            ),
+            scored AS (
+                SELECT
+                    c.id,
+                    c.sim_score * 0.55
+                    + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 1209600.0) * 0.15
+                    + COALESCE(soc.social_bonus, 0.0) * 0.12
+                    + (LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0) * 0.10
+                    - COALESCE(imp.seen_recently, 0.0) * 0.20
+                    AS final_score
+                FROM all_candidates c
+                INNER JOIN listings l ON l.id = c.id
+                LEFT JOIN (
+                    SELECT listing_id, COUNT(*) AS like_count
+                    FROM listing_likes GROUP BY listing_id
+                ) lk ON lk.listing_id = c.id
+                LEFT JOIN (
+                    SELECT DISTINCT l2.id, 1.0 AS social_bonus
+                    FROM listings l2
+                    INNER JOIN follows f ON f.followed_id = l2.user_id AND f.follower_id = :uid
+                ) soc ON soc.id = c.id
+                LEFT JOIN (
+                    SELECT listing_id, 1.0 AS seen_recently
+                    FROM listing_impressions
+                    WHERE user_id = :uid
+                      AND seen_at > NOW() - INTERVAL '3 days'
+                ) imp ON imp.listing_id = c.id
+            )
+            SELECT id FROM scored
+            ORDER BY final_score DESC
             LIMIT :lim
         """),
         params,
