@@ -405,7 +405,12 @@ if os.path.exists(frontend_dir):
         return FileResponse(os.path.join(frontend_dir, "index.html"))
 
     @app.get("/ilan/{listing_id}", include_in_schema=False)
-    async def serve_listing_page(request: Request, listing_id: int):
+    async def serve_listing_page(request: Request, listing_id: str):
+        try:
+            lid = int(listing_id)
+        except (ValueError, TypeError):
+            return HTMLResponse("<h1>404 — İlan bulunamadı</h1>", status_code=404)
+        listing_id = lid
         async with AsyncSessionLocal() as db:
             listing = await db.scalar(
                 select(Listing).where(Listing.id == listing_id, Listing.is_deleted.is_(False))
