@@ -856,7 +856,7 @@ class AuctionService:
             dm = DirectMessage(
                 sender_id=user.id,
                 receiver_id=buyer_id,
-                content=dm_content,
+                content=dm_content + f"\n📋 teqlif://auction/{auction.id}",
             )
             self.db.add(dm)
             await self.db.commit()
@@ -1046,7 +1046,7 @@ class AuctionService:
                 dm = DirectMessage(
                     sender_id=user.id,
                     receiver_id=winner_user_id,
-                    content=dm_content,
+                    content=dm_content + f"\n📋 teqlif://auction/{auction.id}",
                 )
                 # Kazananın preference_embedding'ini güçlendir (×20 ağırlık)
                 if listing_id:

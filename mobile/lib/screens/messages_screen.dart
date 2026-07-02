@@ -1258,8 +1258,10 @@ class _MessageText extends StatelessWidget {
 
   const _MessageText({required this.content, required this.isMe});
 
-  // teqlif.com/ilan/{id} URL'lerini tespit et
-  static final _urlRegex = RegExp(r'https?://[^\s]+/ilan/(\d+)');
+  // teqlif.com/ilan/{id} veya teqlif://auction/{id} linklerini tespit et
+  static final _linkRegex = RegExp(
+    r'(https?://[^\s]+/ilan/(\d+)|teqlif://auction/(\d+))',
+  );
 
   Future<void> _openListing(BuildContext context, int listingId) async {
     try {
@@ -1268,10 +1270,36 @@ class _MessageText extends StatelessWidget {
         final listing = jsonDecode(resp.body) as Map<String, dynamic>;
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => ListingDetailScreen(listing: listing),
-          ),
+          MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing)),
         );
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _openAuctionDetail(BuildContext context, int auctionId) async {
+    try {
+      final info = await StorageService.getUserInfo();
+      final token = info?['token'] as String?;
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/auth/me/auction/$auctionId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200 && context.mounted) {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        final role = body['role'] as String?;
+        final data = body['data'] as Map<String, dynamic>;
+        if (role == 'buyer') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => PurchaseDetailScreen(purchase: data)),
+          );
+        } else if (role == 'seller') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => SaleDetailScreen(sale: data)),
+          );
+        }
       }
     } catch (_) {}
   }
@@ -1280,43 +1308,59 @@ class _MessageText extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final normalColor = isMe ? Colors.white : AppColors.textPrimary(context);
-    const linkColor = Color(0xFF38BDF8); // açık mavi — her iki balonda görünür
+    const linkColor = Color(0xFF38BDF8);
+    const auctionLinkColor = Color(0xFF4ADE80);
 
-    final matches = _urlRegex.allMatches(content).toList();
+    final matches = _linkRegex.allMatches(content).toList();
     if (matches.isEmpty) {
-      return Text(content,
-          style: TextStyle(color: normalColor, fontSize: 14.5));
+      return Text(content, style: TextStyle(color: normalColor, fontSize: 14.5));
     }
 
     final spans = <TextSpan>[];
     int cursor = 0;
 
     for (final match in matches) {
-      // URL öncesi düz metin
       if (match.start > cursor) {
         spans.add(TextSpan(
           text: content.substring(cursor, match.start),
           style: TextStyle(color: normalColor, fontSize: 14.5),
         ));
       }
-      // Tıklanabilir ilan linki
-      final listingId = int.parse(match.group(1)!);
-      spans.add(TextSpan(
-        text: l.msgGoToListing,
-        style: const TextStyle(
-          color: linkColor,
-          fontSize: 14.5,
-          fontWeight: FontWeight.w700,
-          decoration: TextDecoration.underline,
-          decorationColor: linkColor,
-        ),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () => _openListing(context, listingId),
-      ));
+
+      if (match.group(2) != null) {
+        // İlan linki
+        final listingId = int.parse(match.group(2)!);
+        spans.add(TextSpan(
+          text: l.msgGoToListing,
+          style: const TextStyle(
+            color: linkColor,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w700,
+            decoration: TextDecoration.underline,
+            decorationColor: linkColor,
+          ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () => _openListing(context, listingId),
+        ));
+      } else if (match.group(3) != null) {
+        // Açık artırma detay linki
+        final auctionId = int.parse(match.group(3)!);
+        spans.add(TextSpan(
+          text: '📋 Detaya Git →',
+          style: const TextStyle(
+            color: auctionLinkColor,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w700,
+            decoration: TextDecoration.underline,
+            decorationColor: auctionLinkColor,
+          ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () => _openAuctionDetail(context, auctionId),
+        ));
+      }
       cursor = match.end;
     }
 
-    // URL sonrası kalan metin
     if (cursor < content.length) {
       spans.add(TextSpan(
         text: content.substring(cursor),

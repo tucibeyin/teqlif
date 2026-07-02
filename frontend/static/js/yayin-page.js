@@ -316,24 +316,40 @@
         newBtnSkip.disabled = false;
         newBtnSkip.textContent = 'Görselsiz Onayla';
 
+        // Mevcut yayın görüntüsünü önizleme videosuna bağla (yeni stream açma)
+        const previewVideo = document.getElementById('proofPreviewVideo');
+        if (previewVideo) {
+            const mainVideo = document.getElementById('mainVideo');
+            if (mainVideo && mainVideo.srcObject) {
+                previewVideo.srcObject = mainVideo.srcObject;
+            }
+        }
+
         modal.style.display = 'flex';
+
+        function _closeModal() {
+            modal.style.display = 'none';
+            // Preview srcObject'i serbest bırak (aynı stream nesnesi — sadece referansı kopar)
+            const pv = document.getElementById('proofPreviewVideo');
+            if (pv) pv.srcObject = null;
+        }
 
         newBtnCapture.addEventListener('click', async () => {
             newBtnCapture.disabled = true;
             newBtnCapture.textContent = 'Çekiliyor...';
             try {
                 const proofUrl = await _captureProofSilently();
-                modal.style.display = 'none';
+                _closeModal();
                 await callback(proofUrl);
             } catch (e) {
                 console.error(e);
-                modal.style.display = 'none';
+                _closeModal();
                 await callback(null);
             }
         });
 
         newBtnSkip.addEventListener('click', async () => {
-            modal.style.display = 'none';
+            _closeModal();
             await callback(null);
         });
     }

@@ -461,6 +461,129 @@ async def my_sales(
     ]
 
 
+@router.get("/me/auction/{auction_id}")
+async def my_auction_context(
+    auction_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Bir açık artırmanın detayını döndürür.
+    Çağıran kullanıcı alıcıysa 'purchase' rolü, satıcıysa 'sale' rolü döner.
+    Mesajlardaki teqlif://auction/{id} linklerinde kullanılır.
+    """
+    from app.models.auction import Auction
+    from app.models.listing import Listing as ListingModel
+    from app.models.stream import LiveStream
+    from app.models.user import User as UserModel
+
+    uid = current_user.id
+
+    # Alıcı mı? (winner_id == current_user.id)
+    result = await db.execute(
+        select(
+            Auction.id,
+            Auction.item_name,
+            Auction.start_price,
+            Auction.final_price,
+            Auction.is_bought_it_now,
+            Auction.bid_count,
+            Auction.started_at,
+            Auction.ended_at,
+            Auction.listing_id,
+            Auction.stream_id,
+            Auction.proof_image_url,
+            ListingModel.image_url,
+            ListingModel.category,
+            ListingModel.thumbnail_url,
+            UserModel.username.label("seller_username"),
+            func.coalesce(LiveStream.host_id, ListingModel.user_id).label("seller_id"),
+        )
+        .join(ListingModel, ListingModel.id == Auction.listing_id, isouter=True)
+        .join(LiveStream, LiveStream.id == Auction.stream_id, isouter=True)
+        .join(UserModel, UserModel.id == LiveStream.host_id, isouter=True)
+        .where(Auction.id == auction_id, Auction.winner_id == uid)
+    )
+    buyer_row = result.fetchone()
+    if buyer_row:
+        return {
+            "role": "buyer",
+            "data": {
+                "auction_id": buyer_row.id,
+                "stream_id": buyer_row.stream_id,
+                "item_name": buyer_row.item_name,
+                "start_price": buyer_row.start_price,
+                "final_price": buyer_row.final_price,
+                "is_bought_it_now": buyer_row.is_bought_it_now,
+                "bid_count": buyer_row.bid_count,
+                "started_at": buyer_row.started_at.isoformat() if buyer_row.started_at else None,
+                "ended_at": buyer_row.ended_at.isoformat() if buyer_row.ended_at else None,
+                "listing_id": buyer_row.listing_id,
+                "image_url": buyer_row.image_url,
+                "thumbnail_url": buyer_row.thumbnail_url,
+                "proof_image_url": buyer_row.proof_image_url,
+                "category": buyer_row.category,
+                "seller_username": buyer_row.seller_username,
+                "seller_id": buyer_row.seller_id,
+            },
+        }
+
+    # Satıcı mı? (stream host veya listing sahibi)
+    result2 = await db.execute(
+        select(
+            Auction.id,
+            Auction.item_name,
+            Auction.start_price,
+            Auction.final_price,
+            Auction.is_bought_it_now,
+            Auction.bid_count,
+            Auction.started_at,
+            Auction.ended_at,
+            Auction.listing_id,
+            Auction.stream_id,
+            Auction.proof_image_url,
+            ListingModel.image_url,
+            ListingModel.category,
+            ListingModel.thumbnail_url,
+            UserModel.username.label("buyer_username"),
+            Auction.winner_id.label("buyer_id"),
+        )
+        .join(ListingModel, ListingModel.id == Auction.listing_id, isouter=True)
+        .join(LiveStream, LiveStream.id == Auction.stream_id, isouter=True)
+        .join(UserModel, UserModel.id == Auction.winner_id, isouter=True)
+        .where(
+            Auction.id == auction_id,
+            or_(LiveStream.host_id == uid, ListingModel.user_id == uid),
+        )
+    )
+    seller_row = result2.fetchone()
+    if seller_row:
+        return {
+            "role": "seller",
+            "data": {
+                "auction_id": seller_row.id,
+                "stream_id": seller_row.stream_id,
+                "item_name": seller_row.item_name,
+                "start_price": seller_row.start_price,
+                "final_price": seller_row.final_price,
+                "is_bought_it_now": seller_row.is_bought_it_now,
+                "bid_count": seller_row.bid_count,
+                "started_at": seller_row.started_at.isoformat() if seller_row.started_at else None,
+                "ended_at": seller_row.ended_at.isoformat() if seller_row.ended_at else None,
+                "listing_id": seller_row.listing_id,
+                "image_url": seller_row.image_url,
+                "thumbnail_url": seller_row.thumbnail_url,
+                "proof_image_url": seller_row.proof_image_url,
+                "category": seller_row.category,
+                "buyer_username": seller_row.buyer_username,
+                "buyer_id": seller_row.buyer_id,
+            },
+        }
+
+    from app.core.exceptions import NotFoundException
+    raise NotFoundException("Bu açık artırma bulunamadı veya erişim izniniz yok")
+
+
 @router.post("/refresh")
 @limiter.limit("20/minute")
 async def refresh_token(
