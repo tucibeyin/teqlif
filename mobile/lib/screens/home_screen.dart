@@ -231,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() { _recentLoading = true; _recentListings = []; });
     try {
       await for (final listings in ApiService.get<List<dynamic>>(
-        url: '$kBaseUrl/listings',
+        url: '$kBaseUrl/feed/recent',
         cacheKey: _hasFilter ? null : StorageService.cacheFeed,
         cacheTtl: const Duration(minutes: 5),
         bypassCache: bypassCache,
@@ -262,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final token = await StorageService.getToken();
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings?page=$_recentPage'),
+        Uri.parse('$kBaseUrl/feed/recent?page=$_recentPage'),
         headers: token != null ? {'Authorization': 'Bearer $token'} : null,
       );
       if (!mounted) return;

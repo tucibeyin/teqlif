@@ -557,6 +557,146 @@ def _inject_ads(organic: list[dict], ads: list[dict]) -> list[dict]:
     return result
 
 
+# ── Son İlanlar — Karışık Feed ────────────────────────────────────────────────
+
+_RECENT_PAGE_SIZE = 20
+_INTEREST_SLOTS   = [5, 10, 15]   # ilgi enjeksiyonu pozisyonları (0-indexed, insert)
+
+
+async def get_mixed_recent_feed(
+    user_id: Optional[int],
+    page: int,
+    db: AsyncSession,
+) -> list[dict]:
+    """
+    'Son İlanlar' karışık feed.
+
+    Base: en son eklenen ilanlar (created_at DESC), sayfalama.
+    Enjeksiyonlar:
+      - pos 5, 10, 15 → kullanıcı ilgi kategorilerinden birer ilan
+      - pos 2, 7, 12  → sponsored (yalnızca page 0, mevcut _inject_ads mantığıyla)
+    """
+    offset = page * _RECENT_PAGE_SIZE
+    uid_clause = "AND l.user_id != :uid" if user_id else ""
+    params: dict = {"lim": _RECENT_PAGE_SIZE, "off": offset}
+    if user_id:
+        params["uid"] = user_id
+
+    base_result = await db.execute(
+        text(f"""
+            SELECT l.id
+            FROM listings l
+            WHERE l.is_active = TRUE
+              AND l.is_deleted = FALSE
+              {uid_clause}
+            ORDER BY l.created_at DESC
+            LIMIT :lim OFFSET :off
+        """),
+        params,
+    )
+    base_ids = [r.id for r in base_result]
+    if not base_ids:
+        return []
+
+    rows_result = await db.execute(
+        select(Listing, User)
+        .join(User, User.id == Listing.user_id)
+        .where(
+            Listing.id.in_(base_ids),
+            Listing.is_active == True,    # noqa: E712
+            Listing.is_deleted == False,  # noqa: E712
+        )
+    )
+    rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
+    counts, liked_set = await LikeService.batch_listing_likes(db, base_ids, user_id)
+
+    result = [
+        _row_dict(listing, user, counts.get(lid, 0), lid in liked_set)
+        for lid in base_ids
+        if lid in rows
+        for listing, user in [rows[lid]]
+    ]
+
+    # ── İlgi enjeksiyonu (tüm sayfalar) ──────────────────────────────────────
+    if user_id:
+        interests = await get_user_interests(user_id, db)
+        if interests:
+            top_cats = list(interests.keys())[:3]
+            interest_items = await _fetch_interest_items(
+                user_id, top_cats, base_ids, len(_INTEREST_SLOTS), db
+            )
+            result = _inject_at_slots(result, interest_items, _INTEREST_SLOTS)
+
+    # ── Sponsored enjeksiyonu (yalnızca page 0) ───────────────────────────────
+    if page == 0:
+        try:
+            ad_items = await _get_sponsored_listings(db)
+            result = _inject_ads(result, ad_items)
+        except Exception as exc:
+            logger.warning("[MixedRecent] Sponsored enjeksiyonu atlandı: %s", exc)
+
+    return result
+
+
+async def _fetch_interest_items(
+    user_id: int,
+    categories: list[str],
+    exclude_ids: list[int],
+    count: int,
+    db: AsyncSession,
+) -> list[dict]:
+    """Kullanıcının ilgi kategorilerinden, base listesinde olmayan ilanlar."""
+    excl = f"AND l.id NOT IN ({','.join(str(i) for i in exclude_ids)})" if exclude_ids else ""
+    res = await db.execute(
+        text(f"""
+            SELECT l.id FROM listings l
+            WHERE l.is_active = TRUE
+              AND l.is_deleted = FALSE
+              AND l.user_id != :uid
+              AND l.category = ANY(:cats)
+              {excl}
+            ORDER BY RANDOM()
+            LIMIT :lim
+        """),
+        {"uid": user_id, "cats": categories, "lim": count},
+    )
+    ids = [r.id for r in res]
+    if not ids:
+        return []
+
+    rows_result = await db.execute(
+        select(Listing, User)
+        .join(User, User.id == Listing.user_id)
+        .where(
+            Listing.id.in_(ids),
+            Listing.is_active == True,    # noqa: E712
+            Listing.is_deleted == False,  # noqa: E712
+        )
+    )
+    rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
+    counts, liked_set = await LikeService.batch_listing_likes(db, ids, user_id)
+
+    return [
+        _row_dict(listing, user, counts.get(lid, 0), lid in liked_set)
+        for lid in ids
+        if lid in rows
+        for listing, user in [rows[lid]]
+    ]
+
+
+def _inject_at_slots(organic: list[dict], items: list[dict], slots: list[int]) -> list[dict]:
+    """items'ı slots pozisyonlarına enjekte eder; önceki insertlerin kaydırmasını hesaba katar."""
+    if not items:
+        return organic
+    result = list(organic)
+    for i, item in enumerate(items):
+        if i >= len(slots):
+            break
+        pos = min(slots[i] + i, len(result))
+        result.insert(pos, item)
+    return result
+
+
 # ── Cache invalidation ────────────────────────────────────────────────────────
 
 async def invalidate_user_feed_cache(user_id: int) -> None:

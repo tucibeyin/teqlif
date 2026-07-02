@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.utils.auth import get_current_user, get_current_user_optional
 from app.models.user import User
-from app.services.feed_service import get_personalized_feed, get_foryou_feed
+from app.services.feed_service import get_personalized_feed, get_foryou_feed, get_mixed_recent_feed
 from app.services.recommendation_service import (
     get_personalized_feed as get_ch_personalized_feed,
     get_user_category_affinity,
@@ -72,6 +72,20 @@ async def mark_not_interested(
     key = f"not_interested:{current_user.id}"
     await redis.sadd(key, listing_id)
     await redis.expire(key, 7 * 86400)  # 7 gün
+
+
+@router.get("/recent")
+async def get_recent_mixed_feed(
+    page: int = Query(default=0, ge=0, le=50),
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """
+    Son ilanlar + ilgi enjeksiyonu (pos 5,10,15) + sponsored (page 0, pos 2,7,12).
+    Misafirler: sadece son ilanlar, enjeksiyon yok.
+    """
+    user_id = current_user.id if current_user else None
+    return await get_mixed_recent_feed(user_id, page, db)
 
 
 @router.get("/for-you")
