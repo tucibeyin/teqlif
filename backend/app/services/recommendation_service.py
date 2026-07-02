@@ -217,12 +217,13 @@ async def _cold_start_feed(user_id: int, db: AsyncSession, limit: int) -> list[d
             LEFT JOIN listing_likes ll ON ll.listing_id = l.id
             WHERE l.is_active = TRUE
               AND l.is_deleted = FALSE
+              AND l.user_id != :uid
               AND l.created_at > NOW() - INTERVAL '30 days'
             GROUP BY l.id
             ORDER BY COUNT(ll.id) DESC, l.created_at DESC
             LIMIT :lim
         """),
-        {"lim": limit},
+        {"lim": limit, "uid": user_id},
     )
     ids = [row.id for row in result]
     return await _hydrate(user_id, ids, db)
