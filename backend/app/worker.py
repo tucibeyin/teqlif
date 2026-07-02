@@ -479,6 +479,23 @@ async def compute_user_interests_task(ctx: dict) -> None:
                       AND l.category IS NOT NULL
                     GROUP BY f.user_id, l.category
                 ),
+                msg_scores AS (
+                    SELECT
+                        dm.sender_id AS user_id,
+                        l.category,
+                        SUM(
+                            CASE
+                                WHEN dm.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN dm.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * 10.0
+                        ) AS raw_score
+                    FROM direct_messages dm
+                    INNER JOIN listings l ON l.id = dm.listing_id
+                    WHERE dm.created_at > NOW() - INTERVAL '30 days'
+                      AND l.category IS NOT NULL
+                    GROUP BY dm.sender_id, l.category
+                ),
                 -- Arama sinyali: kullanıcının kategori bazlı arama geçmişi
                 search_scores AS (
                     SELECT
@@ -508,6 +525,8 @@ async def compute_user_interests_task(ctx: dict) -> None:
                     SELECT user_id, category, raw_score FROM like_scores
                     UNION ALL
                     SELECT user_id, category, raw_score FROM fav_scores
+                    UNION ALL
+                    SELECT user_id, category, raw_score FROM msg_scores
                     UNION ALL
                     SELECT user_id, category, raw_score FROM search_scores WHERE raw_score > 0
                 ),

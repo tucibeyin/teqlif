@@ -27,3 +27,4 @@ class ConversationOut(BaseModel):
 class SendMessageIn(BaseModel):
     receiver_id: int
     content: str = Field(..., min_length=1, max_length=1000)
+    listing_id: Optional[int] = None

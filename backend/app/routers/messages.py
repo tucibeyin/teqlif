@@ -221,6 +221,7 @@ async def send_message(
     msg = DirectMessage(
         sender_id=uid,
         receiver_id=data.receiver_id,
+        listing_id=data.listing_id,
         content=data.content,
         is_shadowbanned=is_shadowbanned,
     )
