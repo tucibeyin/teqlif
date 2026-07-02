@@ -1278,8 +1278,7 @@ class _MessageText extends StatelessWidget {
 
   Future<void> _openAuctionDetail(BuildContext context, int auctionId) async {
     try {
-      final info = await StorageService.getUserInfo();
-      final token = info?['token'] as String?;
+      final token = await StorageService.getToken();
       if (token == null) return;
       final resp = await http.get(
         Uri.parse('$kBaseUrl/auth/me/auction/$auctionId'),
