@@ -34,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _forYouLoading = false;
   bool _forYouLoadingMore = false;
   bool _forYouExhausted = false;
+  int _forYouPage = 0;
 
   // En Son Eklenenler — dikey grid, sonsuz scroll
   List<dynamic> _recentListings = [];
@@ -182,16 +183,20 @@ class _HomeScreenState extends State<HomeScreen> {
   /// SWR stream'den dinler: 1. event cache'ten anlık, 2. event API'den taze.
   Future<void> _loadForYou({bool bypassCache = false}) async {
     if (!mounted) return;
-    setState(() { _forYouLoading = true; _forYouExhausted = false; });
+    setState(() { _forYouLoading = true; _forYouExhausted = false; _forYouPage = 0; });
     try {
-      await for (final items in ListingService.getPersonalizedFeed(
-        limit: 10,
+      await for (final items in ApiService.get<List<Map<String, dynamic>>>(
+        url: '$kBaseUrl/feed/for-you?page=0',
+        cacheKey: 'home_for_you',
+        cacheTtl: const Duration(minutes: 10),
         bypassCache: bypassCache,
+        fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
       )) {
         if (!mounted) return;
         setState(() {
           _forYouListings = items;
-          _forYouExhausted = items.isEmpty;
+          _forYouExhausted = items.length < 20;
+          _forYouPage = 1;
           _forYouLoading = false;
         });
       }
@@ -206,16 +211,22 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_forYouLoadingMore || _forYouExhausted || !_isLoggedIn) return;
     setState(() => _forYouLoadingMore = true);
     try {
-      await for (final more in ApiService.get<List<Map<String, dynamic>>>(
-        url: '$kBaseUrl/feed/personalized?limit=10',
-        fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
-      )) {
-        if (!mounted) return;
-        if (more.isEmpty) {
-          setState(() => _forYouExhausted = true);
-        } else {
-          setState(() => _forYouListings = [..._forYouListings, ...more]);
-        }
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/feed/for-you?page=$_forYouPage'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
+        setState(() {
+          _forYouListings = [..._forYouListings, ...data];
+          _forYouPage++;
+          if (data.length < 20) _forYouExhausted = true;
+        });
+      } else {
+        setState(() => _forYouExhausted = true);
       }
     } catch (_) {
     } finally {
