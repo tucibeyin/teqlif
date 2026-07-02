@@ -1,11 +1,13 @@
 import 'dart:developer';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
 import '../../utils/price_formatter.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
+import '../../config/api.dart';
 import 'purchase_detail_screen.dart';
 
 class PurchasesScreen extends StatefulWidget {
@@ -51,6 +53,16 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     }
   }
 
+  String _formatDate(String? iso) {
+    if (iso == null) return '';
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -72,57 +84,164 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16),
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _purchases.length,
-                  itemBuilder: (context, index) {
-                    final item = _purchases[index];
-                    final itemName = item['item_name'] ?? l.purchaseUnknownItem;
-                    final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
-                    
-                    return Card(
-                      color: AppColors.card(context),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PurchaseDetailScreen(purchase: item),
-                            ),
-                          );
-                        },
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        title: Text(
-                          itemName,
-                          style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
+              : RefreshIndicator(
+                  color: kPrimary,
+                  onRefresh: _loadPurchases,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _purchases.length,
+                    itemBuilder: (context, index) {
+                      final item = _purchases[index];
+                      final itemName = item['item_name'] as String? ?? l.purchaseUnknownItem;
+                      final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
+                      final seller = item['seller_username'] as String? ?? l.purchaseUnknownSeller;
+                      final category = item['category'] as String?;
+                      final thumbnailUrl = item['thumbnail_url'] as String? ?? item['image_url'] as String?;
+                      final isBuyItNow = (item['is_bought_it_now'] as bool?) ?? false;
+                      final endedAt = item['ended_at'] as String?;
+
+                      return Card(
+                        color: AppColors.card(context),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        subtitle: Text(
-                          '@${item['seller_username'] ?? l.purchaseUnknownSeller}',
-                          style: TextStyle(color: AppColors.textSecondary(context)),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              fmtPrice(price),
-                              style: const TextStyle(
-                                color: Color(0xFF4ADE80),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PurchaseDetailScreen(purchase: item),
                               ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                // Thumbnail
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: thumbnailUrl != null && thumbnailUrl.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: imgUrl(thumbnailUrl),
+                                          width: 72,
+                                          height: 72,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (_, __, ___) => _placeholderBox(),
+                                          placeholder: (_, __) => _placeholderBox(),
+                                        )
+                                      : _placeholderBox(),
+                                ),
+                                const SizedBox(width: 12),
+                                // Details
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        itemName,
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary(context),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '@$seller',
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary(context),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          if (category != null) ...[
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: kPrimary.withOpacity(0.12),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                category,
+                                                style: const TextStyle(color: kPrimary, fontSize: 11),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                          ],
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: isBuyItNow
+                                                  ? const Color(0xFF16A34A).withOpacity(0.12)
+                                                  : const Color(0xFFF97316).withOpacity(0.12),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              isBuyItNow ? 'Hemen Al' : 'Teklif',
+                                              style: TextStyle(
+                                                color: isBuyItNow
+                                                    ? const Color(0xFF16A34A)
+                                                    : const Color(0xFFF97316),
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (endedAt != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _formatDate(endedAt),
+                                          style: TextStyle(
+                                            color: AppColors.textTertiary(context),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Price + chevron
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      fmtPrice(price),
+                                      style: const TextStyle(
+                                        color: Color(0xFF4ADE80),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Icon(Icons.chevron_right, color: AppColors.iconSecondary(context)),
+                                  ],
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            Icon(Icons.chevron_right, color: AppColors.iconSecondary(context)),
-                          ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
+    );
+  }
+
+  Widget _placeholderBox() {
+    return Container(
+      width: 72,
+      height: 72,
+      color: AppColors.card(context).withOpacity(0.5),
+      child: Icon(Icons.shopping_bag_outlined, color: AppColors.iconSecondary(context), size: 32),
     );
   }
 }

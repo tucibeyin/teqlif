@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, case
 
 from app.database import get_db
 from app.models.user import User
@@ -354,6 +354,7 @@ async def my_purchases(
             ListingModel.category,
             ListingModel.thumbnail_url,
             User.username.label("seller_username"),
+            func.coalesce(LiveStream.host_id, ListingModel.user_id).label("seller_id"),
         )
         .join(ListingModel, ListingModel.id == Auction.listing_id, isouter=True)
         .join(LiveStream, LiveStream.id == Auction.stream_id, isouter=True)
@@ -383,6 +384,7 @@ async def my_purchases(
             "proof_image_url": r.proof_image_url,
             "category": r.category,
             "seller_username": r.seller_username,
+            "seller_id": r.seller_id,
         }
         for r in rows
     ]
@@ -417,6 +419,7 @@ async def my_sales(
             ListingModel.category,
             ListingModel.thumbnail_url,
             User.username.label("buyer_username"),
+            Auction.winner_id.label("buyer_id"),
         )
         .join(ListingModel, ListingModel.id == Auction.listing_id, isouter=True)
         .join(LiveStream, LiveStream.id == Auction.stream_id, isouter=True)
@@ -452,6 +455,7 @@ async def my_sales(
             "proof_image_url": r.proof_image_url,
             "category": r.category,
             "buyer_username": r.buyer_username,
+            "buyer_id": r.buyer_id,
         }
         for r in rows
     ]

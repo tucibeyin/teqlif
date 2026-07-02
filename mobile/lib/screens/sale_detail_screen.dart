@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/price_formatter.dart';
 import 'listing_detail_screen.dart';
@@ -8,20 +8,40 @@ import '../../services/listing_service.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
+import 'messages_screen.dart';
 
 class SaleDetailScreen extends StatelessWidget {
   final Map<String, dynamic> sale;
 
   const SaleDetailScreen({super.key, required this.sale});
 
+  String _formatDate(String? iso) {
+    if (iso == null) return '-';
+    try {
+      final dt = DateTime.parse(iso).toLocal();
+      return '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year} '
+          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '-';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final itemName = sale['item_name'] ?? l.purchaseUnknownItem;
-    final buyerUsername = sale['buyer_username'] ?? l.saleUnknownBuyer;
-    final price = (sale['final_price'] as num?)?.toDouble() ?? 0.0;
-    final proofImageUrl = sale['proof_image_url'] as String?;
+    final itemName = sale['item_name'] as String? ?? l.purchaseUnknownItem;
+    final buyerUsername = sale['buyer_username'] as String? ?? l.saleUnknownBuyer;
+    final buyerId = sale['buyer_id'] as int?;
+    final finalPrice = (sale['final_price'] as num?)?.toDouble() ?? 0.0;
+    final startPrice = (sale['start_price'] as num?)?.toDouble();
+    final bidCount = sale['bid_count'] as int?;
+    final isBuyItNow = (sale['is_bought_it_now'] as bool?) ?? false;
+    final startedAt = sale['started_at'] as String?;
+    final endedAt = sale['ended_at'] as String?;
+    final category = sale['category'] as String?;
     final listingId = sale['listing_id'] as int?;
+    final proofImageUrl = sale['proof_image_url'] as String?;
+    final thumbnailUrl = sale['thumbnail_url'] as String? ?? sale['image_url'] as String?;
 
     return Scaffold(
       backgroundColor: AppColors.bg(context),
@@ -37,7 +57,24 @@ class SaleDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Ürün bilgileri
+            // Image section
+            if (thumbnailUrl != null && thumbnailUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CachedNetworkImage(
+                  imageUrl: imgUrl(thumbnailUrl),
+                  height: 220,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => _imagePlaceholder(),
+                  placeholder: (_, __) => _imagePlaceholder(),
+                ),
+              )
+            else
+              _imagePlaceholder(),
+
+            const SizedBox(height: 16),
+
+            // Item details card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -49,27 +86,55 @@ class SaleDetailScreen extends StatelessWidget {
                 children: [
                   Text(
                     itemName,
-                    style: TextStyle(color: AppColors.textPrimary(context), fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
+                  if (category != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: kPrimary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(category, style: const TextStyle(color: kPrimary, fontSize: 12)),
+                    ),
                   Text(
                     '${l.saleBuyerLabel}: @$buyerUsername',
-                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16),
+                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    fmtPrice(price),
-                    style: const TextStyle(color: Color(0xFF4ADE80), fontSize: 24, fontWeight: FontWeight.bold),
+                  const Divider(height: 24),
+                  _infoRow(context, 'Satış Fiyatı', fmtPrice(finalPrice), valueColor: const Color(0xFF4ADE80)),
+                  if (startPrice != null)
+                    _infoRow(context, 'Başlangıç Fiyatı', fmtPrice(startPrice)),
+                  _infoRow(
+                    context,
+                    'Satış Türü',
+                    isBuyItNow ? 'Hemen Al' : 'Açık Artırma',
+                    valueColor: isBuyItNow
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFFF97316),
                   ),
+                  if (!isBuyItNow && bidCount != null)
+                    _infoRow(context, 'Teklif Sayısı', '$bidCount'),
+                  if (startedAt != null)
+                    _infoRow(context, 'Başlangıç', _formatDate(startedAt)),
+                  if (endedAt != null)
+                    _infoRow(context, 'Bitiş', _formatDate(endedAt)),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            
-            // Alıcı Profiline Git butonu
+
+            const SizedBox(height: 20),
+
+            // Alıcı Profiline Git
             ElevatedButton.icon(
               icon: const Icon(Icons.person, color: Colors.white),
-              label: Text(l.purchaseViewSeller, style: const TextStyle(color: Colors.white)), // Text can stay or change to View Profile
+              label: const Text('Alıcı Profiline Git', style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: kPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -82,27 +147,37 @@ class SaleDetailScreen extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 12),
-            
-            // Alıcıya Mesaj Gönder butonu
-            ElevatedButton.icon(
-              icon: const Icon(Icons.message, color: Colors.white),
-              label: Text(l.saleMessageBuyer, style: const TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6B21A8), // Purple color for messaging
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            const SizedBox(height: 10),
+
+            // Alıcıya Mesaj Gönder
+            if (buyerId != null)
+              ElevatedButton.icon(
+                icon: const Icon(Icons.message_rounded, color: Colors.white),
+                label: Text(l.saleMessageBuyer, style: const TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6B21A8),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DirectChatScreen(
+                        otherUserId: buyerId,
+                        displayName: buyerUsername,
+                        otherHandle: buyerUsername,
+                        listingId: listingId,
+                        contextSale: sale,
+                      ),
+                    ),
+                  );
+                },
               ),
-              onPressed: () {
-                // TODO: Direct Message
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Message feature coming soon.')),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            
-            // İlanı Görüntüle butonu
+
+            const SizedBox(height: 10),
+
+            // İlanı Görüntüle
             if (listingId != null)
               OutlinedButton.icon(
                 icon: Icon(Icons.article, color: AppColors.textSecondary(context)),
@@ -120,7 +195,7 @@ class SaleDetailScreen extends StatelessWidget {
                   );
                   final listing = await ListingService.getListingById(listingId);
                   if (!context.mounted) return;
-                  Navigator.pop(context); // close loading
+                  Navigator.pop(context);
                   if (listing != null) {
                     Navigator.push(
                       context,
@@ -140,7 +215,11 @@ class SaleDetailScreen extends StatelessWidget {
             if (proofImageUrl != null && proofImageUrl.isNotEmpty) ...[
               Text(
                 l.purchaseProofImage,
-                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               ClipRRect(
@@ -148,21 +227,54 @@ class SaleDetailScreen extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl: imgUrl(proofImageUrl),
                   fit: BoxFit.cover,
-                  errorWidget: (context, url, error) => Container(
+                  errorWidget: (_, __, ___) => Container(
                     height: 200,
                     color: Colors.black26,
                     child: const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 50)),
                   ),
-                  placeholder: (context, url) => Container(
+                  placeholder: (_, __) => Container(
                     height: 200,
                     color: Colors.black12,
                     child: const Center(child: CircularProgressIndicator()),
                   ),
                 ),
               ),
-            ]
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _infoRow(BuildContext context, String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14)),
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? AppColors.textPrimary(context),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _imagePlaceholder() {
+    return Container(
+      height: 220,
+      decoration: BoxDecoration(
+        color: Colors.black12,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: Icon(Icons.storefront_outlined, color: Colors.white38, size: 60),
       ),
     );
   }

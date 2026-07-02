@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../utils/price_formatter.dart';
 import '../services/api_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/notification_service.dart';
@@ -15,6 +17,8 @@ import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
+import 'purchase_detail_screen.dart';
+import 'sale_detail_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'live/swipe_live_screen.dart';
 import '../services/stream_service.dart';
@@ -670,6 +674,8 @@ class DirectChatScreen extends StatefulWidget {
   final String displayName;
   final String otherHandle;
   final int? listingId;
+  final Map<String, dynamic>? contextPurchase;
+  final Map<String, dynamic>? contextSale;
 
   const DirectChatScreen({
     super.key,
@@ -677,6 +683,8 @@ class DirectChatScreen extends StatefulWidget {
     required this.displayName,
     required this.otherHandle,
     this.listingId,
+    this.contextPurchase,
+    this.contextSale,
   });
 
   @override
@@ -932,6 +940,11 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       ),
       body: Column(
         children: [
+          if (widget.contextPurchase != null || widget.contextSale != null)
+            _ContextBanner(
+              purchase: widget.contextPurchase,
+              sale: widget.contextSale,
+            ),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator(color: kPrimary))
@@ -1120,6 +1133,118 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Alışveriş/Satış bağlam bandı ─────────────────────────────────────────────
+
+class _ContextBanner extends StatelessWidget {
+  final Map<String, dynamic>? purchase;
+  final Map<String, dynamic>? sale;
+
+  const _ContextBanner({this.purchase, this.sale});
+
+  @override
+  Widget build(BuildContext context) {
+    final item = purchase ?? sale!;
+    final isPurchase = purchase != null;
+    final itemName = item['item_name'] as String? ?? 'Ürün';
+    final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
+    final thumbnailUrl = item['thumbnail_url'] as String? ?? item['image_url'] as String?;
+    final label = isPurchase ? 'Alışveriş' : 'Satış';
+
+    return InkWell(
+      onTap: () {
+        if (isPurchase) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => PurchaseDetailScreen(purchase: item)),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => SaleDetailScreen(sale: item)),
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.card(context),
+          border: Border(bottom: BorderSide(color: AppColors.border(context))),
+        ),
+        child: Row(
+          children: [
+            if (thumbnailUrl != null && thumbnailUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: CachedNetworkImage(
+                  imageUrl: imgUrl(thumbnailUrl),
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => _thumb(context, isPurchase),
+                  placeholder: (_, __) => _thumb(context, isPurchase),
+                ),
+              )
+            else
+              _thumb(context, isPurchase),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: isPurchase ? const Color(0xFF6B21A8) : kPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    itemName,
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              fmtPrice(price),
+              style: const TextStyle(
+                color: Color(0xFF4ADE80),
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, size: 18, color: AppColors.iconSecondary(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _thumb(BuildContext context, bool isPurchase) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: (isPurchase ? const Color(0xFF6B21A8) : kPrimary).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(
+        isPurchase ? Icons.shopping_bag_outlined : Icons.storefront_outlined,
+        size: 22,
+        color: isPurchase ? const Color(0xFF6B21A8) : kPrimary,
       ),
     );
   }
