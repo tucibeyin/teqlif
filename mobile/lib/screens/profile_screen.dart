@@ -815,16 +815,16 @@ class _ListingFilterState extends State<ListingFilter> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                const Icon(Icons.filter_list, size: 20, color: Colors.white70),
+                Icon(Icons.filter_list, size: 20, color: AppColors.textSecondary(context)),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Filtre',
-                  style: TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
                 Icon(
                   _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  color: Colors.white70,
+                  color: AppColors.textSecondary(context),
                 ),
               ],
             ),
