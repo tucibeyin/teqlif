@@ -700,12 +700,18 @@ async def request_phone_verification(
 
 @router.get("/phone-verify/confirm")
 async def confirm_phone_verification_page(
-    token: str,
-    action: str,
+    token: Optional[str] = None,
+    action: Optional[str] = None,
 ):
     """E-posta linki: onay sayfası gösterir. Gerçek işlem POST ile yapılır.
     Email prefetcher'ları GET atar ama POST atamaz — token korunmuş olur."""
     from fastapi.responses import HTMLResponse
+    if not token:
+        return HTMLResponse(_phone_verify_html(
+            "Geçersiz Bağlantı",
+            "Bu doğrulama bağlantısı geçersiz.",
+            "#64748b", False,
+        ), status_code=400)
     redis = await get_redis()
     if not await redis.exists(f"phone_verify:{token}"):
         return HTMLResponse(_phone_verify_html(
@@ -713,7 +719,7 @@ async def confirm_phone_verification_page(
             "Bu doğrulama bağlantısı daha önce kullanılmış ya da süresi dolmuş.",
             "#64748b", False,
         ))
-    return HTMLResponse(_phone_verify_confirm_page(token, action))
+    return HTMLResponse(_phone_verify_confirm_page(token, action or "yes"))
 
 
 @router.post("/phone-verify/confirm")
