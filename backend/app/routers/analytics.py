@@ -1656,6 +1656,9 @@ async def get_pro_metrics(
     best_hour = int(hour_row[0]) if hour_row else None
 
     # 4. Geri dönen izleyici oranı (yayın stream'lerinden)
+    return_viewer_rate = None
+    return_viewer_count = 0
+    total_viewer_count = 0
     return_result = await db.execute(sql_text("""
         WITH viewer_counts AS (
             SELECT user_id, COUNT(DISTINCT ls.id) AS stream_count
@@ -1672,9 +1675,6 @@ async def get_pro_metrics(
         FROM viewer_counts
     """), {"uid": uid})
     ret_row = return_result.fetchone()
-    return_viewer_rate = None
-    return_viewer_count = 0
-    total_viewer_count = 0
     if ret_row and ret_row[0] is not None:
         return_viewer_rate = round(float(ret_row[0]) * 100, 1)
         total_viewer_count = int(ret_row[1])

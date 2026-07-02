@@ -24,3 +24,11 @@ class LiveStream(Base):
     likes: Mapped[list["StreamLike"]] = relationship(  # type: ignore[name-defined]
         "StreamLike", cascade="all, delete-orphan", passive_deletes=True
     )
+
+
+class LiveStreamViewer(Base):
+    __tablename__ = "live_stream_viewers"
+
+    stream_id: Mapped[int] = mapped_column(ForeignKey("live_streams.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -29,7 +29,7 @@ from sqlalchemy import select, or_, and_
 
 from app.database import AsyncSessionLocal
 from app.models.user import User
-from app.models.stream import LiveStream
+from app.models.stream import LiveStream, LiveStreamViewer
 from app.models.block import UserBlock
 from app.services.like_service import LikeService
 from app.schemas.stream import StreamStart, StreamTokenOut, JoinTokenOut
@@ -508,6 +508,14 @@ class StreamService:
 
         token = make_livekit_token(stream.room_name, user, can_publish=False)
         logger.info("[STREAMS] Yayına katılındı | stream_id=%s user_id=%s", stream_id, user.id)
+
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+        await self.db.execute(
+            pg_insert(LiveStreamViewer)
+            .values(stream_id=stream_id, user_id=user.id)
+            .on_conflict_do_nothing()
+        )
+        await self.db.commit()
 
         return JoinTokenOut(
             stream_id=stream.id,
