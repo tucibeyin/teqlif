@@ -2008,6 +2008,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audienceLowBudget => 'Low Budget (<250₺)';
 
   @override
+  String get proToolCompetitorRadarTitle => 'Competitor Price Radar';
+
+  @override
+  String get proToolCompetitorRadarDesc =>
+      'See where your price stands vs. competitors and how much revenue you\'re leaving behind.';
+
+  @override
+  String get proToolRetargetingTitle => 'Reach Interested Buyers';
+
+  @override
+  String get proToolRetargetingDesc =>
+      'Send automatic reminders to people who viewed your listing but didn\'t buy.';
+
+  @override
   String get proToolBestTimeTitle => 'Best Stream Time';
 
   @override

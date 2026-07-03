@@ -5,10 +5,12 @@ import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
+import 'competitor_radar_screen.dart';
 import 'listing_analytics_screen.dart';
 import 'market_intelligence_screen.dart';
 import 'pro_insights_screen.dart';
 import 'pro_stream_analytics_screen.dart';
+import 'retargeting_screen.dart';
 
 class ProHubScreen extends StatefulWidget {
   final bool isPremium;
@@ -154,6 +156,28 @@ class _ProHubScreenState extends State<ProHubScreen> {
             isPremium: isPremium,
             onTap: isPremium
                 ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversionBreakdownScreen()))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.radar,
+            iconColor: const Color(0xFF6366F1),
+            title: l.proToolCompetitorRadarTitle,
+            description: l.proToolCompetitorRadarDesc,
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CompetitorRadarScreen()))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.mark_email_unread_outlined,
+            iconColor: const Color(0xFF0EA5E9),
+            title: l.proToolRetargetingTitle,
+            description: l.proToolRetargetingDesc,
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen()))
                 : () => _showUpgrade(context),
           ),
 

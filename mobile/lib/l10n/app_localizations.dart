@@ -3814,6 +3814,30 @@ abstract class AppLocalizations {
   /// **'Düşük Bütçe (<250₺)'**
   String get audienceLowBudget;
 
+  /// No description provided for @proToolCompetitorRadarTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rakip Fiyat Radarı'**
+  String get proToolCompetitorRadarTitle;
+
+  /// No description provided for @proToolCompetitorRadarDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyatın rakiplere kıyasla nerede? Kaçırdığın geliri gör.'**
+  String get proToolCompetitorRadarDesc;
+
+  /// No description provided for @proToolRetargetingTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlgilenen Alıcılara Ulaş'**
+  String get proToolRetargetingTitle;
+
+  /// No description provided for @proToolRetargetingDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanını görüp almayan kişilere otomatik hatırlatma gönder.'**
+  String get proToolRetargetingDesc;
+
   /// No description provided for @proToolBestTimeTitle.
   ///
   /// In tr, this message translates to:

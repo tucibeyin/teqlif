@@ -995,9 +995,7 @@ async def pro_insights(
         ]
     except Exception as exc:
         logger.warning("[ProInsights] peak_hours başarısız: %s", exc)
-        if not peak_hours:
-            peak_hours = [{"hour": h, "count": 20 - i * 3, "label": f"{h:02d}:00–{h+1:02d}:00"}
-                          for i, h in enumerate([20, 21, 19, 22, 18])]
+        # ClickHouse down ise boş dön — sahte veri gösterme
 
     # ── 7. Akıllı Öneriler — kural motoru ────────────────────────────────────
     tips: list[dict] = []
@@ -1767,4 +1765,197 @@ async def get_pro_metrics(
         "return_viewer_rate_pct": return_viewer_rate,
         "return_viewer_count": return_viewer_count,
         "total_viewer_count": total_viewer_count,
+    }
+
+
+# ── Rakip Fiyat Radarı ───────────────────────────────────────────────────────
+
+@router.get("/competitor-radar/{listing_id}")
+async def competitor_radar(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    PRO: Kullanıcının ilanını pgvector ile benzer aktif ilanlarla karşılaştırır.
+    Fiyat dağılımı, rakip sayısı ve pozisyon sinyali döner.
+    """
+    listing = await db.scalar(
+        select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
+    )
+    if not listing:
+        raise HTTPException(404, "İlan bulunamadı")
+
+    if listing.price is None:
+        return {"signal": "no_price", "competitors": [], "stats": {}}
+
+    if listing.embedding is None:
+        # Embedding yoksa kategori bazlı karşılaştırmaya dön
+        rows = (await db.execute(sql_text("""
+            SELECT id, title, price, user_id
+            FROM listings
+            WHERE is_active = TRUE AND is_deleted = FALSE
+              AND category = :cat AND id != :lid AND user_id != :uid
+              AND price IS NOT NULL
+            ORDER BY ABS(price - :price) ASC
+            LIMIT 20
+        """), {"cat": listing.category, "lid": listing_id,
+               "uid": current_user.id, "price": float(listing.price)})).fetchall()
+    else:
+        vec_str = "[" + ",".join(f"{x:.8f}" for x in listing.embedding) + "]"
+        rows = (await db.execute(sql_text("""
+            SELECT l.id, l.title, l.price, l.user_id
+            FROM listings l
+            WHERE l.is_active = TRUE AND l.is_deleted = FALSE
+              AND l.embedding IS NOT NULL
+              AND l.id != :lid AND l.user_id != :uid
+              AND l.price IS NOT NULL
+              AND (l.embedding <=> :vec::vector) < 0.45
+            ORDER BY l.embedding <=> :vec::vector
+            LIMIT 20
+        """), {"lid": listing_id, "uid": current_user.id, "vec": vec_str})).fetchall()
+
+    if not rows:
+        return {"signal": "no_data", "competitors": [], "stats": {}}
+
+    prices = [float(r[2]) for r in rows]
+    my_price = float(listing.price)
+    avg_price = sum(prices) / len(prices)
+    min_price = min(prices)
+    max_price = max(prices)
+    cheaper_count = sum(1 for p in prices if p < my_price)
+    pct_rank = round((cheaper_count / len(prices)) * 100)  # 0=en ucuz, 100=en pahalı
+
+    if pct_rank >= 75:
+        signal = "pahalı"
+        signal_detail = f"Rakiplerin %{pct_rank}'inden pahalısın"
+    elif pct_rank <= 25:
+        signal = "ucuz"
+        signal_detail = f"Rakiplerin %{100 - pct_rank}'inden ucuzsun — fiyat artırabilirsin"
+    else:
+        signal = "uygun"
+        signal_detail = "Fiyatın piyasa ortalamasına yakın"
+
+    suggested_price = round(avg_price * 0.97)  # Piyasa ortalamasının %3 altı — rekabetçi
+    diff_pct = round(((my_price - avg_price) / avg_price) * 100, 1)
+
+    competitors = [
+        {"id": r[0], "title": r[1][:40], "price": float(r[2])}
+        for r in rows[:8]
+    ]
+
+    return {
+        "signal": signal,
+        "signal_detail": signal_detail,
+        "my_price": my_price,
+        "avg_price": round(avg_price, 2),
+        "min_price": min_price,
+        "max_price": max_price,
+        "diff_pct": diff_pct,
+        "pct_rank": pct_rank,
+        "competitor_count": len(rows),
+        "suggested_price": suggested_price,
+        "competitors": competitors,
+    }
+
+
+# ── Satış Hızı ───────────────────────────────────────────────────────────────
+
+@router.get("/category-velocity")
+async def category_velocity(
+    category: str = Query(..., min_length=1),
+    listing_id: Optional[int] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    PRO: Kategoride son 90 günde satılan ilanların ortalama satış süresi,
+    fiyat hassasiyeti ve en iyi fiyat aralığı.
+    """
+    from app.models.bid import Bid
+
+    # Ortalama satış süresi (oluşturma → kazanılan auction)
+    velocity_row = (await db.execute(sql_text("""
+        SELECT
+            COUNT(*) AS total_sold,
+            ROUND(AVG(EXTRACT(EPOCH FROM (a.updated_at - l.created_at)) / 86400.0), 1) AS avg_days,
+            ROUND(MIN(EXTRACT(EPOCH FROM (a.updated_at - l.created_at)) / 86400.0), 1) AS min_days,
+            ROUND(MAX(EXTRACT(EPOCH FROM (a.updated_at - l.created_at)) / 86400.0), 1) AS max_days,
+            ROUND(AVG(l.price), 0) AS avg_price,
+            ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY l.price), 0) AS p25_price,
+            ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY l.price), 0) AS p75_price
+        FROM auctions a
+        INNER JOIN listings l ON l.id = a.listing_id
+        WHERE a.status = 'ended'
+          AND a.winner_username IS NOT NULL
+          AND l.category = :cat
+          AND a.updated_at > NOW() - INTERVAL '90 days'
+          AND l.price IS NOT NULL
+    """), {"cat": category})).fetchone()
+
+    # Fiyat hassasiyeti — ucuz vs pahalı ilanların satış hızı farkı
+    price_sens = (await db.execute(sql_text("""
+        SELECT
+            CASE WHEN l.price <= pct.p50 THEN 'ucuz' ELSE 'pahalı' END AS bucket,
+            ROUND(AVG(EXTRACT(EPOCH FROM (a.updated_at - l.created_at)) / 86400.0), 1) AS avg_days,
+            COUNT(*) AS count
+        FROM auctions a
+        INNER JOIN listings l ON l.id = a.listing_id
+        INNER JOIN (
+            SELECT category,
+                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) AS p50
+            FROM listings WHERE category = :cat AND is_deleted = FALSE
+            GROUP BY category
+        ) pct ON pct.category = l.category
+        WHERE a.status = 'ended'
+          AND a.winner_username IS NOT NULL
+          AND l.category = :cat
+          AND a.updated_at > NOW() - INTERVAL '90 days'
+          AND l.price IS NOT NULL
+        GROUP BY bucket
+    """), {"cat": category})).fetchall()
+
+    # Mevcut aktif rakip sayısı
+    active_count = await db.scalar(sql_text("""
+        SELECT COUNT(*) FROM listings
+        WHERE category = :cat AND is_active = TRUE AND is_deleted = FALSE
+          AND id != COALESCE(:lid, 0)
+    """), {"cat": category, "lid": listing_id or 0})
+
+    total_sold = int(velocity_row[0]) if velocity_row and velocity_row[0] else 0
+    avg_days = float(velocity_row[1]) if velocity_row and velocity_row[1] else None
+    min_days = float(velocity_row[2]) if velocity_row and velocity_row[2] else None
+    max_days = float(velocity_row[3]) if velocity_row and velocity_row[3] else None
+    avg_price = float(velocity_row[4]) if velocity_row and velocity_row[4] else None
+    p25 = float(velocity_row[5]) if velocity_row and velocity_row[5] else None
+    p75 = float(velocity_row[6]) if velocity_row and velocity_row[6] else None
+
+    price_sensitivity = [
+        {"bucket": r[0], "avg_days": float(r[1]), "count": int(r[2])}
+        for r in price_sens
+    ] if price_sens else []
+
+    # Öneri metni
+    tip = None
+    if avg_days and avg_days > 0:
+        if price_sensitivity:
+            ucuz = next((p for p in price_sensitivity if p["bucket"] == "ucuz"), None)
+            pahali = next((p for p in price_sensitivity if p["bucket"] == "pahalı"), None)
+            if ucuz and pahali and pahali["avg_days"] > 0:
+                speed_ratio = round(pahali["avg_days"] / ucuz["avg_days"], 1)
+                if speed_ratio >= 1.5:
+                    tip = f"Piyasa ortalamasının altında fiyatlanan ilanlar {speed_ratio}× daha hızlı satılıyor"
+
+    return {
+        "category": category,
+        "total_sold_90d": total_sold,
+        "avg_days_to_sell": avg_days,
+        "min_days_to_sell": min_days,
+        "max_days_to_sell": max_days,
+        "avg_sold_price": avg_price,
+        "sweet_spot_min": p25,
+        "sweet_spot_max": p75,
+        "active_competitor_count": int(active_count or 0),
+        "price_sensitivity": price_sensitivity,
+        "tip": tip,
     }

@@ -314,3 +314,189 @@ async def send_blast(
         "spent": tuci_cost,
         "message": f"{sent} kişiye bildirim gönderildi.",
     }
+
+
+# ── Retargeting ───────────────────────────────────────────────────────────────
+
+@router.get("/retargeting-audience/{listing_id}")
+async def retargeting_audience(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    PRO: İlanı görüntüleyen ama satın almayan kullanıcı sayısını döner.
+    ClickHouse feed_analytics + user_events tablosundan çekilir.
+    """
+    if not current_user.is_premium:
+        raise HTTPException(403, "Bu özellik yalnızca PRO kullanıcılara açıktır")
+
+    listing = await db.scalar(
+        select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
+    )
+    if not listing:
+        raise HTTPException(404, "İlan bulunamadı")
+
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+
+        # ClickHouse: bu ilanı görüntüleyen eşsiz kullanıcılar (son 30 gün)
+        viewer_result = await ch.query("""
+            SELECT COUNT(DISTINCT user_id) AS cnt
+            FROM user_events
+            WHERE listing_id = %(lid)s
+              AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
+              AND timestamp >= now() - INTERVAL 30 DAY
+              AND user_id != %(uid)s
+              AND user_id != 0
+        """, parameters={"lid": listing_id, "uid": current_user.id})
+
+        viewer_rows = viewer_result.result_rows
+        total_viewers = int(viewer_rows[0][0]) if viewer_rows else 0
+
+        # Satın alanları çıkar (purchases veya auction kazananları)
+        buyer_result = (await db.execute(sql_text("""
+            SELECT COUNT(*) FROM purchases WHERE listing_id = :lid
+            UNION ALL
+            SELECT COUNT(*) FROM auctions
+            WHERE listing_id = :lid AND winner_username IS NOT NULL
+        """), {"lid": listing_id})).fetchall()
+        already_bought = sum(int(r[0]) for r in buyer_result)
+
+        reachable = max(0, total_viewers - already_bought)
+        # FCM token'ı olan kullanıcılar ~%70
+        reachable_with_token = round(reachable * 0.70)
+
+        return {
+            "listing_id": listing_id,
+            "listing_title": listing.title,
+            "total_viewers_30d": total_viewers,
+            "already_bought": already_bought,
+            "reachable_audience": reachable_with_token,
+            "estimated_cost_tuci": reachable_with_token,  # 1 TUCi per kişi
+        }
+
+    except Exception as exc:
+        logger.warning("[Retargeting] audience-size başarısız: %s", exc)
+        return {
+            "listing_id": listing_id,
+            "listing_title": listing.title,
+            "total_viewers_30d": 0,
+            "already_bought": 0,
+            "reachable_audience": 0,
+            "estimated_cost_tuci": 0,
+        }
+
+
+class RetargetingBlastBody(BaseModel):
+    listing_id: int
+    estimated_audience: int = Field(ge=0)
+    estimated_cost: int = Field(ge=0)
+
+
+@router.post("/send-retargeting")
+async def send_retargeting(
+    body: RetargetingBlastBody,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    PRO: İlanı görüntüleyen ama satın almayan kullanıcılara kişiselleştirilmiş bildirim gönderir.
+    1 TUCi per kişi (blast kredi sayımına dahil edilmez — ayrı bir işlem).
+    """
+    if not current_user.is_premium:
+        raise HTTPException(403, "Bu özellik yalnızca PRO kullanıcılara açıktır")
+
+    listing = await db.scalar(
+        select(Listing).where(Listing.id == body.listing_id, Listing.user_id == current_user.id)
+    )
+    if not listing:
+        raise HTTPException(404, "İlan bulunamadı")
+
+    tuci_cost = body.estimated_cost
+    if tuci_cost > 0:
+        balance = await db.scalar(
+            sql_text("SELECT tuci_balance FROM users WHERE id = :uid"), {"uid": current_user.id}
+        )
+        if (balance or 0) < tuci_cost:
+            raise HTTPException(402, "Yetersiz TUCi bakiyesi")
+
+    # ClickHouse'dan viewer user_id'lerini çek
+    viewer_ids: list[int] = []
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        result = await ch.query("""
+            SELECT DISTINCT user_id
+            FROM user_events
+            WHERE listing_id = %(lid)s
+              AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
+              AND timestamp >= now() - INTERVAL 30 DAY
+              AND user_id != %(uid)s
+              AND user_id != 0
+            LIMIT 500
+        """, parameters={"lid": body.listing_id, "uid": current_user.id})
+        viewer_ids = [int(r[0]) for r in result.result_rows]
+    except Exception as exc:
+        logger.warning("[Retargeting] ClickHouse viewer query başarısız: %s", exc)
+
+    if not viewer_ids:
+        return {"sent": 0, "spent": 0, "message": "Henüz yeterli izleyici verisi yok."}
+
+    # FCM token'ları PostgreSQL'den çek
+    token_rows = (await db.execute(sql_text("""
+        SELECT fcm_token FROM users
+        WHERE id = ANY(:ids) AND fcm_token IS NOT NULL AND fcm_token != ''
+    """), {"ids": viewer_ids})).fetchall()
+    fcm_tokens = [r[0] for r in token_rows]
+
+    if not fcm_tokens:
+        return {"sent": 0, "spent": 0, "message": "Bildirim gönderilebilecek kullanıcı bulunamadı."}
+
+    listing_url = f"/listing/{body.listing_id}"
+
+    from app.services.firebase_service import send_push, InvalidFCMTokenError
+
+    async def _send_one(token: str) -> None:
+        try:
+            await send_push(
+                token=token,
+                title="Hâlâ ilgilendin mi? 👀",
+                body=f"{listing.title} — hâlâ satışta!",
+                data={"type": "new_listing", "listing_id": str(body.listing_id)},
+                extra_data={"url": listing_url},
+            )
+        except InvalidFCMTokenError:
+            pass
+        except Exception as exc:
+            logger.warning("[Retargeting] Push başarısız: %s", exc)
+
+    sent = 0
+    for i in range(0, len(fcm_tokens), 50):
+        chunk = fcm_tokens[i: i + 50]
+        await asyncio.gather(*[_send_one(t) for t in chunk])
+        sent += len(chunk)
+
+    # TUCi düş
+    actual_cost = min(tuci_cost, sent)
+    if actual_cost > 0:
+        await db.execute(
+            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            {"cost": actual_cost, "uid": current_user.id},
+        )
+        db.add(TuciTransaction(
+            user_id=current_user.id,
+            amount=-actual_cost,
+            transaction_type="spend_retargeting",
+        ))
+        await db.commit()
+
+    logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | cost=%d TUCi",
+                current_user.id, sent, actual_cost)
+
+    return {
+        "sent": sent,
+        "spent": actual_cost,
+        "message": f"{sent} kişiye geri hedefleme bildirimi gönderildi.",
+    }

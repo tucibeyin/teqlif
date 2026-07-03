@@ -459,6 +459,81 @@ class AnalyticsService {
       debugPrint('[ANALYTICS] Error tracking event: $eventType');
     }
   }
+
+  /// Rakip Fiyat Radarı → `/api/analytics/competitor-radar/{listing_id}`
+  static Future<Map<String, dynamic>?> competitorRadar(int listingId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/competitor-radar/$listingId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
+  /// Satış Hızı → `/api/analytics/category-velocity`
+  static Future<Map<String, dynamic>?> categoryVelocity(String category, {int? listingId}) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      var url = '$kBaseUrl/analytics/category-velocity?category=${Uri.encodeComponent(category)}';
+      if (listingId != null) url += '&listing_id=$listingId';
+      final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'});
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
+  /// Retargeting kitlesi → `GET /api/leads/retargeting-audience/{listing_id}`
+  static Future<Map<String, dynamic>?> retargetingAudience(int listingId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/leads/retargeting-audience/$listingId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 403) return {'error': 'pro_required'};
+    } catch (_) {}
+    return null;
+  }
+
+  /// Retargeting blast gönder → `POST /api/leads/send-retargeting`
+  static Future<Map<String, dynamic>?> sendRetargeting({
+    required int listingId,
+    required int estimatedAudience,
+    required int estimatedCost,
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/leads/send-retargeting'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'listing_id': listingId,
+          'estimated_audience': estimatedAudience,
+          'estimated_cost': estimatedCost,
+        }),
+      );
+      if (resp.statusCode == 200 || resp.statusCode == 202) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      try {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        return {'error': body['detail'] ?? 'Blast gönderilemedi.'};
+      } catch (_) {}
+      return {'error': 'Blast gönderilemedi.'};
+    } catch (_) {}
+    return null;
+  }
 }
 
 // --- Screen Tracking Observer ---

@@ -2009,6 +2009,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get audienceLowBudget => 'Düşük Bütçe (<250₺)';
 
   @override
+  String get proToolCompetitorRadarTitle => 'Rakip Fiyat Radarı';
+
+  @override
+  String get proToolCompetitorRadarDesc =>
+      'Fiyatın rakiplere kıyasla nerede? Kaçırdığın geliri gör.';
+
+  @override
+  String get proToolRetargetingTitle => 'İlgilenen Alıcılara Ulaş';
+
+  @override
+  String get proToolRetargetingDesc =>
+      'İlanını görüp almayan kişilere otomatik hatırlatma gönder.';
+
+  @override
   String get proToolBestTimeTitle => 'En İyi Yayın Saati';
 
   @override

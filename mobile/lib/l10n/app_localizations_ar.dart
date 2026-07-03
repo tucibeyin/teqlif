@@ -1993,6 +1993,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get audienceLowBudget => 'ميزانية منخفضة (<250₺)';
 
   @override
+  String get proToolCompetitorRadarTitle => 'رادار أسعار المنافسين';
+
+  @override
+  String get proToolCompetitorRadarDesc =>
+      'اكتشف موقع سعرك مقارنةً بالمنافسين وكم تخسر من أرباح.';
+
+  @override
+  String get proToolRetargetingTitle => 'تواصل مع المهتمين';
+
+  @override
+  String get proToolRetargetingDesc =>
+      'أرسل تذكيراً تلقائياً للأشخاص الذين شاهدوا إعلانك ولم يشتروا.';
+
+  @override
   String get proToolBestTimeTitle => 'أفضل وقت للبث';
 
   @override
