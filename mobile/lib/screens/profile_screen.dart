@@ -2973,7 +2973,7 @@ class _SummaryRow extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(label,
-                style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface)),
           ),
           Text('$amount TUCi',
               style: const TextStyle(
@@ -3006,7 +3006,9 @@ class _TxnRow extends StatelessWidget {
           Container(
             width: 36, height: 36,
             decoration: BoxDecoration(
-              color: isPositive ? Colors.green.shade50 : Colors.red.shade50,
+              color: isPositive
+                  ? Colors.green.withValues(alpha: 0.15)
+                  : Colors.red.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
