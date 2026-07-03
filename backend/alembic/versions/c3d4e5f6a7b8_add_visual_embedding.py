@@ -17,8 +17,9 @@ depends_on = None
 def upgrade() -> None:
     # CLIP ViT-B/32 → 512 boyutlu görsel embedding
     op.execute("ALTER TABLE listings ADD COLUMN IF NOT EXISTS visual_embedding vector(512)")
+    # Kolon yeni ve tamamen NULL — index build anında biter, CONCURRENTLY gerekmiyor
     op.execute(
-        "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_listings_visual_embedding "
+        "CREATE INDEX IF NOT EXISTS ix_listings_visual_embedding "
         "ON listings USING ivfflat (visual_embedding vector_cosine_ops) WITH (lists = 50)"
     )
 
