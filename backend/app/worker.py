@@ -710,13 +710,17 @@ async def compute_user_interests_task(ctx: dict) -> None:
 
 async def update_user_preference_embedding(ctx: dict, user_id: int) -> None:
     """
-    Belirtilen kullanıcının son 50 ilan etkileşiminden ağırlıklı ortalama vektör
-    hesaplar ve User.preference_embedding kolonuna yazar.
+    Belirtilen kullanıcının preference_embedding'ini günceller.
 
-    Ağırlık:
-      - duration_seconds (maks 60s'e kırpılır) → uzun izleme = güçlü sinyal
-      - interaction_type: 'offer' × 5, 'click' × 2, diğer × 1
-      - Hiç embeddingsi olmayan ilanlar atlanır
+    Sinyal kaynakları (birleşik ağırlıklı ortalama):
+      1. PostgreSQL UserInteraction — explicit etkileşimler (tıklama, teklif, satın alma)
+         - auction_won × 20, offer × 5, click × 2, diğer × 1
+         - duration_seconds ağırlığı (maks 60s kırpılır)
+      2. ClickHouse feed_analytics — implicit sinyal (son 7 gün)
+         - click → × 3.0
+         - impression + dwell > 8000ms → × 1.5
+         - impression + dwell > 3000ms → × 0.8
+         ClickHouse erişilemezse sadece PostgreSQL sinyali kullanılır.
     """
     try:
         import numpy as np
@@ -728,6 +732,7 @@ async def update_user_preference_embedding(ctx: dict, user_id: int) -> None:
         from app.models.user import User
 
         async with AsyncSessionLocal() as db:
+            # ── 1. PostgreSQL explicit sinyaller ─────────────────────────────
             interactions = list(await db.scalars(
                 select(UserInteraction)
                 .where(
@@ -741,33 +746,84 @@ async def update_user_preference_embedding(ctx: dict, user_id: int) -> None:
                 .limit(50)
             ))
 
-            if not interactions:
+            # ── 2. ClickHouse implicit sinyaller (son 7 gün) ─────────────────
+            ch_signals: dict[int, float] = {}
+            try:
+                from app.database_clickhouse import get_clickhouse_client
+                ch = await get_clickhouse_client()
+                if ch is not None:
+                    uid_str = str(user_id)
+                    ch_result = await ch.query(f"""
+                        SELECT
+                            listing_id,
+                            SUM(
+                                CASE
+                                    WHEN event_type = 'click' THEN 3.0
+                                    WHEN event_type = 'impression' AND dwell_time_ms > 8000 THEN 1.5
+                                    WHEN event_type = 'impression' AND dwell_time_ms > 3000 THEN 0.8
+                                    ELSE 0
+                                END
+                            ) AS signal
+                        FROM feed_analytics
+                        WHERE user_id = '{uid_str}'
+                          AND timestamp >= now() - INTERVAL 7 DAY
+                        GROUP BY listing_id
+                        HAVING signal > 0
+                        LIMIT 100
+                    """)
+                    for lid_str, signal in ch_result.result_rows:
+                        try:
+                            ch_signals[int(lid_str)] = float(signal)
+                        except (ValueError, TypeError):
+                            continue
+            except Exception as ch_exc:
+                logger.debug("[Worker] ClickHouse sinyal alınamadı, atlanıyor: %s", ch_exc)
+
+            # ── 3. Tüm listing ID'lerini topla ───────────────────────────────
+            pg_item_ids = [i.item_id for i in interactions]
+            ch_item_ids = list(ch_signals.keys())
+            all_item_ids = list(set(pg_item_ids) | set(ch_item_ids))
+
+            if not all_item_ids:
                 return
 
-            item_ids = [i.item_id for i in interactions]
             emb_rows = await db.execute(
                 select(Listing.id, Listing.embedding)
-                .where(Listing.id.in_(item_ids), Listing.embedding.isnot(None))
+                .where(Listing.id.in_(all_item_ids), Listing.embedding.isnot(None))
             )
             emb_map = {r.id: r.embedding for r in emb_rows}
 
             if not emb_map:
                 return
 
-            vecs, ws = [], []
+            vecs: list = []
+            ws: list = []
+
+            # PostgreSQL sinyalleri
             for inter in interactions:
                 emb = emb_map.get(inter.item_id)
                 if emb is None:
                     continue
                 w = min(float(inter.duration_seconds or 1.0), 60.0)
                 if inter.interaction_type == "auction_won":
-                    w *= 20.0   # gerçek satın alma — en güçlü sinyal
+                    w *= 20.0
                 elif inter.interaction_type == "offer":
                     w *= 5.0
                 elif inter.interaction_type == "click":
                     w *= 2.0
                 vecs.append(np.array(emb, dtype=np.float32))
                 ws.append(max(w, 0.1))
+
+            # ClickHouse sinyalleri (PostgreSQL'de olmayan listing'ler)
+            pg_ids_set = set(pg_item_ids)
+            for lid, signal in ch_signals.items():
+                if lid in pg_ids_set:
+                    continue  # PostgreSQL'de zaten var, çift sayma
+                emb = emb_map.get(lid)
+                if emb is None:
+                    continue
+                vecs.append(np.array(emb, dtype=np.float32))
+                ws.append(max(signal, 0.1))
 
             if not vecs:
                 return
@@ -786,7 +842,10 @@ async def update_user_preference_embedding(ctx: dict, user_id: int) -> None:
             )
             await db.commit()
 
-        logger.info("[Worker] preference_embedding güncellendi | user_id=%d", user_id)
+        logger.info(
+            "[Worker] preference_embedding güncellendi | user_id=%d pg_signals=%d ch_signals=%d",
+            user_id, len(interactions), len(ch_signals),
+        )
 
         # For-you feed cache'ini temizle
         from app.utils.redis_client import get_redis
@@ -1318,6 +1377,23 @@ async def train_swipe_live_als_task(ctx: dict) -> None:
         raise
 
 
+async def train_feed_als_task(ctx: dict) -> None:
+    """
+    Her gece 03:45'te çalışır.
+    30 günlük feed_analytics verisinden ilan feed'i ALS collaborative filtering modeli eğitir.
+    Kullanıcı ve ilan vektörlerini Redis'e yazar (25 saat TTL).
+    SwipeLive ALS'den 30 dk sonra çalışır — yük çakışmasını önler.
+    """
+    try:
+        from app.services.feed_als_ml import train_feed_als
+        await train_feed_als()
+        logger.info("[Worker] train_feed_als_task tamamlandı")
+    except Exception as exc:
+        logger.error("[Worker] train_feed_als_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 async def invalidate_swipe_live_configs_task(ctx: dict) -> None:
     """
     Her 15 dakikada bir: ClickHouse'daki yeni SwipeLive etkileşim verisini
@@ -1388,6 +1464,7 @@ class WorkerSettings:
         send_budget_match_notifications_task,
         invalidate_swipe_live_configs_task,
         train_swipe_live_als_task,
+        train_feed_als_task,
         sync_swipelive_interests_task,
         backfill_listing_embeddings_task,
     ]
@@ -1429,6 +1506,8 @@ class WorkerSettings:
         cron(compute_trending_categories_task, hour={0, 6, 12, 18}, minute=0),
         # Her gece 03:15 — SwipeLive ALS collaborative filtering modeli eğit
         cron(train_swipe_live_als_task, hour=3, minute=15),
+        # Her gece 03:45 — İlan feed ALS collaborative filtering modeli eğit
+        cron(train_feed_als_task, hour=3, minute=45),
         # Her 20 dakikada SwipeLive olaylarını kullanıcı ilgi sinyaline dönüştür
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
         # Her saat başı — embedding'i olmayan ilanlar için backfill (20'şer batch)

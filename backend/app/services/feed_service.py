@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.redis_client import get_redis
 from app.services.listing_service import _row_dict
 from app.services.like_service import LikeService
+from app.services.feed_als_ml import get_als_scores
 from app.models.listing import Listing
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
@@ -524,8 +525,8 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
 
     Strateji:
       - pgvector pool (semantic, limit*2 aday) + sosyal pool (takip edilen satıcılar, 30 aday)
-      - UNION sonrası lightweight re-ranking: sim_score × 0.55 + freshness × 0.15
-        + social_bonus × 0.12 + quality × 0.10 − seen_recently_penalty × 0.20
+      - SQL re-ranking: pgvec_sim × 0.45 + freshness × 0.15 + social × 0.12 + quality × 0.10 − seen × 0.20
+      - Python ALS blending: sql_score × 0.80 + als_score × 0.20 (ALS vektörü varsa)
       - 'not_interested' Redis seti hariç tutulur.
       - max_budget varsa price <= max_budget × 1.2 filtresi uygulanır.
       - Son 3 günde görülen ilanlar yumuşak cezalandırılır (hard filter değil).
@@ -556,10 +557,10 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
         budget_clause = "AND (l.price IS NULL OR l.price <= :price_ceiling)"
         params["price_ceiling"] = user.max_budget * 1.2
 
+    # SQL: candidate pool + temel skorlama (id + sql_score döndürür)
     result = await db.execute(
         text(f"""
             WITH pgvec_pool AS (
-                -- Semantik benzerlik: embedding'e en yakın ilanlar
                 SELECT l.id,
                        (1.0 - (l.embedding <=> :vec::vector)) AS sim_score
                 FROM listings l
@@ -573,7 +574,6 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                 LIMIT :pgvec_lim
             ),
             social_pool AS (
-                -- Takip edilen satıcıların son ilanları (sosyal sinyal)
                 SELECT l.id, 0.0 AS sim_score
                 FROM listings l
                 INNER JOIN follows f ON f.followed_id = l.user_id AND f.follower_id = :uid
@@ -591,12 +591,12 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
             scored AS (
                 SELECT
                     c.id,
-                    c.sim_score * 0.55
+                    c.sim_score * 0.45
                     + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 1209600.0) * 0.15
                     + COALESCE(soc.social_bonus, 0.0) * 0.12
                     + (LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0) * 0.10
                     - COALESCE(imp.seen_recently, 0.0) * 0.20
-                    AS final_score
+                    AS sql_score
                 FROM all_candidates c
                 INNER JOIN listings l ON l.id = c.id
                 LEFT JOIN (
@@ -615,14 +615,36 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                       AND seen_at > NOW() - INTERVAL '3 days'
                 ) imp ON imp.listing_id = c.id
             )
-            SELECT id FROM scored
-            ORDER BY final_score DESC
+            SELECT id, sql_score FROM scored
+            ORDER BY sql_score DESC
             LIMIT :lim
         """),
         params,
     )
-    ids = [r.id for r in result]
-    return ids if ids else await _popular_feed(0, limit, db, exclude_user_id=user_id)
+    rows = result.all()
+
+    if not rows:
+        return await _popular_feed(0, limit, db, exclude_user_id=user_id)
+
+    # Python ALS blending — ALS vektörü yoksa sql_score aynen kullanılır
+    candidate_ids = [r.id for r in rows]
+    sql_scores: dict[int, float] = {r.id: float(r.sql_score) for r in rows}
+
+    try:
+        als_scores = await get_als_scores(user_id, candidate_ids)
+    except Exception as exc:
+        logger.warning("[ForYou] ALS skorları alınamadı, atlanıyor: %s", exc)
+        als_scores = {}
+
+    if als_scores:
+        final_scores = {
+            lid: sql_scores[lid] * 0.80 + als_scores.get(lid, 0.0) * 0.20
+            for lid in candidate_ids
+        }
+    else:
+        final_scores = sql_scores
+
+    return sorted(candidate_ids, key=lambda lid: final_scores[lid], reverse=True)
 
 
 # ── Sponsored İlan Enjeksiyonu ────────────────────────────────────────────────
