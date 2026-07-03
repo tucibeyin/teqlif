@@ -55,10 +55,6 @@ class HomeScreenState extends State<HomeScreen> {
 
   bool _showOnboardingBanner = false;
 
-  // ForYou yatay scroll — dwell tracking
-  final ScrollController _forYouScrollCtrl = ScrollController();
-  Timer? _dwellTimer;
-  static const double _cardWidth = 130.0; // 120px kart + 10px margin
 
   static const _categoryMeta = [
     {'slug': 'elektronik', 'icon': Icons.devices_outlined},
@@ -92,60 +88,18 @@ class HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _cities = c);
     });
     _scrollCtrl.addListener(_onScroll);
-    _forYouScrollCtrl.addListener(_onForYouScroll);
   }
 
   @override
   void dispose() {
-    _dwellTimer?.cancel();
-    _forYouScrollCtrl.removeListener(_onForYouScroll);
-    _forYouScrollCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
-  }
-
-  void _onForYouScrollEnd() {
-    _dwellTimer?.cancel();
-    if (_forYouListings.isEmpty) return;
-    final offset = _forYouScrollCtrl.offset;
-    final index = (offset / _cardWidth).round().clamp(0, _forYouListings.length - 1);
-    final item = _forYouListings[index] as Map<String, dynamic>;
-    final itemId = item['id'] as int?;
-    if (itemId == null) return;
-    _dwellTimer = Timer(const Duration(seconds: 3), () {
-      final rawPrice = item['price'];
-      // Kullanıcı kartı 3 saniye izledi — hem Redis hem ClickHouse'a yaz
-      AnalyticsService.logInteraction(
-        itemId: itemId,
-        itemType: 'listing',
-        interactionType: 'dwell',
-        durationSeconds: 3.0,
-        pricePoint: rawPrice != null ? (rawPrice as num).toDouble() : null,
-        metadata: {'source': 'for_you_feed'},
-      );
-      // ClickHouse feed_analytics → recommendation engine döngüsünü kapatır
-      FeedTelemetryService.instance.logEvent(
-        listingId: itemId.toString(),
-        eventType: 'impression',
-        dwellTimeMs: 3000,
-        contentType: 'photo',
-        slotIndex: index,
-      );
-    });
-  }
-
-  // Sona yaklaşınca sessizce yeni batch yükle
-  void _onForYouScroll() {
-    if (!_forYouScrollCtrl.hasClients) return;
-    final pos = _forYouScrollCtrl.position;
-    if (pos.pixels >= pos.maxScrollExtent - _cardWidth * 2) {
-      _loadMoreForYou();
-    }
   }
 
   void _onScroll() {
     if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 300) {
       _loadMoreRecent();
+      _loadMoreForYou();
     }
   }
 
@@ -812,91 +766,78 @@ class HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: _forYouLoading && _forYouListings.isEmpty
-                      ? SizedBox(
-                          height: 180,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: 4,
-                            itemBuilder: (_, __) => Container(
-                              width: 120,
-                              margin: const EdgeInsets.only(right: 8),
-                              child: const ShimmerBox(),
-                            ),
-                          ),
-                        )
-                      : _forYouListings.isEmpty
-                          ? const SizedBox.shrink()
-                          : SizedBox(
-                              height: 190,
-                              child: NotificationListener<ScrollEndNotification>(
-                                onNotification: (_) {
-                                  _onForYouScrollEnd();
-                                  return false;
-                                },
-                                child: ListView.builder(
-                                  controller: _forYouScrollCtrl,
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  // +1 slot: sona yükleniyor spinner'ı
-                                  itemCount: _forYouListings.length + (_forYouLoadingMore ? 1 : 0),
-                                  itemBuilder: (ctx, i) {
-                                    if (i == _forYouListings.length) {
-                                      return const SizedBox(
-                                        width: 60,
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: 20, height: 20,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                    final item = _forYouListings[i] as Map<String, dynamic>;
-                                    return _HorizontalListingCard(
-                                      listing: item,
-                                      onTap: () {
-                                        _dwellTimer?.cancel();
-                                        if (item['is_sponsored'] == true) {
-                                          final cid = item['campaign_id'];
-                                          if (cid != null) AnalyticsService.trackAdClick(cid as int);
-                                        } else if (_isLoggedIn) {
-                                          final id = item['id'] as int?;
-                                          if (id != null) unawaited(AnalyticsService.logInteraction(
-                                            itemId: id, itemType: 'listing', interactionType: 'click',
-                                            pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
-                                            metadata: {'source': 'for_you_feed'},
-                                          ));
-                                        }
-                                        // Highlight ilan → doğrudan canlı yayına katıl
-                                        if (item['is_highlight'] == true) {
-                                          final rawRoomId = item['active_room_id'];
-                                          if (rawRoomId != null) {
-                                            final roomId = rawRoomId is int
-                                                ? rawRoomId
-                                                : int.tryParse(rawRoomId.toString());
-                                            if (roomId != null) {
-                                              Navigator.push(ctx, MaterialPageRoute(
-                                                builder: (_) => SwipeLiveScreen.single(
-                                                    streamId: roomId),
-                                              ));
-                                              return;
-                                            }
-                                          }
-                                        }
-                                        Navigator.push(ctx, MaterialPageRoute(
-                                          builder: (_) => ListingDetailScreen(
-                                              listing: Map<String, dynamic>.from(item)),
-                                        ));
-                                      },
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                ),
+                if (_forYouLoading && _forYouListings.isEmpty)
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (_, __) => const ShimmerBox(),
+                        childCount: 6,
+                      ),
+                    ),
+                  )
+                else if (_forYouListings.isNotEmpty) ...[
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (ctx, i) {
+                          final item = _forYouListings[i] as Map<String, dynamic>;
+                          return _GridItem(
+                            key: Key('for_you_item_${item['id']}'),
+                            listing: item,
+                            onRemove: () => setState(() => _forYouListings.removeAt(i)),
+                            onTap: () {
+                              if (item['is_sponsored'] == true) {
+                                final cid = item['campaign_id'];
+                                if (cid != null) AnalyticsService.trackAdClick(cid as int);
+                              } else if (_isLoggedIn) {
+                                final id = item['id'] as int?;
+                                if (id != null) unawaited(AnalyticsService.logInteraction(
+                                  itemId: id, itemType: 'listing', interactionType: 'click',
+                                  pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
+                                  metadata: {'source': 'for_you_feed'},
+                                ));
+                              }
+                              if (item['is_highlight'] == true) {
+                                final rawRoomId = item['active_room_id'];
+                                if (rawRoomId != null) {
+                                  final roomId = rawRoomId is int
+                                      ? rawRoomId
+                                      : int.tryParse(rawRoomId.toString());
+                                  if (roomId != null) {
+                                    Navigator.push(ctx, MaterialPageRoute(
+                                      builder: (_) => SwipeLiveScreen.single(streamId: roomId),
+                                    ));
+                                    return;
+                                  }
+                                }
+                              }
+                              Navigator.push(ctx, MaterialPageRoute(
+                                builder: (_) => ListingDetailScreen(
+                                    listing: Map<String, dynamic>.from(item)),
+                              ));
+                            },
+                          );
+                        },
+                        childCount: _forYouListings.length,
+                      ),
+                    ),
+                  ),
+                  if (_forYouLoadingMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      ),
+                    ),
+                ],
               ],
 
               // ── En Son Eklenenler ──────────────────────────────────
