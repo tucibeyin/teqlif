@@ -91,7 +91,7 @@
       </div>
       <div class="title">{{ og_title }}</div>
       <div class="desc">{{ og_description }}</div>
-      <a class="btn-open" href="#" id="btnOpen">Uygulamayı İndir / Aç</a>
+      <a class="btn-open" href="#" id="btnOpen">Uygulamayı İndir</a>
       <a class="btn-web" href="{{ web_url }}" id="btnWeb">Web'de Devam Et</a>
       <div class="status" id="status"></div>
     </div>
@@ -118,29 +118,16 @@
         return;
       }
 
-      // ── "Uygulamayı İndir / Aç" butonu ───────────────────────────────
-      // Universal Link kuruluysa uygulama linke tıklanınca doğrudan açılır
-      // (bu sayfaya hiç gelmez). Buraya gelenler büyük ihtimalle uygulamayı
-      // yüklü değil — önce store'a git; yüklüyse scheme ile dene.
+      // ── Butonu platforma göre etiketle ────────────────────────────────
+      btnOpen.textContent = isIOS ? 'App Store\'dan İndir' : 'Play Store\'dan İndir';
+
+      // ── "İndir" butonu: doğrudan store'a git ─────────────────────────
+      // Universal Link kuruluysa davet linkine tıklanınca uygulama açılır
+      // (landing page gösterilmez). Buraya geliyorsa uygulama yüklü değil.
+      // Smart App Banner zaten yüklü kullanıcılara "Aç" seçeneği gösteriyor.
       btnOpen.addEventListener('click', function (e) {
         e.preventDefault();
-        var opened = false;
-        // Uygulama açılırsa (Universal Link veya scheme) sayfa gizlenir
-        var onHide = function () {
-          if (document.hidden) {
-            opened = true;
-            document.removeEventListener('visibilitychange', onHide);
-          }
-        };
-        document.addEventListener('visibilitychange', onHide);
-
-        // Önce scheme'i dene (yüklüyse açar, hata vermez çünkü user gesture var)
-        window.location.href = appScheme;
-
-        // 1.5s içinde açılmadıysa store'a git
-        setTimeout(function () {
-          if (!opened) window.location.href = storeUrl;
-        }, 1500);
+        window.location.href = storeUrl;
       });
     })();
   </script>
