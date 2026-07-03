@@ -499,10 +499,10 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   Future<void> _confirmDeleteStory() async {
     // View isteği sunucuda işleniyorken DELETE gönderilmesini önlemek için
     // önce videoyu durdur, kısa süre bekle
+    final l = AppLocalizations.of(context)!;
     _videoCtrl?.pause();
     await Future.delayed(const Duration(milliseconds: 300));
 
-    final l = AppLocalizations.of(context)!;
     if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -672,7 +672,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                     child: Center(
                       child: AnimatedBuilder(
                         animation: _heartAnimCtrl!,
-                        builder: (_, __) {
+                        builder: (_, _) {
                           final t = _heartAnimCtrl!.value;
                           final double scale;
                           if (t < 0.4) {
@@ -760,11 +760,11 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
         child: CachedNetworkImage(
           imageUrl: url,
           fit: BoxFit.contain,
-          placeholder: (_, __) => const CircularProgressIndicator(
+          placeholder: (_, _) => const CircularProgressIndicator(
             color: Colors.white54,
             strokeWidth: 2,
           ),
-          errorWidget: (_, __, ___) => const Icon(
+          errorWidget: (_, _, _) => const Icon(
             Icons.broken_image_outlined,
             color: Colors.white38,
             size: 64,
@@ -808,7 +808,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFFF4136).withOpacity(0.5),
+                        color: const Color(0xFFFF4136).withValues(alpha: 0.5),
                         blurRadius: 20,
                         spreadRadius: 4,
                       ),
@@ -820,7 +820,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                         ? CachedNetworkImage(
                             imageUrl: resolved,
                             fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) =>
+                            errorWidget: (_, _, _) =>
                                 _InitialsBubble(username: user.username),
                           )
                         : _InitialsBubble(username: user.username),
@@ -1072,7 +1072,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                   ? CachedNetworkImage(
                       imageUrl: resolved,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) =>
+                      errorWidget: (_, _, _) =>
                           _InitialsBubble(username: user.username),
                     )
                   : _InitialsBubble(username: user.username),
@@ -1155,7 +1155,6 @@ class _StoryProgressBar extends StatelessWidget {
   final AnimationController? liveAnim;
 
   const _StoryProgressBar({
-    super.key,
     required this.state,
     this.videoController,
     this.liveAnim,
@@ -1170,7 +1169,7 @@ class _StoryProgressBar extends StatelessWidget {
     if (videoController != null) {
       return ValueListenableBuilder<VideoPlayerValue>(
         valueListenable: videoController!,
-        builder: (_, val, __) {
+        builder: (_, val, _) {
           final dur = val.duration.inMilliseconds;
           final pos = val.position.inMilliseconds;
           return _bar(dur > 0 ? (pos / dur).clamp(0.0, 1.0) : 0.0);
@@ -1182,7 +1181,7 @@ class _StoryProgressBar extends StatelessWidget {
     if (liveAnim != null) {
       return AnimatedBuilder(
         animation: liveAnim!,
-        builder: (_, __) => _bar(liveAnim!.value),
+        builder: (_, _) => _bar(liveAnim!.value),
       );
     }
 
@@ -1329,7 +1328,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
                   final timeAgo = _formatTime(context, v.viewedAt);
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: kPrimaryLight.withOpacity(0.25),
+                      backgroundColor: kPrimaryLight.withValues(alpha: 0.25),
                       child: Text(
                         initial,
                         style: const TextStyle(

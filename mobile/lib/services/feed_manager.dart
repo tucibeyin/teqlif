@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/stream.dart';
 
@@ -39,7 +38,6 @@ class SwipeFeedManager {
   final List<FeedSlot> _slots = [];
   int _nextListingIndex = 0;
   int _nextStreamIndex = 0;
-  int _listingOnlyGroupCount = 0;
 
   final Set<int> _endedStreamIds = {};
   final List<int> _priorityStreamIds = [];
@@ -219,7 +217,6 @@ class SwipeFeedManager {
   }
 
   void _extendGroupsUpTo(int targetPage) {
-    final rand = Random();
     while (_slots.length <= targetPage) {
       int? streamId;
       final activeStreams = _liveItems

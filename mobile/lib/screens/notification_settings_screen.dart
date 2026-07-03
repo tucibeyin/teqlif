@@ -21,7 +21,7 @@ class _NotificationSettingsScreenState
   bool _loading = true;
   String? _error;
 
-  Map<String, bool> _prefs = {
+  final Map<String, bool> _prefs = {
     'messages': true,
     'follows': true,
     'auction_won': true,
@@ -472,7 +472,7 @@ class _ProSection extends StatelessWidget {
                       else
                         Switch(
                           value: quietEnabled,
-                          activeColor: kPrimary,
+                          activeThumbColor: kPrimary,
                           onChanged: onQuietEnabled,
                         ),
                     ],
@@ -623,7 +623,7 @@ class _NotifTile extends StatelessWidget {
           style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
         ),
         value: value,
-        activeColor: kPrimary,
+        activeThumbColor: kPrimary,
         onChanged: onChanged,
       ),
     );

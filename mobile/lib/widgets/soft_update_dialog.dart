@@ -30,13 +30,13 @@ class SoftUpdateDialog extends StatelessWidget {
             const Icon(Icons.system_update_rounded, size: 48, color: kPrimary),
             const SizedBox(height: 16),
             Text(
-              l.softUpdateTitle ?? 'Yeni Sürüm Mevcut',
+              l.softUpdateTitle,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              l.softUpdateMessage ?? 'Uygulamanın yeni bir sürümü yayınlandı. Daha iyi bir deneyim için hemen güncelleyebilirsiniz.',
+              l.softUpdateMessage,
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
               textAlign: TextAlign.center,
             ),
@@ -49,14 +49,14 @@ class SoftUpdateDialog extends StatelessWidget {
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                child: Text(l.softUpdateUpdateNow ?? 'Şimdi Güncelle'),
+                child: Text(l.softUpdateUpdateNow),
               ),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                l.softUpdateLater ?? 'Daha Sonra',
+                l.softUpdateLater,
                 style: TextStyle(color: AppColors.textSecondary(context)),
               ),
             ),

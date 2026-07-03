@@ -284,8 +284,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEA580C).withOpacity(0.15),
-                      border: Border.all(color: const Color(0xFFEA580C).withOpacity(0.5)),
+                      color: const Color(0xFFEA580C).withValues(alpha: 0.15),
+                      border: Border.all(color: const Color(0xFFEA580C).withValues(alpha: 0.5)),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -544,10 +544,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: Colors.amber.withOpacity(0.2),
+                                color: Colors.amber.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                    color: Colors.amber.withOpacity(0.6)),
+                                    color: Colors.amber.withValues(alpha: 0.6)),
                               ),
                               child: const Icon(Icons.open_in_new,
                                   color: Colors.amber, size: 12),
@@ -589,7 +589,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       if (resp.statusCode != 200 || !mounted) return;
       final listing = jsonDecode(resp.body) as Map<String, dynamic>;
       if (!mounted) return;
-      _openListingSheet(context, listing);
+      if (context.mounted) _openListingSheet(context, listing);
     } catch (_) {}
   }
 
@@ -657,8 +657,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                               imageUrl: imageUrls[i],
                               fit: BoxFit.cover,
                               width: double.infinity,
-                              placeholder: (_, __) => const ShimmerBox(),
-                              errorWidget: (_, __, ___) => Container(
+                              placeholder: (_, _) => const ShimmerBox(),
+                              errorWidget: (_, _, _) => Container(
                                 color: const Color(0xFF0F172A),
                                 child: const Icon(Icons.image_outlined,
                                     color: Color(0xFF475569), size: 48),
@@ -1212,9 +1212,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       child: Container(
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.5)),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
         child: Icon(icon, color: color, size: 16),
       ),
@@ -1686,7 +1686,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                               strokeWidth: 2, color: Colors.white),
                         )
                       else ...[
-                        Text('${l.auctionBuyNowBtn}',
+                        Text(l.auctionBuyNowBtn,
                             style: const TextStyle(color: Colors.white,
                                 fontWeight: FontWeight.w700, fontSize: 14)),
                         Text('₺${_fmt(bin)}',
@@ -1933,7 +1933,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                           margin: const EdgeInsets.only(bottom: 6),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
-                            color: isSelected ? kPrimary.withOpacity(0.15) : const Color(0xFF0F172A),
+                            color: isSelected ? kPrimary.withValues(alpha: 0.15) : const Color(0xFF0F172A),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: isSelected ? kPrimary : const Color(0xFF334155),
@@ -1953,10 +1953,10 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                                         imageUrl: url,
                                         width: 38, height: 38,
                                         fit: BoxFit.cover,
-                                        placeholder: (_, __) => const ShimmerBox(
+                                        placeholder: (_, _) => const ShimmerBox(
                                           width: 38, height: 38,
                                         ),
-                                        errorWidget: (_, __, ___) => _lpPlaceholder())
+                                        errorWidget: (_, _, _) => _lpPlaceholder())
                                     : _lpPlaceholder(),
                               );
                             }),
@@ -2045,7 +2045,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: active ? kPrimary.withOpacity(0.2) : const Color(0xFF0F172A),
+          color: active ? kPrimary.withValues(alpha: 0.2) : const Color(0xFF0F172A),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: active ? kPrimary : const Color(0xFF334155),

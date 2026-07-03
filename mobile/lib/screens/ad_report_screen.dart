@@ -536,7 +536,6 @@ class _AdvancedMetrics extends StatelessWidget {
   Widget build(BuildContext context) {
     final bestHour = report['best_hour'] as int?;
     final catAvgCtr = report['category_avg_ctr'];
-    final dailySpend = report['daily_spend'];
     final daysLeft = report['estimated_days_left'];
 
     if (bestHour == null && catAvgCtr == null && daysLeft == null) {
@@ -560,7 +559,7 @@ class _AdvancedMetrics extends StatelessWidget {
               child: _MiniStat(
                 icon: Icons.schedule,
                 label: l.adMetricBestHour,
-                value: '${bestHour}:00',
+                value: '$bestHour:00',
               ),
             ),
             if (catAvgCtr != null) Expanded(

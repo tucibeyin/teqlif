@@ -254,7 +254,7 @@ class _MarqueeTextState extends State<_MarqueeText>
 
         return AnimatedBuilder(
           animation: ctrl,
-          builder: (_, __) {
+          builder: (_, _) {
             final totalDist     = _containerWidth + _textWidth;
             final scrollMs      = totalDist / _speed * 1000;
             final totalMs       = scrollMs + _pauseMs;

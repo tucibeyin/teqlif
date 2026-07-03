@@ -29,7 +29,7 @@ class OfflineQueueService {
       'receiver_id': receiverId,
       'content': content,
       'queued_at': DateTime.now().millisecondsSinceEpoch,
-      if (listingId != null) 'listing_id': listingId,
+      'listing_id': ?listingId,
     };
     await _box?.put(localId, jsonEncode(data));
     debugPrint('[OfflineQueue] enqueue: localId=$localId receiver=$receiverId');
@@ -95,18 +95,18 @@ class OfflineQueueService {
   /// Cihaz çevrimiçi olduğunda kuyruktaki mesajları otomatik gönderir.
   static void startDrainOnReconnect() {
     _connectSub?.cancel();
-    bool _wasOnline = true; // optimistik başlangıç
+    bool wasOnline = true; // optimistik başlangıç
 
     final svc = ConnectivityService();
     // Anlık durumu öğren
-    svc.isConnected.then((online) => _wasOnline = online);
+    svc.isConnected.then((online) => wasOnline = online);
 
     _connectSub = svc.onConnectivityChanged.listen((online) {
-      if (online && !_wasOnline) {
+      if (online && !wasOnline) {
         debugPrint('[OfflineQueue] İnternet geri geldi — drain tetiklendi');
         drain();
       }
-      _wasOnline = online;
+      wasOnline = online;
     });
   }
 }

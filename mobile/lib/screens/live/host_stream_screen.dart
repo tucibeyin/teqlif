@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -64,7 +63,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   bool _micEnabled = true;
   bool _cameraEnabled = true;
   bool _isFrontCamera = true;
-  bool _connecting = true;
   String? _error;
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
@@ -364,7 +362,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         final l = AppLocalizations.of(context)!;
         setState(() {
           _error = l.livePermissionRequired;
-          _connecting = false;
         });
       }
       return;
@@ -436,7 +433,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       setState(() {
         _room = room;
         _localVideoTrack = foundTrack;
-        _connecting = false;
       });
 
       // Track hâlâ gelmemişse event listener yeterli değilse fallback polling
@@ -459,7 +455,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       if (mounted) {
         setState(() {
           _error = 'Bağlantı hatası: ${e.toString()}';
-          _connecting = false;
         });
       }
     }
@@ -877,7 +872,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                           setState(() => _viewerCount = n),
                       onUsernameTap: _showModSheet,
                       // İzleyiciler kalp gönderdiğinde host ekranında uçsun
-                      onStreamLike: (_, __) =>
+                      onStreamLike: (_, _) =>
                           _heartsKey.currentState?.addHeart(isLocal: false),
                       onCoHostAccepted: (username) =>
                           setState(() => _coHostUsername = username),
@@ -907,7 +902,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                 color: const Color(0x88000000),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                    color: Colors.amber.withOpacity(0.5)),
+                                    color: Colors.amber.withValues(alpha: 0.5)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1279,7 +1274,7 @@ class _ViewersBottomSheet extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 14,
-                          backgroundColor: usernameColor(uname).withOpacity(0.25),
+                          backgroundColor: usernameColor(uname).withValues(alpha: 0.25),
                           child: Text(
                             uname.isNotEmpty ? uname[0].toUpperCase() : '?',
                             style: TextStyle(
@@ -1424,9 +1419,9 @@ class _BidsOverlay extends StatelessWidget {
         filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.48),
+            color: Colors.black.withValues(alpha: 0.48),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.09)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1481,7 +1476,7 @@ class _BidsOverlay extends StatelessWidget {
                         // Grup başlığı
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          color: Colors.white.withOpacity(0.04),
+                          color: Colors.white.withValues(alpha: 0.04),
                           child: Text(
                             g.title ?? 'Açık Artırma',
                             style: const TextStyle(
@@ -1532,7 +1527,7 @@ class _BidsOverlay extends StatelessWidget {
                                           ? TextDecoration.underline
                                           : null,
                                       decorationColor: usernameColor(bid.bidder)
-                                          .withOpacity(0.5),
+                                          .withValues(alpha: 0.5),
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1570,7 +1565,6 @@ class _BidsToggleTab extends StatelessWidget {
   final VoidCallback onToggle;
 
   const _BidsToggleTab({
-    super.key,
     required this.isOpen,
     required this.count,
     required this.onToggle,
@@ -1580,7 +1574,7 @@ class _BidsToggleTab extends StatelessWidget {
   Widget build(BuildContext context) {
     // Toggle listenin solunda, sol kenarı yuvarlak; sağ kenarı listeye yapışık
     const radius = BorderRadius.horizontal(left: Radius.circular(12));
-    final borderColor = Colors.white.withOpacity(isOpen ? 0.10 : 0.15);
+    final borderColor = Colors.white.withValues(alpha: isOpen ? 0.10 : 0.15);
 
     return GestureDetector(
       onTap: onToggle,
@@ -1596,7 +1590,7 @@ class _BidsToggleTab extends StatelessWidget {
             height: isOpen ? _kBidsH / 2 : 160,
             padding: isOpen ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(isOpen ? 0.42 : 0.52),
+              color: Colors.black.withValues(alpha: isOpen ? 0.42 : 0.52),
               borderRadius: radius,
               border: Border(
                 left: BorderSide(color: borderColor),
@@ -1663,7 +1657,7 @@ class _BidsToggleTab extends StatelessWidget {
         // ‹ oku — listeyi aç
         const Icon(
           Icons.chevron_left_rounded,
-          color: const Color(0xFF64748B),
+          color: Color(0xFF64748B),
           size: 18,
         ),
       ],
@@ -1944,7 +1938,7 @@ class _ModBtn extends StatelessWidget {
         onPressed: loading ? null : onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          disabledBackgroundColor: color.withOpacity(0.4),
+          disabledBackgroundColor: color.withValues(alpha: 0.4),
           padding: const EdgeInsets.symmetric(vertical: 13),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           elevation: 0,
@@ -1988,7 +1982,7 @@ class _PinInputSheetState extends State<_PinInputSheet> {
           decoration: BoxDecoration(
             color: const Color(0xFF1A1A2E),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.amber.withOpacity(0.4)),
+            border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2030,7 +2024,7 @@ class _PinInputSheetState extends State<_PinInputSheet> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide:
-                        BorderSide(color: Colors.amber.withOpacity(0.6)),
+                        BorderSide(color: Colors.amber.withValues(alpha: 0.6)),
                   ),
                   contentPadding: const EdgeInsets.all(12),
                   counterStyle:

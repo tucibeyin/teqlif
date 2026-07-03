@@ -193,7 +193,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
         children: [
           groupsAsync.when(
             loading: () => _buildTray(context, null, isLoading: true),
-            error: (_, __) => _buildTray(context, []),
+            error: (_, _) => _buildTray(context, []),
             data: (groups) => _buildTray(context, groups),
           ),
           Divider(height: 1, thickness: 1, color: AppColors.divider(context)),
@@ -533,11 +533,11 @@ class _StoryGroupItem extends StatelessWidget {
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
-                              placeholder: (_, __) => _InitialAvatar(
+                              placeholder: (_, _) => _InitialAvatar(
                                 username: group.user.username,
                                 context: context,
                               ),
-                              errorWidget: (_, __, ___) => _InitialAvatar(
+                              errorWidget: (_, _, _) => _InitialAvatar(
                                 username: group.user.username,
                                 context: context,
                               ),

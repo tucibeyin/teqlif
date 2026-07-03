@@ -36,9 +36,7 @@ class VideoCacheManager {
   }
 
   Future<void> init() async {
-    if (_tempDir == null) {
-      _tempDir = await getTemporaryDirectory();
-    }
+    _tempDir ??= await getTemporaryDirectory();
   }
 
   String? getCachedPath(int id) {

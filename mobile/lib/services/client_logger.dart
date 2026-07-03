@@ -54,8 +54,8 @@ class ClientLogger {
       final body = jsonEncode({
         'tag':      tag,
         'message':  message,
-        if (error != null) 'error': error,
-        if (details != null) 'details': details,
+        'error': ?error,
+        'details': ?details,
         'platform': Platform.isIOS ? 'ios' : 'android',
       });
       await http

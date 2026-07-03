@@ -37,7 +37,7 @@ class AuthService {
       'username': username,
       'full_name': fullName,
       'password': password,
-      if (phone != null) 'phone': phone,
+      'phone': ?phone,
       if (referredBy != null && referredBy.isNotEmpty) 'referred_by': referredBy,
     };
     final body = await apiCall(

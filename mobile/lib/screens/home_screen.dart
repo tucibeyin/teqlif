@@ -56,16 +56,6 @@ class HomeScreenState extends State<HomeScreen> {
   bool _showOnboardingBanner = false;
 
 
-  static const _categoryMeta = [
-    {'slug': 'elektronik', 'icon': Icons.devices_outlined},
-    {'slug': 'vasita', 'icon': Icons.directions_car_outlined},
-    {'slug': 'emlak', 'icon': Icons.home_work_outlined},
-    {'slug': 'giyim', 'icon': Icons.checkroom_outlined},
-    {'slug': 'spor', 'icon': Icons.sports_soccer_outlined},
-    {'slug': 'kitap', 'icon': Icons.menu_book_outlined},
-    {'slug': 'ev', 'icon': Icons.home_outlined},
-    {'slug': 'diger', 'icon': Icons.more_horiz},
-  ];
 
   List<Map<String, dynamic>> _buildCategories(AppLocalizations l) => [
     {'slug': 'elektronik', 'label': l.catElectronics, 'icon': Icons.devices_outlined},
@@ -364,7 +354,7 @@ class HomeScreenState extends State<HomeScreen> {
               child: ListView.separated(
                 controller: controller,
                 itemCount: _cities.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (_, i) {
                   final city = _cities[i];
                   final selected = _selectedCity == city;
@@ -688,7 +678,7 @@ class HomeScreenState extends State<HomeScreen> {
                       childAspectRatio: 0.78,
                     ),
                     delegate: SliverChildBuilderDelegate(
-                      (_, __) => const ShimmerGridCard(), childCount: 9,
+                      (_, _) => const ShimmerGridCard(), childCount: 9,
                     ),
                   ),
                 )
@@ -774,7 +764,7 @@ class HomeScreenState extends State<HomeScreen> {
                         crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
                       ),
                       delegate: SliverChildBuilderDelegate(
-                        (_, __) => const ShimmerBox(),
+                        (_, _) => const ShimmerBox(),
                         childCount: 6,
                       ),
                     ),
@@ -799,11 +789,11 @@ class HomeScreenState extends State<HomeScreen> {
                                 if (cid != null) AnalyticsService.trackAdClick(cid as int);
                               } else if (_isLoggedIn) {
                                 final id = item['id'] as int?;
-                                if (id != null) unawaited(AnalyticsService.logInteraction(
+                                if (id != null) { unawaited(AnalyticsService.logInteraction(
                                   itemId: id, itemType: 'listing', interactionType: 'click',
                                   pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
                                   metadata: {'source': 'for_you_feed'},
-                                ));
+                                )); }
                               }
                               if (item['is_highlight'] == true) {
                                 final rawRoomId = item['active_room_id'];
@@ -863,7 +853,7 @@ class HomeScreenState extends State<HomeScreen> {
                       childAspectRatio: 0.78,
                     ),
                     delegate: SliverChildBuilderDelegate(
-                      (_, __) => const ShimmerGridCard(), childCount: 9,
+                      (_, _) => const ShimmerGridCard(), childCount: 9,
                     ),
                   ),
                 )
@@ -914,10 +904,10 @@ class HomeScreenState extends State<HomeScreen> {
                             if (cid != null) AnalyticsService.trackAdClick(cid as int);
                           } else if (_isLoggedIn) {
                             final id = item['id'] as int?;
-                            if (id != null) unawaited(AnalyticsService.logInteraction(
+                            if (id != null) { unawaited(AnalyticsService.logInteraction(
                               itemId: id, itemType: 'listing', interactionType: 'click',
                               pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
-                            ));
+                            )); }
                           }
                           Navigator.push(ctx, MaterialPageRoute(
                             builder: (_) => ListingDetailScreen(
@@ -1148,7 +1138,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                             if (_pulseAnim != null)
                               AnimatedBuilder(
                                 animation: _pulseAnim!,
-                                builder: (_, __) => Opacity(
+                                builder: (_, _) => Opacity(
                                   opacity: _pulseAnim!.value,
                                   child: Container(
                                     width: 8,
@@ -1424,8 +1414,8 @@ class _GridItemState extends State<_GridItem> {
               ? CachedNetworkImage(
                   imageUrl: photo,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => const ShimmerBox(),
-                  errorWidget: (_, __, ___) => _placeholder(context),
+                  placeholder: (_, _) => const ShimmerBox(),
+                  errorWidget: (_, _, _) => _placeholder(context),
                 )
               : _placeholder(context),
           if (price.isNotEmpty)

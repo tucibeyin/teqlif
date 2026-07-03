@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
@@ -154,7 +153,7 @@ class _HeartWidget extends StatelessWidget {
       bottom: 120,
       child: AnimatedBuilder(
         animation: particle.ctrl,
-        builder: (_, __) {
+        builder: (_, _) {
           final t = particle.ctrl.value; // 0.0 → 1.0
 
           // Yukarı hareketi: 0 → 200 px

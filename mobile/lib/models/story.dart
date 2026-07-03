@@ -1,8 +1,7 @@
-/// Backend `UserStoryGroupResponse` hybrid şemasının Flutter karşılığı.
-///
-/// story_type değerleri:
-///   'video'         → normal video hikayesi; videoUrl dolu.
-///   'live_redirect' → kullanıcı şu an canlı yayında; streamId dolu, video alanları null.
+// Backend `UserStoryGroupResponse` hybrid şemasının Flutter karşılığı.
+// story_type değerleri:
+//   'video'         → normal video hikayesi; videoUrl dolu.
+//   'live_redirect' → kullanıcı şu an canlı yayında; streamId dolu, video alanları null.
 
 class StoryAuthor {
   final int id;

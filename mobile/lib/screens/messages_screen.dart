@@ -285,7 +285,7 @@ class _MessagesTabState extends State<_MessagesTab> {
           onRefresh: _load,
           child: ListView.separated(
         itemCount: _conversations.length,
-        separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+        separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
         itemBuilder: (context, i) {
           final conv = _conversations[i];
           final username = conv['username'] as String? ?? '';
@@ -298,7 +298,7 @@ class _MessagesTabState extends State<_MessagesTab> {
 
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: kPrimary.withOpacity(0.15),
+              backgroundColor: kPrimary.withValues(alpha: 0.15),
               child: Text(
                 initial,
                 style: const TextStyle(color: kPrimary, fontWeight: FontWeight.bold),
@@ -373,7 +373,7 @@ class _MessagesTabState extends State<_MessagesTab> {
 
   Widget _buildErrorBanner() {
     return Material(
-      color: Colors.orange.withOpacity(0.12),
+      color: Colors.orange.withValues(alpha: 0.12),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         child: Row(
@@ -595,7 +595,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       onRefresh: _load,
       child: ListView.separated(
         itemCount: _notifications.length,
-        separatorBuilder: (_, __) => const Divider(height: 1, indent: 60),
+        separatorBuilder: (_, _) => const Divider(height: 1, indent: 60),
         itemBuilder: (context, i) {
           final notif = _notifications[i];
           final type = notif['type'] as String?;
@@ -1027,7 +1027,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                                             style: TextStyle(
                                               fontSize: 10,
                                               color: isMe
-                                                  ? Colors.white.withOpacity(0.75)
+                                                  ? Colors.white.withValues(alpha: 0.75)
                                                   : const Color(0xFF9CA3AF),
                                             ),
                                           ),
@@ -1039,10 +1039,10 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                                                   : (isRead ? Icons.done_all : Icons.done),
                                               size: 12,
                                               color: isPending
-                                                  ? Colors.white.withOpacity(0.45)
+                                                  ? Colors.white.withValues(alpha: 0.45)
                                                   : (isRead
                                                       ? Colors.blue.shade200
-                                                      : Colors.white.withOpacity(0.6)),
+                                                      : Colors.white.withValues(alpha: 0.6)),
                                             ),
                                           ],
                                         ],
@@ -1185,8 +1185,8 @@ class _ContextBanner extends StatelessWidget {
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => _thumb(context, isPurchase),
-                  placeholder: (_, __) => _thumb(context, isPurchase),
+                  errorWidget: (_, _, _) => _thumb(context, isPurchase),
+                  placeholder: (_, _) => _thumb(context, isPurchase),
                 ),
               )
             else
@@ -1238,7 +1238,7 @@ class _ContextBanner extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: (isPurchase ? const Color(0xFF6B21A8) : kPrimary).withOpacity(0.12),
+        color: (isPurchase ? const Color(0xFF6B21A8) : kPrimary).withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Icon(
@@ -1402,7 +1402,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _ctrl,
-      builder: (_, __) {
+      builder: (_, _) {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(3, (i) {
@@ -1413,7 +1413,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: kPrimary.withOpacity(opacity),
+                color: kPrimary.withValues(alpha: opacity),
                 shape: BoxShape.circle,
               ),
             );
@@ -1421,23 +1421,5 @@ class _TypingIndicatorState extends State<_TypingIndicator>
         );
       },
     );
-  }
-}
-
-// Inline profile navigation wrapper (avoids circular import)
-class _ProfileView extends StatelessWidget {
-  final String username;
-  final int userId;
-  final String displayName;
-
-  const _ProfileView({
-    required this.username,
-    required this.userId,
-    required this.displayName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PublicProfileScreen(username: username, userId: userId);
   }
 }

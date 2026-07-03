@@ -34,7 +34,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   bool _isFollowing = false;
   bool _followLoading = false;
   bool _isBlocked = false;
-  bool _blockLoading = false;
   Map<String, dynamic>? _ratingSummary;
 
   // ── Arama & kategori filtresi ─────────────────────────────────────────────
@@ -171,7 +170,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   Future<void> _toggleBlock() async {
     if (_user == null) return;
-    setState(() => _blockLoading = true);
     try {
       final headers = await _authHeaders();
       if (_isBlocked) {
@@ -195,7 +193,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _blockLoading = false);
     }
   }
 
@@ -323,7 +320,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -572,9 +569,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             ? CachedNetworkImage(
                                 imageUrl: photo,
                                 fit: BoxFit.cover,
-                                placeholder: (_, __) => const Center(
+                                placeholder: (_, _) => const Center(
                                     child: CircularProgressIndicator(strokeWidth: 2)),
-                                errorWidget: (c, __, ___) => Container(
+                                errorWidget: (c, _, _) => Container(
                                   color: AppColors.surfaceVariant(c),
                                   child: Icon(Icons.image_outlined,
                                       size: 28, color: AppColors.border(c)),
@@ -632,7 +629,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
     final avatar = CircleAvatar(
       radius: 44,
-      backgroundColor: kPrimary.withOpacity(0.15),
+      backgroundColor: kPrimary.withValues(alpha: 0.15),
       backgroundImage: rawImg != null ? NetworkImage(imgUrl(rawImg)) : null,
       child: rawImg == null
           ? Text(
@@ -684,7 +681,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           border: Border.all(color: AppColors.border(context), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -982,7 +979,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kPrimary,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: kPrimary.withOpacity(0.4),
+                      disabledBackgroundColor: kPrimary.withValues(alpha: 0.4),
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -1168,7 +1165,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                     : ListView.separated(
                         controller: controller,
                         itemCount: _ratings!.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, _) =>
                             Divider(height: 1, color: AppColors.divider(context)),
                         itemBuilder: (_, i) {
                           final r =
@@ -1200,7 +1197,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                                 CircleAvatar(
                                   radius: 20,
                                   backgroundColor:
-                                      kPrimary.withOpacity(0.12),
+                                      kPrimary.withValues(alpha: 0.12),
                                   backgroundImage: raterImg != null
                                       ? NetworkImage(imgUrl(raterImg))
                                       : null,
@@ -1325,13 +1322,13 @@ class _LiveAvatarRingState extends State<_LiveAvatarRing>
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFFDD2A7B)
-                    .withOpacity(0.15 + 0.35 * _glow.value),
+                    .withValues(alpha: 0.15 + 0.35 * _glow.value),
                 blurRadius: 8 + 14 * _glow.value,
                 spreadRadius: 1 + 3 * _glow.value,
               ),
               BoxShadow(
                 color: const Color(0xFFF58529)
-                    .withOpacity(0.1 + 0.2 * _glow.value),
+                    .withValues(alpha: 0.1 + 0.2 * _glow.value),
                 blurRadius: 12 + 16 * _glow.value,
                 spreadRadius: 0 + 2 * _glow.value,
               ),
@@ -1385,7 +1382,7 @@ class _LiveAvatarRingState extends State<_LiveAvatarRing>
                   border: Border.all(color: Colors.white, width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFEF4444).withOpacity(0.45),
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.45),
                       blurRadius: 6,
                     ),
                   ],

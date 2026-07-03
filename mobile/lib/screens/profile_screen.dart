@@ -33,7 +33,6 @@ import 'blocked_users_screen.dart';
 import 'account_info_screen.dart';
 import 'purchases_screen.dart';
 import 'sales_screen.dart';
-import 'public_profile_screen.dart';
 import '../services/share_service.dart';
 import '../services/wallet_service.dart';
 
@@ -47,11 +46,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _user;
   List<dynamic> _listings = [];
-  List<dynamic> _purchases = [];
   bool _loading = true;
   bool _purchasesLoading = false;
-  int _purchasesPage = 1;
-  bool _purchasesHasMore = false;
   int? _tuciBalance;
   List<dynamic> _tuciHistory = [];
 
@@ -103,14 +99,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) setState(() => _purchasesLoading = true);
     try {
       final token = await StorageService.getToken();
-      final resp = await http.get(
+      await http.get(
         Uri.parse('$kBaseUrl/auth/me/purchases'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) {
-        final decoded = jsonDecode(resp.body) as List?;
-        if (mounted) setState(() { _purchases = decoded ?? []; });
-      }
     } catch (_) {
       // sessizce geç
     } finally {
@@ -177,19 +169,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           
           // Profil bilgisi güncellenince is_premium dahil tüm bilgileri locale kaydet.
           // /users/{username} endpoint'i email döndurmüyor, localInfo'dan alıyoruz.
-          if (userId != null) {
-            StorageService.saveUserInfo(
+          StorageService.saveUserInfo(
               id: user['id'] as int? ?? userId,
               email: localInfo?['email'] as String? ?? '',
-              username: user['username'] as String? ?? username ?? '',
+              username: user['username'] as String? ?? username,
               fullName: user['full_name'] as String? ?? '',
               isPremium: user['is_premium'] == true,
               onboardingCompleted: user['onboarding_completed'] == true,
               isVerified: user['is_verified'] == true,
               phoneVerified: user['phone_verified'] == true,
-            );
-          }
-          
+          );
+
           if (mounted) setState(() { _user = user; _loading = false; });
         },
         onError: (e) {
@@ -252,8 +242,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         width: radius * 2,
         height: radius * 2,
         fit: BoxFit.cover,
-        placeholder: (_, __) => CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
-        errorWidget:  (_, __, ___) => CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
+        placeholder: (_, _) => CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
+        errorWidget:  (_, _, _) => CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
       ),
     );
   }
@@ -684,7 +674,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     childAspectRatio: 0.78,
                   ),
                   delegate: SliverChildBuilderDelegate(
-                    (_, __) => const ShimmerGridCard(),
+                    (_, _) => const ShimmerGridCard(),
                     childCount: 9,
                   ),
                 ),
@@ -980,10 +970,10 @@ class _ListingGridItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imgs = listing['image_urls'] as List? ?? [];
-    final _raw = imgs.isNotEmpty
+    final raw = imgs.isNotEmpty
         ? imgs[0] as String
         : listing['image_url'] as String?;
-    final imageUrl = _raw != null ? imgUrl(_raw) : null;
+    final imageUrl = raw != null ? imgUrl(raw) : null;
     final price = _fmt(listing['price']);
 
     final isSponsored = listing['is_sponsored'] == true;
@@ -1004,9 +994,9 @@ class _ListingGridItem extends StatelessWidget {
               ? CachedNetworkImage(
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) =>
+                  placeholder: (_, _) =>
                       const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                  errorWidget: (_, __, ___) => _placeholder(context),
+                  errorWidget: (_, _, _) => _placeholder(context),
                 )
               : _placeholder(context),
           // Pasif ilanlar için karartma overlay
@@ -1209,12 +1199,13 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     bool loading = false;
     String? error;
 
+    final l = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     final token = await StorageService.getToken();
     if (token == null || !mounted) return;
 
-    final l = AppLocalizations.of(context)!;
-
     await showDialog(
+      // ignore: use_build_context_synchronously
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
@@ -1383,7 +1374,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           );
                           if (ctx.mounted) Navigator.pop(ctx);
                           if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.showSnackBar(
                               SnackBar(content: Text(l.msgPasswordChanged)),
                             );
                           }
@@ -1654,7 +1645,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         fontSize: 12, color: AppColors.textSecondary(context)),
                   ),
                   value: _biometricEnabled,
-                  activeColor: kPrimary,
+                  activeThumbColor: kPrimary,
                   onChanged: _toggleBiometric,
                 ),
               SwitchListTile(
@@ -1666,7 +1657,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
                 value: ThemeProvider.instance.isDark,
-                activeColor: kPrimary,
+                activeThumbColor: kPrimary,
                 onChanged: (_) async {
                   await ThemeProvider.instance.toggle();
                   if (mounted) setState(() {});
@@ -1813,7 +1804,6 @@ class _SettingsTile extends StatelessWidget {
   final VoidCallback onTap;
   final Widget? trailing;
   final Color? iconColor;
-  final Color? labelColor;
 
   const _SettingsTile({
     required this.icon,
@@ -1821,14 +1811,13 @@ class _SettingsTile extends StatelessWidget {
     required this.onTap,
     this.trailing,
     this.iconColor,
-    this.labelColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
-      title: Text(label, style: TextStyle(fontSize: 14, color: labelColor ?? AppColors.textPrimary(context))),
+      title: Text(label, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
       trailing: trailing ?? Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
       onTap: onTap,
     );
@@ -2007,13 +1996,15 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       return;
     }
     setState(() { _saving = true; });
+    final linkErrorMsg = AppLocalizations.of(context)!.editProfileLinkError;
+    final errMessenger = ScaffoldMessenger.of(context);
     try {
       final token = await StorageService.getToken();
       if (token == null) throw Exception('No token');
       final bio = _bioCtrl.text.trim();
       final link = _linkCtrl.text.trim();
       if (link.isNotEmpty && !link.startsWith('http://') && !link.startsWith('https://')) {
-        showErrorSnackbar(context, Exception(AppLocalizations.of(context)!.editProfileLinkError));
+        errMessenger.showSnackBar(SnackBar(content: Text(linkErrorMsg), backgroundColor: Colors.red));
         setState(() => _saving = false);
         return;
       }
@@ -2160,7 +2151,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             const SizedBox(height: 14),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _bioCtrl,
-              builder: (_, val, __) {
+              builder: (_, val, _) {
                 final l = AppLocalizations.of(context)!;
                 return TextField(
                   controller: _bioCtrl,
@@ -2331,7 +2322,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.all(12),
                     itemCount: _listings.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (ctx, i) {
                       final l = _listings[i];
                       final imgs = l['image_urls'] as List? ?? [];
@@ -2348,11 +2339,11 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                                 ? CachedNetworkImage(
                                     imageUrl: imageUrl,
                                     width: 60, height: 60, fit: BoxFit.cover,
-                                    placeholder: (_, __) => const SizedBox(
+                                    placeholder: (_, _) => const SizedBox(
                                       width: 60, height: 60,
                                       child: Center(child: CircularProgressIndicator(strokeWidth: 1.5)),
                                     ),
-                                    errorWidget: (_, __, ___) => _imgPlaceholder())
+                                    errorWidget: (_, _, _) => _imgPlaceholder())
                                 : _imgPlaceholder(),
                           ),
                           title: Text(l['title'] ?? '',
@@ -2500,7 +2491,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.all(12),
                     itemCount: _listings.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (ctx, i) {
                       final l = _listings[i];
                       final imgs = l['image_urls'] as List? ?? [];
@@ -2517,11 +2508,11 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                                 ? CachedNetworkImage(
                                     imageUrl: imageUrl,
                                     width: 60, height: 60, fit: BoxFit.cover,
-                                    placeholder: (_, __) => const SizedBox(
+                                    placeholder: (_, _) => const SizedBox(
                                       width: 60, height: 60,
                                       child: Center(child: CircularProgressIndicator(strokeWidth: 1.5)),
                                     ),
-                                    errorWidget: (_, __, ___) => _imgPlaceholder())
+                                    errorWidget: (_, _, _) => _imgPlaceholder())
                                 : _imgPlaceholder(),
                           ),
                           title: Text(l['title'] ?? '',

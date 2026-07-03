@@ -72,6 +72,7 @@ class SearchScreenState extends State<SearchScreen> {
   Future<void> _showAlertSheet(BuildContext context) async {
     final query = _controller.text.trim();
     final l = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
@@ -120,20 +121,14 @@ class SearchScreenState extends State<SearchScreen> {
       );
       if (mounted) {
         if (resp.statusCode == 201) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.searchAlertCreated)),
-          );
+          messenger.showSnackBar(SnackBar(content: Text(l.searchAlertCreated)));
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.searchAlertFailed)),
-          );
+          messenger.showSnackBar(SnackBar(content: Text(l.searchAlertFailed)));
         }
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.searchAlertFailed)),
-        );
+        messenger.showSnackBar(SnackBar(content: Text(l.searchAlertFailed)));
       }
     } finally {
       if (mounted) setState(() => _alertCreating = false);
@@ -181,26 +176,26 @@ class SearchScreenState extends State<SearchScreen> {
     if (mounted) setState(() => _isLoggedIn = loggedIn);
 
     // İlk veri geldiğinde loading'i kapat (cache varsa anlık)
-    bool _firstDataArrived = false;
-    void _maybeStopLoading() {
-      if (!_firstDataArrived && mounted) {
-        _firstDataArrived = true;
+    bool firstDataArrived = false;
+    void maybeStopLoading() {
+      if (!firstDataArrived && mounted) {
+        firstDataArrived = true;
         setState(() => _exploreLoading = false);
       }
     }
 
     // ── Aktif yayınlar (1 dk cache) ────────────────────────────────────────
-    _loadExploreStreams(bypassCache, _maybeStopLoading);
+    _loadExploreStreams(bypassCache, maybeStopLoading);
 
     // ── Kişisel feed (giriş: 1 saat cache | misafir: 5 dk) ────────────────
-    _loadExploreForYou(loggedIn: loggedIn, bypassCache: bypassCache, onData: _maybeStopLoading);
+    _loadExploreForYou(loggedIn: loggedIn, bypassCache: bypassCache, onData: maybeStopLoading);
 
     // ── En son ilanlar (5 dk cache, yalnızca giriş yapılmışsa ayrı çek) ───
     if (loggedIn) {
-      _loadExploreRecent(bypassCache: bypassCache, onData: _maybeStopLoading);
+      _loadExploreRecent(bypassCache: bypassCache, onData: maybeStopLoading);
     } else {
       // Misafirde for-you zaten son ilanları gösterir
-      _maybeStopLoading();
+      maybeStopLoading();
     }
   }
 
@@ -875,9 +870,9 @@ class _StreamCard extends StatelessWidget {
               CachedNetworkImage(
                 imageUrl: imgUrl(stream.thumbnailUrl),
                 fit: BoxFit.cover,
-                placeholder: (_, __) =>
+                placeholder: (_, _) =>
                     const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                errorWidget: (_, __, ___) => _gradient(),
+                errorWidget: (_, _, _) => _gradient(),
               )
             else
               _gradient(),
@@ -998,9 +993,9 @@ class _ListingTile extends StatelessWidget {
               ? CachedNetworkImage(
                   imageUrl: photo,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) =>
+                  placeholder: (_, _) =>
                       const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                  errorWidget: (_, __, ___) => _placeholder(context),
+                  errorWidget: (_, _, _) => _placeholder(context),
                 )
               : _placeholder(context),
           if (price.isNotEmpty)

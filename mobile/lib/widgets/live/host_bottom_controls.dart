@@ -74,7 +74,7 @@ class _ControlBtn extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: active ? Colors.black54 : Colors.red.withOpacity(0.75),
+          color: active ? Colors.black54 : Colors.red.withValues(alpha: 0.75),
           shape: BoxShape.circle,
           border: Border.all(
             color: active ? Colors.white30 : Colors.transparent,

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Kullanıcı adını deterministik olarak bir renge çevirir.
 /// Aynı username her zaman aynı rengi döndürür.
 Color usernameColor(String username) {
-  const _palette = [
+  const palette = [
     Color(0xFFF87171), // kırmızı
     Color(0xFFFB923C), // turuncu
     Color(0xFFFBBF24), // sarı
@@ -22,5 +22,5 @@ Color usernameColor(String username) {
   for (final c in username.codeUnits) {
     hash = (hash * 31 + c) & 0x7FFFFFFF;
   }
-  return _palette[hash % _palette.length];
+  return palette[hash % palette.length];
 }

@@ -527,7 +527,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               'location': _selectedCity,
             'image_urls': imageUrls,
             if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
-            if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
+            'thumbnail_url': ?thumbnailUrl,
             if (_videoUploadUrl != null) 'video_url': _videoUploadUrl,
           }),
         ),
@@ -627,7 +627,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _images.length + (_images.length < _maxImages ? 1 : 0),
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
                         itemBuilder: (ctx, i) {
                           if (i == _images.length) {
                             // Add button at end
@@ -789,6 +789,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
                     key: const Key('create_listing_select_kategori'),
+                    // ignore: deprecated_member_use
                     value: _selectedCategory,
                     decoration: InputDecoration(labelText: l.fieldCategory, hintText: l.fieldCategoryHint),
                     items: _categories
@@ -821,6 +822,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
                     key: const Key('create_listing_select_konum'),
+                    // ignore: deprecated_member_use
                     value: _selectedCity,
                     decoration: InputDecoration(labelText: l.fieldLocation),
                     hint: Text(l.fieldLocationHint),

@@ -698,7 +698,6 @@ class _AiCreditCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
     final used      = credits?['used']      as int? ?? 0;
     final limit     = credits?['limit']     as int? ?? (isPremium ? 20 : 0);
     final remaining = credits?['remaining'] as int? ?? (isPremium ? 20 : 0);

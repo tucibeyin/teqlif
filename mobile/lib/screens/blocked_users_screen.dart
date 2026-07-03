@@ -101,7 +101,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                 )
               : ListView.separated(
                   itemCount: _blocked.length,
-                  separatorBuilder: (_, __) =>
+                  separatorBuilder: (_, _) =>
                       Divider(height: 1, color: AppColors.divider(context)),
                   itemBuilder: (_, i) {
                     final u = _blocked[i] as Map<String, dynamic>;
@@ -124,7 +124,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                         ),
                         child: CircleAvatar(
                           radius: 22,
-                          backgroundColor: kPrimary.withOpacity(0.12),
+                          backgroundColor: kPrimary.withValues(alpha: 0.12),
                           backgroundImage:
                               rawImg != null ? NetworkImage(imgUrl(rawImg)) : null,
                           child: rawImg == null

@@ -450,14 +450,11 @@ class _MetricCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  final String? hint;
-
   const _MetricCard({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
-    this.hint,
   });
 
   @override
@@ -507,17 +504,6 @@ class _MetricCard extends StatelessWidget {
               height: 1.3,
             ),
           ),
-          if (hint != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              hint!,
-              style: TextStyle(
-                color: color.withValues(alpha: 0.75),
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
         ],
       ),
     );

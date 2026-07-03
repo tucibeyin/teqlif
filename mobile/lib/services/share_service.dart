@@ -55,7 +55,9 @@ class ShareService {
       } catch (_) {}
     }
     // Görsel yoksa veya indirilemezse native sheet aç
-    await _shareNative(context, text: '$text\n$url', origin: origin);
+    if (context.mounted) {
+      await _shareNative(context, text: '$text\n$url', origin: origin);
+    }
   }
 
   static Future<void> shareToWhatsApp(
@@ -68,7 +70,7 @@ class ShareService {
     final waUrl = Uri.parse('whatsapp://send?text=$encoded');
     if (await canLaunchUrl(waUrl)) {
       await launchUrl(waUrl);
-    } else {
+    } else if (context.mounted) {
       // WhatsApp yüklü değil → native share
       await _shareNative(context, text: '$text\n$url', origin: origin);
     }

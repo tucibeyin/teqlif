@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -105,8 +104,8 @@ class AnalyticsService {
           'title': title,
           'category': category,
           'estimated_cost': estimatedCost,
-          if (listingId != null) 'listing_id': listingId,
-          if (streamId != null) 'stream_id': streamId,
+          'listing_id': ?listingId,
+          'stream_id': ?streamId,
         }),
       );
       if (resp.statusCode == 202) {
@@ -293,9 +292,9 @@ class AnalyticsService {
         'item_id': itemId,
         'item_type': itemType,
         'interaction_type': interactionType,
-        if (durationSeconds != null) 'duration_seconds': durationSeconds,
-        if (pricePoint != null) 'price_point': pricePoint,
-        if (metadata != null) 'metadata': metadata,
+        'duration_seconds': ?durationSeconds,
+        'price_point': ?pricePoint,
+        'metadata': ?metadata,
       };
       http
           .post(Uri.parse('$kBaseUrl/analytics/interaction'),
@@ -550,7 +549,7 @@ class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
     if (newRoute is PageRoute) {
-      AnalyticsService.trackEvent('screen_view', {'screen_name': newRoute?.settings.name ?? 'unknown'});
+      AnalyticsService.trackEvent('screen_view', {'screen_name': newRoute.settings.name ?? 'unknown'});
     }
   }
 }

@@ -828,7 +828,7 @@ class _ProMetricsCard extends StatelessWidget {
             const SizedBox(width: 10),
             _MetricChip(
               label: l.proMetricBestHour,
-              value: bestHour != null ? '${bestHour}:00' : '--',
+              value: bestHour != null ? '$bestHour:00' : '--',
             ),
             const SizedBox(width: 10),
             _MetricChip(

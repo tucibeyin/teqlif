@@ -22,7 +22,7 @@ class HypeMeterWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<int>(
       valueListenable: hypeScore,
-      builder: (_, score, __) {
+      builder: (_, score, _) {
         final color    = _barColor(score);
         final fraction = (score / 100.0).clamp(0.0, 1.0);
         final isHot    = score > 75;
@@ -77,7 +77,7 @@ class HypeMeterWidget extends StatelessWidget {
                           borderRadius: BorderRadius.circular(5),
                           boxShadow: [
                             BoxShadow(
-                              color: color.withOpacity(0.55),
+                              color: color.withValues(alpha: 0.55),
                               blurRadius: 6,
                             ),
                           ],

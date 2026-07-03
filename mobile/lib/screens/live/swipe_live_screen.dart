@@ -8,13 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/api.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
-import '../../core/app_exception.dart';
-import '../../core/logger_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/wallet_service.dart';
@@ -101,7 +98,6 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   int _currentListingsPerGroup = 2;
   int? _dwellStart;        // mevcut yayın sayfasına girildiği an (ms epoch)
   int? _listingPageStart;  // mevcut ilan sayfasına girildiği an (ms epoch)
-  int _fastListingStreak = 0;
   static const int _listingFastThresholdMs = 1500;
 
   int _listingPage = 0;
@@ -291,11 +287,6 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     if (_listingPageStart != null && prevItem is ListingFeedItem) {
       final dwellMs = now - _listingPageStart!;
       final isFast = dwellMs < _listingFastThresholdMs;
-      if (isFast) {
-        _fastListingStreak++;
-      } else {
-        _fastListingStreak = 0;
-      }
       _recordListingEvent(prevItem.data['id'], isFast ? 'skip' : 'dwell', dwellMs: dwellMs, slotIndex: _currentPage);
     }
 
@@ -563,7 +554,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (didPop) _pipAction?.call();
       },
       child: Scaffold(
@@ -699,7 +690,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   bool _likeThrottlePending = false;
   
   LocalVideoTrack? _localVideoTrack;
-  int _viewerCount = 0;
   String? _myUsername;
   // single() modunda token geldikten sonra doldurulur
   String? _resolvedTitle;
@@ -1130,8 +1120,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
             child: CachedNetworkImage(
               imageUrl: imgUrl(widget.stream.thumbnailUrl),
               fit: BoxFit.cover,
-              placeholder: (_, __) => _darkBg(),
-              errorWidget: (_, __, ___) => _darkBg(),
+              placeholder: (_, _) => _darkBg(),
+              errorWidget: (_, _, _) => _darkBg(),
             ),
           )
         else
@@ -1325,18 +1315,18 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                         widget.onEngagementEvent?.call('raid_view');
                       }
                     },
-                    onViewerCountChanged: (n) =>
-                        setState(() => _viewerCount = n),
+                    onViewerCountChanged: (_) {},
                     onMuted: _handleMuted,
                     onUnmuted: _handleUnmuted,
                     onKicked: _handleKicked,
                     onModPromotedSelf: _handleModPromotedSelf,
                     onModDemotedSelf: _handleModDemotedSelf,
                     onModRestored: () {
-                      if (mounted && !_isCoHost)
+                      if (mounted && !_isCoHost) {
                         setState(() => _isCoHost = true);
+                      }
                     },
-                    onStreamLike: (_, __) =>
+                    onStreamLike: (_, _) =>
                         _heartsKey.currentState?.addHeart(isLocal: false),
                     onCoHostInvite: (hostUsername, targetUsername) {
                       if (!mounted || _isSelfCoHost) return;
@@ -1556,8 +1546,8 @@ class _GiftSheetState extends State<_GiftSheet> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                color: Colors.red.withValues(alpha: 0.1),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

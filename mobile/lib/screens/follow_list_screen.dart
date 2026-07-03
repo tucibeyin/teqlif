@@ -121,7 +121,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                 )
               : ListView.separated(
                   itemCount: _users.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+                  separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
                   itemBuilder: (ctx, i) {
                     final u = _users[i] as Map<String, dynamic>;
                     final isMe = u['is_me'] as bool? ?? false;
@@ -142,7 +142,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                         ),
                         child: CircleAvatar(
                           radius: 22,
-                          backgroundColor: kPrimary.withOpacity(0.12),
+                          backgroundColor: kPrimary.withValues(alpha: 0.12),
                           child: Text(
                             initial,
                             style: const TextStyle(

@@ -65,8 +65,8 @@ class PurchaseDetailScreen extends StatelessWidget {
                   imageUrl: imgUrl(thumbnailUrl),
                   height: 220,
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => _imagePlaceholder(),
-                  placeholder: (_, __) => _imagePlaceholder(),
+                  errorWidget: (_, _, _) => _imagePlaceholder(),
+                  placeholder: (_, _) => _imagePlaceholder(),
                 ),
               )
             else
@@ -98,7 +98,7 @@ class PurchaseDetailScreen extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: kPrimary.withOpacity(0.12),
+                        color: kPrimary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(category, style: const TextStyle(color: kPrimary, fontSize: 12)),
@@ -227,12 +227,12 @@ class PurchaseDetailScreen extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl: imgUrl(proofImageUrl),
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => Container(
+                  errorWidget: (_, _, _) => Container(
                     height: 200,
                     color: Colors.black26,
                     child: const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 50)),
                   ),
-                  placeholder: (_, __) => Container(
+                  placeholder: (_, _) => Container(
                     height: 200,
                     color: Colors.black12,
                     child: const Center(child: CircularProgressIndicator()),

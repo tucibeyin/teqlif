@@ -202,11 +202,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     } catch (_) {
       widget.listing['likes_count'] = prevCount;
       widget.listing['is_liked'] = prevLiked;
-      if (mounted) setState(() {
-        _isLiked = prevLiked;
-        _likesCount = prevCount;
-        _isFavorited = prevFav;
-      });
+      if (mounted) {
+        setState(() {
+          _isLiked = prevLiked;
+          _likesCount = prevCount;
+          _isFavorited = prevFav;
+        });
+      }
     }
   }
 
@@ -498,6 +500,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   Future<void> _deleteListing(BuildContext context) async {
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final connErr = AppLocalizations.of(context)!.errorConnection;
     final token = await StorageService.getToken();
     if (token == null) return;
     final id = widget.listing['id'];
@@ -508,17 +513,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       );
       if (!mounted) return;
       if (resp.statusCode == 200) {
-        Navigator.pop(context, true);
+        nav.pop(true);
       } else {
         final detail = jsonDecode(resp.body)['detail'] ?? 'Bir hata oluştu';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
+        messenger.showSnackBar(SnackBar(content: Text(detail)));
       }
     } catch (_) {
       if (mounted) {
-        final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.errorConnection)),
-        );
+        messenger.showSnackBar(SnackBar(content: Text(connErr)));
       }
     }
   }
@@ -538,6 +540,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   Future<void> _boostListing(BuildContext ctx) async {
+    final boostMessenger = ScaffoldMessenger.of(ctx);
+    final l = AppLocalizations.of(ctx)!;
     // Önce boost kredi durumunu çek
     int remaining = 0;
     int limit = 0;
@@ -568,11 +572,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     } catch (_) {}
 
     if (!mounted) return;
-    final l = AppLocalizations.of(ctx)!;
 
     // Pro değilse bilgilendir
     if (!isPro) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+      boostMessenger.showSnackBar(SnackBar(
         content: Text(l.boostOnlyPro),
         backgroundColor: const Color(0xFFF97316),
       ));
@@ -583,6 +586,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     final bool isFreeMode = remaining > 0;
 
     final confirmed = await showDialog<bool>(
+      // ignore: use_build_context_synchronously
       context: ctx,
       builder: (dlgCtx) {
         final dl = AppLocalizations.of(dlgCtx)!;
@@ -758,6 +762,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 key: const Key('listing_detail_report_select_neden'),
+                // ignore: deprecated_member_use
                 value: selectedReason,
                 hint: Text(l.listingReportSelectHint),
                 decoration: InputDecoration(
@@ -1410,7 +1415,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                   imageUrl: _images[imgIdx],
                   fit: BoxFit.cover,
                   width: double.infinity,
-                  placeholder: (_, __) => const ShimmerBox(),
+                  placeholder: (_, _) => const ShimmerBox(),
                   errorWidget: (ctx, url, err) {
                     debugPrint('IMG HATA [$url]: $err');
                     return Container(
@@ -1472,7 +1477,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               child: Center(
                 child: AnimatedBuilder(
                   animation: _heartAnimCtrl!,
-                  builder: (_, __) {
+                  builder: (_, _) {
                     final t = _heartAnimCtrl!.value;
                     final double scale;
                     if (t < 0.4) {
@@ -1663,9 +1668,9 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
             child: CachedNetworkImage(
               imageUrl: widget.images[i],
               fit: BoxFit.contain,
-              placeholder: (_, __) => const Center(
+              placeholder: (_, _) => const Center(
                   child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2)),
-              errorWidget: (_, __, ___) => const Icon(
+              errorWidget: (_, _, _) => const Icon(
                 Icons.broken_image_outlined,
                 color: Colors.white54,
                 size: 64,

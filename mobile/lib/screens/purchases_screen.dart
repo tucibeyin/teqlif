@@ -129,8 +129,8 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                                           width: 72,
                                           height: 72,
                                           fit: BoxFit.cover,
-                                          errorWidget: (_, __, ___) => _placeholderBox(),
-                                          placeholder: (_, __) => _placeholderBox(),
+                                          errorWidget: (_, _, _) => _placeholderBox(),
+                                          placeholder: (_, _) => _placeholderBox(),
                                         )
                                       : _placeholderBox(),
                                 ),
@@ -165,7 +165,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: kPrimary.withOpacity(0.12),
+                                                color: kPrimary.withValues(alpha: 0.12),
                                                 borderRadius: BorderRadius.circular(4),
                                               ),
                                               child: Text(
@@ -179,8 +179,8 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: isBuyItNow
-                                                  ? const Color(0xFF16A34A).withOpacity(0.12)
-                                                  : const Color(0xFFF97316).withOpacity(0.12),
+                                                  ? const Color(0xFF16A34A).withValues(alpha: 0.12)
+                                                  : const Color(0xFFF97316).withValues(alpha: 0.12),
                                               borderRadius: BorderRadius.circular(4),
                                             ),
                                             child: Text(
@@ -240,7 +240,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     return Container(
       width: 72,
       height: 72,
-      color: AppColors.card(context).withOpacity(0.5),
+      color: AppColors.card(context).withValues(alpha: 0.5),
       child: Icon(Icons.shopping_bag_outlined, color: AppColors.iconSecondary(context), size: 32),
     );
   }

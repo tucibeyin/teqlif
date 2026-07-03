@@ -67,8 +67,7 @@ class _SplashScreenState extends State<SplashScreen> {
       }
       
       if (Platform.isIOS || true) {
-        // We show the custom dialog on iOS (or if Android flexible update wasn't supported/failed but we still want to inform them)
-        // Actually, let's just always show the SoftUpdateDialog for a consistent experience if they don't update immediately via Google Play.
+        if (!mounted) return;
         await showDialog(
           context: context,
           barrierDismissible: true,
@@ -93,6 +92,7 @@ class _SplashScreenState extends State<SplashScreen> {
     // ki invite kodu auth akışına (register ekranına) taşınabilsin
     await DeepLinkService.captureInitialLink();
 
+    if (!mounted) return;
     if (token == null) {
       Navigator.of(context).pushReplacementNamed('/login');
       return;
@@ -126,19 +126,6 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.of(context).pushReplacementNamed('/home');
   }
 
-  Future<void> _checkAndroidUpdate() async {
-    try {
-      final info = await InAppUpdate.checkForUpdate();
-      if (info.updateAvailability == UpdateAvailability.updateAvailable) {
-        // Immediate mod: Play Store tam ekran overlay açar, uygulama güncellenmeden devam edemez
-        await InAppUpdate.performImmediateUpdate();
-        // performImmediateUpdate başarıyla tamamlanırsa uygulama zaten yeniden başlar.
-        // Kullanıcı update'i reddederse (bazı Android sürümlerinde mümkün) akış devam eder.
-      }
-    } catch (_) {
-      // Play Store erişilemiyor veya sideload kurulum → sessizce devam et
-    }
-  }
 
   Future<void> _prefetch(String token) async {
     final futures = <Future>[

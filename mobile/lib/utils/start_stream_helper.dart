@@ -94,6 +94,7 @@ Future<void> showStartStreamDialog(
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               key: const Key('live_dialog_select_kategori'),
+              // ignore: deprecated_member_use
               value: selectedCategory,
               decoration: InputDecoration(
                 labelText: l.liveCategoryLabel,

@@ -380,7 +380,7 @@ class ChatPanelState extends State<ChatPanel> {
       onDone: (closeCode) => _scheduleReconnect(closeCode: closeCode),
       onData: (data) {
         if (!mounted) return;
-        String? _eventType;
+        String? eventType;
         try {
           final json = jsonDecode(data as String) as Map<String, dynamic>;
           if (json['type'] == 'message') {
@@ -408,21 +408,21 @@ class ChatPanelState extends State<ChatPanel> {
             widget.onViewerCountChanged?.call(count);
           } else if (json['type'] == 'stream_ended') {
             _streamEnded = true;
-            _eventType = 'stream_ended';
+            eventType = 'stream_ended';
           } else if (json['type'] == 'muted') {
             if (mounted) setState(() => _selfMuted = true);
-            _eventType = 'muted';
+            eventType = 'muted';
           } else if (json['type'] == 'unmuted') {
             if (mounted) setState(() => _selfMuted = false);
-            _eventType = 'unmuted';
+            eventType = 'unmuted';
           } else if (json['type'] == 'kicked') {
             _streamEnded = true;
-            _eventType = 'kicked';
+            eventType = 'kicked';
           } else if (json['type'] == 'mod_promoted') {
             final target = json['username'] as String? ?? '';
             final by = json['promoted_by'] as String? ?? '';
             final targetId = (json['user_id'] as num?)?.toInt();
-            _eventType = 'mod_promoted:$target:$by';
+            eventType = 'mod_promoted:$target:$by';
             // user_id eşleşirse hedefli self eventi tetikle (backend deploy beklenmeden)
             if (_myUserId != null &&
                 targetId != null &&
@@ -430,31 +430,31 @@ class ChatPanelState extends State<ChatPanel> {
               debugPrint(
                 '[CHAT] mod_promoted self-match via user_id=$targetId',
               );
-              _eventType = 'mod_promoted_self:$by';
+              eventType = 'mod_promoted_self:$by';
             }
           } else if (json['type'] == 'mod_demoted') {
             final target = json['username'] as String? ?? '';
             final by = json['demoted_by'] as String? ?? '';
             final targetId = (json['user_id'] as num?)?.toInt();
-            _eventType = 'mod_demoted:$target:$by';
+            eventType = 'mod_demoted:$target:$by';
             if (_myUserId != null &&
                 targetId != null &&
                 targetId == _myUserId) {
               debugPrint('[CHAT] mod_demoted self-match via user_id=$targetId');
-              _eventType = 'mod_demoted_self:$by';
+              eventType = 'mod_demoted_self:$by';
             }
           } else if (json['type'] == 'mod_status') {
             // Yeniden bağlanmada mevcut mod durumu — sessiz geri yükleme
             final isMod = json['is_mod'] as bool? ?? false;
-            if (isMod) _eventType = 'mod_status_restored';
+            if (isMod) eventType = 'mod_status_restored';
           } else if (json['type'] == 'mod_promoted_self') {
             // Hedefli event — sadece atanan kullanıcı alır
             final by = json['promoted_by'] as String? ?? '';
-            _eventType = 'mod_promoted_self:$by';
+            eventType = 'mod_promoted_self:$by';
           } else if (json['type'] == 'mod_demoted_self') {
             // Hedefli event — sadece etkilenen kullanıcı alır
             final by = json['demoted_by'] as String? ?? '';
-            _eventType = 'mod_demoted_self:$by';
+            eventType = 'mod_demoted_self:$by';
           } else if (json['type'] == 'host_pin') {
             final content = json['content'] as String? ?? '';
             if (mounted) {
@@ -466,27 +466,27 @@ class ChatPanelState extends State<ChatPanel> {
             final likeUsername = json['username'] as String? ?? '';
             // Kendi gönderdiğimiz kalpleri tekrar gösterme
             if (_myUserId == null || likeUserId != _myUserId) {
-              _eventType = 'stream_like:$likeUserId:$likeUsername';
+              eventType = 'stream_like:$likeUserId:$likeUsername';
             }
           } else if (json['type'] == 'cohost_invite') {
             final hostUsername = json['host_username'] as String? ?? '';
             final targetUsername = json['target_username'] as String? ?? '';
-            _eventType = 'cohost_invite:$hostUsername:$targetUsername';
+            eventType = 'cohost_invite:$hostUsername:$targetUsername';
           } else if (json['type'] == 'cohost_removed') {
             final targetUsername = json['target_username'] as String? ?? '';
-            _eventType = 'cohost_removed:$targetUsername';
+            eventType = 'cohost_removed:$targetUsername';
           } else if (json['type'] == 'cohost_accepted') {
             final username = json['username'] as String? ?? '';
-            _eventType = 'cohost_accepted:$username';
+            eventType = 'cohost_accepted:$username';
           } else if (json['type'] == 'WHALE_ALERT') {
             final username = json['username'] as String? ?? '';
             final tier = json['tier'] as String? ?? 'VIP';
-            _eventType = 'whale_alert:$username:$tier';
+            eventType = 'whale_alert:$username:$tier';
           } else if (json['type'] == 'gift') {
             final sender = json['sender'] as String? ?? '';
             final giftName = json['gift_name'] as String? ?? '';
             final cost = (json['cost'] as num?)?.toInt() ?? 0;
-            _eventType = 'gift:$sender:$giftName:$cost';
+            eventType = 'gift:$sender:$giftName:$cost';
           } else if (json['type'] == 'hype_update') {
             final score = (json['score'] as num?)?.toInt() ?? 0;
             widget.onHypeUpdate?.call(score);
@@ -527,17 +527,17 @@ class ChatPanelState extends State<ChatPanel> {
           debugPrint('[CHAT] JSON parse hatası: $e');
         }
         // Callback'leri try-catch dışında çağır — exception gizlenmesin
-        if (_eventType == 'stream_ended') widget.onStreamEnded?.call();
-        if (_eventType == 'muted') widget.onMuted?.call();
-        if (_eventType == 'unmuted') widget.onUnmuted?.call();
-        if (_eventType == 'kicked') {
+        if (eventType == 'stream_ended') widget.onStreamEnded?.call();
+        if (eventType == 'muted') widget.onMuted?.call();
+        if (eventType == 'unmuted') widget.onUnmuted?.call();
+        if (eventType == 'kicked') {
           debugPrint(
             '[CHAT] kicked — onKicked null:${widget.onKicked == null}',
           );
           widget.onKicked?.call();
         }
-        if (_eventType != null && _eventType!.startsWith('mod_promoted:')) {
-          final rest = _eventType!.substring('mod_promoted:'.length);
+        if (eventType != null && eventType.startsWith('mod_promoted:')) {
+          final rest = eventType.substring('mod_promoted:'.length);
           final colon = rest.indexOf(':');
           final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
           final promotedBy = colon >= 0 ? rest.substring(colon + 1) : '';
@@ -546,8 +546,8 @@ class ChatPanelState extends State<ChatPanel> {
           );
           widget.onModPromoted?.call(targetUsername, promotedBy);
         }
-        if (_eventType != null && _eventType!.startsWith('mod_demoted:')) {
-          final rest = _eventType!.substring('mod_demoted:'.length);
+        if (eventType != null && eventType.startsWith('mod_demoted:')) {
+          final rest = eventType.substring('mod_demoted:'.length);
           final colon = rest.indexOf(':');
           final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
           final demotedBy = colon >= 0 ? rest.substring(colon + 1) : '';
@@ -556,26 +556,26 @@ class ChatPanelState extends State<ChatPanel> {
           );
           widget.onModDemoted?.call(targetUsername, demotedBy);
         }
-        if (_eventType == 'mod_status_restored') {
+        if (eventType == 'mod_status_restored') {
           debugPrint('[CHAT] mod_status_restored — sessiz geri yükleme');
           widget.onModRestored?.call();
         }
-        if (_eventType != null &&
-            _eventType!.startsWith('mod_promoted_self:')) {
-          final promotedBy = _eventType!.substring('mod_promoted_self:'.length);
+        if (eventType != null &&
+            eventType.startsWith('mod_promoted_self:')) {
+          final promotedBy = eventType.substring('mod_promoted_self:'.length);
           debugPrint(
             '[CHAT] mod_promoted_self — promotedBy:$promotedBy | onModPromotedSelf null:${widget.onModPromotedSelf == null}',
           );
           widget.onModPromotedSelf?.call(promotedBy);
           debugPrint('[CHAT] mod_promoted_self — callback çağrısı tamamlandı');
         }
-        if (_eventType != null && _eventType!.startsWith('mod_demoted_self:')) {
-          final demotedBy = _eventType!.substring('mod_demoted_self:'.length);
+        if (eventType != null && eventType.startsWith('mod_demoted_self:')) {
+          final demotedBy = eventType.substring('mod_demoted_self:'.length);
           debugPrint('[CHAT] mod_demoted_self — demotedBy:$demotedBy');
           widget.onModDemotedSelf?.call(demotedBy);
         }
-        if (_eventType != null && _eventType!.startsWith('stream_like:')) {
-          final rest = _eventType!.substring('stream_like:'.length);
+        if (eventType != null && eventType.startsWith('stream_like:')) {
+          final rest = eventType.substring('stream_like:'.length);
           final colon = rest.indexOf(':');
           final likeUserId = colon >= 0
               ? int.tryParse(rest.substring(0, colon)) ?? 0
@@ -583,32 +583,32 @@ class ChatPanelState extends State<ChatPanel> {
           final likeUsername = colon >= 0 ? rest.substring(colon + 1) : '';
           widget.onStreamLike?.call(likeUserId, likeUsername);
         }
-        if (_eventType != null && _eventType!.startsWith('cohost_invite:')) {
-          final rest = _eventType!.substring('cohost_invite:'.length);
+        if (eventType != null && eventType.startsWith('cohost_invite:')) {
+          final rest = eventType.substring('cohost_invite:'.length);
           final colon = rest.indexOf(':');
           final hostUsername = colon >= 0 ? rest.substring(0, colon) : rest;
           final targetUsername = colon >= 0 ? rest.substring(colon + 1) : '';
           widget.onCoHostInvite?.call(hostUsername, targetUsername);
         }
-        if (_eventType != null && _eventType!.startsWith('cohost_removed:')) {
-          final targetUsername = _eventType!.substring(
+        if (eventType != null && eventType.startsWith('cohost_removed:')) {
+          final targetUsername = eventType.substring(
             'cohost_removed:'.length,
           );
           widget.onCoHostRemoved?.call(targetUsername);
         }
-        if (_eventType != null && _eventType!.startsWith('cohost_accepted:')) {
-          final username = _eventType!.substring('cohost_accepted:'.length);
+        if (eventType != null && eventType.startsWith('cohost_accepted:')) {
+          final username = eventType.substring('cohost_accepted:'.length);
           widget.onCoHostAccepted?.call(username);
         }
-        if (_eventType != null && _eventType!.startsWith('whale_alert:')) {
-          final rest = _eventType!.substring('whale_alert:'.length);
+        if (eventType != null && eventType.startsWith('whale_alert:')) {
+          final rest = eventType.substring('whale_alert:'.length);
           final colon = rest.indexOf(':');
           final username = colon >= 0 ? rest.substring(0, colon) : rest;
           final tier = colon >= 0 ? rest.substring(colon + 1) : 'VIP';
           widget.onWhaleAlert?.call(username, tier);
         }
-        if (_eventType != null && _eventType!.startsWith('gift:')) {
-          final rest = _eventType!.substring('gift:'.length);
+        if (eventType != null && eventType.startsWith('gift:')) {
+          final rest = eventType.substring('gift:'.length);
           final firstColon = rest.indexOf(':');
           final sender = firstColon >= 0 ? rest.substring(0, firstColon) : rest;
           final remainder = firstColon >= 0
@@ -703,7 +703,7 @@ class ChatPanelState extends State<ChatPanel> {
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.amber.withOpacity(0.55), width: 1),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.55), width: 1),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -794,7 +794,7 @@ class ChatPanelState extends State<ChatPanel> {
                   if (timed != null) {
                     return ValueListenableBuilder<double>(
                       valueListenable: timed.opacity,
-                      builder: (_, op, __) => AnimatedOpacity(
+                      builder: (_, op, _) => AnimatedOpacity(
                         opacity: op,
                         duration: const Duration(milliseconds: 700),
                         child: _MessageItem(
@@ -1101,8 +1101,8 @@ class _ChatAvatar extends StatelessWidget {
         memCacheWidth: 60,
         memCacheHeight: 60,
         fit: BoxFit.cover,
-        placeholder: (_, __) => fallback,
-        errorWidget: (_, __, ___) => fallback,
+        placeholder: (_, _) => fallback,
+        errorWidget: (_, _, _) => fallback,
       ),
     );
   }

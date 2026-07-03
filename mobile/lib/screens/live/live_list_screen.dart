@@ -182,7 +182,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final cats = _categories;
-    final showFilter = !_loading && cats.length >= 1;
+    final showFilter = !_loading && cats.isNotEmpty;
     final filtered = _filtered;
 
     return Scaffold(
@@ -324,7 +324,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 const SizedBox(width: 6),
                 Text(
                   _selectedCategory != null
-                      ? (_kCatLabels[_selectedCategory!] ?? _selectedCategory!) + ' Yayınları'
+                      ? '${_kCatLabels[_selectedCategory!] ?? _selectedCategory!} Yayınları'
                       : 'En Son Canlı Yayınlar',
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                 ),
@@ -524,9 +524,9 @@ class _StreamGridTile extends StatelessWidget {
                     CachedNetworkImage(
                       imageUrl: imgUrl(stream.thumbnailUrl),
                       fit: BoxFit.cover,
-                      placeholder: (_, __) =>
+                      placeholder: (_, _) =>
                           const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      errorWidget: (_, __, ___) => _gradientBox(),
+                      errorWidget: (_, _, _) => _gradientBox(),
                     )
                   else
                     _gradientBox(),

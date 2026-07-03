@@ -190,7 +190,7 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
                               // Kenar padding'i ekleyerek yanlardan swipe-to-close alanı yarat
                               padding: const EdgeInsets.symmetric(horizontal: 24),
                               itemCount: _targets!.length,
-                              separatorBuilder: (_, __) => const SizedBox(width: 12),
+                              separatorBuilder: (_, _) => const SizedBox(width: 12),
                               itemBuilder: (_, i) => _RaidTargetCard(
                                 data: _targets![i],
                                 onTap: () =>
@@ -212,8 +212,8 @@ class _RaidEndedOverlayState extends State<RaidEndedOverlay>
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(width: 12),
-      itemBuilder: (_, __) => ShimmerBox(
+      separatorBuilder: (_, _) => const SizedBox(width: 12),
+      itemBuilder: (_, _) => ShimmerBox(
         width: 150,
         height: 220,
         borderRadius: BorderRadius.circular(14),
@@ -254,7 +254,7 @@ class _HostBanner extends StatelessWidget {
                   ? CachedNetworkImage(
                       imageUrl: imgUrl(thumbnailUrl!),
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => _fallback(),
+                      errorWidget: (_, _, _) => _fallback(),
                     )
                   : _fallback(),
             ),
@@ -329,11 +329,11 @@ class _RaidTargetCard extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: imgUrl(thumbUrl),
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => const ShimmerBox(
+                        placeholder: (_, _) => const ShimmerBox(
                           width: double.infinity,
                           height: double.infinity,
                         ),
-                        errorWidget: (_, __, ___) => _thumbFallback(),
+                        errorWidget: (_, _, _) => _thumbFallback(),
                       )
                     : _thumbFallback(),
               ),
