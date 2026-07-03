@@ -1025,12 +1025,21 @@ abstract class AppLocalizations {
   String get errorTooFast;
 
   /// No description provided for @errorContentPolicy.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan başlığı veya açıklaması topluluk kurallarına aykırı içerik barındırıyor.'**
   String get errorContentPolicy;
 
   /// No description provided for @similarListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'Benzer İlanlar'**
   String get similarListings;
 
   /// No description provided for @suggestedSellers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Önerilen Satıcılar'**
   String get suggestedSellers;
 
   /// No description provided for @msgPasswordChanged.
