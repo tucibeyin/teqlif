@@ -3096,12 +3096,11 @@ class _ReferralCardState extends State<_ReferralCard> {
 
   void _share() {
     if (_code == null) return;
-    SharePlus.instance.share(
-      ShareParams(
-        text: 'Teqlif\'te canlı mezatlara katıl! '
-            'TUCi kazanmak için davet kodum: $_code. '
-            'Link: https://teqlif.com/invite?code=$_code',
-      ),
+    Share.share(
+      'Teqlif\'te canlı mezatlara katıl! '
+      'TUCi kazanmak için davet kodum: $_code. '
+      'Link: https://teqlif.com/invite?code=$_code',
+      subject: 'Teqlif\'e Davetlisin!',
     );
   }
 
