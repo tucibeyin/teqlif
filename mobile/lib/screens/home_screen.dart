@@ -20,6 +20,7 @@ import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
+import 'public_profile_screen.dart';
 import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -44,6 +45,9 @@ class HomeScreenState extends State<HomeScreen> {
   bool _recentLoadingMore = false;
   bool _recentExhausted = false;
   int _recentPage = 0;
+
+  // Önerilen satıcılar — yatay avatar şeridi, giriş yapanlar için
+  List<Map<String, dynamic>> _suggestedSellers = [];
 
   // Filtreli sonuçlar (filtre aktifken _recentListings'in yerine geçer)
   bool _isLoggedIn = false;
@@ -128,7 +132,10 @@ class HomeScreenState extends State<HomeScreen> {
       await _loadFiltered(token);
     } else {
       // Paralel yükleme: ForYou beklenmeden arka planda başlar
-      if (loggedIn) unawaited(_loadForYou(bypassCache: bypassCache));
+      if (loggedIn) {
+        unawaited(_loadForYou(bypassCache: bypassCache));
+        unawaited(_loadSuggestedSellers());
+      }
       await _loadRecent(token, bypassCache: bypassCache);
     }
   }
@@ -151,6 +158,21 @@ class HomeScreenState extends State<HomeScreen> {
         phoneVerified: user.phoneVerified,
       );
       if (mounted) setState(() => _showOnboardingBanner = false);
+    } catch (_) {}
+  }
+
+  Future<void> _loadSuggestedSellers() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/users/suggested-sellers'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 5));
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() => _suggestedSellers = data.cast<Map<String, dynamic>>());
+      }
     } catch (_) {}
   }
 
@@ -841,6 +863,36 @@ class HomeScreenState extends State<HomeScreen> {
                 ),
               ],
 
+              // ── Önerilen Satıcılar ─────────────────────────────────
+              if (_isLoggedIn && _suggestedSellers.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                    child: Text(l.suggestedSellers,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 96,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _suggestedSellers.length,
+                      itemBuilder: (ctx, i) => _SellerAvatarCard(
+                        seller: _suggestedSellers[i],
+                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                          builder: (_) => PublicProfileScreen(
+                            username: _suggestedSellers[i]['username'] as String? ?? '',
+                            userId: _suggestedSellers[i]['id'] as int?,
+                          ),
+                        )),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
               // ── En Son Eklenenler ──────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
@@ -962,6 +1014,23 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
     with SingleTickerProviderStateMixin {
   AnimationController? _pulseCtrl;
   Animation<double>? _pulseAnim;
+  bool _clicked = false;
+
+  void _sendFeedSignal(String event) {
+    final lid = widget.listing['id'];
+    if (lid == null) return;
+    unawaited(() async {
+      try {
+        final token = await StorageService.getToken();
+        if (token == null) return;
+        await http.post(
+          Uri.parse('$kBaseUrl/feed/signal'),
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+          body: jsonEncode({'listing_id': lid, 'event': event}),
+        ).timeout(const Duration(seconds: 3));
+      } catch (_) {}
+    }());
+  }
 
   @override
   void initState() {
@@ -993,6 +1062,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
 
   @override
   void dispose() {
+    if (!_clicked) _sendFeedSignal('skip');
     _pulseCtrl?.dispose();
     super.dispose();
   }
@@ -1017,6 +1087,8 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
 
     return GestureDetector(
       onTap: () {
+        _clicked = true;
+        _sendFeedSignal('click');
         // Tıklandı → ClickHouse feed_analytics (click)
         final lid = widget.listing['id'];
         if (lid != null) {
@@ -1620,6 +1692,51 @@ class _OnboardingBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Önerilen satıcı avatar kartı ────────────────────────────────────────────
+class _SellerAvatarCard extends StatelessWidget {
+  final Map<String, dynamic> seller;
+  final VoidCallback onTap;
+
+  const _SellerAvatarCard({required this.seller, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final rawAvatar = seller['profile_image'] as String?;
+    final avatarUrl = rawAvatar != null ? imgUrl(rawAvatar) : null;
+    final username = seller['username'] as String? ?? '';
+    final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 72,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: AppColors.surfaceVariant(context),
+              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              child: avatarUrl == null
+                ? Text(initial, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18))
+                : null,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '@$username',
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

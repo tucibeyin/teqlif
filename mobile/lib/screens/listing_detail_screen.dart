@@ -64,6 +64,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   // Galeri + video analytics
   int _maxPhotoReached = 0;
 
+  List<Map<String, dynamic>> _similarListings = [];
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +98,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     }
     _loadMyId();
     _loadOffers();
+    _loadSimilarListings();
   }
 
   Future<void> _loadMyId() async {
@@ -376,6 +379,24 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     } finally {
       if (mounted) setState(() => _offersLoading = false);
     }
+  }
+
+  Future<void> _loadSimilarListings() async {
+    final lid = widget.listing['id'];
+    if (lid == null) return;
+    try {
+      final token = await StorageService.getToken();
+      final headers = <String, String>{};
+      if (token != null) headers['Authorization'] = 'Bearer $token';
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/$lid/similar'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 8));
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() => _similarListings = data.cast<Map<String, dynamic>>());
+      }
+    } catch (_) {}
   }
 
   Future<void> _placeOffer() async {
@@ -1253,6 +1274,73 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 ],
               ),
             ),
+            if (_similarListings.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Text(
+                  AppLocalizations.of(context)!.similarListings,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+              ),
+              SizedBox(
+                height: 172,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _similarListings.length,
+                  itemBuilder: (ctx, i) {
+                    final item = _similarListings[i];
+                    final imgs = item['image_urls'] as List? ?? [];
+                    final rawPhoto = imgs.isNotEmpty ? imgs[0] as String : item['image_url'] as String?;
+                    final photo = rawPhoto != null ? imgUrl(rawPhoto) : null;
+                    return GestureDetector(
+                      onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                        builder: (_) => ListingDetailScreen(listing: Map<String, dynamic>.from(item)),
+                      )),
+                      child: Container(
+                        width: 110,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: AppColors.card(context),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: photo != null
+                                ? CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, width: double.infinity)
+                                : Container(color: AppColors.surfaceVariant(context)),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['title'] ?? '',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (item['price'] != null)
+                                    Text(
+                                      '${(item['price'] as num).toInt()} ₺',
+                                      style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
             const SizedBox(height: 90),
           ],
         ),

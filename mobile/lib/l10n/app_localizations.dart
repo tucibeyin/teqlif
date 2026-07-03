@@ -1027,6 +1027,12 @@ abstract class AppLocalizations {
   /// No description provided for @errorContentPolicy.
   String get errorContentPolicy;
 
+  /// No description provided for @similarListings.
+  String get similarListings;
+
+  /// No description provided for @suggestedSellers.
+  String get suggestedSellers;
+
   /// No description provided for @msgPasswordChanged.
   ///
   /// In tr, this message translates to:
