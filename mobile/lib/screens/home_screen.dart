@@ -26,10 +26,11 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> {
+  void refresh() => _load(bypassCache: true);
   // Kişiselleştirilmiş (Sana Özel) — yatay scroll, giriş yapanlar için
   List<dynamic> _forYouListings = [];
   bool _forYouLoading = false;

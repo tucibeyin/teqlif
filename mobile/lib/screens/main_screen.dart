@@ -42,6 +42,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   StreamSubscription<void>? _authFailedSub;
 
   final GlobalKey<LiveListScreenState> _liveListKey = GlobalKey();
+  final GlobalKey<HomeScreenState> _homeKey = GlobalKey();
+  final GlobalKey<SearchScreenState> _searchKey = GlobalKey();
   late final List<Widget> _screens;
 
   @override
@@ -49,8 +51,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     super.initState();
     _screens = [
       LiveListScreen(key: _liveListKey),
-      const HomeScreen(),
-      const SearchScreen(),
+      HomeScreen(key: _homeKey),
+      SearchScreen(key: _searchKey),
       const MessagesScreen(),
       const ProfileScreen(),
     ];
@@ -130,9 +132,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   void _onNavTap(int index) {
-    // Canlı yayınlar tabına dönüşte listeyi ve hikayeleri güncelle
-    if (index == 0 && _currentIndex != 0) {
-      _liveListKey.currentState?.refresh();
+    if (index != _currentIndex) {
+      if (index == 0) _liveListKey.currentState?.refresh();
+      if (index == 1) _homeKey.currentState?.refresh();
+      if (index == 2) _searchKey.currentState?.refresh();
     }
     setState(() => _currentIndex = index);
     // Mesajlar tabına geçince listeyi ve badge'i güncelle

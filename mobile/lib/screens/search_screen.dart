@@ -20,10 +20,11 @@ class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  State<SearchScreen> createState() => _SearchScreenState();
+  State<SearchScreen> createState() => SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class SearchScreenState extends State<SearchScreen> {
+  void refresh() => _loadExplore(bypassCache: true);
   final _controller = TextEditingController();
   Timer? _debounce;
   int _searchToken = 0; // her yeni arama için artar; eski yanıtlar görmezden gelinir
