@@ -55,12 +55,14 @@ class ShareService {
       } catch (_) {}
     }
     // Görsel yoksa veya indirilemezse native sheet aç
-    await _shareNative(text: '$text\n$url', origin: origin);
+    await _shareNative(context, text: '$text\n$url', origin: origin);
   }
 
-  static Future<void> shareToWhatsApp({
+  static Future<void> shareToWhatsApp(
+    BuildContext context, {
     required String url,
     required String text,
+    Rect? origin,
   }) async {
     final encoded = Uri.encodeComponent('$text\n$url');
     final waUrl = Uri.parse('whatsapp://send?text=$encoded');
@@ -68,7 +70,7 @@ class ShareService {
       await launchUrl(waUrl);
     } else {
       // WhatsApp yüklü değil → native share
-      await _shareNative(text: '$text\n$url');
+      await _shareNative(context, text: '$text\n$url', origin: origin);
     }
   }
 
@@ -85,18 +87,32 @@ class ShareService {
     }
   }
 
-  static Future<void> shareOther({
+  static Future<void> shareOther(
+    BuildContext context, {
     required String url,
     required String text,
     Rect? origin,
   }) async {
-    await _shareNative(text: '$text\n$url', origin: origin);
+    await _shareNative(context, text: '$text\n$url', origin: origin);
   }
 
   // ── Yardımcılar ──────────────────────────────────────────────────
 
-  static Future<void> _shareNative({required String text, Rect? origin}) async {
-    await Share.share(text, sharePositionOrigin: origin);
+  static Future<void> _shareNative(
+    BuildContext context, {
+    required String text,
+    Rect? origin,
+  }) async {
+    // iOS 26+ sharePositionOrigin zorunlu — null gelirse ekran merkezini kullan
+    final safeOrigin = origin ?? (() {
+      final size = MediaQuery.sizeOf(context);
+      return Rect.fromCenter(
+        center: size.center(Offset.zero),
+        width: 1,
+        height: 1,
+      );
+    })();
+    await Share.share(text, sharePositionOrigin: safeOrigin);
   }
 
   static Future<File?> _downloadImage(String imageUrl) async {
@@ -180,7 +196,7 @@ class _ShareSheet extends StatelessWidget {
             subtitle: 'Doğrudan WhatsApp\'a gönder',
             onTap: () async {
               Navigator.of(context).pop();
-              await ShareService.shareToWhatsApp(url: url, text: text);
+              await ShareService.shareToWhatsApp(context, url: url, text: text, origin: origin);
             },
           ),
           _ShareOption(
@@ -198,7 +214,7 @@ class _ShareSheet extends StatelessWidget {
             subtitle: 'Tüm uygulamaları göster',
             onTap: () async {
               Navigator.of(context).pop();
-              await ShareService.shareOther(url: url, text: text, origin: origin);
+              await ShareService.shareOther(context, url: url, text: text, origin: origin);
             },
           ),
           SizedBox(height: MediaQuery.of(context).padding.bottom + 12),

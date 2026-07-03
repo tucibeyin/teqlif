@@ -1145,6 +1145,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   }
 
   bool _shareLoading = false;
+  final GlobalKey _shareTileKey = GlobalKey();
 
   Future<void> _shareInvite() async {
     if (_shareLoading) return;
@@ -1170,9 +1171,19 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       );
       return;
     }
+    // iOS 26+ sharePositionOrigin zorunlu — tile'ın ekran konumunu kullan
+    final box = _shareTileKey.currentContext?.findRenderObject() as RenderBox?;
+    final origin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : Rect.fromCenter(
+            center: MediaQuery.sizeOf(context).center(Offset.zero),
+            width: 1,
+            height: 1,
+          );
     await Share.share(
       'Teqlif\'te harika ürünler var! Davet kodum ile kayıt ol, ikimiz de TUCi kazan 🎁\n\nDavet kodum: $code\nhttps://teqlif.com/invite?code=$code',
       subject: 'Teqlif\'e Davetlisin!',
+      sharePositionOrigin: origin,
     );
   }
 
@@ -1543,6 +1554,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             title: 'Davet Et & Kazan',
             items: [
               ListTile(
+                key: _shareTileKey,
                 leading: const Icon(Icons.card_giftcard_outlined, color: Color(0xFF16A34A)),
                 title: const Text('Arkadaşlarını Davet Et, TUCi Kazan!', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 subtitle: const Text('Her davet için +50, arkadaşın +10 TUCi kazanır', style: TextStyle(fontSize: 12)),
