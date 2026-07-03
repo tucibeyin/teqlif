@@ -121,17 +121,24 @@ async def track_interaction(
         redis = await get_redis()
         await redis.rpush(INTERACTION_QUEUE, json.dumps(record))
 
-        # Cold start tetikleyici: ilk 5/10/20 etkileşimde interests hemen yenile
-        if user_id:
+        # Cold start tetikleyici: ilk 3/5/10/20 etkileşimde embedding + interests hemen yenile
+        if user_id and payload.item_type == "listing":
             count_key = f"interaction_count:{user_id}"
             count = await redis.incr(count_key)
             if count == 1:
                 await redis.expire(count_key, 86400)  # 24h TTL
-            if count in {5, 10, 20}:
+            if count in {3, 5, 10, 20}:
                 try:
                     from arq import create_pool
                     from app.worker import WorkerSettings
                     pool = await create_pool(WorkerSettings.redis_settings)
+                    # Interaction queue'yu hemen flush et, ardından embedding hesapla
+                    await pool.enqueue_job("flush_interactions_to_db")
+                    await pool.enqueue_job(
+                        "update_user_preference_embedding",
+                        user_id,
+                        _job_id=f"pref_emb:{user_id}",
+                    )
                     await pool.enqueue_job("compute_user_interests_task")
                     await pool.aclose()
                 except Exception as arq_exc:

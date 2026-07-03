@@ -858,6 +858,59 @@ async def generate_listing_embedding_task(ctx: dict, listing_id: int) -> None:
         raise
 
 
+# ── Task: Embedding Backfill ─────────────────────────────────────────────────
+
+async def backfill_listing_embeddings_task(ctx: dict) -> None:
+    """
+    Her saat çalışır; embedding'i NULL olan aktif ilanlar için
+    sentence-transformer embedding üretir ve kaydeder.
+    Batch 20 ilan — uzun süren işlerin cron'u bloke etmemesi için küçük tutuldu.
+    """
+    try:
+        from sqlalchemy import select, update as sa_update
+        from app.database import AsyncSessionLocal
+        from app.models.listing import Listing
+        from app.services.ml_service import generate_embedding
+
+        async with AsyncSessionLocal() as db:
+            rows = (await db.scalars(
+                select(Listing)
+                .where(Listing.embedding.is_(None), Listing.is_deleted.is_(False))
+                .order_by(Listing.id)
+                .limit(20)
+            )).all()
+
+            if not rows:
+                return
+
+            count = 0
+            for listing in rows:
+                parts = [listing.title or ""]
+                if listing.description:
+                    parts.append(listing.description)
+                if listing.category:
+                    parts.append(listing.category)
+                text = " ".join(parts).strip()
+                if not text:
+                    continue
+                try:
+                    emb = generate_embedding(text)
+                    await db.execute(
+                        sa_update(Listing).where(Listing.id == listing.id).values(embedding=emb)
+                    )
+                    count += 1
+                except Exception as e:
+                    logger.warning("[Worker] backfill_listing_embeddings: id=%d hata: %s", listing.id, e)
+
+            await db.commit()
+            if count:
+                logger.info("[Worker] backfill_listing_embeddings: %d ilan embedding üretildi", count)
+
+    except Exception as exc:
+        logger.error("[Worker] backfill_listing_embeddings başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+
+
 # ── Task: Eski İmpressionları Temizle ────────────────────────────────────────
 
 async def cleanup_old_impressions_task(ctx: dict) -> None:
@@ -1336,6 +1389,7 @@ class WorkerSettings:
         invalidate_swipe_live_configs_task,
         train_swipe_live_als_task,
         sync_swipelive_interests_task,
+        backfill_listing_embeddings_task,
     ]
 
     cron_jobs = [
@@ -1377,6 +1431,8 @@ class WorkerSettings:
         cron(train_swipe_live_als_task, hour=3, minute=15),
         # Her 20 dakikada SwipeLive olaylarını kullanıcı ilgi sinyaline dönüştür
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
+        # Her saat başı — embedding'i olmayan ilanlar için backfill (20'şer batch)
+        cron(backfill_listing_embeddings_task, minute=30),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

@@ -221,7 +221,7 @@ class SearchScreenState extends State<SearchScreen> {
   }) {
     final url = loggedIn ? '$kBaseUrl/feed/for-you?page=0' : '$kBaseUrl/listings';
     final cacheKey = loggedIn ? 'explore_for_you' : StorageService.cacheFeed;
-    final ttl = loggedIn ? const Duration(hours: 1) : const Duration(minutes: 5);
+    final ttl = const Duration(minutes: 5);
 
     ApiService.get<List<dynamic>>(
       url: url,
