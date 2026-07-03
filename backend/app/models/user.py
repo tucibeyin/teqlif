@@ -35,3 +35,4 @@ class User(Base):
     website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    referral_code: Mapped[str | None] = mapped_column(String(12), unique=True, index=True, nullable=True)

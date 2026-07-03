@@ -17,6 +17,7 @@ from app.core.exceptions import NotFoundException, BadRequestException, Forbidde
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 from app.config import settings
+from app.services.referral_service import get_unique_referral_code
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -81,6 +82,7 @@ async def _create_user_and_send_code(
         if result.scalar_one_or_none():
             raise ConflictException("Bu telefon numarası zaten kayıtlı")
 
+    ref_code = await get_unique_referral_code(db)
     user = User(
         email=data.email,
         username=data.username,
@@ -88,6 +90,7 @@ async def _create_user_and_send_code(
         hashed_password=hash_password(data.password),
         is_verified=False,
         phone=data.phone or None,
+        referral_code=ref_code,
     )
     db.add(user)
     await db.commit()

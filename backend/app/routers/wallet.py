@@ -19,6 +19,10 @@ _TYPE_LABELS = {
     "web_topup":          "Web yükleme",
     "send_gift":          "Canlı hediye gönderildi",
     "receive_gift":       "Canlı hediye alındı",
+    "referral_bonus":     "Davet ödülü",
+    "welcome_bonus":      "Davet kodu bonusu",
+    "spend_retargeting":  "Retargeting bildirimi",
+    "spend_boost":        "Öne çıkarma",
 }
 
 
