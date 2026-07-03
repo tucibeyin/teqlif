@@ -777,7 +777,7 @@ class SearchScreenState extends State<SearchScreen> {
           ],
 
           // ── Boş durum ────────────────────────────────────────────
-          if (_exploreStreams.isEmpty && _exploreListings.isEmpty)
+          if (!_exploreLoading && _exploreStreams.isEmpty && _exploreListings.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(

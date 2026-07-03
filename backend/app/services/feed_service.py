@@ -382,27 +382,36 @@ async def _score_and_rank(
 
 
 async def _popular_feed(offset: int, limit: int, db: AsyncSession, exclude_user_id: int | None = None) -> list[int]:
-    """Cold start ve misafir kullanıcılar için son 30 günün en popüler ilanları."""
+    """Cold start ve misafir kullanıcılar için en popüler ilanlar.
+
+    Önce son 180 günde dener; sonuç boşsa tüm zamanlara genişler.
+    """
     uid_filter = "AND l.user_id != :uid" if exclude_user_id else ""
     params: dict = {"lim": limit, "off": offset}
     if exclude_user_id:
         params["uid"] = exclude_user_id
-    result = await db.execute(
-        text(f"""
-            SELECT l.id
-            FROM listings l
-            LEFT JOIN listing_likes ll ON ll.listing_id = l.id
-            WHERE l.is_active = TRUE
-              AND l.is_deleted = FALSE
-              AND l.created_at > NOW() - INTERVAL '30 days'
-              {uid_filter}
-            GROUP BY l.id
-            ORDER BY COUNT(ll.id) DESC, l.created_at DESC
-            LIMIT :lim OFFSET :off
-        """),
-        params,
-    )
-    return [row.id for row in result]
+
+    for interval in ("180 days", None):
+        date_filter = f"AND l.created_at > NOW() - INTERVAL '{interval}'" if interval else ""
+        result = await db.execute(
+            text(f"""
+                SELECT l.id
+                FROM listings l
+                LEFT JOIN listing_likes ll ON ll.listing_id = l.id
+                WHERE l.is_active = TRUE
+                  AND l.is_deleted = FALSE
+                  {date_filter}
+                  {uid_filter}
+                GROUP BY l.id
+                ORDER BY COUNT(ll.id) DESC, l.created_at DESC
+                LIMIT :lim OFFSET :off
+            """),
+            params,
+        )
+        ids = [row.id for row in result]
+        if ids:
+            return ids
+    return []
 
 
 async def _mark_impressions(user_id: int, listing_ids: list[int], db: AsyncSession) -> None:
