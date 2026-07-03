@@ -478,6 +478,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.';
 
   @override
+  String get errorContentPolicy =>
+      'İlan başlığı veya açıklaması topluluk kurallarına aykırı içerik barındırıyor.';
+
+  @override
   String get msgPasswordChanged => 'Şifreniz başarıyla değiştirildi.';
 
   @override

@@ -479,6 +479,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'أنت تُجري العمليات بسرعة كبيرة. يرجى الانتظار قليلاً.';
 
   @override
+  String get errorContentPolicy =>
+      'عنوان إعلانك أو وصفه يحتوي على محتوى يخالف إرشادات مجتمعنا.';
+
+  @override
   String get msgPasswordChanged => 'تم تغيير كلمة المرور بنجاح.';
 
   @override

@@ -1024,6 +1024,9 @@ abstract class AppLocalizations {
   /// **'Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.'**
   String get errorTooFast;
 
+  /// No description provided for @errorContentPolicy.
+  String get errorContentPolicy;
+
   /// No description provided for @msgPasswordChanged.
   ///
   /// In tr, this message translates to:

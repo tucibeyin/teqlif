@@ -584,6 +584,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') {
       return l.errorTooFast;
     }
+    if (e.code == 'CONTENT_POLICY_VIOLATION') {
+      return l.errorContentPolicy;
+    }
     return e.message;
   }
 

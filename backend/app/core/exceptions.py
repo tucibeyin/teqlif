@@ -69,6 +69,13 @@ class BadRequestException(AppException):
         super().__init__(status_code=400, message=message, code="BAD_REQUEST")
 
 
+class ContentPolicyException(AppException):
+    """400 — İçerik politikası ihlali (profanity, NSFW vb.)."""
+
+    def __init__(self, message: str = "İçerik topluluk kurallarına aykırı"):
+        super().__init__(status_code=400, message=message, code="CONTENT_POLICY_VIOLATION")
+
+
 class ConflictException(AppException):
     """409 — Çakışma (zaten mevcut kayıt vb.)."""
 

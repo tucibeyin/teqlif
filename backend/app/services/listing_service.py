@@ -27,6 +27,7 @@ from app.schemas.stream import VALID_CATEGORIES
 from app.core.exceptions import (
     NotFoundException,
     BadRequestException,
+    ContentPolicyException,
     TooManyRequestsException,
     ConflictException,
     DatabaseException,
@@ -335,7 +336,7 @@ class ListingService:
         _desc = (payload.get("description") or "").strip()
         if analyze_listing_text(_title, _desc):
             await release_action_lock(uid, "listing_create")
-            raise BadRequestException("İlan başlığı veya açıklaması uygunsuz içerik barındırıyor.")
+            raise ContentPolicyException()
 
         category = (payload.get("category") or "diger").strip().lower()
         if category not in VALID_CATEGORIES:

@@ -478,6 +478,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTooFast => 'You are acting too fast. Please wait a moment.';
 
   @override
+  String get errorContentPolicy =>
+      'Your listing title or description contains content that violates our community guidelines.';
+
+  @override
   String get msgPasswordChanged =>
       'Your password has been changed successfully.';
 

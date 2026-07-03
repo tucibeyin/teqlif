@@ -139,6 +139,22 @@ async def check_listing_nsfw(listing_id: int) -> None:
         await db.commit()
         logger.info("[NSFW] Kontrol tamamlandı | listing_id=%d score=%.3f", listing_id, max_score)
 
+    if max_score >= _NSFW_AUTO_DEACTIVATE:
+        try:
+            from app.routers.notifications import push_notification
+            await push_notification(
+                user_id=listing.user_id,
+                notif={
+                    "type": "listing_removed",
+                    "title": "İlanınız kaldırıldı",
+                    "body": "İlanınız topluluk kurallarına aykırı görsel içerik barındırdığı için yayından kaldırıldı.",
+                    "related_id": listing_id,
+                    "listing_id": listing_id,
+                },
+            )
+        except Exception as exc:
+            logger.warning("[NSFW] Bildirim gönderilemedi | listing_id=%d | %s", listing_id, exc)
+
 
 async def nsfw_backfill(batch_size: int = 20) -> int:
     """nsfw_checked_at NULL olan ilanlar için NSFW kontrolü yap. Döndürür: işlenen sayı."""
