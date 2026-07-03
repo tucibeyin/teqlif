@@ -61,4 +61,12 @@ class DeepLinkService {
 
   /// Canlı URI stream'i — MainScreen subscribe olur.
   static Stream<Uri> get uriStream => AppLinks().uriLinkStream;
+
+  /// https://teqlif.com/invite?code=TQLF8X2 linkinden kodu çıkarır.
+  /// Davet linki değilse null döner.
+  static String? extractInviteCode(Uri uri) {
+    final segs = uri.pathSegments;
+    if (segs.isEmpty || segs.first != 'invite') return null;
+    return uri.queryParameters['code'];
+  }
 }

@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
+import 'package:http/http.dart' as http;
+import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/auth_service.dart';
 import '../services/deep_link_service.dart';
@@ -237,6 +240,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // çakışması gibi durumlarda) ikinci işlemi yoksay.
     if (!DeepLinkService.shouldHandle(uri)) return;
 
+    // /invite?code=TQLF8X2 → davet kodu uygula
+    final inviteCode = DeepLinkService.extractInviteCode(uri);
+    if (inviteCode != null) {
+      _applyReferralCode(inviteCode);
+      return;
+    }
+
     final segments = uri.pathSegments;
     if (segments.length < 2) return;
 
@@ -270,6 +280,47 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           ).then((_) => _liveListKey.currentState?.refresh());
         }
         break;
+    }
+  }
+
+  Future<void> _applyReferralCode(String code) async {
+    final token = await StorageService.getToken();
+    if (token == null || !mounted) return;
+    try {
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/users/apply-referral'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'referral_code': code}),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.celebration_rounded, color: Colors.white),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Tebrikler! Davet kodu uygulandı, TUCi hesabına yüklendi! 🎉',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF16A34A),
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(12),
+          ),
+        );
+      }
+    } catch (_) {
+      // Sessizce yoksay — kullanıcı deneyimini bozmadan devam et
     }
   }
 
