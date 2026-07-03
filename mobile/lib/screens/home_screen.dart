@@ -1706,7 +1706,7 @@ class _SellerAvatarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rawAvatar = seller['profile_image'] as String?;
+    final rawAvatar = seller['profile_image_url'] as String?;
     final avatarUrl = rawAvatar != null ? imgUrl(rawAvatar) : null;
     final username = seller['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';

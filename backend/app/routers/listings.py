@@ -180,16 +180,16 @@ async def get_similar_listings(
                 l.id, l.title, l.price, l.category, l.location,
                 l.image_url, l.image_urls, l.created_at,
                 u.id AS user_id, u.username, u.full_name, u.profile_image_url,
-                (1.0 - (l.embedding <=> :vec::vector)) AS similarity
+                (1.0 - (l.embedding <=> CAST(:vec AS vector))) AS similarity
             FROM listings l
             JOIN users u ON u.id = l.user_id
             WHERE l.id != :lid
               AND l.is_active = TRUE
               AND l.is_deleted = FALSE
               AND l.embedding IS NOT NULL
-              AND (l.embedding <=> :vec::vector) < 0.5
+              AND (l.embedding <=> CAST(:vec AS vector)) < 0.5
               {block_clause}
-            ORDER BY l.embedding <=> :vec::vector
+            ORDER BY l.embedding <=> CAST(:vec AS vector)
             LIMIT :lim
         """),
         params,
