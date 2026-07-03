@@ -487,7 +487,7 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
     # Sponsored ilan enjeksiyonu — sadece ilk sayfa
     if page == 0:
         try:
-            ad_items = await _get_sponsored_listings(db)
+            ad_items = await _get_sponsored_listings(db, exclude_user_id=user_id)
             result = _inject_ads(result, ad_items)
         except Exception as exc:
             logger.warning("[Feed] Sponsored enjeksiyonu atlandı: %s", exc)
@@ -603,7 +603,7 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
 
 # ── Sponsored İlan Enjeksiyonu ────────────────────────────────────────────────
 
-async def _get_sponsored_listings(db: AsyncSession) -> list[dict]:
+async def _get_sponsored_listings(db: AsyncSession, exclude_user_id: int | None = None) -> list[dict]:
     """
     CTR × bid skoru ile sıralı sponsored ilan seçimi.
 
@@ -635,6 +635,7 @@ async def _get_sponsored_listings(db: AsyncSession) -> list[dict]:
             AdCampaign.status == "active",
             Listing.is_active == True,   # noqa: E712
             Listing.is_deleted == False,  # noqa: E712
+            *([Listing.user_id != exclude_user_id] if exclude_user_id else []),
         )
     )
     candidates = rows.all()
@@ -756,7 +757,7 @@ async def get_mixed_recent_feed(
     # ── Sponsored enjeksiyonu (yalnızca page 0) ───────────────────────────────
     if page == 0:
         try:
-            ad_items = await _get_sponsored_listings(db)
+            ad_items = await _get_sponsored_listings(db, exclude_user_id=user_id)
             result = _inject_ads(result, ad_items)
         except Exception as exc:
             logger.warning("[MixedRecent] Sponsored enjeksiyonu atlandı: %s", exc)
