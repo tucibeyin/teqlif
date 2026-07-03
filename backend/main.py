@@ -444,6 +444,18 @@ if os.path.exists(frontend_dir):
         ctx["web_url"]    = f"/profil.html?u={user.username}"
         return templates.TemplateResponse(request, "app-landing.html", ctx)
 
+    @app.get("/invite", include_in_schema=False)
+    async def serve_invite_page(request: Request, code: str = ""):
+        ctx = {
+            "og_title":       "Teqlif'e Davet Edildin!",
+            "og_description": "Canlı mezat ve ikinci el alışverişin adresi teqlif'e katıl, TUCi kazan.",
+            "og_image":       _DEFAULT_OG_IMAGE,
+            "og_url":         f"https://www.teqlif.com/invite?code={code}",
+            "app_scheme":     f"teqlif://invite?code={code}",
+            "web_url":        "https://teqlif.com",
+        }
+        return templates.TemplateResponse(request, "app-landing.html", ctx)
+
     @app.get("/mesajlar", include_in_schema=False)
     async def serve_messages_page():
         return FileResponse(os.path.join(frontend_dir, "mesajlar.html"))
