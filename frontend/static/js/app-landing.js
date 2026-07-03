@@ -1,5 +1,5 @@
 (function () {
-  var IOS_STORE     = 'https://apps.apple.com/tr/app/teqlif/id6744777483';
+  var IOS_STORE     = 'https://apps.apple.com/app/id6744777483';
   var ANDROID_STORE = 'https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile';
 
   var ua        = navigator.userAgent || '';
