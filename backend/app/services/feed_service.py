@@ -189,7 +189,7 @@ async def _score_and_rank(
     max_budget varsa: price <= max_budget × 1.2 filtresi tüm candidate pool'lara uygulanır.
     """
     if not interests:
-        return await _popular_feed(offset, limit, db)
+        return await _popular_feed(offset, limit, db, exclude_user_id=user_id)
 
     # ── Saat dilimi bağlam sinyali ────────────────────────────────────────────
     hour = datetime.now().hour
@@ -280,6 +280,7 @@ async def _score_and_rank(
                 FROM listings l
                 INNER JOIN follows f ON f.followed_id = l.user_id AND f.follower_id = :uid
                 WHERE l.is_active = TRUE AND l.is_deleted = FALSE
+                  AND l.user_id != :uid
                   {ni_filter}
                   {budget_clause}
                 ORDER BY l.created_at DESC
@@ -380,21 +381,26 @@ async def _score_and_rank(
     return [row.id for row in result]
 
 
-async def _popular_feed(offset: int, limit: int, db: AsyncSession) -> list[int]:
+async def _popular_feed(offset: int, limit: int, db: AsyncSession, exclude_user_id: int | None = None) -> list[int]:
     """Cold start ve misafir kullanıcılar için son 30 günün en popüler ilanları."""
+    uid_filter = "AND l.user_id != :uid" if exclude_user_id else ""
+    params: dict = {"lim": limit, "off": offset}
+    if exclude_user_id:
+        params["uid"] = exclude_user_id
     result = await db.execute(
-        text("""
+        text(f"""
             SELECT l.id
             FROM listings l
             LEFT JOIN listing_likes ll ON ll.listing_id = l.id
             WHERE l.is_active = TRUE
               AND l.is_deleted = FALSE
               AND l.created_at > NOW() - INTERVAL '30 days'
+              {uid_filter}
             GROUP BY l.id
             ORDER BY COUNT(ll.id) DESC, l.created_at DESC
             LIMIT :lim OFFSET :off
         """),
-        {"lim": limit, "off": offset},
+        params,
     )
     return [row.id for row in result]
 
@@ -520,7 +526,7 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
     user = await db.scalar(select(User).where(User.id == user_id))
 
     if user is None or user.preference_embedding is None:
-        return await _popular_feed(0, limit, db)
+        return await _popular_feed(0, limit, db, exclude_user_id=user_id)
 
     vec_str = "[" + ",".join(f"{x:.8f}" for x in user.preference_embedding) + "]"
 
@@ -563,6 +569,7 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                 FROM listings l
                 INNER JOIN follows f ON f.followed_id = l.user_id AND f.follower_id = :uid
                 WHERE l.is_active = TRUE AND l.is_deleted = FALSE
+                  AND l.user_id != :uid
                   {ni_filter}
                 ORDER BY l.created_at DESC
                 LIMIT 30
@@ -606,7 +613,7 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
         params,
     )
     ids = [r.id for r in result]
-    return ids if ids else await _popular_feed(0, limit, db)
+    return ids if ids else await _popular_feed(0, limit, db, exclude_user_id=user_id)
 
 
 # ── Sponsored İlan Enjeksiyonu ────────────────────────────────────────────────
