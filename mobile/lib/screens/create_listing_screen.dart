@@ -101,6 +101,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         title: title,
         description: desc,
         category: _selectedCategory ?? '',
+        city: _selectedCity ?? '',
       );
       if (!mounted) return;
       if (result == null) {

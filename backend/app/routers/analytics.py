@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks, Query
 from pydantic import BaseModel, Field
@@ -415,10 +416,24 @@ async def ai_price_credits(current_user: User = Depends(get_current_user)):
     }
 
 
+_PRICE_CAT_LABELS: dict[str, str] = {
+    "elektronik": "Elektronik ve Teknoloji",
+    "vasita": "Araç ve Taşıt",
+    "emlak": "Emlak ve Konut",
+    "giyim": "Giyim ve Moda",
+    "spor": "Spor ve Outdoor",
+    "kitap": "Kitap ve Eğitim",
+    "ev": "Ev ve Yaşam",
+    "diger": "Diğer",
+}
+
+
 class PriceEstimateRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     description: str = Field(default="", max_length=2000)
-    category: str = Field(default="")  # category key (e.g. "elektronik")
+    category: str = Field(default="")
+    city: str = Field(default="")
+    image_url: str = Field(default="")
 
 
 @router.post("/price-estimate")
@@ -428,10 +443,12 @@ async def price_estimate(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Başlık + açıklama metninden embedding üretir, pgvector ile satılmış benzer
-    ilanları bulur ve istatistiksel fiyat tahmini üretir.
-    Pro kullanıcılar ayda 20 ücretsiz sorgu; standart ve limit aşan Pro kullanıcılar 5 TUCi harcar.
+    Multi-sinyal AI fiyat tahmini.
+    Sinyal ağırlıkları: semantik embedding × kategori (x2) × şehir (x1.3) × güncellik × pHash (x1.5)
+    IQR aykırı değer temizleme + ağırlıklı fiyat ortalaması + kategori bazlı güven seviyesi.
     """
+    from datetime import datetime as _dt2, timezone as _tz2
+
     # ── Limit / bakiye kontrolü ───────────────────────────────────────────────
     if current_user.is_premium:
         ai_used = await _get_ai_used(current_user.id)
@@ -450,85 +467,161 @@ async def price_estimate(
 
     from app.services.ml_service import generate_embedding
 
-    # 1. CPU-blocking embedding işini executor'da çalıştır
-    combined = f"{body.title.strip()} {body.description.strip()}".strip()
+    # 1. Embedding: kategori etiketi + başlık + açıklama
+    cat_label = _PRICE_CAT_LABELS.get(body.category.strip(), body.category.strip())
+    combined = " ".join(filter(None, [
+        cat_label,
+        body.title.strip(),
+        body.description.strip()[:500],
+    ]))
     loop = asyncio.get_event_loop()
     embedding: list[float] = await loop.run_in_executor(None, generate_embedding, combined)
-
-    # pgvector literal: '[0.1,0.2,...]'
     emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
 
-    # 2. Benzer satılmış ilanları bul (auction winner'ı olan = satıldı)
-    q = sql_text("""
-        WITH nearby AS (
-            SELECT
-                a.start_price,
-                a.final_price,
-                (l.embedding <=> CAST(:emb AS vector)) AS dist
-            FROM listings l
-            JOIN auctions a ON a.listing_id = l.id
-            WHERE a.winner_username IS NOT NULL
-              AND l.embedding IS NOT NULL
-              AND (l.embedding <=> CAST(:emb AS vector)) < 0.4
-            ORDER BY dist
-            LIMIT 50
-        )
+    # 2. Opsiyonel: yüklenmiş görselin pHash'i
+    body_phash: str | None = None
+    if body.image_url:
+        try:
+            from app.services.image_mod_service import compute_phash
+            body_phash = await compute_phash(body.image_url)
+        except Exception:
+            pass
+
+    # 3. pgvector geniş aday havuzu (dist < 0.55, ham satırlar)
+    candidates_q = sql_text("""
         SELECT
-            COUNT(*)                                                 AS cnt,
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY start_price) AS median_start,
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY final_price)  AS median_final,
-            AVG(start_price)                                         AS avg_start,
-            AVG(final_price)                                         AS avg_final,
-            MIN(final_price)                                         AS min_final,
-            MAX(final_price)                                         AS max_final
-        FROM nearby
+            l.category,
+            l.location,
+            l.image_phash,
+            l.created_at,
+            a.start_price,
+            a.final_price,
+            (l.embedding <=> CAST(:emb AS vector)) AS dist
+        FROM listings l
+        JOIN auctions a ON a.listing_id = l.id
+        WHERE a.winner_username IS NOT NULL
+          AND l.embedding IS NOT NULL
+          AND a.final_price > 0
+          AND (l.embedding <=> CAST(:emb AS vector)) < 0.55
+        ORDER BY dist
+        LIMIT 150
     """)
+    result = await db.execute(candidates_q, {"emb": emb_str})
+    rows = result.fetchall()
 
-    result = await db.execute(q, {"emb": emb_str})
-    row = result.fetchone()
-    cnt = int(row.cnt or 0)
+    _no_data = {
+        "found_similar": 0,
+        "suggested_start_price": None,
+        "estimated_close_price": None,
+        "min_close_price": None,
+        "max_close_price": None,
+        "confidence": "low",
+        "category_match_count": 0,
+        "advice": (
+            "Henüz yeterli benzer ürün verisi bulunamadı. "
+            "Platforma eklendikçe tahminler daha isabetli hale gelecek. "
+            "Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz."
+        ),
+        "tuci_spent": 0,
+    }
 
+    if not rows:
+        return _no_data
+
+    # 4. Çok sinyalli skorlama
+    now = _dt2.now(_tz2.utc)
+    body_category = body.category.strip().lower()
+    body_city = body.city.strip().lower()
+
+    scored: list[tuple[float, Any]] = []
+    for row in rows:
+        sem_sim = max(0.0, 1.0 - float(row.dist))
+        cat_mult = 2.0 if (body_category and (row.category or "").lower() == body_category) else 1.0
+        city_mult = 1.0
+        if body_city and row.location:
+            loc = row.location.lower()
+            if body_city in loc or loc in body_city:
+                city_mult = 1.3
+        age_days = 365
+        if row.created_at:
+            created = row.created_at
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=_tz2.utc)
+            age_days = max(0, (now - created).days)
+        recency = math.exp(-age_days / 180.0)
+        phash_mult = 1.0
+        if body_phash and row.image_phash:
+            try:
+                hamming = bin(int(body_phash, 16) ^ int(row.image_phash, 16)).count("1")
+                phash_mult = 1.5 if hamming <= 8 else (1.2 if hamming <= 16 else 1.0)
+            except Exception:
+                pass
+        composite = sem_sim * cat_mult * city_mult * recency * phash_mult
+        scored.append((composite, row))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    # 5. IQR aykırı değer temizleme (>=10 veri noktasında)
+    if len(scored) >= 10:
+        prices_s = sorted(float(r.final_price) for _, r in scored)
+        lo = prices_s[len(prices_s) // 10]
+        hi = prices_s[-(len(prices_s) // 10) - 1]
+        scored = [(s, r) for s, r in scored if lo <= float(r.final_price) <= hi]
+
+    top = scored[:30]
+    cnt = len(top)
     if cnt == 0:
-        return {
-            "found_similar": 0,
-            "suggested_start_price": None,
-            "estimated_close_price": None,
-            "min_close_price": None,
-            "max_close_price": None,
-            "confidence": "low",
-            "advice": (
-                "Henüz yeterli benzer ürün verisi bulunamadı. "
-                "Platforma eklendikçe tahminler daha isabetli hale gelecek. "
-                "Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz."
-            ),
-        }
+        return _no_data
 
-    suggested_start = round(float(row.median_start or row.avg_start or 0), 2)
-    estimated_close = round(float(row.median_final or row.avg_final or 0), 2)
-    min_close = round(float(row.min_final), 2) if row.min_final else None
-    max_close = round(float(row.max_final), 2) if row.max_final else None
+    # 6. Agirlikli fiyat hesaplama
+    total_w = sum(s for s, _ in top)
+    w_final = sum(s * float(r.final_price) for s, r in top) / total_w
+    start_rows = [(s, r) for s, r in top if r.start_price and float(r.start_price) > 0]
+    if start_rows:
+        sw = sum(s for s, _ in start_rows)
+        w_start = sum(s * float(r.start_price) for s, r in start_rows) / sw
+    else:
+        w_start = w_final * 0.72
+    all_finals = sorted(float(r.final_price) for _, r in top)
+    n = len(all_finals)
+    min_price = all_finals[max(0, n // 10)]
+    max_price = all_finals[min(n - 1, max(0, n - n // 10 - 1))]
 
-    confidence = "high" if cnt >= 20 else ("medium" if cnt >= 5 else "low")
+    # 7. Guven seviyesi: kategori eslesme sayisina gore
+    cat_matched = sum(1 for _, r in top if (r.category or "").lower() == body_category)
+    if cat_matched >= 10 or (cat_matched >= 5 and body_category):
+        confidence = "high"
+    elif cat_matched >= 3 or cnt >= 10:
+        confidence = "medium"
+    else:
+        confidence = "low"
 
-    # 3. Tavsiye metni üret
-    cat = body.category.strip() or "ürün"
+    suggested_start = round(w_start, 0)
+    estimated_close = round(w_final, 0)
+    min_close = round(min_price, 0)
+    max_close = round(max_price, 0)
+
+    # 8. Zengin tavsiye metni
     close_fmt = f"{int(estimated_close):,}".replace(",", ".")
     start_fmt = f"{int(suggested_start):,}".replace(",", ".")
-
+    signals = []
+    if cat_matched > 0:
+        signals.append(f"{cat_matched} aynı kategori")
+    if body_city and any(body_city in (r.location or "").lower() for _, r in top):
+        signals.append("şehir bazlı")
+    signal_str = f" ({', '.join(signals)})" if signals else ""
     advice = (
-        f"Benzer {cnt} ürün satış verisi analiz edildi. "
-        f"Önerilen başlangıç fiyatı {start_fmt} ₺, "
-        f"nihai kapanış ortalama {close_fmt} ₺ bandında gerçekleşti."
+        f"{cnt} benzer ürün satış verisi analiz edildi{signal_str}. "
+        f"Önerilen başlangıç: {start_fmt} ₺ — beklenen kapanış: {close_fmt} ₺."
     )
-    if estimated_close > suggested_start * 1.35:
+    if estimated_close > suggested_start * 1.30:
+        advice += " Teklif rekabeti yüksek — düşük başlangıç daha fazla katılımcı çeker."
+    elif estimated_close < suggested_start * 0.85:
+        advice += " Başlangıç fiyatını biraz daha düşük tutmak satış hızını artırabilir."
+    if n >= 5 and (max_price - min_price) > estimated_close * 0.5:
         advice += (
-            " Bu kategoride teklif rekabeti yüksek — "
-            "düşük başlangıç fiyatı daha fazla katılımcı çekebilir."
-        )
-    elif estimated_close < suggested_start * 0.9:
-        advice += (
-            " Başlangıç fiyatını biraz daha gerçekçi tutmak "
-            "satış hızınızı artırabilir."
+            f" Fiyat bandı geniş ({int(min_price):,}–{int(max_price):,} ₺) — "
+            "açıklama ve fotoğraf kalitesi nihai fiyatı önemli ölçüde etkiler."
         )
 
     # ── TUCi düş + sayaç güncelle ─────────────────────────────────────────────
@@ -536,10 +629,8 @@ async def price_estimate(
     if current_user.is_premium:
         ai_used = await _get_ai_used(current_user.id)
         if ai_used < AI_PRICE_LIMIT_PRO:
-            # Aylık ücretsiz hak var
             await _increment_ai(current_user.id)
         else:
-            # Ücretsiz hak bitti → TUCi düş
             await db.execute(
                 sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
                 {"cost": AI_PRICE_ESTIMATE_COST, "uid": current_user.id},
@@ -571,6 +662,7 @@ async def price_estimate(
         "min_close_price": min_close,
         "max_close_price": max_close,
         "confidence": confidence,
+        "category_match_count": cat_matched,
         "advice": advice,
         "tuci_spent": tuci_spent,
     }
