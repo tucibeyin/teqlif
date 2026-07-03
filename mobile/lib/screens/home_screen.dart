@@ -1397,12 +1397,27 @@ class _GridItemState extends State<_GridItem> {
       _likesCount += _isLiked ? 1 : -1;
     });
     try {
-      final result = await ListingService.toggleLike(widget.listing['id'] as int);
+      final id = widget.listing['id'] as int;
+      final result = await ListingService.toggleLike(id);
       final newCount = result['likes_count'] as int? ?? _likesCount;
       final newLiked = result['is_liked'] as bool? ?? _isLiked;
-      // widget.listing map'ini de güncelle — parent rebuild olursa initState doğru değeri okur
       widget.listing['likes_count'] = newCount;
       widget.listing['is_liked'] = newLiked;
+      // Favorites API ile senkronize et
+      final token = await StorageService.getToken();
+      if (token != null) {
+        if (newLiked) {
+          http.post(
+            Uri.parse('$kBaseUrl/favorites/$id'),
+            headers: {'Authorization': 'Bearer $token'},
+          );
+        } else {
+          http.delete(
+            Uri.parse('$kBaseUrl/favorites/$id'),
+            headers: {'Authorization': 'Bearer $token'},
+          );
+        }
+      }
       if (mounted) {
         setState(() {
           _likesCount = newCount;
