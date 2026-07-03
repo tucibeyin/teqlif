@@ -152,7 +152,7 @@ class ListingService:
             return
         try:
             result = await db.execute(
-                select(ListingImpression.listing_id, func.count(ListingImpression.user_id))
+                select(ListingImpression.listing_id, func.count(func.distinct(ListingImpression.user_id)))
                 .where(ListingImpression.listing_id.in_(listing_ids))
                 .group_by(ListingImpression.listing_id)
             )

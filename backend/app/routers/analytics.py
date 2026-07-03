@@ -710,8 +710,8 @@ async def pro_insights(
         )
         listing_ids = [r[0] for r in listing_ids_result.fetchall()]
 
-        views_total = len(listing_ids) * 8  # fallback
-        hesitations = max(1, len(listing_ids) * 2)
+        views_total = 0
+        hesitations = 0
 
         if listing_ids:
             ids_str = ", ".join(str(i) for i in listing_ids)
@@ -729,12 +729,12 @@ async def pro_insights(
                       AND timestamp >= now() - INTERVAL 30 DAY
                 """)
                 r = ch_r.result_rows[0] if ch_r.result_rows else (0, 0, 0)
-                views_total = int(r[0]) or (len(listing_ids) * 8)
-                hesitations = int(r[2]) or max(1, len(listing_ids) * 2)
+                views_total = int(r[0] or 0)
+                hesitations = int(r[2] or 0)
             except Exception:
                 pass
 
-        bids_count = kpis.get("bids_30d", 0) or max(1, len(listing_ids))
+        bids_count = kpis.get("bids_30d", 0)
         sales_count = kpis.get("sales_30d", 0)
         funnel = {
             "views": views_total,

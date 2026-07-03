@@ -484,6 +484,14 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
             impression_count=impression_map.get(lid, 0) if user.id == user_id else None
         ))
 
+    # Organik ilanları listing_impressions'a yaz (sponsored hariç)
+    organic_ids = [r["id"] for r in result]
+    if organic_ids:
+        try:
+            await _mark_impressions(user_id, organic_ids, db)
+        except Exception as exc:
+            logger.warning("[ForYou] Impression yazılamadı: %s", exc)
+
     # Sponsored ilan enjeksiyonu — sadece ilk sayfa
     if page == 0:
         try:
@@ -753,6 +761,15 @@ async def get_mixed_recent_feed(
                 user_id, top_cats, base_ids, len(_INTEREST_SLOTS), db
             )
             result = _inject_at_slots(result, interest_items, _INTEREST_SLOTS)
+
+    # Organik + interest ilan izlenimlerini kaydet (sponsored hariç)
+    if user_id:
+        organic_ids = [r["id"] for r in result]
+        if organic_ids:
+            try:
+                await _mark_impressions(user_id, organic_ids, db)
+            except Exception as exc:
+                logger.warning("[MixedRecent] Impression yazılamadı: %s", exc)
 
     # ── Sponsored enjeksiyonu (yalnızca page 0) ───────────────────────────────
     if page == 0:
