@@ -17,7 +17,7 @@ from app.core.exceptions import NotFoundException, BadRequestException, Forbidde
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 from app.config import settings
-from app.services.referral_service import get_unique_referral_code
+from app.services.referral_service import get_unique_referral_code, apply_referral
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -98,6 +98,8 @@ async def _create_user_and_send_code(
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
+    if data.referred_by:
+        await redis.setex(f"referral_pending:{data.email}", VERIFY_CODE_TTL, data.referred_by.strip().upper())
     await _send_verification_email(request, data.email, data.full_name, code, has_phone=bool(data.phone))
 
 
@@ -126,6 +128,14 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
     await db.commit()
     await db.refresh(user)
     await redis.delete(f"verify:{data.email}")
+
+    pending_ref = await redis.get(f"referral_pending:{data.email}")
+    if pending_ref:
+        try:
+            await apply_referral(db, user, pending_ref)
+        except Exception:
+            pass  # Geçersiz/süresi dolmuş kod — doğrulamayı engelleme
+        await redis.delete(f"referral_pending:{data.email}")
 
     lang = _detect_lang(request)
     try:

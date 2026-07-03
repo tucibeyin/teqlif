@@ -10,6 +10,7 @@ class UserRegister(BaseModel):
     full_name: str
     password: str
     phone: str | None = None
+    referred_by: str | None = None  # davet kodu (isteğe bağlı)
 
     @field_validator("username")
     @classmethod

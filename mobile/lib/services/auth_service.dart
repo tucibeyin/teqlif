@@ -30,6 +30,7 @@ class AuthService {
     required String fullName,
     required String password,
     String? phone,
+    String? referredBy,
   }) async {
     final payload = {
       'email': email,
@@ -37,6 +38,7 @@ class AuthService {
       'full_name': fullName,
       'password': password,
       if (phone != null) 'phone': phone,
+      if (referredBy != null && referredBy.isNotEmpty) 'referred_by': referredBy,
     };
     final body = await apiCall(
       () => http.post(

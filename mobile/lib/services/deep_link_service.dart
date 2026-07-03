@@ -1,4 +1,5 @@
 import 'package:app_links/app_links.dart';
+import 'storage_service.dart';
 
 /// Deep link koordinatörü.
 ///
@@ -53,10 +54,17 @@ class DeepLinkService {
   }
 
   /// Cold-start linkini okur ve kaydeder. SplashScreen'den çağrılır.
+  /// Davet linki ise kodu SharedPreferences'a yazar (auth akışından önce).
   static Future<void> captureInitialLink() async {
     final appLinks = AppLinks();
     final uri = await appLinks.getInitialLink();
-    if (uri != null) setPending(uri);
+    if (uri != null) {
+      setPending(uri);
+      final code = extractInviteCode(uri);
+      if (code != null) {
+        await StorageService.savePendingReferralCode(code);
+      }
+    }
   }
 
   /// Canlı URI stream'i — MainScreen subscribe olur.

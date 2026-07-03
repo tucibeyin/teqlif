@@ -8,6 +8,7 @@ import '../../config/theme.dart';
 import '../../core/logger_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
+import '../../services/storage_service.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/phone_input_field.dart';
 import 'verify_screen.dart';
@@ -26,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _fullNameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _passConfirmCtrl = TextEditingController();
+  final _referralCtrl = TextEditingController();
   String? _phoneE164; // E.164 formatında telefon (+90532...)
 
   bool _loading = false;
@@ -41,6 +43,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void initState() {
     super.initState();
     _usernameCtrl.addListener(_onUsernameChanged);
+    _loadPendingReferralCode();
+  }
+
+  Future<void> _loadPendingReferralCode() async {
+    final code = await StorageService.getPendingReferralCode();
+    if (code != null && mounted) {
+      _referralCtrl.text = code;
+    }
   }
 
   @override
@@ -51,6 +61,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _fullNameCtrl.dispose();
     _passCtrl.dispose();
     _passConfirmCtrl.dispose();
+    _referralCtrl.dispose();
     super.dispose();
   }
 
@@ -122,13 +133,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     setState(() => _loading = true);
     try {
+      final referralCode = _referralCtrl.text.trim();
       await AuthService.register(
         email: _emailCtrl.text.trim(),
         username: _usernameCtrl.text.trim(),
         fullName: _fullNameCtrl.text.trim(),
         password: _passCtrl.text,
         phone: _phoneE164,
+        referredBy: referralCode.isEmpty ? null : referralCode,
       );
+      await StorageService.clearPendingReferralCode();
       if (mounted) {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -266,6 +280,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       key: const Key('register_input_telefon'),
                       onChanged: (e164) => setState(() => _phoneE164 = e164),
                       onReset: () => setState(() => _phoneE164 = null),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      key: const Key('register_input_davet_kodu'),
+                      controller: _referralCtrl,
+                      autocorrect: false,
+                      textCapitalization: TextCapitalization.characters,
+                      maxLength: 12,
+                      decoration: InputDecoration(
+                        labelText: 'Davet Kodu (isteğe bağlı)',
+                        counterText: '',
+                        prefixIcon: const Icon(Icons.card_giftcard_outlined, size: 20),
+                        helperText: 'Bir arkadaşın seni davet ettiyse kodunu gir',
+                        helperStyle: const TextStyle(fontSize: 11),
+                      ),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(

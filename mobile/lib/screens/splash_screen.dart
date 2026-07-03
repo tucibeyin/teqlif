@@ -89,6 +89,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
+    // Cold-start deep link'i yakala — token kontrolünden önce çalışmalı
+    // ki invite kodu auth akışına (register ekranına) taşınabilsin
+    await DeepLinkService.captureInitialLink();
+
     if (token == null) {
       Navigator.of(context).pushReplacementNamed('/login');
       return;
@@ -119,8 +123,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
     PushNotificationService.initialize();
-    // Cold-start deep link'i yakala — MainScreen tüketecek
-    await DeepLinkService.captureInitialLink();
     Navigator.of(context).pushReplacementNamed('/home');
   }
 

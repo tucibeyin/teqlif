@@ -178,6 +178,23 @@ class StorageService {
     ]);
   }
 
+  static const _pendingReferralCodeKey = 'teqlif_pending_referral_code';
+
+  static Future<void> savePendingReferralCode(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pendingReferralCodeKey, code);
+  }
+
+  static Future<String?> getPendingReferralCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_pendingReferralCodeKey);
+  }
+
+  static Future<void> clearPendingReferralCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingReferralCodeKey);
+  }
+
   static const _darkModeKey = 'teqlif_dark_mode';
 
   static Future<bool> isDarkModeEnabled() async {
