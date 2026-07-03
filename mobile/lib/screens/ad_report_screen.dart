@@ -409,32 +409,37 @@ class _MetricCard extends StatelessWidget {
           BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32, height: 32,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.topLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 32, height: 32,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 17),
             ),
-            child: Icon(icon, color: color, size: 17),
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800, height: 1.1),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, height: 1.3),
-          ),
-          if (hint != null) ...[
-            const SizedBox(height: 3),
-            Text(hint!, style: TextStyle(color: color.withValues(alpha: 0.7), fontSize: 10, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800, height: 1.1),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, height: 1.3),
+            ),
+            if (hint != null) ...[
+              const SizedBox(height: 3),
+              Text(hint!, style: TextStyle(color: color.withValues(alpha: 0.7), fontSize: 10, fontWeight: FontWeight.w500)),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
