@@ -1,14 +1,19 @@
 """
-Feed LightFM ML — Hybrid Collaborative + Content Filtering
+Feed Hybrid BPR ML — Collaborative + Content Filtering
 
-30 günlük feed_analytics (ClickHouse) verisinden LightFM hybrid modeli eğitir.
-Kullanıcı ve ilan vektörlerini Redis'te saklar; feed_service bu
-vektörlerden anlık skor hesaplayabilir.
+LightFM'in Python 3.13 uyumsuzluğu nedeniyle implicit.bpr + text embedding
+blending ile aynı işlevsellik sağlanır.
+
+Algoritma:
+  1. implicit.BayesianPersonalizedRanking → collaborative faktörler (CF)
+  2. DB'deki 384-dim text embedding'lerden TruncatedSVD ile 64-dim içerik vektörü
+  3. Hybrid item vec = normalize(CF * 0.70 + content * 0.30)
+  4. User/item vektörler Redis'e yazılır (25 saat TTL)
 
 ARQ worker her gece 04:15'te train_lightfm_task'ı çalıştırır.
 num_threads=2 — VPS CPU koruması.
 
-Confidence ağırlıkları (ALS ile aynı):
+Confidence ağırlıkları:
   click                              → 1.0
   impression + dwell_time > 8000ms  → 0.7
   impression + dwell_time > 3000ms  → 0.4
@@ -26,11 +31,13 @@ _USER_VEC_KEY = "feed:lfm:user_vec:{uid}"
 _ITEM_VEC_KEY = "feed:lfm:item_vec:{lid}"
 _LFM_TTL = 90_000  # 25 saat
 _MIN_ROWS = 100
+_CONTENT_WEIGHT = 0.30   # içerik vektörü ağırlığı
+_CF_WEIGHT = 0.70        # collaborative faktör ağırlığı
 
 
 async def get_lightfm_scores(user_id: int, listing_ids: list[int]) -> dict[int, float]:
     """
-    LightFM modelinden kullanıcı–ilan benzerlik skorları.
+    Hybrid BPR modelinden kullanıcı–ilan benzerlik skorları.
     Model yoksa ya da vektör eksikse boş dict döner.
     """
     if not listing_ids:
@@ -67,14 +74,16 @@ async def get_lightfm_scores(user_id: int, listing_ids: list[int]) -> dict[int, 
 
 async def train_lightfm() -> None:
     """
-    30 günlük feed_analytics verisinden LightFM hybrid modeli eğit.
+    30 günlük feed_analytics verisinden Hybrid BPR modeli eğit.
+    implicit.BayesianPersonalizedRanking + text embedding blending.
     Faktör vektörlerini Redis'e yaz (25 saat TTL).
     """
     try:
-        from lightfm import LightFM  # type: ignore
+        import implicit  # type: ignore
         import scipy.sparse as sp
-    except ImportError:
-        logger.warning("[LightFM] lightfm kurulu değil: pip install lightfm")
+        from sklearn.decomposition import TruncatedSVD  # type: ignore
+    except ImportError as e:
+        logger.warning("[HybridBPR] Bağımlılık eksik: %s", e)
         return
 
     from app.database_clickhouse import get_clickhouse_client
@@ -82,23 +91,25 @@ async def train_lightfm() -> None:
     from app.utils.redis_client import get_redis
     from sqlalchemy import text
 
+    # ── 1. ClickHouse interaction verisi ─────────────────────────────────────
     try:
         ch = await get_clickhouse_client()
         if ch is None:
-            logger.warning("[LightFM] ClickHouse bağlantısı yok, eğitim atlanıyor")
+            logger.warning("[HybridBPR] ClickHouse bağlantısı yok, eğitim atlanıyor")
             return
     except Exception as exc:
-        logger.warning("[LightFM] ClickHouse bağlanamadı: %s", exc)
+        logger.warning("[HybridBPR] ClickHouse bağlanamadı: %s", exc)
         return
 
     result = await ch.query("""
         SELECT
             user_id,
             listing_id,
-            countIf(event_type = 'click')                                               AS clicks,
-            countIf(event_type = 'impression' AND dwell_time_ms > 8000)                AS long_dwells,
-            countIf(event_type = 'impression' AND dwell_time_ms BETWEEN 3001 AND 8000) AS short_dwells,
-            countIf(event_type = 'skip')                                                AS skips
+            SUM(if(event_type = 'click',
+                   log2(toFloat64(slot_index) + 2.0), 0))                               AS clicks,
+            countIf(event_type = 'impression' AND dwell_time_ms > 8000)                 AS long_dwells,
+            countIf(event_type = 'impression' AND dwell_time_ms BETWEEN 3001 AND 8000)  AS short_dwells,
+            countIf(event_type = 'skip')                                                 AS skips
         FROM feed_analytics
         WHERE timestamp >= now() - INTERVAL 30 DAY
           AND user_id   != ''
@@ -109,7 +120,7 @@ async def train_lightfm() -> None:
 
     rows = result.result_rows
     if len(rows) < _MIN_ROWS:
-        logger.info("[LightFM] Yetersiz veri (%d satır), eğitim atlanıyor", len(rows))
+        logger.info("[HybridBPR] Yetersiz veri (%d satır), eğitim atlanıyor", len(rows))
         return
 
     valid_rows = []
@@ -119,25 +130,24 @@ async def train_lightfm() -> None:
             lid = int(lid_s)
         except (ValueError, TypeError):
             continue
-        conf = (
-            1.0 * clicks
-            + 0.7 * long_dwells
-            + 0.4 * short_dwells
-            + 0.05 * skips
+        conf = max(
+            float(clicks) * 1.0
+            + float(long_dwells) * 0.7
+            + float(short_dwells) * 0.4
+            + float(skips) * 0.05,
+            0.01,
         )
-        valid_rows.append((uid, lid, max(conf, 0.01)))
+        valid_rows.append((uid, lid, conf))
 
     if len(valid_rows) < _MIN_ROWS:
-        logger.info("[LightFM] Geçerli satır yetersiz (%d), atlanıyor", len(valid_rows))
+        logger.info("[HybridBPR] Geçerli satır yetersiz (%d), atlanıyor", len(valid_rows))
         return
 
     user_ids = sorted({r[0] for r in valid_rows})
     listing_ids = sorted({r[1] for r in valid_rows})
     u2i = {uid: i for i, uid in enumerate(user_ids)}
     l2i = {lid: i for i, lid in enumerate(listing_ids)}
-
-    n_users = len(user_ids)
-    n_items = len(listing_ids)
+    n_users, n_items = len(user_ids), len(listing_ids)
 
     data, row_idx, col_idx = [], [], []
     for uid, lid, conf in valid_rows:
@@ -145,78 +155,86 @@ async def train_lightfm() -> None:
         row_idx.append(u2i[uid])
         col_idx.append(l2i[lid])
 
-    interactions = sp.coo_matrix(
+    user_items = sp.csr_matrix(
         (data, (row_idx, col_idx)),
         shape=(n_users, n_items),
         dtype=np.float32,
     )
 
-    # İçerik özellikleri: ilan kategorilerini one-hot feature matrix olarak ekle
-    item_features: sp.csr_matrix | None = None
+    # ── 2. BPR Collaborative Filtering ───────────────────────────────────────
+    factors = min(64, max(16, n_users // 4, n_items // 4))
+    model = implicit.bpr.BayesianPersonalizedRanking(
+        factors=factors,
+        iterations=50,
+        learning_rate=0.05,
+        regularization=0.01,
+        num_threads=2,
+        random_state=42,
+    )
+    model.fit(user_items)
+
+    uf = np.asarray(model.user_factors, dtype=np.float32)   # (n_users, factors)
+    itf = np.asarray(model.item_factors, dtype=np.float32)  # (n_items, factors)
+
+    # ── 3. Text Embedding İçerik Vektörleri (PostgreSQL) ────────────────────
+    content_matrix: np.ndarray | None = None
     try:
         async with AsyncSessionLocal() as db:
-            cat_result = await db.execute(
-                text("""
-                    SELECT id, category FROM listings
-                    WHERE id = ANY(:ids) AND category IS NOT NULL
-                """),
+            emb_result = await db.execute(
+                text("SELECT id, embedding FROM listings WHERE id = ANY(:ids) AND embedding IS NOT NULL"),
                 {"ids": listing_ids},
             )
-            cat_map = {row.id: row.category for row in cat_result}
+            emb_map = {row.id: row.embedding for row in emb_result}
 
-        all_cats = sorted(set(cat_map.values()))
-        cat2ci = {cat: i for i, cat in enumerate(all_cats)}
-
-        if all_cats:
-            feat_data, feat_rows, feat_cols = [], [], []
+        if emb_map:
+            # Sadece embedding'i olan ilanlar için içerik matrisini doldur
+            raw_content = np.zeros((n_items, 384), dtype=np.float32)
+            has_content = np.zeros(n_items, dtype=bool)
             for lid, li in l2i.items():
-                cat = cat_map.get(lid)
-                if cat and cat in cat2ci:
-                    feat_rows.append(li)
-                    feat_cols.append(cat2ci[cat])
-                    feat_data.append(1.0)
-            if feat_data:
-                item_features = sp.csr_matrix(
-                    (feat_data, (feat_rows, feat_cols)),
-                    shape=(n_items, len(all_cats)),
-                    dtype=np.float32,
-                )
+                emb = emb_map.get(lid)
+                if emb is not None:
+                    raw_content[li] = np.array(emb, dtype=np.float32)
+                    has_content[li] = True
+
+            if has_content.sum() >= 10:
+                # TruncatedSVD ile faktör boyutuna indir
+                svd = TruncatedSVD(n_components=factors, random_state=42)
+                reduced = svd.fit_transform(raw_content).astype(np.float32)
+                # Normalize
+                norms = np.linalg.norm(reduced, axis=1, keepdims=True)
+                norms[norms == 0] = 1.0
+                content_matrix = reduced / norms
+                logger.info("[HybridBPR] İçerik vektörleri hazır | ilan=%d", has_content.sum())
     except Exception as fe:
-        logger.warning("[LightFM] İçerik özellikleri alınamadı, CF only: %s", fe)
+        logger.warning("[HybridBPR] İçerik özellikleri alınamadı, CF-only: %s", fe)
 
-    factors = min(64, max(16, n_users // 4, n_items // 4))
-    model = LightFM(
-        no_components=factors,
-        loss="warp",
-        random_state=42,
-        max_sampled=10,
-    )
+    # ── 4. Hybrid Blending ───────────────────────────────────────────────────
+    # CF vektörlerini normalize et
+    cf_norms = np.linalg.norm(itf, axis=1, keepdims=True)
+    cf_norms[cf_norms == 0] = 1.0
+    itf_norm = itf / cf_norms
 
-    model.fit(
-        interactions,
-        item_features=item_features,
-        epochs=20,
-        num_threads=2,
-        verbose=False,
-    )
+    if content_matrix is not None:
+        hybrid_itf = itf_norm * _CF_WEIGHT + content_matrix * _CONTENT_WEIGHT
+        # Yeniden normalize
+        h_norms = np.linalg.norm(hybrid_itf, axis=1, keepdims=True)
+        h_norms[h_norms == 0] = 1.0
+        hybrid_itf = (hybrid_itf / h_norms).astype(np.float32)
+    else:
+        hybrid_itf = itf_norm
 
+    # ── 5. Redis'e yaz ───────────────────────────────────────────────────────
     redis = await get_redis()
     pipe = redis.pipeline()
-
-    user_repr = model.get_user_representations(features=None)
-    item_repr = model.get_item_representations(features=item_features)
-
-    # user_repr = (biases, vectors), item_repr = (biases, vectors)
-    uf = np.asarray(user_repr[1], dtype=np.float32)
-    itf = np.asarray(item_repr[1], dtype=np.float32)
 
     for uid, ui in u2i.items():
         pipe.setex(_USER_VEC_KEY.format(uid=uid), _LFM_TTL, uf[ui].tobytes())
     for lid, li in l2i.items():
-        pipe.setex(_ITEM_VEC_KEY.format(lid=lid), _LFM_TTL, itf[li].tobytes())
+        pipe.setex(_ITEM_VEC_KEY.format(lid=lid), _LFM_TTL, hybrid_itf[li].tobytes())
 
     await pipe.execute()
     logger.info(
-        "[LightFM] Eğitim tamamlandı | users=%d listings=%d factors=%d",
+        "[HybridBPR] Eğitim tamamlandı | users=%d listings=%d factors=%d content=%s",
         n_users, n_items, factors,
+        f"{int(content_matrix is not None and (content_matrix != 0).any())}",
     )
