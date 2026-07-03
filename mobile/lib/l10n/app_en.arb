@@ -70,6 +70,7 @@
   "btnClearFilters": "Clear Filters",
   "btnDeactivate": "Deactivate",
   "btnActivate": "Activate",
+  "btnAddFavorite": "Add to Favorites",
   "btnRemoveFavorite": "Remove from Favorites",
   "homeRecentListings": "Recent Listings",
   "searchHint": "Searching...",

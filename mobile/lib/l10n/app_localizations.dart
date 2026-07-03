@@ -509,6 +509,9 @@ abstract class AppLocalizations {
   String get btnActivate;
 
   /// No description provided for @btnAddFavorite.
+  ///
+  /// In tr, this message translates to:
+  /// **'Favorilere Ekle'**
   String get btnAddFavorite;
 
   /// No description provided for @btnRemoveFavorite.

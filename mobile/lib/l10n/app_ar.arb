@@ -68,6 +68,7 @@
   "btnClearFilters": "مسح الفلاتر",
   "btnDeactivate": "إلغاء التنشيط",
   "btnActivate": "تنشيط",
+  "btnAddFavorite": "إضافة إلى المفضلة",
   "btnRemoveFavorite": "إزالة من المفضلة",
   "homeRecentListings": "آخر الإعلانات",
   "searchHint": "جارٍ البحث...",

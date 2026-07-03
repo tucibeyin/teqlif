@@ -68,6 +68,7 @@
   "btnClearFilters": "Filtreleri Temizle",
   "btnDeactivate": "Pasife Al",
   "btnActivate": "Aktif Yap",
+  "btnAddFavorite": "Favorilere Ekle",
   "btnRemoveFavorite": "Favoriden Çıkar",
   "homeRecentListings": "Son İlanlar",
   "searchHint": "Aranıyor...",
