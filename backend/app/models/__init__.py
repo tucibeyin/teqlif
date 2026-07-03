@@ -4,8 +4,8 @@ from .listing import Listing
 from .like import ListingLike
 from .favorite import Favorite
 from .follow import Follow
-from .block import Block
-from .message import Message
+from .block import UserBlock
+from .message import DirectMessage
 from .notification import Notification
 from .listing_offer import ListingOffer
 from .listing_impression import ListingImpression
