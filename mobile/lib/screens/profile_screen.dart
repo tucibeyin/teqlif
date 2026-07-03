@@ -2381,16 +2381,19 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   }
 
   Future<void> _removeFavorite(dynamic listing) async {
+    final id = listing['id'];
+    // Optimistic: anında listeden kaldır
+    setState(() => _listings.removeWhere((l) => l['id'] == id));
     final token = await StorageService.getToken();
     if (token == null) return;
     try {
       await http.delete(
-        Uri.parse('$kBaseUrl/favorites/${listing['id']}'),
+        Uri.parse('$kBaseUrl/favorites/$id'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      await _load();
     } catch (e) {
       LoggerService.instance.warning('FavoritesScreen', 'Favori kaldırılamadı: $e');
+      await _load(); // Hata varsa listeyi geri yükle
     }
   }
 
