@@ -508,6 +508,9 @@ abstract class AppLocalizations {
   /// **'Aktif Yap'**
   String get btnActivate;
 
+  /// No description provided for @btnAddFavorite.
+  String get btnAddFavorite;
+
   /// No description provided for @btnRemoveFavorite.
   ///
   /// In tr, this message translates to:

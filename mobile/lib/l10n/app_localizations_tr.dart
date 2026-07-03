@@ -214,6 +214,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get btnActivate => 'Aktif Yap';
 
   @override
+  String get btnAddFavorite => 'Favorilere Ekle';
+
+  @override
   String get btnRemoveFavorite => 'Favoriden Çıkar';
 
   @override

@@ -215,6 +215,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get btnActivate => 'Activate';
 
   @override
+  String get btnAddFavorite => 'Add to Favorites';
+
+  @override
   String get btnRemoveFavorite => 'Remove from Favorites';
 
   @override

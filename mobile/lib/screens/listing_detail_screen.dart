@@ -174,11 +174,24 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       _isFavorited = _isLiked;
     });
     try {
-      final result = await ListingService.toggleLike(widget.listing['id'] as int);
+      final id = widget.listing['id'] as int;
+      final result = await ListingService.toggleLike(id);
       final newCount = result['likes_count'] as int? ?? _likesCount;
       final newLiked = result['is_liked'] as bool? ?? _isLiked;
       widget.listing['likes_count'] = newCount;
       widget.listing['is_liked'] = newLiked;
+      // Favorites API ile senkronize et — beğeni = favoriye ekle/çıkar
+      if (newLiked) {
+        await http.post(
+          Uri.parse('$kBaseUrl/favorites/$id'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+      } else {
+        await http.delete(
+          Uri.parse('$kBaseUrl/favorites/$id'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+      }
       if (mounted) {
         setState(() {
           _likesCount = newCount;
@@ -894,7 +907,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 (_isFavorited || _isLiked) ? Icons.favorite : Icons.favorite_border,
                 color: (_isFavorited || _isLiked) ? Colors.red : const Color(0xFF9CA3AF),
               ),
-              tooltip: _isFavorited ? l.btnRemoveFavorite : l.btnRemoveFavorite,
+              tooltip: _isFavorited ? l.btnRemoveFavorite : l.btnAddFavorite,
               onPressed: _toggleFavorite,
             ),
             IconButton(

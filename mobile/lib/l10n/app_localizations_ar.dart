@@ -215,6 +215,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get btnActivate => 'تنشيط';
 
   @override
+  String get btnAddFavorite => 'إضافة إلى المفضلة';
+
+  @override
   String get btnRemoveFavorite => 'إزالة من المفضلة';
 
   @override
