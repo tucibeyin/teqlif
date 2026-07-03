@@ -1181,7 +1181,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             height: 1,
           );
     await Share.share(
-      'Teqlif\'e katıl, ikimiz de TUCi kazan! 🎁\nhttps://teqlif.com/invite?code=$code',
+      'Teqlif\'e katıl, ikimizde TUCi kazanalım! 🎁\nhttps://teqlif.com/invite?code=$code',
       subject: 'Teqlif\'e Davetlisin!',
       sharePositionOrigin: origin,
     );
