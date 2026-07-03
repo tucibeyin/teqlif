@@ -17,6 +17,7 @@ import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/listing_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
@@ -2381,7 +2382,8 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   }
 
   Future<void> _removeFavorite(dynamic listing) async {
-    final id = listing['id'];
+    final id = listing['id'] as int;
+    final wasLiked = listing['is_liked'] as bool? ?? false;
     // Optimistic: anında listeden kaldır
     setState(() => _listings.removeWhere((l) => l['id'] == id));
     final token = await StorageService.getToken();
@@ -2391,9 +2393,13 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
         Uri.parse('$kBaseUrl/favorites/$id'),
         headers: {'Authorization': 'Bearer $token'},
       );
+      // Beğeniyi de kaldır — favori ile beğeni senkron tutulur
+      if (wasLiked) {
+        await ListingService.toggleLike(id);
+      }
     } catch (e) {
       LoggerService.instance.warning('FavoritesScreen', 'Favori kaldırılamadı: $e');
-      await _load(); // Hata varsa listeyi geri yükle
+      await _load();
     }
   }
 
