@@ -7,7 +7,6 @@ import '../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -35,6 +34,7 @@ import 'account_info_screen.dart';
 import 'purchases_screen.dart';
 import 'sales_screen.dart';
 import 'public_profile_screen.dart';
+import '../services/share_service.dart';
 import '../services/wallet_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -1180,10 +1180,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             width: 1,
             height: 1,
           );
-    await Share.share(
-      'Teqlif\'e katıl, ikimizde TUCi kazanalım! 🎁\nhttps://teqlif.com/invite?code=$code',
-      subject: 'Teqlif\'e Davetlisin!',
-      sharePositionOrigin: origin,
+    await ShareService.show(
+      context,
+      url: 'https://teqlif.com/invite?code=$code',
+      text: 'Teqlif\'e katıl, ikimizde TUCi kazanalım! 🎁',
+      origin: origin,
     );
   }
 
