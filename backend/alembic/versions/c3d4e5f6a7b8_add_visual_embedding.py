@@ -1,15 +1,15 @@
 """add visual_embedding to listings
 
-Revision ID: a1b2c3d4e5f6
-Revises: z2a3b4c5d6e7
+Revision ID: c3d4e5f6a7b8
+Revises: b1c2d3e4f5a6
 Create Date: 2026-07-04 04:30:00.000000
 
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = 'a1b2c3d4e5f6'
-down_revision = 'z2a3b4c5d6e7'
+revision = 'c3d4e5f6a7b8'
+down_revision = 'b1c2d3e4f5a6'
 branch_labels = None
 depends_on = None
 
