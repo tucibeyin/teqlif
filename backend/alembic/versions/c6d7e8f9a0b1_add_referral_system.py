@@ -1,15 +1,15 @@
 """add referral system
 
-Revision ID: a3b4c5d6e7f8
-Revises: z2a3b4c5d6e7
-Create Date: 2026-07-03 10:00:00.000000
+Revision ID: c6d7e8f9a0b1
+Revises: d5e6f7a8b9c0
+Create Date: 2026-07-03 11:00:00.000000
 
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = 'a3b4c5d6e7f8'
-down_revision = 'z2a3b4c5d6e7'
+revision = 'c6d7e8f9a0b1'
+down_revision = 'd5e6f7a8b9c0'
 branch_labels = None
 depends_on = None
 
@@ -21,16 +21,14 @@ def upgrade():
     op.create_index('ix_users_referral_code', 'users', ['referral_code'], unique=True)
 
     # ── 2. Mevcut kullanıcılar için benzersiz kod üret (backfill) ───────────
-    # PostgreSQL'de SUBSTRING(MD5(RANDOM()::text || id::text), 1, 7) deterministik
-    # değildir ama id bazlı MD5 kullanılır, çakışmaya karşı güvenlik için UPPER.
-    # Karakter seti hex (0-9 A-F) — 7 hane → 16^7 = 268 milyon kombinasyon.
+    # MD5(id || sabit_tuz) → deterministik, 7 hex karakter, UPPER
     op.execute("""
         UPDATE users
         SET referral_code = UPPER(SUBSTRING(MD5(id::text || 'teqlif_ref_2026'), 1, 7))
         WHERE referral_code IS NULL
     """)
 
-    # Nadir çakışma ihtimaline karşı: aynı hash çıkabilir — sonraki tur düzeltir
+    # Nadir çakışmaya karşı ikinci tur — farklı tuz kullanır
     op.execute("""
         WITH dupes AS (
             SELECT id,
