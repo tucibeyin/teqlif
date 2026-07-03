@@ -1144,26 +1144,36 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     }
   }
 
+  bool _shareLoading = false;
+
   Future<void> _shareInvite() async {
+    if (_shareLoading) return;
     final token = await StorageService.getToken();
     if (token == null || !mounted) return;
+    setState(() => _shareLoading = true);
+    String? code;
     try {
       final resp = await http.get(
         Uri.parse('$kBaseUrl/users/my-referral'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (!mounted) return;
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
-        final code = data['referral_code'] as String?;
-        if (code != null) {
-          await Share.share(
-            'Teqlif\'te harika ürünler var! Davet kodum ile kayıt ol, ikimiz de TUCi kazan 🎁\n\nDavet kodum: $code\nhttps://teqlif.com/invite?code=$code',
-            subject: 'Teqlif\'e Davetlisin!',
-          );
-        }
+        code = data['referral_code'] as String?;
       }
     } catch (_) {}
+    if (!mounted) return;
+    setState(() => _shareLoading = false);
+    if (code == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Davet kodu alınamadı, tekrar deneyin.')),
+      );
+      return;
+    }
+    await Share.share(
+      'Teqlif\'te harika ürünler var! Davet kodum ile kayıt ol, ikimiz de TUCi kazan 🎁\n\nDavet kodum: $code\nhttps://teqlif.com/invite?code=$code',
+      subject: 'Teqlif\'e Davetlisin!',
+    );
   }
 
   Future<void> _toggleBiometric(bool value) async {
@@ -1536,7 +1546,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 leading: const Icon(Icons.card_giftcard_outlined, color: Color(0xFF16A34A)),
                 title: const Text('Arkadaşlarını Davet Et, TUCi Kazan!', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 subtitle: const Text('Her davet için +50, arkadaşın +10 TUCi kazanır', style: TextStyle(fontSize: 12)),
-                trailing: Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
+                trailing: _shareLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
                 onTap: _shareInvite,
               ),
             ],
