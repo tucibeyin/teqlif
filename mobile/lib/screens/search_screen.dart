@@ -9,8 +9,10 @@ import '../config/theme.dart';
 import '../models/stream.dart';
 import '../services/analytics_service.dart';
 import '../services/api_service.dart';
+import '../services/feed_telemetry_service.dart';
 import '../services/storage_service.dart';
 import '../services/stream_service.dart';
+import '../widgets/shimmer_loading.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
@@ -50,12 +52,15 @@ class SearchScreenState extends State<SearchScreen> {
   bool _forYouExhausted = false;
   bool _forYouLoadingMore = false;
   final ScrollController _scrollCtrl = ScrollController();
+  final ScrollController _forYouScrollCtrl = ScrollController();
+  static const double _cardWidth = 130.0;
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onQueryChanged);
     _scrollCtrl.addListener(_onScroll);
+    _forYouScrollCtrl.addListener(_onForYouScroll);
     _loadExplore();
   }
 
@@ -66,6 +71,8 @@ class SearchScreenState extends State<SearchScreen> {
     _debounce?.cancel();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
+    _forYouScrollCtrl.removeListener(_onForYouScroll);
+    _forYouScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -135,9 +142,12 @@ class SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  void _onScroll() {
-    if (_scrollCtrl.position.pixels >=
-        _scrollCtrl.position.maxScrollExtent - 300) {
+  void _onScroll() {}
+
+  void _onForYouScroll() {
+    if (!_forYouScrollCtrl.hasClients) return;
+    final pos = _forYouScrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - _cardWidth * 3) {
       _loadMoreForYou();
     }
   }
@@ -674,7 +684,7 @@ class SearchScreenState extends State<SearchScreen> {
             ),
           ],
           // ── Sana Özel / Son İlanlar ──────────────────────────────
-          if (_exploreListings.isNotEmpty) ...[
+          if (_exploreListings.isNotEmpty || (_exploreLoading && _isLoggedIn)) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -688,49 +698,81 @@ class SearchScreenState extends State<SearchScreen> {
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 15),
                     ),
+                    const Spacer(),
+                    if (_forYouLoadingMore)
+                      const SizedBox(
+                        width: 14, height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: kPrimary),
+                      ),
                   ],
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 2,
-                  mainAxisSpacing: 2,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, i) {
-                    final listing =
-                        _exploreListings[i] as Map<String, dynamic>;
-                    return _ListingTile(
-                      listing: listing,
-                      onTap: () {
-                        final id = listing['id'] as int?;
-                        if (id != null && _isLoggedIn) _trackInteraction(id);
-                        Navigator.push(
-                          ctx,
-                          MaterialPageRoute(
-                            builder: (_) => ListingDetailScreen(listing: listing),
+            SliverToBoxAdapter(
+              child: _exploreLoading && _exploreListings.isEmpty
+                  ? SizedBox(
+                      height: 190,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: 4,
+                        itemBuilder: (_, _) => Container(
+                          width: 120,
+                          margin: const EdgeInsets.only(right: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: Colors.grey.withValues(alpha: 0.15),
                           ),
-                        );
-                      },
-                    );
-                  },
-                  childCount: _exploreListings.length,
-                ),
-              ),
+                          child: const ShimmerBox(),
+                        ),
+                      ),
+                    )
+                  : _exploreListings.isEmpty
+                      ? const SizedBox.shrink()
+                      : SizedBox(
+                          height: 190,
+                          child: ListView.builder(
+                            controller: _forYouScrollCtrl,
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: _exploreListings.length + (_forYouLoadingMore ? 1 : 0),
+                            itemBuilder: (ctx, i) {
+                              if (i == _exploreListings.length) {
+                                return const SizedBox(
+                                  width: 60,
+                                  child: Center(child: SizedBox(
+                                    width: 20, height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )),
+                                );
+                              }
+                              final listing = _exploreListings[i] as Map<String, dynamic>;
+                              return _HorizontalListingCard(
+                                listing: listing,
+                                onTap: () {
+                                  final id = listing['id'] as int?;
+                                  if (id != null && _isLoggedIn) _trackInteraction(id);
+                                  if (listing['is_highlight'] == true) {
+                                    final rawRoomId = listing['active_room_id'];
+                                    if (rawRoomId != null) {
+                                      final roomId = rawRoomId is int ? rawRoomId : int.tryParse(rawRoomId.toString());
+                                      if (roomId != null) {
+                                        Navigator.push(ctx, MaterialPageRoute(
+                                          builder: (_) => SwipeLiveScreen.single(streamId: roomId),
+                                        ));
+                                        return;
+                                      }
+                                    }
+                                  }
+                                  Navigator.push(ctx, MaterialPageRoute(
+                                    builder: (_) => ListingDetailScreen(listing: listing),
+                                  ));
+                                },
+                              );
+                            },
+                          ),
+                        ),
             ),
-            if (_forYouLoadingMore)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(
-                    child: CircularProgressIndicator(color: kPrimary, strokeWidth: 2),
-                  ),
-                ),
-              ),
           ],
 
           // ── En Son İlanlar (login, /api/listings) ─────────────────
@@ -955,6 +997,264 @@ class _StreamCard extends StatelessWidget {
           child: Icon(Icons.videocam_rounded, color: Colors.white30, size: 36),
         ),
       );
+}
+
+// ── Yatay ilan kartı (Sana Özel) ────────────────────────────────────────────
+class _HorizontalListingCard extends StatefulWidget {
+  final Map<String, dynamic> listing;
+  final VoidCallback onTap;
+
+  const _HorizontalListingCard({required this.listing, required this.onTap});
+
+  @override
+  State<_HorizontalListingCard> createState() => _HorizontalListingCardState();
+}
+
+class _HorizontalListingCardState extends State<_HorizontalListingCard>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _pulseCtrl;
+  Animation<double>? _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.listing['is_highlight'] == true) {
+      _pulseCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 900),
+      )..repeat(reverse: true);
+      _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
+        CurvedAnimation(parent: _pulseCtrl!, curve: Curves.easeInOut),
+      );
+    }
+    if (widget.listing['is_sponsored'] == true) {
+      final cid = widget.listing['campaign_id'];
+      if (cid != null) AnalyticsService.trackAdImpression(cid as int);
+    }
+    final lid = widget.listing['id'];
+    if (lid != null) {
+      FeedTelemetryService.instance.logEvent(
+        listingId: lid.toString(),
+        eventType: 'impression',
+        dwellTimeMs: 0,
+        contentType: 'photo',
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl?.dispose();
+    super.dispose();
+  }
+
+  String _fmt(dynamic price) {
+    if (price == null) return '';
+    final s = (price as num).toInt().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()} ₺';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imgs = widget.listing['image_urls'] as List? ?? [];
+    final raw = imgs.isNotEmpty ? imgs[0] as String : widget.listing['image_url'] as String?;
+    final photo = raw != null ? imgUrl(raw) : null;
+    final price = _fmt(widget.listing['price']);
+
+    return GestureDetector(
+      onTap: () {
+        final lid = widget.listing['id'];
+        if (lid != null) {
+          FeedTelemetryService.instance.logEvent(
+            listingId: lid.toString(),
+            eventType: 'click',
+            dwellTimeMs: 0,
+            contentType: 'photo',
+          );
+        }
+        widget.onTap();
+      },
+      child: Container(
+        width: 120,
+        margin: const EdgeInsets.only(right: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: AppColors.card(context),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  photo != null
+                      ? CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, width: double.infinity)
+                      : Container(
+                          color: AppColors.surfaceVariant(context),
+                          child: Center(child: Icon(Icons.image_outlined, color: AppColors.border(context))),
+                        ),
+                  if (widget.listing['is_sponsored'] == true)
+                    Positioned(
+                      top: 5, left: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.62),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text('Sponsorlu',
+                            style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  if (widget.listing['seller_is_premium'] == true)
+                    Positioned(
+                      top: 5, right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                              colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text('👑', style: TextStyle(fontSize: 9)),
+                      ),
+                    ),
+                  if (widget.listing['seller_badge'] == 'trusted_seller')
+                    Positioned(
+                      top: widget.listing['seller_is_premium'] == true ? 24 : 5,
+                      right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text('✅', style: TextStyle(fontSize: 9)),
+                      ),
+                    )
+                  else if (widget.listing['seller_badge'] == 'active_seller')
+                    Positioned(
+                      top: widget.listing['seller_is_premium'] == true ? 24 : 5,
+                      right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text('⭐', style: TextStyle(fontSize: 9)),
+                      ),
+                    ),
+                  if (widget.listing['is_trending'] == true)
+                    Positioned(
+                      bottom: 5, right: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.deepOrange.withValues(alpha: 0.88),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          AppLocalizations.of(context)!.badgeTrending,
+                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  if (widget.listing['is_highlight'] == true)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.15),
+                              Colors.red.withValues(alpha: 0.75),
+                            ],
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (_pulseAnim != null)
+                              AnimatedBuilder(
+                                animation: _pulseAnim!,
+                                builder: (_, _) => Opacity(
+                                  opacity: _pulseAnim!.value,
+                                  child: Container(
+                                    width: 8, height: 8,
+                                    margin: const EdgeInsets.only(bottom: 4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(4, 0, 4, 6),
+                              child: Text(
+                                '🔴 Alev\nAlev!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (widget.listing['is_highlight'] == true)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                color: Colors.red,
+                child: const Text(
+                  'Canlı Yayına Katıl →',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 5, 6, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.listing['title'] as String? ?? '',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary(context)),
+                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                    ),
+                    if (price.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(price,
+                          style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700)),
+                    ],
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ── İlan grid tile ──────────────────────────────────────────────────────────
