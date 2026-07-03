@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["4SUTR2VZVG.teqlif"],
+        "components": [
+          { "/": "/invite*" },
+          { "/": "/ilan/*" },
+          { "/": "/profil/*" },
+          { "/": "/yayin/*" }
+        ]
+      }
+    ]
+  }
+}

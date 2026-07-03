@@ -19,6 +19,7 @@
   <meta name="twitter:image"      content="{{ og_image }}">
   <meta name="description"        content="{{ og_description }}">
 
+  <meta name="apple-itunes-app" content="app-id=6744777483, app-argument={{ app_scheme }}">
   <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
   <link rel="apple-touch-icon"    href="/static/icons/icon-192.png">
 
@@ -90,7 +91,7 @@
       </div>
       <div class="title">{{ og_title }}</div>
       <div class="desc">{{ og_description }}</div>
-      <a class="btn-open" href="{{ app_scheme }}" id="btnOpen">Uygulamada Aç</a>
+      <a class="btn-open" href="#" id="btnOpen">Uygulamayı İndir / Aç</a>
       <a class="btn-web" href="{{ web_url }}" id="btnWeb">Web'de Devam Et</a>
       <div class="status" id="status"></div>
     </div>
@@ -117,53 +118,30 @@
         return;
       }
 
-      // ── "Uygulamada Aç" tıklanınca: scheme dene, yüklü değilse store'a git ──
-      // iOS custom scheme sessizce başarısız olur; visibilitychange ile app açılıp
-      // açılmadığını anlarız. 1.5s içinde sayfa gizlenmezse store'a yönlendir.
+      // ── "Uygulamayı İndir / Aç" butonu ───────────────────────────────
+      // Universal Link kuruluysa uygulama linke tıklanınca doğrudan açılır
+      // (bu sayfaya hiç gelmez). Buraya gelenler büyük ihtimalle uygulamayı
+      // yüklü değil — önce store'a git; yüklüyse scheme ile dene.
       btnOpen.addEventListener('click', function (e) {
         e.preventDefault();
-        var appOpened = false;
-        var fallback = setTimeout(function () {
-          if (!appOpened) window.location.href = storeUrl;
-        }, 1500);
+        var opened = false;
+        // Uygulama açılırsa (Universal Link veya scheme) sayfa gizlenir
         var onHide = function () {
           if (document.hidden) {
-            appOpened = true;
-            clearTimeout(fallback);
+            opened = true;
             document.removeEventListener('visibilitychange', onHide);
           }
         };
         document.addEventListener('visibilitychange', onHide);
+
+        // Önce scheme'i dene (yüklüyse açar, hata vermez çünkü user gesture var)
         window.location.href = appScheme;
-      });
 
-      // ── Sayfa yüklenince otomatik dene (Android / WAB için) ───────────
-      var autoOpened = false;
-      document.addEventListener('visibilitychange', function () {
-        if (document.hidden) autoOpened = true;
+        // 1.5s içinde açılmadıysa store'a git
+        setTimeout(function () {
+          if (!opened) window.location.href = storeUrl;
+        }, 1500);
       });
-      try { window.location.href = appScheme; } catch (_) {}
-
-      // 1.2s sonra: uygulama açılmadıysa store indirme ekranına geç
-      setTimeout(function () {
-        var opened = autoOpened || document.hidden;
-        document.body.innerHTML =
-          '<div style="height:100vh;display:flex;align-items:center;justify-content:center;' +
-          'background:#0f172a;font-family:-apple-system,sans-serif;padding:24px;box-sizing:border-box">' +
-          '<div style="text-align:center;color:#f1f5f9;max-width:320px">' +
-          (opened
-            ? '<div style="font-size:48px;margin-bottom:16px">✅</div>' +
-              '<p style="font-size:18px;font-weight:700;margin:0 0 8px">Uygulama açıldı</p>' +
-              '<p style="font-size:14px;color:#94a3b8;margin:0">teqlif uygulamasına geri dönebilirsiniz.</p>'
-            : '<div style="font-size:48px;margin-bottom:16px">📲</div>' +
-              '<p style="font-size:18px;font-weight:700;margin:0 0 8px">teqlif uygulamasını indirin</p>' +
-              '<p style="font-size:14px;color:#94a3b8;margin:0 0 24px">Canlı yayınları izlemek için uygulamayı yükleyin.</p>' +
-              '<a href="' + storeUrl + '" style="display:inline-block;background:#06b6d4;color:#fff;' +
-              'padding:12px 28px;border-radius:20px;font-weight:700;font-size:15px;text-decoration:none">' +
-              (isIOS ? 'App Store\'dan İndir' : 'Google Play\'den İndir') + '</a>'
-          ) +
-          '</div></div>';
-      }, 1200);
     })();
   </script>
 </body>

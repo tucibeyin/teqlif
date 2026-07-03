@@ -405,6 +405,13 @@ if os.path.exists(frontend_dir):
     async def serve_index():
         return FileResponse(os.path.join(frontend_dir, "index.html"))
 
+    @app.get("/.well-known/apple-app-site-association", include_in_schema=False)
+    async def serve_aasa():
+        return FileResponse(
+            os.path.join(frontend_dir, ".well-known", "apple-app-site-association"),
+            media_type="application/json",
+        )
+
     @app.get("/ilan/{listing_id}", include_in_schema=False)
     async def serve_listing_page(request: Request, listing_id: str):
         try:
