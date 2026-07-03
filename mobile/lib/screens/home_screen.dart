@@ -10,6 +10,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/analytics_service.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../services/city_service.dart';
 import '../services/feed_telemetry_service.dart';
 import '../services/listing_service.dart';
@@ -165,6 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final done = (userInfo?['onboarding_completed'] == true) || (prefs.getBool('onboarding_done') == true);
       final skipped = prefs.getBool('onboarding_skipped') == true;
       if (mounted) setState(() => _showOnboardingBanner = !(done || skipped));
+      // Cache stale olabilir (reinstall sonrası) — sunucuya sor ve güncelle
+      if (!done && !skipped) unawaited(_checkOnboardingFromServer());
     }
 
     if (_hasFilter) {
@@ -178,7 +181,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Sana Özel (yatay, ClickHouse kişiselleştirilmiş) ─────────────────────
 
-  // ── Sana Özel (yatay, ClickHouse kişiselleştirilmiş) ─────────────────────
+  // Reinstall sonrası stale cache durumunda sunucuyu kontrol eder.
+  Future<void> _checkOnboardingFromServer() async {
+    try {
+      final user = await AuthService.me();
+      if (!user.onboardingCompleted) return;
+      await StorageService.saveUserInfo(
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        isPremium: user.isPremium,
+        onboardingCompleted: true,
+        isVerified: user.isVerified,
+        phoneVerified: user.phoneVerified,
+      );
+      if (mounted) setState(() => _showOnboardingBanner = false);
+    } catch (_) {}
+  }
 
   /// SWR stream'den dinler: 1. event cache'ten anlık, 2. event API'den taze.
   Future<void> _loadForYou({bool bypassCache = false}) async {
