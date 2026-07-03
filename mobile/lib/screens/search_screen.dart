@@ -778,10 +778,13 @@ class _SearchScreenState extends State<SearchScreen> {
           // ── Boş durum ────────────────────────────────────────────
           if (_exploreStreams.isEmpty && _exploreListings.isEmpty)
             SliverFillRemaining(
+              hasScrollBody: false,
               child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     Icon(
                       _isLoggedIn
                           ? Icons.auto_awesome_outlined
@@ -798,6 +801,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       style: const TextStyle(color: Color(0xFF6B7280)),
                     ),
                   ],
+                ),
                 ),
               ),
             ),

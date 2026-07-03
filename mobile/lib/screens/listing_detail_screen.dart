@@ -239,7 +239,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       );
       if (resp.statusCode == 200 && mounted) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        setState(() => _isFavorited = data['is_favorited'] as bool? ?? false);
+        final isFav = data['is_favorited'] as bool? ?? false;
+        setState(() {
+          _isFavorited = isFav;
+          if (isFav) _isLiked = true;
+        });
       }
     } catch (_) {}
   }
