@@ -32,7 +32,7 @@ router = APIRouter(prefix="/api/ads", tags=["ads"])
 # ── Boost Kredi Sabitleri ─────────────────────────────────────────────────────
 
 _BOOST_LIMIT_FREE = 0   # Ücretsiz hesap: boost yapamaz
-_BOOST_LIMIT_PRO  = 20  # Pro hesap: ayda 20 boost
+_BOOST_LIMIT_PRO  = 3   # Pro hesap: ayda 3 boost
 
 
 def _boost_redis_key(user_id: int) -> str:
@@ -82,7 +82,7 @@ async def create_campaign(
     """
     Satıcı kendi ilanı için reklam kampanyası başlatır.
 
-    - Pro kullanıcılar ayda 20 boost hakkına sahiptir (ücretsiz).
+    - Pro kullanıcılar ayda 3 boost hakkına sahiptir (ücretsiz).
     - Aylık hak biterse TUCi bakiyesinden 50 TUCi düşürülerek boost yapılır.
     - Ücretsiz hesaplar boost yapamaz.
     - İlanın sahibi olduğu doğrulanır.
@@ -94,7 +94,7 @@ async def create_campaign(
     if boost_limit == 0:
         raise HTTPException(
             status_code=403,
-            detail="İlan öne çıkarma yalnızca Pro hesaplara özeldir. Pro'ya geçerek ayda 20 boost hakkı kazanabilirsin.",
+            detail="İlan öne çıkarma yalnızca Pro hesaplara özeldir. Pro'ya geçerek ayda 3 boost hakkı kazanabilirsin.",
         )
     boost_used = await _get_boost_used(current_user.id)
 

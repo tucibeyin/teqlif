@@ -22,6 +22,7 @@ class ProHubScreen extends StatefulWidget {
 class _ProHubScreenState extends State<ProHubScreen> {
   Map<String, dynamic>? _credits;
   Map<String, dynamic>? _boostCredits;
+  Map<String, dynamic>? _aiCredits;
   bool _isPremium = false;
 
   @override
@@ -55,10 +56,12 @@ class _ProHubScreenState extends State<ProHubScreen> {
   Future<void> _loadCredits() async {
     final blastData = await AnalyticsService.getBlastCredits();
     final boostData = await AnalyticsService.getBoostCredits();
+    final aiData    = await AnalyticsService.getAiPriceCredits();
     if (mounted) {
       setState(() {
-        _credits = blastData;
+        _credits      = blastData;
         _boostCredits = boostData;
+        _aiCredits    = aiData;
       });
     }
   }
@@ -185,6 +188,22 @@ class _ProHubScreenState extends State<ProHubScreen> {
             ),
           ),
           _BoostCreditCard(credits: _boostCredits, isPremium: isPremium),
+
+          // ── AI Fiyat Danışmanı Kredi Kartı ────────────────────────────────
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 12),
+            child: Text(
+              'Yapay Zeka Fiyat Danışmanı',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary(context),
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+          _AiCreditCard(credits: _aiCredits, isPremium: isPremium),
 
           if (!isPremium) ...[
             const SizedBox(height: 28),
@@ -545,8 +564,8 @@ class _BlastCreditCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final used      = credits?['used']      as int? ?? 0;
-    final limit     = credits?['limit']     as int? ?? (isPremium ? 20 : 3);
-    final remaining = credits?['remaining'] as int? ?? (isPremium ? 20 : 3);
+    final limit     = credits?['limit']     as int? ?? (isPremium ? 5 : 3);
+    final remaining = credits?['remaining'] as int? ?? (isPremium ? 5 : 3);
     final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
 
     final Color barColor = remaining == 0
@@ -618,7 +637,7 @@ class _BlastCreditCard extends StatelessWidget {
                     color: const Color(0xFFFFB800),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text('PRO: 20/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
+                  child: const Text('PRO: 5/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
                 ),
             ],
           ),
@@ -645,6 +664,135 @@ class _BlastCreditCard extends StatelessWidget {
   }
 }
 
+// ── AI Fiyat Danışmanı Kredi Kartı ────────────────────────────────────────────
+
+class _AiCreditCard extends StatelessWidget {
+  final Map<String, dynamic>? credits;
+  final bool isPremium;
+
+  const _AiCreditCard({required this.credits, required this.isPremium});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final used      = credits?['used']      as int? ?? 0;
+    final limit     = credits?['limit']     as int? ?? (isPremium ? 20 : 0);
+    final remaining = credits?['remaining'] as int? ?? (isPremium ? 20 : 0);
+    final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
+
+    final Color barColor = remaining == 0
+        ? const Color(0xFFEF4444)
+        : remaining <= limit ~/ 4
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF22C55E);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.auto_awesome_outlined, color: Color(0xFF6366F1), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bu Ay Kalan Sorgu',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                    ),
+                    const SizedBox(height: 2),
+                    isPremium
+                      ? RichText(
+                          text: TextSpan(
+                            style: TextStyle(color: AppColors.textPrimary(context)),
+                            children: [
+                              TextSpan(
+                                text: '$remaining',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: barColor,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' / $limit',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Text(
+                          '5 TUCi/sorgu',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+              if (!isPremium)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFB800),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('PRO: 20/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
+                ),
+            ],
+          ),
+          if (isPremium) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: AppColors.border(context),
+                valueColor: AlwaysStoppedAnimation<Color>(barColor),
+                minHeight: 6,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              remaining == 0
+                  ? 'Aylık ücretsiz hakkınız doldu. Ek sorgular 5 TUCi/adet.'
+                  : '$used sorgu kullanıldı, $remaining sorgu kaldı',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            Text(
+              'Pro üyelikte ayda 20 ücretsiz sorgu hakkı kazanırsınız.',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 // ── Boost Kredi Kartı ──────────────────────────────────────────────────────────
 
 class _BoostCreditCard extends StatelessWidget {
@@ -657,8 +805,8 @@ class _BoostCreditCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final used      = credits?['used']      as int? ?? 0;
-    final limit     = credits?['limit']     as int? ?? (isPremium ? 20 : 0);
-    final remaining = credits?['remaining'] as int? ?? (isPremium ? 20 : 0);
+    final limit     = credits?['limit']     as int? ?? (isPremium ? 3 : 0);
+    final remaining = credits?['remaining'] as int? ?? (isPremium ? 3 : 0);
     final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
 
     final Color barColor = remaining == 0
@@ -730,7 +878,7 @@ class _BoostCreditCard extends StatelessWidget {
                     color: const Color(0xFFFFB800),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text('PRO: 20/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
+                  child: const Text('PRO: 3/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
                 ),
             ],
           ),

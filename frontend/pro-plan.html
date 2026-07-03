@@ -400,6 +400,69 @@
         .price-sub   { font-size: .65rem; color: var(--text-dim); margin-top: .12rem; min-height: .8rem; }
         .price-free  { font-size: 1.1rem; font-weight: 800; color: var(--text-dim); }
 
+        /* ── Fiyat hero kartı ──────────────────────────────────── */
+        .price-hero {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .price-card {
+            flex: 1;
+            min-width: 180px;
+            background: var(--surface);
+            border: 1px solid var(--border-dark);
+            border-radius: 14px;
+            padding: 1rem 1.2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .15s, background .15s;
+        }
+
+        .price-card.selected {
+            background: var(--pro-bg);
+            border-color: var(--pri);
+            box-shadow: 0 0 18px rgba(6,182,212,.18);
+        }
+
+        .price-card-label {
+            font-size: .72rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            margin-bottom: .4rem;
+        }
+
+        .price-card-amount {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--pri);
+            line-height: 1;
+        }
+
+        .price-card-period {
+            font-size: .78rem;
+            color: var(--text-dim);
+            margin-top: .18rem;
+        }
+
+        .price-card-save {
+            display: inline-block;
+            margin-top: .45rem;
+            background: rgba(74,222,128,.14);
+            color: var(--green);
+            font-size: .68rem;
+            font-weight: 800;
+            padding: .12rem .55rem;
+            border-radius: 50px;
+            border: 1px solid rgba(74,222,128,.25);
+        }
+
+        .price-card-save.hidden { visibility: hidden; }
+
         .tfoot-val-inner strong {
             display: block;
             font-size: .72rem;
@@ -522,6 +585,22 @@
         <p>Daha fazla kazan, verilerle karar al, platformun tüm gücünü aç.</p>
     </div>
 
+    <!-- Fiyat kartları -->
+    <div class="price-hero">
+        <div class="price-card selected" id="cardMonthly">
+            <div class="price-card-label">Aylık Plan</div>
+            <div class="price-card-amount" id="priceMonthlyAmt">₺199</div>
+            <div class="price-card-period">/ay · istediğin zaman iptal</div>
+            <span class="price-card-save hidden">—</span>
+        </div>
+        <div class="price-card" id="cardYearly">
+            <div class="price-card-label">Yıllık Plan</div>
+            <div class="price-card-amount" id="priceYearlyAmt">₺1.990</div>
+            <div class="price-card-period">/yıl · ~₺166/ay</div>
+            <span class="price-card-save">🎉 2 ay bedava</span>
+        </div>
+    </div>
+
     <div class="plan-toggle">
         <button class="toggle-btn active" id="btnMonthly">Aylık</button>
         <button class="toggle-btn" id="btnYearly">
@@ -599,16 +678,16 @@
                         </div>
                     </td>
                     <td class="td-std"><span class="v-dim">5 TUCi/kullanım</span></td>
-                    <td class="td-pro"><span class="v-ok">⚡ Ücretsiz</span></td>
+                    <td class="td-pro"><span class="v-ok">⚡ 20/ay ücretsiz</span></td>
                     <td class="td-val">
                         <div class="val-card">
                             <div class="val-amount">~₺100/ay</div>
-                            <div class="val-desc">20 kullanım × 5 TUCi<br>= 100 TL tasarruf</div>
+                            <div class="val-desc">20 sorgu × 5 TUCi<br>= 100 TL tasarruf</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="desc-row" data-key="ai">
-                    <td colspan="4"><div class="desc-inner">İlan oluştururken yapay zeka, platformdaki benzer ürünlerin geçmiş satışlarını analiz ederek size en rekabetçi fiyatı saniyeler içinde önerir. Standart kullanıcılar bu özellik için TUCi öderken Pro'da tamamen ücretsizdir.</div></td>
+                    <td colspan="4"><div class="desc-inner">İlan oluştururken yapay zeka, platformdaki benzer ürünlerin geçmiş satışlarını analiz ederek size en rekabetçi fiyatı saniyeler içinde önerir. Pro kullanıcılar ayda 20 sorgu ücretsiz kullanabilir; standart kullanıcılar her sorgu için 5 TUCi öder.</div></td>
                 </tr>
 
                 <!-- 4 -->
@@ -641,16 +720,16 @@
                         </div>
                     </td>
                     <td class="td-std"><span class="v-dim">0 adet / ay</span></td>
-                    <td class="td-pro"><span class="v-ok">✔ 20 adet / ay</span></td>
+                    <td class="td-pro"><span class="v-ok">✔ 3 adet / ay</span></td>
                     <td class="td-val">
                         <div class="val-card">
-                            <div class="val-amount">₺1.000/ay</div>
-                            <div class="val-desc">20 boost × 50 TUCi<br>= 1.000 TL değer</div>
+                            <div class="val-amount">₺150/ay</div>
+                            <div class="val-desc">3 boost × 50 TUCi<br>= 150 TL değer</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="desc-row" data-key="boost">
-                    <td colspan="4"><div class="desc-inner">Ayda 20 ilanınızı rakiplerinizin önüne geçirecek şekilde "Sana Özel" akışında öne çıkarabilirsiniz. Her boost 50 TUCi bütçeyle çalışır ve tıklama başına 1 TUCi harcar — bütçe bitene kadar ilanınız ön sırada görünür.</div></td>
+                    <td colspan="4"><div class="desc-inner">Ayda 3 ilanınızı rakiplerinizin önüne geçirecek şekilde "Sana Özel" akışında öne çıkarabilirsiniz. Her boost 50 TUCi bütçeyle çalışır ve tıklama başına 1 TUCi harcar — bütçe bitene kadar ilanınız ön sırada görünür.</div></td>
                 </tr>
 
                 <!-- 6 -->
@@ -683,11 +762,11 @@
                         </div>
                     </td>
                     <td class="td-std"><span class="v-dim">3 adet / ay</span></td>
-                    <td class="td-pro"><span class="v-ok">20 adet / ay</span></td>
+                    <td class="td-pro"><span class="v-ok">5 adet / ay</span></td>
                     <td class="td-val">
                         <div class="val-card">
-                            <div class="val-amount">Maksimum Etki</div>
-                            <div class="val-desc">+17 ekstra ücretsiz duyuru hakkı ile binlerce kullanıcıya bedava ulaşın</div>
+                            <div class="val-amount">+2 Ekstra</div>
+                            <div class="val-desc">+2 ekstra ücretsiz duyuru hakkı ile binlerce kullanıcıya bedava ulaşın</div>
                         </div>
                     </td>
                 </tr>
@@ -724,6 +803,11 @@
                         <button class="btn-free" onclick="window.location.href='/'">Ücretsiz Devam Et</button>
                     </td>
                     <td class="tfoot-pro" style="padding:.8rem 1rem; border-bottom:none;">
+                        <div style="margin-bottom:.55rem;">
+                            <div id="tfootPriceLabel" style="font-size:.68rem;color:var(--text-dim);margin-bottom:.18rem;">Aylık</div>
+                            <div id="tfootPriceVal" style="font-size:1.8rem;font-weight:900;color:var(--pri);line-height:1;">₺199</div>
+                            <div id="tfootPriceSub" style="font-size:.65rem;color:var(--text-dim);margin-top:.1rem;">/ ay · iptal istediğin an</div>
+                        </div>
                         <button class="btn-pro" id="btnPro">Hemen Pro Ol 👑</button>
                     </td>
                     <td class="tfoot-val" style="padding:.8rem .85rem; border-bottom:none;">
@@ -741,15 +825,15 @@
     <div class="total-banner">
         <div class="total-banner-left">
             <div class="total-banner-icon">💰</div>
-            <div class="total-banner-text">
-                <strong>Ödediğinizin 5.5 katını geri alırsınız</strong>
-                <span style="color:var(--text-dim);font-size:.74rem;">Boost ve blast haklarınızı kullandığınızda ₺200 ödeyip <strong style="color:var(--green)">₺1.100+ değer</strong> elde edersiniz.</span>
+            <div class="total-banner-text" id="totalBannerText">
+                <strong>₺199 ödeyip ₺250+ değer elde et</strong>
+                <span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + AI danışman (₺100) haklarını kullandığında her ay kazancın maliyetini karşılar.</span>
             </div>
         </div>
         <div class="total-banner-right">
-            <div class="total-val">₺1.100+</div>
-            <div class="total-sub">aylık avantaj değeri</div>
-            <div class="roi-pill">Paranın 5.5 katı değer 🎯</div>
+            <div class="total-val" id="totalVal">₺250+</div>
+            <div class="total-sub" id="totalSub">aylık avantaj değeri</div>
+            <div class="roi-pill" id="roiPill">Maliyetin karşılanır 🎯</div>
         </div>
     </div>
 
@@ -764,6 +848,6 @@
 </div>
 
 <script src="/static/js/main.js"></script>
-<script src="/static/js/pro-plan.js?v=10"></script>
+<script src="/static/js/pro-plan.js?v=11"></script>
 </body>
 </html>

@@ -20,7 +20,8 @@ from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
 from app.database_clickhouse import get_clickhouse_client
 
-AI_PRICE_ESTIMATE_COST = 5  # TUCi
+AI_PRICE_ESTIMATE_COST = 5   # TUCi (standart kullanıcılar ve PRO limit aşınca)
+AI_PRICE_LIMIT_PRO    = 20  # PRO kullanıcılar ayda 20 ücretsiz sorgu
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -362,6 +363,51 @@ async def get_seller_report(
 
 # ── Yapay Zeka Fiyatlama Danışmanı ───────────────────────────────────────────
 
+import calendar as _calendar
+from datetime import datetime as _datetime
+
+def _ai_redis_key(user_id: int) -> str:
+    month = _datetime.now().strftime("%Y-%m")
+    return f"ai_price_credits:{user_id}:{month}"
+
+async def _get_ai_used(user_id: int) -> int:
+    try:
+        redis = await get_redis()
+        val = await redis.get(_ai_redis_key(user_id))
+        return int(val) if val else 0
+    except Exception:
+        return 0
+
+async def _increment_ai(user_id: int) -> None:
+    try:
+        redis = await get_redis()
+        key = _ai_redis_key(user_id)
+        count = await redis.incr(key)
+        if count == 1:
+            now = _datetime.now()
+            last_day = _calendar.monthrange(now.year, now.month)[1]
+            end_of_month = _datetime(now.year, now.month, last_day, 23, 59, 59)
+            ttl_secs = int((end_of_month - now).total_seconds()) + 1
+            await redis.expire(key, ttl_secs)
+    except Exception:
+        pass
+
+
+@router.get("/ai-price-credits")
+async def ai_price_credits(current_user: User = Depends(get_current_user)):
+    """PRO kullanıcının bu ayki AI fiyat danışmanı kredi durumunu döndürür."""
+    if not current_user.is_premium:
+        return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False}
+    used = await _get_ai_used(current_user.id)
+    remaining = max(0, AI_PRICE_LIMIT_PRO - used)
+    return {
+        "used": used,
+        "limit": AI_PRICE_LIMIT_PRO,
+        "remaining": remaining,
+        "is_premium": True,
+    }
+
+
 class PriceEstimateRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     description: str = Field(default="", max_length=2000)
@@ -377,14 +423,23 @@ async def price_estimate(
     """
     Başlık + açıklama metninden embedding üretir, pgvector ile satılmış benzer
     ilanları bulur ve istatistiksel fiyat tahmini üretir.
-    Pro kullanıcılar ücretsiz; standart kullanıcılar 5 TUCi harcar.
+    Pro kullanıcılar ayda 20 ücretsiz sorgu; standart ve limit aşan Pro kullanıcılar 5 TUCi harcar.
     """
-    # ── TUCi bakiye kontrolü (Pro'ya gerek yok) ──────────────────────────────
-    if not current_user.is_premium and current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
-        raise HTTPException(
-            status_code=402,
-            detail=f"Yetersiz TUCi bakiyesi. Gerekli: {AI_PRICE_ESTIMATE_COST} TUCi, Mevcut: {current_user.tuci_balance} TUCi",
-        )
+    # ── Limit / bakiye kontrolü ───────────────────────────────────────────────
+    if current_user.is_premium:
+        ai_used = await _get_ai_used(current_user.id)
+        if ai_used >= AI_PRICE_LIMIT_PRO and current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
+            raise HTTPException(
+                status_code=402,
+                detail=f"Bu ay {AI_PRICE_LIMIT_PRO} ücretsiz hakkınızı kullandınız. "
+                       f"Ücretli devam için {AI_PRICE_ESTIMATE_COST} TUCi gerekmekte, bakiyeniz: {current_user.tuci_balance} TUCi.",
+            )
+    else:
+        if current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
+            raise HTTPException(
+                status_code=402,
+                detail=f"Yetersiz TUCi bakiyesi. Gerekli: {AI_PRICE_ESTIMATE_COST} TUCi, Mevcut: {current_user.tuci_balance} TUCi",
+            )
 
     from app.services.ml_service import generate_embedding
 
@@ -469,9 +524,27 @@ async def price_estimate(
             "satış hızınızı artırabilir."
         )
 
-    # ── TUCi düş + logla (Pro kullanıcılar ücretsiz) ─────────────────────────
+    # ── TUCi düş + sayaç güncelle ─────────────────────────────────────────────
     tuci_spent = 0
-    if not current_user.is_premium:
+    if current_user.is_premium:
+        ai_used = await _get_ai_used(current_user.id)
+        if ai_used < AI_PRICE_LIMIT_PRO:
+            # Aylık ücretsiz hak var
+            await _increment_ai(current_user.id)
+        else:
+            # Ücretsiz hak bitti → TUCi düş
+            await db.execute(
+                sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                {"cost": AI_PRICE_ESTIMATE_COST, "uid": current_user.id},
+            )
+            db.add(TuciTransaction(
+                user_id=current_user.id,
+                amount=-AI_PRICE_ESTIMATE_COST,
+                transaction_type="spend_ai",
+            ))
+            await db.commit()
+            tuci_spent = AI_PRICE_ESTIMATE_COST
+    else:
         await db.execute(
             sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
             {"cost": AI_PRICE_ESTIMATE_COST, "uid": current_user.id},

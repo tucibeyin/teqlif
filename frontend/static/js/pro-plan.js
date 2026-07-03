@@ -9,57 +9,100 @@
         document.getElementById('btnMonthly').classList.toggle('active', !isYearly);
         document.getElementById('btnYearly').classList.toggle('active', isYearly);
 
+        var cardMonthly = document.getElementById('cardMonthly');
+        var cardYearly  = document.getElementById('cardYearly');
+        if (cardMonthly) cardMonthly.classList.toggle('selected', !isYearly);
+        if (cardYearly)  cardYearly.classList.toggle('selected',  isYearly);
+
+        /* tfoot fiyat */
+        var tfLabel = document.getElementById('tfootPriceLabel');
+        var tfVal   = document.getElementById('tfootPriceVal');
+        var tfSub   = document.getElementById('tfootPriceSub');
+
         if (isYearly) {
+            if (tfLabel) tfLabel.textContent  = 'Yıllık';
+            if (tfVal)   tfVal.textContent    = '₺1.990';
+            if (tfSub)   tfSub.textContent    = '/ yıl · ~₺166/ay · 2 ay bedava';
+
+            /* tablo: AI */
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺1.200/yıl';
-            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '240 kullanım × 5 TUCi<br>= 1.200 TL tasarruf';
-            
+            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '240 sorgu × 5 TUCi<br>= 1.200 TL tasarruf';
+
+            /* tablo: boost */
             document.querySelector('tr[data-key="boost"] .td-std span').textContent = '0 adet / yıl';
-            document.querySelector('tr[data-key="boost"] .td-pro span').textContent = '✔ 240 adet / yıl';
-            document.querySelector('tr[data-key="boost"] .val-amount').textContent = '₺12.000/yıl';
-            document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '240 boost × 50 TUCi<br>= 12.000 TL değer';
-            
+            document.querySelector('tr[data-key="boost"] .td-pro span').textContent = '✔ 36 adet / yıl';
+            document.querySelector('tr[data-key="boost"] .val-amount').textContent = '₺1.800/yıl';
+            document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '36 boost × 50 TUCi<br>= 1.800 TL değer';
+
+            /* tablo: blast */
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl';
-            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '240 adet / yıl';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = 'Maksimum Etki';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+204 ekstra ücretsiz duyuru hakkı ile on binlerce kullanıcıya bedava ulaşın';
-            
+            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '60 adet / yıl';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+24 Ekstra';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+24 ekstra ücretsiz duyuru hakkı ile on binlerce kullanıcıya bedava ulaşın';
+
+            /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺2.000 yatır,<br><span style="color:var(--green);font-weight:700;">₺13.200+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺3.000+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
             }
-            
-            document.querySelector('.total-banner-text').innerHTML = '<strong>Ödediğinizin 6.5 katını geri alırsınız</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost ve diğer haklarınızı kullandığınızda ₺2.000 ödeyip <strong style="color:var(--green)">₺13.200+ değer</strong> elde edersiniz.</span>';
-            document.querySelector('.total-val').textContent = '₺13.200+';
-            document.querySelector('.total-sub').textContent = 'yıllık avantaj değeri';
-            document.querySelector('.roi-pill').textContent = 'Paranın 6.5 katı değer 🎯';
+
+            /* banner */
+            var bannerText = document.getElementById('totalBannerText');
+            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺3.000+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + AI danışman (₺1.200) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
+            var totalVal = document.getElementById('totalVal');
+            if (totalVal) totalVal.textContent = '₺3.000+';
+            var totalSub = document.getElementById('totalSub');
+            if (totalSub) totalSub.textContent = 'yıllık avantaj değeri';
+            var roiPill = document.getElementById('roiPill');
+            if (roiPill) roiPill.textContent = 'Maliyetin 1.5 katı değer 🎯';
+
         } else {
+            if (tfLabel) tfLabel.textContent  = 'Aylık';
+            if (tfVal)   tfVal.textContent    = '₺199';
+            if (tfSub)   tfSub.textContent    = '/ ay · iptal istediğin an';
+
+            /* tablo: AI */
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺100/ay';
-            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '20 kullanım × 5 TUCi<br>= 100 TL tasarruf';
-            
+            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '20 sorgu × 5 TUCi<br>= 100 TL tasarruf';
+
+            /* tablo: boost */
             document.querySelector('tr[data-key="boost"] .td-std span').textContent = '0 adet / ay';
-            document.querySelector('tr[data-key="boost"] .td-pro span').textContent = '✔ 20 adet / ay';
-            document.querySelector('tr[data-key="boost"] .val-amount').textContent = '₺1.000/ay';
-            document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '20 boost × 50 TUCi<br>= 1.000 TL değer';
-            
+            document.querySelector('tr[data-key="boost"] .td-pro span').textContent = '✔ 3 adet / ay';
+            document.querySelector('tr[data-key="boost"] .val-amount').textContent = '₺150/ay';
+            document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '3 boost × 50 TUCi<br>= 150 TL değer';
+
+            /* tablo: blast */
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay';
-            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '20 adet / ay';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = 'Maksimum Etki';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+17 ekstra ücretsiz duyuru hakkı ile binlerce kullanıcıya bedava ulaşın';
-            
+            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '5 adet / ay';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+2 Ekstra';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+2 ekstra ücretsiz duyuru hakkı ile binlerce kullanıcıya bedava ulaşın';
+
+            /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺200 yatır,<br><span style="color:var(--green);font-weight:700;">₺1.100+ kazan.</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺250+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
             }
-            
-            document.querySelector('.total-banner-text').innerHTML = '<strong>Ödediğinizin 5.5 katını geri alırsınız</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost ve diğer haklarınızı kullandığınızda ₺200 ödeyip <strong style="color:var(--green)">₺1.100+ değer</strong> elde edersiniz.</span>';
-            document.querySelector('.total-val').textContent = '₺1.100+';
-            document.querySelector('.total-sub').textContent = 'aylık avantaj değeri';
-            document.querySelector('.roi-pill').textContent = 'Paranın 5.5 katı değer 🎯';
+
+            /* banner */
+            var bannerText = document.getElementById('totalBannerText');
+            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺250+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + AI danışman (₺100) haklarını kullandığında her ay kazancın maliyetin karşılar.</span>';
+            var totalVal = document.getElementById('totalVal');
+            if (totalVal) totalVal.textContent = '₺250+';
+            var totalSub = document.getElementById('totalSub');
+            if (totalSub) totalSub.textContent = 'aylık avantaj değeri';
+            var roiPill = document.getElementById('roiPill');
+            if (roiPill) roiPill.textContent = 'Maliyetin karşılanır 🎯';
         }
     }
 
     document.getElementById('btnMonthly').addEventListener('click', function () { setPlan('monthly'); });
     document.getElementById('btnYearly').addEventListener('click',  function () { setPlan('yearly');  });
+
+    /* Fiyat kartlarına da tıklanabilirlik */
+    var cardM = document.getElementById('cardMonthly');
+    var cardY = document.getElementById('cardYearly');
+    if (cardM) cardM.addEventListener('click', function () { setPlan('monthly'); });
+    if (cardY) cardY.addEventListener('click', function () { setPlan('yearly');  });
 
     /* ── Açılır satırlar ────────────────────────────────────── */
     document.querySelectorAll('tr.feat-row').forEach(function (row) {
@@ -68,7 +111,6 @@
             var descRow = document.querySelector('tr.desc-row[data-key="' + key + '"]');
             var isOpen  = row.classList.contains('open');
 
-            // Diğer açık satırları kapat
             document.querySelectorAll('tr.feat-row.open').forEach(function (r) {
                 r.classList.remove('open');
                 var dk = r.dataset.key;

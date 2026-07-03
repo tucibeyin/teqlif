@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api/leads", tags=["leads"])
 
 COST_PER_PERSON: int = 1  # TUCi per kişi
 _BLAST_LIMIT_STANDARD = 3
-_BLAST_LIMIT_PRO      = 20
+_BLAST_LIMIT_PRO      = 5
 
 
 # ── Blast Kredi Yardımcıları (Redis) ─────────────────────────────────────────
