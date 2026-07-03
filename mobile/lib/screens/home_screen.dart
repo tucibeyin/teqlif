@@ -1323,8 +1323,9 @@ class _GridItemState extends State<_GridItem> {
   @override
   void initState() {
     super.initState();
+    final id = widget.listing['id'] as int;
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
-    _isLiked = widget.listing['is_liked'] as bool? ?? false;
+    _isLiked = ListingService.getCachedLike(id) ?? (widget.listing['is_liked'] as bool? ?? false);
     if (widget.listing['is_sponsored'] == true) {
       final cid = widget.listing['campaign_id'];
       if (cid != null) AnalyticsService.trackAdImpression(cid as int);
@@ -1334,14 +1335,19 @@ class _GridItemState extends State<_GridItem> {
   @override
   void didUpdateWidget(_GridItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Farklı ilan geldi → State'i sıfırla; aynı ilan → yerel beğeni durumunu koru
-    if (oldWidget.listing['id'] != widget.listing['id']) {
+    final id = widget.listing['id'] as int;
+    if (oldWidget.listing['id'] != id) {
+      // Farklı ilan → tamamen sıfırla
       _likesCount = widget.listing['likes_count'] as int? ?? 0;
-      _isLiked = widget.listing['is_liked'] as bool? ?? false;
+      _isLiked = ListingService.getCachedLike(id) ?? (widget.listing['is_liked'] as bool? ?? false);
       if (widget.listing['is_sponsored'] == true) {
         final cid = widget.listing['campaign_id'];
         if (cid != null) AnalyticsService.trackAdImpression(cid as int);
       }
+    } else {
+      // Aynı ilan → cache'te güncelleme varsa uygula
+      final cached = ListingService.getCachedLike(id);
+      if (cached != null && cached != _isLiked) _isLiked = cached;
     }
   }
 

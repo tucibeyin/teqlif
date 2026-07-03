@@ -2384,7 +2384,8 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   Future<void> _removeFavorite(dynamic listing) async {
     final id = listing['id'] as int;
     final wasLiked = listing['is_liked'] as bool? ?? false;
-    // Optimistic: anında listeden kaldır
+    // Optimistic: anında listeden kaldır; cache'i hemen güncelle
+    ListingService.setLikeCache(id, false);
     setState(() => _listings.removeWhere((l) => l['id'] == id));
     final token = await StorageService.getToken();
     if (token == null) return;
@@ -2393,12 +2394,12 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
         Uri.parse('$kBaseUrl/favorites/$id'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      // Beğeniyi de kaldır — favori ile beğeni senkron tutulur
       if (wasLiked) {
         await ListingService.toggleLike(id);
       }
     } catch (e) {
       LoggerService.instance.warning('FavoritesScreen', 'Favori kaldırılamadı: $e');
+      ListingService.setLikeCache(id, true);
       await _load();
     }
   }

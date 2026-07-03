@@ -9,6 +9,15 @@ import 'api_service.dart';
 import 'storage_service.dart';
 
 class ListingService {
+  // Uygulama oturumu boyunca beğeni durumunu tutan merkezi cache.
+  // Herhangi bir ekrandan toggleLike / setLikeCache çağrılınca güncellenir;
+  // _GridItem.initState önce buraya bakarak en güncel durumu okur.
+  static final Map<int, bool> _likeCache = {};
+
+  static bool? getCachedLike(int id) => _likeCache[id];
+
+  static void setLikeCache(int id, bool liked) => _likeCache[id] = liked;
+
   static Future<Map<String, String>> _headers({bool auth = true}) async {
     final token = auth ? await StorageService.getToken() : null;
     return {
@@ -85,7 +94,9 @@ class ListingService {
         headers: await _headers(auth: true),
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        final result = jsonDecode(resp.body) as Map<String, dynamic>;
+        _likeCache[listingId] = result['is_liked'] as bool? ?? false;
+        return result;
       }
       final body = jsonDecode(resp.body) as Map<String, dynamic>;
       final errMap = body['error'] as Map?;
