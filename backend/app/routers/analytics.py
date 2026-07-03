@@ -1878,9 +1878,9 @@ async def category_velocity(
     velocity_row = (await db.execute(sql_text("""
         SELECT
             COUNT(*) AS total_sold,
-            ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.created_at) - l.created_at)) / 86400.0), 1) AS avg_days,
-            ROUND(MIN(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.created_at) - l.created_at)) / 86400.0), 1) AS min_days,
-            ROUND(MAX(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.created_at) - l.created_at)) / 86400.0), 1) AS max_days,
+            ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.started_at) - l.created_at)) / 86400.0), 1) AS avg_days,
+            ROUND(MIN(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.started_at) - l.created_at)) / 86400.0), 1) AS min_days,
+            ROUND(MAX(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.started_at) - l.created_at)) / 86400.0), 1) AS max_days,
             ROUND(AVG(l.price), 0) AS avg_price,
             ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY l.price), 0) AS p25_price,
             ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY l.price), 0) AS p75_price
@@ -1889,7 +1889,7 @@ async def category_velocity(
         WHERE a.status = 'ended'
           AND a.winner_username IS NOT NULL
           AND l.category = :cat
-          AND COALESCE(a.ended_at, a.created_at) > NOW() - INTERVAL '90 days'
+          AND COALESCE(a.ended_at, a.started_at) > NOW() - INTERVAL '90 days'
           AND l.price IS NOT NULL
     """), {"cat": category})).fetchone()
 
@@ -1897,7 +1897,7 @@ async def category_velocity(
     price_sens = (await db.execute(sql_text("""
         SELECT
             CASE WHEN l.price <= pct.p50 THEN 'ucuz' ELSE 'pahalı' END AS bucket,
-            ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.created_at) - l.created_at)) / 86400.0), 1) AS avg_days,
+            ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.started_at) - l.created_at)) / 86400.0), 1) AS avg_days,
             COUNT(*) AS count
         FROM auctions a
         INNER JOIN listings l ON l.id = a.listing_id
@@ -1910,7 +1910,7 @@ async def category_velocity(
         WHERE a.status = 'ended'
           AND a.winner_username IS NOT NULL
           AND l.category = :cat
-          AND COALESCE(a.ended_at, a.created_at) > NOW() - INTERVAL '90 days'
+          AND COALESCE(a.ended_at, a.started_at) > NOW() - INTERVAL '90 days'
           AND l.price IS NOT NULL
         GROUP BY bucket
     """), {"cat": category})).fetchall()
