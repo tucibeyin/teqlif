@@ -108,35 +108,45 @@
       var isMobile  = isIOS || isAndroid;
 
       var storeUrl = isIOS ? IOS_STORE : ANDROID_STORE;
-      var status   = document.getElementById('status');
       var btnOpen  = document.getElementById('btnOpen');
       var btnWeb   = document.getElementById('btnWeb');
 
-      // ── Masaüstü ──────────────────────────────────────────────────────
+      // ── Masaüstü: doğrudan web'e git ──────────────────────────────────
       if (!isMobile) {
         window.location.replace(btnWeb.href);
         return;
       }
 
-      // ── Mobil ─────────────────────────────────────────────────────────
-      // WhatsApp, Universal Link ile uygulamayı açarken aynı anda IAB'ini
-      // de açıyor. IAB öne geldiğinde konfüze edici içerik göstermemek için:
-      // 1. Hemen teqlif:// tetikle (uygulama zaten açıksa sadece öne geçer)
-      // 2. 1.2s sonra sayfayı minimal mesaja dönüştür
-      //    - Uygulama açıldıysa: "Uygulama açıldı"
-      //    - Açılmadıysa (kurulu değil): store linkleri
-
-      var appOpened = false;
-      document.addEventListener('visibilitychange', function () {
-        if (document.hidden) appOpened = true;
+      // ── "Uygulamada Aç" tıklanınca: scheme dene, yüklü değilse store'a git ──
+      // iOS custom scheme sessizce başarısız olur; visibilitychange ile app açılıp
+      // açılmadığını anlarız. 1.5s içinde sayfa gizlenmezse store'a yönlendir.
+      btnOpen.addEventListener('click', function (e) {
+        e.preventDefault();
+        var appOpened = false;
+        var fallback = setTimeout(function () {
+          if (!appOpened) window.location.href = storeUrl;
+        }, 1500);
+        var onHide = function () {
+          if (document.hidden) {
+            appOpened = true;
+            clearTimeout(fallback);
+            document.removeEventListener('visibilitychange', onHide);
+          }
+        };
+        document.addEventListener('visibilitychange', onHide);
+        window.location.href = appScheme;
       });
 
-      // Scheme'i tetikle — uygulama kuruluysa açar/öne geçer
+      // ── Sayfa yüklenince otomatik dene (Android / WAB için) ───────────
+      var autoOpened = false;
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) autoOpened = true;
+      });
       try { window.location.href = appScheme; } catch (_) {}
 
-      // 1.2s sonra sayfayı değiştir
+      // 1.2s sonra: uygulama açılmadıysa store indirme ekranına geç
       setTimeout(function () {
-        var opened = appOpened || document.hidden;
+        var opened = autoOpened || document.hidden;
         document.body.innerHTML =
           '<div style="height:100vh;display:flex;align-items:center;justify-content:center;' +
           'background:#0f172a;font-family:-apple-system,sans-serif;padding:24px;box-sizing:border-box">' +
