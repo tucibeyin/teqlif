@@ -341,21 +341,21 @@ async def retargeting_audience(
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
 
-        # ClickHouse: bu ilanı görüntüleyen eşsiz kullanıcılar (son 30 gün)
-        viewer_result = await ch.query("""
-            SELECT COUNT(DISTINCT user_id) AS cnt
+        # ClickHouse: görüntüleyen eşsiz user_id listesi (son 30 gün)
+        vid_result = await ch.query("""
+            SELECT DISTINCT user_id
             FROM user_events
             WHERE listing_id = %(lid)s
               AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
               AND timestamp >= now() - INTERVAL 30 DAY
               AND user_id != %(uid)s
               AND user_id != 0
+            LIMIT 500
         """, parameters={"lid": listing_id, "uid": current_user.id})
+        viewer_ids = [int(r[0]) for r in vid_result.result_rows]
+        total_viewers = len(viewer_ids)
 
-        viewer_rows = viewer_result.result_rows
-        total_viewers = int(viewer_rows[0][0]) if viewer_rows else 0
-
-        # Satın alanları çıkar (purchases veya auction kazananları)
+        # Satın alanları çıkar
         buyer_result = (await db.execute(sql_text("""
             SELECT COUNT(*) FROM purchases WHERE listing_id = :lid
             UNION ALL
@@ -364,9 +364,15 @@ async def retargeting_audience(
         """), {"lid": listing_id})).fetchall()
         already_bought = sum(int(r[0]) for r in buyer_result)
 
-        reachable = max(0, total_viewers - already_bought)
-        # FCM token'ı olan kullanıcılar ~%70
-        reachable_with_token = round(reachable * 0.70)
+        # Gerçek FCM token sayısını say — tahmin değil, DB'deki gerçek rakam
+        if viewer_ids:
+            token_count = await db.scalar(sql_text("""
+                SELECT COUNT(*) FROM users
+                WHERE id = ANY(:ids) AND fcm_token IS NOT NULL AND fcm_token != ''
+            """), {"ids": viewer_ids})
+            reachable_with_token = int(token_count or 0)
+        else:
+            reachable_with_token = 0
 
         return {
             "listing_id": listing_id,
@@ -450,6 +456,11 @@ async def send_retargeting(
         WHERE id = ANY(:ids) AND fcm_token IS NOT NULL AND fcm_token != ''
     """), {"ids": viewer_ids})).fetchall()
     fcm_tokens = [r[0] for r in token_rows]
+
+    # Kullanıcının onayladığı kişi sayısından fazla gönderme
+    # (tahmin ile gerçek arasındaki farkı kapatır)
+    if body.estimated_audience > 0:
+        fcm_tokens = fcm_tokens[:body.estimated_audience]
 
     if not fcm_tokens:
         return {"sent": 0, "spent": 0, "message": "Bildirim gönderilebilecek kullanıcı bulunamadı."}
