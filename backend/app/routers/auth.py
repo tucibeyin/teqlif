@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, case
+from sqlalchemy import select, func, or_, case, update as sa_update
 
 from app.database import get_db
 from app.models.user import User
@@ -159,6 +159,18 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
     if not user.is_verified:
         raise EmailNotVerifiedException()
 
+    if not user.onboarding_completed:
+        from app.models.user_interest import UserInterest
+        has_interests = await db.scalar(
+            select(func.count()).where(UserInterest.user_id == user.id)
+        )
+        if has_interests:
+            user.onboarding_completed = True
+            await db.execute(
+                sa_update(User).where(User.id == user.id).values(onboarding_completed=True)
+            )
+            await db.commit()
+
     redis = await get_redis()
     token = create_access_token(user.id)
     refresh = create_refresh_token()
@@ -243,7 +255,18 @@ async def check_username(username: str = "", exclude_id: int | None = None, db: 
 
 
 @router.get("/me", response_model=UserOut)
-async def me(current_user: User = Depends(get_current_user)):
+async def me(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if not current_user.onboarding_completed:
+        from app.models.user_interest import UserInterest
+        has_interests = await db.scalar(
+            select(func.count()).where(UserInterest.user_id == current_user.id)
+        )
+        if has_interests:
+            current_user.onboarding_completed = True
+            await db.execute(
+                sa_update(User).where(User.id == current_user.id).values(onboarding_completed=True)
+            )
+            await db.commit()
     return current_user
 
 
