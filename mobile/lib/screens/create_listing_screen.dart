@@ -964,6 +964,7 @@ class _AiPriceButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: loading
               ? [
                   const SizedBox(
