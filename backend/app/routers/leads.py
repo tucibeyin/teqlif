@@ -345,7 +345,7 @@ async def retargeting_audience(
         vid_result = await ch.query("""
             SELECT DISTINCT user_id
             FROM user_events
-            WHERE listing_id = %(lid)s
+            WHERE item_id = %(lid)s
               AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
               AND timestamp >= now() - INTERVAL 30 DAY
               AND user_id != %(uid)s
@@ -436,7 +436,7 @@ async def send_retargeting(
         result = await ch.query("""
             SELECT DISTINCT user_id
             FROM user_events
-            WHERE listing_id = %(lid)s
+            WHERE item_id = %(lid)s
               AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
               AND timestamp >= now() - INTERVAL 30 DAY
               AND user_id != %(uid)s
