@@ -97,38 +97,6 @@
     </div>
   </div>
 
-  <script>
-    (function () {
-      var IOS_STORE     = 'https://apps.apple.com/tr/app/teqlif/id6744777483';
-      var ANDROID_STORE = 'https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile';
-
-      var ua        = navigator.userAgent || '';
-      var isIOS     = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-      var isAndroid = /Android/i.test(ua);
-      var isMobile  = isIOS || isAndroid;
-
-      var storeUrl = isIOS ? IOS_STORE : ANDROID_STORE;
-      var btnOpen  = document.getElementById('btnOpen');
-      var btnWeb   = document.getElementById('btnWeb');
-
-      // ── Masaüstü: doğrudan web'e git ──────────────────────────────────
-      if (!isMobile) {
-        window.location.replace(btnWeb.href);
-        return;
-      }
-
-      // ── Butonu platforma göre etiketle ────────────────────────────────
-      btnOpen.textContent = isIOS ? 'App Store\'dan İndir' : 'Play Store\'dan İndir';
-
-      // ── "İndir" butonu: doğrudan store'a git ─────────────────────────
-      // Universal Link kuruluysa davet linkine tıklanınca uygulama açılır
-      // (landing page gösterilmez). Buraya geliyorsa uygulama yüklü değil.
-      // Smart App Banner zaten yüklü kullanıcılara "Aç" seçeneği gösteriyor.
-      btnOpen.addEventListener('click', function (e) {
-        e.preventDefault();
-        window.location.href = storeUrl;
-      });
-    })();
-  </script>
+  <script src="/static/js/app-landing.js"></script>
 </body>
 </html>
