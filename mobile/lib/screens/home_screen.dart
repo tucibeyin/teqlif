@@ -862,6 +862,13 @@ class HomeScreenState extends State<HomeScreen> {
                                         if (item['is_sponsored'] == true) {
                                           final cid = item['campaign_id'];
                                           if (cid != null) AnalyticsService.trackAdClick(cid as int);
+                                        } else if (_isLoggedIn) {
+                                          final id = item['id'] as int?;
+                                          if (id != null) unawaited(AnalyticsService.logInteraction(
+                                            itemId: id, itemType: 'listing', interactionType: 'click',
+                                            pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
+                                            metadata: {'source': 'for_you_feed'},
+                                          ));
                                         }
                                         // Highlight ilan → doğrudan canlı yayına katıl
                                         if (item['is_highlight'] == true) {
@@ -960,13 +967,20 @@ class HomeScreenState extends State<HomeScreen> {
                         listing: _recentListings[i],
                         onRemove: () => setState(() => _recentListings.removeAt(i)),
                         onTap: () {
-                          if (_recentListings[i]['is_sponsored'] == true) {
-                            final cid = _recentListings[i]['campaign_id'];
+                          final item = _recentListings[i];
+                          if (item['is_sponsored'] == true) {
+                            final cid = item['campaign_id'];
                             if (cid != null) AnalyticsService.trackAdClick(cid as int);
+                          } else if (_isLoggedIn) {
+                            final id = item['id'] as int?;
+                            if (id != null) unawaited(AnalyticsService.logInteraction(
+                              itemId: id, itemType: 'listing', interactionType: 'click',
+                              pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
+                            ));
                           }
                           Navigator.push(ctx, MaterialPageRoute(
                             builder: (_) => ListingDetailScreen(
-                                listing: Map<String, dynamic>.from(_recentListings[i])),
+                                listing: Map<String, dynamic>.from(item)),
                           ));
                         },
                       ),
