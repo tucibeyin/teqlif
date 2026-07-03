@@ -329,6 +329,14 @@ class ListingService:
             logger.warning("[LISTINGS] Çift istek engellendi | user_id=%s", uid)
             raise ConflictException("İsteğiniz zaten işleniyor. Lütfen bekleyin.")
 
+        # Profanity kontrolü: title + description
+        from app.core.auto_mod import analyze_listing_text
+        _title = (payload.get("title") or "").strip()
+        _desc = (payload.get("description") or "").strip()
+        if analyze_listing_text(_title, _desc):
+            await release_action_lock(uid, "listing_create")
+            raise BadRequestException("İlan başlığı veya açıklaması uygunsuz içerik barındırıyor.")
+
         category = (payload.get("category") or "diger").strip().lower()
         if category not in VALID_CATEGORIES:
             await release_action_lock(uid, "listing_create")
@@ -433,6 +441,16 @@ class ListingService:
             )
         except Exception as exc:
             logger.warning("[LISTINGS] budget_match enqueue başarısız | listing_id=%s | %s", listing.id, exc)
+
+        # Görsel moderasyon: pHash (kopya tespit) + NSFW kontrolü
+        if listing.image_url:
+            try:
+                from app.utils.arq_pool import get_arq_pool as _get_arq
+                _arq = await _get_arq()
+                await _arq.enqueue_job("compute_listing_phash_task", listing.id, listing.image_url)
+                await _arq.enqueue_job("nsfw_check_task", listing.id)
+            except Exception as exc:
+                logger.warning("[LISTINGS] Görsel moderasyon enqueue başarısız | listing_id=%s | %s", listing.id, exc)
 
         # Arama alarmı eşleşmeleri — anlık tetikle
         _asyncio.create_task(_trigger_search_alerts(listing.id, listing.category, listing.price))

@@ -23,13 +23,12 @@ def _sanitize_ts_query(q: str) -> str:
 
 
 def _build_prefix_tsquery(q: str) -> str:
-    """Her kelimeye :* ekler — to_tsquery ile prefix (as-you-type) arama sağlar."""
-    # to_tsquery için özel karakterleri temizle
-    safe = re.sub(r"[&|!():<>@*\\]", " ", q)
-    words = [w for w in safe.split() if w]
-    if not words:
-        return ""
-    return " & ".join(f"{w}:*" for w in words)
+    """
+    Her kelime için kök + orijinal form ile prefix FTS query üretir.
+    snowballstemmer Türkçe stemming: "ayakkabıları" → "ayakkabı:* & ayakkabıları:*"
+    """
+    from app.services.turkish_nlp import build_stemmed_tsquery
+    return build_stemmed_tsquery(q)
 
 
 async def _optional_user_id(
@@ -395,7 +394,7 @@ async def search_listings(
         listings = [_listing_dict(l, u) for l, u in result.all()]
         return {"listings": listings, "search_type": "text"}
 
-    # ── 2. Uzun sorgu (≥3 kelime) → Semantic / pgvector + kişiselleştirme ───────
+    # ── 2. Uzun sorgu (≥3 kelime) → FAISS candidate + pgvector ranking + kişiselleştirme ──
     if len(words) >= 3:
         loop = asyncio.get_running_loop()
         vector: list[float] = await loop.run_in_executor(None, generate_embedding, q)
@@ -403,7 +402,7 @@ async def search_listings(
 
         # Kullanıcının preference_embedding'ini al (kişiselleştirme için)
         pref_clause = ""
-        params: dict = {"vec": vec_str, "offset": offset, "threshold": 0.6}
+        params: dict = {"vec": vec_str, "offset": offset}
         if current_user_id:
             from app.models.user import User as UserModel
             user_row = await db.scalar(
@@ -426,24 +425,52 @@ async def search_listings(
             """
             params["uid"] = current_user_id
 
-        raw = sa_text(f"""
-            SELECT
-                l.id, l.title, l.price, l.category, l.location,
-                l.image_url, l.image_urls, l.created_at,
-                u.id AS uid, u.username, u.full_name
-            FROM listings l
-            JOIN users u ON u.id = l.user_id
-            WHERE l.is_active = TRUE
-              AND l.is_deleted = FALSE
-              AND l.embedding IS NOT NULL
-              AND (l.embedding <=> :vec::vector) < :threshold
-              {block_clause}
-            ORDER BY (
-                (1.0 - (l.embedding <=> :vec::vector))
-                {pref_clause}
-            ) DESC
-            LIMIT 12 OFFSET :offset
-        """)
+        # FAISS → hızlı candidate set, pgvector → hassas sıralama
+        from app.services.faiss_service import faiss_search
+        candidate_ids = await faiss_search(vector, k=80)
+
+        if candidate_ids:
+            params["candidate_ids"] = candidate_ids
+            raw = sa_text(f"""
+                SELECT
+                    l.id, l.title, l.price, l.category, l.location,
+                    l.image_url, l.image_urls, l.created_at,
+                    u.id AS uid, u.username, u.full_name
+                FROM listings l
+                JOIN users u ON u.id = l.user_id
+                WHERE l.id = ANY(:candidate_ids)
+                  AND l.is_active = TRUE
+                  AND l.is_deleted = FALSE
+                  AND l.embedding IS NOT NULL
+                  {block_clause}
+                ORDER BY (
+                    (1.0 - (l.embedding <=> :vec::vector))
+                    {pref_clause}
+                ) DESC
+                LIMIT 12 OFFSET :offset
+            """)
+        else:
+            # FAISS index henüz yok → pgvector fallback
+            params["threshold"] = 0.6
+            raw = sa_text(f"""
+                SELECT
+                    l.id, l.title, l.price, l.category, l.location,
+                    l.image_url, l.image_urls, l.created_at,
+                    u.id AS uid, u.username, u.full_name
+                FROM listings l
+                JOIN users u ON u.id = l.user_id
+                WHERE l.is_active = TRUE
+                  AND l.is_deleted = FALSE
+                  AND l.embedding IS NOT NULL
+                  AND (l.embedding <=> :vec::vector) < :threshold
+                  {block_clause}
+                ORDER BY (
+                    (1.0 - (l.embedding <=> :vec::vector))
+                    {pref_clause}
+                ) DESC
+                LIMIT 12 OFFSET :offset
+            """)
+
         result = await db.execute(raw, params)
         rows = result.fetchall()
         listings = [

@@ -1502,6 +1502,58 @@ async def clip_visual_backfill_task(ctx: dict) -> None:
         capture_exception(exc)
 
 
+async def compute_listing_phash_task(ctx: dict, listing_id: int, image_url: str) -> None:
+    """İlan primary görselinden pHash hesapla, DB'ye yaz, kopya varsa logla."""
+    try:
+        from app.services.image_mod_service import store_listing_phash
+        await store_listing_phash(listing_id, image_url)
+    except Exception as exc:
+        logger.error("[Worker] compute_listing_phash_task başarısız | listing_id=%s | %s", listing_id, exc, exc_info=True)
+        capture_exception(exc)
+
+
+async def backfill_phash_task(ctx: dict) -> None:
+    """image_phash NULL olan ilanlar için toplu pHash hesaplama (50 ilan/çalıştırma)."""
+    try:
+        from app.services.image_mod_service import backfill_phash
+        count = await backfill_phash(batch_size=50)
+        logger.info("[Worker] backfill_phash_task tamamlandı | işlenen=%d", count)
+    except Exception as exc:
+        logger.error("[Worker] backfill_phash_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
+async def nsfw_check_task(ctx: dict, listing_id: int) -> None:
+    """Tek ilanın tüm görsellerini NSFW için kontrol et."""
+    try:
+        from app.services.nsfw_service import check_listing_nsfw
+        await check_listing_nsfw(listing_id)
+    except Exception as exc:
+        logger.error("[Worker] nsfw_check_task başarısız | listing_id=%s | %s", listing_id, exc, exc_info=True)
+        capture_exception(exc)
+
+
+async def nsfw_backfill_task(ctx: dict) -> None:
+    """nsfw_checked_at NULL olan ilanlar için toplu NSFW kontrolü (20 ilan/çalıştırma)."""
+    try:
+        from app.services.nsfw_service import nsfw_backfill
+        count = await nsfw_backfill(batch_size=20)
+        logger.info("[Worker] nsfw_backfill_task tamamlandı | işlenen=%d", count)
+    except Exception as exc:
+        logger.error("[Worker] nsfw_backfill_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
+async def rebuild_faiss_index_task(ctx: dict) -> None:
+    """Tüm aktif listing embedding'lerinden FAISS IVFFlat index yeniden kur."""
+    try:
+        from app.services.faiss_service import rebuild_index
+        await rebuild_index()
+    except Exception as exc:
+        logger.error("[Worker] rebuild_faiss_index_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
 async def invalidate_swipe_live_configs_task(ctx: dict) -> None:
     """
     Her 15 dakikada bir: ClickHouse'daki yeni SwipeLive etkileşim verisini
@@ -1578,6 +1630,11 @@ class WorkerSettings:
         optimize_notification_timing_task,
         train_lightfm_task,
         clip_visual_backfill_task,
+        compute_listing_phash_task,
+        backfill_phash_task,
+        nsfw_check_task,
+        nsfw_backfill_task,
+        rebuild_faiss_index_task,
     ]
 
     cron_jobs = [
@@ -1625,6 +1682,12 @@ class WorkerSettings:
         cron(train_lightfm_task, hour=4, minute=15),
         # Her gece 04:30 — CLIP görsel embedding backfill (30 ilan/çalıştırma)
         cron(clip_visual_backfill_task, hour=4, minute=30),
+        # Her gece 05:15 — NSFW backfill (20 ilan/çalıştırma)
+        cron(nsfw_backfill_task, hour=5, minute=15),
+        # Her gece 05:30 — pHash backfill (50 ilan/çalıştırma)
+        cron(backfill_phash_task, hour=5, minute=30),
+        # Günde 2x 00:30 + 12:30 — FAISS index yeniden kur
+        cron(rebuild_faiss_index_task, hour={0, 12}, minute=30),
         # Her 20 dakikada SwipeLive olaylarını kullanıcı ilgi sinyaline dönüştür
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
         # Her saat başı — embedding'i olmayan ilanlar için backfill (20'şer batch)

@@ -25,6 +25,19 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
+# ── better-profanity — Türkçe kelime listesiyle genişletilmiş İngilizce filtre ──
+
+_bp_profanity = None
+try:
+    from better_profanity import profanity as _bpp
+    _tr_path = os.path.join(os.path.dirname(__file__), "bad_words", "tr.json")
+    if os.path.exists(_tr_path):
+        with open(_tr_path, encoding="utf-8") as _f_bp:
+            _bpp.add_censor_words(json.load(_f_bp))
+    _bp_profanity = _bpp
+except Exception:
+    pass
+
 _BAD_WORDS_DIR = os.path.join(os.path.dirname(__file__), "bad_words")
 _SUPPORTED_LANGS = ("tr", "en", "ar")
 
@@ -106,6 +119,24 @@ def analyze_text_all(text: str) -> bool:
 
 
 # ── Geriye dönük uyumluluk — eski kod auto_mod.contains_profanity() kullanıyor ──
+
+def analyze_listing_text(title: str, description: str = "") -> bool:
+    """
+    İlan başlığı + açıklamasını uygunsuz içerik için kontrol et.
+    Hem JSON sözlüğü hem better-profanity kullanılır.
+    """
+    combined = f"{title} {description or ''}".strip()
+    if not combined:
+        return False
+    if analyze_text_all(combined):
+        return True
+    if _bp_profanity is not None:
+        try:
+            return _bp_profanity.contains_profanity(combined)
+        except Exception:
+            pass
+    return False
+
 
 class _LegacyAutoMod:
     """

@@ -33,3 +33,7 @@ sentence-transformers==3.4.1
 clickhouse-connect==0.8.15
 implicit>=0.7.2
 scipy>=1.11.0
+imagehash>=4.3.1
+snowballstemmer>=2.2.0
+nudenet>=3.4.2
+faiss-cpu>=1.7.4
