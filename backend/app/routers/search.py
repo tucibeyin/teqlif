@@ -395,14 +395,26 @@ async def search_listings(
         listings = [_listing_dict(l, u) for l, u in result.all()]
         return {"listings": listings, "search_type": "text"}
 
-    # ── 2. Uzun sorgu (≥3 kelime) → Semantic / pgvector ───────────────────────
+    # ── 2. Uzun sorgu (≥3 kelime) → Semantic / pgvector + kişiselleştirme ───────
     if len(words) >= 3:
         loop = asyncio.get_running_loop()
         vector: list[float] = await loop.run_in_executor(None, generate_embedding, q)
         vec_str = "[" + ",".join(f"{v:.8f}" for v in vector) + "]"
 
-        block_clause = ""
+        # Kullanıcının preference_embedding'ini al (kişiselleştirme için)
+        pref_clause = ""
         params: dict = {"vec": vec_str, "offset": offset, "threshold": 0.6}
+        if current_user_id:
+            from app.models.user import User as UserModel
+            user_row = await db.scalar(
+                select(UserModel.preference_embedding).where(UserModel.id == current_user_id)
+            )
+            if user_row is not None:
+                pref_str = "[" + ",".join(f"{x:.8f}" for x in user_row) + "]"
+                pref_clause = "+ (1.0 - (l.embedding <=> :pref_vec::vector)) * 0.15"
+                params["pref_vec"] = pref_str
+
+        block_clause = ""
         if current_user_id:
             block_clause = """
                 AND l.user_id NOT IN (
@@ -426,7 +438,10 @@ async def search_listings(
               AND l.embedding IS NOT NULL
               AND (l.embedding <=> :vec::vector) < :threshold
               {block_clause}
-            ORDER BY (l.embedding <=> :vec::vector)
+            ORDER BY (
+                (1.0 - (l.embedding <=> :vec::vector))
+                {pref_clause}
+            ) DESC
             LIMIT 12 OFFSET :offset
         """)
         result = await db.execute(raw, params)
@@ -447,37 +462,72 @@ async def search_listings(
         ]
         return {"listings": listings, "search_type": "semantic"}
 
-    # ── 3. Orta uzunluk → prefix FTS + NULL-search_vector ILIKE birlikte ────
+    # ── 3. Orta uzunluk → prefix FTS + NULL-search_vector ILIKE + kişiselleştirme ──
     ts_q = _sanitize_ts_query(q)
     term = f"%{ts_q}%"
     prefix_q = _build_prefix_tsquery(ts_q)
     if not prefix_q:
         return {"listings": [], "search_type": "text"}
-    # to_tsquery + :* → "çam:*" her "çam" ile başlayan lexeme'i bulur
-    tsquery = func.to_tsquery("turkish", prefix_q)
-    rank = func.ts_rank(Listing.search_vector, tsquery)
-    stmt = (
-        select(Listing, User, func.coalesce(rank, 0.0).label("rank"))
-        .join(User, User.id == Listing.user_id)
-        .where(
-            Listing.is_active == True,  # noqa: E712
-            Listing.is_deleted == False,  # noqa: E712
-            or_(
-                # search_vector dolu → FTS eşleşmesi
-                Listing.search_vector.op("@@")(tsquery),
-                # search_vector NULL → sadece başlık ILIKE (description gürültü yaratır)
-                and_(
-                    Listing.search_vector.is_(None),
-                    Listing.title.ilike(term),
-                ),
-            ),
-        )
-        .order_by(func.coalesce(rank, 0.0).desc())
-        .offset(offset)
-        .limit(12)
-    )
+
+    fts_params: dict = {"tsq_prefix": prefix_q, "term": term, "offset": offset}
+
+    # Kullanıcının preference_embedding'i varsa ORDER BY'a kişisel boost ekle
+    fts_pref_expr = "0.0"
     if current_user_id:
-        stmt = _block_filters(stmt, Listing.user_id, current_user_id)
-    result = await db.execute(stmt)
-    listings = [_listing_dict(l, u) for l, u, _r in result.all()]
+        from app.models.user import User as UserModel
+        user_row = await db.scalar(
+            select(UserModel.preference_embedding).where(UserModel.id == current_user_id)
+        )
+        if user_row is not None:
+            pref_str = "[" + ",".join(f"{x:.8f}" for x in user_row) + "]"
+            fts_pref_expr = "COALESCE((1.0 - (l.embedding <=> :fts_pref_vec::vector)) * 0.15, 0.0)"
+            fts_params["fts_pref_vec"] = pref_str
+
+    fts_block = ""
+    if current_user_id:
+        fts_block = """
+            AND l.user_id NOT IN (
+                SELECT blocked_id FROM user_blocks WHERE blocker_id = :fts_uid
+                UNION
+                SELECT blocker_id FROM user_blocks WHERE blocked_id = :fts_uid
+            )
+        """
+        fts_params["fts_uid"] = current_user_id
+
+    fts_raw = sa_text(f"""
+        SELECT
+            l.id, l.title, l.price, l.category, l.location,
+            l.image_url, l.image_urls, l.created_at,
+            u.id AS uid, u.username, u.full_name
+        FROM listings l
+        JOIN users u ON u.id = l.user_id
+        WHERE l.is_active = TRUE
+          AND l.is_deleted = FALSE
+          AND (
+              l.search_vector @@ to_tsquery('turkish', :tsq_prefix)
+              OR (l.search_vector IS NULL AND l.title ILIKE :term)
+          )
+          {fts_block}
+        ORDER BY (
+            COALESCE(ts_rank(l.search_vector, to_tsquery('turkish', :tsq_prefix)), 0.0) * 0.85
+            + {fts_pref_expr}
+        ) DESC
+        LIMIT 12 OFFSET :offset
+    """)
+    fts_result = await db.execute(fts_raw, fts_params)
+    fts_rows = fts_result.fetchall()
+    listings = [
+        {
+            "id": row[0],
+            "title": row[1],
+            "price": row[2],
+            "category": row[3],
+            "location": row[4],
+            "image_url": row[5],
+            "image_urls": json.loads(row[6]) if row[6] else [],
+            "created_at": row[7].isoformat() if row[7] else None,
+            "user": {"id": row[8], "username": row[9], "full_name": row[10]},
+        }
+        for row in fts_rows
+    ]
     return {"listings": listings, "search_type": "text"}

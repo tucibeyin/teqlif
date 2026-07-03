@@ -135,6 +135,7 @@ async def train_swipe_live_als() -> None:
         regularization=0.1,
         iterations=20,
         use_gpu=False,
+        num_threads=2,
         random_state=42,
     )
     model.fit(user_items)

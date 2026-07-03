@@ -11,7 +11,8 @@ app.services.listing_service.ListingService'e taşınmıştır.
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_cache.decorator import cache
 
@@ -138,3 +139,80 @@ async def get_listing_offers(
     db: AsyncSession = Depends(get_db),
 ):
     return await ListingService(db).get_listing_offers(listing_id)
+
+
+@router.get("/{listing_id}/similar")
+async def get_similar_listings(
+    listing_id: int,
+    limit: int = Query(default=10, ge=1, le=20),
+    current_user_id: Optional[int] = Depends(_optional_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    pgvector cosine distance ile semantik olarak benzer ilanları döndürür.
+    İlan embedding'i yoksa boş liste döner.
+    """
+    row = await db.execute(
+        text("SELECT embedding, category FROM listings WHERE id = :id AND is_active = TRUE AND is_deleted = FALSE"),
+        {"id": listing_id},
+    )
+    target = row.first()
+    if target is None or target.embedding is None:
+        return []
+
+    block_clause = ""
+    params: dict = {"lid": listing_id, "lim": limit,
+                    "vec": target.embedding if isinstance(target.embedding, str)
+                    else "[" + ",".join(f"{x:.8f}" for x in target.embedding) + "]"}
+    if current_user_id:
+        block_clause = """
+            AND l.user_id NOT IN (
+                SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
+                UNION
+                SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
+            )
+        """
+        params["uid"] = current_user_id
+
+    result = await db.execute(
+        text(f"""
+            SELECT
+                l.id, l.title, l.price, l.category, l.location,
+                l.image_url, l.image_urls, l.created_at,
+                u.id AS user_id, u.username, u.full_name, u.profile_image_url,
+                (1.0 - (l.embedding <=> :vec::vector)) AS similarity
+            FROM listings l
+            JOIN users u ON u.id = l.user_id
+            WHERE l.id != :lid
+              AND l.is_active = TRUE
+              AND l.is_deleted = FALSE
+              AND l.embedding IS NOT NULL
+              AND (l.embedding <=> :vec::vector) < 0.5
+              {block_clause}
+            ORDER BY l.embedding <=> :vec::vector
+            LIMIT :lim
+        """),
+        params,
+    )
+    import json
+    rows = result.fetchall()
+    return [
+        {
+            "id": r.id,
+            "title": r.title,
+            "price": r.price,
+            "category": r.category,
+            "location": r.location,
+            "image_url": r.image_url,
+            "image_urls": json.loads(r.image_urls) if r.image_urls else [],
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "similarity": round(float(r.similarity), 4),
+            "user": {
+                "id": r.user_id,
+                "username": r.username,
+                "full_name": r.full_name,
+                "profile_image_url": r.profile_image_url,
+            },
+        }
+        for r in rows
+    ]

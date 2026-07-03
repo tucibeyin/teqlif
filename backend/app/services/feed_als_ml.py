@@ -92,11 +92,14 @@ async def train_feed_als() -> None:
         logger.warning("[FeedALS] ClickHouse bağlanamadı: %s", exc)
         return
 
+    # Position bias düzeltmesi: tıklamaları log2(slot+2) ile ağırlıklandır.
+    # Üst slotlar doğal olarak daha fazla tıklanır; alt slottaki tıklama daha güçlü sinyal.
     result = await ch.query("""
         SELECT
             user_id,
             listing_id,
-            countIf(event_type = 'click')                                            AS clicks,
+            SUM(if(event_type = 'click',
+                   log2(toFloat64(slot_index) + 2.0), 0))                           AS clicks,
             countIf(event_type = 'impression' AND dwell_time_ms > 8000)             AS long_dwells,
             countIf(event_type = 'impression' AND dwell_time_ms BETWEEN 3001 AND 8000) AS short_dwells,
             countIf(event_type = 'skip')                                             AS skips
@@ -160,6 +163,7 @@ async def train_feed_als() -> None:
         regularization=0.1,
         iterations=20,
         use_gpu=False,
+        num_threads=2,
         random_state=42,
     )
     model.fit(user_items)

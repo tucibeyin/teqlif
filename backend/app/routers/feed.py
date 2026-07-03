@@ -1,9 +1,15 @@
+import json
+from typing import Literal
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+import numpy as np
 
 from app.database import get_db
 from app.utils.auth import get_current_user, get_current_user_optional
 from app.models.user import User
+from app.models.listing import Listing
 from app.services.feed_service import get_personalized_feed, get_foryou_feed, get_mixed_recent_feed
 from app.services.recommendation_service import (
     get_personalized_feed as get_ch_personalized_feed,
@@ -102,3 +108,53 @@ async def get_for_you_feed(
     - Sayfa başına 20 ilan, maks 5 sayfa (100 ilan havuzu Redis'te 5 dk önbelleklenir)
     """
     return await get_foryou_feed(current_user.id, page, db)
+
+
+class FeedSignalPayload(BaseModel):
+    listing_id: int
+    event: Literal["click", "skip"]
+
+
+@router.post("/signal", status_code=204)
+async def record_feed_signal(
+    payload: FeedSignalPayload,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Session-içi drift: kullanıcının mevcut oturumda hangi yöne ilgi gösterdiğini yakalar.
+    click → session vektörüne eklenir (EMA α=0.3)
+    skip  → oturumu etkilemez (negatif sinyal çok gürültülü)
+    Session vektörü 30 dakika TTL ile Redis'te tutulur.
+    """
+    if payload.event != "click":
+        return
+
+    emb_row = await db.scalar(
+        select(Listing.embedding).where(
+            Listing.id == payload.listing_id,
+            Listing.embedding.isnot(None),
+        )
+    )
+    if emb_row is None:
+        return
+
+    new_vec = np.array(emb_row, dtype=np.float32)
+    norm = np.linalg.norm(new_vec)
+    if norm > 0:
+        new_vec /= norm
+
+    redis = await get_redis()
+    key = f"feed:session:{current_user.id}"
+    existing = await redis.get(key)
+
+    if existing:
+        alpha = 0.3
+        old_vec = np.frombuffer(existing, dtype=np.float32)
+        blended = (1 - alpha) * old_vec + alpha * new_vec
+        bn = np.linalg.norm(blended)
+        if bn > 0:
+            blended /= bn
+        await redis.setex(key, 1800, blended.tobytes())
+    else:
+        await redis.setex(key, 1800, new_vec.tobytes())

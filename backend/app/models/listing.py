@@ -30,6 +30,7 @@ class Listing(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     search_vector: Mapped[Optional[Any]] = mapped_column(TSVECTOR, nullable=True)
     embedding: Mapped[Optional[Any]] = mapped_column(Vector(384), nullable=True)
+    visual_embedding: Mapped[Optional[Any]] = mapped_column(Vector(512), nullable=True)
 
     is_highlight: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     active_room_id: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)

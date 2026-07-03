@@ -1394,6 +1394,114 @@ async def train_feed_als_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: Bildirim Zaman Optimizasyonu ────────────────────────────────────────
+
+async def optimize_notification_timing_task(ctx: dict) -> None:
+    """
+    Her gece 04:00'da çalışır.
+    Son 14 günün feed_analytics verisiyle kullanıcı başına günün hangi saatlerinde
+    en çok etkileşim yaptığını hesaplar ve Redis'e yazar (25 saat TTL).
+
+    Pazarlama bildirimleri bu veriyi kullanarak doğru saate denk getirilir.
+    Açık artırma / gerçek zamanlı bildirimler bu filtreden geçmez.
+
+    Redis key: notif:peak_hours:{uid}  → JSON "[8,20,21]"
+    """
+    try:
+        import json
+        from app.database_clickhouse import get_clickhouse_client
+        from app.utils.redis_client import get_redis
+
+        ch = await get_clickhouse_client()
+        if ch is None:
+            logger.warning("[NotifTiming] ClickHouse yok, atlanıyor")
+            return
+
+        result = await ch.query("""
+            SELECT
+                user_id,
+                toHour(timestamp)     AS hour_of_day,
+                count()               AS event_cnt
+            FROM feed_analytics
+            WHERE timestamp >= now() - INTERVAL 14 DAY
+              AND user_id != ''
+              AND event_type IN ('click', 'impression')
+            GROUP BY user_id, hour_of_day
+            HAVING event_cnt >= 2
+            ORDER BY user_id, event_cnt DESC
+        """)
+
+        rows = result.result_rows
+        if not rows:
+            logger.info("[NotifTiming] Yeterli veri yok, atlanıyor")
+            return
+
+        from collections import defaultdict
+        user_hours: dict[int, list[tuple[int, int]]] = defaultdict(list)
+        for uid_s, hour, cnt in rows:
+            try:
+                uid = int(uid_s)
+                user_hours[uid].append((int(hour), int(cnt)))
+            except (ValueError, TypeError):
+                continue
+
+        redis = await get_redis()
+        pipe = redis.pipeline()
+        _TTL = 90_000  # 25 saat
+        written = 0
+        for uid, hour_counts in user_hours.items():
+            sorted_hours = sorted(hour_counts, key=lambda x: x[1], reverse=True)
+            peak = [h for h, _ in sorted_hours[:3]]
+            pipe.setex(f"notif:peak_hours:{uid}", _TTL, json.dumps(peak))
+            written += 1
+
+        await pipe.execute()
+        logger.info("[NotifTiming] Tamamlandı | kullanıcı=%d", written)
+
+    except Exception as exc:
+        logger.error("[NotifTiming] optimize_notification_timing_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
+# ── Task: LightFM Hybrid Model ────────────────────────────────────────────────
+
+async def train_lightfm_task(ctx: dict) -> None:
+    """
+    Her gece 04:15'te çalışır.
+    LightFM hybrid collaborative + content filtering modelini eğitir.
+    Kullanıcı ve ilan vektörlerini Redis'e yazar (25 saat TTL).
+    """
+    try:
+        from app.services.feed_lightfm_ml import train_lightfm
+        await train_lightfm()
+        logger.info("[Worker] train_lightfm_task tamamlandı")
+    except ImportError:
+        logger.warning("[Worker] lightfm kurulu değil, atlanıyor")
+    except Exception as exc:
+        logger.error("[Worker] train_lightfm_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
+# ── Task: CLIP Visual Embedding Backfill ─────────────────────────────────────
+
+async def clip_visual_backfill_task(ctx: dict) -> None:
+    """
+    Her gece 04:30'da çalışır.
+    visual_embedding'i NULL olan ilanlar için CLIP ViT-B/32 ile görsel embedding üretir.
+    Rate limit: işlem başına 2 saniye bekleme — VPS CPU koruması.
+    Batch: 30 ilan/çalıştırma.
+    """
+    try:
+        from app.services.clip_service import backfill_clip_embeddings
+        count = await backfill_clip_embeddings(batch_size=30)
+        logger.info("[Worker] clip_visual_backfill_task tamamlandı | işlenen=%d", count)
+    except ImportError:
+        logger.warning("[Worker] CLIP bağımlılıkları eksik, atlanıyor")
+    except Exception as exc:
+        logger.error("[Worker] clip_visual_backfill_task başarısız | %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
 async def invalidate_swipe_live_configs_task(ctx: dict) -> None:
     """
     Her 15 dakikada bir: ClickHouse'daki yeni SwipeLive etkileşim verisini
@@ -1467,6 +1575,9 @@ class WorkerSettings:
         train_feed_als_task,
         sync_swipelive_interests_task,
         backfill_listing_embeddings_task,
+        optimize_notification_timing_task,
+        train_lightfm_task,
+        clip_visual_backfill_task,
     ]
 
     cron_jobs = [
@@ -1508,6 +1619,12 @@ class WorkerSettings:
         cron(train_swipe_live_als_task, hour=3, minute=15),
         # Her gece 03:45 — İlan feed ALS collaborative filtering modeli eğit
         cron(train_feed_als_task, hour=3, minute=45),
+        # Her gece 04:00 — kullanıcı bazlı bildirim saat optimizasyonu
+        cron(optimize_notification_timing_task, hour=4, minute=0),
+        # Her gece 04:15 — LightFM hybrid model eğitimi
+        cron(train_lightfm_task, hour=4, minute=15),
+        # Her gece 04:30 — CLIP görsel embedding backfill (30 ilan/çalıştırma)
+        cron(clip_visual_backfill_task, hour=4, minute=30),
         # Her 20 dakikada SwipeLive olaylarını kullanıcı ilgi sinyaline dönüştür
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
         # Her saat başı — embedding'i olmayan ilanlar için backfill (20'şer batch)

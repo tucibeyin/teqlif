@@ -11,10 +11,10 @@ app.services.user_service.UserService'e taşınmıştır.
 """
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text as sa_text
 
 from app.database import get_db
 from app.models.user import User
@@ -105,6 +105,100 @@ async def my_referral(
         "referred_bonus": 10,
         "already_used_a_code": already_used is not None,
     }
+
+
+@router.get("/suggested-sellers")
+async def get_suggested_sellers(
+    limit: int = Query(default=20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Kullanıcının ilgi profiline göre 'Kimi Takip Et' önerilerini döndürür.
+
+    Algoritma:
+      1. user_interests → kullanıcının ilgi kategorileri (top-5)
+      2. Bu kategorilerde en çok aktif ilan bulunan satıcılar seçilir
+      3. Kullanıcının zaten takip ettiği satıcılar hariç tutulur
+      4. Sıralama: kategori_eşleşme × ilan_sayısı_skoru × satıcı_kalitesi
+    """
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    cached_interests = await redis.get(f"interests:{current_user.id}")
+    if cached_interests:
+        import json as _json
+        interests = _json.loads(cached_interests)
+    else:
+        rows = await db.execute(
+            sa_text("SELECT category, score FROM user_interests WHERE user_id = :uid ORDER BY score DESC LIMIT 5"),
+            {"uid": current_user.id},
+        )
+        interests = {row.category: row.score for row in rows}
+
+    top_cats = list(interests.keys())[:5] if interests else []
+
+    if top_cats:
+        cat_cases = " ".join(
+            f"WHEN l.category = '{cat}' THEN {score:.4f}"
+            for cat, score in list(interests.items())[:5]
+        )
+        cat_score_expr = f"COALESCE(MAX(CASE {cat_cases} ELSE 0.0 END), 0.0)"
+    else:
+        cat_score_expr = "0.0"
+
+    result = await db.execute(
+        sa_text(f"""
+            SELECT
+                u.id,
+                u.username,
+                u.full_name,
+                u.profile_image_url,
+                u.bio,
+                COUNT(l.id)                                     AS listing_count,
+                {cat_score_expr}                                AS cat_match,
+                COALESCE(fol.follower_count, 0)                 AS follower_count
+            FROM users u
+            INNER JOIN listings l ON l.user_id = u.id
+                AND l.is_active = TRUE AND l.is_deleted = FALSE
+            LEFT JOIN (
+                SELECT followed_id, COUNT(*) AS follower_count
+                FROM follows GROUP BY followed_id
+            ) fol ON fol.followed_id = u.id
+            WHERE u.id != :uid
+              AND u.is_active = TRUE
+              AND u.id NOT IN (
+                  SELECT followed_id FROM follows WHERE follower_id = :uid
+              )
+              AND u.id NOT IN (
+                  SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
+                  UNION
+                  SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
+              )
+            GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, fol.follower_count
+            HAVING COUNT(l.id) >= 1
+            ORDER BY (
+                {cat_score_expr} * 0.60
+                + LEAST(LOG(1.0 + COUNT(l.id)) / 4.0, 0.25)
+                + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.15)
+            ) DESC
+            LIMIT :lim
+        """),
+        {"uid": current_user.id, "lim": limit},
+    )
+
+    rows_out = result.fetchall()
+    return [
+        {
+            "id": row[0],
+            "username": row[1],
+            "full_name": row[2],
+            "profile_image_url": row[3],
+            "bio": row[4],
+            "listing_count": row[5],
+            "follower_count": row[7],
+        }
+        for row in rows_out
+    ]
 
 
 @router.get("/{username}")

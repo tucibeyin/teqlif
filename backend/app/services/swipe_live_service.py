@@ -85,19 +85,33 @@ async def _build_config(user_id: int, db: AsyncSession) -> dict:
         logger.debug("[SwipeLive] ALS skor alınamadı: %s", exc)
 
     # 4b. Chat hızı (son 90s mesaj sayısı) — momentum sinyali
+    # + viewer count delta (son 5 dk izleyici büyümesi) — momentum sinyali
     chat_rates: dict[int, float] = {}
+    viewer_deltas: dict[int, float] = {}
     try:
         from app.utils.redis_client import get_redis
         _redis = await get_redis()
         tick_keys = [f"stream:chat_tick:{sid}" for sid in stream_ids]
+        snap_keys = [f"stream:viewers_snap:{sid}" for sid in stream_ids]
         if tick_keys:
             raw_ticks = await _redis.mget(*tick_keys)
+            raw_snaps = await _redis.mget(*snap_keys)
             max_tick = max((int(v or 0) for v in raw_ticks), default=1)
-            for sid, raw in zip(stream_ids, raw_ticks):
-                tick = int(raw or 0)
+            snap_pipe = _redis.pipeline()
+            for sid, raw_tick, raw_snap, stream in zip(stream_ids, raw_ticks, raw_snaps, streams):
+                tick = int(raw_tick or 0)
                 chat_rates[sid] = tick / max(max_tick, 1)
+                # Viewer momentum: delta = current - snapshot (5 dakika önce)
+                current_viewers = getattr(stream, "viewer_count", 0) or 0
+                old_viewers = int(raw_snap or current_viewers)
+                delta = max(0, current_viewers - old_viewers)
+                max_v = max(current_viewers, 1)
+                viewer_deltas[sid] = min(delta / max_v, 1.0)
+                # Snapshot'ı güncelle (6 dakika TTL)
+                snap_pipe.setex(f"stream:viewers_snap:{sid}", 360, current_viewers)
+            await snap_pipe.execute()
     except Exception as exc:
-        logger.debug("[SwipeLive] Chat hızı alınamadı: %s", exc)
+        logger.debug("[SwipeLive] Chat hızı / viewer delta alınamadı: %s", exc)
 
     # 5. Yayınları skorla ve sırala
     seen_categories: dict[str, int] = {}
@@ -107,6 +121,7 @@ async def _build_config(user_id: int, db: AsyncSession) -> dict:
             stream, interests, ch_engagement,
             als_scores, seen_categories,
             chat_rate=chat_rates.get(stream.id, 0.0),
+            viewer_delta=viewer_deltas.get(stream.id, 0.0),
         )
         scored.append((score, stream))
         seen_categories[stream.category] = seen_categories.get(stream.category, 0) + 1
@@ -144,6 +159,7 @@ def _score_stream(
     als_scores: dict[int, float],
     seen_categories: dict[str, int],
     chat_rate: float = 0.0,
+    viewer_delta: float = 0.0,
 ) -> float:
     # 1. Category affinity
     affinity = min(interests.get(stream.category, 0.05), 1.0)
@@ -168,8 +184,10 @@ def _score_stream(
     age_hours = (now - started).total_seconds() / 3600.0
     recency = max(0.0, 1.0 - age_hours / 2.0)
 
-    # 6. Chat momentum (90s pencerede normalize edilmiş mesaj hızı)
-    momentum = min(chat_rate, 1.0)
+    # 6. Momentum: chat hızı + viewer büyümesi delta
+    chat_momentum = min(chat_rate, 1.0)
+    view_momentum = min(viewer_delta, 1.0)
+    momentum = chat_momentum * 0.60 + view_momentum * 0.40
 
     # 7. Çeşitlilik cezası — kategorinin kaçıncı tekrarı
     repeat_count = seen_categories.get(stream.category, 0)

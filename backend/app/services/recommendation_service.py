@@ -1,5 +1,5 @@
 """
-Recommendation Service — ClickHouse telemetri verisinden epsilon-greedy kişiselleştirilmiş feed.
+Recommendation Service — ClickHouse telemetri verisinden Thompson Sampling kişiselleştirilmiş feed.
 
 Akış:
   1. get_user_category_affinity():
@@ -7,7 +7,9 @@ Akış:
        → PostgreSQL'den category bilgisi → kategori skorlarını topla → top-N
   2. get_personalized_feed():
        Affinity boşsa → cold start (popüler ilanlar)
-       Affinity varsa → %80 exploit (top-3 kategori) + %20 explore (keşfet)
+       Affinity varsa → Thompson Sampling ile kategori seçimi
+         Her kategori için Beta(α, β) örneklenir; en yüksek örnekten kategori seçilir.
+         Explore kategoriler Beta(1, 5) ile az ama sıfır olmayan olasılıkta seçilir.
 
 Puanlama (son 7 gün):
   click              → +5
@@ -35,8 +37,6 @@ logger = logging.getLogger(__name__)
 
 _AFFINITY_CACHE_TTL = 900   # 15 dakika
 _AFFINITY_DAYS = 7
-_EXPLOIT_RATIO = 0.80       # %80 → top-3 ilgi kategorisi
-_EXPLORE_RATIO = 0.20       # %20 → keşfet (ilgi dışı)
 
 
 async def get_user_category_affinity(
@@ -66,14 +66,19 @@ async def get_user_category_affinity(
         return {}
 
     uid_str = str(user_id)
+    # Position bias düzeltmesi: üst slotlarda görünen ilanlar daha kolay tıklanır.
+    # log2(slot_index + 2) ile tıklamaları normalize ediyoruz — alt slottaki tıklama daha değerli.
     ch_query = f"""
         SELECT
             listing_id,
             SUM(
                 CASE
-                    WHEN event_type = 'click'                                THEN 5
-                    WHEN event_type = 'impression' AND dwell_time_ms > 3000  THEN 2
-                    WHEN event_type = 'skip'                                 THEN -2
+                    WHEN event_type = 'click'
+                        THEN 5 * log2(toFloat64(slot_index) + 2.0)
+                    WHEN event_type = 'impression' AND dwell_time_ms > 3000
+                        THEN 2
+                    WHEN event_type = 'skip'
+                        THEN -2
                     ELSE 0
                 END
             ) AS score
@@ -135,18 +140,56 @@ async def get_user_category_affinity(
     return affinity
 
 
+def _thompson_sample_categories(
+    affinity: dict[str, float],
+    all_categories: list[str],
+    n_exploit: int,
+    n_explore: int,
+) -> tuple[list[str], list[str]]:
+    """
+    Thompson Sampling ile exploit ve explore kategorilerini seçer.
+
+    Her kategori için Beta dağılımı:
+      - Affinity'de varsa: Beta(α = score × 20 + 1, β = (1 - score) × 20 + 1)
+      - Affinity'de yoksa:  Beta(1, 5) — düşük ama sıfır olmayan keşif olasılığı
+
+    En yüksek n_exploit örneği → exploit kategorileri
+    Kalan yüksekler veya keşif havuzu → explore kategorileri
+    """
+    try:
+        from scipy.stats import beta as beta_dist  # type: ignore
+    except ImportError:
+        top_cats = list(affinity.keys())[:n_exploit]
+        other_cats = [c for c in all_categories if c not in set(top_cats)]
+        return top_cats, other_cats[:n_explore]
+
+    scores: dict[str, float] = {}
+    for cat in all_categories:
+        if cat in affinity:
+            a = affinity[cat] * 20.0 + 1.0
+            b = (1.0 - affinity[cat]) * 20.0 + 1.0
+        else:
+            a, b = 1.0, 5.0
+        scores[cat] = beta_dist.rvs(a, b)
+
+    ranked = sorted(all_categories, key=lambda c: scores[c], reverse=True)
+    exploit_cats = [c for c in ranked if c in affinity][:n_exploit]
+    explore_cats = [c for c in ranked if c not in set(exploit_cats)][:n_explore]
+    return exploit_cats, explore_cats
+
+
 async def get_personalized_feed(
     user_id: int,
     db: AsyncSession,
     limit: int = 10,
 ) -> list[dict]:
     """
-    Epsilon-greedy kişiselleştirilmiş ilan akışı.
+    Thompson Sampling tabanlı kişiselleştirilmiş ilan akışı.
 
     - Affinity boşsa (yeni kullanıcı — cold start): son 30 günün popüler ilanları.
     - Affinity varsa:
-        %80 (exploit) → top-3 kategori ilanlarından rastgele
-        %20 (explore) → ilgi dışı kategorilerden rastgele (keşfet mantığı)
+        Thompson Sampling ile hem exploit hem explore kategorileri seçilir.
+        Exploit → affinity yüksek kategorilerden; explore → diğerlerinden.
       Liste karıştırılarak döndürülür.
     """
     affinity = await get_user_category_affinity(user_id, db)
@@ -154,22 +197,39 @@ async def get_personalized_feed(
     if not affinity:
         return await _cold_start_feed(user_id, db, limit)
 
-    top_cats = list(affinity.keys())
-    exploit_n = round(limit * _EXPLOIT_RATIO)   # varsayılan: 8
-    explore_n = limit - exploit_n               # varsayılan: 2
+    # Mevcut tüm aktif kategorileri PostgreSQL'den çek (keşif havuzu için)
+    cat_result = await db.execute(
+        text("""
+            SELECT DISTINCT category FROM listings
+            WHERE is_active = TRUE AND is_deleted = FALSE AND category IS NOT NULL
+            LIMIT 50
+        """)
+    )
+    all_categories = [row[0] for row in cat_result.fetchall()]
+    if not all_categories:
+        all_categories = list(affinity.keys())
 
-    # Geniş havuz çek → sonra rastgele seç (ORDER BY RANDOM() pahalı olmasın diye)
+    n_exploit = round(limit * 0.80)
+    n_explore = limit - n_exploit
+
+    exploit_cats, explore_cats = _thompson_sample_categories(
+        affinity, all_categories, n_exploit, n_explore
+    )
+
     exploit_ids = await _ids_from_categories(
-        user_id, db, categories=top_cats, limit=exploit_n * 4
+        user_id, db, categories=exploit_cats or list(affinity.keys()), limit=n_exploit * 4
     )
     explore_ids = await _ids_from_categories(
-        user_id, db, exclude_categories=top_cats, limit=explore_n * 4
+        user_id, db,
+        categories=explore_cats if explore_cats else None,
+        exclude_categories=list(affinity.keys()) if not explore_cats else None,
+        limit=n_explore * 4,
     )
 
     random.shuffle(exploit_ids)
     random.shuffle(explore_ids)
 
-    selected = exploit_ids[:exploit_n] + explore_ids[:explore_n]
+    selected = exploit_ids[:n_exploit] + explore_ids[:n_explore]
     random.shuffle(selected)
 
     return await _hydrate(user_id, selected, db)

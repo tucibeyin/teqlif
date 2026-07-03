@@ -20,6 +20,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+import numpy as np
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -538,7 +539,19 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
     if user is None or user.preference_embedding is None:
         return await _popular_feed(0, limit, db, exclude_user_id=user_id)
 
-    vec_str = "[" + ",".join(f"{x:.8f}" for x in user.preference_embedding) + "]"
+    # Session-içi drift: mevcut oturum vektörüyle preference_embedding'i harmanlayın
+    pref_vec = np.array(user.preference_embedding, dtype=np.float32)
+    session_bytes = await redis.get(f"feed:session:{user_id}")
+    if session_bytes:
+        sess_vec = np.frombuffer(session_bytes, dtype=np.float32)
+        if sess_vec.shape == pref_vec.shape:
+            blended = pref_vec * 0.70 + sess_vec * 0.30
+            bn = np.linalg.norm(blended)
+            if bn > 0:
+                blended /= bn
+            pref_vec = blended
+
+    vec_str = "[" + ",".join(f"{x:.8f}" for x in pref_vec.tolist()) + "]"
 
     # not_interested filtresi (Redis)
     excluded_raw = await redis.smembers(f"not_interested:{user_id}")
