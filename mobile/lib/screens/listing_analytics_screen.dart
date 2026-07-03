@@ -548,8 +548,8 @@ class _ListingCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(extraValue, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: extraColor)),
-                        Text(extraLabel!, style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
+                        Text(extraValue, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: extraColor)),
+                        Text(extraLabel!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
                       ],
                     ),
                   ),
