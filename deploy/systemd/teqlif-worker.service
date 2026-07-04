@@ -1,0 +1,17 @@
+[Unit]
+Description=Teqlif ARQ Background Worker
+After=network.target postgresql.service redis.service teqlif.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/teqlif.com/backend
+EnvironmentFile=/var/www/teqlif.com/backend/.env
+ExecStart=/var/www/teqlif.com/venv/bin/arq app.worker.WorkerSettings
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
