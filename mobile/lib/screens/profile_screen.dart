@@ -529,24 +529,6 @@ class ProfileScreenState extends State<ProfileScreen> {
                                 fontSize: 14,
                               ),
                             ),
-                            if (isVerified) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2563EB),
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.verified, size: 10, color: Colors.white),
-                                    SizedBox(width: 3),
-                                    Text('Verified', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: Colors.white)),
-                                  ],
-                                ),
-                              ),
-                            ],
                             if (_user?['is_premium'] == true) ...[
                               const SizedBox(width: 6),
                               Container(
