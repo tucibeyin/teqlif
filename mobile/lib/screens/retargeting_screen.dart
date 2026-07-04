@@ -175,7 +175,8 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     setState(() => _sending = false);
 
     if (result != null && result['error'] == null) {
-      setState(() { _sent = true; _sentCount = reachable; });
+      final sent = result['sent'] as int? ?? actualCount;
+      setState(() { _sent = true; _sentCount = sent; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.retargetingBlastSuccess),
