@@ -753,16 +753,16 @@ async def _get_sponsored_listings(db: AsyncSession, exclude_user_id: int | None 
 def _inject_ads(organic: list[dict], ads: list[dict]) -> list[dict]:
     """
     Sponsored item'ları organik feed'e AD_SLOTS pozisyonlarına enjekte eder.
-    Her insert önceki insertlerin yarattığı kaymayı hesaba katar.
-    Organik eleman sayısı değişmez — toplam eleman sayısı ad sayısı kadar artar.
+    Aynı ilan organik listede zaten varsa önce oradan çıkarılır; böylece ilan
+    tek görünür ama is_sponsored=True / campaign_id bilgisiyle (sponsored versiyonu).
     """
     if not ads:
         return organic
-    result = list(organic)
+    ad_ids = {ad["id"] for ad in ads}
+    result = [item for item in organic if item["id"] not in ad_ids]
     for i, ad in enumerate(ads):
         if i >= len(AD_SLOTS):
             break
-        # i adet önceki insert, hedef pozisyonu i kadar sağa kaydırdı
         pos = min(AD_SLOTS[i] + i, len(result))
         result.insert(pos, ad)
     return result
