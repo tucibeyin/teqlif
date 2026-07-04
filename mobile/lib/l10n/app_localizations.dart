@@ -121,7 +121,7 @@ abstract class AppLocalizations {
   /// No description provided for @navSearch.
   ///
   /// In tr, this message translates to:
-  /// **'Ara'**
+  /// **'Keşfet'**
   String get navSearch;
 
   /// No description provided for @navMessages.
