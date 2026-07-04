@@ -72,7 +72,7 @@ async def main():
         try:
             import aiohttp
             from livekit.api.room_service import RoomService, ListRoomsRequest
-            from app.core.config import settings
+            from app.config import settings
 
             async with aiohttp.ClientSession() as session:
                 svc = RoomService(

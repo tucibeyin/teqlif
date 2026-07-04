@@ -993,6 +993,63 @@ async def cleanup_old_impressions_task(ctx: dict) -> None:
         raise
 
 
+async def cleanup_stale_streams_task(ctx: dict) -> None:
+    """Her 5 dk: LiveKit'te odası kapanmış ama DB'de is_live=True olan hayalet yayınları kapat."""
+    try:
+        import aiohttp
+        from datetime import datetime, timezone, timedelta
+        from sqlalchemy import select
+        from app.database import AsyncSessionLocal
+        from app.models.stream import LiveStream
+        from app.config import settings
+        from livekit.api.room_service import RoomService, ListRoomsRequest
+
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=10)
+
+        async with AsyncSessionLocal() as db:
+            streams = (await db.execute(
+                select(LiveStream).where(
+                    LiveStream.is_live == True,  # noqa: E712
+                    LiveStream.started_at <= cutoff,
+                )
+            )).scalars().all()
+
+            if not streams:
+                return
+
+            try:
+                async with aiohttp.ClientSession() as session:
+                    svc = RoomService(
+                        session,
+                        settings.livekit_api_base,
+                        settings.livekit_api_key,
+                        settings.livekit_api_secret,
+                    )
+                    res = await svc.list_rooms(ListRoomsRequest())
+                    active_rooms = {r.name for r in res.rooms}
+            except Exception as lk_exc:
+                logger.warning("[Worker] Stale stream cleanup: LiveKit API erişilemedi | %s", lk_exc)
+                return
+
+            from app.routers.webhooks import _close_stream
+            for stream in streams:
+                if stream.room_name not in active_rooms:
+                    elapsed = int(
+                        (datetime.now(timezone.utc) - stream.started_at.replace(tzinfo=timezone.utc)).total_seconds() // 60
+                        if stream.started_at.tzinfo is None
+                        else (datetime.now(timezone.utc) - stream.started_at).total_seconds() // 60
+                    )
+                    logger.warning(
+                        "[Worker] Hayalet yayın kapatılıyor | stream_id=%s room=%s elapsed=%d dk",
+                        stream.id, stream.room_name, elapsed,
+                    )
+                    await _close_stream(db, stream.room_name)
+
+    except Exception as exc:
+        logger.error("[Worker] cleanup_stale_streams başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+
+
 async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
     """
     Yeni yayın başladığında ilgili kitlenin FCM tokenlarına akıllı bildirim gönderir.
@@ -1637,6 +1694,7 @@ class WorkerSettings:
         nsfw_check_task,
         nsfw_backfill_task,
         rebuild_faiss_index_task,
+        cleanup_stale_streams_task,
     ]
 
     cron_jobs = [
@@ -1694,6 +1752,8 @@ class WorkerSettings:
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
         # Her saat başı — embedding'i olmayan ilanlar için backfill (20'şer batch)
         cron(backfill_listing_embeddings_task, minute=30),
+        # Her 5 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
+        cron(cleanup_stale_streams_task, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
