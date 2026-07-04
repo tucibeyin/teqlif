@@ -39,8 +39,9 @@ const _kCatLabels = {
 };
 
 class LiveListScreenState extends ConsumerState<LiveListScreen> {
-  List<StreamOut> _streams = [];        // tüm aktif yayınlar (En Son)
-  List<StreamOut> _recommended = [];    // kişiselleştirilmiş (Sana Özel)
+  List<StreamOut> _streams = [];                          // tüm aktif yayınlar (En Son)
+  List<StreamOut> _recommended = [];                      // kişiselleştirilmiş (Sana Özel)
+  List<Map<String, dynamic>> _suggestedStreamers = [];    // önerilen yayıncılar
   bool _loading = true;
   bool _isLoggedIn = false;
   String? _selectedCategory; // null = Tümü
@@ -115,6 +116,11 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       unawaited(
         StreamService.getRecommendedStreams().then((rec) {
           if (mounted) setState(() => _recommended = rec);
+        }),
+      );
+      unawaited(
+        StreamService.getSuggestedStreamers().then((streamers) {
+          if (mounted) setState(() => _suggestedStreamers = streamers);
         }),
       );
     }
@@ -270,11 +276,45 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   Widget _buildContent(AppLocalizations l, List<StreamOut> filtered) {
     final rec = _filteredRecommended;
     final hasRec = _isLoggedIn && rec.isNotEmpty;
+    final hasSuggestedStreamers = _isLoggedIn && _suggestedStreamers.isNotEmpty;
     final cats = _categories;
 
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
+        // ── Önerilen Yayıncılar ────────────────────────────────
+        if (hasSuggestedStreamers) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Row(
+                children: const [
+                  Icon(Icons.live_tv_rounded, color: Color(0xFFEF4444), size: 15),
+                  SizedBox(width: 6),
+                  Text(
+                    'Önerilen Yayıncılar',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 106,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: _suggestedStreamers.length,
+                itemBuilder: (_, i) => _StreamerAvatarCard(streamer: _suggestedStreamers[i]),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: Divider(height: 1, indent: 12, endIndent: 12),
+          ),
+        ],
+
         // ── Sana Özel Yayınlar ─────────────────────────────────
         if (hasRec) ...[
           SliverToBoxAdapter(
@@ -482,6 +522,81 @@ class _EmptyState extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _StreamerAvatarCard extends StatelessWidget {
+  final Map<String, dynamic> streamer;
+  const _StreamerAvatarCard({required this.streamer});
+
+  @override
+  Widget build(BuildContext context) {
+    final rawUrl = (streamer['profile_image_url'] as String?) ?? '';
+    final imageUrl = rawUrl.isNotEmpty ? imgUrl(rawUrl) : null;
+    final isVerified = streamer['is_verified'] == true;
+    final isPremium = streamer['is_premium'] == true;
+    final streamCount = streamer['stream_count'] as int? ?? 0;
+    final name = (streamer['full_name'] as String?)?.isNotEmpty == true
+        ? streamer['full_name'] as String
+        : streamer['username'] as String? ?? '';
+
+    return SizedBox(
+      width: 72,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: const Color(0xFFE5E7EB),
+                  backgroundImage: imageUrl != null ? CachedNetworkImageProvider(imageUrl) : null,
+                  child: imageUrl == null
+                      ? Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF6B7280)),
+                        )
+                      : null,
+                ),
+                if (isPremium)
+                  Positioned(
+                    bottom: 0, right: 0,
+                    child: Container(
+                      width: 18, height: 18,
+                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFF59E0B)),
+                      child: const Center(child: Text('👑', style: TextStyle(fontSize: 10))),
+                    ),
+                  )
+                else if (isVerified)
+                  Positioned(
+                    bottom: 0, right: 0,
+                    child: Container(
+                      width: 18, height: 18,
+                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF2563EB)),
+                      child: const Icon(Icons.check, size: 12, color: Colors.white),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              '$streamCount yayın',
+              style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

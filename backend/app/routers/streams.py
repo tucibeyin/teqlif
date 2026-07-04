@@ -303,6 +303,83 @@ async def leave_cohost(
     return await StreamService(db).leave_cohost(stream_id, current_user)
 
 
+@router.get("/suggested-streamers")
+async def get_suggested_streamers(
+    limit: int = Query(default=15, ge=1, le=30),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Son 90 günde yayın yapmış kullanıcıları yayın sayısı + ortalama izleyici + takipçi ile sıralar."""
+    from sqlalchemy import text as sa_text
+
+    base_query = """
+        SELECT
+            u.id,
+            u.username,
+            u.full_name,
+            u.profile_image_url,
+            u.is_verified,
+            u.is_premium,
+            COUNT(ls.id)                                   AS stream_count,
+            COALESCE(AVG(ls.viewer_count), 0)              AS avg_viewers,
+            COALESCE(fol.follower_count, 0)                AS follower_count
+        FROM users u
+        INNER JOIN live_streams ls ON ls.host_id = u.id
+            AND ls.started_at >= NOW() - INTERVAL '90 days'
+        LEFT JOIN (
+            SELECT followed_id, COUNT(*) AS follower_count
+            FROM follows GROUP BY followed_id
+        ) fol ON fol.followed_id = u.id
+        WHERE u.id != :uid
+          AND u.is_active = TRUE
+          AND u.id NOT IN (
+              SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
+              UNION
+              SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
+          )
+        {follow_filter}
+        GROUP BY u.id, u.username, u.full_name, u.profile_image_url,
+                 u.is_verified, u.is_premium, fol.follower_count
+        HAVING COUNT(ls.id) >= 1
+        ORDER BY (
+            LEAST(LOG(1.0 + COUNT(ls.id)) / 3.0, 0.35)
+            + LEAST(COALESCE(AVG(ls.viewer_count), 0) / 200.0, 0.35)
+            + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.30)
+        ) DESC
+        LIMIT :lim
+    """
+
+    result = await db.execute(
+        sa_text(base_query.format(
+            follow_filter="AND u.id NOT IN (SELECT followed_id FROM follows WHERE follower_id = :uid)"
+        )),
+        {"uid": current_user.id, "lim": limit},
+    )
+    rows = result.fetchall()
+
+    if not rows:
+        result = await db.execute(
+            sa_text(base_query.format(follow_filter="")),
+            {"uid": current_user.id, "lim": limit},
+        )
+        rows = result.fetchall()
+
+    return [
+        {
+            "id": row[0],
+            "username": row[1],
+            "full_name": row[2],
+            "profile_image_url": row[3],
+            "is_verified": row[4],
+            "is_premium": row[5],
+            "stream_count": int(row[6]),
+            "avg_viewers": round(float(row[7]), 1),
+            "follower_count": int(row[8]),
+        }
+        for row in rows
+    ]
+
+
 @router.get("/following/live", response_model=list[StreamOut])
 async def get_followed_live_streams(
     current_user: User = Depends(get_current_user),
