@@ -21,26 +21,25 @@ router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 _receiver = WebhookReceiver(TokenVerifier(settings.livekit_api_key, settings.livekit_api_secret))
 
 
-@router.get("/livekit", include_in_schema=False)
-async def livekit_webhook_probe():
-    return {"status": "ok"}
-
-
-@router.post("/livekit", include_in_schema=False)
+@router.api_route("/livekit", methods=["GET", "POST"], include_in_schema=False)
 async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
     body = await request.body()
-    auth_header = request.headers.get("Authorization", "")
 
+    # LiveKit bazen GET ile gönderir; body yoksa probe (sağlık kontrolü)
+    if not body:
+        return {"status": "ok"}
+
+    auth_header = request.headers.get("Authorization", "")
     try:
         event = _receiver.receive(body.decode(), auth_header)
     except Exception:
-        logger.error("LiveKit webhook imza doğrulaması başarısız", exc_info=True)
+        logger.error("LiveKit webhook imza doğrulaması başarısız | method=%s", request.method, exc_info=True)
         raise HTTPException(status_code=401, detail="Geçersiz webhook imzası")
 
     event_type = event.event
     room_name = event.room.name if event.room else None
 
-    logger.info("LiveKit webhook alındı | event=%s room=%s", event_type, room_name)
+    logger.info("LiveKit webhook alındı | method=%s event=%s room=%s", request.method, event_type, room_name)
 
     if event_type == "room_finished" and room_name:
         background_tasks.add_task(_delayed_close_stream, room_name)
