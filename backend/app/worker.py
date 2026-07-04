@@ -11,6 +11,8 @@ Her task:
 
 from __future__ import annotations
 
+import json
+
 from arq import cron
 from arq.connections import RedisSettings
 
@@ -678,7 +680,7 @@ async def compute_user_interests_task(ctx: dict) -> None:
                     "uid": row.user_id,
                     "cat": row.category,
                     "score": float(row.score),
-                    "raw": {"raw_total": float(row.raw)},
+                    "raw": json.dumps({"raw_total": float(row.raw)}),
                 })
                 updated_users.add(row.user_id)
 
