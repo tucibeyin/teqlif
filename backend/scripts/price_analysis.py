@@ -172,8 +172,10 @@ async def main():
 
         if listing2 and listing2.embedding is not None:
             emb2 = "[" + ",".join(f"{x:.6f}" for x in listing2.embedding) + "]"
+            price_lo = float(listing2.price or 1) * 0.05
+            price_hi = float(listing2.price or 1) * 20.0
 
-            # Embedding benzerliğiyle bulunan aktif ilanlar (şu anki query — kategorisiz)
+            # Embedding benzerliğiyle bulunan aktif ilanlar (eski query — kategorisiz, filtre yok)
             sim_rows = (await db2.execute(text("""
                 SELECT id, title, category, price, user_id,
                        (embedding <=> CAST(:emb AS vector)) AS dist
@@ -202,7 +204,7 @@ async def main():
                     diff = ((listing2.price - avg) / avg) * 100
                     print(f"  İlan fiyatı: {listing2.price}₺  →  Piyasaya göre: %{diff:+.1f}")
 
-            # Kategori filtreli versiyon (düzeltilmiş)
+            # Kategori + fiyat filtreli versiyon (düzeltilmiş — production'daki yeni query)
             sim_cat_rows = (await db2.execute(text("""
                 SELECT id, title, category, price,
                        (embedding <=> CAST(:emb AS vector)) AS dist
@@ -210,13 +212,14 @@ async def main():
                 WHERE user_id != :uid
                   AND category = :cat
                   AND is_active AND NOT is_deleted
-                  AND price IS NOT NULL
+                  AND price > :lo AND price < :hi
                   AND embedding IS NOT NULL
                 ORDER BY embedding <=> CAST(:emb AS vector)
                 LIMIT 10
-            """), {"uid": listing2.user_id, "emb": emb2, "cat": listing2.category})).fetchall()
+            """), {"uid": listing2.user_id, "emb": emb2, "cat": listing2.category,
+                   "lo": price_lo, "hi": price_hi})).fetchall()
 
-            print(f"\n  Kategori filtreli versiyon ({listing2.category}):")
+            print(f"\n  Kategori + fiyat filtreli versiyon (düzeltilmiş — {listing2.category}, {price_lo:.0f}₺–{price_hi:.0f}₺):")
             cat_prices = []
             for r in sim_cat_rows:
                 print(f"  {r.id:>5}  {float(r.dist):>6.3f}  {int(r.price):>8}₺  {(r.title or '')[:30]}")

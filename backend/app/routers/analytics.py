@@ -1001,6 +1001,9 @@ async def pro_insights(
         my_listings = my_listings_r.fetchall()
         for ml in my_listings:
             market_avg: float | None = None
+            # Fiyat aralığı: ilanın fiyatının 0.05x–20x arası (test verisi ve aykırı değerleri eler)
+            price_lo = float(ml.price) * 0.05
+            price_hi = float(ml.price) * 20.0
             if ml.embedding is not None:
                 try:
                     emb_str = "[" + ",".join(f"{x:.6f}" for x in ml.embedding) + "]"
@@ -1008,13 +1011,15 @@ async def pro_insights(
                         SELECT AVG(price) FROM (
                             SELECT price FROM listings
                             WHERE user_id != :uid
+                              AND category = :cat
                               AND is_active AND NOT is_deleted
-                              AND price IS NOT NULL
+                              AND price > :lo AND price < :hi
                               AND embedding IS NOT NULL
                             ORDER BY embedding <=> CAST(:emb AS vector)
                             LIMIT 10
                         ) sub
-                    """), {"uid": uid, "emb": emb_str})
+                    """), {"uid": uid, "emb": emb_str, "cat": ml.category,
+                           "lo": price_lo, "hi": price_hi})
                     market_avg = sim_r.scalar()
                 except Exception:
                     await db.rollback()
@@ -1023,8 +1028,10 @@ async def pro_insights(
                 cat_r = await db.execute(sql_text("""
                     SELECT AVG(price) FROM listings
                     WHERE category = :cat AND user_id != :uid
-                      AND is_active AND NOT is_deleted AND price IS NOT NULL
-                """), {"cat": ml.category, "uid": uid})
+                      AND is_active AND NOT is_deleted
+                      AND price > :lo AND price < :hi
+                """), {"cat": ml.category, "uid": uid,
+                       "lo": price_lo, "hi": price_hi})
                 market_avg = cat_r.scalar()
 
             if market_avg and market_avg > 0:
