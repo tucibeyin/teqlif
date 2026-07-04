@@ -1,7 +1,7 @@
 """rename is_verified to email_verified
 
 Revision ID: a3b4c5d6e7f8
-Revises: z2a3b4c5d6e7
+Revises: d7e8f9a0b1c2
 Create Date: 2026-07-04
 
 is_verified sadece e-posta doğrulamasını temsil ediyordu; bu isim "tam doğrulama"
@@ -13,7 +13,7 @@ is_verified → model property: email_verified AND phone_verified (tam doğrulam
 from alembic import op
 
 revision = 'b9c0d1e2f3a4'
-down_revision = 'z2a3b4c5d6e7'
+down_revision = 'd7e8f9a0b1c2'
 branch_labels = None
 depends_on = None
 
