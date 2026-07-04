@@ -2003,10 +2003,10 @@
 
         btn.addEventListener('click', async function () {
             if (!_blastData) return;
-            const reachable      = _blastData.non_follower_audience || _blastData.audience_size || 0;
-            const perBlastCap    = _blastData.per_blast_cap        || 5;
-            const creditsLeft    = _blastData.credits_remaining    || 0;
-            const tuciBalance    = _blastData.tuci_balance         || 0;
+            const reachable      = _blastData.non_follower_audience ?? _blastData.audience_size ?? 0;
+            const perBlastCap    = _blastData.per_blast_cap        ?? 5;
+            const creditsLeft    = _blastData.credits_remaining    ?? 0;
+            const tuciBalance    = _blastData.tuci_balance         ?? 0;
             const actualCount    = Math.min(reachable, perBlastCap);
             const freeUsed       = Math.min(creditsLeft, actualCount);
             const paidCount      = actualCount - freeUsed;
