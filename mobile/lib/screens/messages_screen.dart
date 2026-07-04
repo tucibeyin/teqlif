@@ -74,6 +74,10 @@ class MessagesScreenState extends State<MessagesScreen>
     }
   }
 
+  void refresh({bool bypassCache = false}) {
+    PushNotificationService.notificationStream.add({});
+  }
+
   void _onTabChanged() {
     if (!_tabController.indexIsChanging && _tabController.index == 1) {
       NotificationService.markAllRead().then((_) {

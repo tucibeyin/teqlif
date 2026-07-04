@@ -45,6 +45,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final GlobalKey<HomeScreenState> _homeKey = GlobalKey();
   final GlobalKey<SearchScreenState> _searchKey = GlobalKey();
   final GlobalKey<MessagesScreenState> _messagesKey = GlobalKey();
+  final GlobalKey<ProfileScreenState> _profileKey = GlobalKey();
   late final List<Widget> _screens;
 
   // Tab başına son SWR yenileme zamanı
@@ -52,9 +53,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   // Tab TTL'leri: bu süreden önce geçilmişse ağ isteği atılmaz, cache gösterilir
   static const Map<int, Duration> _kTabTtl = {
-    0: Duration(seconds: 30),  // Canlı — yayınlar sık değişir
-    1: Duration(seconds: 60),  // İlanlar
-    2: Duration(seconds: 60),  // Keşfet
+    0: Duration(seconds: 30),   // Canlı — yayınlar sık değişir
+    1: Duration(seconds: 60),   // İlanlar
+    2: Duration(seconds: 60),   // Keşfet
+    3: Duration(seconds: 120),  // Mesajlar
+    4: Duration(seconds: 120),  // Profil
   };
 
   @override
@@ -65,7 +68,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       HomeScreen(key: _homeKey),
       SearchScreen(key: _searchKey),
       MessagesScreen(key: _messagesKey),
-      const ProfileScreen(),
+      ProfileScreen(key: _profileKey),
     ];
     WidgetsBinding.instance.addObserver(this);
     WsService.connect();
@@ -132,6 +135,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       if (_currentIndex == 0) _liveListKey.currentState?.refresh(bypassCache: false);
       if (_currentIndex == 1) _homeKey.currentState?.refresh(bypassCache: false);
       if (_currentIndex == 2) _searchKey.currentState?.refresh(bypassCache: false);
+      if (_currentIndex == 3) _messagesKey.currentState?.refresh(bypassCache: false);
+      if (_currentIndex == 4) _profileKey.currentState?.refresh(bypassCache: false);
       _lastTabRefresh[_currentIndex] = DateTime.now();
     }
   }
@@ -167,15 +172,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           if (index == 0) _liveListKey.currentState?.refresh(bypassCache: false);
           if (index == 1) _homeKey.currentState?.refresh(bypassCache: false);
           if (index == 2) _searchKey.currentState?.refresh(bypassCache: false);
+          if (index == 3) _messagesKey.currentState?.refresh(bypassCache: false);
+          if (index == 4) _profileKey.currentState?.refresh(bypassCache: false);
           _lastTabRefresh[index] = DateTime.now();
         }
         // TTL dolmamış: içerik olduğu gibi kalır, ağ isteği atılmaz
       }
     }
     setState(() => _currentIndex = index);
-    // Mesajlar tabına geçince listeyi ve badge'i güncelle
+    // Mesajlar tabına geçince badge'i güncelle (içerik TTL ile yönetiliyor)
     if (index == 3) {
-      PushNotificationService.notificationStream.add({});
       Future.delayed(const Duration(milliseconds: 300), _refreshBadges);
     }
   }

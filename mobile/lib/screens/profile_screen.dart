@@ -40,10 +40,10 @@ class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _user;
   List<dynamic> _listings = [];
   bool _loading = true;
@@ -84,6 +84,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _load();
   }
+
+  void refresh({bool bypassCache = false}) => _load(bypassCache: bypassCache);
 
   @override
   void dispose() {
