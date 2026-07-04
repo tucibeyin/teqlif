@@ -158,8 +158,10 @@ async def main():
             for email in all_emails:
                 h = hashlib.md5(email.encode()).hexdigest()
                 await db.execute(sql_text("""
-                    INSERT INTO users (email, username, full_name, hashed_password, tuci_balance, fcm_token)
-                    VALUES (:email, :uname, 'Test User', 'x', 200, :token)
+                    INSERT INTO users
+                        (email, username, full_name, hashed_password,
+                         is_active, email_verified, tuci_balance, fcm_token)
+                    VALUES (:email, :uname, 'Test User', 'x', true, false, 200, :token)
                 """), {"email": email, "uname": f"u_{h[:8]}", "token": f"fcm_{h[:12]}"})
             await db.flush()
 
