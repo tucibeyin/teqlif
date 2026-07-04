@@ -362,7 +362,7 @@ async def retargeting_audience(
         # Kazanılan açık artırma sayısı (purchases çift sayımını önlemek için sadece auctions kullan)
         buyer_result = await db.scalar(sql_text("""
             SELECT COUNT(*) FROM auctions
-            WHERE listing_id = :lid AND winner_username IS NOT NULL AND status = 'ended'
+            WHERE listing_id = :lid AND winner_username IS NOT NULL AND status = 'completed'
         """), {"lid": listing_id})
         already_bought = int(buyer_result or 0)
 
