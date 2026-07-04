@@ -2029,7 +2029,7 @@ async def category_velocity(
             ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY l.price)::numeric, 0) AS p75_price
         FROM auctions a
         INNER JOIN listings l ON l.id = a.listing_id
-        WHERE a.status = 'ended'
+        WHERE a.status = 'completed'
           AND a.winner_username IS NOT NULL
           AND a.ended_at IS NOT NULL
           AND l.category = :cat
@@ -2051,7 +2051,7 @@ async def category_velocity(
             FROM listings WHERE category = :cat AND is_deleted = FALSE
             GROUP BY category
         ) pct ON pct.category = l.category
-        WHERE a.status = 'ended'
+        WHERE a.status = 'completed'
           AND a.winner_username IS NOT NULL
           AND a.ended_at IS NOT NULL
           AND l.category = :cat
