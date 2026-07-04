@@ -70,8 +70,8 @@ logger = setup_logging()
 if settings.sentry_backend_dsn:
     sentry_sdk.init(
         dsn=settings.sentry_backend_dsn,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
+        traces_sample_rate=0.05,
+        profiles_sample_rate=0.05,
     )
     logger.info("Sentry Backend entegrasyonu aktif edildi.")
 # ---------------------------
@@ -184,8 +184,23 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
 
-# Prometheus metrics — /metrics endpoint'i (sadece iç ağdan erişilmeli)
-Instrumentator().instrument(app).expose(app, include_in_schema=False)
+# Prometheus metrics — sadece localhost / iç ağ erişimine izin verilir
+_instrumentator = Instrumentator().instrument(app)
+
+_INTERNAL_NETS = ("127.0.0.1", "::1", "10.", "172.16.", "172.17.", "172.18.",
+                  "172.19.", "172.20.", "172.21.", "172.22.", "172.23.", "172.24.",
+                  "172.25.", "172.26.", "172.27.", "172.28.", "172.29.", "172.30.",
+                  "172.31.", "192.168.")
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics(request: Request):
+    from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+    from fastapi.responses import Response
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "").split(",")[0].strip()
+    if not any(client_ip.startswith(prefix) for prefix in _INTERNAL_NETS):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=403, content={"detail": "Forbidden"})
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 # Security setup
 app.state.limiter = limiter
