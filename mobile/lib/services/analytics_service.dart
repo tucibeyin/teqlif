@@ -95,6 +95,7 @@ class AnalyticsService {
     required int estimatedCost,
     int? listingId,
     int? streamId,
+    int? recipientCount,
   }) async {
     try {
       final token = await StorageService.getToken();
@@ -111,6 +112,7 @@ class AnalyticsService {
           'estimated_cost': estimatedCost,
           'listing_id': ?listingId,
           'stream_id': ?streamId,
+          if (recipientCount != null) 'recipient_count': recipientCount,
         }),
       );
       if (resp.statusCode == 202) {
@@ -523,6 +525,7 @@ class AnalyticsService {
     required int listingId,
     required int estimatedAudience,
     required int estimatedCost,
+    int? recipientCount,
   }) async {
     try {
       final token = await StorageService.getToken();
@@ -537,6 +540,7 @@ class AnalyticsService {
           'listing_id': listingId,
           'estimated_audience': estimatedAudience,
           'estimated_cost': estimatedCost,
+          if (recipientCount != null) 'recipient_count': recipientCount,
         }),
       );
       if (resp.statusCode == 200 || resp.statusCode == 202) {

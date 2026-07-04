@@ -2529,6 +2529,16 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String retargetingDialogBodyKarma(int count, int free, int cost) {
+    return '$count kişiye bildirim gönderilecek.\n\n$free kredi kullanılacak + $cost TUCi ödenecek.';
+  }
+
+  @override
+  String retargetingDialogBodyInsufficient(int cost, int balance) {
+    return 'Yetersiz TUCi bakiyesi.\nGerekli: $cost TUCi | Mevcut: $balance TUCi';
+  }
+
+  @override
   String get retargetingCostFree => 'Ücretsiz';
 
   @override
@@ -2543,7 +2553,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String retargetingPaidSubtitle(int count) {
-    return '$count kişi × 1 TUCi';
+    return '$count kişi × 10 TUCi';
   }
 
   @override
@@ -2573,7 +2583,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get retargetingInfoText =>
-      'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık blast krediniz varsa ücretsiz, bitince her kişi için 1 TUCi harcanır.';
+      'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık blast krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.';
 
   @override
   String get retargetingLast30Days => 'Son 30 gün içinde';

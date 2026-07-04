@@ -2528,6 +2528,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String retargetingDialogBodyKarma(int count, int free, int cost) {
+    return 'A notification will be sent to $count people.\n\n$free credit(s) will be used + $cost TUCi will be charged.';
+  }
+
+  @override
+  String retargetingDialogBodyInsufficient(int cost, int balance) {
+    return 'Insufficient TUCi balance.\nRequired: $cost TUCi | Available: $balance TUCi';
+  }
+
+  @override
   String get retargetingCostFree => 'Free';
 
   @override
@@ -2542,7 +2552,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String retargetingPaidSubtitle(int count) {
-    return '$count people × 1 TUCi';
+    return '$count people × 10 TUCi';
   }
 
   @override
@@ -2572,7 +2582,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retargetingInfoText =>
-      'Sends a reminder notification to people who viewed your listing but didn\'t buy. Free if you have monthly blast credits, otherwise 1 TUCi per person.';
+      'Sends a reminder notification to people who viewed your listing but didn\'t buy. Free if you have monthly blast credits, otherwise 10 TUCi per person.';
 
   @override
   String get retargetingLast30Days => 'Last 30 days';

@@ -2508,6 +2508,16 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String retargetingDialogBodyKarma(int count, int free, int cost) {
+    return 'سيتم إرسال إشعار إلى $count شخص.\n\nسيُستخدم $free رصيد + سيُدفع $cost TUCi.';
+  }
+
+  @override
+  String retargetingDialogBodyInsufficient(int cost, int balance) {
+    return 'رصيد TUCi غير كافٍ.\nالمطلوب: $cost TUCi | المتاح: $balance TUCi';
+  }
+
+  @override
   String get retargetingCostFree => 'مجاني';
 
   @override
@@ -2522,7 +2532,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String retargetingPaidSubtitle(int count) {
-    return '$count شخص × 1 TUCi';
+    return '$count شخص × 10 TUCi';
   }
 
   @override
@@ -2552,7 +2562,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get retargetingInfoText =>
-      'يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 1 TUCi لكل شخص.';
+      'يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 10 TUCi لكل شخص.';
 
   @override
   String get retargetingLast30Days => 'آخر 30 يومًا';

@@ -124,7 +124,7 @@ async def main():
             redis = await get_redis()
             used_raw = await redis.get(month_key)
             used = int(used_raw) if used_raw else 0
-            _BLAST_LIMIT_PRO = 5
+            _BLAST_LIMIT_PRO = 6
             remaining = max(0, _BLAST_LIMIT_PRO - used)
             print(f"  Bu ay kullanılan: {used} / {_BLAST_LIMIT_PRO}")
             print(f"  Kalan           : {remaining}")

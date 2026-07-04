@@ -588,8 +588,8 @@ class _BlastCreditCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final used      = credits?['used']      as int? ?? 0;
-    final limit     = credits?['limit']     as int? ?? (isPremium ? 5 : 3);
-    final remaining = credits?['remaining'] as int? ?? (isPremium ? 5 : 3);
+    final limit     = credits?['limit']     as int? ?? (isPremium ? 6 : 3);
+    final remaining = credits?['remaining'] as int? ?? (isPremium ? 6 : 3);
     final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
 
     final Color barColor = remaining == 0
@@ -661,7 +661,7 @@ class _BlastCreditCard extends StatelessWidget {
                     color: const Color(0xFFFFB800),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text('PRO: 5/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
+                  child: const Text('PRO: 6/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
                 ),
             ],
           ),

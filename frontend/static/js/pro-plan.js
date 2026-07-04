@@ -35,10 +35,10 @@
             document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '36 boost × 50 TUCi<br>= 1.800 TL değer';
 
             /* tablo: blast */
-            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl';
-            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '60 adet / yıl';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+24 Ekstra';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+24 ekstra ücretsiz duyuru hakkı ile on binlerce kullanıcıya bedava ulaşın';
+            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl · max 5 kişi';
+            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '72 adet / yıl · max 10 kişi';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+36 Ekstra';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+36 ekstra ücretsiz duyuru hakkı (72/yıl) + 2× alıcı kapasitesi (10 kişi) · eksik hak için 10 TUCi/kişi';
 
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
@@ -72,10 +72,10 @@
             document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '3 boost × 50 TUCi<br>= 150 TL değer';
 
             /* tablo: blast */
-            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay';
-            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '5 adet / ay';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+2 Ekstra';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+2 ekstra ücretsiz duyuru hakkı ile binlerce kullanıcıya bedava ulaşın';
+            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay · max 5 kişi';
+            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '6 adet / ay · max 10 kişi';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+3 Ekstra';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+3 ekstra ücretsiz duyuru hakkı (6/ay) + 2× alıcı kapasitesi (10 kişi) · eksik hak için 10 TUCi/kişi';
 
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');

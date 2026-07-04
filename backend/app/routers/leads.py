@@ -26,9 +26,11 @@ from app.utils.auth import get_current_user
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/leads", tags=["leads"])
 
-COST_PER_PERSON: int = 1  # TUCi per kişi
-_BLAST_LIMIT_STANDARD = 3
-_BLAST_LIMIT_PRO      = 5
+COST_PER_PERSON: int = 10        # TUCi per kişi
+_BLAST_LIMIT_STANDARD = 3        # aylık ücretsiz alıcı hakkı
+_BLAST_LIMIT_PRO      = 6        # aylık ücretsiz alıcı hakkı (PRO)
+_PER_BLAST_CAP_STANDARD = 5      # tek blast'ta maks. alıcı
+_PER_BLAST_CAP_PRO      = 10     # tek blast'ta maks. alıcı (PRO)
 
 
 # ── Blast Kredi Yardımcıları (Redis) ─────────────────────────────────────────
@@ -48,14 +50,17 @@ async def _get_blast_used(user_id: int) -> int:
         return 0
 
 
-async def _increment_blast(user_id: int) -> None:
+async def _increment_blast(user_id: int, count: int = 1) -> None:
+    """Kullanılan ücretsiz alıcı sayısını Redis'e yazar (INCRBY)."""
+    if count <= 0:
+        return
     try:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
         key = _blast_redis_key(user_id)
-        count = await redis.incr(key)
-        if count == 1:
-            # İlk blast — ayın sonuna kadar TTL ayarla
+        new_val = await redis.incrby(key, count)
+        if new_val <= count:
+            # Anahtar bu ay ilk kez oluşturuldu — ayın sonuna TTL ayarla
             now = datetime.now()
             last_day = calendar.monthrange(now.year, now.month)[1]
             end_of_month = datetime(now.year, now.month, last_day, 23, 59, 59)
@@ -117,26 +122,38 @@ async def audience_size(
     audience_capped = len(target_user_ids) > 10000
     target_user_ids = target_user_ids[:10000]
 
-    # PostgreSQL'den gerçek FCM token sayısı — send-blast ile aynı sorgu
+    # PostgreSQL'den gerçek FCM token sayısı — takipçiler hariç
     if target_user_ids:
         token_count = await db.scalar(sql_text("""
             SELECT COUNT(*) FROM users
-            WHERE id = ANY(:ids) AND fcm_token IS NOT NULL AND fcm_token != ''
-        """), {"ids": target_user_ids})
+            WHERE id = ANY(:ids)
+              AND fcm_token IS NOT NULL AND fcm_token != ''
+              AND id NOT IN (
+                  SELECT follower_id FROM follows WHERE followed_id = :me
+              )
+        """), {"ids": target_user_ids, "me": current_user.id})
         reachable = int(token_count or 0)
     else:
         reachable = 0
 
+    cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
     used  = await _get_blast_used(current_user.id)
-    is_free = used < limit
+    credits_remaining = max(0, limit - used)
 
-    estimated_cost = 0 if is_free else reachable * COST_PER_PERSON
+    actual_cap      = min(reachable, cap)
+    free_used       = min(credits_remaining, actual_cap)
+    paid_count      = actual_cap - free_used
+    estimated_cost  = paid_count * COST_PER_PERSON
 
     return {
-        "audience_size": reachable,
-        "estimated_cost": estimated_cost,
-        "audience_capped": audience_capped,
+        "audience_size":          reachable,
+        "non_follower_audience":  reachable,
+        "estimated_cost":         estimated_cost,
+        "audience_capped":        audience_capped,
+        "per_blast_cap":          cap,
+        "credits_remaining":      credits_remaining,
+        "tuci_balance":           current_user.tuci_balance,
     }
 
 
@@ -148,12 +165,15 @@ async def blast_credits(
 ):
     """Kullanıcının bu ayki blast kredi durumunu döndürür."""
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
+    cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     used  = await _get_blast_used(current_user.id)
     return {
-        "used":       used,
-        "limit":      limit,
-        "remaining":  max(0, limit - used),
-        "is_premium": current_user.is_premium,
+        "used":          used,
+        "limit":         limit,
+        "remaining":     max(0, limit - used),
+        "is_premium":    current_user.is_premium,
+        "per_blast_cap": cap,
+        "tuci_balance":  current_user.tuci_balance,
     }
 
 
@@ -165,6 +185,7 @@ class BlastRequest(BaseModel):
     listing_id: int | None = Field(default=None)
     stream_id: int | None = Field(default=None)
     estimated_cost: int = Field(ge=0)
+    recipient_count: int | None = Field(default=None, ge=1)  # kullanıcının seçtiği alıcı sayısı
 
 
 @router.post("/send-blast", status_code=202)
@@ -176,26 +197,25 @@ async def send_blast(
     """
     Hedef kitleye push bildirimi gönderir.
 
-    1. Aylık blast kredi limiti kontrolü (Standart: 3 / Pro: 20).
-    2. ClickHouse → son 7 günde aktif user_id listesi çek.
+    Karma model: free_used kredi ücretsiz, kalan paid_count × 10 TUCi.
+    1. Kredi + per_blast_cap → actual alıcı sayısı belirlenir.
+    2. ClickHouse → son 7 günde aktif user_id listesi (takipçiler hariç).
     3. PostgreSQL → FCM tokenları al.
     4. Firebase → toplu push gönder.
     """
-    # ── Aylık blast kredi kontrolü ve TUCi hesaplama ────────────────────────
+    cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
     used  = await _get_blast_used(current_user.id)
-    is_free = used < limit
-    
-    if is_free:
-        tuci_cost = 0
-    else:
-        tuci_cost = body.estimated_cost
-        if tuci_cost <= 0:
-            tip = "" if current_user.is_premium else " Pro'ya geçerek aylık 20 hakka sahip olabilirsiniz."
-            raise HTTPException(
-                status_code=429,
-                detail=f"Bu ay için ücretsiz blast krediniz doldu ({used}/{limit}). TUCi ödeyerek göndermeye devam edebilirsiniz.{tip}",
-            )
+    credits_remaining = max(0, limit - used)
+
+    # Kullanıcının seçtiği ya da maksimum alıcı sayısı
+    desired = body.recipient_count if body.recipient_count else cap
+    actual_count = min(desired, cap)
+
+    # Karma maliyet hesabı
+    free_used  = min(credits_remaining, actual_count)
+    paid_count = actual_count - free_used
+    tuci_cost  = paid_count * COST_PER_PERSON
 
     # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
     if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
@@ -244,13 +264,15 @@ async def send_blast(
         logger.info("[Leads] ClickHouse verisi yok — blast iptal | seller=%d", current_user.id)
         return {"sent": 0, "spent": 0, "message": "Bu kategori için henüz yeterli kitle verisi yok."}
 
-    token_q = select(User.fcm_token).where(
-        User.id.in_(target_user_ids),
-        User.fcm_token.is_not(None),
-        User.fcm_token != "",
-    ).limit(5000)
-
-    token_result = await db.execute(token_q)
+    token_result = await db.execute(sql_text("""
+        SELECT fcm_token FROM users
+        WHERE id = ANY(:ids)
+          AND fcm_token IS NOT NULL AND fcm_token != ''
+          AND id NOT IN (
+              SELECT follower_id FROM follows WHERE followed_id = :me
+          )
+        LIMIT :cap
+    """), {"ids": target_user_ids, "me": current_user.id, "cap": actual_count})
     fcm_tokens: list[str] = [r[0] for r in token_result.fetchall() if r[0]]
 
     if not fcm_tokens:
@@ -293,11 +315,11 @@ async def send_blast(
         sent += len(chunk)
 
     logger.info(
-        "[Leads] Blast gönderildi | seller=%d | tokens=%d | cost=%d TUCi",
-        current_user.id, sent, body.estimated_cost,
+        "[Leads] Blast gönderildi | seller=%d | tokens=%d | free=%d | paid=%d | cost=%d TUCi",
+        current_user.id, sent, free_used, paid_count, tuci_cost,
     )
 
-    # ── TUCi düş + işlem logla + kredi say ───────────────────────────────────
+    # ── TUCi düş + kredi say ──────────────────────────────────────────────────
     if tuci_cost > 0:
         await db.execute(
             sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
@@ -309,9 +331,9 @@ async def send_blast(
             transaction_type="spend_lead_gen",
         ))
         await db.commit()
-        
-    if is_free:
-        await _increment_blast(current_user.id)
+
+    if free_used > 0:
+        await _increment_blast(current_user.id, count=free_used)
 
     return {
         "sent": sent,
@@ -366,19 +388,27 @@ async def retargeting_audience(
         """), {"lid": listing_id})
         already_bought = int(buyer_result or 0)
 
-        # Gerçek FCM token sayısını say — tahmin değil, DB'deki gerçek rakam
+        # Gerçek FCM token sayısını say — takipçiler hariç
         if viewer_ids:
             token_count = await db.scalar(sql_text("""
                 SELECT COUNT(*) FROM users
-                WHERE id = ANY(:ids) AND fcm_token IS NOT NULL AND fcm_token != ''
-            """), {"ids": viewer_ids})
+                WHERE id = ANY(:ids)
+                  AND fcm_token IS NOT NULL AND fcm_token != ''
+                  AND id NOT IN (
+                      SELECT follower_id FROM follows WHERE followed_id = :me
+                  )
+            """), {"ids": viewer_ids, "me": current_user.id})
             reachable_with_token = int(token_count or 0)
         else:
             reachable_with_token = 0
 
-        used = await _get_blast_used(current_user.id)
-        blast_remaining = max(0, _BLAST_LIMIT_PRO - used)
-        is_free = blast_remaining > 0
+        cap   = _PER_BLAST_CAP_PRO
+        used  = await _get_blast_used(current_user.id)
+        credits_remaining = max(0, _BLAST_LIMIT_PRO - used)
+        actual_cap   = min(reachable_with_token, cap)
+        free_used    = min(credits_remaining, actual_cap)
+        paid_count   = actual_cap - free_used
+        estimated_cost = paid_count * COST_PER_PERSON
 
         return {
             "listing_id": listing_id,
@@ -386,10 +416,12 @@ async def retargeting_audience(
             "total_viewers_30d": total_viewers,
             "already_bought": already_bought,
             "reachable_audience": reachable_with_token,
-            "estimated_cost_tuci": 0 if is_free else reachable_with_token,
-            "blast_credits_remaining": blast_remaining,
+            "non_follower_audience": reachable_with_token,
+            "estimated_cost_tuci": estimated_cost,
+            "blast_credits_remaining": credits_remaining,
             "blast_credits_limit": _BLAST_LIMIT_PRO,
-            "is_free": is_free,
+            "per_blast_cap": cap,
+            "tuci_balance": current_user.tuci_balance,
         }
 
     except Exception as exc:
@@ -400,10 +432,12 @@ async def retargeting_audience(
             "total_viewers_30d": 0,
             "already_bought": 0,
             "reachable_audience": 0,
+            "non_follower_audience": 0,
             "estimated_cost_tuci": 0,
             "blast_credits_remaining": 0,
             "blast_credits_limit": _BLAST_LIMIT_PRO,
-            "is_free": False,
+            "per_blast_cap": _PER_BLAST_CAP_PRO,
+            "tuci_balance": current_user.tuci_balance,
         }
 
 
@@ -411,6 +445,7 @@ class RetargetingBlastBody(BaseModel):
     listing_id: int
     estimated_audience: int = Field(ge=0)
     estimated_cost: int = Field(ge=0)
+    recipient_count: int | None = Field(default=None, ge=1)  # kullanıcının seçtiği alıcı sayısı
 
 
 @router.post("/send-retargeting")
@@ -432,17 +467,19 @@ async def send_retargeting(
     if not listing:
         raise HTTPException(404, "İlan bulunamadı")
 
-    # Blast kredisi varsa ücretsiz, yoksa TUCi öde
-    used = await _get_blast_used(current_user.id)
-    has_credit = used < _BLAST_LIMIT_PRO
-    tuci_cost = 0 if has_credit else body.estimated_cost
+    # Karma model: kredi ücretsiz, kalan × 10 TUCi
+    cap   = _PER_BLAST_CAP_PRO
+    used  = await _get_blast_used(current_user.id)
+    credits_remaining = max(0, _BLAST_LIMIT_PRO - used)
 
-    if tuci_cost > 0:
-        balance = await db.scalar(
-            sql_text("SELECT tuci_balance FROM users WHERE id = :uid"), {"uid": current_user.id}
-        )
-        if (balance or 0) < tuci_cost:
-            raise HTTPException(402, f"Yetersiz TUCi bakiyesi. Mevcut: {balance or 0} TUCi, Gerekli: {tuci_cost} TUCi")
+    desired      = body.recipient_count if body.recipient_count else cap
+    actual_count = min(desired, cap)
+    free_used    = min(credits_remaining, actual_count)
+    paid_count   = actual_count - free_used
+    tuci_cost    = paid_count * COST_PER_PERSON
+
+    if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
+        raise HTTPException(402, f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {tuci_cost} TUCi")
 
     # ClickHouse'dan viewer user_id'lerini çek
     viewer_ids: list[int] = []
@@ -466,17 +503,17 @@ async def send_retargeting(
     if not viewer_ids:
         return {"sent": 0, "spent": 0, "message": "Henüz yeterli izleyici verisi yok."}
 
-    # FCM token'ları PostgreSQL'den çek
+    # FCM token'ları PostgreSQL'den çek — takipçiler hariç, actual_count ile sınırlı
     token_rows = (await db.execute(sql_text("""
         SELECT fcm_token FROM users
-        WHERE id = ANY(:ids) AND fcm_token IS NOT NULL AND fcm_token != ''
-    """), {"ids": viewer_ids})).fetchall()
+        WHERE id = ANY(:ids)
+          AND fcm_token IS NOT NULL AND fcm_token != ''
+          AND id NOT IN (
+              SELECT follower_id FROM follows WHERE followed_id = :me
+          )
+        LIMIT :cap
+    """), {"ids": viewer_ids, "me": current_user.id, "cap": actual_count})).fetchall()
     fcm_tokens = [r[0] for r in token_rows]
-
-    # Kullanıcının onayladığı kişi sayısından fazla gönderme
-    # (tahmin ile gerçek arasındaki farkı kapatır)
-    if body.estimated_audience > 0:
-        fcm_tokens = fcm_tokens[:body.estimated_audience]
 
     if not fcm_tokens:
         return {"sent": 0, "spent": 0, "message": "Bildirim gönderilebilecek kullanıcı bulunamadı."}
@@ -505,30 +542,27 @@ async def send_retargeting(
         await asyncio.gather(*[_send_one(t) for t in chunk])
         sent += len(chunk)
 
-    # Kredi düş veya TUCi öde
-    actual_cost = 0
-    if has_credit:
-        await _increment_blast(current_user.id)
-    else:
-        actual_cost = min(tuci_cost, sent)
-        if actual_cost > 0:
-            await db.execute(
-                sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                {"cost": actual_cost, "uid": current_user.id},
-            )
-            db.add(TuciTransaction(
-                user_id=current_user.id,
-                amount=-actual_cost,
-                transaction_type="spend_retargeting",
-            ))
-            await db.commit()
+    # TUCi düş + kredi say
+    if tuci_cost > 0:
+        await db.execute(
+            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            {"cost": tuci_cost, "uid": current_user.id},
+        )
+        db.add(TuciTransaction(
+            user_id=current_user.id,
+            amount=-tuci_cost,
+            transaction_type="spend_retargeting",
+        ))
+        await db.commit()
 
-    logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | free=%s | cost=%d TUCi",
-                current_user.id, sent, has_credit, actual_cost)
+    if free_used > 0:
+        await _increment_blast(current_user.id, count=free_used)
+
+    logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | free=%d | paid=%d | cost=%d TUCi",
+                current_user.id, sent, free_used, paid_count, tuci_cost)
 
     return {
         "sent": sent,
-        "spent": actual_cost,
-        "free": has_credit,
+        "spent": tuci_cost,
         "message": f"{sent} kişiye geri hedefleme bildirimi gönderildi.",
     }

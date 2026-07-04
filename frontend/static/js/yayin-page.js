@@ -1990,23 +1990,45 @@
         const btn = document.getElementById('btnBlast');
         const wrapper = document.getElementById('blastWrapper');
         if (!btn || !wrapper) return;
+
+        let _blastData = null;
         try {
             const qs = new URLSearchParams({ title: title || 'Canlı Yayın' });
             if (category) qs.set('category', category);
-            const data = await apiFetch('/leads/audience-size?' + qs);
-            if (!data || !data.audience_size) return;
+            _blastData = await apiFetch('/leads/audience-size?' + qs);
+            if (!_blastData || !_blastData.non_follower_audience) return;
             wrapper.style.display = 'inline-block';
-            btn.dataset.audienceSize = data.audience_size;
-            btn.dataset.estimatedCost = data.estimated_cost;
-            btn.title = `${data.audience_size} kişiye ulaşılabilir`;
-        } catch (_) {}
+            btn.title = `${_blastData.non_follower_audience} kişiye ulaşılabilir`;
+        } catch (_) { return; }
 
         btn.addEventListener('click', async function () {
-            const size = parseInt(btn.dataset.audienceSize || '0');
-            const cost = parseInt(btn.dataset.estimatedCost || '0');
-            if (!size) return;
+            if (!_blastData) return;
+            const reachable      = _blastData.non_follower_audience || _blastData.audience_size || 0;
+            const perBlastCap    = _blastData.per_blast_cap        || 5;
+            const creditsLeft    = _blastData.credits_remaining    || 0;
+            const tuciBalance    = _blastData.tuci_balance         || 0;
+            const actualCount    = Math.min(reachable, perBlastCap);
+            const freeUsed       = Math.min(creditsLeft, actualCount);
+            const paidCount      = actualCount - freeUsed;
+            const tuciCost       = paidCount * 10;
+            if (!actualCount) return;
 
-            if (!confirm(`${size} hazır alıcıya bildirim gönderilecek.\nToplam ücret: ${cost} TUCi\n\nOnaylıyor musunuz?`)) return;
+            // Senaryo 4: Yetersiz bakiye
+            if (tuciCost > 0 && tuciBalance < tuciCost) {
+                alert(`Yetersiz TUCi bakiyesi.\nGerekli: ${tuciCost} TUCi | Mevcut: ${tuciBalance} TUCi`);
+                return;
+            }
+
+            // Onay mesajı (senaryo 1/2/3)
+            let confirmMsg;
+            if (freeUsed > 0 && paidCount === 0) {
+                confirmMsg = `${actualCount} kişiye bildirim gönderilecek.\n\n${freeUsed} blast krediniz kullanılacak. Ücretsiz!\n\nOnaylıyor musunuz?`;
+            } else if (freeUsed > 0 && paidCount > 0) {
+                confirmMsg = `${actualCount} kişiye bildirim gönderilecek.\n\n${freeUsed} kredi + ${tuciCost} TUCi ödenecek. (Karma)\n\nOnaylıyor musunuz?`;
+            } else {
+                confirmMsg = `${actualCount} kişiye bildirim gönderilecek.\n\nToplam ücret: ${tuciCost} TUCi\n\nOnaylıyor musunuz?`;
+            }
+            if (!confirm(confirmMsg)) return;
 
             btn.disabled = true;
             btn.textContent = '📣 Gönderiliyor…';
@@ -2014,12 +2036,13 @@
                 const result = await apiFetch('/leads/send-blast', {
                     method: 'POST',
                     body: JSON.stringify({
-                        title: title || 'Canlı Yayın',
-                        category: category || '',
-                        estimated_cost: cost,
+                        title:          title || 'Canlı Yayın',
+                        category:       category || '',
+                        estimated_cost: tuciCost,
+                        recipient_count: actualCount,
                     }),
                 });
-                const sent = (result && result.sent) || size;
+                const sent = (result && result.sent) || actualCount;
                 _blastToast(`🎯 ${sent} kişiye bildirim gönderildi!`, '#059669');
                 wrapper.style.display = 'none';
             } catch (e) {

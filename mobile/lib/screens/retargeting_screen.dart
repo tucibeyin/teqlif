@@ -81,15 +81,55 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     final listing = _selectedListing;
     final audience = _audienceData;
     if (listing == null || audience == null) return;
-    final reachable = audience['reachable_audience'] as int? ?? 0;
-    final cost = audience['estimated_cost_tuci'] as int? ?? 0;
-    final isFree = audience['is_free'] as bool? ?? false;
-    final creditsLeft = audience['blast_credits_remaining'] as int? ?? 0;
+    final reachable      = audience['reachable_audience']     as int? ?? 0;
+    final creditsLeft    = audience['blast_credits_remaining'] as int? ?? 0;
+    final perBlastCap    = audience['per_blast_cap']          as int? ?? 10;
+    final tuciBalance    = audience['tuci_balance']            as int? ?? 0;
     if (reachable == 0) return;
 
-    final dialogBody = isFree
-        ? l.retargetingDialogBodyFree(reachable, creditsLeft)
-        : l.retargetingDialogBodyPaid(reachable, cost);
+    final actualCount = reachable < perBlastCap ? reachable : perBlastCap;
+    final freeUsed    = creditsLeft < actualCount ? creditsLeft : actualCount;
+    final paidCount   = actualCount - freeUsed;
+    final tuciCost    = paidCount * 10;
+
+    // Senaryo 4: Yetersiz bakiye
+    if (tuciCost > 0 && tuciBalance < tuciCost) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.card(context),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(l.retargetingDialogTitle,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary(context))),
+          content: Text(
+            l.retargetingDialogBodyInsufficient(tuciCost, tuciBalance),
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context), height: 1.5),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(l.btnDismiss, style: const TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Senaryo 1/2/3: Onay dialogu
+    final String dialogBody;
+    if (freeUsed > 0 && paidCount == 0) {
+      dialogBody = l.retargetingDialogBodyFree(actualCount, freeUsed);
+    } else if (freeUsed > 0 && paidCount > 0) {
+      dialogBody = l.retargetingDialogBodyKarma(actualCount, freeUsed, tuciCost);
+    } else {
+      dialogBody = l.retargetingDialogBodyPaid(actualCount, tuciCost);
+    }
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -107,7 +147,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocalizations.of(context)!.btnDismiss, style: TextStyle(color: AppColors.textSecondary(context))),
+            child: Text(l.btnDismiss, style: TextStyle(color: AppColors.textSecondary(context))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -116,7 +156,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text(AppLocalizations.of(context)!.btnSend, style: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(l.btnSend, style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -127,8 +167,9 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     setState(() => _sending = true);
     final result = await AnalyticsService.sendRetargeting(
       listingId: listing['id'] as int,
-      estimatedAudience: reachable,
-      estimatedCost: cost,
+      estimatedAudience: actualCount,
+      estimatedCost: tuciCost,
+      recipientCount: actualCount,
     );
     if (!mounted) return;
     setState(() => _sending = false);
@@ -238,12 +279,16 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       );
     }
 
-    final totalViewers = audience['total_viewers_30d'] as int? ?? 0;
-    final alreadyBought = audience['already_bought'] as int? ?? 0;
-    final reachable = audience['reachable_audience'] as int? ?? 0;
-    final cost = audience['estimated_cost_tuci'] as int? ?? 0;
-    final isFree = audience['is_free'] as bool? ?? false;
-    final creditsLeft = audience['blast_credits_remaining'] as int? ?? 0;
+    final totalViewers  = audience['total_viewers_30d']      as int? ?? 0;
+    final alreadyBought = audience['already_bought']          as int? ?? 0;
+    final reachable     = audience['reachable_audience']      as int? ?? 0;
+    final cost          = audience['estimated_cost_tuci']     as int? ?? 0;
+    final creditsLeft   = audience['blast_credits_remaining'] as int? ?? 0;
+    final perBlastCap   = audience['per_blast_cap']           as int? ?? 10;
+    final actualCount   = reachable < perBlastCap ? reachable : perBlastCap;
+    final freeUsed      = creditsLeft < actualCount ? creditsLeft : actualCount;
+    final paidCount     = actualCount - freeUsed;
+    final isFree        = paidCount == 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,8 +453,8 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                           const SizedBox(height: 2),
                           Text(
                             isFree
-                                ? l.retargetingFreeSubtitle(reachable)
-                                : l.retargetingPaidSubtitle(reachable),
+                                ? l.retargetingFreeSubtitle(actualCount)
+                                : l.retargetingPaidSubtitle(actualCount),
                             style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
                           ),
                         ],

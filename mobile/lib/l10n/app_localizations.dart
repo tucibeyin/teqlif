@@ -4726,6 +4726,18 @@ abstract class AppLocalizations {
   /// **'{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından {cost} TUCi düşülecek.'**
   String retargetingDialogBodyPaid(int count, int cost);
 
+  /// No description provided for @retargetingDialogBodyKarma.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kişiye bildirim gönderilecek.\n\n{free} kredi kullanılacak + {cost} TUCi ödenecek.'**
+  String retargetingDialogBodyKarma(int count, int free, int cost);
+
+  /// No description provided for @retargetingDialogBodyInsufficient.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yetersiz TUCi bakiyesi.\nGerekli: {cost} TUCi | Mevcut: {balance} TUCi'**
+  String retargetingDialogBodyInsufficient(int cost, int balance);
+
   /// No description provided for @retargetingCostFree.
   ///
   /// In tr, this message translates to:
@@ -4747,7 +4759,7 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingPaidSubtitle.
   ///
   /// In tr, this message translates to:
-  /// **'{count} kişi × 1 TUCi'**
+  /// **'{count} kişi × 10 TUCi'**
   String retargetingPaidSubtitle(int count);
 
   /// No description provided for @retargetingEstimatedCost.
@@ -4789,7 +4801,7 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingInfoText.
   ///
   /// In tr, this message translates to:
-  /// **'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık blast krediniz varsa ücretsiz, bitince her kişi için 1 TUCi harcanır.'**
+  /// **'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık blast krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.'**
   String get retargetingInfoText;
 
   /// No description provided for @retargetingLast30Days.
