@@ -35,8 +35,8 @@
             document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '36 boost × 50 TUCi<br>= 1.800 TL değer';
 
             /* tablo: blast */
-            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl · max 5 kişi';
-            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '72 adet / yıl · max 10 kişi';
+            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl · her blast'ta max 5 kişi';
+            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '72 adet / yıl · her blast'ta max 10 kişi';
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+36 Blast Kredisi';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+36 ekstra kredi + 2× alıcı kapasitesi · max ₺3.600/yıl TUCi tasarrufu';
 
@@ -72,8 +72,8 @@
             document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '3 boost × 50 TUCi<br>= 150 TL değer';
 
             /* tablo: blast */
-            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay · max 5 kişi';
-            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '6 adet / ay · max 10 kişi';
+            document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay · her blast'ta max 5 kişi';
+            document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '6 adet / ay · her blast'ta max 10 kişi';
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+3 Blast Kredisi';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+3 ekstra kredi + 2× alıcı kapasitesi · max ₺300/ay TUCi tasarrufu';
 
