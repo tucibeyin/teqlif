@@ -51,7 +51,7 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg(context),
         elevation: 0,
-        title: Text(l.proAnalyticsTitle, style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(l.proToolSalesTitle, style: const TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
