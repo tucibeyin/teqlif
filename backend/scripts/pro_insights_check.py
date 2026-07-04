@@ -203,7 +203,7 @@ async def main():
             SELECT COUNT(*) AS total, COALESCE(AVG(viewer_count),0) AS avg_v,
                    COALESCE(MAX(viewer_count),0) AS peak_v,
                    COALESCE(AVG(EXTRACT(EPOCH FROM (ended_at - started_at))/60),0) AS avg_dur
-            FROM streams WHERE seller_id=:uid AND status='ended'
+            FROM live_streams WHERE seller_id=:uid AND status='ended'
         """), {"uid": UID})).fetchone()
         print(f"  Toplam yayın        : {st_r.total}")
         print(f"  Ort. izleyici       : {float(st_r.avg_v):.1f}")
@@ -215,7 +215,7 @@ async def main():
         ph_r = (await db.execute(text("""
             SELECT EXTRACT(HOUR FROM started_at AT TIME ZONE 'Europe/Istanbul') AS hr,
                    COUNT(*) AS cnt, COALESCE(AVG(viewer_count),0) AS avg_v
-            FROM streams WHERE seller_id=:uid AND status='ended'
+            FROM live_streams WHERE seller_id=:uid AND status='ended'
             GROUP BY hr ORDER BY avg_v DESC LIMIT 5
         """), {"uid": UID})).fetchall()
         if ph_r:
