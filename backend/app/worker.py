@@ -994,7 +994,7 @@ async def cleanup_old_impressions_task(ctx: dict) -> None:
 
 
 async def cleanup_stale_streams_task(ctx: dict) -> None:
-    """Her 5 dk: LiveKit'te odası kapanmış ama DB'de is_live=True olan hayalet yayınları kapat."""
+    """Her 2 dk: LiveKit'te odası kapanmış ama DB'de is_live=True olan hayalet yayınları kapat."""
     try:
         import aiohttp
         from datetime import datetime, timezone, timedelta
@@ -1004,7 +1004,7 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
         from app.config import settings
         from livekit.api.room_service import RoomService, ListRoomsRequest
 
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=10)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=3)
 
         async with AsyncSessionLocal() as db:
             streams = (await db.execute(
@@ -1752,8 +1752,8 @@ class WorkerSettings:
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
         # Her saat başı — embedding'i olmayan ilanlar için backfill (20'şer batch)
         cron(backfill_listing_embeddings_task, minute=30),
-        # Her 5 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
-        cron(cleanup_stale_streams_task, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
+        # Her 2 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
+        cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
