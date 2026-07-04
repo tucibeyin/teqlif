@@ -154,7 +154,7 @@ async def main():
 
         async with AsyncSessionLocal() as db:
             await db.execute(sql_text("""
-                INSERT INTO users (email, username, password_hash, tuci_balance, fcm_token)
+                INSERT INTO users (email, username, hashed_password, tuci_balance, fcm_token)
                 SELECT e, 'u_'||left(md5(e),8), 'x', 200, 'fcm_'||left(md5(e),12)
                 FROM unnest(ARRAY[:emails]::text[]) AS e
             """), {"emails": all_emails})
