@@ -1324,6 +1324,72 @@ class _ListingTile extends StatelessWidget {
                 ),
               ),
             ),
+          // ── Sol üst: Sponsorlu ──────────────────────────────────────────
+          if (listing['is_sponsored'] == true)
+            Positioned(
+              top: 4, left: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text('Sponsorlu',
+                    style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          // ── Sağ üst: Premium + Rozet ────────────────────────────────────
+          if (listing['seller_is_premium'] == true)
+            Positioned(
+              top: 4, right: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text('👑', style: TextStyle(fontSize: 8)),
+              ),
+            ),
+          if (listing['seller_badge'] == 'trusted_seller')
+            Positioned(
+              top: listing['seller_is_premium'] == true ? 22 : 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text('✅', style: TextStyle(fontSize: 8)),
+              ),
+            )
+          else if (listing['seller_badge'] == 'active_seller')
+            Positioned(
+              top: listing['seller_is_premium'] == true ? 22 : 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text('⭐', style: TextStyle(fontSize: 8)),
+              ),
+            ),
+          // ── Sağ alt: Trending ───────────────────────────────────────────
+          if (listing['is_trending'] == true)
+            Positioned(
+              bottom: 22, right: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.deepOrange.withValues(alpha: 0.88),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text('🔥', style: TextStyle(fontSize: 8)),
+              ),
+            ),
         ],
       ),
     );
