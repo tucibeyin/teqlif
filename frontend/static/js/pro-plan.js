@@ -37,24 +37,24 @@
             /* tablo: blast */
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl · max 5 kişi';
             document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '72 adet / yıl · max 10 kişi';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+36 Ekstra';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+36 ekstra ücretsiz duyuru hakkı (72/yıl) + 2× alıcı kapasitesi (10 kişi) · eksik hak için 10 TUCi/kişi';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+36 Blast Kredisi';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+36 ekstra kredi + 2× alıcı kapasitesi · max ₺3.600/yıl TUCi tasarrufu';
 
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺3.000+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺4.200+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺3.000+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + AI danışman (₺1.200) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺4.200+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + AI danışman (₺1.200) + Blast kredisi (~₺1.200) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺3.000+';
+            if (totalVal) totalVal.textContent = '₺4.200+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'yıllık avantaj değeri';
             var roiPill = document.getElementById('roiPill');
-            if (roiPill) roiPill.textContent = 'Maliyetin 1.5 katı değer 🎯';
+            if (roiPill) roiPill.textContent = 'Maliyetin 2 katı değer 🎯';
 
         } else {
             if (tfLabel) tfLabel.textContent  = 'Aylık';
@@ -74,20 +74,20 @@
             /* tablo: blast */
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay · max 5 kişi';
             document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '6 adet / ay · max 10 kişi';
-            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+3 Ekstra';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+3 ekstra ücretsiz duyuru hakkı (6/ay) + 2× alıcı kapasitesi (10 kişi) · eksik hak için 10 TUCi/kişi';
+            document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+3 Blast Kredisi';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+3 ekstra kredi + 2× alıcı kapasitesi · max ₺300/ay TUCi tasarrufu';
 
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺250+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺350+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺250+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + AI danışman (₺100) haklarını kullandığında her ay kazancın maliyetin karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺350+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + AI danışman (₺100) + Blast kredisi (~₺100) haklarını kullandığında her ay kazancın maliyeti karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺250+';
+            if (totalVal) totalVal.textContent = '₺350+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'aylık avantaj değeri';
             var roiPill = document.getElementById('roiPill');
