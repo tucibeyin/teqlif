@@ -225,7 +225,7 @@ class SearchScreenState extends State<SearchScreen> {
     required VoidCallback onData,
   }) {
     final url = loggedIn ? '$kBaseUrl/feed/for-you?page=0' : '$kBaseUrl/listings';
-    final cacheKey = loggedIn ? 'explore_for_you' : StorageService.cacheFeed;
+    final cacheKey = loggedIn ? 'explore_for_you' : 'explore_listings';
     final ttl = const Duration(minutes: 5);
 
     ApiService.get<List<dynamic>>(
@@ -253,7 +253,7 @@ class SearchScreenState extends State<SearchScreen> {
   void _loadExploreRecent({required bool bypassCache, required VoidCallback onData}) {
     ApiService.get<List<dynamic>>(
       url: '$kBaseUrl/listings',
-      cacheKey: StorageService.cacheFeed,
+      cacheKey: 'explore_listings',
       cacheTtl: const Duration(minutes: 5),
       bypassCache: bypassCache,
       fromJson: (raw) => raw as List,

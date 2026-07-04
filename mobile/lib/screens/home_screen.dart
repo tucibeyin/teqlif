@@ -219,7 +219,7 @@ class HomeScreenState extends State<HomeScreen> {
     try {
       await for (final listings in ApiService.get<List<dynamic>>(
         url: '$kBaseUrl/feed/recent',
-        cacheKey: _hasFilter ? null : StorageService.cacheFeed,
+        cacheKey: _hasFilter ? null : 'home_feed_recent',
         cacheTtl: const Duration(minutes: 5),
         bypassCache: bypassCache,
         fromJson: (raw) => raw as List,
