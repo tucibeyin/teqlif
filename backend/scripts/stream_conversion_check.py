@@ -107,7 +107,7 @@ async def main():
             FROM listings l
             INNER JOIN auctions a ON a.listing_id = l.id
                 AND a.ended_at >= NOW() - INTERVAL '90 days'
-                AND a.status = 'ended'
+                AND a.status = 'completed'
             WHERE l.user_id = :uid
               AND l.is_deleted = FALSE
             GROUP BY l.category
@@ -156,7 +156,7 @@ async def main():
         cnt_status = (await db.execute(text("""
             SELECT COUNT(*) FROM auctions a
             JOIN live_streams ls ON ls.id = a.stream_id
-            WHERE ls.host_id = :uid AND a.status = 'ended'
+            WHERE ls.host_id = :uid AND a.status = 'completed'
         """), {"uid": UID})).scalar()
 
         cnt_listing = (await db.execute(text("""
@@ -177,7 +177,7 @@ async def main():
             JOIN live_streams ls ON ls.id = a.stream_id
             JOIN listings l ON l.id = a.listing_id
             WHERE ls.host_id = :uid
-              AND a.status = 'ended'
+              AND a.status = 'completed'
               AND a.ended_at >= NOW() - INTERVAL '90 days'
               AND l.user_id = :uid
         """), {"uid": UID})).scalar()
