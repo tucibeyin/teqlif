@@ -488,9 +488,14 @@ async def price_estimate(
         except Exception:
             pass
 
-    # 3. pgvector geniş aday havuzu (dist < 0.55, ham satırlar)
-    # DISTINCT ON: her listing için sadece en yüksek final_price'lı açık artırmayı al
-    candidates_q = sql_text("""
+    # 3. pgvector geniş aday havuzu — önce aynı kategori, az veri varsa geniş
+    # Her listing için tek açık artırma (LATERAL dedup), kendi ilanı hariç (excl)
+    _base_where = """
+        l.embedding IS NOT NULL
+          AND (:excl = 0 OR l.id != :excl)
+          AND (l.embedding <=> CAST(:emb AS vector)) < 0.55
+    """
+    candidates_q = sql_text(f"""
         SELECT
             l.category,
             l.location,
@@ -509,14 +514,34 @@ async def price_estimate(
             ORDER BY final_price DESC
             LIMIT 1
         ) a ON TRUE
-        WHERE l.embedding IS NOT NULL
-          AND (:excl = 0 OR l.id != :excl)
-          AND (l.embedding <=> CAST(:emb AS vector)) < 0.55
+        WHERE {_base_where}
+          AND (:cat = '' OR l.category = :cat)
         ORDER BY dist
         LIMIT 150
     """)
-    result = await db.execute(candidates_q, {"emb": emb_str, "excl": body.exclude_listing_id})
+    result = await db.execute(candidates_q, {
+        "emb": emb_str, "excl": body.exclude_listing_id,
+        "cat": body_category,
+    })
     rows = result.fetchall()
+
+    # Kategori eşleşmesi yetersizse (< 5) geniş arama yap — ama category_match_count düşük kalır
+    if len(rows) < 5 and body_category:
+        result2 = await db.execute(sql_text(f"""
+            SELECT
+                l.category, l.location, l.image_phash, l.created_at,
+                a.start_price, a.final_price,
+                (l.embedding <=> CAST(:emb AS vector)) AS dist
+            FROM listings l
+            JOIN LATERAL (
+                SELECT start_price, final_price FROM auctions
+                WHERE listing_id = l.id AND winner_username IS NOT NULL AND final_price > 0
+                ORDER BY final_price DESC LIMIT 1
+            ) a ON TRUE
+            WHERE {_base_where}
+            ORDER BY dist LIMIT 150
+        """), {"emb": emb_str, "excl": body.exclude_listing_id})
+        rows = result2.fetchall()
 
     _no_data = {
         "found_similar": 0,

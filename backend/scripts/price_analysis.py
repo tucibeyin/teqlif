@@ -45,35 +45,37 @@ async def main():
         # ── 2. pgvector aday havuzu (dist < 0.55) ────────────────────────
         emb_str = "[" + ",".join(f"{v:.6f}" for v in listing.embedding) + "]"
 
-        rows = (await db.execute(text("""
-            SELECT
-                l.id,
-                l.title,
-                l.category,
-                l.location,
-                l.created_at,
-                a.start_price,
-                a.final_price,
-                a.winner_username,
-                (l.embedding <=> CAST(:emb AS vector)) AS dist
+        _lateral = """
             FROM listings l
             JOIN LATERAL (
                 SELECT start_price, final_price, winner_username
                 FROM auctions
                 WHERE listing_id = l.id
-                  AND winner_username IS NOT NULL
-                  AND final_price > 0
-                ORDER BY final_price DESC
-                LIMIT 1
+                  AND winner_username IS NOT NULL AND final_price > 0
+                ORDER BY final_price DESC LIMIT 1
             ) a ON TRUE
-            WHERE l.embedding IS NOT NULL
-              AND l.id != :excl
+            WHERE l.embedding IS NOT NULL AND l.id != :excl
               AND (l.embedding <=> CAST(:emb AS vector)) < 0.55
-            ORDER BY dist
-            LIMIT 150
-        """), {"emb": emb_str, "excl": LISTING_ID})).fetchall()
+        """
+        _cols = "l.id, l.title, l.category, l.location, l.created_at, a.start_price, a.final_price, a.winner_username, (l.embedding <=> CAST(:emb AS vector)) AS dist"
+        body_category = (listing.category or "").lower()
 
-        print(f"\n[1] pgvector aday havuzu (dist < 0.55): {len(rows)} ilan bulundu")
+        rows = (await db.execute(text(f"""
+            SELECT {_cols} {_lateral}
+              AND (:cat = '' OR l.category = :cat)
+            ORDER BY dist LIMIT 150
+        """), {"emb": emb_str, "excl": LISTING_ID, "cat": body_category})).fetchall()
+
+        fallback = False
+        if len(rows) < 5 and body_category:
+            rows = (await db.execute(text(f"""
+                SELECT {_cols} {_lateral}
+                ORDER BY dist LIMIT 150
+            """), {"emb": emb_str, "excl": LISTING_ID})).fetchall()
+            fallback = True
+
+        print(f"\n[1] pgvector aday havuzu (dist < 0.55): {len(rows)} ilan bulundu"
+              + (" (kategori <5 → geniş arama)" if fallback else " (kategori filtreli)"))
         if not rows:
             print("  ⚠ Hiç benzer tamamlanmış ilan bulunamadı — fiyat tahmini 'veri yok' döner.")
             # Tüm açık artırma sayısını göster
