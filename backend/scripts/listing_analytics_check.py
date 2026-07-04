@@ -143,7 +143,7 @@ async def main():
                     max(duration_seconds)               AS max_watch_sec
                 FROM user_events
                 WHERE item_type='listing'
-                  AND event_type='video_watch'
+                  AND event_type='listing_video_watch'
                   AND item_id IN ({vid_ids})
                   AND timestamp >= now() - INTERVAL {DAYS} DAY
                 GROUP BY item_id

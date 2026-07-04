@@ -1037,7 +1037,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
         listingId: lid.toString(),
         eventType: 'impression',
         dwellTimeMs: 0,
-        contentType: 'photo',
+        contentType: (widget.listing['video_url'] as String?) != null ? 'video' : 'photo',
       );
     }
   }
@@ -1074,7 +1074,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
             listingId: lid.toString(),
             eventType: 'click',
             dwellTimeMs: 0,
-            contentType: 'photo',
+            contentType: (widget.listing['video_url'] as String?) != null ? 'video' : 'photo',
           );
         }
         widget.onTap();
