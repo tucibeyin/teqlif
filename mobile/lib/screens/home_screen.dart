@@ -1710,6 +1710,8 @@ class _SellerAvatarCard extends StatelessWidget {
     final avatarUrl = rawAvatar != null ? imgUrl(rawAvatar) : null;
     final username = seller['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
+    final isVerified = seller['is_verified'] == true;
+    final isPremium = seller['is_premium'] == true;
 
     return GestureDetector(
       onTap: onTap,
@@ -1719,13 +1721,47 @@ class _SellerAvatarCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.surfaceVariant(context),
-              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-              child: avatarUrl == null
-                ? Text(initial, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18))
-                : null,
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: AppColors.surfaceVariant(context),
+                  backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                  child: avatarUrl == null
+                    ? Text(initial, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18))
+                    : null,
+                ),
+                if (isPremium)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFFF59E0B),
+                      ),
+                      child: const Center(
+                        child: Text('👑', style: TextStyle(fontSize: 10)),
+                      ),
+                    ),
+                  )
+                else if (isVerified)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF2563EB),
+                      ),
+                      child: const Icon(Icons.check, size: 12, color: Colors.white),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(

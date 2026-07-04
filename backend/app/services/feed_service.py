@@ -26,7 +26,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.utils.redis_client import get_redis
-from app.services.listing_service import _row_dict, _get_badges_and_trending
+from app.services.listing_service import _row_dict, _fetch_seller_meta
 from app.services.like_service import LikeService
 from app.services.feed_als_ml import get_als_scores
 from app.models.listing import Listing
@@ -138,7 +138,7 @@ async def get_personalized_feed(
 
     # Sıralamayı koru (scoring'den gelen sıra)
     all_uids = list({rows[lid][1].id for lid in listing_ids if lid in rows})
-    badge_map, trending_cats = await _get_badges_and_trending(all_uids)
+    badge_map, trending_cats = await _fetch_seller_meta(all_uids)
 
     result = []
     for lid in listing_ids:
@@ -498,7 +498,7 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
                 impression_map[lid] = imp_count
 
     foryou_uids = list({rows[lid][1].id for lid in listing_ids if lid in rows})
-    badge_map_fy, trending_cats_fy = await _get_badges_and_trending(foryou_uids)
+    badge_map_fy, trending_cats_fy = await _fetch_seller_meta(foryou_uids)
 
     result = []
     for lid in listing_ids:
@@ -811,7 +811,7 @@ async def get_mixed_recent_feed(
     counts, liked_set = await LikeService.batch_listing_likes(db, base_ids, user_id)
 
     recent_uids = list({rows[lid][1].id for lid in base_ids if lid in rows})
-    badge_map_r, trending_cats_r = await _get_badges_and_trending(recent_uids)
+    badge_map_r, trending_cats_r = await _fetch_seller_meta(recent_uids)
 
     result = [
         _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
@@ -891,7 +891,7 @@ async def _fetch_interest_items(
     counts, liked_set = await LikeService.batch_listing_likes(db, ids, user_id)
 
     interest_uids = list({rows[lid][1].id for lid in ids if lid in rows})
-    badge_map_i, trending_cats_i = await _get_badges_and_trending(interest_uids)
+    badge_map_i, trending_cats_i = await _fetch_seller_meta(interest_uids)
 
     return [
         _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
