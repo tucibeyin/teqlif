@@ -183,7 +183,7 @@ async def main():
         """), {"uid": UID})).scalar()
 
         print(f"\n  Filtre sayımları (toplam {int(stats.total_auctions)} auction):")
-        print(f"  status='ended'           : {cnt_status}")
+        print(f"  status='completed'       : {cnt_status}")
         print(f"  listing_id IS NOT NULL   : {cnt_listing}")
         print(f"  ended_at son 90 günde    : {cnt_ended_at}")
         print(f"  Tüm filtreler birlikte   : {cnt_all_filters}  ← conversion-breakdown bu sayıyı görmeli")
