@@ -108,11 +108,14 @@ async def audience_size(
               AND timestamp >= now() - INTERVAL 7 DAY
               AND user_id IS NOT NULL
               AND user_id != {current_user.id}
-            LIMIT 10000
+            LIMIT 10001
         """)
         target_user_ids = [int(r[0]) for r in ch_result.result_rows if r[0]]
     except Exception as exc:
         logger.warning("[Leads] ClickHouse sorgusu başarısız: %s", exc)
+
+    audience_capped = len(target_user_ids) > 10000
+    target_user_ids = target_user_ids[:10000]
 
     # PostgreSQL'den gerçek FCM token sayısı — send-blast ile aynı sorgu
     if target_user_ids:
@@ -133,6 +136,7 @@ async def audience_size(
     return {
         "audience_size": reachable,
         "estimated_cost": estimated_cost,
+        "audience_capped": audience_capped,
     }
 
 
@@ -250,12 +254,11 @@ async def send_blast(
     fcm_tokens: list[str] = [r[0] for r in token_result.fetchall() if r[0]]
 
     if not fcm_tokens:
-        logger.info("[Leads] FCM token bulunamadı — demo başarı döndürülüyor | seller=%d", current_user.id)
-        await _increment_blast(current_user.id)
+        logger.info("[Leads] FCM token bulunamadı — blast iptal | seller=%d", current_user.id)
         return {
             "sent": 0,
-            "spent": 0.0,
-            "message": "Demo: bildirim altyapısı kurulmadı, gerçek gönderim yapılamadı.",
+            "spent": 0,
+            "message": "Bu hedef kitlede bildirim alacak kullanıcı bulunamadı.",
         }
 
     # ── Firebase toplu push (fire-and-forget) ─────────────────────────────────
@@ -356,14 +359,12 @@ async def retargeting_audience(
         viewer_ids = [int(r[0]) for r in vid_result.result_rows]
         total_viewers = len(viewer_ids)
 
-        # Satın alanları çıkar
-        buyer_result = (await db.execute(sql_text("""
-            SELECT COUNT(*) FROM purchases WHERE listing_id = :lid
-            UNION ALL
+        # Kazanılan açık artırma sayısı (purchases çift sayımını önlemek için sadece auctions kullan)
+        buyer_result = await db.scalar(sql_text("""
             SELECT COUNT(*) FROM auctions
-            WHERE listing_id = :lid AND winner_username IS NOT NULL
-        """), {"lid": listing_id})).fetchall()
-        already_bought = sum(int(r[0]) for r in buyer_result)
+            WHERE listing_id = :lid AND winner_username IS NOT NULL AND status = 'ended'
+        """), {"lid": listing_id})
+        already_bought = int(buyer_result or 0)
 
         # Gerçek FCM token sayısını say — tahmin değil, DB'deki gerçek rakam
         if viewer_ids:

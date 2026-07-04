@@ -561,11 +561,15 @@ async def price_estimate(
 
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    # 5. IQR aykırı değer temizleme (>=10 veri noktasında)
+    # 5. IQR aykırı değer temizleme (>=10 veri noktasında) — Tukey Q1/Q3 ± 1.5×IQR
     if len(scored) >= 10:
         prices_s = sorted(float(r.final_price) for _, r in scored)
-        lo = prices_s[len(prices_s) // 10]
-        hi = prices_s[-(len(prices_s) // 10) - 1]
+        n_p = len(prices_s)
+        q1 = prices_s[n_p // 4]
+        q3 = prices_s[(3 * n_p) // 4]
+        iqr = q3 - q1
+        lo = q1 - 1.5 * iqr
+        hi = q3 + 1.5 * iqr
         scored = [(s, r) for s, r in scored if lo <= float(r.final_price) <= hi]
 
     top = scored[:30]
@@ -744,13 +748,14 @@ async def market_trends(
                 r.category,
                 r.cnt AS recent_cnt,
                 COALESCE(p.cnt, 0) AS prev_cnt,
-                CASE WHEN COALESCE(p.cnt, 0) > 0
+                CASE WHEN COALESCE(p.cnt, 0) > 0 AND r.cnt >= 3
                     THEN ROUND(((((r.cnt - p.cnt)::float / p.cnt) * 100))::numeric, 1)
-                    ELSE 100.0
+                    ELSE NULL
                 END AS growth_pct
             FROM recent r
             LEFT JOIN prev p ON p.category = r.category
-            ORDER BY growth_pct DESC
+            WHERE r.cnt >= 3
+            ORDER BY COALESCE(growth_pct, 0) DESC
             LIMIT 3
         """)
         cat_result = await db.execute(cat_q)
@@ -761,7 +766,7 @@ async def market_trends(
                 "label": _CATEGORY_LABELS.get(key, key.capitalize()),
                 "recent_count": int(row.recent_cnt),
                 "prev_count": int(row.prev_cnt),
-                "growth_pct": float(row.growth_pct),
+                "growth_pct": float(row.growth_pct) if row.growth_pct is not None else None,
             })
     except Exception as exc:
         logger.warning("[MarketTrends] trending_categories başarısız: %s", exc)
@@ -931,8 +936,8 @@ async def pro_insights(
         active_listings = active_ids_r.fetchall()
         if active_listings:
             ids_str = ", ".join(str(r.id) for r in active_listings)
-            view_map: dict[int, int] = {r.id: len(active_listings) - i for i, r in enumerate(active_listings)}
-            hes_map: dict[int, int] = {r.id: max(0, len(active_listings) - i - 1) for i, r in enumerate(active_listings)}
+            view_map: dict[int, int] = {r.id: 0 for r in active_listings}
+            hes_map: dict[int, int] = {r.id: 0 for r in active_listings}
             try:
                 from app.database_clickhouse import get_clickhouse_client
                 ch = await get_clickhouse_client()
@@ -961,8 +966,8 @@ async def pro_insights(
                     "title": r.title,
                     "price": r.price,
                     "category": _CAT_LABELS.get(r.category or "diger", r.category or "Diğer"),
-                    "views_30d": view_map.get(r.id, len(active_listings) - i),
-                    "hesitations_30d": hes_map.get(r.id, max(0, len(active_listings) - i - 1)),
+                    "views_30d": view_map.get(r.id, 0),
+                    "hesitations_30d": hes_map.get(r.id, 0),
                     "heat_score": view_map.get(r.id, 0) * 1 + hes_map.get(r.id, 0) * 3,
                 }
                 for i, r in enumerate(scored)
@@ -1190,6 +1195,7 @@ async def best_stream_time(
             SUM(won_auctions)                                                              AS total_wins
         FROM stream_auctions
         GROUP BY day_of_week, hour_block
+        HAVING COUNT(*) >= 2
         ORDER BY conv_rate DESC, total_wins DESC
         LIMIT 5
     """), {"uid": uid})
@@ -1202,11 +1208,12 @@ async def best_stream_time(
             "stream_count": int(r.stream_count),
             "conversion_rate": round(float(r.conv_rate) * 100, 1),
             "total_wins": int(r.total_wins),
+            "confidence": "high" if int(r.stream_count) >= 5 else ("medium" if int(r.stream_count) >= 3 else "low"),
         }
         for r in rows
     ]
     if not slots:
-        return {"slots": [], "recommendation": "Henüz yeterli yayın verisi yok (min. 1 yayın gerekli)."}
+        return {"slots": [], "recommendation": "Henüz yeterli yayın verisi yok (min. 2 yayın gerekli)."}
 
     best = slots[0]
     return {
@@ -1244,6 +1251,7 @@ async def conversion_breakdown(
         FROM listings l
         INNER JOIN auctions a ON a.listing_id = l.id
             AND a.ended_at >= NOW() - INTERVAL '90 days'
+            AND a.status = 'ended'
         WHERE l.user_id = :uid
           AND l.is_deleted = FALSE
         GROUP BY l.category
@@ -1519,10 +1527,10 @@ async def video_roi(
         rows = await ch.query(f"""
             SELECT
                 content_type,
-                countIf(event_type = 'impression')                            AS impressions,
-                countIf(event_type = 'click')                                 AS clicks,
-                if(impressions > 0, round(clicks / impressions * 100, 1), 0) AS ctr,
-                round(avgIf(dwell_time_ms, event_type IN ('impression','skip')), 0) AS avg_dwell_ms
+                countIf(event_type = 'impression')                                        AS impressions,
+                countIf(event_type = 'click')                                             AS clicks,
+                if(impressions > 0, round(toFloat64(clicks) / impressions * 100, 2), 0)  AS ctr,
+                round(avgIf(dwell_time_ms, event_type IN ('impression','skip')), 0)       AS avg_dwell_ms
             FROM feed_analytics
             WHERE timestamp >= now() - INTERVAL {days} DAY
               AND listing_id IN ({placeholders})
@@ -1537,9 +1545,9 @@ async def video_roi(
             SELECT
                 listing_id,
                 content_type,
-                countIf(event_type = 'impression')                            AS impressions,
-                countIf(event_type = 'click')                                 AS clicks,
-                if(impressions > 0, round(clicks / impressions * 100, 1), 0) AS ctr
+                countIf(event_type = 'impression')                                        AS impressions,
+                countIf(event_type = 'click')                                             AS clicks,
+                if(impressions > 0, round(toFloat64(clicks) / impressions * 100, 2), 0)  AS ctr
             FROM feed_analytics
             WHERE timestamp >= now() - INTERVAL {days} DAY
               AND listing_id IN ({placeholders})
@@ -1588,7 +1596,7 @@ async def gallery_stats(
         raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
 
     result = await db.execute(
-        select(Listing.id, Listing.title).where(
+        select(Listing.id, Listing.title, Listing.image_urls).where(
             Listing.user_id == current_user.id,
             Listing.is_deleted == False,  # noqa: E712
         )
@@ -1597,8 +1605,16 @@ async def gallery_stats(
     if not listings:
         return {"stats": []}
 
+    import json as _json
     listing_map = {r.id: r.title for r in listings}
     listing_ids = [r.id for r in listings]
+    photo_count_map: dict[int, int] = {}
+    for r in listings:
+        try:
+            urls = _json.loads(r.image_urls) if r.image_urls else []
+            photo_count_map[r.id] = max(1, len(urls))
+        except Exception:
+            photo_count_map[r.id] = 1
 
     try:
         ch = await get_clickhouse_client()
@@ -1621,12 +1637,17 @@ async def gallery_stats(
         stats = []
         for row in rows.result_rows:
             lid, views, avg_depth, max_depth = row
+            total_photos = photo_count_map.get(int(lid), 1)
+            avg_d = float(avg_depth or 0)
+            depth_pct = round(min(100.0, avg_d / total_photos * 100), 1) if total_photos > 0 else 0.0
             stats.append({
                 "listing_id": lid,
                 "title": listing_map.get(int(lid), "—"),
                 "views": int(views),
-                "avg_swipe_depth": float(avg_depth or 0),
+                "avg_swipe_depth": avg_d,
                 "max_swipe_depth": int(max_depth or 0),
+                "total_photos": total_photos,
+                "depth_pct": depth_pct,
             })
     except Exception as exc:
         logger.error("[gallery-stats] ClickHouse sorgu hatası: %s", exc, exc_info=True)
@@ -1723,6 +1744,7 @@ async def demand_radar(
             WHERE timestamp >= now() - INTERVAL {days} DAY
               AND length(query) >= 2
             GROUP BY query
+            HAVING cnt >= 2
             ORDER BY cnt DESC
             LIMIT 20
         """)
@@ -1733,6 +1755,7 @@ async def demand_radar(
             WHERE timestamp >= now() - INTERVAL {days} DAY
               AND category != ''
             GROUP BY category
+            HAVING cnt >= 2
             ORDER BY cnt DESC
             LIMIT 10
         """)
@@ -1817,7 +1840,7 @@ async def get_pro_metrics(
         WHERE l.user_id = :uid
           AND l.created_at > NOW() - INTERVAL '90 days'
         GROUP BY hour
-        HAVING COUNT(DISTINCT imp.user_id) > 0
+        HAVING COUNT(DISTINCT imp.user_id) >= 10
         ORDER BY (COUNT(ae.id)::float / NULLIF(COUNT(DISTINCT imp.user_id), 0)) DESC
         LIMIT 1
     """), {"uid": uid})
@@ -1830,11 +1853,12 @@ async def get_pro_metrics(
     total_viewer_count = 0
     return_result = await db.execute(sql_text("""
         WITH viewer_counts AS (
-            SELECT user_id, COUNT(DISTINCT ls.id) AS stream_count
+            SELECT lsv.user_id, COUNT(DISTINCT ls.id) AS stream_count
             FROM live_stream_viewers lsv
             INNER JOIN live_streams ls ON ls.id = lsv.stream_id AND ls.host_id = :uid
             WHERE lsv.user_id != :uid
-            GROUP BY user_id
+              AND lsv.joined_at >= NOW() - INTERVAL '180 days'
+            GROUP BY lsv.user_id
         )
         SELECT
             COUNT(*) FILTER (WHERE stream_count >= 2)::float /
@@ -1927,7 +1951,12 @@ async def competitor_radar(
         signal = "uygun"
         signal_detail = "Fiyatın piyasa ortalamasına yakın"
 
-    suggested_price = round(avg_price * 0.97)  # Piyasa ortalamasının %3 altı — rekabetçi
+    if signal == "pahalı":
+        suggested_price = round(avg_price * 0.95)
+    elif signal == "ucuz":
+        suggested_price = round(avg_price * 1.03)
+    else:
+        suggested_price = round(avg_price * 0.97)
     diff_pct = round(((my_price - avg_price) / avg_price) * 100, 1)
 
     competitors = [
@@ -1969,9 +1998,9 @@ async def category_velocity(
     velocity_row = (await db.execute(sql_text("""
         SELECT
             COUNT(*) AS total_sold,
-            ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.started_at) - l.created_at)) / 86400.0)::numeric, 1) AS avg_days,
-            ROUND(MIN(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.started_at) - l.created_at)) / 86400.0)::numeric, 1) AS min_days,
-            ROUND(MAX(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.started_at) - l.created_at)) / 86400.0)::numeric, 1) AS max_days,
+            ROUND(AVG(EXTRACT(EPOCH FROM (a.ended_at - l.created_at)) / 86400.0)::numeric, 1) AS avg_days,
+            ROUND(MIN(EXTRACT(EPOCH FROM (a.ended_at - l.created_at)) / 86400.0)::numeric, 1) AS min_days,
+            ROUND(MAX(EXTRACT(EPOCH FROM (a.ended_at - l.created_at)) / 86400.0)::numeric, 1) AS max_days,
             ROUND(AVG(l.price)::numeric, 0) AS avg_price,
             ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY l.price)::numeric, 0) AS p25_price,
             ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY l.price)::numeric, 0) AS p75_price
@@ -1979,8 +2008,9 @@ async def category_velocity(
         INNER JOIN listings l ON l.id = a.listing_id
         WHERE a.status = 'ended'
           AND a.winner_username IS NOT NULL
+          AND a.ended_at IS NOT NULL
           AND l.category = :cat
-          AND COALESCE(a.ended_at, a.started_at) > NOW() - INTERVAL '90 days'
+          AND a.ended_at > NOW() - INTERVAL '90 days'
           AND l.price IS NOT NULL
     """), {"cat": category})).fetchone()
 
@@ -1988,7 +2018,7 @@ async def category_velocity(
     price_sens = (await db.execute(sql_text("""
         SELECT
             CASE WHEN l.price <= pct.p50 THEN 'ucuz' ELSE 'pahalı' END AS bucket,
-            ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(a.ended_at, a.started_at) - l.created_at)) / 86400.0)::numeric, 1) AS avg_days,
+            ROUND(AVG(EXTRACT(EPOCH FROM (a.ended_at - l.created_at)) / 86400.0)::numeric, 1) AS avg_days,
             COUNT(*) AS count
         FROM auctions a
         INNER JOIN listings l ON l.id = a.listing_id
@@ -2000,8 +2030,9 @@ async def category_velocity(
         ) pct ON pct.category = l.category
         WHERE a.status = 'ended'
           AND a.winner_username IS NOT NULL
+          AND a.ended_at IS NOT NULL
           AND l.category = :cat
-          AND COALESCE(a.ended_at, a.started_at) > NOW() - INTERVAL '90 days'
+          AND a.ended_at > NOW() - INTERVAL '90 days'
           AND l.price IS NOT NULL
         GROUP BY bucket
     """), {"cat": category})).fetchall()
@@ -2032,7 +2063,7 @@ async def category_velocity(
         if price_sensitivity:
             ucuz = next((p for p in price_sensitivity if p["bucket"] == "ucuz"), None)
             pahali = next((p for p in price_sensitivity if p["bucket"] == "pahalı"), None)
-            if ucuz and pahali and pahali["avg_days"] > 0:
+            if ucuz and pahali and pahali["avg_days"] > 0 and ucuz["avg_days"] > 0:
                 speed_ratio = round(pahali["avg_days"] / ucuz["avg_days"], 1)
                 if speed_ratio >= 1.5:
                     tip = f"Piyasa ortalamasının altında fiyatlanan ilanlar {speed_ratio}× daha hızlı satılıyor"
