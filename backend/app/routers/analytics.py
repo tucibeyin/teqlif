@@ -434,6 +434,7 @@ class PriceEstimateRequest(BaseModel):
     category: str = Field(default="")
     city: str = Field(default="")
     image_url: str = Field(default="")
+    exclude_listing_id: int = Field(default=0)
 
 
 @router.post("/price-estimate")
@@ -488,6 +489,7 @@ async def price_estimate(
             pass
 
     # 3. pgvector geniş aday havuzu (dist < 0.55, ham satırlar)
+    # DISTINCT ON: her listing için sadece en yüksek final_price'lı açık artırmayı al
     candidates_q = sql_text("""
         SELECT
             l.category,
@@ -498,15 +500,22 @@ async def price_estimate(
             a.final_price,
             (l.embedding <=> CAST(:emb AS vector)) AS dist
         FROM listings l
-        JOIN auctions a ON a.listing_id = l.id
-        WHERE a.winner_username IS NOT NULL
-          AND l.embedding IS NOT NULL
-          AND a.final_price > 0
+        JOIN LATERAL (
+            SELECT start_price, final_price
+            FROM auctions
+            WHERE listing_id = l.id
+              AND winner_username IS NOT NULL
+              AND final_price > 0
+            ORDER BY final_price DESC
+            LIMIT 1
+        ) a ON TRUE
+        WHERE l.embedding IS NOT NULL
+          AND (:excl = 0 OR l.id != :excl)
           AND (l.embedding <=> CAST(:emb AS vector)) < 0.55
         ORDER BY dist
         LIMIT 150
     """)
-    result = await db.execute(candidates_q, {"emb": emb_str})
+    result = await db.execute(candidates_q, {"emb": emb_str, "excl": body.exclude_listing_id})
     rows = result.fetchall()
 
     _no_data = {

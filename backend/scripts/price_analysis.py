@@ -157,7 +157,78 @@ async def main():
         if listing.price and w_final > 0:
             diff = ((listing.price - w_final) / w_final) * 100
             print(f"  Piyasa ortalamasına göre: %{diff:+.1f}")
-        print()
+
+    # ── 6. Pro Insights: price_intel (aktif ilanlar karşılaştırması) ───────────
+    # Bu Satış ve Kitle Raporu → 'Fiyatın Piyasada Nerede' bölümünün kaynağı
+    print(f"\n{'━'*70}")
+    print(f"  [5] PRICE_INTEL — Aktif ilanlar karşılaştırması")
+    print(f"  (Satış ve Kitle Raporu 'Fiyatın Piyasada Nerede' kaynağı)")
+    print(f"{'━'*70}")
+
+    async with AsyncSessionLocal() as db2:
+        listing2 = (await db2.execute(
+            select(Listing).where(Listing.id == LISTING_ID)
+        )).scalar_one_or_none()
+
+        if listing2 and listing2.embedding:
+            emb2 = "[" + ",".join(f"{x:.6f}" for x in listing2.embedding) + "]"
+
+            # Embedding benzerliğiyle bulunan aktif ilanlar (şu anki query — kategorisiz)
+            sim_rows = (await db2.execute(text("""
+                SELECT id, title, category, price, user_id,
+                       (embedding <=> CAST(:emb AS vector)) AS dist
+                FROM listings
+                WHERE user_id != :uid
+                  AND is_active AND NOT is_deleted
+                  AND price IS NOT NULL
+                  AND embedding IS NOT NULL
+                ORDER BY embedding <=> CAST(:emb AS vector)
+                LIMIT 10
+            """), {"uid": listing2.user_id, "emb": emb2})).fetchall()
+
+            print(f"\n  Embedding benzerliğiyle bulunan ilk 10 aktif ilan (mevcut query):")
+            print(f"  {'ID':>5}  {'dist':>6}  {'fiyat':>8}  {'kategori':<14}  Başlık")
+            print(f"  {'─'*60}")
+            prices = []
+            for r in sim_rows:
+                cat_match = "✓" if r.category == listing2.category else "✗"
+                print(f"  {r.id:>5}  {float(r.dist):>6.3f}  {int(r.price):>8}₺  {cat_match} {(r.category or ''):<12}  {(r.title or '')[:28]}")
+                prices.append(float(r.price))
+
+            if prices:
+                avg = sum(prices) / len(prices)
+                print(f"\n  Market_avg (mevcut): {avg:.0f}₺")
+                if listing2.price:
+                    diff = ((listing2.price - avg) / avg) * 100
+                    print(f"  İlan fiyatı: {listing2.price}₺  →  Piyasaya göre: %{diff:+.1f}")
+
+            # Kategori filtreli versiyon (düzeltilmiş)
+            sim_cat_rows = (await db2.execute(text("""
+                SELECT id, title, category, price,
+                       (embedding <=> CAST(:emb AS vector)) AS dist
+                FROM listings
+                WHERE user_id != :uid
+                  AND category = :cat
+                  AND is_active AND NOT is_deleted
+                  AND price IS NOT NULL
+                  AND embedding IS NOT NULL
+                ORDER BY embedding <=> CAST(:emb AS vector)
+                LIMIT 10
+            """), {"uid": listing2.user_id, "emb": emb2, "cat": listing2.category})).fetchall()
+
+            print(f"\n  Kategori filtreli versiyon ({listing2.category}):")
+            cat_prices = []
+            for r in sim_cat_rows:
+                print(f"  {r.id:>5}  {float(r.dist):>6.3f}  {int(r.price):>8}₺  {(r.title or '')[:30]}")
+                cat_prices.append(float(r.price))
+            if cat_prices:
+                cat_avg = sum(cat_prices) / len(cat_prices)
+                print(f"\n  Market_avg (kategori filtreli): {cat_avg:.0f}₺")
+            else:
+                print(f"  (Aynı kategoride başka aktif ilan yok)")
+        else:
+            print("  Embedding yok — price_intel çalışamaz.")
+    print()
 
 
 asyncio.run(main())
