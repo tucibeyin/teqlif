@@ -106,7 +106,8 @@ async def main():
                     event_type,
                     count() AS cnt
                 FROM user_events
-                WHERE campaign_id IN ({ids_str})
+                WHERE item_id IN ({ids_str})
+                  AND item_type = 'ad_campaign'
                   AND event_type IN ('ad_impression', 'ad_click')
                 GROUP BY event_type
                 ORDER BY event_type
