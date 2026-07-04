@@ -36,6 +36,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   bool _submitting = false;
   bool _aiLoading = false;
   bool _isPro = false;
+  int? _aiCreditsRemaining;
   final List<File> _images = [];
   final _picker = ImagePicker();
   File? _video;
@@ -73,9 +74,17 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (!mounted) return;
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        setState(() => _isPro = data['is_premium'] == true);
+        final isPro = data['is_premium'] == true;
+        setState(() => _isPro = isPro);
+        if (isPro) _loadAiCredits();
       }
     } catch (_) {}
+  }
+
+  Future<void> _loadAiCredits() async {
+    final credits = await AnalyticsService.getAiPriceCredits();
+    if (!mounted || credits == null) return;
+    setState(() => _aiCreditsRemaining = (credits['remaining'] as num?)?.toInt() ?? 0);
   }
 
   @override
@@ -109,6 +118,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           const SnackBar(content: Text('Fiyat tahmini alınamadı. Lütfen tekrar deneyin.')),
         );
         return;
+      }
+      if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
+        setState(() => _aiCreditsRemaining = _aiCreditsRemaining! - 1);
       }
       _showPriceEstimateSheet(result);
     } finally {
@@ -821,6 +833,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   _AiPriceButton(
                     loading: _aiLoading,
                     isPro: _isPro,
+                    creditsRemaining: _aiCreditsRemaining,
                     onTap: _fetchAiPriceEstimate,
                   ),
                   const SizedBox(height: 14),
@@ -942,8 +955,9 @@ class _ThousandSeparatorFormatter extends TextInputFormatter {
 class _AiPriceButton extends StatelessWidget {
   final bool loading;
   final bool isPro;
+  final int? creditsRemaining;
   final VoidCallback onTap;
-  const _AiPriceButton({required this.loading, required this.isPro, required this.onTap});
+  const _AiPriceButton({required this.loading, required this.isPro, required this.onTap, this.creditsRemaining});
 
   @override
   Widget build(BuildContext context) {
@@ -1008,17 +1022,26 @@ class _AiPriceButton extends StatelessWidget {
                         color: Colors.white.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.workspace_premium_rounded, size: 10, color: Color(0xFF34D399)),
-                          SizedBox(width: 3),
+                          Icon(Icons.workspace_premium_rounded, size: 10,
+                              color: creditsRemaining == 0
+                                  ? const Color(0xFFF59E0B)
+                                  : const Color(0xFF34D399)),
+                          const SizedBox(width: 3),
                           Text(
-                            'Pro · Ücretsiz',
+                            creditsRemaining == null
+                                ? 'Pro'
+                                : creditsRemaining == 0
+                                    ? 'Kredi yok'
+                                    : '$creditsRemaining hak kaldı',
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF34D399),
+                              color: creditsRemaining == 0
+                                  ? const Color(0xFFF59E0B)
+                                  : const Color(0xFF34D399),
                               letterSpacing: 0.3,
                             ),
                           ),
