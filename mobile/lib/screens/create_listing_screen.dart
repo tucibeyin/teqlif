@@ -119,10 +119,27 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         );
         return;
       }
-      if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
+      final tuciSpent = (result['tuci_spent'] as num?)?.toInt() ?? 0;
+      if (tuciSpent > 0) {
+        // TUCi harcandı — badge'i serverdan taze al
+        _loadAiCredits();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('$tuciSpent TUCi harcandı.'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ));
+      } else if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
         setState(() => _aiCreditsRemaining = _aiCreditsRemaining! - 1);
       }
       _showPriceEstimateSheet(result);
+    } on AiInsufficientTuciException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.detail),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFFEF4444),
+        duration: const Duration(seconds: 4),
+      ));
     } finally {
       if (mounted) setState(() => _aiLoading = false);
     }
@@ -1034,7 +1051,7 @@ class _AiPriceButton extends StatelessWidget {
                             creditsRemaining == null
                                 ? 'Pro'
                                 : creditsRemaining == 0
-                                    ? 'Kredi yok'
+                                    ? '5 TUCi'
                                     : '$creditsRemaining hak kaldı',
                             style: TextStyle(
                               fontSize: 9,

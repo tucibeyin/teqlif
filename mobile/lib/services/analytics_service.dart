@@ -7,6 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 import '../services/storage_service.dart';
 
+class AiInsufficientTuciException implements Exception {
+  final String detail;
+  const AiInsufficientTuciException(this.detail);
+}
+
 class AnalyticsService {
   static String? _sessionId;
   static bool? _consentAccepted;
@@ -122,6 +127,8 @@ class AnalyticsService {
   }
 
   /// Yapay Zeka fiyatlama tahmini → `POST /api/analytics/price-estimate`
+  /// Throws [AiInsufficientTuciException] on HTTP 402 (insufficient TUCi).
+  /// Returns null on other errors.
   static Future<Map<String, dynamic>?> getPriceEstimate({
     required String title,
     required String description,
@@ -149,6 +156,12 @@ class AnalyticsService {
       if (resp.statusCode == 200) {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
+      if (resp.statusCode == 402) {
+        final detail = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? '';
+        throw AiInsufficientTuciException(detail);
+      }
+    } on AiInsufficientTuciException {
+      rethrow;
     } catch (_) {}
     return null;
   }
