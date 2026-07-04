@@ -343,12 +343,12 @@ async def _score_and_rank(
                 (
                     ({cat_affinity_expr}) * {cat_w}
                     + {pgvec_score_term}
-                    + (LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0) * {quality_w}
+                    + LEAST(LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0, 1.0) * {quality_w}
                     + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 604800.0) * {freshness_w}
                     + COALESCE(soc.is_followed, 0.0) * {social_w}
                     + ({exploration_expr}) * {explore_w}
                     + (ABS(HASHTEXT(l.id::text || :seed)::float / 2147483647.0)) * 0.02
-                    - COALESCE(imp.seen, 0.0) * {seen_w}
+                    - COALESCE(imp.seen_decay, 0.0) * {seen_w}
                     + COALESCE(hq.quality, 0.0) * {host_w}
                     + COALESCE(sc.conv_rate, 0.0) * {conv_w}
                 ) AS feed_score
@@ -365,9 +365,11 @@ async def _score_and_rank(
                 INNER JOIN follows f ON f.followed_id = l2.user_id AND f.follower_id = :uid
             ) soc ON soc.id = l.id
             LEFT JOIN (
-                SELECT listing_id, 1.0 AS seen
+                SELECT listing_id,
+                       GREATEST(0.0, 1.0 - EXTRACT(EPOCH FROM (NOW() - seen_at)) / (30.0 * 86400)) AS seen_decay
                 FROM listing_impressions
                 WHERE user_id = :uid
+                  AND seen_at > NOW() - INTERVAL '30 days'
             ) imp ON imp.listing_id = l.id
             LEFT JOIN host_quality hq ON hq.host_id = l.user_id
             LEFT JOIN seller_conv sc ON sc.seller_id = l.user_id
@@ -590,7 +592,10 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
         budget_clause = "AND (l.price IS NULL OR l.price <= :price_ceiling)"
         params["price_ceiling"] = user.max_budget * 1.2
 
-    # SQL: candidate pool + temel skorlama (id + sql_score döndürür)
+    # SQL: candidate pool + temel skorlama — diversity için limit*3 aday çek
+    diverse_lim = limit * 3
+    params["diverse_lim"] = diverse_lim
+
     result = await db.execute(
         text(f"""
             WITH pgvec_pool AS (
@@ -613,6 +618,7 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                 WHERE l.is_active = TRUE AND l.is_deleted = FALSE
                   AND l.user_id != :uid
                   {ni_filter}
+                  {budget_clause}
                 ORDER BY l.created_at DESC
                 LIMIT 30
             ),
@@ -628,11 +634,12 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
             scored AS (
                 SELECT
                     c.id,
+                    l.category,
                     c.sim_score * 0.45
                     + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 1209600.0) * 0.15
                     + COALESCE(soc.social_bonus, 0.0) * 0.12
                     + LEAST(LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0, 1.0) * 0.10
-                    - COALESCE(imp.seen_recently, 0.0) * 0.20
+                    - COALESCE(imp.seen_decay, 0.0) * 0.20
                     AS sql_score
                 FROM all_candidates c
                 INNER JOIN listings l ON l.id = c.id
@@ -646,15 +653,16 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                     INNER JOIN follows f ON f.followed_id = l2.user_id AND f.follower_id = :uid
                 ) soc ON soc.id = c.id
                 LEFT JOIN (
-                    SELECT listing_id, 1.0 AS seen_recently
+                    SELECT listing_id,
+                           GREATEST(0.0, 1.0 - EXTRACT(EPOCH FROM (NOW() - seen_at)) / (30.0 * 86400)) AS seen_decay
                     FROM listing_impressions
                     WHERE user_id = :uid
-                      AND seen_at > NOW() - INTERVAL '3 days'
+                      AND seen_at > NOW() - INTERVAL '30 days'
                 ) imp ON imp.listing_id = c.id
             )
-            SELECT id, sql_score FROM scored
+            SELECT id, category, sql_score FROM scored
             ORDER BY sql_score DESC
-            LIMIT :lim
+            LIMIT :diverse_lim
         """),
         params,
     )
@@ -663,11 +671,11 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
     if not rows:
         return await _popular_feed(0, limit, db, exclude_user_id=user_id)
 
-    # Python ALS blending — ALS vektörü yoksa sql_score aynen kullanılır
-    # dict.fromkeys: sırayı koruyarak dedup (SQL fix'e ek güvenlik katmanı)
+    cat_map: dict[int, str] = {r.id: (r.category or "") for r in rows}
     candidate_ids = list(dict.fromkeys(r.id for r in rows))
     sql_scores: dict[int, float] = {r.id: float(r.sql_score) for r in rows}
 
+    # ALS blending — her iki skoru [0,1] normalize et, sonra ağırlıklı topla
     try:
         als_scores = await get_als_scores(user_id, candidate_ids)
     except Exception as exc:
@@ -675,14 +683,43 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
         als_scores = {}
 
     if als_scores:
+        sql_vals = list(sql_scores.values())
+        sql_min, sql_max = min(sql_vals), max(sql_vals)
+        sql_range = sql_max - sql_min or 1.0
+        norm_sql = {k: (v - sql_min) / sql_range for k, v in sql_scores.items()}
+
+        als_vals = list(als_scores.values())
+        als_min, als_max = min(als_vals), max(als_vals)
+        als_range = als_max - als_min or 1.0
+        norm_als = {k: (v - als_min) / als_range for k, v in als_scores.items()}
+
         final_scores = {
-            lid: sql_scores[lid] * 0.80 + als_scores.get(lid, 0.0) * 0.20
+            lid: norm_sql.get(lid, 0.0) * 0.80 + norm_als.get(lid, 0.0) * 0.20
             for lid in candidate_ids
         }
     else:
         final_scores = sql_scores
 
-    return sorted(candidate_ids, key=lambda lid: final_scores[lid], reverse=True)
+    # Greedy kategori çeşitliliği: her kategoriden max 4 ilan
+    MAX_PER_CAT = 4
+    sorted_ids = sorted(candidate_ids, key=lambda lid: final_scores[lid], reverse=True)
+    cat_counts: dict[str, int] = {}
+    diverse_ids: list[int] = []
+    overflow_ids: list[int] = []
+    for lid in sorted_ids:
+        cat = cat_map.get(lid, "")
+        if cat_counts.get(cat, 0) < MAX_PER_CAT:
+            diverse_ids.append(lid)
+            cat_counts[cat] = cat_counts.get(cat, 0) + 1
+        else:
+            overflow_ids.append(lid)
+        if len(diverse_ids) >= limit:
+            break
+    # Yeterli çeşitli ilan bulunamazsa skoru yüksek overflow'dan tamamla
+    if len(diverse_ids) < limit:
+        diverse_ids.extend(overflow_ids[: limit - len(diverse_ids)])
+
+    return diverse_ids[:limit]
 
 
 # ── Sponsored İlan Enjeksiyonu ────────────────────────────────────────────────
