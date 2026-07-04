@@ -117,11 +117,10 @@ async def main():
         # ── 4. Blast credits ──────────────────────────────────────────────
         sep("4. BLAST KREDİLERİ  (Redis)")
         try:
-            import calendar
             from datetime import datetime, timezone
             now = datetime.now(timezone.utc)
-            month_key = f"blast_credits:{UID}:{now.year}:{now.month}"
-            from app.database_redis import get_redis
+            month_key = f"blast_credits:{UID}:{now.strftime('%Y-%m')}"
+            from app.utils.redis_client import get_redis
             redis = await get_redis()
             used_raw = await redis.get(month_key)
             used = int(used_raw) if used_raw else 0
