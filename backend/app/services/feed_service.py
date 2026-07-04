@@ -26,7 +26,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.utils.redis_client import get_redis
-from app.services.listing_service import _row_dict
+from app.services.listing_service import _row_dict, _get_badges_and_trending
 from app.services.like_service import LikeService
 from app.services.feed_als_ml import get_als_scores
 from app.models.listing import Listing
@@ -137,6 +137,9 @@ async def get_personalized_feed(
                 impression_map[lid] = imp_count
 
     # Sıralamayı koru (scoring'den gelen sıra)
+    all_uids = list({rows[lid][1].id for lid in listing_ids if lid in rows})
+    badge_map, trending_cats = await _get_badges_and_trending(all_uids)
+
     result = []
     for lid in listing_ids:
         if lid not in rows:
@@ -144,6 +147,8 @@ async def get_personalized_feed(
         listing, user = rows[lid]
         result.append(_row_dict(
             listing, user, counts.get(lid, 0), lid in liked_set,
+            seller_badge=badge_map.get(user.id),
+            is_trending=listing.category in trending_cats,
             impression_count=impression_map.get(lid, 0) if user.id == user_id else None
         ))
 
@@ -492,6 +497,9 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
             for lid, imp_count in imp_result.all():
                 impression_map[lid] = imp_count
 
+    foryou_uids = list({rows[lid][1].id for lid in listing_ids if lid in rows})
+    badge_map_fy, trending_cats_fy = await _get_badges_and_trending(foryou_uids)
+
     result = []
     for lid in listing_ids:
         if lid not in rows:
@@ -499,6 +507,8 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
         listing, user = rows[lid]
         result.append(_row_dict(
             listing, user, counts.get(lid, 0), lid in liked_set,
+            seller_badge=badge_map_fy.get(user.id),
+            is_trending=listing.category in trending_cats_fy,
             impression_count=impression_map.get(lid, 0) if user.id == user_id else None
         ))
 
@@ -800,8 +810,13 @@ async def get_mixed_recent_feed(
     rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
     counts, liked_set = await LikeService.batch_listing_likes(db, base_ids, user_id)
 
+    recent_uids = list({rows[lid][1].id for lid in base_ids if lid in rows})
+    badge_map_r, trending_cats_r = await _get_badges_and_trending(recent_uids)
+
     result = [
-        _row_dict(listing, user, counts.get(lid, 0), lid in liked_set)
+        _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
+                  seller_badge=badge_map_r.get(user.id),
+                  is_trending=listing.category in trending_cats_r)
         for lid in base_ids
         if lid in rows
         for listing, user in [rows[lid]]
@@ -875,8 +890,13 @@ async def _fetch_interest_items(
     rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
     counts, liked_set = await LikeService.batch_listing_likes(db, ids, user_id)
 
+    interest_uids = list({rows[lid][1].id for lid in ids if lid in rows})
+    badge_map_i, trending_cats_i = await _get_badges_and_trending(interest_uids)
+
     return [
-        _row_dict(listing, user, counts.get(lid, 0), lid in liked_set)
+        _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
+                  seller_badge=badge_map_i.get(user.id),
+                  is_trending=listing.category in trending_cats_i)
         for lid in ids
         if lid in rows
         for listing, user in [rows[lid]]
