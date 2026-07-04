@@ -21,6 +21,7 @@ import 'services/offline_queue_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/background_audio_handler.dart';
 import 'widgets/global_keyboard_accessory.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   // --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU ---
@@ -47,6 +48,14 @@ void main() async {
         );
         return true; // hatayı "işlendi" olarak işaretle, uygulama çökmez
       };
+
+      // iOS'ta Keychain uygulama silinse de korunur; SharedPreferences silinir.
+      // Fresh install tespiti: SharedPreferences'ta flag yoksa → stale Keychain'i temizle.
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('app_installed') != true) {
+        await StorageService.clear();
+        await prefs.setBool('app_installed', true);
+      }
 
       await CacheService.init();
       await StorageService.restoreAvatarUrl();
