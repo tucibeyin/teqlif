@@ -302,7 +302,51 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   fullName,
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
+                // ── Verified / PRO badge'leri ──────────────────────────────
+                if (_user!['is_verified'] == true || _user!['is_premium'] == true)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_user!['is_verified'] == true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified, size: 12, color: Colors.white),
+                                SizedBox(width: 4),
+                                Text('Verified', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ),
+                        if (_user!['is_verified'] == true && _user!['is_premium'] == true)
+                          const SizedBox(width: 6),
+                        if (_user!['is_premium'] == true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('👑', style: TextStyle(fontSize: 10)),
+                                SizedBox(width: 4),
+                                Text('PRO', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 Text(
                   '@${widget.username}',
                   style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
@@ -446,6 +490,32 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               Text('İşlemler', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary(context))),
                               const SizedBox(width: 6),
                               Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textPrimary(context)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // ── Mesaj Gönder ────────────────────────────────────
+                      GestureDetector(
+                        onTap: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => DirectChatScreen(
+                            otherUserId: userId,
+                            displayName: fullName,
+                            otherHandle: widget.username,
+                          ),
+                        )),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant(context),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.chat_bubble_outline, size: 16, color: AppColors.textPrimary(context)),
+                              const SizedBox(width: 6),
+                              Text('Mesaj', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary(context))),
                             ],
                           ),
                         ),
