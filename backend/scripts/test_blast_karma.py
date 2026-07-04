@@ -145,26 +145,30 @@ async def main():
         db_ok = False
 
     if db_ok:
+        import hashlib
         tag          = f"_blasttest_{uuid.uuid4().hex[:8]}"
         seller_email = f"seller{tag}@test.invalid"
         buyer_emails = [f"buyer{i}{tag}@test.invalid" for i in range(4)]
         # ilk 2 alıcı → seller'ı takip eder; son 2 → takipçi değil
-        follower_emails  = buyer_emails[:2]
-        all_emails       = [seller_email] + buyer_emails
+        follower_emails = buyer_emails[:2]
+        all_emails      = [seller_email] + buyer_emails
 
         async with AsyncSessionLocal() as db:
-            await db.execute(sql_text("""
-                INSERT INTO users (email, username, hashed_password, tuci_balance, fcm_token)
-                SELECT e, 'u_'||left(md5(e),8), 'x', 200, 'fcm_'||left(md5(e),12)
-                FROM unnest(ARRAY[:emails]::text[]) AS e
-            """), {"emails": all_emails})
+            # Tek tek INSERT (asyncpg list→array dönüşüm sorununu atlatır)
+            for email in all_emails:
+                h = hashlib.md5(email.encode()).hexdigest()
+                await db.execute(sql_text("""
+                    INSERT INTO users (email, username, hashed_password, tuci_balance, fcm_token)
+                    VALUES (:email, :uname, 'x', 200, :token)
+                """), {"email": email, "uname": f"u_{h[:8]}", "token": f"fcm_{h[:12]}"})
             await db.flush()
 
-            rows     = (await db.execute(sql_text(
-                "SELECT id, email FROM users WHERE email = ANY(:e)"
-            ), {"e": all_emails})).fetchall()
-            id_map   = {r.email: r.id for r in rows}
-            seller_id  = id_map[seller_email]
+            # tag ile bul — list parametresi yok
+            rows = (await db.execute(sql_text(
+                "SELECT id, email FROM users WHERE email LIKE :pat"
+            ), {"pat": f"%{tag}%"})).fetchall()
+            id_map        = {r.email: r.id for r in rows}
+            seller_id     = id_map[seller_email]
             all_buyer_ids = [id_map[e] for e in buyer_emails]
 
             for e in follower_emails:
@@ -175,6 +179,8 @@ async def main():
             await db.flush()
 
             # send_blast FCM sorgusunun birebir kopyası
+            # (id_map'ten gelen ID'leri tek tek OR ile değil ANY ile geç —
+            #  asyncpg integer list'i kabul eder, string list etmez)
             result = await db.execute(sql_text("""
                 SELECT fcm_token FROM users
                 WHERE id = ANY(:ids)
@@ -209,13 +215,13 @@ async def main():
                 f"token sayısı={len(tokens_capped)}",
             )
 
-            # Temizlik
+            # Temizlik — tag LIKE ile, list parametresi yok
             await db.execute(sql_text(
                 "DELETE FROM follows WHERE followed_id = :sid"
             ), {"sid": seller_id})
             await db.execute(sql_text(
-                "DELETE FROM users WHERE email = ANY(:e)"
-            ), {"e": all_emails})
+                "DELETE FROM users WHERE email LIKE :pat"
+            ), {"pat": f"%{tag}%"})
             await db.commit()
             print(f"  {INFO} Test verileri temizlendi")
 
