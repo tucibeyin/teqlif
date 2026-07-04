@@ -165,7 +165,7 @@
   "errorCaptchaFailed": "فشل التحقق الأمني. يرجى المحاولة مجدداً.",
   "errorTooFast": "أنت تُجري العمليات بسرعة كبيرة. يرجى الانتظار قليلاً.",
   "errorContentPolicy": "عنوان إعلانك أو وصفه يحتوي على محتوى يخالف إرشادات مجتمعنا.",
-  "similarListings": "إعلانات مشابهة",
+  "similarListings": "إعلانات قد تعجبك",
   "suggestedSellers": "بائعون مقترحون",
   "msgPasswordChanged": "تم تغيير كلمة المرور بنجاح.",
   "msgListingPublished": "تم نشر الإعلان!",

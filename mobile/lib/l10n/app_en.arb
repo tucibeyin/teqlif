@@ -165,7 +165,7 @@
   "errorCaptchaFailed": "Security verification failed. Please try again.",
   "errorTooFast": "You are acting too fast. Please wait a moment.",
   "errorContentPolicy": "Your listing title or description contains content that violates our community guidelines.",
-  "similarListings": "Similar Listings",
+  "similarListings": "Listings You Might Like",
   "suggestedSellers": "Suggested Sellers",
   "msgPasswordChanged": "Your password has been changed successfully.",
   "msgListingPublished": "Listing published!",

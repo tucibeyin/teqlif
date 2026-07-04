@@ -482,7 +482,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your listing title or description contains content that violates our community guidelines.';
 
   @override
-  String get similarListings => 'Similar Listings';
+  String get similarListings => 'Listings You Might Like';
 
   @override
   String get suggestedSellers => 'Suggested Sellers';

@@ -1033,7 +1033,7 @@ abstract class AppLocalizations {
   /// No description provided for @similarListings.
   ///
   /// In tr, this message translates to:
-  /// **'Benzer İlanlar'**
+  /// **'İlgilenebileceğin İlanlar'**
   String get similarListings;
 
   /// No description provided for @suggestedSellers.

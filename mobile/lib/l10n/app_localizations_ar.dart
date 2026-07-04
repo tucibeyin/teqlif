@@ -483,7 +483,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'عنوان إعلانك أو وصفه يحتوي على محتوى يخالف إرشادات مجتمعنا.';
 
   @override
-  String get similarListings => 'إعلانات مشابهة';
+  String get similarListings => 'إعلانات قد تعجبك';
 
   @override
   String get suggestedSellers => 'بائعون مقترحون';

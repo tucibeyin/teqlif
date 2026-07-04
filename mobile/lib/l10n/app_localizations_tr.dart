@@ -482,7 +482,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'İlan başlığı veya açıklaması topluluk kurallarına aykırı içerik barındırıyor.';
 
   @override
-  String get similarListings => 'Benzer İlanlar';
+  String get similarListings => 'İlgilenebileceğin İlanlar';
 
   @override
   String get suggestedSellers => 'Önerilen Satıcılar';
