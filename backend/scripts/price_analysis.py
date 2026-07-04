@@ -170,7 +170,7 @@ async def main():
             select(Listing).where(Listing.id == LISTING_ID)
         )).scalar_one_or_none()
 
-        if listing2 and listing2.embedding:
+        if listing2 and listing2.embedding is not None:
             emb2 = "[" + ",".join(f"{x:.6f}" for x in listing2.embedding) + "]"
 
             # Embedding benzerliğiyle bulunan aktif ilanlar (şu anki query — kategorisiz)
