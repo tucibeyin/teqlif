@@ -2495,4 +2495,23 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get hostAcceptSaleBtnSkip => 'Çekmeden Onayla';
+
+  @override
+  String radarSuggestedCopied(String price) {
+    return '$price ₺ panoya kopyalandı';
+  }
+
+  @override
+  String radarCopyBtn(String price) {
+    return 'Önerilen fiyatı kopyala: $price ₺';
+  }
+
+  @override
+  String retargetingBlastSent(int count) {
+    return '$count kişiye bildirim gönderildi!';
+  }
+
+  @override
+  String get retargetingBlastCooldown =>
+      'Bir sonraki blast için 7 gün beklemeniz gerekiyor.';
 }

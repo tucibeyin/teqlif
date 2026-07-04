@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
@@ -280,10 +281,7 @@ class _KpiGrid extends StatelessWidget {
     );
   }
 
-  static String _fmt(double v) {
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}B';
-    return v.toStringAsFixed(0);
-  }
+  static String _fmt(double v) => NumberFormat('#,##0', 'tr_TR').format(v);
 }
 
 class _KpiCard extends StatelessWidget {
@@ -523,7 +521,7 @@ class _HotLeadRow extends StatelessWidget {
               children: [
                 Text(lead['title'] as String? ?? '', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text('${lead['category']}  •  ${price != null ? '${price.toStringAsFixed(0)} ₺' : '—'}',
+                Text('${lead['category']}  •  ${price != null ? '${NumberFormat('#,##0', 'tr_TR').format(price)} ₺' : '—'}',
                     style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
               ],
             ),
@@ -598,9 +596,9 @@ class _PriceIntelRow extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _PriceBox(label: l.priceYours, value: '${yourPrice.toStringAsFixed(0)} ₺', color: sigColor)),
+              Expanded(child: _PriceBox(label: l.priceYours, value: '${NumberFormat('#,##0', 'tr_TR').format(yourPrice)} ₺', color: sigColor)),
               const SizedBox(width: 10),
-              Expanded(child: _PriceBox(label: l.priceMarketAvg, value: '${marketAvg.toStringAsFixed(0)} ₺', color: AppColors.textSecondary(context))),
+              Expanded(child: _PriceBox(label: l.priceMarketAvg, value: '${NumberFormat('#,##0', 'tr_TR').format(marketAvg)} ₺', color: AppColors.textSecondary(context))),
               const SizedBox(width: 10),
               Expanded(child: _PriceBox(label: l.priceDiff, value: '${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%', color: sigColor)),
             ],

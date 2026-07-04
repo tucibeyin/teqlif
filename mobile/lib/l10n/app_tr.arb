@@ -1242,5 +1242,12 @@
   "hostAcceptSaleDialogTitle": "Satışı Onaylıyorsunuz",
   "hostAcceptSaleDialogBody": "Lütfen sattığınız ürünü kameraya gösterin ve onay fotoğrafını çekin.",
   "hostAcceptSaleBtnCapture": "Çek ve Onayla",
-  "hostAcceptSaleBtnSkip": "Çekmeden Onayla"
+  "hostAcceptSaleBtnSkip": "Çekmeden Onayla",
+  "radarSuggestedCopied": "{price} ₺ panoya kopyalandı",
+  "@radarSuggestedCopied": { "placeholders": { "price": { "type": "String" } } },
+  "radarCopyBtn": "Önerilen fiyatı kopyala: {price} ₺",
+  "@radarCopyBtn": { "placeholders": { "price": { "type": "String" } } },
+  "retargetingBlastSent": "{count} kişiye bildirim gönderildi!",
+  "@retargetingBlastSent": { "placeholders": { "count": { "type": "int" } } },
+  "retargetingBlastCooldown": "Bir sonraki blast için 7 gün beklemeniz gerekiyor."
 }

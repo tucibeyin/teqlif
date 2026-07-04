@@ -1241,5 +1241,12 @@
   "hostAcceptSaleDialogTitle": "Confirming Sale",
   "hostAcceptSaleDialogBody": "Please show the item to the camera and take a proof photo.",
   "hostAcceptSaleBtnCapture": "Capture & Confirm",
-  "hostAcceptSaleBtnSkip": "Confirm Without Photo"
+  "hostAcceptSaleBtnSkip": "Confirm Without Photo",
+  "radarSuggestedCopied": "{price} ₺ copied to clipboard",
+  "@radarSuggestedCopied": { "placeholders": { "price": { "type": "String" } } },
+  "radarCopyBtn": "Copy suggested price: {price} ₺",
+  "@radarCopyBtn": { "placeholders": { "price": { "type": "String" } } },
+  "retargetingBlastSent": "Notification sent to {count} people!",
+  "@retargetingBlastSent": { "placeholders": { "count": { "type": "int" } } },
+  "retargetingBlastCooldown": "You need to wait 7 days for the next blast."
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -361,7 +362,7 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
                     Text(l.conversionCategorySales(won, total), style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
                     const Spacer(),
                     if (avgPrice > 0)
-                      Text(l.conversionAvgPrice(avgPrice.toStringAsFixed(0)),
+                      Text(l.conversionAvgPrice(NumberFormat('#,##0', 'tr_TR').format(avgPrice)),
                           style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
                   ],
                 ),

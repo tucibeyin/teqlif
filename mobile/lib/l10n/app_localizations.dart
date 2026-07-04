@@ -4683,6 +4683,30 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Çekmeden Onayla'**
   String get hostAcceptSaleBtnSkip;
+
+  /// No description provided for @radarSuggestedCopied.
+  ///
+  /// In tr, this message translates to:
+  /// **'{price} ₺ panoya kopyalandı'**
+  String radarSuggestedCopied(String price);
+
+  /// No description provided for @radarCopyBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Önerilen fiyatı kopyala: {price} ₺'**
+  String radarCopyBtn(String price);
+
+  /// No description provided for @retargetingBlastSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kişiye bildirim gönderildi!'**
+  String retargetingBlastSent(int count);
+
+  /// No description provided for @retargetingBlastCooldown.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bir sonraki blast için 7 gün beklemeniz gerekiyor.'**
+  String get retargetingBlastCooldown;
 }
 
 class _AppLocalizationsDelegate

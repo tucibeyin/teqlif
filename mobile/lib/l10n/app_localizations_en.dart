@@ -2494,4 +2494,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hostAcceptSaleBtnSkip => 'Confirm Without Photo';
+
+  @override
+  String radarSuggestedCopied(String price) {
+    return '$price ₺ copied to clipboard';
+  }
+
+  @override
+  String radarCopyBtn(String price) {
+    return 'Copy suggested price: $price ₺';
+  }
+
+  @override
+  String retargetingBlastSent(int count) {
+    return 'Notification sent to $count people!';
+  }
+
+  @override
+  String get retargetingBlastCooldown =>
+      'You need to wait 7 days for the next blast.';
 }

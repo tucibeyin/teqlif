@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
+import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
 
@@ -21,6 +23,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   bool _loadingAudience = false;
   bool _sending = false;
   bool _sent = false;
+  int _sentCount = 0;
 
   @override
   void initState() {
@@ -125,7 +128,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     setState(() => _sending = false);
 
     if (result != null && result['error'] == null) {
-      setState(() => _sent = true);
+      setState(() { _sent = true; _sentCount = reachable; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Bildirimler başarıyla gönderildi!'),
@@ -175,12 +178,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                     ),
                     const SizedBox(height: 20),
                     if (_loadingAudience)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(48),
-                          child: CircularProgressIndicator(),
-                        ),
-                      )
+                      const _AudienceSkeleton()
                     else if (_audienceData != null)
                       _audienceCard(),
                   ],
@@ -378,23 +376,33 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                   width: double.infinity,
                   child: _sent
                       ? Container(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF22C55E).withValues(alpha: 0.12),
+                            color: const Color(0xFF22C55E).withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.3)),
                           ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          child: Column(
                             children: [
-                              Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 18),
-                              SizedBox(width: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    AppLocalizations.of(context)!.retargetingBlastSent(_sentCount),
+                                    style: const TextStyle(
+                                      fontSize: 14, fontWeight: FontWeight.w700,
+                                      color: Color(0xFF22C55E),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
                               Text(
-                                'Bildirimler gönderildi!',
-                                style: TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w700,
-                                  color: Color(0xFF22C55E),
-                                ),
+                                AppLocalizations.of(context)!.retargetingBlastCooldown,
+                                style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
+                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
@@ -465,51 +473,109 @@ class _ListingPicker extends StatelessWidget {
   final Map<String, dynamic> selected;
   final ValueChanged<Map<String, dynamic>> onChanged;
 
-  const _ListingPicker({
-    required this.listings,
-    required this.selected,
-    required this.onChanged,
-  });
+  const _ListingPicker({required this.listings, required this.selected, required this.onChanged});
+
+  static const double _itemH = 62;
+  static const int _maxVisible = 5;
 
   @override
   Widget build(BuildContext context) {
+    final visibleCount = listings.length.clamp(1, _maxVisible);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      height: visibleCount * _itemH,
       decoration: BoxDecoration(
         color: AppColors.card(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border(context)),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<Map<String, dynamic>>(
-          isExpanded: true,
-          value: selected,
-          dropdownColor: AppColors.card(context),
-          style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
-          icon: Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary(context)),
-          items: listings.map((l) {
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ListView.separated(
+          physics: const ClampingScrollPhysics(),
+          itemCount: listings.length,
+          separatorBuilder: (ctx2, i2) => Divider(height: 1, thickness: 1, color: AppColors.border(ctx2)),
+          itemBuilder: (ctx, i) {
+            final l = listings[i];
+            final isSelected = l['id'] == selected['id'];
             final price = l['price'];
-            final priceStr = price != null ? ' · ${_fmt(price)} ₺' : '';
-            return DropdownMenuItem(
-              value: l,
-              child: Text(
-                '${l['title'] ?? '—'}$priceStr',
-                overflow: TextOverflow.ellipsis,
+            return InkWell(
+              onTap: () => onChanged(l),
+              child: Container(
+                height: _itemH,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                color: isSelected ? const Color(0xFF6366F1).withValues(alpha: 0.08) : Colors.transparent,
+                child: Row(
+                  children: [
+                    Icon(
+                      isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      size: 18,
+                      color: isSelected ? const Color(0xFF6366F1) : AppColors.textSecondary(ctx),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l['title'] as String? ?? '—',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: AppColors.textPrimary(ctx),
+                        ),
+                      ),
+                    ),
+                    if (price != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '${NumberFormat('#,##0', 'tr_TR').format((price as num).toDouble())} ₺',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(ctx)),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             );
-          }).toList(),
-          onChanged: (v) { if (v != null) onChanged(v); },
+          },
         ),
       ),
     );
   }
+}
 
-  String _fmt(dynamic v) {
-    final n = (v as num).toDouble();
-    if (n >= 1000) {
-      return '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}K';
-    }
-    return n.toStringAsFixed(0);
+// ── Audience Skeleton ─────────────────────────────────────────────────────────
+
+class _AudienceSkeleton extends StatelessWidget {
+  const _AudienceSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final base = AppColors.border(context);
+    box(double h, {double? w, double r = 8}) => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(r)),
+        );
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: base),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          box(14, w: 120),
+          const SizedBox(height: 16),
+          Row(children: [
+            Expanded(child: box(72, r: 10)), const SizedBox(width: 8),
+            Expanded(child: box(72, r: 10)), const SizedBox(width: 8),
+            Expanded(child: box(72, r: 10)),
+          ]),
+          const SizedBox(height: 16),
+          box(50, r: 10),
+        ],
+      ),
+    );
   }
 }
 

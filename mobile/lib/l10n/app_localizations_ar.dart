@@ -2474,4 +2474,23 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get hostAcceptSaleBtnSkip => 'تأكيد بدون صورة';
+
+  @override
+  String radarSuggestedCopied(String price) {
+    return 'تم نسخ $price ₺ إلى الحافظة';
+  }
+
+  @override
+  String radarCopyBtn(String price) {
+    return 'نسخ السعر المقترح: $price ₺';
+  }
+
+  @override
+  String retargetingBlastSent(int count) {
+    return 'تم إرسال إشعار إلى $count شخص!';
+  }
+
+  @override
+  String get retargetingBlastCooldown =>
+      'يجب الانتظار 7 أيام حتى الإرسال التالي.';
 }

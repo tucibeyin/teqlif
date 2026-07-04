@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
+import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
 
@@ -113,12 +116,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
                       ),
                       const SizedBox(height: 20),
                       if (_loadingData)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(48),
-                            child: CircularProgressIndicator(),
-                          ),
-                        )
+                        const _RadarSkeleton()
                       else ...[
                         if (_radarData != null)
                           _RadarSection(
@@ -176,51 +174,71 @@ class _ListingPicker extends StatelessWidget {
   final Map<String, dynamic> selected;
   final ValueChanged<Map<String, dynamic>> onChanged;
 
-  const _ListingPicker({
-    required this.listings,
-    required this.selected,
-    required this.onChanged,
-  });
+  const _ListingPicker({required this.listings, required this.selected, required this.onChanged});
+
+  static const double _itemH = 62;
+  static const int _maxVisible = 5;
 
   @override
   Widget build(BuildContext context) {
+    final visibleCount = listings.length.clamp(1, _maxVisible);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      height: visibleCount * _itemH,
       decoration: BoxDecoration(
         color: AppColors.card(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border(context)),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<Map<String, dynamic>>(
-          isExpanded: true,
-          value: selected,
-          dropdownColor: AppColors.card(context),
-          style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
-          icon: Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary(context)),
-          items: listings.map((l) {
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ListView.separated(
+          physics: const ClampingScrollPhysics(),
+          itemCount: listings.length,
+          separatorBuilder: (context2, i2) => Divider(height: 1, thickness: 1, color: AppColors.border(context2)),
+          itemBuilder: (ctx, i) {
+            final l = listings[i];
+            final isSelected = l['id'] == selected['id'];
             final price = l['price'];
-            final priceStr = price != null ? ' · ${_fmt(price)} ₺' : '';
-            return DropdownMenuItem(
-              value: l,
-              child: Text(
-                '${l['title'] ?? '—'}$priceStr',
-                overflow: TextOverflow.ellipsis,
+            return InkWell(
+              onTap: () => onChanged(l),
+              child: Container(
+                height: _itemH,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                color: isSelected ? const Color(0xFF6366F1).withValues(alpha: 0.08) : Colors.transparent,
+                child: Row(
+                  children: [
+                    Icon(
+                      isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      size: 18,
+                      color: isSelected ? const Color(0xFF6366F1) : AppColors.textSecondary(ctx),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l['title'] as String? ?? '—',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: AppColors.textPrimary(ctx),
+                        ),
+                      ),
+                    ),
+                    if (price != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '${NumberFormat('#,##0', 'tr_TR').format((price as num).toDouble())} ₺',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(ctx)),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             );
-          }).toList(),
-          onChanged: (v) { if (v != null) onChanged(v); },
+          },
         ),
       ),
     );
-  }
-
-  String _fmt(dynamic v) {
-    final n = (v as num).toDouble();
-    if (n >= 1000) {
-      return '${(n / 1000).toStringAsFixed(n % 1000 == 0 ? 0 : 1)}K';
-    }
-    return n.toStringAsFixed(0);
   }
 }
 
@@ -330,25 +348,47 @@ class _RadarSection extends StatelessWidget {
           // Fiyat metrikleri
           Row(
             children: [
-              _PriceMetric(
-                label: 'Senin fiyatın',
-                value: myPrice,
-                color: signalColor,
-              ),
+              _PriceMetric(label: 'Senin fiyatın', value: myPrice, color: signalColor),
               const SizedBox(width: 10),
-              _PriceMetric(
-                label: 'Rakip ort.',
-                value: avgPrice,
-                color: AppColors.textPrimary(context),
-              ),
+              _PriceMetric(label: 'Rakip ort.', value: avgPrice, color: AppColors.textPrimary(context)),
               const SizedBox(width: 10),
-              _PriceMetric(
-                label: 'Önerilen',
-                value: suggestedPrice,
-                color: const Color(0xFF22C55E),
-              ),
+              _PriceMetric(label: 'Önerilen', value: suggestedPrice, color: const Color(0xFF22C55E)),
             ],
           ),
+          if (signal != 'uygun' && suggestedPrice > 0) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () {
+                final l = AppLocalizations.of(context)!;
+                Clipboard.setData(ClipboardData(text: suggestedPrice.toStringAsFixed(0)));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(l.radarSuggestedCopied(NumberFormat('#,##0', 'tr_TR').format(suggestedPrice))),
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ));
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF22C55E).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.content_copy_outlined, size: 14, color: Color(0xFF22C55E)),
+                    const SizedBox(width: 6),
+                    Text(
+                      AppLocalizations.of(context)!.radarCopyBtn(NumberFormat('#,##0', 'tr_TR').format(suggestedPrice)),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF22C55E)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
 
           // Fiyat aralığı çubuğu
@@ -452,10 +492,7 @@ class _RadarSection extends StatelessWidget {
     );
   }
 
-  String _fmtPrice(double v) {
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}K';
-    return v.toStringAsFixed(0);
-  }
+  String _fmtPrice(double v) => NumberFormat('#,##0', 'tr_TR').format(v);
 }
 
 // ── Satış Hızı Bölümü ─────────────────────────────────────────────────────────
@@ -669,9 +706,68 @@ class _VelocitySection extends StatelessWidget {
     );
   }
 
-  String _fmtPrice(double v) {
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}K';
-    return v.toStringAsFixed(0);
+  String _fmtPrice(double v) => NumberFormat('#,##0', 'tr_TR').format(v);
+}
+
+// ── Skeleton Loading ──────────────────────────────────────────────────────────
+
+class _RadarSkeleton extends StatelessWidget {
+  const _RadarSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final base = AppColors.border(context);
+    box(double h, {double? w, double r = 8}) => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(r)),
+        );
+    card(Widget child) => Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.card(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: base),
+          ),
+          child: child,
+        );
+    return Column(
+      children: [
+        card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          box(14, w: 140),
+          const SizedBox(height: 14),
+          Row(children: [
+            box(24, w: 80, r: 6), const SizedBox(width: 10), Expanded(child: box(14)),
+          ]),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(child: box(60, r: 10)), const SizedBox(width: 10),
+            Expanded(child: box(60, r: 10)), const SizedBox(width: 10),
+            Expanded(child: box(60, r: 10)),
+          ]),
+          const SizedBox(height: 14),
+          box(10, r: 4),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: box(64, r: 10)), const SizedBox(width: 8),
+            Expanded(child: box(64, r: 10)), const SizedBox(width: 8),
+            Expanded(child: box(64, r: 10)),
+          ]),
+        ])),
+        card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          box(14, w: 160),
+          const SizedBox(height: 14),
+          box(48, w: 100, r: 4),
+          const SizedBox(height: 14),
+          Row(children: [
+            Expanded(child: box(64, r: 10)), const SizedBox(width: 8),
+            Expanded(child: box(64, r: 10)), const SizedBox(width: 8),
+            Expanded(child: box(64, r: 10)),
+          ]),
+        ])),
+      ],
+    );
   }
 }
 
@@ -741,12 +837,7 @@ class _PriceMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String fmt;
-    if (value >= 1000) {
-      fmt = '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}K ₺';
-    } else {
-      fmt = '${value.toStringAsFixed(0)} ₺';
-    }
+    final fmt = '${NumberFormat('#,##0', 'tr_TR').format(value)} ₺';
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

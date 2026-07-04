@@ -1241,5 +1241,12 @@
   "hostAcceptSaleDialogTitle": "تأكيد البيع",
   "hostAcceptSaleDialogBody": "يرجى عرض العنصر للكاميرا والتقاط صورة إثبات.",
   "hostAcceptSaleBtnCapture": "التقاط وتأكيد",
-  "hostAcceptSaleBtnSkip": "تأكيد بدون صورة"
+  "hostAcceptSaleBtnSkip": "تأكيد بدون صورة",
+  "radarSuggestedCopied": "تم نسخ {price} ₺ إلى الحافظة",
+  "@radarSuggestedCopied": { "placeholders": { "price": { "type": "String" } } },
+  "radarCopyBtn": "نسخ السعر المقترح: {price} ₺",
+  "@radarCopyBtn": { "placeholders": { "price": { "type": "String" } } },
+  "retargetingBlastSent": "تم إرسال إشعار إلى {count} شخص!",
+  "@retargetingBlastSent": { "placeholders": { "count": { "type": "int" } } },
+  "retargetingBlastCooldown": "يجب الانتظار 7 أيام حتى الإرسال التالي."
 }
