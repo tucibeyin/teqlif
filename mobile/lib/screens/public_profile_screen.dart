@@ -435,14 +435,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         onSelected: (value) {
                           switch (value) {
-                            case 'message':
-                              Navigator.push(context, MaterialPageRoute(
-                                builder: (_) => DirectChatScreen(
-                                  otherUserId: userId,
-                                  displayName: fullName,
-                                  otherHandle: widget.username,
-                                ),
-                              ));
                             case 'rate':
                               _showRatingForm();
                             case 'block':
@@ -450,14 +442,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           }
                         },
                         itemBuilder: (_) => [
-                          PopupMenuItem(
-                            value: 'message',
-                            child: Row(children: [
-                              const Icon(Icons.chat_bubble_outline, size: 18),
-                              const SizedBox(width: 10),
-                              Text(l.pubProfileSendMessage),
-                            ]),
-                          ),
                           if (_isFollowing)
                             PopupMenuItem(
                               value: 'rate',
