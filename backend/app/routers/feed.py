@@ -1,4 +1,5 @@
 import json
+import base64
 from typing import Literal
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Query
@@ -149,12 +150,14 @@ async def record_feed_signal(
     existing = await redis.get(key)
 
     if existing:
-        alpha = 0.3
-        old_vec = np.frombuffer(existing, dtype=np.float32)
-        blended = (1 - alpha) * old_vec + alpha * new_vec
-        bn = np.linalg.norm(blended)
-        if bn > 0:
-            blended /= bn
-        await redis.setex(key, 1800, blended.tobytes())
-    else:
-        await redis.setex(key, 1800, new_vec.tobytes())
+        try:
+            alpha = 0.3
+            old_vec = np.frombuffer(base64.b64decode(existing), dtype=np.float32)
+            blended = (1 - alpha) * old_vec + alpha * new_vec
+            bn = np.linalg.norm(blended)
+            if bn > 0:
+                blended /= bn
+            new_vec = blended
+        except Exception:
+            pass
+    await redis.setex(key, 1800, base64.b64encode(new_vec.tobytes()).decode())

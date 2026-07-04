@@ -17,6 +17,7 @@ import json
 import math
 import random
 import logging
+import base64
 from datetime import datetime
 from typing import Optional
 
@@ -541,15 +542,18 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
 
     # Session-içi drift: mevcut oturum vektörüyle preference_embedding'i harmanlayın
     pref_vec = np.array(user.preference_embedding, dtype=np.float32)
-    session_bytes = await redis.get(f"feed:session:{user_id}")
-    if session_bytes:
-        sess_vec = np.frombuffer(session_bytes, dtype=np.float32)
-        if sess_vec.shape == pref_vec.shape:
-            blended = pref_vec * 0.70 + sess_vec * 0.30
-            bn = np.linalg.norm(blended)
-            if bn > 0:
-                blended /= bn
-            pref_vec = blended
+    session_b64 = await redis.get(f"feed:session:{user_id}")
+    if session_b64:
+        try:
+            sess_vec = np.frombuffer(base64.b64decode(session_b64), dtype=np.float32)
+        except Exception:
+            sess_vec = np.array([], dtype=np.float32)
+    if session_b64 and sess_vec.shape == pref_vec.shape:
+        blended = pref_vec * 0.70 + sess_vec * 0.30
+        bn = np.linalg.norm(blended)
+        if bn > 0:
+            blended /= bn
+        pref_vec = blended
 
     vec_str = "[" + ",".join(f"{x:.8f}" for x in pref_vec.tolist()) + "]"
 
