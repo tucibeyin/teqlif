@@ -497,9 +497,15 @@ class ListingService:
         if not listing:
             raise NotFoundException("İlan bulunamadı")
 
+        # Commit öncesi medya URL'lerini kaydet (session commit sonrası erişilebilir olmayabilir)
+        _image_url    = listing.image_url
+        _image_urls   = listing.image_urls
+        _thumbnail    = listing.thumbnail_url
+        _video_url    = listing.video_url
+        _owner_id     = listing.user_id
+
         listing.is_deleted = True
         listing.is_active = False
-        _owner_id = listing.user_id
         try:
             await self.db.commit()
         except Exception as exc:
@@ -511,13 +517,18 @@ class ListingService:
             capture_exception(exc)
             raise DatabaseException("İlan silinemedi")
 
+        # Commit sonrası: tüm kaynakları temizle (fire-and-forget)
         import asyncio as _asyncio3
         from app.database_clickhouse import track_user_event
+        from app.utils.listing_cleanup import cleanup_listing_resources
         _asyncio3.create_task(track_user_event(
             event_type="listing_deleted",
             item_id=listing_id,
             item_type="listing",
             user_id=_owner_id,
+        ))
+        _asyncio3.create_task(cleanup_listing_resources(
+            listing_id, _image_url, _image_urls, _thumbnail, _video_url,
         ))
 
         return {"ok": True}

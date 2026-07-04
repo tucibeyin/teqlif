@@ -11,7 +11,7 @@ class Purchase(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     buyer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
-    listing_id: Mapped[Optional[int]] = mapped_column(ForeignKey("listings.id"), nullable=True, index=True)
+    listing_id: Mapped[Optional[int]] = mapped_column(ForeignKey("listings.id", ondelete="SET NULL"), nullable=True, index=True)
     auction_id: Mapped[Optional[int]] = mapped_column(ForeignKey("auctions.id"), nullable=True, index=True)
     price: Mapped[float] = mapped_column(Float, nullable=False)
     # 'AUCTION' | 'BUY_IT_NOW'

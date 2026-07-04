@@ -86,6 +86,12 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
     ARQ cron görevi — her gün 04:30'da çalışır.
     60+ gün önce pasife alınmış ilanları siler ve sahibine bildirim gönderir.
     """
+    from app.utils.listing_cleanup import (
+        delete_listing_files,
+        cleanup_listings_redis_batch,
+        cleanup_listings_notifications_batch,
+    )
+
     cutoff = datetime.now(timezone.utc) - timedelta(days=_INACTIVE_DELETE_DAYS)
 
     try:
@@ -108,6 +114,12 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
             listing_ids = [l.id for l in listings]
             user_ids = list({l.user_id for l in listings})
             user_listing_map: dict[int, list[tuple[int, str]]] = {}
+
+            # Medya bilgilerini commit öncesi topla
+            media_info = [
+                (l.id, l.image_url, l.image_urls, l.thumbnail_url, l.video_url)
+                for l in listings
+            ]
             for l in listings:
                 user_listing_map.setdefault(l.user_id, []).append((l.id, l.title))
 
@@ -118,6 +130,16 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
             )
             await db.commit()
             logger.info("[ListingTasks] %d pasif ilan silindi | ids=%s", len(listing_ids), listing_ids[:10])
+
+        # Commit sonrası: dosyaları sil
+        for lid, img_url, img_urls, thumb, vid in media_info:
+            delete_listing_files(lid, img_url, img_urls, thumb, vid)
+
+        # Redis ALS vektörleri + bildirimleri toplu temizle
+        await asyncio.gather(
+            cleanup_listings_redis_batch(listing_ids),
+            cleanup_listings_notifications_batch(listing_ids),
+        )
 
         await _notify_deleted(user_ids, user_listing_map)
 
