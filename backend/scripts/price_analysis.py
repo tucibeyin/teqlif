@@ -57,14 +57,21 @@ async def main():
                 a.winner_username,
                 (l.embedding <=> CAST(:emb AS vector)) AS dist
             FROM listings l
-            JOIN auctions a ON a.listing_id = l.id
-            WHERE a.winner_username IS NOT NULL
-              AND l.embedding IS NOT NULL
-              AND a.final_price > 0
+            JOIN LATERAL (
+                SELECT start_price, final_price, winner_username
+                FROM auctions
+                WHERE listing_id = l.id
+                  AND winner_username IS NOT NULL
+                  AND final_price > 0
+                ORDER BY final_price DESC
+                LIMIT 1
+            ) a ON TRUE
+            WHERE l.embedding IS NOT NULL
+              AND l.id != :excl
               AND (l.embedding <=> CAST(:emb AS vector)) < 0.55
             ORDER BY dist
             LIMIT 150
-        """), {"emb": emb_str})).fetchall()
+        """), {"emb": emb_str, "excl": LISTING_ID})).fetchall()
 
         print(f"\n[1] pgvector aday havuzu (dist < 0.55): {len(rows)} ilan bulundu")
         if not rows:
