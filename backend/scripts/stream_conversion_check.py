@@ -124,6 +124,70 @@ async def main():
         else:
             print("  (Son 90 günde tamamlanmış açık artırma yok)")
 
+        # ── Diagnostik: neden boş? ────────────────────────────────────────
+        sep("DIAGNOSTIK — auction tablosundaki verinin durumu")
+        diag = (await db.execute(text("""
+            SELECT
+                a.id,
+                a.status,
+                a.listing_id,
+                a.stream_id,
+                a.winner_id,
+                a.ended_at,
+                l.user_id AS listing_owner
+            FROM auctions a
+            JOIN live_streams ls ON ls.id = a.stream_id
+            LEFT JOIN listings l ON l.id = a.listing_id
+            WHERE ls.host_id = :uid
+            ORDER BY a.id DESC
+            LIMIT 10
+        """), {"uid": UID})).fetchall()
+
+        print(f"  {'ID':>5}  {'status':<10}  {'listing_id':>10}  {'stream_id':>9}  {'winner_id':>9}  {'ended_at':>22}  {'owner':>6}")
+        print(f"  {'─'*75}")
+        for r in diag:
+            ea = str(r.ended_at)[:19] if r.ended_at else "NULL"
+            lid = str(r.listing_id) if r.listing_id else "NULL"
+            wid = str(r.winner_id) if r.winner_id else "NULL"
+            owner = str(r.listing_owner) if r.listing_owner else "NULL"
+            print(f"  {r.id:>5}  {(r.status or '—'):<10}  {lid:>10}  {r.stream_id:>9}  {wid:>9}  {ea:>22}  {owner:>6}")
+
+        # Filtre bazlı sayım
+        cnt_status = (await db.execute(text("""
+            SELECT COUNT(*) FROM auctions a
+            JOIN live_streams ls ON ls.id = a.stream_id
+            WHERE ls.host_id = :uid AND a.status = 'ended'
+        """), {"uid": UID})).scalar()
+
+        cnt_listing = (await db.execute(text("""
+            SELECT COUNT(*) FROM auctions a
+            JOIN live_streams ls ON ls.id = a.stream_id
+            WHERE ls.host_id = :uid AND a.listing_id IS NOT NULL
+        """), {"uid": UID})).scalar()
+
+        cnt_ended_at = (await db.execute(text("""
+            SELECT COUNT(*) FROM auctions a
+            JOIN live_streams ls ON ls.id = a.stream_id
+            WHERE ls.host_id = :uid
+              AND a.ended_at >= NOW() - INTERVAL '90 days'
+        """), {"uid": UID})).scalar()
+
+        cnt_all_filters = (await db.execute(text("""
+            SELECT COUNT(*) FROM auctions a
+            JOIN live_streams ls ON ls.id = a.stream_id
+            JOIN listings l ON l.id = a.listing_id
+            WHERE ls.host_id = :uid
+              AND a.status = 'ended'
+              AND a.ended_at >= NOW() - INTERVAL '90 days'
+              AND l.user_id = :uid
+        """), {"uid": UID})).scalar()
+
+        print(f"\n  Filtre sayımları (toplam {int(stats.total_auctions)} auction):")
+        print(f"  status='ended'           : {cnt_status}")
+        print(f"  listing_id IS NOT NULL   : {cnt_listing}")
+        print(f"  ended_at son 90 günde    : {cnt_ended_at}")
+        print(f"  Tüm filtreler birlikte   : {cnt_all_filters}  ← conversion-breakdown bu sayıyı görmeli")
+
     print()
 
 
