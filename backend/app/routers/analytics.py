@@ -755,7 +755,11 @@ async def market_trends(
             FROM recent r
             LEFT JOIN prev p ON p.category = r.category
             WHERE r.cnt >= 3
-            ORDER BY COALESCE(growth_pct, 0) DESC
+            ORDER BY COALESCE(
+                CASE WHEN COALESCE(p.cnt, 0) > 0 AND r.cnt >= 3
+                    THEN ((r.cnt - p.cnt)::float / p.cnt) * 100
+                    ELSE NULL
+                END, 0) DESC
             LIMIT 3
         """)
         cat_result = await db.execute(cat_q)
