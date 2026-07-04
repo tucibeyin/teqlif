@@ -970,7 +970,6 @@ class _AiPriceButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: loading
               ? [
                   const SizedBox(
@@ -990,12 +989,15 @@ class _AiPriceButton extends StatelessWidget {
               : [
                   const Text('✨', style: TextStyle(fontSize: 15)),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Yapay Zeka ile Fiyat Belirle',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                  const Flexible(
+                    child: Text(
+                      'Yapay Zeka ile Fiyat Belirle',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (isPro) ...[

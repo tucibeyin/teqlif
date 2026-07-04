@@ -187,7 +187,7 @@ async def get_similar_listings(
               AND l.is_active = TRUE
               AND l.is_deleted = FALSE
               AND l.embedding IS NOT NULL
-              AND (l.embedding <=> CAST(:vec AS vector)) < 0.5
+              AND (l.embedding <=> CAST(:vec AS vector)) < 0.7
               {block_clause}
             ORDER BY l.embedding <=> CAST(:vec AS vector)
             LIMIT :lim
