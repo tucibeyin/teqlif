@@ -64,7 +64,7 @@ async def main():
         # İlan Analizleri (+66 gösterim, %10.6 CTR) kaynağı
         ch = await get_clickhouse_client()
 
-        feed_rows = await ch.fetch_all(f"""
+        feed_result = await ch.query(f"""
             SELECT
                 event_type,
                 count() AS cnt
@@ -73,6 +73,7 @@ async def main():
             GROUP BY event_type
             ORDER BY cnt DESC
         """)
+        feed_rows = feed_result.result_rows
 
         print(f"\n[ClickHouse — feed_analytics (organik swipe feed)]")
         if feed_rows:
@@ -100,7 +101,7 @@ async def main():
             campaign_ids = [str(c.id) for c in campaigns]
             ids_str = ", ".join(campaign_ids)
 
-            ad_rows = await ch.fetch_all(f"""
+            ad_result = await ch.query(f"""
                 SELECT
                     event_type,
                     count() AS cnt
@@ -110,6 +111,7 @@ async def main():
                 GROUP BY event_type
                 ORDER BY event_type
             """)
+            ad_rows = ad_result.result_rows
 
             print(f"\n[ClickHouse — user_events (reklam ad_impression/ad_click)]")
             if ad_rows:
