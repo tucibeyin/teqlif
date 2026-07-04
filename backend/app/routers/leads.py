@@ -75,8 +75,9 @@ async def audience_size(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Bu başlık/kategori ile eşleşen ve son 7 gün içinde aktif olan
-    olası alıcı kitlesini tahmin eder.
+    Bu başlık/kategori ile eşleşen ve son 7 gün içinde aktif olan,
+    FCM token'ı bulunan gerçek kullanıcı sayısını döndürür.
+    send-blast ile aynı mantık kullanılır — tahmin yoktur.
     """
     listing_q = select(Listing.id).where(
         Listing.is_deleted == False,  # noqa: E712
@@ -92,13 +93,14 @@ async def audience_size(
     if not listing_ids:
         return {"audience_size": 0, "estimated_cost": 0}
 
+    # ClickHouse'dan gerçek user_id listesi (tahmin değil)
     ids_str = ", ".join(str(i) for i in listing_ids)
-    ch_count = 0
+    target_user_ids: list[int] = []
     try:
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
         ch_result = await ch.query(f"""
-            SELECT countDistinct(user_id)
+            SELECT DISTINCT user_id
             FROM user_events
             WHERE item_type = 'listing'
               AND item_id IN ({ids_str})
@@ -106,23 +108,27 @@ async def audience_size(
               AND timestamp >= now() - INTERVAL 7 DAY
               AND user_id IS NOT NULL
               AND user_id != {current_user.id}
+            LIMIT 10000
         """)
-        row = ch_result.result_rows[0] if ch_result.result_rows else (0,)
-        ch_count = int(row[0] or 0)
+        target_user_ids = [int(r[0]) for r in ch_result.result_rows if r[0]]
     except Exception as exc:
-        logger.warning("[Leads] ClickHouse sorgusu başarısız, PostgreSQL fallback: %s", exc)
-        ch_count = 0
+        logger.warning("[Leads] ClickHouse sorgusu başarısız: %s", exc)
 
-    if ch_count == 0:
-        ch_count = min(len(listing_ids) * 3, 200)
+    # PostgreSQL'den gerçek FCM token sayısı — send-blast ile aynı sorgu
+    if target_user_ids:
+        token_count = await db.scalar(sql_text("""
+            SELECT COUNT(*) FROM users
+            WHERE id = ANY(:ids) AND fcm_token IS NOT NULL AND fcm_token != ''
+        """), {"ids": target_user_ids})
+        reachable = int(token_count or 0)
+    else:
+        reachable = 0
 
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
     used  = await _get_blast_used(current_user.id)
     is_free = used < limit
 
-    reachable = int(ch_count * 0.60)
-    raw_cost = reachable * COST_PER_PERSON
-    estimated_cost = 0 if is_free else raw_cost
+    estimated_cost = 0 if is_free else reachable * COST_PER_PERSON
 
     return {
         "audience_size": reachable,
@@ -155,7 +161,6 @@ class BlastRequest(BaseModel):
     listing_id: int | None = Field(default=None)
     stream_id: int | None = Field(default=None)
     estimated_cost: int = Field(ge=0)
-    estimated_audience: int = Field(default=0, ge=0)  # UI'ın gösterdiği kişi sayısı
 
 
 @router.post("/send-blast", status_code=202)
@@ -243,10 +248,6 @@ async def send_blast(
 
     token_result = await db.execute(token_q)
     fcm_tokens: list[str] = [r[0] for r in token_result.fetchall() if r[0]]
-
-    # UI'ın gösterdiği kişi sayısıyla tut — preview ile gönderim uyuşsun
-    if body.estimated_audience > 0:
-        fcm_tokens = fcm_tokens[:body.estimated_audience]
 
     if not fcm_tokens:
         logger.info("[Leads] FCM token bulunamadı — demo başarı döndürülüyor | seller=%d", current_user.id)
