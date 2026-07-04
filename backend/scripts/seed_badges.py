@@ -1,5 +1,7 @@
 """
-Badge test seed scripti.
+Gerçek verilerden badge/trending hesaplar ve feed cache'ini temizler.
+Worker'ın 01:30'ı beklemeden anında tetikler.
+
 VPS'de çalıştır:
   cd /var/www/teqlif.com/backend
   source /var/www/teqlif.com/venv/bin/activate
@@ -11,89 +13,51 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy import text
-from app.database import AsyncSessionLocal
-from app.utils.redis_client import get_redis
-
 
 async def main():
+    from app.worker import compute_seller_badges_task, compute_trending_categories_task
+    from app.utils.redis_client import get_redis
+
+    ctx: dict = {}
+
+    # ── 1. Satıcı rozeti hesapla (ClickHouse auction verisinden) ──────────
+    print("▶ compute_seller_badges_task çalışıyor...")
+    try:
+        await compute_seller_badges_task(ctx)
+        print("✓ Satıcı rozetleri Redis'e yazıldı")
+    except Exception as e:
+        print(f"✗ compute_seller_badges_task başarısız: {e}")
+
+    # ── 2. Trend kategorileri hesapla (PostgreSQL auction verisinden) ──────
+    print("▶ compute_trending_categories_task çalışıyor...")
+    try:
+        await compute_trending_categories_task(ctx)
+        print("✓ Trend kategoriler Redis'e yazıldı")
+    except Exception as e:
+        print(f"✗ compute_trending_categories_task başarısız: {e}")
+
+    # ── 3. Feed cache'ini temizle → yeni badge'ler hemen görünsün ─────────
     redis = await get_redis()
-    async with AsyncSessionLocal() as db:
-
-        # ── 1. Mevcut ilanları ve sahiplerini çek ──────────────────────────
-        rows = (await db.execute(text("""
-            SELECT DISTINCT u.id, u.username, l.category
-            FROM listings l
-            JOIN users u ON u.id = l.user_id
-            WHERE l.is_active = TRUE AND l.is_deleted = FALSE
-              AND (l.expires_at IS NULL OR l.expires_at > NOW())
-            ORDER BY u.id
-            LIMIT 20
-        """))).fetchall()
-
-        if not rows:
-            print("Hiç aktif ilan bulunamadı. Önce ilan ekleyin.")
-            return
-
-        user_ids   = list({r[0] for r in rows})
-        categories = list({r[2] for r in rows if r[2]})
-
-        print(f"Bulunan kullanıcılar: {user_ids}")
-        print(f"Bulunan kategoriler : {categories}")
-
-        # ── 2. seller_badge: trusted_seller → ilk kullanıcıya ──────────────
-        if len(user_ids) >= 1:
-            uid = user_ids[0]
-            await redis.setex(f"seller:badge:{uid}", 90_000, "trusted_seller")
-            print(f"✅ trusted_seller  → user_id={uid}")
-
-        # ── 3. seller_badge: active_seller → ikinci kullanıcıya ────────────
-        if len(user_ids) >= 2:
-            uid = user_ids[1]
-            await redis.setex(f"seller:badge:{uid}", 90_000, "active_seller")
-            print(f"⭐ active_seller   → user_id={uid}")
-
-        # ── 4. seller_is_premium → üçüncü kullanıcıyı premium yap ─────────
-        premium_uid = user_ids[2] if len(user_ids) >= 3 else user_ids[0]
-        await db.execute(
-            text("UPDATE users SET is_premium = TRUE WHERE id = :uid"),
-            {"uid": premium_uid},
-        )
-        await db.commit()
-        print(f"👑 is_premium=TRUE  → user_id={premium_uid}")
-
-        # ── 5. is_trending → varsa ilk iki kategoriyi trending yap ─────────
-        key = "trending:categories"
+    deleted = 0
+    async for key in redis.scan_iter("feed:foryou:*"):
         await redis.delete(key)
-        trending = categories[:2] if len(categories) >= 2 else categories
-        if trending:
-            await redis.sadd(key, *trending)
-            await redis.expire(key, 21_600)
-            print(f"🔥 trending         → {trending}")
-        else:
-            print("⚠️  Kategori bulunamadı, trending ayarlanmadı.")
+        deleted += 1
+    print(f"✓ {deleted} adet feed:foryou:* cache temizlendi")
 
-        # ── 6. is_highlight → aktif bir yayın odası gerektiriyor ────────────
-        # Mevcut stream room_id varsa aşağıdaki satırı uncomment et:
-        # ROOM_ID  = 1          # <-- gerçek room_id
-        # HOST_UID = user_ids[0]
-        # await db.execute(text("""
-        #     INSERT INTO listings (user_id, title, video_url, is_active, is_deleted,
-        #                          is_highlight, active_room_id, expires_at, created_at)
-        #     VALUES (:uid, 'Canlı Yayın Anı — Test', '/highlights/test.mp4',
-        #             TRUE, FALSE, TRUE, :rid, NOW() + INTERVAL '2 hours', NOW())
-        #     ON CONFLICT DO NOTHING
-        # """), {"uid": HOST_UID, "rid": ROOM_ID})
-        # await db.commit()
-        # print(f"🔴 is_highlight     → room_id={ROOM_ID}")
-        print("🔴 is_highlight     → aktif bir yayın başlatıldığında otomatik oluşur")
+    # ── 4. Özet ───────────────────────────────────────────────────────────
+    badge_keys = []
+    async for key in redis.scan_iter("seller:badge:*"):
+        badge_keys.append(key)
+    trending = await redis.smembers("trending:categories")
 
-        # ── 7. Özet ────────────────────────────────────────────────────────
-        # for-you feed Redis cache'ini temizle ki yeni badge'ler hemen görünsün
-        async for key in redis.scan_iter("feed:foryou:*"):
-            await redis.delete(key)
-        print("\n✓ feed:foryou:* cache temizlendi")
-        print("✓ Uygulamayı kapat-aç → badge'leri göreceksiniz")
+    print(f"\n{'─'*40}")
+    print(f"Rozet sayısı   : {len(badge_keys)}")
+    for k in badge_keys:
+        v = await redis.get(k)
+        print(f"  {k} → {v}")
+    print(f"Trend kategoriler: {trending or '(yok)'}")
+    print(f"{'─'*40}")
+    print("Uygulamayı kapat-aç veya pull-to-refresh → badge'leri göreceksiniz")
 
 
 asyncio.run(main())
