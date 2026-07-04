@@ -631,7 +631,7 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                     c.sim_score * 0.45
                     + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 1209600.0) * 0.15
                     + COALESCE(soc.social_bonus, 0.0) * 0.12
-                    + (LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0) * 0.10
+                    + LEAST(LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0, 1.0) * 0.10
                     - COALESCE(imp.seen_recently, 0.0) * 0.20
                     AS sql_score
                 FROM all_candidates c

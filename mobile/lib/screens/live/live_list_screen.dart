@@ -546,6 +546,7 @@ class _StreamerAvatarCard extends StatelessWidget {
     final imageUrl = rawUrl.isNotEmpty ? imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
     final isPremium = streamer['is_premium'] == true;
+    final isLive = streamer['is_live'] == true;
     final username = streamer['username'] as String? ?? '';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
 
@@ -624,6 +625,29 @@ class _StreamerAvatarCard extends StatelessWidget {
                           border: Border.all(color: AppColors.surface(context), width: 1.5),
                         ),
                         child: const Icon(Icons.check, size: 11, color: Colors.white),
+                      ),
+                    ),
+                  // CANLI badge (üst kısım)
+                  if (isLive)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: AppColors.surface(context), width: 1),
+                        ),
+                        child: const Text(
+                          'CANLI',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 7,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
                       ),
                     ),
                 ],

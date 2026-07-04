@@ -309,43 +309,94 @@ async def get_suggested_streamers(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Son 90 günde yayın yapmış kullanıcıları yayın sayısı + ortalama izleyici + takipçi ile sıralar."""
+    """
+    Son 90 günde yayın yapmış kullanıcıları kişiselleştirilmiş skorla sıralar.
+
+    Skor bileşenleri (toplam 1.0):
+      - Şu an canlı yayında        → +0.35 bonus (sabit)
+      - Kategori affinity bonusu   → 0.25  (user_interests'ten top-3 kategori eşleşmesi)
+      - Ortalama izleyici          → 0.25  (LOG normalize, platforma göre kalibre)
+      - Takipçi sayısı             → 0.15  (LOG normalize)
+      - Yayın sıklığı              → 0.10  (LOG normalize)
+
+    Önce takip edilmeyenler (yeni keşif), veri yoksa takip edilenler dahil edilir.
+    """
     from sqlalchemy import text as sa_text
 
-    base_query = """
+    # Kullanıcının top-3 ilgi kategorisini çek
+    interest_result = await db.execute(
+        sa_text("""
+            SELECT category FROM user_interests
+            WHERE user_id = :uid
+            ORDER BY score DESC
+            LIMIT 3
+        """),
+        {"uid": current_user.id},
+    )
+    top_cats = [r[0] for r in interest_result.fetchall()]
+    # PostgreSQL ANY() için array literal
+    cats_literal = "ARRAY[" + ",".join(f"'{c}'" for c in top_cats) + "]" if top_cats else "ARRAY[]::text[]"
+
+    base_query = f"""
+        WITH streamer_stats AS (
+            SELECT
+                u.id,
+                u.username,
+                u.full_name,
+                u.profile_image_url,
+                u.is_verified,
+                u.is_premium,
+                COUNT(ls.id)                                    AS stream_count,
+                COALESCE(AVG(ls.viewer_count), 0)               AS avg_viewers,
+                COALESCE(fol.follower_count, 0)                 AS follower_count,
+                -- Şu an canlı mı? (ended_at IS NULL = aktif yayın)
+                COALESCE(live_now.is_live, FALSE)               AS is_live,
+                -- Kullanıcının ilgi kategorileriyle eşleşme
+                COALESCE(cat_match.has_match, FALSE)            AS category_match
+            FROM users u
+            INNER JOIN live_streams ls ON ls.host_id = u.id
+                AND ls.started_at >= NOW() - INTERVAL '90 days'
+            LEFT JOIN (
+                SELECT followed_id, COUNT(*) AS follower_count
+                FROM follows GROUP BY followed_id
+            ) fol ON fol.followed_id = u.id
+            LEFT JOIN (
+                SELECT DISTINCT host_id, TRUE AS is_live
+                FROM live_streams
+                WHERE ended_at IS NULL
+            ) live_now ON live_now.host_id = u.id
+            LEFT JOIN (
+                SELECT DISTINCT host_id, TRUE AS has_match
+                FROM live_streams
+                WHERE started_at >= NOW() - INTERVAL '90 days'
+                  AND category = ANY({cats_literal})
+            ) cat_match ON cat_match.host_id = u.id
+            WHERE u.id != :uid
+              AND u.is_active = TRUE
+              AND u.id NOT IN (
+                  SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
+                  UNION
+                  SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
+              )
+            {{follow_filter}}
+            GROUP BY u.id, u.username, u.full_name, u.profile_image_url,
+                     u.is_verified, u.is_premium, fol.follower_count,
+                     live_now.is_live, cat_match.has_match
+            HAVING COUNT(ls.id) >= 1
+        )
         SELECT
-            u.id,
-            u.username,
-            u.full_name,
-            u.profile_image_url,
-            u.is_verified,
-            u.is_premium,
-            COUNT(ls.id)                                   AS stream_count,
-            COALESCE(AVG(ls.viewer_count), 0)              AS avg_viewers,
-            COALESCE(fol.follower_count, 0)                AS follower_count
-        FROM users u
-        INNER JOIN live_streams ls ON ls.host_id = u.id
-            AND ls.started_at >= NOW() - INTERVAL '90 days'
-        LEFT JOIN (
-            SELECT followed_id, COUNT(*) AS follower_count
-            FROM follows GROUP BY followed_id
-        ) fol ON fol.followed_id = u.id
-        WHERE u.id != :uid
-          AND u.is_active = TRUE
-          AND u.id NOT IN (
-              SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
-              UNION
-              SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
-          )
-        {follow_filter}
-        GROUP BY u.id, u.username, u.full_name, u.profile_image_url,
-                 u.is_verified, u.is_premium, fol.follower_count
-        HAVING COUNT(ls.id) >= 1
-        ORDER BY (
-            LEAST(LOG(1.0 + COUNT(ls.id)) / 3.0, 0.35)
-            + LEAST(COALESCE(AVG(ls.viewer_count), 0) / 200.0, 0.35)
-            + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.30)
-        ) DESC
+            id, username, full_name, profile_image_url,
+            is_verified, is_premium, stream_count, avg_viewers, follower_count, is_live,
+            -- Kişiselleştirilmiş kompozit skor
+            (
+                CASE WHEN is_live THEN 0.35 ELSE 0.0 END
+                + CASE WHEN category_match THEN 0.25 ELSE 0.0 END
+                + LEAST(LOG(1.0 + avg_viewers) / LOG(51.0), 1.0) * 0.25
+                + LEAST(LOG(1.0 + follower_count) / LOG(1001.0), 1.0) * 0.15
+                + LEAST(LOG(1.0 + stream_count) / LOG(21.0), 1.0) * 0.10
+            ) AS score
+        FROM streamer_stats
+        ORDER BY score DESC, stream_count DESC
         LIMIT :lim
     """
 
@@ -375,6 +426,7 @@ async def get_suggested_streamers(
             "stream_count": int(row[6]),
             "avg_viewers": round(float(row[7]), 1),
             "follower_count": int(row[8]),
+            "is_live": bool(row[9]),
         }
         for row in rows
     ]
