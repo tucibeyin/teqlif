@@ -15,7 +15,8 @@ import json
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
+from datetime import datetime, timezone
 
 from app.models.listing import Listing
 from app.models.listing_offer import ListingOffer
@@ -90,6 +91,8 @@ def _row_dict(
         "seller_badge": seller_badge,
         "is_trending": is_trending,
         "impression_count": impression_count,
+        "is_highlight": listing.is_highlight,
+        "active_room_id": listing.active_room_id,
     }
 
 
@@ -174,7 +177,11 @@ class ListingService:
         q = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
-            .where(Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
+            .where(
+                Listing.is_active == True,    # noqa: E712
+                Listing.is_deleted == False,  # noqa: E712
+                or_(Listing.expires_at == None, Listing.expires_at > datetime.now(timezone.utc)),  # noqa: E711
+            )
         )
         if user_id:
             q = q.where(Listing.user_id == user_id)
