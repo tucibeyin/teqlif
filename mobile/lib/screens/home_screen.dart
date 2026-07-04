@@ -31,7 +31,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
-  void refresh() => _load(bypassCache: true);
+  void refresh({bool bypassCache = true}) => _load(bypassCache: bypassCache);
   // Kişiselleştirilmiş (Sana Özel) — yatay scroll, giriş yapanlar için
   List<dynamic> _forYouListings = [];
   bool _forYouLoading = false;

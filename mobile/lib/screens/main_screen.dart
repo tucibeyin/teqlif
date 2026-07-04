@@ -47,6 +47,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final GlobalKey<MessagesScreenState> _messagesKey = GlobalKey();
   late final List<Widget> _screens;
 
+  // Tab başına son SWR yenileme zamanı
+  final Map<int, DateTime> _lastTabRefresh = {};
+
+  // Tab TTL'leri: bu süreden önce geçilmişse ağ isteği atılmaz, cache gösterilir
+  static const Map<int, Duration> _kTabTtl = {
+    0: Duration(seconds: 30),  // Canlı — yayınlar sık değişir
+    1: Duration(seconds: 60),  // İlanlar
+    2: Duration(seconds: 60),  // Keşfet
+  };
+
   @override
   void initState() {
     super.initState();
@@ -109,6 +119,20 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       _refreshBadges();
       WsService.connect();
       PushNotificationService.notificationStream.add({});
+      // App arka plandan döndü: aktif sekmenin TTL'i dolmuşsa SWR ile yenile
+      _maybeRefreshCurrentTab();
+    }
+  }
+
+  void _maybeRefreshCurrentTab() {
+    final ttl = _kTabTtl[_currentIndex];
+    if (ttl == null) return;
+    final last = _lastTabRefresh[_currentIndex];
+    if (last == null || DateTime.now().difference(last) > ttl) {
+      if (_currentIndex == 0) _liveListKey.currentState?.refresh(bypassCache: false);
+      if (_currentIndex == 1) _homeKey.currentState?.refresh(bypassCache: false);
+      if (_currentIndex == 2) _searchKey.currentState?.refresh(bypassCache: false);
+      _lastTabRefresh[_currentIndex] = DateTime.now();
     }
   }
 
@@ -134,9 +158,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   void _onNavTap(int index) {
     if (index != _currentIndex) {
-      if (index == 0) _liveListKey.currentState?.refresh();
-      if (index == 1) _homeKey.currentState?.refresh();
-      if (index == 2) _searchKey.currentState?.refresh();
+      final ttl = _kTabTtl[index];
+      if (ttl != null) {
+        final last = _lastTabRefresh[index];
+        final stale = last == null || DateTime.now().difference(last) > ttl;
+        if (stale) {
+          // TTL dolmuş: SWR — cache'i anında göster, arka planda API'yi çek
+          if (index == 0) _liveListKey.currentState?.refresh(bypassCache: false);
+          if (index == 1) _homeKey.currentState?.refresh(bypassCache: false);
+          if (index == 2) _searchKey.currentState?.refresh(bypassCache: false);
+          _lastTabRefresh[index] = DateTime.now();
+        }
+        // TTL dolmamış: içerik olduğu gibi kalır, ağ isteği atılmaz
+      }
     }
     setState(() => _currentIndex = index);
     // Mesajlar tabına geçince listeyi ve badge'i güncelle

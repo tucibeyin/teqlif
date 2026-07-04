@@ -26,7 +26,7 @@ class SearchScreen extends StatefulWidget {
 }
 
 class SearchScreenState extends State<SearchScreen> {
-  void refresh() => _loadExplore(bypassCache: true);
+  void refresh({bool bypassCache = true}) => _loadExplore(bypassCache: bypassCache);
   final _controller = TextEditingController();
   Timer? _debounce;
   int _searchToken = 0; // her yeni arama için artar; eski yanıtlar görmezden gelinir

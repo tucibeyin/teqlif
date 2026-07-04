@@ -97,7 +97,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
 
   void triggerStartDialog() =>
       showStartStreamDialog(context, onStreamStarted: _load);
-  void refresh() => _load(bypassCache: true);
+  void refresh({bool bypassCache = true}) => _load(bypassCache: bypassCache);
 
   /// [bypassCache]: pull-to-refresh ve bağlantı geri geldiğinde true.
   Future<void> _load({bool bypassCache = false}) async {
