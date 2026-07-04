@@ -83,8 +83,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   Future<void> _loadAiCredits() async {
     final credits = await AnalyticsService.getAiPriceCredits();
-    if (!mounted || credits == null) return;
-    setState(() => _aiCreditsRemaining = (credits['remaining'] as num?)?.toInt() ?? 0);
+    if (!mounted) return;
+    setState(() => _aiCreditsRemaining = (credits?['remaining'] as num?)?.toInt() ?? 20);
   }
 
   @override
@@ -900,39 +900,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(l.btnPublishListing),
-                            if (!_isPro) ...[
-                              const SizedBox(height: 3),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.toll_rounded, size: 10, color: Color(0xFFFBBF24)),
-                                    SizedBox(width: 3),
-                                    Text(
-                                      'İlan yayınlama ücreti: 1 TUCi',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFFFBBF24),
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                      : Text(l.btnPublishListing),
                 ),
               ),
               const SizedBox(height: 24),
@@ -1043,22 +1011,20 @@ class _AiPriceButton extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.workspace_premium_rounded, size: 10,
-                              color: creditsRemaining == 0
-                                  ? const Color(0xFFF59E0B)
-                                  : const Color(0xFF34D399)),
+                              color: (creditsRemaining == null || creditsRemaining! > 0)
+                                  ? const Color(0xFF34D399)
+                                  : const Color(0xFFF59E0B)),
                           const SizedBox(width: 3),
                           Text(
-                            creditsRemaining == null
-                                ? 'Pro'
-                                : creditsRemaining == 0
-                                    ? '5 TUCi'
-                                    : '$creditsRemaining hak kaldı',
+                            creditsRemaining == null || creditsRemaining! > 0
+                                ? '${creditsRemaining ?? '…'} hak kaldı'
+                                : '5 TUCi',
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
-                              color: creditsRemaining == 0
-                                  ? const Color(0xFFF59E0B)
-                                  : const Color(0xFF34D399),
+                              color: (creditsRemaining == null || creditsRemaining! > 0)
+                                  ? const Color(0xFF34D399)
+                                  : const Color(0xFFF59E0B),
                               letterSpacing: 0.3,
                             ),
                           ),
