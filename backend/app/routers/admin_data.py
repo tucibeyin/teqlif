@@ -439,7 +439,7 @@ async def purge_user(
     user.website_url  = None
     user.fcm_token    = None
     user.is_active    = False
-    user.is_verified  = False
+    user.email_verified = False
     user.deleted_at   = user.deleted_at or now
 
     await db.commit()

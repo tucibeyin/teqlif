@@ -153,7 +153,7 @@ async def get_suggested_sellers(
             u.full_name,
             u.profile_image_url,
             u.bio,
-            u.is_verified,
+            (u.email_verified AND u.phone_verified) AS is_verified,
             u.is_premium,
             COUNT(l.id)                                     AS listing_count,
             {cat_score_expr}                                AS cat_match,
@@ -173,7 +173,7 @@ async def get_suggested_sellers(
               SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
           )
         {{follow_filter}}
-        GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, u.is_verified, u.is_premium, fol.follower_count
+        GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, u.email_verified, u.phone_verified, u.is_premium, fol.follower_count
         HAVING COUNT(l.id) >= 1
         ORDER BY (
             {cat_score_expr} * 0.60

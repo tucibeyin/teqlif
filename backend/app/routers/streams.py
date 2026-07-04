@@ -344,7 +344,7 @@ async def get_suggested_streamers(
                 u.username,
                 u.full_name,
                 u.profile_image_url,
-                u.is_verified,
+                (u.email_verified AND u.phone_verified) AS is_verified,
                 u.is_premium,
                 COUNT(ls.id)                                    AS stream_count,
                 COALESCE(AVG(ls.viewer_count), 0)               AS avg_viewers,
@@ -380,7 +380,7 @@ async def get_suggested_streamers(
               )
             {{follow_filter}}
             GROUP BY u.id, u.username, u.full_name, u.profile_image_url,
-                     u.is_verified, u.is_premium, fol.follower_count,
+                     u.email_verified, u.phone_verified, u.is_premium, fol.follower_count,
                      live_now.is_live, cat_match.has_match
             HAVING COUNT(ls.id) >= 1
         )

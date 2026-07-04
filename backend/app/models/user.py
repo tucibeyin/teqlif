@@ -16,13 +16,18 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     fcm_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     profile_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     profile_image_thumb_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notification_prefs: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+
+    @property
+    def is_verified(self) -> bool:
+        """Tam doğrulama: hem e-posta hem telefon doğrulandıysa True."""
+        return self.email_verified and self.phone_verified
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_shadowbanned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

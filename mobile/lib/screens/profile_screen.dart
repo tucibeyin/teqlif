@@ -271,7 +271,6 @@ class ProfileScreenState extends State<ProfileScreen> {
     final email = _user?['email'] ?? '';
     final isVerified = _user?['is_verified'] == true;
     final phoneVerified = _user?['phone_verified'] == true;
-    final isFullyVerified = isVerified && phoneVerified;
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
 
     return Scaffold(
@@ -365,7 +364,7 @@ class ProfileScreenState extends State<ProfileScreen> {
               '@$username',
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
             ),
-            if (isFullyVerified) ...[
+            if (isVerified) ...[
               const SizedBox(width: 4),
               const Icon(
                 Icons.verified,

@@ -88,7 +88,7 @@ async def _create_user_and_send_code(
         username=data.username,
         full_name=data.full_name,
         hashed_password=hash_password(data.password),
-        is_verified=False,
+        email_verified=False,
         phone=data.phone or None,
         referral_code=ref_code,
     )
@@ -124,7 +124,7 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
     if not user:
         raise NotFoundException("Kullanıcı bulunamadı")
 
-    user.is_verified = True
+    user.email_verified = True
     await db.commit()
     await db.refresh(user)
     await redis.delete(f"verify:{data.email}")
@@ -169,7 +169,7 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
     if not user.is_active:
         raise ForbiddenException("Hesabınız devre dışı")
 
-    if not user.is_verified:
+    if not user.email_verified:
         raise EmailNotVerifiedException()
 
     if not user.onboarding_completed:
@@ -197,7 +197,7 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
 async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
-    if not user or user.is_verified:
+    if not user or user.email_verified:
         raise BadRequestException("Geçersiz istek")
 
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
