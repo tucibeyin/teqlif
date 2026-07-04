@@ -146,47 +146,55 @@ async def get_suggested_sellers(
     else:
         cat_score_expr = "0.0"
 
+    base_query = f"""
+        SELECT
+            u.id,
+            u.username,
+            u.full_name,
+            u.profile_image_url,
+            u.bio,
+            COUNT(l.id)                                     AS listing_count,
+            {cat_score_expr}                                AS cat_match,
+            COALESCE(fol.follower_count, 0)                 AS follower_count
+        FROM users u
+        INNER JOIN listings l ON l.user_id = u.id
+            AND l.is_active = TRUE AND l.is_deleted = FALSE
+        LEFT JOIN (
+            SELECT followed_id, COUNT(*) AS follower_count
+            FROM follows GROUP BY followed_id
+        ) fol ON fol.followed_id = u.id
+        WHERE u.id != :uid
+          AND u.is_active = TRUE
+          AND u.id NOT IN (
+              SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
+              UNION
+              SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
+          )
+        {{follow_filter}}
+        GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, fol.follower_count
+        HAVING COUNT(l.id) >= 1
+        ORDER BY (
+            {cat_score_expr} * 0.60
+            + LEAST(LOG(1.0 + COUNT(l.id)) / 4.0, 0.25)
+            + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.15)
+        ) DESC
+        LIMIT :lim
+    """
+
     result = await db.execute(
-        sa_text(f"""
-            SELECT
-                u.id,
-                u.username,
-                u.full_name,
-                u.profile_image_url,
-                u.bio,
-                COUNT(l.id)                                     AS listing_count,
-                {cat_score_expr}                                AS cat_match,
-                COALESCE(fol.follower_count, 0)                 AS follower_count
-            FROM users u
-            INNER JOIN listings l ON l.user_id = u.id
-                AND l.is_active = TRUE AND l.is_deleted = FALSE
-            LEFT JOIN (
-                SELECT followed_id, COUNT(*) AS follower_count
-                FROM follows GROUP BY followed_id
-            ) fol ON fol.followed_id = u.id
-            WHERE u.id != :uid
-              AND u.is_active = TRUE
-              AND u.id NOT IN (
-                  SELECT followed_id FROM follows WHERE follower_id = :uid
-              )
-              AND u.id NOT IN (
-                  SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
-                  UNION
-                  SELECT blocker_id FROM user_blocks WHERE blocked_id = :uid
-              )
-            GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, fol.follower_count
-            HAVING COUNT(l.id) >= 1
-            ORDER BY (
-                {cat_score_expr} * 0.60
-                + LEAST(LOG(1.0 + COUNT(l.id)) / 4.0, 0.25)
-                + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.15)
-            ) DESC
-            LIMIT :lim
-        """),
+        sa_text(base_query.format(follow_filter="AND u.id NOT IN (SELECT followed_id FROM follows WHERE follower_id = :uid)")),
         {"uid": current_user.id, "lim": limit},
     )
-
     rows_out = result.fetchall()
+
+    # Takip edilmeyenler boşsa takip edilenleri de göster (fallback)
+    if not rows_out:
+        result = await db.execute(
+            sa_text(base_query.format(follow_filter="")),
+            {"uid": current_user.id, "lim": limit},
+        )
+        rows_out = result.fetchall()
+
     return [
         {
             "id": row[0],
