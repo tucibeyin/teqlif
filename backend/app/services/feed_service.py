@@ -781,8 +781,17 @@ async def _get_sponsored_listings(db: AsyncSession, exclude_user_id: int | None 
     else:
         selected_rows = top
 
+    sponsor_uids = [user.id for _, _, user in selected_rows[:n_slots]]
+    badge_map_sp, trending_cats_sp = await _fetch_seller_meta(sponsor_uids)
+
     return [
-        _row_dict(listing, user, 0, False, is_sponsored=True, campaign_id=campaign.id)
+        _row_dict(
+            listing, user, 0, False,
+            is_sponsored=True,
+            campaign_id=campaign.id,
+            seller_badge=badge_map_sp.get(user.id),
+            is_trending=listing.category in trending_cats_sp,
+        )
         for campaign, listing, user in selected_rows[:n_slots]
     ]
 
