@@ -505,7 +505,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           ),
                         )),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                          padding: const EdgeInsets.all(11),
                           decoration: BoxDecoration(
                             color: AppColors.surfaceVariant(context),
                             borderRadius: BorderRadius.circular(10),
@@ -513,9 +513,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.chat_bubble_outline, size: 16, color: AppColors.textPrimary(context)),
-                              const SizedBox(width: 6),
-                              Text('Mesaj', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary(context))),
+                              Icon(Icons.chat_bubble_outline, size: 18, color: AppColors.textPrimary(context)),
                             ],
                           ),
                         ),
