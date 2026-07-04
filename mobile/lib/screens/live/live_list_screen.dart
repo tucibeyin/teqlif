@@ -17,6 +17,7 @@ import '../../providers/story_provider.dart';
 import '../../widgets/live/story_tray.dart';
 import '../../widgets/offline_banner.dart';
 import 'swipe_live_screen.dart';
+import '../public_profile_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 class LiveListScreen extends ConsumerStatefulWidget {
@@ -306,7 +307,15 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 itemCount: _suggestedStreamers.length,
-                itemBuilder: (_, i) => _StreamerAvatarCard(streamer: _suggestedStreamers[i]),
+                itemBuilder: (ctx, i) => _StreamerAvatarCard(
+                  streamer: _suggestedStreamers[i],
+                  onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                    builder: (_) => PublicProfileScreen(
+                      username: _suggestedStreamers[i]['username'] as String? ?? '',
+                      userId: _suggestedStreamers[i]['id'] as int?,
+                    ),
+                  )),
+                ),
               ),
             ),
           ),
@@ -528,7 +537,8 @@ class _EmptyState extends StatelessWidget {
 
 class _StreamerAvatarCard extends StatelessWidget {
   final Map<String, dynamic> streamer;
-  const _StreamerAvatarCard({required this.streamer});
+  final VoidCallback? onTap;
+  const _StreamerAvatarCard({required this.streamer, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -536,65 +546,124 @@ class _StreamerAvatarCard extends StatelessWidget {
     final imageUrl = rawUrl.isNotEmpty ? imgUrl(rawUrl) : null;
     final isVerified = streamer['is_verified'] == true;
     final isPremium = streamer['is_premium'] == true;
-    final streamCount = streamer['stream_count'] as int? ?? 0;
-    final name = (streamer['full_name'] as String?)?.isNotEmpty == true
-        ? streamer['full_name'] as String
-        : streamer['username'] as String? ?? '';
+    final username = streamer['username'] as String? ?? '';
+    final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
 
-    return SizedBox(
-      width: 72,
-      child: Padding(
-        padding: const EdgeInsets.only(right: 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: const Color(0xFFE5E7EB),
-                  backgroundImage: imageUrl != null ? CachedNetworkImageProvider(imageUrl) : null,
-                  child: imageUrl == null
-                      ? Text(
-                          name.isNotEmpty ? name[0].toUpperCase() : '?',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF6B7280)),
-                        )
-                      : null,
-                ),
-                if (isPremium)
-                  Positioned(
-                    bottom: 0, right: 0,
-                    child: Container(
-                      width: 18, height: 18,
-                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFF59E0B)),
-                      child: const Center(child: Text('👑', style: TextStyle(fontSize: 10))),
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 72,
+        child: Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Gradient ring + white border + avatar (Story stilinde)
+                  Container(
+                    width: 62,
+                    height: 62,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
-                  )
-                else if (isVerified)
-                  Positioned(
-                    bottom: 0, right: 0,
+                    padding: const EdgeInsets.all(2.5),
                     child: Container(
-                      width: 18, height: 18,
-                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF2563EB)),
-                      child: const Icon(Icons.check, size: 12, color: Colors.white),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.surface(context),
+                      ),
+                      padding: const EdgeInsets.all(1.5),
+                      child: ClipOval(
+                        child: imageUrl != null && imageUrl.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                                placeholder: (_, _) => _AvatarInitial(initial: initial, context: context),
+                                errorWidget: (_, _, _) => _AvatarInitial(initial: initial, context: context),
+                              )
+                            : _AvatarInitial(initial: initial, context: context),
+                      ),
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 5),
-            Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              '$streamCount yayın',
-              style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)),
-              textAlign: TextAlign.center,
-            ),
-          ],
+                  // Premium badge
+                  if (isPremium)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFFF59E0B),
+                          border: Border.all(color: AppColors.surface(context), width: 1.5),
+                        ),
+                        child: const Center(child: Text('👑', style: TextStyle(fontSize: 10))),
+                      ),
+                    )
+                  // Verified badge
+                  else if (isVerified)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF2563EB),
+                          border: Border.all(color: AppColors.surface(context), width: 1.5),
+                        ),
+                        child: const Icon(Icons.check, size: 11, color: Colors.white),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              Text(
+                '@$username',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarInitial extends StatelessWidget {
+  final String initial;
+  final BuildContext context;
+  const _AvatarInitial({required this.initial, required this.context});
+
+  @override
+  Widget build(BuildContext _) {
+    return Container(
+      color: AppColors.primaryBg(context),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: kPrimary,
+          fontWeight: FontWeight.w700,
+          fontSize: 20,
         ),
       ),
     );
