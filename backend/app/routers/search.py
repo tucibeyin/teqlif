@@ -289,9 +289,9 @@ async def search_all(
             WHERE l.is_active = TRUE
               AND l.is_deleted = FALSE
               AND l.embedding IS NOT NULL
-              AND (l.embedding <=> :vec::vector) < :threshold
+              AND (l.embedding <=> CAST(:vec AS vector)) < :threshold
               {block_clause}
-            ORDER BY (l.embedding <=> :vec::vector)
+            ORDER BY (l.embedding <=> CAST(:vec AS vector))
             LIMIT 12 OFFSET :offset
         """)
         result = await db.execute(raw, params)
@@ -410,7 +410,7 @@ async def search_listings(
             )
             if user_row is not None:
                 pref_str = "[" + ",".join(f"{x:.8f}" for x in user_row) + "]"
-                pref_clause = "+ (1.0 - (l.embedding <=> :pref_vec::vector)) * 0.15"
+                pref_clause = "+ (1.0 - (l.embedding <=> CAST(:pref_vec AS vector))) * 0.15"
                 params["pref_vec"] = pref_str
 
         block_clause = ""
@@ -444,7 +444,7 @@ async def search_listings(
                   AND l.embedding IS NOT NULL
                   {block_clause}
                 ORDER BY (
-                    (1.0 - (l.embedding <=> :vec::vector))
+                    (1.0 - (l.embedding <=> CAST(:vec AS vector)))
                     {pref_clause}
                 ) DESC
                 LIMIT 12 OFFSET :offset
@@ -462,10 +462,10 @@ async def search_listings(
                 WHERE l.is_active = TRUE
                   AND l.is_deleted = FALSE
                   AND l.embedding IS NOT NULL
-                  AND (l.embedding <=> :vec::vector) < :threshold
+                  AND (l.embedding <=> CAST(:vec AS vector)) < :threshold
                   {block_clause}
                 ORDER BY (
-                    (1.0 - (l.embedding <=> :vec::vector))
+                    (1.0 - (l.embedding <=> CAST(:vec AS vector)))
                     {pref_clause}
                 ) DESC
                 LIMIT 12 OFFSET :offset
@@ -507,7 +507,7 @@ async def search_listings(
         )
         if user_row is not None:
             pref_str = "[" + ",".join(f"{x:.8f}" for x in user_row) + "]"
-            fts_pref_expr = "COALESCE((1.0 - (l.embedding <=> :fts_pref_vec::vector)) * 0.15, 0.0)"
+            fts_pref_expr = "COALESCE((1.0 - (l.embedding <=> CAST(:fts_pref_vec AS vector))) * 0.15, 0.0)"
             fts_params["fts_pref_vec"] = pref_str
 
     fts_block = ""

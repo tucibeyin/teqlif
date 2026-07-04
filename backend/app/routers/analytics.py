@@ -993,7 +993,7 @@ async def pro_insights(
                               AND is_active AND NOT is_deleted
                               AND price IS NOT NULL
                               AND embedding IS NOT NULL
-                            ORDER BY embedding <=> :emb::vector
+                            ORDER BY embedding <=> CAST(:emb AS vector)
                             LIMIT 10
                         ) sub
                     """), {"uid": uid, "emb": emb_str})

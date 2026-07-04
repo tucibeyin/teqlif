@@ -252,13 +252,13 @@ async def _score_and_rank(
                   AND l.user_id != :uid
                   {ni_filter}
                   {budget_clause}
-                ORDER BY l.embedding <=> :vec::vector
+                ORDER BY l.embedding <=> CAST(:vec AS vector)
                 LIMIT 80
             )
         """
         pgvec_score_term = (
             "CASE WHEN l.embedding IS NOT NULL "
-            "THEN (1.0 - (l.embedding <=> :vec::vector)) * 0.20 ELSE 0.0 END"
+            "THEN (1.0 - (l.embedding <=> CAST(:vec AS vector))) * 0.20 ELSE 0.0 END"
         )
 
     sql = text(f"""
@@ -579,7 +579,7 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
         text(f"""
             WITH pgvec_pool AS (
                 SELECT l.id,
-                       (1.0 - (l.embedding <=> :vec::vector)) AS sim_score
+                       (1.0 - (l.embedding <=> CAST(:vec AS vector))) AS sim_score
                 FROM listings l
                 WHERE l.is_active = TRUE
                   AND l.is_deleted = FALSE
@@ -587,7 +587,7 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                   AND l.user_id != :uid
                   {ni_filter}
                   {budget_clause}
-                ORDER BY l.embedding <=> :vec::vector
+                ORDER BY l.embedding <=> CAST(:vec AS vector)
                 LIMIT :pgvec_lim
             ),
             social_pool AS (
