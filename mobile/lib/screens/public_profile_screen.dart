@@ -380,86 +380,114 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ),
                   ),
                 ] else if (userId != 0) ...[
-                  Center(
-                    child: PopupMenuButton<String>(
-                      key: const Key('pub_profile_btn_islemler'),
-                      tooltip: 'İşlemler',
-                      position: PopupMenuPosition.under,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      onSelected: (value) {
-                        switch (value) {
-                          case 'follow':
-                            _toggleFollow();
-                          case 'message':
-                            Navigator.push(context, MaterialPageRoute(
-                              builder: (_) => DirectChatScreen(
-                                otherUserId: userId,
-                                displayName: fullName,
-                                otherHandle: widget.username,
-                              ),
-                            ));
-                          case 'rate':
-                            _showRatingForm();
-                          case 'block':
-                            _toggleBlock();
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'follow',
-                          child: Row(children: [
-                            if (_followLoading)
-                              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            else
-                              Icon(_isFollowing ? Icons.person_remove_outlined : Icons.person_add_outlined, size: 18),
-                            const SizedBox(width: 10),
-                            Text(_isFollowing ? l.pubProfileFollowingLabel : l.pubProfileFollowLabel),
-                          ]),
-                        ),
-                        PopupMenuItem(
-                          value: 'message',
-                          child: Row(children: [
-                            const Icon(Icons.chat_bubble_outline, size: 18),
-                            const SizedBox(width: 10),
-                            Text(l.pubProfileSendMessage),
-                          ]),
-                        ),
-                        if (_isFollowing)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // ── İşlemler ──────────────────────────────────────
+                      PopupMenuButton<String>(
+                        key: const Key('pub_profile_btn_islemler'),
+                        tooltip: 'İşlemler',
+                        position: PopupMenuPosition.under,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'message':
+                              Navigator.push(context, MaterialPageRoute(
+                                builder: (_) => DirectChatScreen(
+                                  otherUserId: userId,
+                                  displayName: fullName,
+                                  otherHandle: widget.username,
+                                ),
+                              ));
+                            case 'rate':
+                              _showRatingForm();
+                            case 'block':
+                              _toggleBlock();
+                          }
+                        },
+                        itemBuilder: (_) => [
                           PopupMenuItem(
-                            value: 'rate',
+                            value: 'message',
                             child: Row(children: [
-                              Icon(hasMyRating ? Icons.star_rounded : Icons.star_outline_rounded, size: 18),
+                              const Icon(Icons.chat_bubble_outline, size: 18),
                               const SizedBox(width: 10),
-                              Text(hasMyRating ? l.pubProfileUpdateRating : l.pubProfileGiveRating),
+                              Text(l.pubProfileSendMessage),
                             ]),
                           ),
-                        const PopupMenuDivider(),
-                        PopupMenuItem(
-                          value: 'block',
-                          child: Row(children: [
-                            const Icon(Icons.block_outlined, size: 18, color: Color(0xFFEF4444)),
-                            const SizedBox(width: 10),
-                            Text(_isBlocked ? l.pubProfileUnblock : l.pubProfileBlock,
-                                style: const TextStyle(color: Color(0xFFEF4444))),
-                          ]),
-                        ),
-                      ],
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant(context),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('İşlemler', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary(context))),
-                            const SizedBox(width: 6),
-                            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textPrimary(context)),
-                          ],
+                          if (_isFollowing)
+                            PopupMenuItem(
+                              value: 'rate',
+                              child: Row(children: [
+                                Icon(hasMyRating ? Icons.star_rounded : Icons.star_outline_rounded, size: 18),
+                                const SizedBox(width: 10),
+                                Text(hasMyRating ? l.pubProfileUpdateRating : l.pubProfileGiveRating),
+                              ]),
+                            ),
+                          const PopupMenuDivider(),
+                          PopupMenuItem(
+                            value: 'block',
+                            child: Row(children: [
+                              const Icon(Icons.block_outlined, size: 18, color: Color(0xFFEF4444)),
+                              const SizedBox(width: 10),
+                              Text(_isBlocked ? l.pubProfileUnblock : l.pubProfileBlock,
+                                  style: const TextStyle(color: Color(0xFFEF4444))),
+                            ]),
+                          ),
+                        ],
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant(context),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('İşlemler', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary(context))),
+                              const SizedBox(width: 6),
+                              Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textPrimary(context)),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      // ── Takip Et / Takip Ediliyor ──────────────────────
+                      GestureDetector(
+                        onTap: _followLoading ? null : _toggleFollow,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                          decoration: BoxDecoration(
+                            color: _isFollowing ? AppColors.surfaceVariant(context) : const Color(0xFF6366F1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: _followLoading
+                              ? const SizedBox(
+                                  width: 18, height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _isFollowing ? Icons.person_remove_outlined : Icons.person_add_outlined,
+                                      size: 16,
+                                      color: _isFollowing ? AppColors.textPrimary(context) : Colors.white,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _isFollowing ? l.pubProfileFollowingLabel : l.pubProfileFollowLabel,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                        color: _isFollowing ? AppColors.textPrimary(context) : Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 const SizedBox(height: 24),
