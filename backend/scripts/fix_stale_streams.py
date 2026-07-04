@@ -71,7 +71,7 @@ async def main():
         sep("2. LİVEKİT ODA DURUMU")
         try:
             import aiohttp
-            from livekit.api import RoomService, ListRoomsRequest
+            from livekit.api.room_service import RoomService, ListRoomsRequest
             from app.core.config import settings
 
             async with aiohttp.ClientSession() as session:
