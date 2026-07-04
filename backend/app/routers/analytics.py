@@ -717,7 +717,7 @@ async def market_trends(
         ch = await get_clickhouse_client()
         ch_result = await ch.query(
             """
-            SELECT toHour(timestamp) AS hr, COUNT(*) AS cnt
+            SELECT toHour(toTimeZone(timestamp, 'Europe/Istanbul')) AS hr, COUNT(*) AS cnt
             FROM user_events
             WHERE timestamp >= now() - INTERVAL 30 DAY
             GROUP BY hr
