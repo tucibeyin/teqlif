@@ -11,7 +11,7 @@ app.services.stream_service.StreamService'e taşınmıştır.
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, UploadFile, File, status, BackgroundTasks
+from fastapi import APIRouter, Depends, Query, UploadFile, File, status, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
