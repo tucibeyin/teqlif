@@ -552,7 +552,13 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
 
     # Session-içi drift: mevcut oturum vektörüyle preference_embedding'i harmanlayın
     pref_vec = np.array(user.preference_embedding, dtype=np.float32)
-    session_b64 = await redis.get(f"feed:session:{user_id}")
+    try:
+        session_b64 = await redis.get(f"feed:session:{user_id}")
+    except Exception:
+        # decode_responses=True olan client raw binary key'i UTF-8 olarak decode edemez
+        session_b64 = None
+        await redis.delete(f"feed:session:{user_id}")
+    sess_vec = np.array([], dtype=np.float32)
     if session_b64:
         try:
             sess_vec = np.frombuffer(base64.b64decode(session_b64), dtype=np.float32)
