@@ -750,11 +750,16 @@ def _inject_ads(organic: list[dict], ads: list[dict]) -> list[dict]:
     Sponsored item'ları organik feed'e AD_SLOTS pozisyonlarına enjekte eder.
     Her insert önceki insertlerin yarattığı kaymayı hesaba katar.
     Organik eleman sayısı değişmez — toplam eleman sayısı ad sayısı kadar artar.
+    Zaten organik listede bulunan ilanlar sponsored olarak tekrar eklenmez.
     """
     if not ads:
         return organic
+    organic_ids = {item.get("id") for item in organic}
+    unique_ads = [ad for ad in ads if ad.get("id") not in organic_ids]
+    if not unique_ads:
+        return organic
     result = list(organic)
-    for i, ad in enumerate(ads):
+    for i, ad in enumerate(unique_ads):
         if i >= len(AD_SLOTS):
             break
         # i adet önceki insert, hedef pozisyonu i kadar sağa kaydırdı

@@ -18,7 +18,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get navListings => 'İlanlar';
 
   @override
-  String get navSearch => 'Ara';
+  String get navSearch => 'Keşfet';
 
   @override
   String get navMessages => 'Mesajlar';
