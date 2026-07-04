@@ -1274,7 +1274,7 @@ async def conversion_breakdown(
         FROM listings l
         INNER JOIN auctions a ON a.listing_id = l.id
             AND a.ended_at >= NOW() - INTERVAL '90 days'
-            AND a.status = 'ended'
+            AND a.status = 'completed'
         WHERE l.user_id = :uid
           AND l.is_deleted = FALSE
         GROUP BY l.category
