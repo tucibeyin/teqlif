@@ -200,21 +200,14 @@ def _user_id_from_request(request: Request) -> int | None:
 # ── Tıklama ───────────────────────────────────────────────────────────────────
 
 async def _log_click_to_clickhouse(campaign_id: int, user_id: int) -> None:
-    """ClickHouse'a ad_click event'i yazar. BackgroundTask olarak çalışır."""
-    try:
-        from app.database_clickhouse import get_clickhouse_client
-        ch = await get_clickhouse_client()
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        await ch.insert(
-            "user_events",
-            [[user_id, campaign_id, "ad_campaign", "ad_click", None, None, now]],
-            column_names=[
-                "user_id", "item_id", "item_type",
-                "event_type", "price_point", "duration_seconds", "timestamp",
-            ],
-        )
-    except Exception as exc:
-        logger.warning("[Ads] ClickHouse click log başarısız | campaign=%d | %s", campaign_id, exc)
+    """ad_click event'ini Redis buffer'a ekler."""
+    from app.database_clickhouse import buffer_user_event
+    await buffer_user_event(
+        event_type="ad_click",
+        item_id=campaign_id,
+        item_type="ad_campaign",
+        user_id=user_id,
+    )
 
 
 @router.post("/click/{campaign_id}", status_code=202)
@@ -245,21 +238,14 @@ async def _log_impression_to_clickhouse(
     campaign_id: int,
     user_id: int | None,
 ) -> None:
-    """ClickHouse'a ad_impression event'i yazar. BackgroundTask olarak çalışır."""
-    try:
-        from app.database_clickhouse import get_clickhouse_client
-        ch = await get_clickhouse_client()
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        await ch.insert(
-            "user_events",
-            [[user_id, campaign_id, "ad_campaign", "ad_impression", None, None, now]],
-            column_names=[
-                "user_id", "item_id", "item_type",
-                "event_type", "price_point", "duration_seconds", "timestamp",
-            ],
-        )
-    except Exception as exc:
-        logger.warning("[Ads] ClickHouse impression log başarısız | campaign=%d | %s", campaign_id, exc)
+    """ad_impression event'ini Redis buffer'a ekler."""
+    from app.database_clickhouse import buffer_user_event
+    await buffer_user_event(
+        event_type="ad_impression",
+        item_id=campaign_id,
+        item_type="ad_campaign",
+        user_id=user_id,
+    )
 
 
 async def _mark_ad_impression_in_postgres(listing_id: int, user_id: int) -> None:

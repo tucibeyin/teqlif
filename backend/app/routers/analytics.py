@@ -1461,16 +1461,15 @@ async def track_search(
             pass
 
     try:
-        from datetime import datetime, timezone
-        ch = await get_clickhouse_client()
-        now = datetime.now(timezone.utc)
-        await ch.insert(
-            "search_events",
-            [[now, user_id, body.query.strip(), body.category, body.result_count]],
-            column_names=["timestamp", "user_id", "query", "category", "result_count"],
+        from app.database_clickhouse import buffer_search_event
+        await buffer_search_event(
+            user_id=user_id,
+            query=body.query.strip(),
+            category=body.category,
+            result_count=body.result_count,
         )
     except Exception as exc:
-        logger.warning("[track-search] ClickHouse insert başarısız: %s", exc)
+        logger.warning("[track-search] ClickHouse buffer başarısız: %s", exc)
 
     # Kategori varsa analytics_events'e yaz → feed kişiselleştirme döngüsünü kapatır
     if user_id and body.category:

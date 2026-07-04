@@ -1,14 +1,22 @@
 """
-ClickHouse bağlantı katmanı — bare-metal, Docker yok.
+ClickHouse bağlantı katmanı — Redis-buffered batch insert pattern.
 
-Singleton pattern: uygulama ömrü boyunca tek bir AsyncClient örneği tutulur.
-Startup'ta init_clickhouse() çağrılır; tablo yoksa oluşturulur.
+INSERT akışı (endüstri standardı):
+  buffer_*() → Redis list (ch_buf:{table}) → _flush_loop() her FLUSH_INTERVAL s → batch INSERT
 
-Graceful degradation: ClickHouse kapalıysa sadece uyarı loglanır,
-PostgreSQL akışı kesintisiz devam eder.
+  Her single-row insert 1 MergeTree part oluşturur; binlerce part birikiyor ve
+  background merge disk'i eziyor. Buffer + batch flush bu sorunu ortadan kaldırır.
+
+Read/query kullanımı değişmez: SELECT sorgular doğrudan ClickHouse'a gider.
+Batch insert endpoint'leri (feed_analytics, swipe_live_events) değişmez — zaten toplu.
 """
 
+from __future__ import annotations
+
+import asyncio
+import json
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 
 import clickhouse_connect
@@ -19,6 +27,16 @@ logger = logging.getLogger(__name__)
 # ── Singleton ─────────────────────────────────────────────────────────────────
 
 _client: Optional[AsyncClient] = None
+_flush_task: Optional[asyncio.Task] = None
+
+# ── Ayarlar ───────────────────────────────────────────────────────────────────
+
+FLUSH_INTERVAL: int = 5    # saniye — her 5s bir flush
+MAX_BATCH: int = 2000      # flush başına tablo başına max satır
+
+# Redis buffer key'leri
+_BUF_USER_EVENTS   = "ch_buf:user_events"
+_BUF_SEARCH_EVENTS = "ch_buf:search_events"
 
 # ── Tablo DDL ─────────────────────────────────────────────────────────────────
 
@@ -76,8 +94,6 @@ PARTITION BY toYYYYMM(timestamp)
 ORDER BY (category, timestamp)
 """
 
-# SwipeLive'da yayın ve ilan etkileşimlerini izler.
-# stream_id=0 → ilan eventi; listing_id=0 → yayın eventi.
 _CREATE_SWIPE_LIVE_EVENTS_TABLE = """
 CREATE TABLE IF NOT EXISTS swipe_live_events
 (
@@ -99,14 +115,10 @@ ORDER BY (user_id, timestamp)
 SETTINGS index_granularity = 8192
 """
 
-
-# ── Public API ────────────────────────────────────────────────────────────────
+# ── Bağlantı ──────────────────────────────────────────────────────────────────
 
 async def get_clickhouse_client() -> AsyncClient:
-    """
-    Singleton ClickHouse async istemcisini döndürür.
-    İlk çağrıda bağlantıyı kurar (localhost:8123, HTTP arayüzü).
-    """
+    """Singleton AsyncClient döndürür."""
     global _client
     if _client is None:
         _client = await clickhouse_connect.get_async_client(
@@ -119,12 +131,7 @@ async def get_clickhouse_client() -> AsyncClient:
 
 
 async def init_clickhouse() -> None:
-    """
-    Uygulama başlangıcında çağrılır:
-      1. Bağlantıyı test eder
-      2. user_events tablosunu (yoksa) oluşturur
-    ClickHouse erişilemezse uyarı loglar, uygulamayı durdurmaz.
-    """
+    """Startup: bağlantı kur + tablolar oluştur."""
     global _client
     try:
         _client = await clickhouse_connect.get_async_client(
@@ -150,15 +157,21 @@ async def init_clickhouse() -> None:
 
 
 async def close_clickhouse() -> None:
-    """Uygulama kapanırken bağlantıyı temizler."""
+    """Shutdown: bağlantıyı temizle."""
     global _client
     if _client is not None:
         await _client.close()
         _client = None
         logger.info("[ClickHouse] Bağlantı kapatıldı.")
 
+# ── Buffer API — yazma noktası ────────────────────────────────────────────────
 
-async def track_user_event(
+def _now_str() -> str:
+    """ClickHouse DateTime formatında UTC timestamp."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+async def buffer_user_event(
     *,
     event_type: str,
     item_id: int,
@@ -168,28 +181,60 @@ async def track_user_event(
     duration_seconds: Optional[float] = None,
 ) -> None:
     """
-    user_events tablosuna tek satır ekler. Fire-and-forget — hata olursa sadece loglanır.
-    Çağıranı bloklamaz; asyncio.create_task ile çağırılmalıdır.
+    user_events Redis buffer'ına ekler (< 1ms). Fire-and-forget.
+    Timestamp event anında alınır — flush anında değil.
     """
-    if _client is None:
-        return
     try:
-        await _client.insert(
-            "user_events",
-            [[user_id, item_id, item_type, event_type, price_point, duration_seconds]],
-            column_names=["user_id", "item_id", "item_type", "event_type", "price_point", "duration_seconds"],
-        )
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        row = [user_id, item_id, item_type, event_type,
+               price_point, duration_seconds, _now_str()]
+        await redis.rpush(_BUF_USER_EVENTS, json.dumps(row))
     except Exception as exc:
-        logger.warning("[ClickHouse] track_user_event başarısız | event=%s item_id=%s | %s", event_type, item_id, exc)
+        logger.warning("[ClickHouse] buffer_user_event başarısız: %s", exc)
 
+
+async def buffer_search_event(
+    *,
+    user_id: Optional[int],
+    query: str,
+    category: str = "",
+    result_count: int = 0,
+) -> None:
+    """search_events Redis buffer'ına ekler."""
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        row = [_now_str(), user_id, query, category, result_count]
+        await redis.rpush(_BUF_SEARCH_EVENTS, json.dumps(row))
+    except Exception as exc:
+        logger.warning("[ClickHouse] buffer_search_event başarısız: %s", exc)
+
+
+# Backward-compat alias — eski call site'ları kırmaz
+async def track_user_event(
+    *,
+    event_type: str,
+    item_id: int,
+    item_type: str,
+    user_id: Optional[int] = None,
+    price_point: Optional[float] = None,
+    duration_seconds: Optional[float] = None,
+) -> None:
+    await buffer_user_event(
+        event_type=event_type,
+        item_id=item_id,
+        item_type=item_type,
+        user_id=user_id,
+        price_point=price_point,
+        duration_seconds=duration_seconds,
+    )
+
+
+# ── Batch insert — toplu flush endpoint'leri (değişmez) ──────────────────────
 
 async def batch_insert_swipe_live_events(events: list[dict]) -> None:
-    """
-    swipe_live_events tablosuna batch insert yapar. Fire-and-forget.
-    Her event dict'i şu alanları içermelidir:
-      user_id, stream_id, listing_id, event_type, dwell_ms,
-      stream_category, listing_category, listings_seen, slot_index, session_id
-    """
+    """swipe_live_events — zaten toplu, doğrudan insert edilir."""
     if _client is None or not events:
         return
     cols = [
@@ -215,3 +260,125 @@ async def batch_insert_swipe_live_events(events: list[dict]) -> None:
         await _client.insert("swipe_live_events", rows, column_names=cols)
     except Exception as exc:
         logger.warning("[ClickHouse] batch_insert_swipe_live_events başarısız | count=%d | %s", len(events), exc)
+
+# ── Flush motoru ──────────────────────────────────────────────────────────────
+
+def _parse_dt(val) -> datetime:
+    """Redis'ten gelen timestamp string'ini naive datetime'a çevirir."""
+    if isinstance(val, datetime):
+        return val.replace(tzinfo=None)
+    try:
+        return datetime.strptime(str(val), "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return datetime.utcnow()
+
+
+async def _drain(redis, buf_key: str) -> list[list]:
+    """Buffer'dan atomik olarak MAX_BATCH satır çeker, kalanı bırakır."""
+    async with redis.pipeline(transaction=True) as pipe:
+        await pipe.lrange(buf_key, 0, MAX_BATCH - 1)
+        await pipe.ltrim(buf_key, MAX_BATCH, -1)
+        results = await pipe.execute()
+    out = []
+    for raw in results[0]:
+        try:
+            out.append(json.loads(raw))
+        except Exception:
+            continue
+    return out
+
+
+async def flush_all_buffers() -> None:
+    """
+    Tüm buffer'ları boşaltır ve ClickHouse'a batch insert yapar.
+    Hata oluşursa satırlar kaybedilir (analytics fire-and-forget kabul edilebilir).
+    Finansal veri için bu pattern kullanılmamalıdır.
+    """
+    if _client is None:
+        return
+
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+
+        # ── user_events ────────────────────────────────────────────────────────
+        rows = await _drain(redis, _BUF_USER_EVENTS)
+        if rows:
+            data = [
+                [
+                    r[0],              # user_id    Nullable(UInt32)
+                    int(r[1]),         # item_id    UInt32
+                    str(r[2]),         # item_type  LowCardinality
+                    str(r[3]),         # event_type LowCardinality
+                    r[4],              # price_point Nullable(Float64)
+                    r[5],              # duration_seconds Nullable(Float64)
+                    _parse_dt(r[6]),   # timestamp  DateTime
+                ]
+                for r in rows
+            ]
+            await _client.insert(
+                "user_events",
+                data,
+                column_names=[
+                    "user_id", "item_id", "item_type", "event_type",
+                    "price_point", "duration_seconds", "timestamp",
+                ],
+            )
+            logger.debug("[ClickHouse] user_events flush | %d satır", len(data))
+
+        # ── search_events ──────────────────────────────────────────────────────
+        rows = await _drain(redis, _BUF_SEARCH_EVENTS)
+        if rows:
+            data = [
+                [
+                    _parse_dt(r[0]),   # timestamp  DateTime
+                    r[1],              # user_id    Nullable(UInt32)
+                    str(r[2]),         # query      String
+                    str(r[3]),         # category   LowCardinality
+                    int(r[4]),         # result_count UInt32
+                ]
+                for r in rows
+            ]
+            await _client.insert(
+                "search_events",
+                data,
+                column_names=["timestamp", "user_id", "query", "category", "result_count"],
+            )
+            logger.debug("[ClickHouse] search_events flush | %d satır", len(data))
+
+    except Exception as exc:
+        logger.warning("[ClickHouse] flush_all_buffers başarısız: %s", exc)
+
+
+async def _flush_loop() -> None:
+    """FLUSH_INTERVAL saniyede bir flush_all_buffers çalıştırır."""
+    while True:
+        try:
+            await asyncio.sleep(FLUSH_INTERVAL)
+            await flush_all_buffers()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning("[ClickHouse] flush_loop beklenmedik hata: %s", exc)
+
+
+def start_flush_loop() -> asyncio.Task:
+    """FastAPI lifespan startup'ından çağrılır."""
+    global _flush_task
+    _flush_task = asyncio.create_task(_flush_loop(), name="ch_flush_loop")
+    logger.info("[ClickHouse] Flush loop başlatıldı (interval=%ds, batch=%d)", FLUSH_INTERVAL, MAX_BATCH)
+    return _flush_task
+
+
+async def stop_flush_loop() -> None:
+    """FastAPI lifespan shutdown'ında çağrılır: döngüyü durdurur + son flush."""
+    global _flush_task
+    if _flush_task is not None:
+        _flush_task.cancel()
+        try:
+            await _flush_task
+        except asyncio.CancelledError:
+            pass
+        _flush_task = None
+    await flush_all_buffers()
+    logger.info("[ClickHouse] Flush loop durduruldu, son flush tamamlandı.")

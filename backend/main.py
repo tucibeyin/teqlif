@@ -140,7 +140,7 @@ async def _seed_cities():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.database import init_extensions
-    from app.database_clickhouse import init_clickhouse, close_clickhouse
+    from app.database_clickhouse import init_clickhouse, close_clickhouse, start_flush_loop, stop_flush_loop
     await init_extensions()
     try:
         async with engine.begin() as conn:
@@ -153,6 +153,7 @@ async def lifespan(app: FastAPI):
     await _seed_categories()
     await _seed_cities()
     await init_clickhouse()
+    flush_task = start_flush_loop()
     # FastAPI Cache — Redis backend (decode_responses=False: JsonCoder bytes bekler)
     _cache_redis = aioredis.from_url(settings.redis_url, decode_responses=False)
     FastAPICache.init(RedisBackend(_cache_redis), prefix="teqlif:cache")
@@ -177,6 +178,7 @@ async def lifespan(app: FastAPI):
     hype_manager.stop_decay()
     await arq_pool.close()
     clear_pool()
+    await stop_flush_loop()
     await close_clickhouse()
 
 
