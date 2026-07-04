@@ -441,7 +441,7 @@ async def _mark_impressions(user_id: int, listing_ids: list[int], db: AsyncSessi
 
 # ── For-You Feed (pgvector cosine distance) ──────────────────────────────────
 
-FORYOU_CACHE_TTL = 300    # 5 dakika
+FORYOU_CACHE_TTL = 3600   # 1 saat — badge tutarlılığı için mobile cache'den uzun
 FORYOU_POOL_SIZE = 100    # Önceden hesaplanan ID havuzu
 
 

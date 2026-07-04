@@ -52,7 +52,8 @@ async def _fetch_seller_meta(user_ids: list[int]) -> tuple[dict[int, str | None]
         badge_map = {uid: (val or None) for uid, val in zip(user_ids, results)}
         trending_cats = set(await redis.smembers("trending:categories") or [])
         return badge_map, trending_cats
-    except Exception:
+    except Exception as exc:
+        logger.warning("[SellerMeta] Redis fetch başarısız — badge/trending boş dönüyor: %s", exc)
         return {}, set()
 
 
