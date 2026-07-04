@@ -32,7 +32,7 @@ async def main():
     from datetime import datetime, timezone, timedelta
     from sqlalchemy import select, text
     from app.database import AsyncSessionLocal
-    from app.models.live_stream import LiveStream
+    from app.models.stream import LiveStream
 
     async with AsyncSessionLocal() as db:
 

@@ -23,7 +23,7 @@ async def main():
     from datetime import datetime, timezone
     from sqlalchemy import select, text
     from app.database import AsyncSessionLocal
-    from app.models.live_stream import LiveStream
+    from app.models.stream import LiveStream
 
     sep(f"STREAM DURUMU — #{' #'.join(str(i) for i in STREAM_IDS)}")
     async with AsyncSessionLocal() as db:
