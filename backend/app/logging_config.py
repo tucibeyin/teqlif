@@ -22,6 +22,7 @@ def _make_json_handler(path: str, level: int) -> TimedRotatingFileHandler:
         _JSON_FIELDS,
         datefmt="%Y-%m-%dT%H:%M:%SZ",
         rename_fields={"asctime": "timestamp", "levelname": "level", "name": "logger"},
+        json_ensure_ascii=False,
     ))
     return handler
 
