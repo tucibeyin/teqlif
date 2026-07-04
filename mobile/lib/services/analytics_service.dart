@@ -88,6 +88,7 @@ class AnalyticsService {
     required String title,
     required String category,
     required int estimatedCost,
+    required int estimatedAudience,
     int? listingId,
     int? streamId,
   }) async {
@@ -104,6 +105,7 @@ class AnalyticsService {
           'title': title,
           'category': category,
           'estimated_cost': estimatedCost,
+          'estimated_audience': estimatedAudience,
           'listing_id': ?listingId,
           'stream_id': ?streamId,
         }),

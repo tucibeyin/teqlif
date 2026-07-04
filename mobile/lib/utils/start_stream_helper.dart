@@ -287,6 +287,7 @@ Future<void> showStartStreamDialog(
           title: title,
           blastApproved: blastApproved,
           blastCost: blastCost.toDouble(),
+          blastAudience: audienceSize,
         ),
       ),
     );

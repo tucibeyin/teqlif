@@ -43,6 +43,7 @@ class HostStreamScreen extends StatefulWidget {
   /// LiveKit bağlantısı kurulunca confirmLive'dan sonra blast gönderilir.
   final bool blastApproved;
   final double blastCost;
+  final int blastAudience;
 
   const HostStreamScreen({
     super.key,
@@ -50,6 +51,7 @@ class HostStreamScreen extends StatefulWidget {
     required this.title,
     this.blastApproved = false,
     this.blastCost = 0,
+    this.blastAudience = 0,
   });
 
   @override
@@ -182,6 +184,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         title: widget.title,
         category: widget.streamToken.category,
         estimatedCost: _audienceCost.toInt(),
+        estimatedAudience: _audienceSize,
       );
       if (!mounted) return;
       if (result != null && result['error'] == null) {
@@ -423,6 +426,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           title: widget.title,
           category: widget.streamToken.category,
           estimatedCost: widget.blastCost.toInt(),
+          estimatedAudience: widget.blastAudience,
           streamId: widget.streamToken.streamId,
         ).ignore();
       }

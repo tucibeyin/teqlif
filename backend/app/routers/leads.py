@@ -155,6 +155,7 @@ class BlastRequest(BaseModel):
     listing_id: int | None = Field(default=None)
     stream_id: int | None = Field(default=None)
     estimated_cost: int = Field(ge=0)
+    estimated_audience: int = Field(default=0, ge=0)  # UI'ın gösterdiği kişi sayısı
 
 
 @router.post("/send-blast", status_code=202)
@@ -230,23 +231,22 @@ async def send_blast(
         logger.warning("[Leads] ClickHouse user listesi alınamadı: %s", exc)
 
     # ── PostgreSQL: FCM tokenlar ──────────────────────────────────────────────
-    if target_user_ids:
-        token_q = select(User.fcm_token).where(
-            User.id.in_(target_user_ids),
-            User.fcm_token.is_not(None),
-            User.fcm_token != "",
-        ).limit(5000)
-    else:
-        logger.info("[Leads] ClickHouse verisi yok — FCM fallback: tüm aktif kullanıcılar")
-        token_q = select(User.fcm_token).where(
-            User.id != current_user.id,
-            User.fcm_token.is_not(None),
-            User.fcm_token != "",
-            User.is_active == True,  # noqa: E712
-        ).limit(5000)
+    if not target_user_ids:
+        logger.info("[Leads] ClickHouse verisi yok — blast iptal | seller=%d", current_user.id)
+        return {"sent": 0, "spent": 0, "message": "Bu kategori için henüz yeterli kitle verisi yok."}
+
+    token_q = select(User.fcm_token).where(
+        User.id.in_(target_user_ids),
+        User.fcm_token.is_not(None),
+        User.fcm_token != "",
+    ).limit(5000)
 
     token_result = await db.execute(token_q)
     fcm_tokens: list[str] = [r[0] for r in token_result.fetchall() if r[0]]
+
+    # UI'ın gösterdiği kişi sayısıyla tut — preview ile gönderim uyuşsun
+    if body.estimated_audience > 0:
+        fcm_tokens = fcm_tokens[:body.estimated_audience]
 
     if not fcm_tokens:
         logger.info("[Leads] FCM token bulunamadı — demo başarı döndürülüyor | seller=%d", current_user.id)
