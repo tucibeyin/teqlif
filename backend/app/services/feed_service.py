@@ -617,9 +617,13 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                 LIMIT 30
             ),
             all_candidates AS (
-                SELECT id, sim_score FROM pgvec_pool
-                UNION
-                SELECT id, sim_score FROM social_pool
+                SELECT id, MAX(sim_score) AS sim_score
+                FROM (
+                    SELECT id, sim_score FROM pgvec_pool
+                    UNION ALL
+                    SELECT id, sim_score FROM social_pool
+                ) combined
+                GROUP BY id
             ),
             scored AS (
                 SELECT
@@ -660,7 +664,8 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
         return await _popular_feed(0, limit, db, exclude_user_id=user_id)
 
     # Python ALS blending — ALS vektörü yoksa sql_score aynen kullanılır
-    candidate_ids = [r.id for r in rows]
+    # dict.fromkeys: sırayı koruyarak dedup (SQL fix'e ek güvenlik katmanı)
+    candidate_ids = list(dict.fromkeys(r.id for r in rows))
     sql_scores: dict[int, float] = {r.id: float(r.sql_score) for r in rows}
 
     try:
@@ -750,16 +755,11 @@ def _inject_ads(organic: list[dict], ads: list[dict]) -> list[dict]:
     Sponsored item'ları organik feed'e AD_SLOTS pozisyonlarına enjekte eder.
     Her insert önceki insertlerin yarattığı kaymayı hesaba katar.
     Organik eleman sayısı değişmez — toplam eleman sayısı ad sayısı kadar artar.
-    Zaten organik listede bulunan ilanlar sponsored olarak tekrar eklenmez.
     """
     if not ads:
         return organic
-    organic_ids = {item.get("id") for item in organic}
-    unique_ads = [ad for ad in ads if ad.get("id") not in organic_ids]
-    if not unique_ads:
-        return organic
     result = list(organic)
-    for i, ad in enumerate(unique_ads):
+    for i, ad in enumerate(ads):
         if i >= len(AD_SLOTS):
             break
         # i adet önceki insert, hedef pozisyonu i kadar sağa kaydırdı
