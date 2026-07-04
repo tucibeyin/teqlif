@@ -93,7 +93,7 @@ async def main():
         print(f"\n[PostgreSQL — ad_campaigns]")
         if campaigns:
             for c in campaigns:
-                print(f"  campaign_id={c.id}  status={c.status}  budget={c.budget}  spent={c.spent}")
+                print(f"  campaign_id={c.id}  status={c.status}  total_budget={c.total_budget}  spent={c.spent_budget}  cpc_bid={c.cpc_bid}")
         else:
             print("  (reklam kampanyası yok)")
 
