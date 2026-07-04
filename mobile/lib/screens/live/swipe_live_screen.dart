@@ -938,7 +938,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Reddet', style: TextStyle(color: Color(0xFF64748B))),
+            child: Text(AppLocalizations.of(ctx)!.auctionBuyNowReject, style: const TextStyle(color: Color(0xFF64748B))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -946,7 +946,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Kabul Et', style: TextStyle(color: Colors.white)),
+            child: Text(AppLocalizations.of(ctx)!.btnAcceptInvite, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -984,7 +984,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.genericErrorDetail(e.toString()))),
         );
       }
     }

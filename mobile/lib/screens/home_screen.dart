@@ -775,8 +775,8 @@ class HomeScreenState extends State<HomeScreen> {
                       children: [
                         const Icon(Icons.auto_awesome, color: kPrimary, size: 16),
                         const SizedBox(width: 6),
-                        const Text('Sana Özel',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                        Text(l.forYouLabel,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                         const Spacer(),
                         if (_forYouLoading && _forYouListings.isNotEmpty)
                           const SizedBox(

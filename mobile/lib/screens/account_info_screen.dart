@@ -62,8 +62,8 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Bir hata oluştu, lütfen daha sonra tekrar deneyin.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errorGenericRetry),
             behavior: SnackBarBehavior.floating,
           ),
         );

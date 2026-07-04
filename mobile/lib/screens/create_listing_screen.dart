@@ -100,7 +100,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     final desc = _descCtrl.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Önce ilan başlığını giriniz.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.createNeedTitle)),
       );
       return;
     }
@@ -115,7 +115,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (!mounted) return;
       if (result == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fiyat tahmini alınamadı. Lütfen tekrar deneyin.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.aiPriceError)),
         );
         return;
       }
@@ -124,7 +124,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         // TUCi harcandı — badge'i serverdan taze al
         _loadAiCredits();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('$tuciSpent TUCi harcandı.'),
+          content: Text(AppLocalizations.of(context)!.tuciSpent(tuciSpent)),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ));
@@ -372,7 +372,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (dur.inSeconds > _maxVideoDurationSecs) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Video $_maxVideoDurationSecs saniyeyi geçemez (${dur.inSeconds}s).')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.videoTooLong(_maxVideoDurationSecs, dur.inSeconds))),
           );
         }
         return;
@@ -420,7 +420,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Galeriden seç'),
+              title: Text(AppLocalizations.of(context)!.profilePickGallery),
               onTap: () {
                 Navigator.pop(context);
                 _pickVideo(ImageSource.gallery);
@@ -428,7 +428,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.videocam_outlined),
-              title: const Text('Kamera ile çek (maks 15 sn)'),
+              title: Text(AppLocalizations.of(context)!.createPickCamera(_maxVideoDurationSecs)),
               onTap: () {
                 Navigator.pop(context);
                 _pickVideo(ImageSource.camera);
@@ -504,7 +504,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_videoUploading) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Video henüz yükleniyor, lütfen bekleyin.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.videoUploading)),
       );
       return;
     }
@@ -766,12 +766,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Video (maks 15 sn)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text(l.videoLabel(_maxVideoDurationSecs), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                       if (_video == null && !_videoUploading)
                         TextButton.icon(
                           onPressed: _showVideoSourceSheet,
                           icon: const Icon(Icons.videocam_outlined, size: 18),
-                          label: const Text('Ekle'),
+                          label: Text(l.btnAdd),
                         ),
                     ],
                   ),

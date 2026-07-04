@@ -2514,4 +2514,147 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get retargetingBlastCooldown =>
       'Bir sonraki blast için 7 gün beklemeniz gerekiyor.';
+
+  @override
+  String get errorGenericRetry =>
+      'Bir hata oluştu, lütfen daha sonra tekrar deneyin.';
+
+  @override
+  String get verifyEmailTitle => 'E-posta Doğrulama';
+
+  @override
+  String get btnVerify => 'Doğrula';
+
+  @override
+  String get btnResetPassword => 'Şifreyi Sıfırla';
+
+  @override
+  String get radarScreenTitle => 'Rakip Radarı & Satış Hızı';
+
+  @override
+  String priceMinLabel(String price) {
+    return '$price ₺ (min)';
+  }
+
+  @override
+  String priceMaxLabel(String price) {
+    return '$price ₺ (max)';
+  }
+
+  @override
+  String get forYouLabel => 'Sana Özel';
+
+  @override
+  String get messagesUpdateFailed => 'Güncellenemedi';
+
+  @override
+  String get btnRefresh => 'Yenile';
+
+  @override
+  String get messagesLoadFailed => 'Mesajlar yüklenemedi';
+
+  @override
+  String get btnSend => 'Gönder';
+
+  @override
+  String get btnAcceptInvite => 'Kabul Et';
+
+  @override
+  String get btnPin => 'Sabitle';
+
+  @override
+  String get retargetingBlastSuccess => 'Bildirimler başarıyla gönderildi!';
+
+  @override
+  String get hostNotifDialogTitle => 'Bildirim Gönder';
+
+  @override
+  String get hostStreamDataError => 'Veri alınamadı';
+
+  @override
+  String hostInviteError(String error) {
+    return 'Davet gönderilemedi: $error';
+  }
+
+  @override
+  String hostModRemoved(String username) {
+    return '✖ @$username moderatörlükten alındı';
+  }
+
+  @override
+  String genericErrorDetail(String error) {
+    return 'Hata: $error';
+  }
+
+  @override
+  String get profilePhotoUploadError => 'Fotoğraf yüklenemedi. Tekrar deneyin.';
+
+  @override
+  String get profileInviteCodeError => 'Davet kodu alınamadı, tekrar deneyin.';
+
+  @override
+  String get profileInviteTitle => 'Arkadaşlarını Davet Et, TUCi Kazan!';
+
+  @override
+  String get profileInviteSubtitle =>
+      'Her davet için +50, arkadaşın +10 TUCi kazanır';
+
+  @override
+  String get profilePickGallery => 'Galeriden Seç';
+
+  @override
+  String get profilePickCamera => 'Kameradan Çek';
+
+  @override
+  String get listingDeleteDialogTitle => 'İlanı Sil';
+
+  @override
+  String get listingDeleteDialogBody =>
+      'Bu ilanı kalıcı olarak silmek istiyor musunuz?';
+
+  @override
+  String get btnDeleteConfirm => 'Sil';
+
+  @override
+  String get favoritesEmpty => 'Henüz favori ilan yok';
+
+  @override
+  String get createNeedTitle => 'Önce ilan başlığını giriniz.';
+
+  @override
+  String get aiPriceError => 'Fiyat tahmini alınamadı. Lütfen tekrar deneyin.';
+
+  @override
+  String tuciSpent(int count) {
+    return '$count TUCi harcandı.';
+  }
+
+  @override
+  String videoTooLong(int max, int actual) {
+    return 'Video $max saniyeyi geçemez (${actual}s).';
+  }
+
+  @override
+  String createPickCamera(int sec) {
+    return 'Kamera ile çek (maks $sec sn)';
+  }
+
+  @override
+  String get videoUploading => 'Video henüz yükleniyor, lütfen bekleyin.';
+
+  @override
+  String videoLabel(int sec) {
+    return 'Video (maks $sec sn)';
+  }
+
+  @override
+  String get forYouStreams => 'Sana Özel Yayınlar';
+
+  @override
+  String get searchNoResults => 'Sonuç bulunamadı';
+
+  @override
+  String proSearchCount(int count) {
+    return '$count arama';
+  }
 }

@@ -83,10 +83,11 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: const Text('Rakip Radarı & Satış Hızı'),
+        title: Text(l.radarScreenTitle),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
         actions: [
@@ -252,6 +253,7 @@ class _RadarSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final signal = data['signal'] as String? ?? '';
 
     if (signal == 'no_price' || signal == 'no_data') {
@@ -402,8 +404,8 @@ class _RadarSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${_fmtPrice(minPrice)} ₺ (min)', style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
-              Text('${_fmtPrice(maxPrice)} ₺ (max)', style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+              Text(l.priceMinLabel(_fmtPrice(minPrice)), style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+              Text(l.priceMaxLabel(_fmtPrice(maxPrice)), style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
             ],
           ),
           const SizedBox(height: 14),

@@ -390,8 +390,8 @@ class _MessagesTabState extends State<_MessagesTab> {
           children: [
             const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
             const SizedBox(width: 8),
-            const Expanded(
-              child: Text('Güncellenemedi', style: TextStyle(fontSize: 12, color: Colors.orange)),
+            Expanded(
+              child: Text(AppLocalizations.of(context)!.messagesUpdateFailed, style: const TextStyle(fontSize: 12, color: Colors.orange)),
             ),
             TextButton(
               onPressed: _load,
@@ -400,7 +400,7 @@ class _MessagesTabState extends State<_MessagesTab> {
                 minimumSize: const Size(0, 0),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('Yenile', style: TextStyle(fontSize: 12)),
+              child: Text(AppLocalizations.of(context)!.btnRefresh, style: const TextStyle(fontSize: 12)),
             ),
           ],
         ),
@@ -965,12 +965,12 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                           children: [
                             const Icon(Icons.wifi_off_rounded, size: 48, color: Color(0xFF9CA3AF)),
                             const SizedBox(height: 12),
-                            const Text('Mesajlar yüklenemedi',
-                                style: TextStyle(color: Color(0xFF9CA3AF))),
+                            Text(l.messagesLoadFailed,
+                                style: const TextStyle(color: Color(0xFF9CA3AF))),
                             const SizedBox(height: 12),
                             ElevatedButton(
                               onPressed: _loadMessages,
-                              child: const Text('Tekrar Dene'),
+                              child: Text(l.btnRetry),
                             ),
                           ],
                         ),

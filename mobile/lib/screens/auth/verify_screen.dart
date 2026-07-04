@@ -5,6 +5,7 @@ import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../utils/error_helper.dart';
+import '../../l10n/app_localizations.dart';
 import 'category_onboarding_screen.dart';
 
 class VerifyScreen extends StatefulWidget {
@@ -74,8 +75,9 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('E-posta Doğrulama')),
+      appBar: AppBar(title: Text(l.verifyEmailTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -144,7 +146,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('Doğrula'),
+                  : Text(l.btnVerify),
             ),
             const SizedBox(height: 16),
             Center(

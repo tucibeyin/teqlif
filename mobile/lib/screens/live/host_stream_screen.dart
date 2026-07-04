@@ -154,7 +154,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Bildirim Gönder', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        title: Text(l.hostNotifDialogTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
         content: Text(
           _audienceCost == 0
               ? l.blastConfirmBodyFree(_audienceSize)
@@ -164,12 +164,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF64748B))),
+            child: Text(l.btnDismiss, style: const TextStyle(color: Color(0xFF64748B))),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
-            child: const Text('Gönder', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(l.btnSend, style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -247,9 +247,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       child: Center(child: CircularProgressIndicator(color: Colors.white54)),
                     )
                   : data == null
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 120,
-                          child: Center(child: Text('Veri alınamadı', style: TextStyle(color: Colors.white60))),
+                          child: Center(child: Text(l.hostStreamDataError, style: const TextStyle(color: Colors.white60))),
                         )
                       : Column(
                           mainAxisSize: MainAxisSize.min,
@@ -590,7 +590,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Davet gönderilemedi: $e'),
+            content: Text(AppLocalizations.of(context)!.hostInviteError(e.toString())),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -767,18 +767,17 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
           // ── Bağlanıyor — sadece oda henüz bağlı değilken ───────────────
           if (_room == null && _error == null)
-            const Positioned.fill(
+            Positioned.fill(
               child: ColoredBox(
                 color: Colors.black,
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(color: kPrimary),
-                      SizedBox(height: 16),
-                      Text('Yayın başlatılıyor...',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 14)),
+                      const CircularProgressIndicator(color: kPrimary),
+                      const SizedBox(height: 16),
+                      Text(AppLocalizations.of(context)!.liveConnecting,
+                          style: const TextStyle(color: Colors.white70, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -807,7 +806,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                         ElevatedButton(
                           onPressed: () => Navigator.pushNamedAndRemoveUntil(
                               context, '/home', (route) => false),
-                          child: const Text('Geri Dön'),
+                          child: Text(AppLocalizations.of(context)!.btnGoBack),
                         ),
                       ],
                     ),
@@ -906,12 +905,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.push_pin_rounded,
+                                children: [
+                                  const Icon(Icons.push_pin_rounded,
                                       size: 13, color: Colors.amber),
-                                  SizedBox(width: 4),
-                                  Text('Sabitle',
-                                      style: TextStyle(
+                                  const SizedBox(width: 4),
+                                  Text(AppLocalizations.of(context)!.btnPin,
+                                      style: const TextStyle(
                                           color: Colors.white70,
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500)),
@@ -1827,7 +1826,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
                   widget.onDemoted();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('✖ @${widget.username} moderatörlükten alındı'),
+                      content: Text(AppLocalizations.of(context)!.hostModRemoved(widget.username)),
                       backgroundColor: const Color(0xFF475569),
                       behavior: SnackBarBehavior.floating,
                       duration: const Duration(seconds: 3),
@@ -1890,8 +1889,8 @@ class _ModerationSheetState extends State<_ModerationSheet> {
                   side: const BorderSide(color: Colors.white12),
                 ),
               ),
-              child: const Text('İptal',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+              child: Text(AppLocalizations.of(context)!.btnCancel,
+                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
             ),
           ),
 
@@ -1988,12 +1987,12 @@ class _PinInputSheetState extends State<_PinInputSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.push_pin_rounded, color: Colors.amber, size: 16),
-                  SizedBox(width: 8),
-                  Text('Sabitle',
-                      style: TextStyle(
+                  const Icon(Icons.push_pin_rounded, color: Colors.amber, size: 16),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context)!.btnPin,
+                      style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
                           fontWeight: FontWeight.w600)),
@@ -2037,8 +2036,8 @@ class _PinInputSheetState extends State<_PinInputSheet> {
                 children: [
                   TextButton(
                     onPressed: widget.onCancel,
-                    child: const Text('İptal',
-                        style: TextStyle(color: Colors.white38)),
+                    child: Text(AppLocalizations.of(context)!.btnCancel,
+                        style: const TextStyle(color: Colors.white38)),
                   ),
                   const SizedBox(width: 8),
                   TextButton(
@@ -2055,12 +2054,12 @@ class _PinInputSheetState extends State<_PinInputSheet> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.push_pin_rounded, size: 14),
-                        SizedBox(width: 4),
-                        Text('Sabitle', style: TextStyle(fontSize: 13)),
+                        const Icon(Icons.push_pin_rounded, size: 14),
+                        const SizedBox(width: 4),
+                        Text(AppLocalizations.of(context)!.btnPin, style: const TextStyle(fontSize: 13)),
                       ],
                     ),
                   ),

@@ -192,7 +192,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Şifreyi Sıfırla'),
+                          : Text(l.btnResetPassword),
                     ),
                   ),
                 ],

@@ -2513,4 +2513,148 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get retargetingBlastCooldown =>
       'You need to wait 7 days for the next blast.';
+
+  @override
+  String get errorGenericRetry => 'An error occurred, please try again later.';
+
+  @override
+  String get verifyEmailTitle => 'Email Verification';
+
+  @override
+  String get btnVerify => 'Verify';
+
+  @override
+  String get btnResetPassword => 'Reset Password';
+
+  @override
+  String get radarScreenTitle => 'Competitor Radar & Sales Speed';
+
+  @override
+  String priceMinLabel(String price) {
+    return '$price ₺ (min)';
+  }
+
+  @override
+  String priceMaxLabel(String price) {
+    return '$price ₺ (max)';
+  }
+
+  @override
+  String get forYouLabel => 'For You';
+
+  @override
+  String get messagesUpdateFailed => 'Update failed';
+
+  @override
+  String get btnRefresh => 'Refresh';
+
+  @override
+  String get messagesLoadFailed => 'Messages could not be loaded';
+
+  @override
+  String get btnSend => 'Send';
+
+  @override
+  String get btnAcceptInvite => 'Accept';
+
+  @override
+  String get btnPin => 'Pin';
+
+  @override
+  String get retargetingBlastSuccess => 'Notifications sent successfully!';
+
+  @override
+  String get hostNotifDialogTitle => 'Send Notification';
+
+  @override
+  String get hostStreamDataError => 'Could not load data';
+
+  @override
+  String hostInviteError(String error) {
+    return 'Invite could not be sent: $error';
+  }
+
+  @override
+  String hostModRemoved(String username) {
+    return '✖ @$username removed as moderator';
+  }
+
+  @override
+  String genericErrorDetail(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get profilePhotoUploadError =>
+      'Photo could not be uploaded. Try again.';
+
+  @override
+  String get profileInviteCodeError =>
+      'Invite code could not be retrieved, try again.';
+
+  @override
+  String get profileInviteTitle => 'Invite Friends, Earn TUCi!';
+
+  @override
+  String get profileInviteSubtitle =>
+      '+50 TUCi per invite, your friend gets +10 TUCi';
+
+  @override
+  String get profilePickGallery => 'Pick from Gallery';
+
+  @override
+  String get profilePickCamera => 'Take a Photo';
+
+  @override
+  String get listingDeleteDialogTitle => 'Delete Listing';
+
+  @override
+  String get listingDeleteDialogBody =>
+      'Are you sure you want to permanently delete this listing?';
+
+  @override
+  String get btnDeleteConfirm => 'Delete';
+
+  @override
+  String get favoritesEmpty => 'No favorites yet';
+
+  @override
+  String get createNeedTitle => 'Please enter the listing title first.';
+
+  @override
+  String get aiPriceError => 'Could not get price estimate. Please try again.';
+
+  @override
+  String tuciSpent(int count) {
+    return '$count TUCi spent.';
+  }
+
+  @override
+  String videoTooLong(int max, int actual) {
+    return 'Video cannot exceed $max seconds (${actual}s).';
+  }
+
+  @override
+  String createPickCamera(int sec) {
+    return 'Record with camera (max ${sec}s)';
+  }
+
+  @override
+  String get videoUploading => 'Video is still uploading, please wait.';
+
+  @override
+  String videoLabel(int sec) {
+    return 'Video (max ${sec}s)';
+  }
+
+  @override
+  String get forYouStreams => 'Streams For You';
+
+  @override
+  String get searchNoResults => 'No results found';
+
+  @override
+  String proSearchCount(int count) {
+    return '$count searches';
+  }
 }

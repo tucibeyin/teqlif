@@ -4707,6 +4707,246 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bir sonraki blast için 7 gün beklemeniz gerekiyor.'**
   String get retargetingBlastCooldown;
+
+  /// No description provided for @errorGenericRetry.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bir hata oluştu, lütfen daha sonra tekrar deneyin.'**
+  String get errorGenericRetry;
+
+  /// No description provided for @verifyEmailTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta Doğrulama'**
+  String get verifyEmailTitle;
+
+  /// No description provided for @btnVerify.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrula'**
+  String get btnVerify;
+
+  /// No description provided for @btnResetPassword.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifreyi Sıfırla'**
+  String get btnResetPassword;
+
+  /// No description provided for @radarScreenTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rakip Radarı & Satış Hızı'**
+  String get radarScreenTitle;
+
+  /// No description provided for @priceMinLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'{price} ₺ (min)'**
+  String priceMinLabel(String price);
+
+  /// No description provided for @priceMaxLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'{price} ₺ (max)'**
+  String priceMaxLabel(String price);
+
+  /// No description provided for @forYouLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sana Özel'**
+  String get forYouLabel;
+
+  /// No description provided for @messagesUpdateFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güncellenemedi'**
+  String get messagesUpdateFailed;
+
+  /// No description provided for @btnRefresh.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yenile'**
+  String get btnRefresh;
+
+  /// No description provided for @messagesLoadFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mesajlar yüklenemedi'**
+  String get messagesLoadFailed;
+
+  /// No description provided for @btnSend.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönder'**
+  String get btnSend;
+
+  /// No description provided for @btnAcceptInvite.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kabul Et'**
+  String get btnAcceptInvite;
+
+  /// No description provided for @btnPin.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sabitle'**
+  String get btnPin;
+
+  /// No description provided for @retargetingBlastSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bildirimler başarıyla gönderildi!'**
+  String get retargetingBlastSuccess;
+
+  /// No description provided for @hostNotifDialogTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bildirim Gönder'**
+  String get hostNotifDialogTitle;
+
+  /// No description provided for @hostStreamDataError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Veri alınamadı'**
+  String get hostStreamDataError;
+
+  /// No description provided for @hostInviteError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet gönderilemedi: {error}'**
+  String hostInviteError(String error);
+
+  /// No description provided for @hostModRemoved.
+  ///
+  /// In tr, this message translates to:
+  /// **'✖ @{username} moderatörlükten alındı'**
+  String hostModRemoved(String username);
+
+  /// No description provided for @genericErrorDetail.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hata: {error}'**
+  String genericErrorDetail(String error);
+
+  /// No description provided for @profilePhotoUploadError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fotoğraf yüklenemedi. Tekrar deneyin.'**
+  String get profilePhotoUploadError;
+
+  /// No description provided for @profileInviteCodeError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet kodu alınamadı, tekrar deneyin.'**
+  String get profileInviteCodeError;
+
+  /// No description provided for @profileInviteTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arkadaşlarını Davet Et, TUCi Kazan!'**
+  String get profileInviteTitle;
+
+  /// No description provided for @profileInviteSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Her davet için +50, arkadaşın +10 TUCi kazanır'**
+  String get profileInviteSubtitle;
+
+  /// No description provided for @profilePickGallery.
+  ///
+  /// In tr, this message translates to:
+  /// **'Galeriden Seç'**
+  String get profilePickGallery;
+
+  /// No description provided for @profilePickCamera.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kameradan Çek'**
+  String get profilePickCamera;
+
+  /// No description provided for @listingDeleteDialogTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanı Sil'**
+  String get listingDeleteDialogTitle;
+
+  /// No description provided for @listingDeleteDialogBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ilanı kalıcı olarak silmek istiyor musunuz?'**
+  String get listingDeleteDialogBody;
+
+  /// No description provided for @btnDeleteConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sil'**
+  String get btnDeleteConfirm;
+
+  /// No description provided for @favoritesEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz favori ilan yok'**
+  String get favoritesEmpty;
+
+  /// No description provided for @createNeedTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Önce ilan başlığını giriniz.'**
+  String get createNeedTitle;
+
+  /// No description provided for @aiPriceError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyat tahmini alınamadı. Lütfen tekrar deneyin.'**
+  String get aiPriceError;
+
+  /// No description provided for @tuciSpent.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} TUCi harcandı.'**
+  String tuciSpent(int count);
+
+  /// No description provided for @videoTooLong.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video {max} saniyeyi geçemez ({actual}s).'**
+  String videoTooLong(int max, int actual);
+
+  /// No description provided for @createPickCamera.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kamera ile çek (maks {sec} sn)'**
+  String createPickCamera(int sec);
+
+  /// No description provided for @videoUploading.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video henüz yükleniyor, lütfen bekleyin.'**
+  String get videoUploading;
+
+  /// No description provided for @videoLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video (maks {sec} sn)'**
+  String videoLabel(int sec);
+
+  /// No description provided for @forYouStreams.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sana Özel Yayınlar'**
+  String get forYouStreams;
+
+  /// No description provided for @searchNoResults.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sonuç bulunamadı'**
+  String get searchNoResults;
+
+  /// No description provided for @proSearchCount.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} arama'**
+  String proSearchCount(int count);
 }
 
 class _AppLocalizationsDelegate

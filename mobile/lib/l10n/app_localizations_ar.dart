@@ -2493,4 +2493,147 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get retargetingBlastCooldown =>
       'يجب الانتظار 7 أيام حتى الإرسال التالي.';
+
+  @override
+  String get errorGenericRetry => 'حدث خطأ، يرجى المحاولة مرة أخرى لاحقاً.';
+
+  @override
+  String get verifyEmailTitle => 'التحقق من البريد الإلكتروني';
+
+  @override
+  String get btnVerify => 'تحقق';
+
+  @override
+  String get btnResetPassword => 'إعادة تعيين كلمة المرور';
+
+  @override
+  String get radarScreenTitle => 'رادار المنافسين وسرعة المبيعات';
+
+  @override
+  String priceMinLabel(String price) {
+    return '$price ₺ (الحد الأدنى)';
+  }
+
+  @override
+  String priceMaxLabel(String price) {
+    return '$price ₺ (الحد الأقصى)';
+  }
+
+  @override
+  String get forYouLabel => 'مخصص لك';
+
+  @override
+  String get messagesUpdateFailed => 'فشل التحديث';
+
+  @override
+  String get btnRefresh => 'تحديث';
+
+  @override
+  String get messagesLoadFailed => 'تعذّر تحميل الرسائل';
+
+  @override
+  String get btnSend => 'إرسال';
+
+  @override
+  String get btnAcceptInvite => 'قبول';
+
+  @override
+  String get btnPin => 'تثبيت';
+
+  @override
+  String get retargetingBlastSuccess => 'تم إرسال الإشعارات بنجاح!';
+
+  @override
+  String get hostNotifDialogTitle => 'إرسال إشعار';
+
+  @override
+  String get hostStreamDataError => 'تعذّر تحميل البيانات';
+
+  @override
+  String hostInviteError(String error) {
+    return 'تعذّر إرسال الدعوة: $error';
+  }
+
+  @override
+  String hostModRemoved(String username) {
+    return '✖ @$username تمت إزالته من المشرفين';
+  }
+
+  @override
+  String genericErrorDetail(String error) {
+    return 'خطأ: $error';
+  }
+
+  @override
+  String get profilePhotoUploadError => 'تعذّر تحميل الصورة. حاول مرة أخرى.';
+
+  @override
+  String get profileInviteCodeError =>
+      'تعذّر استرداد رمز الدعوة، حاول مرة أخرى.';
+
+  @override
+  String get profileInviteTitle => 'ادعُ أصدقاءك، اكسب TUCi!';
+
+  @override
+  String get profileInviteSubtitle =>
+      '+50 TUCi لكل دعوة، صديقك يحصل على +10 TUCi';
+
+  @override
+  String get profilePickGallery => 'اختر من المعرض';
+
+  @override
+  String get profilePickCamera => 'التقط صورة';
+
+  @override
+  String get listingDeleteDialogTitle => 'حذف الإعلان';
+
+  @override
+  String get listingDeleteDialogBody =>
+      'هل أنت متأكد أنك تريد حذف هذا الإعلان نهائياً؟';
+
+  @override
+  String get btnDeleteConfirm => 'حذف';
+
+  @override
+  String get favoritesEmpty => 'لا توجد مفضلات بعد';
+
+  @override
+  String get createNeedTitle => 'يرجى إدخال عنوان الإعلان أولاً.';
+
+  @override
+  String get aiPriceError => 'تعذّر الحصول على تقدير السعر. حاول مرة أخرى.';
+
+  @override
+  String tuciSpent(int count) {
+    return 'تم إنفاق $count TUCi.';
+  }
+
+  @override
+  String videoTooLong(int max, int actual) {
+    return 'لا يمكن أن يتجاوز الفيديو $max ثانية ($actualث).';
+  }
+
+  @override
+  String createPickCamera(int sec) {
+    return 'تسجيل بالكاميرا (حد أقصى $sec ث)';
+  }
+
+  @override
+  String get videoUploading => 'الفيديو لا يزال يُحمَّل، يرجى الانتظار.';
+
+  @override
+  String videoLabel(int sec) {
+    return 'فيديو (حد أقصى $sec ث)';
+  }
+
+  @override
+  String get forYouStreams => 'بثوث مخصصة لك';
+
+  @override
+  String get searchNoResults => 'لا توجد نتائج';
+
+  @override
+  String proSearchCount(int count) {
+    return '$count بحث';
+  }
 }

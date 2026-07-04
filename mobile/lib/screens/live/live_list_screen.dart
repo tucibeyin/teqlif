@@ -333,8 +333,8 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 children: [
                   const Icon(Icons.auto_awesome, color: kPrimary, size: 15),
                   const SizedBox(width: 6),
-                  const Text('Sana Özel Yayınlar',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  Text(l.forYouStreams,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                 ],
               ),
             ),

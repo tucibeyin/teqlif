@@ -1159,7 +1159,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     setState(() => _shareLoading = false);
     if (code == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Davet kodu alınamadı, tekrar deneyin.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.profileInviteCodeError)),
       );
       return;
     }
@@ -1550,8 +1550,8 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ListTile(
                 key: _shareTileKey,
                 leading: const Icon(Icons.card_giftcard_outlined, color: Color(0xFF16A34A)),
-                title: const Text('Arkadaşlarını Davet Et, TUCi Kazan!', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                subtitle: const Text('Her davet için +50, arkadaşın +10 TUCi kazanır', style: TextStyle(fontSize: 12)),
+                title: Text(AppLocalizations.of(context)!.profileInviteTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                subtitle: Text(AppLocalizations.of(context)!.profileInviteSubtitle, style: const TextStyle(fontSize: 12)),
                 trailing: _shareLoading
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
@@ -1918,12 +1918,12 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Galeriden Seç'),
+              title: Text(AppLocalizations.of(ctx)!.profilePickGallery),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Kameradan Çek'),
+              title: Text(AppLocalizations.of(ctx)!.profilePickCamera),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
           ],
@@ -1971,7 +1971,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       LoggerService.instance.warning('EditProfileScreen', 'Avatar yüklenemedi: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fotoğraf yüklenemedi. Tekrar deneyin.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.profilePhotoUploadError)),
       );
     } finally {
       if (mounted) setState(() { _saving = false; _uploadingAvatar = false; });
@@ -2045,7 +2045,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     final initial = (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?').toUpperCase();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profili Düzenle'),
+        title: Text(AppLocalizations.of(context)!.btnEditProfile),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -2259,13 +2259,13 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('İlanı Sil'),
-        content: const Text('Bu ilanı kalıcı olarak silmek istiyor musunuz?'),
+        title: Text(AppLocalizations.of(context)!.listingDeleteDialogTitle),
+        content: Text(AppLocalizations.of(context)!.listingDeleteDialogBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Vazgeç')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppLocalizations.of(context)!.btnDismiss)),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sil', style: TextStyle(color: Color(0xFFDC2626))),
+            child: Text(AppLocalizations.of(context)!.btnDeleteConfirm, style: const TextStyle(color: Color(0xFFDC2626))),
           ),
         ],
       ),
@@ -2470,20 +2470,21 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Favorilerim')),
+      appBar: AppBar(title: Text(l.profileFavorites)),
       backgroundColor: AppColors.bg(context),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _listings.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.favorite_border, size: 52, color: Color(0xFFD1D5DB)),
-                      SizedBox(height: 12),
-                      Text('Henüz favori ilan yok',
-                          style: TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+                      const Icon(Icons.favorite_border, size: 52, color: Color(0xFFD1D5DB)),
+                      const SizedBox(height: 12),
+                      Text(l.favoritesEmpty,
+                          style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
                     ],
                   ),
                 )

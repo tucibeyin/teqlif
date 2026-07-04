@@ -422,8 +422,8 @@ class SearchScreenState extends State<SearchScreen> {
           children: [
             const Icon(Icons.search_off_outlined, size: 56, color: Color(0xFFD1D5DB)),
             const SizedBox(height: 12),
-            const Text('Sonuç bulunamadı',
-                style: TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+            Text(l.searchNoResults,
+                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
           ],
         ),
       );

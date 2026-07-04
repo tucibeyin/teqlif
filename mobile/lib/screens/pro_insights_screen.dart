@@ -843,7 +843,7 @@ class _ProMetricsCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(children: [
                 Expanded(child: Text(e['category'] as String? ?? '', style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)))),
-                Text('${e['search_count']} arama', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                Text(l.proSearchCount(e['search_count'] as int? ?? 0), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
               ]),
             )),
           ],

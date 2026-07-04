@@ -101,7 +101,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Vazgeç', style: TextStyle(color: AppColors.textSecondary(context))),
+            child: Text(AppLocalizations.of(context)!.btnDismiss, style: TextStyle(color: AppColors.textSecondary(context))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -110,7 +110,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Gönder', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(AppLocalizations.of(context)!.btnSend, style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -131,7 +131,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       setState(() { _sent = true; _sentCount = reachable; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Bildirimler başarıyla gönderildi!'),
+          content: Text(AppLocalizations.of(context)!.retargetingBlastSuccess),
           backgroundColor: const Color(0xFF22C55E),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -152,10 +152,11 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: const Text('İlgilenen Alıcılara Ulaş'),
+        title: Text(l.proToolRetargetingTitle),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
