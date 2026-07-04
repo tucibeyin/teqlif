@@ -96,7 +96,7 @@ async def main():
             print(f"  Rakip sayısı  : {len(rows)}")
             print(f"  Benim fiyatım : {my_price:.0f}₺")
             print(f"  Ortalama fiyat: {avg_price:.0f}₺  (min {min(prices):.0f}₺ / maks {max(prices):.0f}₺)")
-            print(f"  Fiyat sırası  : %{pct_rank} (rakiplerin %{cheaper}'i daha ucuz)")
+            print(f"  Fiyat sırası  : %{pct_rank} ({cheaper}/{len(prices)} rakip daha ucuz)")
             print(f"  Sinyal        : {signal}")
 
             print(f"\n  {'ID':>5}  {'dist':>6}  {'fiyat':>8}  {'kategori':<14}  Başlık")
