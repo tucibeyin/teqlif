@@ -248,46 +248,21 @@ async def _log_impression_to_clickhouse(
     )
 
 
-async def _mark_ad_impression_in_postgres(listing_id: int, user_id: int) -> None:
-    """Sponsored ilan gösterimini listing_impressions tablosuna yazar."""
-    from app.database import AsyncSessionLocal
-    from sqlalchemy import text as _text
-    try:
-        async with AsyncSessionLocal() as session:
-            await session.execute(
-                _text("""
-                    INSERT INTO listing_impressions (user_id, listing_id)
-                    VALUES (:uid, :lid)
-                    ON CONFLICT (user_id, listing_id) DO UPDATE SET seen_at = NOW()
-                """),
-                {"uid": user_id, "lid": listing_id},
-            )
-            await session.commit()
-    except Exception as exc:
-        logger.warning("[Ads] listing_impressions yazılamadı | listing=%d | %s", listing_id, exc)
-
-
 @router.post("/impression/{campaign_id}", status_code=202)
 async def record_impression(
     campaign_id: int,
     request: Request,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
 ):
     """
     Kullanıcı sponsored ilanı ekranda gördüğünde çağrılır.
 
     - Bütçe düşürmez; sadece istatistik kaydeder.
     - ClickHouse'a event_type='ad_impression' logu atılır.
-    - listing_impressions tablosuna da yazılır (ilan detayındaki 'X kişi gördü' ile tutarlılık).
-    - BackgroundTasks ile response geciktirilmez.
+    - 'X kişi gördü' sayacı artık POST /listings/{id}/view ile ilan detayı açılışında yazılır.
     """
     user_id = _user_id_from_request(request)
     background_tasks.add_task(_log_impression_to_clickhouse, campaign_id, user_id)
-    if user_id:
-        campaign = await db.scalar(select(AdCampaign).where(AdCampaign.id == campaign_id))
-        if campaign:
-            background_tasks.add_task(_mark_ad_impression_in_postgres, campaign.listing_id, user_id)
     return {"status": "queued"}
 
 

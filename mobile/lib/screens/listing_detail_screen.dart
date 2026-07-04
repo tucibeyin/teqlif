@@ -137,11 +137,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       final listingUserId = (widget.listing['user'] as Map?)?['id'];
       if (listingUserId != _myUserId) {
         _loadFavoriteStatus(token);
+        _recordView(token);
       } else {
         // İlanın sahibiyiz — taze kampanya durumunu çek
         _refreshCampaignStatus(token);
       }
     }
+  }
+
+  Future<void> _recordView(String token) async {
+    final id = widget.listing['id'];
+    if (id == null) return;
+    try {
+      await http.post(
+        Uri.parse('$kBaseUrl/listings/$id/view'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+    } catch (_) {}
   }
 
   Future<void> _refreshCampaignStatus(String token) async {

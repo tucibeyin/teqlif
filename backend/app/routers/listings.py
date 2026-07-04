@@ -123,6 +123,24 @@ async def create_offer(
     return await ListingService(db).create_offer(listing_id, current_user, payload.amount)
 
 
+@router.post("/{listing_id}/view", status_code=204)
+async def record_listing_view(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """İlan detay sayfası açıldığında çağrılır. 'X kişi gördü' sayacı için unique reach yazar."""
+    await db.execute(
+        text("""
+            INSERT INTO listing_impressions (user_id, listing_id)
+            VALUES (:uid, :lid)
+            ON CONFLICT DO NOTHING
+        """),
+        {"uid": current_user.id, "lid": listing_id},
+    )
+    await db.commit()
+
+
 @router.post("/{listing_id}/like")
 async def toggle_listing_like(
     listing_id: int,
