@@ -376,13 +376,20 @@ async def retargeting_audience(
         else:
             reachable_with_token = 0
 
+        used = await _get_blast_used(current_user.id)
+        blast_remaining = max(0, _BLAST_LIMIT_PRO - used)
+        is_free = blast_remaining > 0
+
         return {
             "listing_id": listing_id,
             "listing_title": listing.title,
             "total_viewers_30d": total_viewers,
             "already_bought": already_bought,
             "reachable_audience": reachable_with_token,
-            "estimated_cost_tuci": reachable_with_token,  # 1 TUCi per kişi
+            "estimated_cost_tuci": 0 if is_free else reachable_with_token,
+            "blast_credits_remaining": blast_remaining,
+            "blast_credits_limit": _BLAST_LIMIT_PRO,
+            "is_free": is_free,
         }
 
     except Exception as exc:
@@ -394,6 +401,9 @@ async def retargeting_audience(
             "already_bought": 0,
             "reachable_audience": 0,
             "estimated_cost_tuci": 0,
+            "blast_credits_remaining": 0,
+            "blast_credits_limit": _BLAST_LIMIT_PRO,
+            "is_free": False,
         }
 
 
@@ -422,13 +432,17 @@ async def send_retargeting(
     if not listing:
         raise HTTPException(404, "İlan bulunamadı")
 
-    tuci_cost = body.estimated_cost
+    # Blast kredisi varsa ücretsiz, yoksa TUCi öde
+    used = await _get_blast_used(current_user.id)
+    has_credit = used < _BLAST_LIMIT_PRO
+    tuci_cost = 0 if has_credit else body.estimated_cost
+
     if tuci_cost > 0:
         balance = await db.scalar(
             sql_text("SELECT tuci_balance FROM users WHERE id = :uid"), {"uid": current_user.id}
         )
         if (balance or 0) < tuci_cost:
-            raise HTTPException(402, "Yetersiz TUCi bakiyesi")
+            raise HTTPException(402, f"Yetersiz TUCi bakiyesi. Mevcut: {balance or 0} TUCi, Gerekli: {tuci_cost} TUCi")
 
     # ClickHouse'dan viewer user_id'lerini çek
     viewer_ids: list[int] = []
@@ -491,25 +505,30 @@ async def send_retargeting(
         await asyncio.gather(*[_send_one(t) for t in chunk])
         sent += len(chunk)
 
-    # TUCi düş
-    actual_cost = min(tuci_cost, sent)
-    if actual_cost > 0:
-        await db.execute(
-            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-            {"cost": actual_cost, "uid": current_user.id},
-        )
-        db.add(TuciTransaction(
-            user_id=current_user.id,
-            amount=-actual_cost,
-            transaction_type="spend_retargeting",
-        ))
-        await db.commit()
+    # Kredi düş veya TUCi öde
+    actual_cost = 0
+    if has_credit:
+        await _increment_blast(current_user.id)
+    else:
+        actual_cost = min(tuci_cost, sent)
+        if actual_cost > 0:
+            await db.execute(
+                sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                {"cost": actual_cost, "uid": current_user.id},
+            )
+            db.add(TuciTransaction(
+                user_id=current_user.id,
+                amount=-actual_cost,
+                transaction_type="spend_retargeting",
+            ))
+            await db.commit()
 
-    logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | cost=%d TUCi",
-                current_user.id, sent, actual_cost)
+    logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | free=%s | cost=%d TUCi",
+                current_user.id, sent, has_credit, actual_cost)
 
     return {
         "sent": sent,
         "spent": actual_cost,
+        "free": has_credit,
         "message": f"{sent} kişiye geri hedefleme bildirimi gönderildi.",
     }

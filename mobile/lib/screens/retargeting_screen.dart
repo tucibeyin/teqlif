@@ -77,12 +77,19 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Future<void> _sendBlast() async {
+    final l = AppLocalizations.of(context)!;
     final listing = _selectedListing;
     final audience = _audienceData;
     if (listing == null || audience == null) return;
     final reachable = audience['reachable_audience'] as int? ?? 0;
     final cost = audience['estimated_cost_tuci'] as int? ?? 0;
+    final isFree = audience['is_free'] as bool? ?? false;
+    final creditsLeft = audience['blast_credits_remaining'] as int? ?? 0;
     if (reachable == 0) return;
+
+    final dialogBody = isFree
+        ? l.retargetingDialogBodyFree(reachable, creditsLeft)
+        : l.retargetingDialogBodyPaid(reachable, cost);
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -90,12 +97,11 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         backgroundColor: AppColors.card(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'Bildirim gönderilsin mi?',
+          l.retargetingDialogTitle,
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary(context)),
         ),
         content: Text(
-          '$reachable kişiye "Hâlâ ilgileniyor musun?" bildirimi gönderilecek. '
-          'Bunun karşılığında cüzdanından $cost TUCi düşülecek.',
+          dialogBody,
           style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context), height: 1.5),
         ),
         actions: [
@@ -188,6 +194,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Widget _infoCard() {
+    final l = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -202,8 +209,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'İlanını daha önce görüntüleyen ama satın almayan kişilere otomatik hatırlatma bildirimi gönderir. '
-              'Her kişi için 1 TUCi harcanır.',
+              l.retargetingInfoText,
               style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context), height: 1.5),
             ),
           ),
@@ -213,6 +219,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Widget _audienceCard() {
+    final l = AppLocalizations.of(context)!;
     final audience = _audienceData!;
     final error = audience['error'] as String?;
 
@@ -235,6 +242,8 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     final alreadyBought = audience['already_bought'] as int? ?? 0;
     final reachable = audience['reachable_audience'] as int? ?? 0;
     final cost = audience['estimated_cost_tuci'] as int? ?? 0;
+    final isFree = audience['is_free'] as bool? ?? false;
+    final creditsLeft = audience['blast_credits_remaining'] as int? ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,7 +271,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    'Son 30 gün içinde',
+                    l.retargetingLast30Days,
                     style: TextStyle(
                       fontSize: 14, fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary(context),
@@ -275,19 +284,19 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                 children: [
                   _AudienceStat(
                     value: '$totalViewers',
-                    label: 'kişi gördü',
+                    label: l.retargetingViewerLabel,
                     color: AppColors.textPrimary(context),
                   ),
                   const SizedBox(width: 8),
                   _AudienceStat(
                     value: '$alreadyBought',
-                    label: 'satın aldı',
+                    label: l.retargetingBoughtLabel,
                     color: const Color(0xFF22C55E),
                   ),
                   const SizedBox(width: 8),
                   _AudienceStat(
                     value: '$reachable',
-                    label: 'ulaşılabilir',
+                    label: l.retargetingReachableLabel,
                     color: const Color(0xFF6366F1),
                   ),
                 ],
@@ -318,12 +327,12 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                         Icon(Icons.search_off_outlined, size: 40, color: AppColors.textSecondary(context)),
                         const SizedBox(height: 10),
                         Text(
-                          'Şu an ulaşılabilecek kimse yok.',
+                          l.retargetingNoAudience,
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'İlanın daha fazla kişi tarafından görüntülenince burada kitlen oluşacak.',
+                          l.retargetingNoAudienceDesc,
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context), height: 1.4),
                         ),
@@ -339,32 +348,68 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Tahmini maliyet',
+                            l.retargetingEstimatedCost,
                             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                           ),
                           const SizedBox(height: 4),
-                          RichText(
-                            text: TextSpan(
+                          if (isFree)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                TextSpan(
-                                  text: '$cost ',
+                                Text(
+                                  l.retargetingCostFree,
                                   style: TextStyle(
                                     fontSize: 28, fontWeight: FontWeight.w900,
-                                    color: AppColors.textPrimary(context),
+                                    color: const Color(0xFF22C55E),
                                   ),
                                 ),
-                                TextSpan(
-                                  text: 'TUCi',
-                                  style: TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w700,
-                                    color: AppColors.textSecondary(context),
+                                const SizedBox(width: 8),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF22C55E).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.3)),
+                                    ),
+                                    child: Text(
+                                      l.retargetingCreditsLeft(creditsLeft),
+                                      style: const TextStyle(
+                                        fontSize: 11, fontWeight: FontWeight.w700,
+                                        color: Color(0xFF22C55E),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
+                            )
+                          else
+                            RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: '$cost ',
+                                    style: TextStyle(
+                                      fontSize: 28, fontWeight: FontWeight.w900,
+                                      color: AppColors.textPrimary(context),
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: 'TUCi',
+                                    style: TextStyle(
+                                      fontSize: 14, fontWeight: FontWeight.w700,
+                                      color: AppColors.textSecondary(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
+                          const SizedBox(height: 2),
                           Text(
-                            '$reachable kişi × 1 TUCi',
+                            isFree
+                                ? l.retargetingFreeSubtitle(reachable)
+                                : l.retargetingPaidSubtitle(reachable),
                             style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
                           ),
                         ],
@@ -408,31 +453,58 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                             ],
                           ),
                         )
-                      : ElevatedButton.icon(
-                          onPressed: _sending ? null : _sendBlast,
-                          icon: _sending
-                              ? const SizedBox(
-                                  width: 16, height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white,
+                      : Column(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _sending ? null : _sendBlast,
+                              icon: _sending
+                                  ? const SizedBox(
+                                      width: 16, height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.send_outlined, size: 18),
+                              label: Text(
+                                _sending ? l.retargetingSending : l.retargetingSendBtnLabel(reachable),
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF6366F1),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                minimumSize: const Size(double.infinity, 0),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  isFree ? Icons.stars_rounded : Icons.account_balance_wallet_outlined,
+                                  size: 13,
+                                  color: isFree ? const Color(0xFF22C55E) : AppColors.textSecondary(context),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isFree
+                                      ? l.retargetingCreditsBadge(creditsLeft)
+                                      : l.retargetingCostBadge(cost),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isFree ? const Color(0xFF22C55E) : AppColors.textSecondary(context),
+                                    fontWeight: isFree ? FontWeight.w600 : FontWeight.normal,
                                   ),
-                                )
-                              : const Icon(Icons.send_outlined, size: 18),
-                          label: Text(
-                            _sending ? 'Gönderiliyor...' : '$reachable kişiye bildirim gönder',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6366F1),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Kullanıcılar "Hâlâ ilgileniyor musun?" bildirimi alacak. Satın almayan kişilere gönderilir.',
+                  l.retargetingFootnote,
                   style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context), height: 1.4),
                   textAlign: TextAlign.center,
                 ),
@@ -445,6 +517,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   Widget _emptyState() {
+    final l = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -452,12 +525,12 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           Icon(Icons.inventory_2_outlined, size: 56, color: AppColors.textSecondary(context)),
           const SizedBox(height: 12),
           Text(
-            'Aktif ilanın bulunamadı.',
+            l.retargetingNoListings,
             style: TextStyle(fontSize: 15, color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 6),
           Text(
-            'Retargeting için en az 1 aktif ilana ihtiyaç var.',
+            l.retargetingNoListingsDesc,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
           ),

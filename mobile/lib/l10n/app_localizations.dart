@@ -4708,6 +4708,138 @@ abstract class AppLocalizations {
   /// **'Bir sonraki blast için 7 gün beklemeniz gerekiyor.'**
   String get retargetingBlastCooldown;
 
+  /// No description provided for @retargetingDialogTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bildirim gönderilsin mi?'**
+  String get retargetingDialogTitle;
+
+  /// No description provided for @retargetingDialogBodyFree.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. {credits} bildirim krediniz var, ücretsiz gönderilecek.'**
+  String retargetingDialogBodyFree(int count, int credits);
+
+  /// No description provided for @retargetingDialogBodyPaid.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından {cost} TUCi düşülecek.'**
+  String retargetingDialogBodyPaid(int count, int cost);
+
+  /// No description provided for @retargetingCostFree.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücretsiz'**
+  String get retargetingCostFree;
+
+  /// No description provided for @retargetingCreditsLeft.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kredi kaldı'**
+  String retargetingCreditsLeft(int count);
+
+  /// No description provided for @retargetingFreeSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kişi — 1 blast krediniz kullanılır'**
+  String retargetingFreeSubtitle(int count);
+
+  /// No description provided for @retargetingPaidSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kişi × 1 TUCi'**
+  String retargetingPaidSubtitle(int count);
+
+  /// No description provided for @retargetingEstimatedCost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tahmini maliyet'**
+  String get retargetingEstimatedCost;
+
+  /// No description provided for @retargetingSending.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönderiliyor...'**
+  String get retargetingSending;
+
+  /// No description provided for @retargetingSendBtnLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kişiye bildirim gönder'**
+  String retargetingSendBtnLabel(int count);
+
+  /// No description provided for @retargetingCreditsBadge.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} kredi kaldı · ücretsiz gönderilir'**
+  String retargetingCreditsBadge(int count);
+
+  /// No description provided for @retargetingCostBadge.
+  ///
+  /// In tr, this message translates to:
+  /// **'{cost} TUCi harcanır'**
+  String retargetingCostBadge(int cost);
+
+  /// No description provided for @retargetingFootnote.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcılar \"Hâlâ ilgileniyor musun?\" bildirimi alacak. Satın almayan kişilere gönderilir.'**
+  String get retargetingFootnote;
+
+  /// No description provided for @retargetingInfoText.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık blast krediniz varsa ücretsiz, bitince her kişi için 1 TUCi harcanır.'**
+  String get retargetingInfoText;
+
+  /// No description provided for @retargetingLast30Days.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son 30 gün içinde'**
+  String get retargetingLast30Days;
+
+  /// No description provided for @retargetingViewerLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'kişi gördü'**
+  String get retargetingViewerLabel;
+
+  /// No description provided for @retargetingBoughtLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'satın aldı'**
+  String get retargetingBoughtLabel;
+
+  /// No description provided for @retargetingReachableLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'ulaşılabilir'**
+  String get retargetingReachableLabel;
+
+  /// No description provided for @retargetingNoAudience.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şu an ulaşılabilecek kimse yok.'**
+  String get retargetingNoAudience;
+
+  /// No description provided for @retargetingNoAudienceDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanın daha fazla kişi tarafından görüntülenince burada kitlen oluşacak.'**
+  String get retargetingNoAudienceDesc;
+
+  /// No description provided for @retargetingNoListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif ilanın bulunamadı.'**
+  String get retargetingNoListings;
+
+  /// No description provided for @retargetingNoListingsDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Retargeting için en az 1 aktif ilana ihtiyaç var.'**
+  String get retargetingNoListingsDesc;
+
   /// No description provided for @errorGenericRetry.
   ///
   /// In tr, this message translates to:

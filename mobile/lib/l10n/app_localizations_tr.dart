@@ -2516,6 +2516,92 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bir sonraki blast için 7 gün beklemeniz gerekiyor.';
 
   @override
+  String get retargetingDialogTitle => 'Bildirim gönderilsin mi?';
+
+  @override
+  String retargetingDialogBodyFree(int count, int credits) {
+    return '$count kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. $credits bildirim krediniz var, ücretsiz gönderilecek.';
+  }
+
+  @override
+  String retargetingDialogBodyPaid(int count, int cost) {
+    return '$count kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından $cost TUCi düşülecek.';
+  }
+
+  @override
+  String get retargetingCostFree => 'Ücretsiz';
+
+  @override
+  String retargetingCreditsLeft(int count) {
+    return '$count kredi kaldı';
+  }
+
+  @override
+  String retargetingFreeSubtitle(int count) {
+    return '$count kişi — 1 blast krediniz kullanılır';
+  }
+
+  @override
+  String retargetingPaidSubtitle(int count) {
+    return '$count kişi × 1 TUCi';
+  }
+
+  @override
+  String get retargetingEstimatedCost => 'Tahmini maliyet';
+
+  @override
+  String get retargetingSending => 'Gönderiliyor...';
+
+  @override
+  String retargetingSendBtnLabel(int count) {
+    return '$count kişiye bildirim gönder';
+  }
+
+  @override
+  String retargetingCreditsBadge(int count) {
+    return '$count kredi kaldı · ücretsiz gönderilir';
+  }
+
+  @override
+  String retargetingCostBadge(int cost) {
+    return '$cost TUCi harcanır';
+  }
+
+  @override
+  String get retargetingFootnote =>
+      'Kullanıcılar \"Hâlâ ilgileniyor musun?\" bildirimi alacak. Satın almayan kişilere gönderilir.';
+
+  @override
+  String get retargetingInfoText =>
+      'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık blast krediniz varsa ücretsiz, bitince her kişi için 1 TUCi harcanır.';
+
+  @override
+  String get retargetingLast30Days => 'Son 30 gün içinde';
+
+  @override
+  String get retargetingViewerLabel => 'kişi gördü';
+
+  @override
+  String get retargetingBoughtLabel => 'satın aldı';
+
+  @override
+  String get retargetingReachableLabel => 'ulaşılabilir';
+
+  @override
+  String get retargetingNoAudience => 'Şu an ulaşılabilecek kimse yok.';
+
+  @override
+  String get retargetingNoAudienceDesc =>
+      'İlanın daha fazla kişi tarafından görüntülenince burada kitlen oluşacak.';
+
+  @override
+  String get retargetingNoListings => 'Aktif ilanın bulunamadı.';
+
+  @override
+  String get retargetingNoListingsDesc =>
+      'Retargeting için en az 1 aktif ilana ihtiyaç var.';
+
+  @override
   String get errorGenericRetry =>
       'Bir hata oluştu, lütfen daha sonra tekrar deneyin.';
 

@@ -2515,6 +2515,92 @@ class AppLocalizationsEn extends AppLocalizations {
       'You need to wait 7 days for the next blast.';
 
   @override
+  String get retargetingDialogTitle => 'Send notification?';
+
+  @override
+  String retargetingDialogBodyFree(int count, int credits) {
+    return 'A \"Still interested?\" notification will be sent to $count people. You have $credits notification credits, sent for free.';
+  }
+
+  @override
+  String retargetingDialogBodyPaid(int count, int cost) {
+    return 'A \"Still interested?\" notification will be sent to $count people. $cost TUCi will be deducted from your wallet.';
+  }
+
+  @override
+  String get retargetingCostFree => 'Free';
+
+  @override
+  String retargetingCreditsLeft(int count) {
+    return '$count credits left';
+  }
+
+  @override
+  String retargetingFreeSubtitle(int count) {
+    return '$count people — 1 blast credit used';
+  }
+
+  @override
+  String retargetingPaidSubtitle(int count) {
+    return '$count people × 1 TUCi';
+  }
+
+  @override
+  String get retargetingEstimatedCost => 'Estimated cost';
+
+  @override
+  String get retargetingSending => 'Sending...';
+
+  @override
+  String retargetingSendBtnLabel(int count) {
+    return 'Send notification to $count people';
+  }
+
+  @override
+  String retargetingCreditsBadge(int count) {
+    return '$count credits left · sent free';
+  }
+
+  @override
+  String retargetingCostBadge(int cost) {
+    return '$cost TUCi will be spent';
+  }
+
+  @override
+  String get retargetingFootnote =>
+      'Users will receive a \"Still interested?\" notification. Only sent to non-buyers.';
+
+  @override
+  String get retargetingInfoText =>
+      'Sends a reminder notification to people who viewed your listing but didn\'t buy. Free if you have monthly blast credits, otherwise 1 TUCi per person.';
+
+  @override
+  String get retargetingLast30Days => 'Last 30 days';
+
+  @override
+  String get retargetingViewerLabel => 'viewed';
+
+  @override
+  String get retargetingBoughtLabel => 'purchased';
+
+  @override
+  String get retargetingReachableLabel => 'reachable';
+
+  @override
+  String get retargetingNoAudience => 'No one reachable right now.';
+
+  @override
+  String get retargetingNoAudienceDesc =>
+      'Your audience will grow as more people view your listing.';
+
+  @override
+  String get retargetingNoListings => 'No active listings found.';
+
+  @override
+  String get retargetingNoListingsDesc =>
+      'You need at least 1 active listing for retargeting.';
+
+  @override
   String get errorGenericRetry => 'An error occurred, please try again later.';
 
   @override

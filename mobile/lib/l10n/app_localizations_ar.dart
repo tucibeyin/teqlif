@@ -2495,6 +2495,92 @@ class AppLocalizationsAr extends AppLocalizations {
       'يجب الانتظار 7 أيام حتى الإرسال التالي.';
 
   @override
+  String get retargetingDialogTitle => 'إرسال إشعار؟';
+
+  @override
+  String retargetingDialogBodyFree(int count, int credits) {
+    return 'سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى $count شخص. لديك $credits رصيد إشعار، سيُرسل مجانًا.';
+  }
+
+  @override
+  String retargetingDialogBodyPaid(int count, int cost) {
+    return 'سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى $count شخص. سيُخصم $cost TUCi من محفظتك.';
+  }
+
+  @override
+  String get retargetingCostFree => 'مجاني';
+
+  @override
+  String retargetingCreditsLeft(int count) {
+    return '$count رصيد متبقٍ';
+  }
+
+  @override
+  String retargetingFreeSubtitle(int count) {
+    return '$count شخص — يُستخدم رصيد بث واحد';
+  }
+
+  @override
+  String retargetingPaidSubtitle(int count) {
+    return '$count شخص × 1 TUCi';
+  }
+
+  @override
+  String get retargetingEstimatedCost => 'التكلفة المتوقعة';
+
+  @override
+  String get retargetingSending => 'جارٍ الإرسال...';
+
+  @override
+  String retargetingSendBtnLabel(int count) {
+    return 'إرسال إشعار إلى $count شخص';
+  }
+
+  @override
+  String retargetingCreditsBadge(int count) {
+    return '$count رصيد متبقٍ · يُرسل مجانًا';
+  }
+
+  @override
+  String retargetingCostBadge(int cost) {
+    return 'سيُنفق $cost TUCi';
+  }
+
+  @override
+  String get retargetingFootnote =>
+      'سيتلقى المستخدمون إشعارًا \"هل لا تزال مهتمًا؟\". يُرسل فقط لغير المشترين.';
+
+  @override
+  String get retargetingInfoText =>
+      'يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 1 TUCi لكل شخص.';
+
+  @override
+  String get retargetingLast30Days => 'آخر 30 يومًا';
+
+  @override
+  String get retargetingViewerLabel => 'شاهد';
+
+  @override
+  String get retargetingBoughtLabel => 'اشترى';
+
+  @override
+  String get retargetingReachableLabel => 'قابل للوصول';
+
+  @override
+  String get retargetingNoAudience => 'لا أحد يمكن الوصول إليه الآن.';
+
+  @override
+  String get retargetingNoAudienceDesc =>
+      'ستنمو قاعدة جمهورك مع زيادة مشاهدات إعلانك.';
+
+  @override
+  String get retargetingNoListings => 'لم يتم العثور على إعلانات نشطة.';
+
+  @override
+  String get retargetingNoListingsDesc =>
+      'تحتاج إلى إعلان نشط واحد على الأقل لإعادة الاستهداف.';
+
+  @override
   String get errorGenericRetry => 'حدث خطأ، يرجى المحاولة مرة أخرى لاحقاً.';
 
   @override
