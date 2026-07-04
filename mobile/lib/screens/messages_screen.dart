@@ -30,10 +30,10 @@ class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
 
   @override
-  State<MessagesScreen> createState() => _MessagesScreenState();
+  State<MessagesScreen> createState() => MessagesScreenState();
 }
 
-class _MessagesScreenState extends State<MessagesScreen>
+class MessagesScreenState extends State<MessagesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _unreadNotifs = 0;
@@ -66,6 +66,12 @@ class _MessagesScreenState extends State<MessagesScreen>
   Future<void> _loadUnreadNotifs() async {
     final count = await NotificationService.getUnreadNotifCount();
     if (mounted) setState(() => _unreadNotifs = count);
+  }
+
+  void switchToNotificationsTab() {
+    if (_tabController.index != 1) {
+      _tabController.animateTo(1);
+    }
   }
 
   void _onTabChanged() {

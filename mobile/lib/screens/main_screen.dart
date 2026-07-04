@@ -44,6 +44,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final GlobalKey<LiveListScreenState> _liveListKey = GlobalKey();
   final GlobalKey<HomeScreenState> _homeKey = GlobalKey();
   final GlobalKey<SearchScreenState> _searchKey = GlobalKey();
+  final GlobalKey<MessagesScreenState> _messagesKey = GlobalKey();
   late final List<Widget> _screens;
 
   @override
@@ -53,7 +54,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       LiveListScreen(key: _liveListKey),
       HomeScreen(key: _homeKey),
       SearchScreen(key: _searchKey),
-      const MessagesScreen(),
+      MessagesScreen(key: _messagesKey),
       const ProfileScreen(),
     ];
     WidgetsBinding.instance.addObserver(this);
@@ -150,36 +151,87 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void _handleNotifNavigation(Map<String, dynamic> data) {
     if (!mounted) return;
     final type = data['type'] as String? ?? '';
+
+    // listing_id veya related_id (sender_id olarak iletilir) — hangisi varsa
+    int? listingId() =>
+        int.tryParse(data['listing_id']?.toString() ?? '') ??
+        int.tryParse(data['sender_id']?.toString() ?? '');
+
+    // stream_id veya related_id (sender_id olarak iletilir) — hangisi varsa
+    int? streamId() =>
+        int.tryParse(data['stream_id']?.toString() ?? '') ??
+        int.tryParse(data['sender_id']?.toString() ?? '');
+
     switch (type) {
+      // ── Canlı yayın bildirimleri ────────────────────────────────────────
       case 'stream_started':
       case 'outbid':
       case 'smart_auction_alert':
-        // Kullanıcı yayın yapıyorsa kendi yayınından çıkarma
+        // Host yayınını kapatma
         if (StreamService.isHosting) break;
-        // stream_id varsa onu kullan; yoksa sender_id'ye (eski bildirimler) düş
-        final sid = int.tryParse(data['stream_id']?.toString() ?? '') ??
-            int.tryParse(data['sender_id']?.toString() ?? '');
+        final sid = streamId();
         if (sid != null) _navigateToLiveStream(sid);
         break;
-      // new_bid: host'a gider, host zaten HostStreamScreen'de teklifi görür.
-      // Viewer moduna yönlendirme yapmamalı — sadece badge güncellenir.
-      case 'new_bid':
-        break;
+
+      // ── İlan bildirimleri ────────────────────────────────────────────────
       case 'new_listing':
       case 'auction_won':
-        final lid = int.tryParse(data['listing_id']?.toString() ?? '') ??
-            int.tryParse(data['sender_id']?.toString() ?? '');
-        if (lid != null) _navigateToListing(lid);
+      case 'search_alert':   // related_id = listing_id, sender_id olarak gelir
+      case 'budget_match':   // related_id = listing_id, sender_id olarak gelir
+      case 'churn_airdrop':  // related_id = listing_id, sender_id olarak gelir
+        final lid = listingId();
+        if (lid != null) {
+          _navigateToListing(lid);
+        } else {
+          _navigateToNotificationsTab();
+        }
         break;
+
+      // ── Mesaj bildirimi ──────────────────────────────────────────────────
       case 'message':
         final senderId = int.tryParse(data['sender_id']?.toString() ?? '');
-        if (senderId != null) _navigateToDirectChat(data);
+        if (senderId != null) {
+          _navigateToDirectChat(data);
+        } else {
+          _navigateToNotificationsTab();
+        }
         break;
+
+      // ── Profil bildirimi ─────────────────────────────────────────────────
       case 'follow':
         final username = data['sender_username'] as String? ?? '';
-        if (username.isNotEmpty) _navigateToProfile(username);
+        if (username.isNotEmpty) {
+          _navigateToProfile(username);
+        } else {
+          _navigateToNotificationsTab();
+        }
+        break;
+
+      // ── new_bid: host HostStreamScreen'de zaten görüyor, nav gerekmez ───
+      case 'new_bid':
+        break;
+
+      // ── Bilgilendirme bildirimleri → Bildirimler sekmesi ─────────────────
+      case 'listing_removed':
+      case 'listing_deactivated':
+      case 'listing_deleted':
+        _navigateToNotificationsTab();
+        break;
+
+      // ── Bilinmeyen tür → Bildirimler sekmesi ─────────────────────────────
+      default:
+        if (type.isNotEmpty) _navigateToNotificationsTab();
         break;
     }
+  }
+
+  void _navigateToNotificationsTab() {
+    if (!mounted) return;
+    setState(() => _currentIndex = 3);
+    // Kısa gecikme: IndexedStack widget'ı build edebilsin
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _messagesKey.currentState?.switchToNotificationsTab();
+    });
   }
 
   void _navigateToLiveStream(int streamId) {
