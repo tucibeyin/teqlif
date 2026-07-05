@@ -517,12 +517,13 @@
 
     <!-- Akordiyon JS Mantığı -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        (function() {
             const accordionHeaders = document.querySelectorAll('.accordion-header');
             
             accordionHeaders.forEach(header => {
-                header.addEventListener('click', () => {
-                    const item = header.parentElement;
+                header.addEventListener('click', function(e) {
+                    e.preventDefault(); // Varsayılan button davranışını engelle
+                    const item = this.parentElement;
                     const content = item.querySelector('.accordion-content');
                     
                     if (item.classList.contains('active')) {
@@ -534,7 +535,7 @@
                     }
                 });
             });
-        });
+        })();
     </script>
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js?v=4"></script>
