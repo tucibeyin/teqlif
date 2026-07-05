@@ -2,7 +2,7 @@ import asyncio
 import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.database import async_session
+from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.user_interest import UserInterest
 from sqlalchemy import update as sa_update
@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def test_onboarding(email: str):
-    async with async_session() as db:
+    async with AsyncSessionLocal() as db:
         res = await db.execute(select(User).where(User.email == email))
         user = res.scalar_one_or_none()
         if not user:
