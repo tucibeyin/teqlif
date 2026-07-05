@@ -354,21 +354,22 @@ async def send_blast(
     # ── Firebase toplu push (fire-and-forget) ─────────────────────────────────
     from app.services.firebase_service import send_push, InvalidFCMTokenError
 
-    if body.stream_id:
-        listing_url = f"/yayin?id={body.stream_id}"
-    elif body.listing_id:
-        listing_url = f"/ilan/{body.listing_id}"
-    else:
-        listing_url = "/home"
-
     async def _send_one(token: str, cid: int) -> None:
         try:
+            extra_data = {
+                "campaign_id": str(cid),
+            }
+            if body.listing_id:
+                extra_data["listing_id"] = str(body.listing_id)
+            if body.stream_id:
+                extra_data["stream_id"] = str(body.stream_id)
+
             await send_push(
                 token=token,
                 title="🔥 Aradığın ürün şu an satışta!",
                 body=f'"{body.title}" — Kaçırmadan incele!',
                 notif_type="lead_blast",
-                extra_data={"url": listing_url, "campaign_id": str(cid)},
+                extra_data=extra_data,
             )
         except InvalidFCMTokenError:
             pass

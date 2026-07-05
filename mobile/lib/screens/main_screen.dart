@@ -227,6 +227,30 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         }
         break;
 
+      // ── Toplu Kitle Bildirimleri (Retargeting) ───────────────────────────
+      case 'lead_blast':
+        final campaignIdRaw = data['campaign_id'];
+        if (campaignIdRaw != null) {
+          final campaignId = int.tryParse(campaignIdRaw.toString());
+          if (campaignId != null) {
+            // Ateşle ve unut (Fire-and-forget)
+            AnalyticsService.trackCampaignClick(campaignId);
+            AnalyticsService.trackEvent('push_click', {'campaign_id': campaignId});
+          }
+        }
+        
+        final lid = listingId();
+        final sid = streamId();
+        
+        if (sid != null && !StreamService.isHosting) {
+          _navigateToLiveStream(sid);
+        } else if (lid != null) {
+          _navigateToListing(lid);
+        } else {
+          _navigateToNotificationsTab();
+        }
+        break;
+
       // ── Mesaj bildirimi ──────────────────────────────────────────────────
       case 'message':
         final senderId = int.tryParse(data['sender_id']?.toString() ?? '');
