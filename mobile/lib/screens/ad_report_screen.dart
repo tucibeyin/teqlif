@@ -456,7 +456,7 @@ class _CtrInsight extends StatelessWidget {
 
   String _insight(AppLocalizations l) {
     if (impressions == 0) return l.adReportInsightNoImpressions;
-    if (ctr >= 5)   return l.adReportInsightGreat(clicks);
+    if (ctr >= 5)   return l.adReportInsightGreat(ctr.round());
     if (ctr >= 2)   return l.adReportInsightGood(clicks, impressions);
     if (ctr >= 0.5) return l.adReportInsightLow(clicks, impressions);
     return l.adReportInsightVeryLow(clicks, impressions);

@@ -4441,7 +4441,7 @@ abstract class AppLocalizations {
   /// No description provided for @adReportInsightGreat.
   ///
   /// In tr, this message translates to:
-  /// **'Harika! İlanınızı gören her 100 kişiden {clicks}\'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.'**
+  /// **'Harika! İlanınızı gören her 100 kişiden yaklaşık {clicks}\'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.'**
   String adReportInsightGreat(int clicks);
 
   /// No description provided for @adReportInsightGood.
@@ -4513,13 +4513,13 @@ abstract class AppLocalizations {
   /// No description provided for @adMetricCategoryAvgCtr.
   ///
   /// In tr, this message translates to:
-  /// **'Kategori Ort. CTR'**
+  /// **'Benzer İlanların İlgi Oranı'**
   String get adMetricCategoryAvgCtr;
 
   /// No description provided for @adMetricBurnRate.
   ///
   /// In tr, this message translates to:
-  /// **'Bütçe Tükenme Hızı'**
+  /// **'Kalan Süre'**
   String get adMetricBurnRate;
 
   /// No description provided for @proBoostSection.

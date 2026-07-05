@@ -2362,7 +2362,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String adReportInsightGreat(int clicks) {
-    return 'Harika! İlanınızı gören her 100 kişiden $clicks\'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.';
+    return 'Harika! İlanınızı gören her 100 kişiden yaklaşık $clicks\'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.';
   }
 
   @override
@@ -2405,10 +2405,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get adMetricBestHour => 'En İyi Saat';
 
   @override
-  String get adMetricCategoryAvgCtr => 'Kategori Ort. CTR';
+  String get adMetricCategoryAvgCtr => 'Benzer İlanların İlgi Oranı';
 
   @override
-  String get adMetricBurnRate => 'Bütçe Tükenme Hızı';
+  String get adMetricBurnRate => 'Kalan Süre';
 
   @override
   String get proBoostSection => 'Öne Çıkarılmış İlan Kredisi';

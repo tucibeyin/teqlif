@@ -1156,7 +1156,7 @@
   },
   "adReportSmartAnalysis": "Akıllı Analiz",
   "adReportInsightNoImpressions": "Henüz kimse ilanınızı görmedi. İlan akışa girdiğinde burası güncellenecek.",
-  "adReportInsightGreat": "Harika! İlanınızı gören her 100 kişiden {clicks}'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.",
+  "adReportInsightGreat": "Harika! İlanınızı gören her 100 kişiden yaklaşık {clicks}'i tıkladı — bu çok iyi bir ilgi oranı. İlan başlığı ve görseli alıcıları çekiyor.",
   "@adReportInsightGreat": {
     "placeholders": {
       "clicks": {
@@ -1205,8 +1205,8 @@
   "proMetricReturnViewers": "Geri Dönen İzleyiciler",
   "adMetricDailyTrend": "Günlük CTR Trendi",
   "adMetricBestHour": "En İyi Saat",
-  "adMetricCategoryAvgCtr": "Kategori Ort. CTR",
-  "adMetricBurnRate": "Bütçe Tükenme Hızı",
+  "adMetricCategoryAvgCtr": "Benzer İlanların İlgi Oranı",
+  "adMetricBurnRate": "Kalan Süre",
   "proBoostSection": "Öne Çıkarılmış İlan Kredisi",
   "boostCreditEmpty": "Bu ay ilan öne çıkarma krediniz doldu. Yeni ayda yenilenir.",
   "boostCreditUsed": "{used} öne çıkarma kullandınız, {remaining} hakkınız kaldı.",

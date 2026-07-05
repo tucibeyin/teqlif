@@ -453,6 +453,8 @@
   "auctionContinueBtn": "Continue",
   "auctionAccepted": "Bid accepted! Summary sent to chat.",
   "buyItNowAccepted": "Buy It Now request approved!",
+  "errorPhotoUpload": "Failed to upload photo. Please try again.",
+  "errorInsufficientBalance": "Insufficient balance. Please top up your balance.",
   "errorPhotoCapture": "Could not capture photo.",
   "auctionEndTitle": "End Auction",
   "auctionEndDesc": "The result will be saved and the auction will close.",
@@ -1155,7 +1157,7 @@
   },
   "adReportSmartAnalysis": "Smart Analysis",
   "adReportInsightNoImpressions": "No one has seen your listing yet. This will update once the listing enters the feed.",
-  "adReportInsightGreat": "Great! {clicks} out of every 100 people who saw your listing clicked on it — that's an excellent engagement rate. Your title and photo are attracting buyers.",
+  "adReportInsightGreat": "Great! About {clicks} out of every 100 people who saw your listing clicked on it — that's an excellent engagement rate. Your title and photo are attracting buyers.",
   "@adReportInsightGreat": {
     "placeholders": {
       "clicks": {
@@ -1204,8 +1206,8 @@
   "proMetricReturnViewers": "Return Viewers",
   "adMetricDailyTrend": "Daily CTR Trend",
   "adMetricBestHour": "Best Hour",
-  "adMetricCategoryAvgCtr": "Category Avg CTR",
-  "adMetricBurnRate": "Budget Burn Rate",
+  "adMetricCategoryAvgCtr": "Similar Listings' Interest",
+  "adMetricBurnRate": "Time Remaining",
   "proBoostSection": "Promoted Listing Credits",
   "boostCreditEmpty": "Your listing boost credits are used up for this month. Renewed next month.",
   "boostCreditUsed": "Used {used} boosts, {remaining} remaining.",
