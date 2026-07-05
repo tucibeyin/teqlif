@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../config/theme.dart';
 
 import '../config/api.dart';
 
@@ -30,24 +31,33 @@ class SellerAvatarCard extends StatelessWidget {
             Stack(
               children: [
                 Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
+                  width: 62,
+                  height: 62,
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.border(context),
-                      width: 1.0,
+                    gradient: LinearGradient(
+                      colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
-                  child: ClipOval(
-                    child: avatarUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: avatarUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => _buildPlaceholder(context, initial),
-                            errorWidget: (context, url, error) => _buildPlaceholder(context, initial),
-                          )
-                        : _buildPlaceholder(context, initial),
+                  padding: const EdgeInsets.all(2.5),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.surface(context),
+                    ),
+                    padding: const EdgeInsets.all(1.5),
+                    child: ClipOval(
+                      child: avatarUrl != null
+                          ? CachedNetworkImage(
+                              imageUrl: avatarUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => _buildPlaceholder(context, initial),
+                              errorWidget: (context, url, error) => _buildPlaceholder(context, initial),
+                            )
+                          : _buildPlaceholder(context, initial),
+                    ),
                   ),
                 ),
                 if (isPremium)
@@ -97,11 +107,14 @@ class SellerAvatarCard extends StatelessWidget {
 
   Widget _buildPlaceholder(BuildContext context, String initial) {
     return Container(
-      color: AppColors.surfaceVariant(context),
-      child: Center(
-        child: Text(
-          initial,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+      color: AppColors.primaryBg(context),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: kPrimary,
+          fontWeight: FontWeight.w700,
+          fontSize: 20,
         ),
       ),
     );
