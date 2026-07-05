@@ -4,7 +4,7 @@ from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
-from app.main import app
+from main import app
 from app.utils.auth import create_access_token
 
 async def main():
