@@ -23,7 +23,11 @@ async def test_mass_notification():
         print("✅ Giriş Başarılı, Token Alındı.\n")
 
         print("2. 'Teqlif Deneme 2' İlanı Bulunuyor...")
-        listings_resp = await client.get("/api/listings/my-listings", headers=headers)
+        listings_resp = await client.get("/api/listings/my", headers=headers)
+        if listings_resp.status_code != 200:
+            print("❌ İlanlar çekilemedi:", listings_resp.text)
+            return
+            
         listings = listings_resp.json()
         
         target_listing = next((l for l in listings if l["title"] == LISTING_TITLE), None)
