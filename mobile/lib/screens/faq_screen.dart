@@ -136,14 +136,7 @@ class FaqScreen extends StatelessWidget {
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: Text(
-                              item.answer,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
-                                height: 1.5,
-                              ),
-                            ),
+                            child: _buildAnswerWithIcons(context, item.answer),
                           ),
                         ],
                       ),
@@ -173,4 +166,56 @@ class _FaqItem {
   final IconData? icon;
 
   _FaqItem({required this.question, required this.answer, this.icon});
+}
+
+Widget _buildAnswerWithIcons(BuildContext context, String text) {
+  final TextStyle style = TextStyle(
+    fontSize: 13,
+    color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+    height: 1.5,
+  );
+
+  final Map<String, IconData> iconMap = {
+    'Mavi Tik': Icons.verified,
+    'teqlif PRO': Icons.workspace_premium,
+    'TUCi': Icons.monetization_on,
+    'Öne Çıkar (Blast)': Icons.rocket_launch,
+    'Sıcak Talep': Icons.local_fire_department_outlined,
+    'Otomatik Teklif': Icons.gavel,
+  };
+
+  final pattern = iconMap.keys.map((k) => RegExp.escape(k)).join('|');
+  final regex = RegExp('($pattern)');
+
+  final List<InlineSpan> spans = [];
+  int lastMatchEnd = 0;
+
+  for (final match in regex.allMatches(text)) {
+    if (match.start > lastMatchEnd) {
+      spans.add(TextSpan(text: text.substring(lastMatchEnd, match.start)));
+    }
+
+    final String matchedWord = match.group(0)!;
+    final IconData icon = iconMap[matchedWord]!;
+
+    spans.add(TextSpan(text: '$matchedWord ('));
+    spans.add(
+      WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Icon(icon, size: 14, color: Theme.of(context).primaryColor),
+        ),
+      ),
+    );
+    spans.add(const TextSpan(text: ')'));
+
+    lastMatchEnd = match.end;
+  }
+
+  if (lastMatchEnd < text.length) {
+    spans.add(TextSpan(text: text.substring(lastMatchEnd)));
+  }
+
+  return Text.rich(TextSpan(children: spans), style: style);
 }
