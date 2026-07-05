@@ -717,7 +717,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                                 borderRadius: BorderRadius.circular(8),
                                 child: _images[i] is String
                                   ? Image.network(
-                                      '$kBaseUrl${_images[i]}',
+                                      imgUrl(_images[i] as String),
                                       width: 90,
                                       height: 90,
                                       fit: BoxFit.cover,
