@@ -495,7 +495,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get giftInsufficientBalance =>
-      'Bakiyeniz yetersiz. Hediye göndermek için TUCi ([ICON_TUCI]) satın alın.';
+      'Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.';
 
   @override
   String get giftLoadBalanceButton => 'Bakiye Yükle';
@@ -1368,7 +1368,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsProActive => 'AKTİF';
 
   @override
-  String get walletTitle => 'TUCi ([ICON_TUCI]) Cüzdanım';
+  String get walletTitle => 'TUCi Cüzdanım';
 
   @override
   String get walletBalance => 'Güncel Bakiye';
@@ -1404,14 +1404,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get walletTxnWebTopup => 'Web yükleme';
 
   @override
-  String get walletComingSoonLabel => 'TUCi ([ICON_TUCI]) Satın Alma Yakında!';
+  String get walletComingSoonLabel => 'TUCi Satın Alma Yakında!';
 
   @override
   String get walletComingSoonDesc =>
-      'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi ([ICON_TUCI]) başlangıç bakiyesi tanımlandı.';
+      'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.';
 
   @override
-  String get walletBuyBtn => 'TUCi ([ICON_TUCI]) Satın Alma Yakında';
+  String get walletBuyBtn => 'TUCi Satın Alma Yakında';
 
   @override
   String get reportLoading => 'Yayın analizi hazırlanıyor…';
@@ -1629,14 +1629,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get blastConfirmCostFreeLabel => 'Ücret';
 
   @override
-  String get blastConfirmCostPaidLabel => 'TUCi ([ICON_TUCI]) Maliyeti';
+  String get blastConfirmCostPaidLabel => 'TUCi Maliyeti';
 
   @override
   String get blastSubtitleFree => 'Yayın başladığında push bildirim • Ücretsiz';
 
   @override
   String blastSubtitlePaid(int cost) {
-    return 'Yayın başladığında push bildirim • $cost TUCi ([ICON_TUCI])';
+    return 'Yayın başladığında push bildirim • $cost TUCi';
   }
 
   @override
@@ -1649,7 +1649,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String blastBtnPaid(int count, int cost) {
-    return '$count Hazır Alıcı — Bildirim Gönder ($cost TUCi ([ICON_TUCI]))';
+    return '$count Hazır Alıcı — Bildirim Gönder ($cost TUCi)';
   }
 
   @override
@@ -1659,7 +1659,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String blastConfirmBodyPaid(int count, int cost) {
-    return '$count hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: $cost TUCi ([ICON_TUCI])';
+    return '$count hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: $cost TUCi';
   }
 
   @override
@@ -2262,13 +2262,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get boostDialogTotalBudget => 'Toplam Bütçe';
 
   @override
-  String get boostDialogTotalBudgetValue => '50 TUCi ([ICON_TUCI])';
+  String get boostDialogTotalBudgetValue => '50 TUCi';
 
   @override
   String get boostDialogCpc => 'Tıklama Başı Maliyet';
 
   @override
-  String get boostDialogCpcValue => '1 TUCi ([ICON_TUCI])';
+  String get boostDialogCpcValue => '1 TUCi';
 
   @override
   String get boostDialogEstClicks => 'Tahmini Tıklama';
@@ -2304,20 +2304,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get boostDialogPaidCost => 'Maliyet';
 
   @override
-  String get boostDialogPaidCostValue => '50 TUCi ([ICON_TUCI])';
+  String get boostDialogPaidCostValue => '50 TUCi';
 
   @override
   String get boostDialogPaidBalance => 'Mevcut Bakiyeniz';
 
   @override
-  String get boostDialogPaidConfirm => '50 TUCi ([ICON_TUCI]) Öde ve Başlat';
+  String get boostDialogPaidConfirm => '50 TUCi Öde ve Başlat';
 
   @override
   String get boostSuccessFree => '🔥 İlanınız ücretsiz olarak öne çıkarıldı!';
 
   @override
   String get boostSuccessPaid =>
-      '🔥 İlanınız öne çıkarıldı! (50 TUCi ([ICON_TUCI]) harcandı)';
+      '🔥 İlanınız öne çıkarıldı! (50 TUCi harcandı)';
 
   @override
   String get boostSuccess => '🔥 İlanınız öne çıkarıldı!';
@@ -2330,7 +2330,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get boostErrorInsufficientTuci =>
-      'Yetersiz TUCi ([ICON_TUCI]) bakiyesi. Ücretli boost için 50 TUCi ([ICON_TUCI]) gerekiyor.';
+      'Yetersiz TUCi bakiyesi. Ücretli boost için 50 TUCi gerekiyor.';
 
   @override
   String get boostBtnStart => 'İlanı Öne Çıkar';
@@ -2553,17 +2553,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String retargetingDialogBodyPaid(int count, int cost) {
-    return '$count kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından $cost TUCi ([ICON_TUCI]) düşülecek.';
+    return '$count kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından $cost TUCi düşülecek.';
   }
 
   @override
   String retargetingDialogBodyKarma(int count, int free, int cost) {
-    return '$count kişiye bildirim gönderilecek.\n\n$free kredi kullanılacak + $cost TUCi ([ICON_TUCI]) ödenecek.';
+    return '$count kişiye bildirim gönderilecek.\n\n$free kredi kullanılacak + $cost TUCi ödenecek.';
   }
 
   @override
   String retargetingDialogBodyInsufficient(int cost, int balance) {
-    return 'Yetersiz TUCi ([ICON_TUCI]) bakiyesi.\nGerekli: $cost TUCi ([ICON_TUCI]) | Mevcut: $balance TUCi ([ICON_TUCI])';
+    return 'Yetersiz TUCi bakiyesi.\nGerekli: $cost TUCi | Mevcut: $balance TUCi';
   }
 
   @override
@@ -2581,7 +2581,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String retargetingPaidSubtitle(int count) {
-    return '$count kişi × 10 TUCi ([ICON_TUCI])';
+    return '$count kişi × 10 TUCi';
   }
 
   @override
@@ -2602,7 +2602,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String retargetingCostBadge(int cost) {
-    return '$cost TUCi ([ICON_TUCI]) harcanır';
+    return '$cost TUCi harcanır';
   }
 
   @override
@@ -2611,7 +2611,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get retargetingInfoText =>
-      'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi ([ICON_TUCI]) harcanır.';
+      'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.';
 
   @override
   String get retargetingLast30Days => 'Son 30 gün içinde';
@@ -2717,12 +2717,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profileInviteCodeError => 'Davet kodu alınamadı, tekrar deneyin.';
 
   @override
-  String get profileInviteTitle =>
-      'Arkadaşlarını Davet Et, TUCi ([ICON_TUCI]) Kazan!';
+  String get profileInviteTitle => 'Arkadaşlarını Davet Et, TUCi Kazan!';
 
   @override
   String get profileInviteSubtitle =>
-      'Her davet için +50, arkadaşın +10 TUCi ([ICON_TUCI]) kazanır';
+      'Her davet için +50, arkadaşın +10 TUCi kazanır';
 
   @override
   String get profilePickGallery => 'Galeriden Seç';
@@ -2751,7 +2750,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String tuciSpent(int count) {
-    return '$count TUCi ([ICON_TUCI]) harcandı.';
+    return '$count TUCi harcandı.';
   }
 
   @override
@@ -2792,7 +2791,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String listingDeactivateCostHint(int cost) {
-    return 'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için $cost TUCi ([ICON_TUCI]) bakiyenizden düşülecektir.';
+    return 'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için $cost TUCi bakiyenizden düşülecektir.';
   }
 
   @override
@@ -2812,12 +2811,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String listingReactivatePaidPro(int cost) {
-    return 'Bu ayki hakkınız doldu. $cost TUCi ([ICON_TUCI]) ödenecek.';
+    return 'Bu ayki hakkınız doldu. $cost TUCi ödenecek.';
   }
 
   @override
   String listingReactivatePaidNormal(int cost, int balance) {
-    return '$cost TUCi ([ICON_TUCI]) ödenecek. Bakiyeniz: $balance TUCi ([ICON_TUCI]).';
+    return '$cost TUCi ödenecek. Bakiyeniz: $balance TUCi.';
   }
 
   @override
@@ -2826,7 +2825,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listingReactivateInsufficientBalance =>
-      'Yetersiz bakiye. Devam etmek için TUCi ([ICON_TUCI]) yükleyin.';
+      'Yetersiz bakiye. Devam etmek için TUCi yükleyin.';
 
   @override
   String get listingReactivateConfirm => 'Aktif Yap';
@@ -3080,8 +3079,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yeniden Hedefleme: İlgili alıcılara doğrudan hatırlatma veya indirim mesajı gönderimi.';
 
   @override
-  String get proToolHotDemandTitle =>
-      'Sıcak Talep ([ICON_HOTDEMAND]) (Lead Gen)';
+  String get proToolHotDemandTitle => 'Sıcak Talep (Lead Gen)';
 
   @override
   String get proToolHotDemandDesc =>

@@ -496,7 +496,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get giftInsufficientBalance =>
-      'Insufficient balance. Purchase TUCi ([ICON_TUCI]) to send a gift.';
+      'Insufficient balance. Purchase TUCi to send a gift.';
 
   @override
   String get giftLoadBalanceButton => 'Load Balance';
@@ -1370,7 +1370,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsProActive => 'ACTIVE';
 
   @override
-  String get walletTitle => 'My TUCi ([ICON_TUCI]) Wallet';
+  String get walletTitle => 'My TUCi Wallet';
 
   @override
   String get walletBalance => 'Current Balance';
@@ -1406,15 +1406,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletTxnWebTopup => 'Web top-up';
 
   @override
-  String get walletComingSoonLabel =>
-      'TUCi ([ICON_TUCI]) Purchase Coming Soon!';
+  String get walletComingSoonLabel => 'TUCi Purchase Coming Soon!';
 
   @override
   String get walletComingSoonDesc =>
-      'Our payment infrastructure is being prepared. All users currently start with 100 TUCi ([ICON_TUCI]) balance.';
+      'Our payment infrastructure is being prepared. All users currently start with 100 TUCi balance.';
 
   @override
-  String get walletBuyBtn => 'TUCi ([ICON_TUCI]) Purchase Coming Soon';
+  String get walletBuyBtn => 'TUCi Purchase Coming Soon';
 
   @override
   String get reportLoading => 'Preparing stream analysis…';
@@ -1589,7 +1588,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proCreditsSummaryTitle => 'Remaining Credits';
 
   @override
-  String get proCreditsBlastName => 'Audience Invite (Blast ([ICON_BLAST]))';
+  String get proCreditsBlastName => 'Audience Invite (Blast)';
 
   @override
   String get proCreditsBoostName => 'Promoted Listing';
@@ -1630,14 +1629,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blastConfirmCostFreeLabel => 'Cost';
 
   @override
-  String get blastConfirmCostPaidLabel => 'TUCi ([ICON_TUCI]) Cost';
+  String get blastConfirmCostPaidLabel => 'TUCi Cost';
 
   @override
   String get blastSubtitleFree => 'Push notification when stream starts • Free';
 
   @override
   String blastSubtitlePaid(int cost) {
-    return 'Push notification when stream starts • $cost TUCi ([ICON_TUCI])';
+    return 'Push notification when stream starts • $cost TUCi';
   }
 
   @override
@@ -1650,7 +1649,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String blastBtnPaid(int count, int cost) {
-    return '$count Ready Buyers — Send Notification ($cost TUCi ([ICON_TUCI]))';
+    return '$count Ready Buyers — Send Notification ($cost TUCi)';
   }
 
   @override
@@ -1660,7 +1659,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String blastConfirmBodyPaid(int count, int cost) {
-    return '$count ready buyers will be notified.\n\nTotal cost: $cost TUCi ([ICON_TUCI])';
+    return '$count ready buyers will be notified.\n\nTotal cost: $cost TUCi';
   }
 
   @override
@@ -2263,13 +2262,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get boostDialogTotalBudget => 'Total Budget';
 
   @override
-  String get boostDialogTotalBudgetValue => '50 TUCi ([ICON_TUCI])';
+  String get boostDialogTotalBudgetValue => '50 TUCi';
 
   @override
   String get boostDialogCpc => 'Cost per Click';
 
   @override
-  String get boostDialogCpcValue => '1 TUCi ([ICON_TUCI])';
+  String get boostDialogCpcValue => '1 TUCi';
 
   @override
   String get boostDialogEstClicks => 'Estimated Clicks';
@@ -2305,20 +2304,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get boostDialogPaidCost => 'Cost';
 
   @override
-  String get boostDialogPaidCostValue => '50 TUCi ([ICON_TUCI])';
+  String get boostDialogPaidCostValue => '50 TUCi';
 
   @override
   String get boostDialogPaidBalance => 'Your Current Balance';
 
   @override
-  String get boostDialogPaidConfirm => 'Pay 50 TUCi ([ICON_TUCI]) & Start';
+  String get boostDialogPaidConfirm => 'Pay 50 TUCi & Start';
 
   @override
   String get boostSuccessFree => '🔥 Your listing is now featured for free!';
 
   @override
   String get boostSuccessPaid =>
-      '🔥 Your listing is now featured! (50 TUCi ([ICON_TUCI]) spent)';
+      '🔥 Your listing is now featured! (50 TUCi spent)';
 
   @override
   String get boostSuccess => '🔥 Your listing is now featured!';
@@ -2331,7 +2330,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get boostErrorInsufficientTuci =>
-      'Insufficient TUCi ([ICON_TUCI]) balance. 50 TUCi ([ICON_TUCI]) is required for a paid boost.';
+      'Insufficient TUCi balance. 50 TUCi is required for a paid boost.';
 
   @override
   String get boostBtnStart => 'Promote Listing';
@@ -2553,17 +2552,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String retargetingDialogBodyPaid(int count, int cost) {
-    return 'A \"Still interested?\" notification will be sent to $count people. $cost TUCi ([ICON_TUCI]) will be deducted from your wallet.';
+    return 'A \"Still interested?\" notification will be sent to $count people. $cost TUCi will be deducted from your wallet.';
   }
 
   @override
   String retargetingDialogBodyKarma(int count, int free, int cost) {
-    return 'A notification will be sent to $count people.\n\n$free credit(s) will be used + $cost TUCi ([ICON_TUCI]) will be charged.';
+    return 'A notification will be sent to $count people.\n\n$free credit(s) will be used + $cost TUCi will be charged.';
   }
 
   @override
   String retargetingDialogBodyInsufficient(int cost, int balance) {
-    return 'Insufficient TUCi ([ICON_TUCI]) balance.\nRequired: $cost TUCi ([ICON_TUCI]) | Available: $balance TUCi ([ICON_TUCI])';
+    return 'Insufficient TUCi balance.\nRequired: $cost TUCi | Available: $balance TUCi';
   }
 
   @override
@@ -2581,7 +2580,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String retargetingPaidSubtitle(int count) {
-    return '$count people × 10 TUCi ([ICON_TUCI])';
+    return '$count people × 10 TUCi';
   }
 
   @override
@@ -2602,7 +2601,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String retargetingCostBadge(int cost) {
-    return '$cost TUCi ([ICON_TUCI]) will be spent';
+    return '$cost TUCi will be spent';
   }
 
   @override
@@ -2611,7 +2610,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retargetingInfoText =>
-      'Sends a reminder notification to people who viewed your listing but didn\'t buy. Free if you have monthly broadcast credits, otherwise 10 TUCi ([ICON_TUCI]) per person.';
+      'Sends a reminder notification to people who viewed your listing but didn\'t buy. Free if you have monthly broadcast credits, otherwise 10 TUCi per person.';
 
   @override
   String get retargetingLast30Days => 'Last 30 days';
@@ -2718,11 +2717,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Invite code could not be retrieved, try again.';
 
   @override
-  String get profileInviteTitle => 'Invite Friends, Earn TUCi ([ICON_TUCI])!';
+  String get profileInviteTitle => 'Invite Friends, Earn TUCi!';
 
   @override
   String get profileInviteSubtitle =>
-      '+50 TUCi ([ICON_TUCI]) per invite, your friend gets +10 TUCi ([ICON_TUCI])';
+      '+50 TUCi per invite, your friend gets +10 TUCi';
 
   @override
   String get profilePickGallery => 'Pick from Gallery';
@@ -2751,7 +2750,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String tuciSpent(int count) {
-    return '$count TUCi ([ICON_TUCI]) spent.';
+    return '$count TUCi spent.';
   }
 
   @override
@@ -2792,7 +2791,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String listingDeactivateCostHint(int cost) {
-    return 'Warning: Your 30-day free window has expired. Reactivating will cost $cost TUCi ([ICON_TUCI]) from your balance.';
+    return 'Warning: Your 30-day free window has expired. Reactivating will cost $cost TUCi from your balance.';
   }
 
   @override
@@ -2812,12 +2811,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String listingReactivatePaidPro(int cost) {
-    return 'Monthly credits exhausted. $cost TUCi ([ICON_TUCI]) will be charged.';
+    return 'Monthly credits exhausted. $cost TUCi will be charged.';
   }
 
   @override
   String listingReactivatePaidNormal(int cost, int balance) {
-    return '$cost TUCi ([ICON_TUCI]) will be charged. Balance: $balance TUCi ([ICON_TUCI]).';
+    return '$cost TUCi will be charged. Balance: $balance TUCi.';
   }
 
   @override
@@ -2826,7 +2825,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listingReactivateInsufficientBalance =>
-      'Insufficient balance. Top up TUCi ([ICON_TUCI]) to continue.';
+      'Insufficient balance. Top up TUCi to continue.';
 
   @override
   String get listingReactivateConfirm => 'Activate';
@@ -3076,8 +3075,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Retargeting: Send reminders or discount messages directly to interested buyers.';
 
   @override
-  String get proToolHotDemandTitle =>
-      'Hot Demand ([ICON_HOTDEMAND]) (Lead Gen)';
+  String get proToolHotDemandTitle => 'Hot Demand (Lead Gen)';
 
   @override
   String get proToolHotDemandDesc =>
