@@ -225,7 +225,7 @@ class BlastRequest(BaseModel):
     category: str = Field(default="")
     listing_id: int | None = Field(default=None)
     stream_id: int | None = Field(default=None)
-    estimated_cost: int = Field(ge=0)
+    estimated_cost: int = Field(default=0, ge=0)
     recipient_count: int | None = Field(default=None, ge=1)  # kullanıcının seçtiği alıcı sayısı
 
 
@@ -499,8 +499,8 @@ async def retargeting_audience(
 
 class RetargetingBlastBody(BaseModel):
     listing_id: int
-    estimated_audience: int = Field(ge=0)
-    estimated_cost: int = Field(ge=0)
+    estimated_audience: int = Field(default=0, ge=0)
+    estimated_cost: int = Field(default=0, ge=0)
     recipient_count: int | None = Field(default=None, ge=1)  # kullanıcının seçtiği alıcı sayısı
 
 
