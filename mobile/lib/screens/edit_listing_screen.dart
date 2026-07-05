@@ -808,7 +808,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(l.videoLabel(_maxVideoDurationSecs), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      if (_video == null && !_videoUploading)
+                      if (_video == null && _videoUploadUrl == null && !_videoUploading)
                         TextButton.icon(
                           onPressed: _showVideoSourceSheet,
                           icon: const Icon(Icons.videocam_outlined, size: 18),
@@ -816,7 +816,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                         ),
                     ],
                   ),
-                  if (_video != null) ...[
+                  if (_video != null || _videoUploadUrl != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
