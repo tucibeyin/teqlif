@@ -1892,55 +1892,90 @@ async def get_pro_metrics(
 
     uid = current_user.id
 
-    # 1. Ortalama detay inceleme süresi (analytics_events: detail_dwell event)
-    dwell_result = await db.execute(sql_text("""
-        SELECT AVG((event_metadata->>'duration_seconds')::float) AS avg_dwell
-        FROM analytics_events ae
-        INNER JOIN listings l ON l.id = (ae.event_metadata->>'item_id')::int
-        WHERE l.user_id = :uid
-          AND ae.event_type = 'detail_dwell'
-          AND ae.created_at > NOW() - INTERVAL '30 days'
-          AND ae.event_metadata->>'duration_seconds' IS NOT NULL
+    # 0. Kullanıcının aktif ilanlarını ve saatlerini çek
+    listings_result = await db.execute(sql_text("""
+        SELECT id, category, EXTRACT(HOUR FROM created_at) AS hr 
+        FROM listings 
+        WHERE user_id = :uid AND is_active = TRUE AND is_deleted = FALSE
     """), {"uid": uid})
-    dwell_row = dwell_result.fetchone()
-    avg_dwell = round(float(dwell_row[0]), 1) if dwell_row and dwell_row[0] else None
+    active_listings = listings_result.fetchall()
+    
+    listing_ids = [str(r.id) for r in active_listings]
+    categories = list(set([r.category for r in active_listings if r.category]))
+    
+    avg_dwell = None
+    search_visibility = []
+    best_hour = None
 
-    # 2. Arama görünürlüğü — kullanıcının kategorisinde kaç arama yapıldı (proxy)
-    vis_result = await db.execute(sql_text("""
-        SELECT l.category, COUNT(DISTINCT ae.id) AS search_count
-        FROM listings l
-        INNER JOIN analytics_events ae
-            ON ae.event_type = 'search'
-            AND ae.event_metadata->>'category' = l.category
-            AND ae.created_at > NOW() - INTERVAL '30 days'
-        WHERE l.user_id = :uid AND l.is_active = TRUE AND l.is_deleted = FALSE
-        GROUP BY l.category
-        ORDER BY search_count DESC
-        LIMIT 5
-    """), {"uid": uid})
-    search_visibility = [{"category": r[0], "search_count": int(r[1])} for r in vis_result.all()]
+    if listing_ids:
+        ids_str = ",".join(listing_ids)
+        try:
+            from app.database_clickhouse import get_clickhouse_client
+            ch = await get_clickhouse_client()
 
-    # 3. En iyi paylaşım saati — en yüksek CTR'a sahip saat
-    hour_result = await db.execute(sql_text("""
-        SELECT
-            EXTRACT(HOUR FROM l.created_at) AS hour,
-            COUNT(DISTINCT ae.id) AS clicks,
-            COUNT(DISTINCT imp.user_id) AS impressions
-        FROM listings l
-        LEFT JOIN analytics_events ae
-            ON ae.event_type = 'click'
-            AND ae.event_metadata->>'item_id' = l.id::text
-            AND ae.created_at > NOW() - INTERVAL '30 days'
-        LEFT JOIN listing_impressions imp ON imp.listing_id = l.id
-        WHERE l.user_id = :uid
-          AND l.created_at > NOW() - INTERVAL '90 days'
-        GROUP BY hour
-        HAVING COUNT(DISTINCT imp.user_id) >= 10
-        ORDER BY (COUNT(DISTINCT ae.id)::float / NULLIF(COUNT(DISTINCT imp.user_id), 0)) DESC
-        LIMIT 1
-    """), {"uid": uid})
-    hour_row = hour_result.fetchone()
-    best_hour = int(hour_row[0]) if hour_row else None
+            # 1. Ortalama detay inceleme süresi (avg_detail_dwell)
+            dwell_ch = await ch.query(f"""
+                SELECT AVG(duration_seconds)
+                FROM user_events
+                WHERE item_type = 'listing'
+                  AND item_id IN ({ids_str})
+                  AND event_type = 'dwell'
+                  AND timestamp >= now() - INTERVAL 30 DAY
+            """)
+            if dwell_ch.result_rows and dwell_ch.result_rows[0][0] is not None:
+                avg_dwell = round(float(dwell_ch.result_rows[0][0]), 1)
+
+            # 2. Arama görünürlüğü (search_visibility)
+            if categories:
+                cats_str = ",".join([f"'{c}'" for c in categories])
+                search_ch = await ch.query(f"""
+                    SELECT category, count(*) AS search_count
+                    FROM search_events
+                    WHERE category IN ({cats_str})
+                      AND timestamp >= now() - INTERVAL 30 DAY
+                    GROUP BY category
+                    ORDER BY search_count DESC
+                    LIMIT 5
+                """)
+                search_visibility = [{"category": r[0], "search_count": int(r[1])} for r in search_ch.result_rows]
+
+            # 3. En iyi paylaşım saati (best_posting_hour)
+            stats_ch = await ch.query(f"""
+                SELECT item_id, 
+                       countIf(event_type = 'view') AS views,
+                       countIf(event_type = 'click') AS clicks
+                FROM user_events
+                WHERE item_type = 'listing'
+                  AND item_id IN ({ids_str})
+                  AND timestamp >= now() - INTERVAL 90 DAY
+                GROUP BY item_id
+            """)
+            
+            hour_stats = {}
+            item_hour_map = {int(r.id): int(r.hr) for r in active_listings}
+            
+            for row in stats_ch.result_rows:
+                item_id = int(row[0])
+                views = int(row[1])
+                clicks = int(row[2])
+                hr = item_hour_map.get(item_id)
+                
+                if hr is not None:
+                    if hr not in hour_stats:
+                        hour_stats[hr] = {"views": 0, "clicks": 0}
+                    hour_stats[hr]["views"] += views
+                    hour_stats[hr]["clicks"] += clicks
+            
+            best_ctr = -1.0
+            for hr, stats in hour_stats.items():
+                if stats["views"] >= 10:
+                    ctr = stats["clicks"] / stats["views"]
+                    if ctr > best_ctr:
+                        best_ctr = ctr
+                        best_hour = hr
+                        
+        except Exception as exc:
+            logger.warning("[ProMetrics] ClickHouse analitiği başarısız: %s", exc)
 
     # 4. Geri dönen izleyici oranı (yayın stream'lerinden)
     return_viewer_rate = None
