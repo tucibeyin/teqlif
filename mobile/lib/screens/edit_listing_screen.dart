@@ -715,12 +715,19 @@ class _EditListingScreenState extends State<EditListingScreen> {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  _images[i],
-                                  width: 90,
-                                  height: 90,
-                                  fit: BoxFit.cover,
-                                ),
+                                child: _images[i] is String
+                                  ? Image.network(
+                                      '$kBaseUrl${_images[i]}',
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.file(
+                                      _images[i] as File,
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                    ),
                               ),
                               Positioned(
                                 top: 2,
