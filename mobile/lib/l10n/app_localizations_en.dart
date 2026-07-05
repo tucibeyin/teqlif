@@ -1614,7 +1614,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String blastConfirmBodyFree(int count) {
-    return '$count ready buyers will be notified.\n\nThis will use one of your free blasts.';
+    return '$count ready buyers will be notified.\n\nThis will use one of your free broadcast notifications.';
   }
 
   @override
@@ -2512,7 +2512,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retargetingBlastCooldown =>
-      'You need to wait 7 days for the next blast.';
+      'You need to wait 7 days for the next broadcast.';
 
   @override
   String get retargetingDialogTitle => 'Send notification?';
@@ -2547,7 +2547,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String retargetingFreeSubtitle(int count) {
-    return '$count people — 1 blast credit used';
+    return '$count people — 1 broadcast credit used';
   }
 
   @override
@@ -2582,7 +2582,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retargetingInfoText =>
-      'Sends a reminder notification to people who viewed your listing but didn\'t buy. Free if you have monthly blast credits, otherwise 10 TUCi per person.';
+      'Sends a reminder notification to people who viewed your listing but didn\'t buy. Free if you have monthly broadcast credits, otherwise 10 TUCi per person.';
 
   @override
   String get retargetingLast30Days => 'Last 30 days';

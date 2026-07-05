@@ -3127,7 +3127,7 @@ abstract class AppLocalizations {
   /// No description provided for @blastConfirmBodyFree.
   ///
   /// In tr, this message translates to:
-  /// **'{count} hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz blast hakkınızdan düşülecek.'**
+  /// **'{count} hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz toplu duyuru hakkınızdan düşülecek.'**
   String blastConfirmBodyFree(int count);
 
   /// No description provided for @blastConfirmBodyPaid.
@@ -4705,7 +4705,7 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingBlastCooldown.
   ///
   /// In tr, this message translates to:
-  /// **'Bir sonraki blast için 7 gün beklemeniz gerekiyor.'**
+  /// **'Bir sonraki toplu duyuru için 7 gün beklemeniz gerekiyor.'**
   String get retargetingBlastCooldown;
 
   /// No description provided for @retargetingDialogTitle.
@@ -4753,7 +4753,7 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingFreeSubtitle.
   ///
   /// In tr, this message translates to:
-  /// **'{count} kişi — 1 blast krediniz kullanılır'**
+  /// **'{count} kişi — 1 toplu duyuru krediniz kullanılır'**
   String retargetingFreeSubtitle(int count);
 
   /// No description provided for @retargetingPaidSubtitle.
@@ -4801,7 +4801,7 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingInfoText.
   ///
   /// In tr, this message translates to:
-  /// **'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık blast krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.'**
+  /// **'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.'**
   String get retargetingInfoText;
 
   /// No description provided for @retargetingLast30Days.

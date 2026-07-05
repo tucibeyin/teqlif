@@ -705,7 +705,7 @@
       }
     }
   },
-  "blastConfirmBodyFree": "{count} hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz blast hakkınızdan düşülecek.",
+  "blastConfirmBodyFree": "{count} hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz toplu duyuru hakkınızdan düşülecek.",
   "@blastConfirmBodyFree": {
     "placeholders": {
       "count": {
@@ -1249,7 +1249,7 @@
   "@radarCopyBtn": { "placeholders": { "price": { "type": "String" } } },
   "retargetingBlastSent": "{count} kişiye bildirim gönderildi!",
   "@retargetingBlastSent": { "placeholders": { "count": { "type": "int" } } },
-  "retargetingBlastCooldown": "Bir sonraki blast için 7 gün beklemeniz gerekiyor.",
+  "retargetingBlastCooldown": "Bir sonraki toplu duyuru için 7 gün beklemeniz gerekiyor.",
   "retargetingDialogTitle": "Bildirim gönderilsin mi?",
   "retargetingDialogBodyFree": "{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. {credits} bildirim krediniz var, ücretsiz gönderilecek.",
   "@retargetingDialogBodyFree": { "placeholders": { "count": { "type": "int" }, "credits": { "type": "int" } } },
@@ -1262,7 +1262,7 @@
   "retargetingCostFree": "Ücretsiz",
   "retargetingCreditsLeft": "{count} kredi kaldı",
   "@retargetingCreditsLeft": { "placeholders": { "count": { "type": "int" } } },
-  "retargetingFreeSubtitle": "{count} kişi — 1 blast krediniz kullanılır",
+  "retargetingFreeSubtitle": "{count} kişi — 1 toplu duyuru krediniz kullanılır",
   "@retargetingFreeSubtitle": { "placeholders": { "count": { "type": "int" } } },
   "retargetingPaidSubtitle": "{count} kişi × 10 TUCi",
   "@retargetingPaidSubtitle": { "placeholders": { "count": { "type": "int" } } },
@@ -1275,7 +1275,7 @@
   "retargetingCostBadge": "{cost} TUCi harcanır",
   "@retargetingCostBadge": { "placeholders": { "cost": { "type": "int" } } },
   "retargetingFootnote": "Kullanıcılar \"Hâlâ ilgileniyor musun?\" bildirimi alacak. Satın almayan kişilere gönderilir.",
-  "retargetingInfoText": "İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık blast krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.",
+  "retargetingInfoText": "İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.",
   "retargetingLast30Days": "Son 30 gün içinde",
   "retargetingViewerLabel": "kişi gördü",
   "retargetingBoughtLabel": "satın aldı",

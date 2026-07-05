@@ -1600,7 +1600,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String blastConfirmBodyFree(int count) {
-    return 'سيتم إشعار $count مشترٍ جاهز.\n\nسيُستخدم أحد بلاستاتك المجانية.';
+    return 'سيتم إشعار $count مشترٍ جاهز.\n\nسيُستخدم أحد إشعاراتك المجانية.';
   }
 
   @override

@@ -704,7 +704,7 @@
       }
     }
   },
-  "blastConfirmBodyFree": "{count} ready buyers will be notified.\n\nThis will use one of your free blasts.",
+  "blastConfirmBodyFree": "{count} ready buyers will be notified.\n\nThis will use one of your free broadcast notifications.",
   "@blastConfirmBodyFree": {
     "placeholders": {
       "count": {
@@ -1248,7 +1248,7 @@
   "@radarCopyBtn": { "placeholders": { "price": { "type": "String" } } },
   "retargetingBlastSent": "Notification sent to {count} people!",
   "@retargetingBlastSent": { "placeholders": { "count": { "type": "int" } } },
-  "retargetingBlastCooldown": "You need to wait 7 days for the next blast.",
+  "retargetingBlastCooldown": "You need to wait 7 days for the next broadcast.",
   "retargetingDialogTitle": "Send notification?",
   "retargetingDialogBodyFree": "A \"Still interested?\" notification will be sent to {count} people. You have {credits} notification credits, sent for free.",
   "@retargetingDialogBodyFree": { "placeholders": { "count": { "type": "int" }, "credits": { "type": "int" } } },
@@ -1261,7 +1261,7 @@
   "retargetingCostFree": "Free",
   "retargetingCreditsLeft": "{count} credits left",
   "@retargetingCreditsLeft": { "placeholders": { "count": { "type": "int" } } },
-  "retargetingFreeSubtitle": "{count} people — 1 blast credit used",
+  "retargetingFreeSubtitle": "{count} people — 1 broadcast credit used",
   "@retargetingFreeSubtitle": { "placeholders": { "count": { "type": "int" } } },
   "retargetingPaidSubtitle": "{count} people × 10 TUCi",
   "@retargetingPaidSubtitle": { "placeholders": { "count": { "type": "int" } } },
@@ -1274,7 +1274,7 @@
   "retargetingCostBadge": "{cost} TUCi will be spent",
   "@retargetingCostBadge": { "placeholders": { "cost": { "type": "int" } } },
   "retargetingFootnote": "Users will receive a \"Still interested?\" notification. Only sent to non-buyers.",
-  "retargetingInfoText": "Sends a reminder notification to people who viewed your listing but didn't buy. Free if you have monthly blast credits, otherwise 10 TUCi per person.",
+  "retargetingInfoText": "Sends a reminder notification to people who viewed your listing but didn't buy. Free if you have monthly broadcast credits, otherwise 10 TUCi per person.",
   "retargetingLast30Days": "Last 30 days",
   "retargetingViewerLabel": "viewed",
   "retargetingBoughtLabel": "purchased",

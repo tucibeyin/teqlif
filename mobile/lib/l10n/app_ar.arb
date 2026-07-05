@@ -704,7 +704,7 @@
       }
     }
   },
-  "blastConfirmBodyFree": "سيتم إشعار {count} مشترٍ جاهز.\n\nسيُستخدم أحد بلاستاتك المجانية.",
+  "blastConfirmBodyFree": "سيتم إشعار {count} مشترٍ جاهز.\n\nسيُستخدم أحد إشعاراتك المجانية.",
   "@blastConfirmBodyFree": {
     "placeholders": {
       "count": {

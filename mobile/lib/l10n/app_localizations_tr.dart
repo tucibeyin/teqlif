@@ -1614,7 +1614,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String blastConfirmBodyFree(int count) {
-    return '$count hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz blast hakkınızdan düşülecek.';
+    return '$count hazır alıcıya bildirim gönderilecek.\n\nÜcretsiz toplu duyuru hakkınızdan düşülecek.';
   }
 
   @override
@@ -2513,7 +2513,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get retargetingBlastCooldown =>
-      'Bir sonraki blast için 7 gün beklemeniz gerekiyor.';
+      'Bir sonraki toplu duyuru için 7 gün beklemeniz gerekiyor.';
 
   @override
   String get retargetingDialogTitle => 'Bildirim gönderilsin mi?';
@@ -2548,7 +2548,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String retargetingFreeSubtitle(int count) {
-    return '$count kişi — 1 blast krediniz kullanılır';
+    return '$count kişi — 1 toplu duyuru krediniz kullanılır';
   }
 
   @override
@@ -2583,7 +2583,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get retargetingInfoText =>
-      'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık blast krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.';
+      'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.';
 
   @override
   String get retargetingLast30Days => 'Son 30 gün içinde';
