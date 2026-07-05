@@ -1601,5 +1601,6 @@
   "faqQAIRadar": "Competitor Analysis and Best Streaming Time",
   "faqAAIRadar": "Competitor Analysis compares your price and click rate with competitors. The Best Streaming Time module reports when your followers are most active.",
   "editListingTitle": "Edit Listing",
-  "btnUpdate": "Update"
+  "btnUpdate": "Update",
+  "btnUpdateListing": "Update Listing"
 }

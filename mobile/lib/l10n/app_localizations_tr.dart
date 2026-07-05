@@ -3020,4 +3020,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get btnUpdate => 'Güncelle';
+
+  @override
+  String get btnUpdateListing => 'İlanı Güncelle';
 }

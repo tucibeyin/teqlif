@@ -5529,6 +5529,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Güncelle'**
   String get btnUpdate;
+
+  /// No description provided for @btnUpdateListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanı Güncelle'**
+  String get btnUpdateListing;
 }
 
 class _AppLocalizationsDelegate

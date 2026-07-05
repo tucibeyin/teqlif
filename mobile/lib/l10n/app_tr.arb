@@ -1600,5 +1600,6 @@
   "faqQAIRadar": "Rekabet Analizi ve En İyi Yayın Saati Tahmini",
   "faqAAIRadar": "Rekabet Analizi, ilanınızın fiyat durumunu ve tıklanma oranını rakiplerle kıyaslar. Yayın Saati Tahmini ise takipçilerinizin en aktif olduğu saatleri gösterir.",
   "editListingTitle": "İlanı Düzenle",
-  "btnUpdate": "Güncelle"
+  "btnUpdate": "Güncelle",
+  "btnUpdateListing": "İlanı Güncelle"
 }

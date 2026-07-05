@@ -2994,4 +2994,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get btnUpdate => 'تحديث';
+
+  @override
+  String get btnUpdateListing => 'تحديث الإعلان';
 }

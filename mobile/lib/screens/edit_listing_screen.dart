@@ -54,8 +54,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
     _titleCtrl.text = widget.listing['title'] ?? '';
     _descCtrl.text = widget.listing['description'] ?? '';
     _priceCtrl.text = (widget.listing['price'] ?? '').toString();
-    _selectedCity = widget.listing['location'];
-    _selectedCategory = widget.listing['category'];
+
     if (widget.listing['image_urls'] != null) {
       try {
         final List<dynamic> urls = jsonDecode(widget.listing['image_urls'] as String);
@@ -70,12 +69,25 @@ class _EditListingScreenState extends State<EditListingScreen> {
       if (mounted) {
         setState(() {
           _categories = cats;
-          if (cats.isNotEmpty) _selectedCategory = cats.first.$1;
+          final initialCat = widget.listing['category'];
+          if (initialCat != null && cats.any((c) => c.$1 == initialCat)) {
+             _selectedCategory = initialCat;
+          } else if (cats.isNotEmpty) {
+             _selectedCategory = cats.first.$1;
+          }
         });
       }
     });
     CityService.getCities().then((c) {
-      if (mounted) setState(() => _cities = c);
+      if (mounted) {
+        setState(() {
+          _cities = c;
+          final initialCity = widget.listing['location'];
+          if (initialCity != null && c.contains(initialCity)) {
+             _selectedCity = initialCity;
+          }
+        });
+      }
     });
     _loadProStatus();
   }
@@ -917,7 +929,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : Text(l.btnPublishListing),
+                      : Text(l.btnUpdateListing),
                 ),
               ),
               const SizedBox(height: 24),
