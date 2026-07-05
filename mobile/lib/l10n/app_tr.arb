@@ -649,13 +649,15 @@
   "proToolListingsDesc": "Hangi ilanınız kaç kişiye ulaştı, kaçı tıkladı",
   "proToolMarketTitle": "Pazar Bilgisi",
   "proToolMarketDesc": "Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor",
-  "proBlastSection": "Kitle Davet Kredisi",
   "proBenefitsTitle": "Pro'ya Geçince Ne Kazanırsın?",
   "proBenefit1": "Satışlarını ve gelirlerin nereye gittiğini gör",
   "proBenefit2": "Her ilanına kaç kişi baktı, kaçı tıkladı",
   "proBenefit3": "Alıcıların en aktif olduğu saatleri öğren",
   "proBenefit4": "İnsanlar ne arıyor — boşluğu doldur, sat",
-  "proStatusTitle": "👑 Pro Kullanıcı",
+  "proStatusTitle": "👑 PRO Kullanıcı",
+  "planMonthly": "Aylık",
+  "planYearly": "Yıllık",
+  "planLifetime": "Ömür Boyu",
   "proStatusDesc": "Tüm analitik araçlara erişiminiz aktif",
   "proRenewalDate": "Yenileme: {date}",
   "@proRenewalDate": { "placeholders": { "date": { "type": "String" } } },
@@ -663,17 +665,27 @@
   "proUnlockDesc": "Verilerle sat, değil tahminle",
   "proUnlockBtn": "Pro'ya Geç",
   "proUpgradeSheetDesc": "Bu aracı kullanmak için Pro'ya geçmeniz gerekiyor.",
-  "blastRemainingTitle": "Bu Ay Kalan Hak",
-  "blastCreditEmpty": "Bu ay duyuru krediniz doldu. Yeni ayda yenilenir.",
-  "blastCreditUsed": "{used} duyuru gönderdiniz, {remaining} hakkınız kaldı.",
-  "@blastCreditUsed": {
+  "proCreditsSummaryTitle": "Kalan Krediler",
+  "proCreditsBlastName": "Kitle Davet (Blast)",
+  "proCreditsBoostName": "Öne Çıkarılmış İlan",
+  "proCreditsAiName": "Yapay Zeka Danışmanı",
+  "proCreditsReactivationName": "Reaktivasyon",
+  "proCreditsBlastDesc": "İlanınızı potansiyel alıcılara özel bildirimle duyurarak satış hızınızı artırır.",
+  "proCreditsBoostDesc": "İlanınızı listelemelerde en üste taşıyarak daha fazla görüntülenme almanızı sağlar.",
+  "proCreditsAiDesc": "Yapay Zeka destekli algoritma ile ilanlarınıza en doğru piyasa fiyatı analizini yapar.",
+  "proCreditsReactivationDesc": "Süresi dolmuş veya askıya alınmış ilanlarınızı ücretsiz olarak tekrar yayına almanızı sağlar.",
+  "proCreditsUsedFormat": "{used} kullanıldı, {remaining} kaldı",
+  "@proCreditsUsedFormat": {
     "placeholders": {
-      "used": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
+      "used": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "proCreditsLimitFormat": "{remaining} / {limit}",
+  "@proCreditsLimitFormat": {
+    "placeholders": {
+      "remaining": { "type": "int" },
+      "limit": { "type": "int" }
     }
   },
   "blastConfirmCostFreeLabel": "Ücret",
@@ -1207,19 +1219,6 @@
   "adMetricBestHour": "En İyi Saat",
   "adMetricCategoryAvgCtr": "Benzer İlanların İlgi Oranı",
   "adMetricBurnRate": "Kalan Süre",
-  "proBoostSection": "Öne Çıkarılmış İlan Kredisi",
-  "boostCreditEmpty": "Bu ay ilan öne çıkarma krediniz doldu. Yeni ayda yenilenir.",
-  "boostCreditUsed": "{used} öne çıkarma kullandınız, {remaining} hakkınız kaldı.",
-  "@boostCreditUsed": {
-    "placeholders": {
-      "used": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
   "softUpdateTitle": "Yeni Sürüm Mevcut",
   "softUpdateMessage": "Uygulamanın yeni bir sürümü yayınlandı. Daha iyi bir deneyim için hemen güncelleyebilirsiniz.",
   "softUpdateUpdateNow": "Şimdi Güncelle",

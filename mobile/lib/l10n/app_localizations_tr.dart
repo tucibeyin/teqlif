@@ -1537,9 +1537,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor';
 
   @override
-  String get proBlastSection => 'Kitle Davet Kredisi';
-
-  @override
   String get proBenefitsTitle => 'Pro\'ya Geçince Ne Kazanırsın?';
 
   @override
@@ -1555,7 +1552,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get proBenefit4 => 'İnsanlar ne arıyor — boşluğu doldur, sat';
 
   @override
-  String get proStatusTitle => '👑 Pro Kullanıcı';
+  String get proStatusTitle => '👑 PRO Kullanıcı';
+
+  @override
+  String get planMonthly => 'Aylık';
+
+  @override
+  String get planYearly => 'Yıllık';
+
+  @override
+  String get planLifetime => 'Ömür Boyu';
 
   @override
   String get proStatusDesc => 'Tüm analitik araçlara erişiminiz aktif';
@@ -1579,15 +1585,44 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu aracı kullanmak için Pro\'ya geçmeniz gerekiyor.';
 
   @override
-  String get blastRemainingTitle => 'Bu Ay Kalan Hak';
+  String get proCreditsSummaryTitle => 'Kalan Krediler';
 
   @override
-  String get blastCreditEmpty =>
-      'Bu ay duyuru krediniz doldu. Yeni ayda yenilenir.';
+  String get proCreditsBlastName => 'Kitle Davet (Blast)';
 
   @override
-  String blastCreditUsed(int used, int remaining) {
-    return '$used duyuru gönderdiniz, $remaining hakkınız kaldı.';
+  String get proCreditsBoostName => 'Öne Çıkarılmış İlan';
+
+  @override
+  String get proCreditsAiName => 'Yapay Zeka Danışmanı';
+
+  @override
+  String get proCreditsReactivationName => 'Reaktivasyon';
+
+  @override
+  String get proCreditsBlastDesc =>
+      'İlanınızı potansiyel alıcılara özel bildirimle duyurarak satış hızınızı artırır.';
+
+  @override
+  String get proCreditsBoostDesc =>
+      'İlanınızı listelemelerde en üste taşıyarak daha fazla görüntülenme almanızı sağlar.';
+
+  @override
+  String get proCreditsAiDesc =>
+      'Yapay Zeka destekli algoritma ile ilanlarınıza en doğru piyasa fiyatı analizini yapar.';
+
+  @override
+  String get proCreditsReactivationDesc =>
+      'Süresi dolmuş veya askıya alınmış ilanlarınızı ücretsiz olarak tekrar yayına almanızı sağlar.';
+
+  @override
+  String proCreditsUsedFormat(int used, int remaining) {
+    return '$used kullanıldı, $remaining kaldı';
+  }
+
+  @override
+  String proCreditsLimitFormat(int remaining, int limit) {
+    return '$remaining / $limit';
   }
 
   @override
@@ -2409,18 +2444,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get adMetricBurnRate => 'Kalan Süre';
-
-  @override
-  String get proBoostSection => 'Öne Çıkarılmış İlan Kredisi';
-
-  @override
-  String get boostCreditEmpty =>
-      'Bu ay ilan öne çıkarma krediniz doldu. Yeni ayda yenilenir.';
-
-  @override
-  String boostCreditUsed(int used, int remaining) {
-    return '$used öne çıkarma kullandınız, $remaining hakkınız kaldı.';
-  }
 
   @override
   String get softUpdateTitle => 'Yeni Sürüm Mevcut';

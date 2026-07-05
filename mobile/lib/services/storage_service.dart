@@ -63,6 +63,7 @@ class StorageService {
   static const _userNameKey = 'teqlif_user_name';
   static const _userFullNameKey = 'teqlif_user_fullname';
   static const _userPremiumKey = 'teqlif_user_premium';
+  static const _userPlanTypeKey = 'teqlif_user_plan_type';
   static const _userIdKey = 'teqlif_user_id';
   static const _userOnboardingKey = 'teqlif_user_onboarding';
   static const _userIsVerifiedKey = 'teqlif_user_is_verified';
@@ -90,6 +91,7 @@ class StorageService {
     required String username,
     required String fullName,
     required bool isPremium,
+    String? planType,
     bool? onboardingCompleted,
     bool? isVerified,
     bool? phoneVerified,
@@ -101,6 +103,9 @@ class StorageService {
       _secureStorage.write(key: _userFullNameKey, value: fullName),
       _secureStorage.write(key: _userPremiumKey, value: isPremium.toString()),
     ];
+    if (planType != null) {
+      futures.add(_secureStorage.write(key: _userPlanTypeKey, value: planType));
+    }
     if (onboardingCompleted != null) {
       futures.add(_secureStorage.write(key: _userOnboardingKey, value: onboardingCompleted.toString()));
     }
@@ -120,6 +125,7 @@ class StorageService {
     final username = await _secureStorage.read(key: _userNameKey);
     final fullName = await _secureStorage.read(key: _userFullNameKey);
     final isPremium = await _secureStorage.read(key: _userPremiumKey);
+    final planType = await _secureStorage.read(key: _userPlanTypeKey);
     final onboardingCompleted = await _secureStorage.read(key: _userOnboardingKey);
     final isVerified = await _secureStorage.read(key: _userIsVerifiedKey);
     final phoneVerified = await _secureStorage.read(key: _userPhoneVerifiedKey);
@@ -129,6 +135,7 @@ class StorageService {
       'username': username ?? '',
       'full_name': fullName ?? '',
       'is_premium': isPremium == 'true',
+      'plan_type': planType,
       'onboarding_completed': onboardingCompleted == 'true',
       'is_verified': isVerified == 'true',
       'phone_verified': phoneVerified == 'true',

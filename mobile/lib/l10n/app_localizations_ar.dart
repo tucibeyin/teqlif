@@ -1522,9 +1522,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proToolMarketDesc => 'ما يبحث عنه المشترون ومتى يتسوقون';
 
   @override
-  String get proBlastSection => 'رصيد دعوة الجمهور';
-
-  @override
   String get proBenefitsTitle => 'ماذا ستحصل مع Pro';
 
   @override
@@ -1540,7 +1537,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proBenefit4 => 'ما يبحث عنه الناس — اسد الفجوة وبِع';
 
   @override
-  String get proStatusTitle => '👑 مستخدم Pro';
+  String get proStatusTitle => '👑 مستخدم PRO';
+
+  @override
+  String get planMonthly => 'شهري';
+
+  @override
+  String get planYearly => 'سنوي';
+
+  @override
+  String get planLifetime => 'مدى الحياة';
 
   @override
   String get proStatusDesc => 'جميع أدوات التحليل نشطة';
@@ -1564,15 +1570,44 @@ class AppLocalizationsAr extends AppLocalizations {
       'تحتاج إلى الترقية إلى Pro لاستخدام هذه الأداة.';
 
   @override
-  String get blastRemainingTitle => 'الرصيد المتبقي هذا الشهر';
+  String get proCreditsSummaryTitle => 'الأرصدة المتبقية';
 
   @override
-  String get blastCreditEmpty =>
-      'استنفدت رصيد الإشعارات هذا الشهر. يتجدد الشهر القادم.';
+  String get proCreditsBlastName => 'دعوة الجمهور (Blast)';
 
   @override
-  String blastCreditUsed(int used, int remaining) {
-    return 'أرسلت $used إشعاراً، $remaining متبقٍ.';
+  String get proCreditsBoostName => 'إعلان مميز';
+
+  @override
+  String get proCreditsAiName => 'مستشار التسعير بالذكاء الاصطناعي';
+
+  @override
+  String get proCreditsReactivationName => 'إعادة التنشيط';
+
+  @override
+  String get proCreditsBlastDesc =>
+      'يُخطر المشترين المحتملين بإعلانك عبر إشعارات الدفع، مما يزيد من سرعة المبيعات.';
+
+  @override
+  String get proCreditsBoostDesc =>
+      'ينقل إعلانك إلى أعلى نتائج البحث للحصول على مزيد من المشاهدات.';
+
+  @override
+  String get proCreditsAiDesc =>
+      'يحلل السوق باستخدام الذكاء الاصطناعي للتوصية بالتسعير الأكثر دقة لإعلانك.';
+
+  @override
+  String get proCreditsReactivationDesc =>
+      'يسمح لك بإعادة نشر الإعلانات منتهية الصلاحية أو المعلقة مجاناً.';
+
+  @override
+  String proCreditsUsedFormat(int used, int remaining) {
+    return 'تم استخدام $used، $remaining متبقٍ';
+  }
+
+  @override
+  String proCreditsLimitFormat(int remaining, int limit) {
+    return '$remaining / $limit';
   }
 
   @override
@@ -2386,18 +2421,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get adMetricBurnRate => 'الوقت المتبقي';
-
-  @override
-  String get proBoostSection => 'رصيد الإعلان المميز';
-
-  @override
-  String get boostCreditEmpty =>
-      'استنفدت رصيد الإعلان المميز هذا الشهر. يتجدد الشهر القادم.';
-
-  @override
-  String boostCreditUsed(int used, int remaining) {
-    return 'استخدمت $used إعلان مميز، $remaining متبقٍ.';
-  }
 
   @override
   String get softUpdateTitle => 'إصدار جديد متاح';

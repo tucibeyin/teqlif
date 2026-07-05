@@ -9,6 +9,7 @@ class User {
   final String? profileImageUrl;
   final String? profileImageThumbUrl;
   final bool isPremium;
+  final String? planType;
   final bool onboardingCompleted;
 
   User({
@@ -22,6 +23,7 @@ class User {
     this.profileImageUrl,
     this.profileImageThumbUrl,
     this.isPremium = false,
+    this.planType,
     this.onboardingCompleted = false,
   });
 
@@ -37,6 +39,7 @@ class User {
       profileImageUrl: json['profile_image_url'] as String?,
       profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
       isPremium: json['is_premium'] as bool? ?? false,
+      planType: json['plan_type'] as String?,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
     );
   }

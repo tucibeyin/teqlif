@@ -1537,9 +1537,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proToolMarketDesc => 'What buyers search for and when they shop';
 
   @override
-  String get proBlastSection => 'Audience Invite Credits';
-
-  @override
   String get proBenefitsTitle => 'What You Get with Pro';
 
   @override
@@ -1555,7 +1552,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proBenefit4 => 'What people search for — fill the gap, sell';
 
   @override
-  String get proStatusTitle => '👑 Pro User';
+  String get proStatusTitle => '👑 PRO User';
+
+  @override
+  String get planMonthly => 'Monthly';
+
+  @override
+  String get planYearly => 'Yearly';
+
+  @override
+  String get planLifetime => 'Lifetime';
 
   @override
   String get proStatusDesc => 'All analytics tools are active';
@@ -1579,15 +1585,44 @@ class AppLocalizationsEn extends AppLocalizations {
       'You need to upgrade to Pro to use this tool.';
 
   @override
-  String get blastRemainingTitle => 'Remaining This Month';
+  String get proCreditsSummaryTitle => 'Remaining Credits';
 
   @override
-  String get blastCreditEmpty =>
-      'Your notification credits are used up for this month. Renewed next month.';
+  String get proCreditsBlastName => 'Audience Invite (Blast)';
 
   @override
-  String blastCreditUsed(int used, int remaining) {
-    return 'Sent $used notifications, $remaining remaining.';
+  String get proCreditsBoostName => 'Promoted Listing';
+
+  @override
+  String get proCreditsAiName => 'AI Pricing Advisor';
+
+  @override
+  String get proCreditsReactivationName => 'Reactivation';
+
+  @override
+  String get proCreditsBlastDesc =>
+      'Notifies potential buyers about your listing via push notifications, increasing sales speed.';
+
+  @override
+  String get proCreditsBoostDesc =>
+      'Moves your listing to the top of search results to get more views.';
+
+  @override
+  String get proCreditsAiDesc =>
+      'Analyzes the market using AI to recommend the most accurate pricing for your listing.';
+
+  @override
+  String get proCreditsReactivationDesc =>
+      'Allows you to republish expired or suspended listings for free.';
+
+  @override
+  String proCreditsUsedFormat(int used, int remaining) {
+    return '$used used, $remaining remaining';
+  }
+
+  @override
+  String proCreditsLimitFormat(int remaining, int limit) {
+    return '$remaining / $limit';
   }
 
   @override
@@ -2408,18 +2443,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adMetricBurnRate => 'Time Remaining';
-
-  @override
-  String get proBoostSection => 'Promoted Listing Credits';
-
-  @override
-  String get boostCreditEmpty =>
-      'Your listing boost credits are used up for this month. Renewed next month.';
-
-  @override
-  String boostCreditUsed(int used, int remaining) {
-    return 'Used $used boosts, $remaining remaining.';
-  }
 
   @override
   String get softUpdateTitle => 'New Version Available';

@@ -139,6 +139,7 @@ async def get_recent_users(limit: int = 50, db: AsyncSession = Depends(get_db), 
             "is_active": u.is_active,
             "is_verified": u.is_verified,
             "is_premium": u.is_premium,
+            "plan_type": u.plan_type,
             "is_shadowbanned": u.is_shadowbanned,
             "deleted_at": u.deleted_at.isoformat() if u.deleted_at else None,
             "tuci_balance": u.tuci_balance,
@@ -161,9 +162,13 @@ async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession
     await db.commit()
     return {"message": "Bilgiler güncellendi."}
 
+class ToggleProRequest(BaseModel):
+    plan_type: Optional[str] = None
+
 @router.post("/users/{user_id}/toggle-pro")
 async def toggle_pro(
     user_id: int,
+    req: ToggleProRequest,
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(check_admin_access),
 ):
@@ -171,10 +176,14 @@ async def toggle_pro(
     if not user:
         raise NotFoundException("Kullanıcı bulunamadı")
     user.is_premium = not user.is_premium
+    if user.is_premium:
+        user.plan_type = req.plan_type if req.plan_type else "monthly"
+    else:
+        user.plan_type = None
     await db.commit()
     status = "PRO verildi" if user.is_premium else "PRO kaldırıldı"
     logger.info("[ADMIN] %s → %s | admin=%s", user.username, status, admin.email)
-    return {"user_id": user_id, "username": user.username, "is_premium": user.is_premium}
+    return {"user_id": user_id, "username": user.username, "is_premium": user.is_premium, "plan_type": user.plan_type}
 
 @router.post("/users/{user_id}/shadowban")
 async def toggle_shadowban(

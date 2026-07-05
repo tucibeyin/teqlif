@@ -2992,12 +2992,6 @@ abstract class AppLocalizations {
   /// **'Alıcılar ne arıyor, hangi saatlerde alışveriş yapıyor'**
   String get proToolMarketDesc;
 
-  /// No description provided for @proBlastSection.
-  ///
-  /// In tr, this message translates to:
-  /// **'Kitle Davet Kredisi'**
-  String get proBlastSection;
-
   /// No description provided for @proBenefitsTitle.
   ///
   /// In tr, this message translates to:
@@ -3031,8 +3025,26 @@ abstract class AppLocalizations {
   /// No description provided for @proStatusTitle.
   ///
   /// In tr, this message translates to:
-  /// **'👑 Pro Kullanıcı'**
+  /// **'👑 PRO Kullanıcı'**
   String get proStatusTitle;
+
+  /// No description provided for @planMonthly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aylık'**
+  String get planMonthly;
+
+  /// No description provided for @planYearly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yıllık'**
+  String get planYearly;
+
+  /// No description provided for @planLifetime.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ömür Boyu'**
+  String get planLifetime;
 
   /// No description provided for @proStatusDesc.
   ///
@@ -3070,23 +3082,71 @@ abstract class AppLocalizations {
   /// **'Bu aracı kullanmak için Pro\'ya geçmeniz gerekiyor.'**
   String get proUpgradeSheetDesc;
 
-  /// No description provided for @blastRemainingTitle.
+  /// No description provided for @proCreditsSummaryTitle.
   ///
   /// In tr, this message translates to:
-  /// **'Bu Ay Kalan Hak'**
-  String get blastRemainingTitle;
+  /// **'Kalan Krediler'**
+  String get proCreditsSummaryTitle;
 
-  /// No description provided for @blastCreditEmpty.
+  /// No description provided for @proCreditsBlastName.
   ///
   /// In tr, this message translates to:
-  /// **'Bu ay duyuru krediniz doldu. Yeni ayda yenilenir.'**
-  String get blastCreditEmpty;
+  /// **'Kitle Davet (Blast)'**
+  String get proCreditsBlastName;
 
-  /// No description provided for @blastCreditUsed.
+  /// No description provided for @proCreditsBoostName.
   ///
   /// In tr, this message translates to:
-  /// **'{used} duyuru gönderdiniz, {remaining} hakkınız kaldı.'**
-  String blastCreditUsed(int used, int remaining);
+  /// **'Öne Çıkarılmış İlan'**
+  String get proCreditsBoostName;
+
+  /// No description provided for @proCreditsAiName.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay Zeka Danışmanı'**
+  String get proCreditsAiName;
+
+  /// No description provided for @proCreditsReactivationName.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reaktivasyon'**
+  String get proCreditsReactivationName;
+
+  /// No description provided for @proCreditsBlastDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınızı potansiyel alıcılara özel bildirimle duyurarak satış hızınızı artırır.'**
+  String get proCreditsBlastDesc;
+
+  /// No description provided for @proCreditsBoostDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınızı listelemelerde en üste taşıyarak daha fazla görüntülenme almanızı sağlar.'**
+  String get proCreditsBoostDesc;
+
+  /// No description provided for @proCreditsAiDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay Zeka destekli algoritma ile ilanlarınıza en doğru piyasa fiyatı analizini yapar.'**
+  String get proCreditsAiDesc;
+
+  /// No description provided for @proCreditsReactivationDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Süresi dolmuş veya askıya alınmış ilanlarınızı ücretsiz olarak tekrar yayına almanızı sağlar.'**
+  String get proCreditsReactivationDesc;
+
+  /// No description provided for @proCreditsUsedFormat.
+  ///
+  /// In tr, this message translates to:
+  /// **'{used} kullanıldı, {remaining} kaldı'**
+  String proCreditsUsedFormat(int used, int remaining);
+
+  /// No description provided for @proCreditsLimitFormat.
+  ///
+  /// In tr, this message translates to:
+  /// **'{remaining} / {limit}'**
+  String proCreditsLimitFormat(int remaining, int limit);
 
   /// No description provided for @blastConfirmCostFreeLabel.
   ///
@@ -4521,24 +4581,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Kalan Süre'**
   String get adMetricBurnRate;
-
-  /// No description provided for @proBoostSection.
-  ///
-  /// In tr, this message translates to:
-  /// **'Öne Çıkarılmış İlan Kredisi'**
-  String get proBoostSection;
-
-  /// No description provided for @boostCreditEmpty.
-  ///
-  /// In tr, this message translates to:
-  /// **'Bu ay ilan öne çıkarma krediniz doldu. Yeni ayda yenilenir.'**
-  String get boostCreditEmpty;
-
-  /// No description provided for @boostCreditUsed.
-  ///
-  /// In tr, this message translates to:
-  /// **'{used} öne çıkarma kullandınız, {remaining} hakkınız kaldı.'**
-  String boostCreditUsed(int used, int remaining);
 
   /// No description provided for @softUpdateTitle.
   ///

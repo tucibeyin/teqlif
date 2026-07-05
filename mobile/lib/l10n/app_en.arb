@@ -650,13 +650,15 @@
   "proToolListingsDesc": "How many people each listing reached and clicked",
   "proToolMarketTitle": "Market Intelligence",
   "proToolMarketDesc": "What buyers search for and when they shop",
-  "proBlastSection": "Audience Invite Credits",
   "proBenefitsTitle": "What You Get with Pro",
   "proBenefit1": "See where your sales and revenue are going",
   "proBenefit2": "How many viewed and clicked each listing",
   "proBenefit3": "Learn the most active hours for buyers",
   "proBenefit4": "What people search for — fill the gap, sell",
-  "proStatusTitle": "👑 Pro User",
+  "proStatusTitle": "👑 PRO User",
+  "planMonthly": "Monthly",
+  "planYearly": "Yearly",
+  "planLifetime": "Lifetime",
   "proStatusDesc": "All analytics tools are active",
   "proRenewalDate": "Renews: {date}",
   "@proRenewalDate": { "placeholders": { "date": { "type": "String" } } },
@@ -664,17 +666,27 @@
   "proUnlockDesc": "Sell with data, not guesswork",
   "proUnlockBtn": "Go Pro",
   "proUpgradeSheetDesc": "You need to upgrade to Pro to use this tool.",
-  "blastRemainingTitle": "Remaining This Month",
-  "blastCreditEmpty": "Your notification credits are used up for this month. Renewed next month.",
-  "blastCreditUsed": "Sent {used} notifications, {remaining} remaining.",
-  "@blastCreditUsed": {
+  "proCreditsSummaryTitle": "Remaining Credits",
+  "proCreditsBlastName": "Audience Invite (Blast)",
+  "proCreditsBoostName": "Promoted Listing",
+  "proCreditsAiName": "AI Pricing Advisor",
+  "proCreditsReactivationName": "Reactivation",
+  "proCreditsBlastDesc": "Notifies potential buyers about your listing via push notifications, increasing sales speed.",
+  "proCreditsBoostDesc": "Moves your listing to the top of search results to get more views.",
+  "proCreditsAiDesc": "Analyzes the market using AI to recommend the most accurate pricing for your listing.",
+  "proCreditsReactivationDesc": "Allows you to republish expired or suspended listings for free.",
+  "proCreditsUsedFormat": "{used} used, {remaining} remaining",
+  "@proCreditsUsedFormat": {
     "placeholders": {
-      "used": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
+      "used": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "proCreditsLimitFormat": "{remaining} / {limit}",
+  "@proCreditsLimitFormat": {
+    "placeholders": {
+      "remaining": { "type": "int" },
+      "limit": { "type": "int" }
     }
   },
   "blastConfirmCostFreeLabel": "Cost",
@@ -1208,19 +1220,6 @@
   "adMetricBestHour": "Best Hour",
   "adMetricCategoryAvgCtr": "Similar Listings' Interest",
   "adMetricBurnRate": "Time Remaining",
-  "proBoostSection": "Promoted Listing Credits",
-  "boostCreditEmpty": "Your listing boost credits are used up for this month. Renewed next month.",
-  "boostCreditUsed": "Used {used} boosts, {remaining} remaining.",
-  "@boostCreditUsed": {
-    "placeholders": {
-      "used": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
   "softUpdateTitle": "New Version Available",
   "softUpdateMessage": "A new version of the app is available. Please update for a better experience.",
   "softUpdateUpdateNow": "Update Now",

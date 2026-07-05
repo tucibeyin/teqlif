@@ -147,6 +147,7 @@ async function loadUsers() {
                     data-modal-active="${u.is_active}"
                     data-modal-shadow="${u.is_shadowbanned}"
                     data-modal-pro="${u.is_premium}"
+                    data-modal-plan="${u.plan_type || 'monthly'}"
                     class="action-btn">Yönet</button>
             </td>
         </tr>`;
@@ -154,7 +155,7 @@ async function loadUsers() {
     document.getElementById("search-users").value = "";
 }
 
-function openModal(id, un, fn, email, act, shadow, isPro) {
+function openModal(id, un, fn, email, act, shadow, isPro, plan) {
     currentUserId = id;
     document.getElementById("modal-title").innerText = "@" + un;
     document.getElementById("edit-fullname").value = fn === 'null' ? '' : fn;
@@ -167,6 +168,7 @@ function openModal(id, un, fn, email, act, shadow, isPro) {
     const proBtn = document.getElementById("btnTogglePro");
     proBtn.textContent = isPro ? '⭐ PRO Kaldır' : '⭐ PRO Ver';
     proBtn.style.background = isPro ? '#6b7280' : '#d97706';
+    document.getElementById("edit-pro-plan").value = plan || 'monthly';
     document.getElementById("user-modal").classList.remove("hidden");
 }
 function closeModal() { document.getElementById("user-modal").classList.add("hidden"); currentUserId = null; }
@@ -187,7 +189,12 @@ async function toggleShadowban() {
 
 async function togglePro() {
     if (!currentUserId) return;
-    const res = await fetch(`/api/admin-data/users/${currentUserId}/toggle-pro`, { method: 'POST', headers: getAuthHeaders() });
+    const plan = document.getElementById("edit-pro-plan").value || 'monthly';
+    const res = await fetch(`/api/admin-data/users/${currentUserId}/toggle-pro`, { 
+        method: 'POST', 
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_type: plan })
+    });
     if (res.ok) { const d = await res.json(); alert(`@${d.username} → ${d.is_premium ? '⭐ PRO verildi' : 'PRO kaldırıldı'}`); closeModal(); loadUsers(); }
 }
 
@@ -542,7 +549,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Event delegation — dynamic table buttons
     document.getElementById('user-table-body')?.addEventListener('click', e => {
         const openBtn = e.target.closest('[data-open-modal]');
-        if (openBtn) { openModal(Number(openBtn.dataset.openModal), openBtn.dataset.modalUn, openBtn.dataset.modalFn, openBtn.dataset.modalEmail, openBtn.dataset.modalActive === 'true', openBtn.dataset.modalShadow === 'true', openBtn.dataset.modalPro === 'true'); return; }
+        if (openBtn) { openModal(Number(openBtn.dataset.openModal), openBtn.dataset.modalUn, openBtn.dataset.modalFn, openBtn.dataset.modalEmail, openBtn.dataset.modalActive === 'true', openBtn.dataset.modalShadow === 'true', openBtn.dataset.modalPro === 'true', openBtn.dataset.modalPlan); return; }
     });
 
     document.getElementById('stream-table-body')?.addEventListener('click', e => {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../l10n/app_localizations.dart';
@@ -27,6 +28,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
   Map<String, dynamic>? _aiCredits;
   Map<String, dynamic>? _reactivationCredits;
   bool _isPremium = false;
+  String? _planType;
 
   @override
   void initState() {
@@ -34,13 +36,26 @@ class _ProHubScreenState extends State<ProHubScreen> {
     _isPremium = widget.isPremium;
     _loadCredits();
     _verifyPremium();
+    _loadLocalPlanType();
+  }
+
+  Future<void> _loadLocalPlanType() async {
+    final info = await StorageService.getUserInfo();
+    if (info != null && mounted) {
+      setState(() => _planType = info['plan_type'] as String?);
+    }
   }
 
   Future<void> _verifyPremium() async {
     try {
       final user = await AuthService.me();
-      if (mounted && user.isPremium != _isPremium) {
-        setState(() => _isPremium = user.isPremium);
+      if (mounted) {
+        if (user.isPremium != _isPremium || user.planType != _planType) {
+          setState(() {
+            _isPremium = user.isPremium;
+            _planType = user.planType;
+          });
+        }
         // Profil bilgisini locale kaydet ki kalıcı olsun
         await StorageService.saveUserInfo(
           id: user.id,
@@ -48,6 +63,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
           username: user.username,
           fullName: user.fullName,
           isPremium: user.isPremium,
+          planType: user.planType,
           onboardingCompleted: user.onboardingCompleted,
           isVerified: user.isVerified,
           phoneVerified: user.phoneVerified,
@@ -88,9 +104,16 @@ class _ProHubScreenState extends State<ProHubScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
-          if (isPremium) _ProStatusCard(renewalDate: _credits?['renewal_date'] as String?) else _UpgradeBanner(),
+          if (isPremium) _ProStatusCard(renewalDate: _credits?['renewal_date'] as String?, planType: _planType) else _UpgradeBanner(),
           const SizedBox(height: 24),
-
+          _CreditsSummaryCard(
+            blastCredits: _credits,
+            boostCredits: _boostCredits,
+            aiCredits: _aiCredits,
+            reactivationCredits: _reactivationCredits,
+            isPremium: isPremium,
+          ),
+          const SizedBox(height: 24),
           // ── Araçlar Başlığı ────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.only(left: 2, bottom: 12),
@@ -184,69 +207,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
                 : () => _showUpgrade(context),
           ),
 
-          // ── Blast Kredi Kartı ──────────────────────────────────────────────
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 12),
-            child: Text(
-              l.proBlastSection,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary(context),
-                letterSpacing: 0.6,
-              ),
-            ),
-          ),
-          _BlastCreditCard(credits: _credits, isPremium: isPremium),
 
-          // ── Boost Kredi Kartı ──────────────────────────────────────────────
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 12),
-            child: Text(
-              l.proBoostSection,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary(context),
-                letterSpacing: 0.6,
-              ),
-            ),
-          ),
-          _BoostCreditCard(credits: _boostCredits, isPremium: isPremium),
-
-          // ── AI Fiyat Danışmanı Kredi Kartı ────────────────────────────────
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 12),
-            child: Text(
-              'Yapay Zeka Fiyat Danışmanı',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary(context),
-                letterSpacing: 0.6,
-              ),
-            ),
-          ),
-          _AiCreditCard(credits: _aiCredits, isPremium: isPremium),
-
-          // ── Reaktivasyon Kredi Kartı ───────────────────────────────────
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 12),
-            child: Text(
-              l.proReactivationSection,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary(context),
-                letterSpacing: 0.6,
-              ),
-            ),
-          ),
-          _ReactivationCreditCard(credits: _reactivationCredits, isPremium: isPremium),
 
           if (!isPremium) ...[
             const SizedBox(height: 28),
@@ -286,7 +247,16 @@ class _ProHubScreenState extends State<ProHubScreen> {
 
 class _ProStatusCard extends StatelessWidget {
   final String? renewalDate;
-  const _ProStatusCard({this.renewalDate});
+  final String? planType;
+  const _ProStatusCard({this.renewalDate, this.planType});
+
+  String _getPlanName(AppLocalizations l, String? type) {
+    switch (type) {
+      case 'yearly': return l.planYearly;
+      case 'lifetime': return l.planLifetime;
+      default: return l.planMonthly;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -317,13 +287,37 @@ class _ProStatusCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l.proStatusTitle,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      l.proStatusTitle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (planType != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          _getPlanName(l, planType),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -340,7 +334,7 @@ class _ProStatusCard extends StatelessWidget {
                       Icon(Icons.event_repeat_outlined, size: 11, color: Colors.white.withValues(alpha: 0.55)),
                       const SizedBox(width: 4),
                       Text(
-                        l.proRenewalDate(_fmtRenewal(renewalDate)),
+                        l.proRenewalDate(_fmtRenewal(context, renewalDate)),
                         style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.55)),
                       ),
                     ],
@@ -611,511 +605,236 @@ class _UpgradeSheet extends StatelessWidget {
   }
 }
 
-// ── Blast Kredi Kartı ──────────────────────────────────────────────────────────
+// ── Kapsülleyici Model Sınıfı ───────────────────────────────────────────────
+class CreditItemModel {
+  final IconData icon;
+  final Color iconColor;
+  final String Function(AppLocalizations) titleBuilder;
+  final String Function(AppLocalizations) descBuilder;
+  final Map<String, dynamic>? data;
+  final int defaultPremiumLimit;
+  final int defaultFreeLimit;
 
-class _BlastCreditCard extends StatelessWidget {
-  final Map<String, dynamic>? credits;
+  CreditItemModel({
+    required this.icon,
+    required this.iconColor,
+    required this.titleBuilder,
+    required this.descBuilder,
+    required this.data,
+    required this.defaultPremiumLimit,
+    required this.defaultFreeLimit,
+  });
+}
+
+// ── Konsolide Krediler Özeti ────────────────────────────────────────────────
+class _CreditsSummaryCard extends StatelessWidget {
+  final Map<String, dynamic>? blastCredits;
+  final Map<String, dynamic>? boostCredits;
+  final Map<String, dynamic>? aiCredits;
+  final Map<String, dynamic>? reactivationCredits;
   final bool isPremium;
 
-  const _BlastCreditCard({required this.credits, required this.isPremium});
+  const _CreditsSummaryCard({
+    required this.blastCredits,
+    required this.boostCredits,
+    required this.aiCredits,
+    required this.reactivationCredits,
+    required this.isPremium,
+  });
+
+  void _showInfoSheet(BuildContext context, String title, String desc) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bg(context),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
+              const SizedBox(height: 12),
+              Text(desc, style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Anladım', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final used      = credits?['used']      as int? ?? 0;
-    final limit     = credits?['limit']     as int? ?? (isPremium ? 6 : 3);
-    final remaining = credits?['remaining'] as int? ?? (isPremium ? 6 : 3);
-    final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
-
-    final Color barColor = remaining == 0
-        ? const Color(0xFFEF4444)
-        : remaining <= limit ~/ 4
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFF22C55E);
+    
+    final items = [
+      CreditItemModel(
+        icon: Icons.campaign_outlined,
+        iconColor: const Color(0xFF8B5CF6),
+        titleBuilder: (l) => l.proCreditsBlastName,
+        descBuilder: (l) => l.proCreditsBlastDesc,
+        data: blastCredits,
+        defaultPremiumLimit: 6,
+        defaultFreeLimit: 3,
+      ),
+      CreditItemModel(
+        icon: Icons.rocket_launch_outlined,
+        iconColor: const Color(0xFF0EA5E9),
+        titleBuilder: (l) => l.proCreditsBoostName,
+        descBuilder: (l) => l.proCreditsBoostDesc,
+        data: boostCredits,
+        defaultPremiumLimit: 5,
+        defaultFreeLimit: 1,
+      ),
+      CreditItemModel(
+        icon: Icons.psychology_outlined,
+        iconColor: const Color(0xFFF59E0B),
+        titleBuilder: (l) => l.proCreditsAiName,
+        descBuilder: (l) => l.proCreditsAiDesc,
+        data: aiCredits,
+        defaultPremiumLimit: 20,
+        defaultFreeLimit: 0,
+      ),
+      CreditItemModel(
+        icon: Icons.replay_outlined,
+        iconColor: const Color(0xFF10B981),
+        titleBuilder: (l) => l.proCreditsReactivationName,
+        descBuilder: (l) => l.proCreditsReactivationDesc,
+        data: reactivationCredits,
+        defaultPremiumLimit: 5,
+        defaultFreeLimit: 0,
+      ),
+    ];
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.campaign_outlined, color: Color(0xFF8B5CF6), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l.blastRemainingTitle,
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                    ),
-                    const SizedBox(height: 2),
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(color: AppColors.textPrimary(context)),
-                        children: [
-                          TextSpan(
-                            text: '$remaining',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: barColor,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' / $limit',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isPremium)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFB800),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('PRO: 6/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: AppColors.border(context),
-              valueColor: AlwaysStoppedAnimation<Color>(barColor),
-              minHeight: 6,
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              l.proCreditsSummaryTitle,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            remaining == 0
-                ? l.blastCreditEmpty
-                : l.blastCreditUsed(used, remaining),
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
-          ),
-          _RenewalRow(renewalDate: credits?['renewal_date'] as String?),
-        ],
-      ),
-    );
-  }
-}
+          Divider(height: 1, color: AppColors.border(context)),
+          ...items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final used = item.data?['used'] as int? ?? 0;
+            final limit = item.data?['limit'] as int? ?? (isPremium ? item.defaultPremiumLimit : item.defaultFreeLimit);
+            final remaining = item.data?['remaining'] as int? ?? (isPremium ? item.defaultPremiumLimit : item.defaultFreeLimit);
+            final progress = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
+            
+            final Color barColor = remaining == 0
+                ? const Color(0xFFEF4444)
+                : remaining <= limit ~/ 4
+                    ? const Color(0xFFF59E0B)
+                    : const Color(0xFF22C55E);
 
-// ── AI Fiyat Danışmanı Kredi Kartı ────────────────────────────────────────────
-
-class _AiCreditCard extends StatelessWidget {
-  final Map<String, dynamic>? credits;
-  final bool isPremium;
-
-  const _AiCreditCard({required this.credits, required this.isPremium});
-
-  @override
-  Widget build(BuildContext context) {
-    final used      = credits?['used']      as int? ?? 0;
-    final limit     = credits?['limit']     as int? ?? (isPremium ? 20 : 0);
-    final remaining = credits?['remaining'] as int? ?? (isPremium ? 20 : 0);
-    final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
-
-    final Color barColor = remaining == 0
-        ? const Color(0xFFEF4444)
-        : remaining <= limit ~/ 4
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFF22C55E);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.auto_awesome_outlined, color: Color(0xFF6366F1), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Bu Ay Kalan Sorgu',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                    ),
-                    const SizedBox(height: 2),
-                    isPremium
-                      ? RichText(
-                          text: TextSpan(
-                            style: TextStyle(color: AppColors.textPrimary(context)),
+            return Column(
+              children: [
+                InkWell(
+                  onTap: () => _showInfoSheet(context, item.titleBuilder(l), item.descBuilder(l)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: item.iconColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(item.icon, color: item.iconColor, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              TextSpan(
-                                text: '$remaining',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: barColor,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    item.titleBuilder(l),
+                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(Icons.info_outline, size: 14, color: AppColors.textSecondary(context)),
+                                ],
                               ),
-                              TextSpan(
-                                text: ' / $limit',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textSecondary(context),
-                                ),
+                              const SizedBox(height: 4),
+                              Text(
+                                l.proCreditsUsedFormat(used, remaining),
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                               ),
                             ],
                           ),
-                        )
-                      : Text(
-                          '5 TUCi/sorgu',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textSecondary(context),
-                          ),
                         ),
-                  ],
-                ),
-              ),
-              if (!isPremium)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFB800),
-                    borderRadius: BorderRadius.circular(4),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              l.proCreditsLimitFormat(remaining, limit),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: barColor),
+                            ),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              width: 60,
+                              height: 4,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(2),
+                                child: LinearProgressIndicator(
+                                  value: progress,
+                                  backgroundColor: AppColors.border(context),
+                                  valueColor: AlwaysStoppedAnimation<Color>(barColor),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Text('PRO: 20/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
                 ),
-            ],
-          ),
-          if (isPremium) ...[
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: AppColors.border(context),
-                valueColor: AlwaysStoppedAnimation<Color>(barColor),
-                minHeight: 6,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              remaining == 0
-                  ? 'Aylık ücretsiz hakkınız doldu. Ek sorgular 5 TUCi/adet.'
-                  : '$used sorgu kullanıldı, $remaining sorgu kaldı',
-              style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
-            ),
-            _RenewalRow(renewalDate: credits?['renewal_date'] as String?),
-          ] else ...[
-            const SizedBox(height: 8),
-            Text(
-              'Pro üyelikte ayda 20 ücretsiz sorgu hakkı kazanırsınız.',
-              style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ── Boost Kredi Kartı ──────────────────────────────────────────────────────────
-
-class _BoostCreditCard extends StatelessWidget {
-  final Map<String, dynamic>? credits;
-  final bool isPremium;
-
-  const _BoostCreditCard({required this.credits, required this.isPremium});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final used      = credits?['used']      as int? ?? 0;
-    final limit     = credits?['limit']     as int? ?? (isPremium ? 3 : 0);
-    final remaining = credits?['remaining'] as int? ?? (isPremium ? 3 : 0);
-    final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
-
-    final Color barColor = remaining == 0
-        ? const Color(0xFFEF4444)
-        : remaining <= limit ~/ 4
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFF22C55E);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEC4899).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.rocket_launch_outlined, color: Color(0xFFEC4899), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l.blastRemainingTitle, // "Bu Ay Kalan Hak"
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                    ),
-                    const SizedBox(height: 2),
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(color: AppColors.textPrimary(context)),
-                        children: [
-                          TextSpan(
-                            text: '$remaining',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: barColor,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' / $limit',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isPremium)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFB800),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('PRO: 3/ay', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.black)),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: AppColors.border(context),
-              valueColor: AlwaysStoppedAnimation<Color>(barColor),
-              minHeight: 6,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            remaining == 0
-                ? l.boostCreditEmpty
-                : l.boostCreditUsed(used, remaining),
-            style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
-          ),
-          _RenewalRow(renewalDate: credits?['renewal_date'] as String?),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Yenileme Tarihi Satırı ──────────────────────────────────────────────────
-class _RenewalRow extends StatelessWidget {
-  final String? renewalDate;
-  const _RenewalRow({this.renewalDate});
-
-  @override
-  Widget build(BuildContext context) {
-    final formatted = _fmtRenewal(renewalDate);
-    if (formatted.isEmpty) return const SizedBox.shrink();
-    final l = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Row(children: [
-        Icon(Icons.event_repeat_outlined, size: 10, color: AppColors.textSecondary(context)),
-        const SizedBox(width: 4),
-        Text(l.proRenewalDate(formatted), style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
-      ]),
-    );
-  }
-}
-
-class _ReactivationCreditCard extends StatelessWidget {
-  final Map<String, dynamic>? credits;
-  final bool isPremium;
-
-  const _ReactivationCreditCard({required this.credits, required this.isPremium});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final used      = credits?['used']      as int? ?? 0;
-    final limit     = credits?['limit']     as int? ?? (isPremium ? 5 : 0);
-    final remaining = credits?['remaining'] as int? ?? (isPremium ? 5 : 0);
-    final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
-
-    final Color barColor = remaining == 0
-        ? const Color(0xFFEF4444)
-        : remaining <= limit ~/ 4
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFF22C55E);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.replay_outlined, color: Color(0xFF8B5CF6), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l.blastRemainingTitle,
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                    ),
-                    const SizedBox(height: 2),
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(color: AppColors.textPrimary(context)),
-                        children: [
-                          TextSpan(
-                            text: '$remaining',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: barColor,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' / $limit',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isPremium)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text('PRO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF8B5CF6))),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              backgroundColor: AppColors.border(context),
-              valueColor: AlwaysStoppedAnimation<Color>(barColor),
-            ),
-          ),
-          if (isPremium) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '$used hak kullanıldı, $remaining hak kaldı',
-                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
-                ),
+                if (index < items.length - 1)
+                  Divider(height: 1, indent: 68, color: AppColors.border(context)),
               ],
-            ),
-            const SizedBox(height: 4),
-            _RenewalRow(renewalDate: credits?['renewal_date'] as String?),
-          ] else ...[
-            const SizedBox(height: 8),
-            Text(
-              l.listingReactivateProUpsell,
-              style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
-            ),
-          ],
+            );
+          }),
         ],
       ),
     );
   }
 }
 
-String _fmtRenewal(String? iso) {
+String _fmtRenewal(BuildContext context, String? iso) {
   if (iso == null) return '';
   try {
     final d = DateTime.parse(iso);
-    const m = ['', 'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-    return '${d.day} ${m[d.month]}';
+    final locale = Localizations.localeOf(context).languageCode;
+    return DateFormat.yMMMMd(locale).format(d);
   } catch (_) {
     return '';
   }

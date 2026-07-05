@@ -649,13 +649,15 @@
   "proToolListingsDesc": "كم شخصاً وصل إليه كل إعلان ونقر عليه",
   "proToolMarketTitle": "استخبارات السوق",
   "proToolMarketDesc": "ما يبحث عنه المشترون ومتى يتسوقون",
-  "proBlastSection": "رصيد دعوة الجمهور",
   "proBenefitsTitle": "ماذا ستحصل مع Pro",
   "proBenefit1": "شاهد أين تذهب مبيعاتك وإيراداتك",
   "proBenefit2": "كم شخصاً شاهد ونقر على كل إعلان",
   "proBenefit3": "تعلم أوقات الذروة للمشترين",
   "proBenefit4": "ما يبحث عنه الناس — اسد الفجوة وبِع",
-  "proStatusTitle": "👑 مستخدم Pro",
+  "proStatusTitle": "👑 مستخدم PRO",
+  "planMonthly": "شهري",
+  "planYearly": "سنوي",
+  "planLifetime": "مدى الحياة",
   "proStatusDesc": "جميع أدوات التحليل نشطة",
   "proRenewalDate": "التجديد: {date}",
   "@proRenewalDate": { "placeholders": { "date": { "type": "String" } } },
@@ -663,17 +665,27 @@
   "proUnlockDesc": "بِع بالبيانات، لا بالتخمين",
   "proUnlockBtn": "الترقية إلى Pro",
   "proUpgradeSheetDesc": "تحتاج إلى الترقية إلى Pro لاستخدام هذه الأداة.",
-  "blastRemainingTitle": "الرصيد المتبقي هذا الشهر",
-  "blastCreditEmpty": "استنفدت رصيد الإشعارات هذا الشهر. يتجدد الشهر القادم.",
-  "blastCreditUsed": "أرسلت {used} إشعاراً، {remaining} متبقٍ.",
-  "@blastCreditUsed": {
+  "proCreditsSummaryTitle": "الأرصدة المتبقية",
+  "proCreditsBlastName": "دعوة الجمهور (Blast)",
+  "proCreditsBoostName": "إعلان مميز",
+  "proCreditsAiName": "مستشار التسعير بالذكاء الاصطناعي",
+  "proCreditsReactivationName": "إعادة التنشيط",
+  "proCreditsBlastDesc": "يُخطر المشترين المحتملين بإعلانك عبر إشعارات الدفع، مما يزيد من سرعة المبيعات.",
+  "proCreditsBoostDesc": "ينقل إعلانك إلى أعلى نتائج البحث للحصول على مزيد من المشاهدات.",
+  "proCreditsAiDesc": "يحلل السوق باستخدام الذكاء الاصطناعي للتوصية بالتسعير الأكثر دقة لإعلانك.",
+  "proCreditsReactivationDesc": "يسمح لك بإعادة نشر الإعلانات منتهية الصلاحية أو المعلقة مجاناً.",
+  "proCreditsUsedFormat": "تم استخدام {used}، {remaining} متبقٍ",
+  "@proCreditsUsedFormat": {
     "placeholders": {
-      "used": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
+      "used": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "proCreditsLimitFormat": "{remaining} / {limit}",
+  "@proCreditsLimitFormat": {
+    "placeholders": {
+      "remaining": { "type": "int" },
+      "limit": { "type": "int" }
     }
   },
   "blastConfirmCostFreeLabel": "التكلفة",
@@ -1207,19 +1219,6 @@
   "adMetricBestHour": "أفضل ساعة",
   "adMetricCategoryAvgCtr": "اهتمام الإعلانات المشابهة",
   "adMetricBurnRate": "الوقت المتبقي",
-  "proBoostSection": "رصيد الإعلان المميز",
-  "boostCreditEmpty": "استنفدت رصيد الإعلان المميز هذا الشهر. يتجدد الشهر القادم.",
-  "boostCreditUsed": "استخدمت {used} إعلان مميز، {remaining} متبقٍ.",
-  "@boostCreditUsed": {
-    "placeholders": {
-      "used": {
-        "type": "int"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
   "softUpdateTitle": "إصدار جديد متاح",
   "softUpdateMessage": "يتوفر إصدار جديد من التطبيق. يرجى التحديث للحصول على تجربة أفضل.",
   "softUpdateUpdateNow": "تحديث الآن",
