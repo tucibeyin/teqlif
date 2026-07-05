@@ -45,7 +45,6 @@ class SellerAvatarCard extends StatelessWidget {
                             imageUrl: avatarUrl,
                             fit: BoxFit.cover,
                             memCacheWidth: 150,
-                            memCacheHeight: 150,
                             placeholder: (context, url) => _buildPlaceholder(context, initial),
                             errorWidget: (context, url, error) => _buildPlaceholder(context, initial),
                           )

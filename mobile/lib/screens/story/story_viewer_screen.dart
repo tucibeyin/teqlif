@@ -759,8 +759,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       child: Center(
         child: CachedNetworkImage(
           imageUrl: url,
-                                memCacheWidth: 250,
-                                memCacheHeight: 250,
+                                memCacheWidth: 600,
           fit: BoxFit.contain,
           placeholder: (_, _) => const CircularProgressIndicator(
             color: Colors.white54,
@@ -821,8 +820,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                     child: resolved != null
                         ? CachedNetworkImage(
                             imageUrl: resolved,
-                                memCacheWidth: 250,
-                                memCacheHeight: 250,
+                                memCacheWidth: 600,
                             fit: BoxFit.cover,
                             errorWidget: (_, _, _) =>
                                 _InitialsBubble(username: user.username),
@@ -1075,8 +1073,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
               child: resolved != null
                   ? CachedNetworkImage(
                       imageUrl: resolved,
-                                memCacheWidth: 250,
-                                memCacheHeight: 250,
+                                memCacheWidth: 600,
                       fit: BoxFit.cover,
                       errorWidget: (_, _, _) =>
                           _InitialsBubble(username: user.username),

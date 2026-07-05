@@ -655,8 +655,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                             onPageChanged: (i) => setSt(() => pageIdx[0] = i),
                             itemBuilder: (_, i) => CachedNetworkImage(
                               imageUrl: imageUrls[i],
-                                memCacheWidth: 250,
-                                memCacheHeight: 250,
+                                memCacheWidth: 600,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               placeholder: (_, _) => const ShimmerBox(),
@@ -1953,8 +1952,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                                 child: url != null && url.isNotEmpty
                                     ? CachedNetworkImage(
                                         imageUrl: url,
-                                memCacheWidth: 250,
-                                memCacheHeight: 250,
+                                memCacheWidth: 600,
                                         width: 38, height: 38,
                                         fit: BoxFit.cover,
                                         placeholder: (_, _) => const ShimmerBox(

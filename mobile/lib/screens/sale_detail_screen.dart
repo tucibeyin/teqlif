@@ -63,8 +63,7 @@ class SaleDetailScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
                   imageUrl: imgUrl(thumbnailUrl),
-                                memCacheWidth: 250,
-                                memCacheHeight: 250,
+                                memCacheWidth: 600,
                   height: 220,
                   fit: BoxFit.cover,
                   errorWidget: (_, _, _) => _imagePlaceholder(),
@@ -228,8 +227,7 @@ class SaleDetailScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
                   imageUrl: imgUrl(proofImageUrl),
-                                memCacheWidth: 250,
-                                memCacheHeight: 250,
+                                memCacheWidth: 600,
                   fit: BoxFit.cover,
                   errorWidget: (_, _, _) => Container(
                     height: 200,
