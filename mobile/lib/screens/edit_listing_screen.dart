@@ -57,10 +57,15 @@ class _EditListingScreenState extends State<EditListingScreen> {
 
     if (widget.listing['image_urls'] != null) {
       try {
-        final List<dynamic> urls = jsonDecode(widget.listing['image_urls'] as String);
-        _images.addAll(urls.cast<String>());
-      } catch (_) {}
+        final imgs = widget.listing['image_urls'] as List;
+        _images.addAll(imgs.cast<String>());
+      } catch (e) {
+        debugPrint('Error loading images: $e');
+      }
+    } else if (widget.listing['image_url'] != null) {
+      _images.add(widget.listing['image_url'] as String);
     }
+
     if (widget.listing['video_url'] != null) {
       _videoUploadUrl = widget.listing['video_url'];
     }
