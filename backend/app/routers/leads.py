@@ -225,7 +225,7 @@ class BlastRequest(BaseModel):
     category: str = Field(default="")
     listing_id: int | None = Field(default=None)
     stream_id: int | None = Field(default=None)
-    estimated_cost: int = Field(default=0, ge=0)
+    estimated_cost: int | None = Field(default=None, ge=0)
     recipient_count: int | None = Field(default=None, ge=1)  # kullanıcının seçtiği alıcı sayısı
 
 
@@ -250,10 +250,10 @@ async def send_blast(
     credits_remaining = max(0, limit - used)
 
     # İstenen maksimum kişi sayısı
-    # estimated_cost > 0 ise kullanıcının onayladığı fatura tavanı olarak kullan:
-    # ücretsiz krediler + onaylanan ücretli kişi sayısını geç asla.
+    # estimated_cost is None → alan gönderilmemiş, tam cap kullan (eski caller'lar).
+    # estimated_cost >= 0 → kullanıcının onayladığı fatura tavanı; bu kadarı geçme.
     desired = body.recipient_count if body.recipient_count else cap
-    if body.estimated_cost > 0:
+    if body.estimated_cost is not None:
         max_paid_authorized = body.estimated_cost // COST_PER_PERSON
         actual_count_max = min(desired, credits_remaining + max_paid_authorized, cap)
     else:
@@ -505,8 +505,8 @@ async def retargeting_audience(
 
 class RetargetingBlastBody(BaseModel):
     listing_id: int
-    estimated_audience: int = Field(default=0, ge=0)
-    estimated_cost: int = Field(default=0, ge=0)
+    estimated_audience: int | None = Field(default=None, ge=0)
+    estimated_cost: int | None = Field(default=None, ge=0)
     recipient_count: int | None = Field(default=None, ge=1)  # kullanıcının seçtiği alıcı sayısı
 
 
@@ -535,7 +535,7 @@ async def send_retargeting(
     credits_remaining = max(0, _BLAST_LIMIT_PRO - used)
 
     desired = body.recipient_count if body.recipient_count else cap
-    if body.estimated_cost > 0:
+    if body.estimated_cost is not None:
         max_paid_authorized = body.estimated_cost // COST_PER_PERSON
         actual_count = min(desired, credits_remaining + max_paid_authorized, cap)
     else:

@@ -389,7 +389,7 @@ async def estimate_audience_for_listing(
 
 from pydantic import BaseModel, Field
 class MassNotificationRequest(BaseModel):
-    estimated_cost: int = Field(default=0, ge=0)
+    estimated_cost: int | None = Field(default=None, ge=0)
     recipient_count: int | None = Field(default=None, ge=1)
 
 @router.post("/{listing_id}/send-mass-notification", status_code=202)
