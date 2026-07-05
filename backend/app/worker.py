@@ -1004,7 +1004,7 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
         from app.database import AsyncSessionLocal
         from app.models.stream import LiveStream
         from app.config import settings
-        from livekit.api.room_service import RoomService, ListRoomsRequest
+        from livekit.api.room_service import RoomService, ListRoomsRequest, ListParticipantsRequest
 
         cutoff = datetime.now(timezone.utc) - timedelta(minutes=3)
 
@@ -1036,8 +1036,21 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
             from app.routers.webhooks import _close_stream
             for stream in streams:
                 num_participants = active_rooms.get(stream.room_name)
-                # Oda yok VEYA oda boş (tüm katılımcılar ayrıldı) → kapat
-                should_close = num_participants is None or num_participants == 0
+                # Oda yok VEYA boş → kapat
+                if num_participants is None or num_participants == 0:
+                    should_close = True
+                else:
+                    # Oda var ve katılımcı var — host hâlâ orada mı?
+                    try:
+                        part_res = await svc.list_participants(
+                            ListParticipantsRequest(room=stream.room_name)
+                        )
+                        host_identity = str(stream.host_id)
+                        host_present = any(p.identity == host_identity for p in part_res.participants)
+                        should_close = not host_present
+                    except Exception:
+                        should_close = False  # API hatasında güvenli taraf: kapatma
+
                 if should_close:
                     elapsed = int(
                         (datetime.now(timezone.utc) - stream.started_at.replace(tzinfo=timezone.utc)).total_seconds() // 60
