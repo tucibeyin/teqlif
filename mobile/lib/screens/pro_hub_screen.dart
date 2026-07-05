@@ -219,17 +219,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
                 : () => _showUpgrade(context),
           ),
 
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.batch_prediction_outlined,
-            iconColor: const Color(0xFF8B5CF6),
-            title: l.proToolAiPriceTitle,
-            description: l.proToolAiPriceDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yapay zeka asistanını ilan oluşturma ve düzenleme ekranlarında kullanabilirsiniz.')))
-                : () => _showUpgrade(context),
-          ),
+
           const SizedBox(height: 10),
           _ToolCard(
             icon: Icons.stream_outlined,
