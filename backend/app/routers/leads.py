@@ -250,8 +250,14 @@ async def send_blast(
     credits_remaining = max(0, limit - used)
 
     # İstenen maksimum kişi sayısı
+    # estimated_cost > 0 ise kullanıcının onayladığı fatura tavanı olarak kullan:
+    # ücretsiz krediler + onaylanan ücretli kişi sayısını geç asla.
     desired = body.recipient_count if body.recipient_count else cap
-    actual_count_max = min(desired, cap)
+    if body.estimated_cost > 0:
+        max_paid_authorized = body.estimated_cost // COST_PER_PERSON
+        actual_count_max = min(desired, credits_remaining + max_paid_authorized, cap)
+    else:
+        actual_count_max = min(desired, cap)
 
     # ── Kategorideki listing ID'leri ─────────────────────────────────────────
     listing_q = select(Listing.id).where(
@@ -528,8 +534,12 @@ async def send_retargeting(
     used  = await _get_blast_used(current_user.id, current_user.premium_since)
     credits_remaining = max(0, _BLAST_LIMIT_PRO - used)
 
-    desired      = body.recipient_count if body.recipient_count else cap
-    actual_count = min(desired, cap)
+    desired = body.recipient_count if body.recipient_count else cap
+    if body.estimated_cost > 0:
+        max_paid_authorized = body.estimated_cost // COST_PER_PERSON
+        actual_count = min(desired, credits_remaining + max_paid_authorized, cap)
+    else:
+        actual_count = min(desired, cap)
     free_used    = min(credits_remaining, actual_count)
     paid_count   = actual_count - free_used
     tuci_cost    = paid_count * COST_PER_PERSON
