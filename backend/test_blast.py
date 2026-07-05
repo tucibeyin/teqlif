@@ -57,7 +57,8 @@ async def test_mass_notification():
             "title": LISTING_TITLE,
             "listing_id": listing_id,
             "category": target_listing.get("category"),
-            "recipient_count": 1000 # Max limit
+            "recipient_count": 1000, # Max limit
+            "estimated_cost": 0      # Pydantic schema zorunlu kıldığı için
         }
         blast_resp = await client.post("/api/leads/send-blast", json=blast_payload, headers=headers)
         if blast_resp.status_code != 202:
