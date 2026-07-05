@@ -26,29 +26,29 @@
 
             /* tablo: AI */
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺1.200/yıl';
-            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '240 sorgu × 5 TUCi<br>= 1.200 TL tasarruf';
+            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '240 sorgu × 5 TL<br>= 1.200 TL tasarruf';
 
             /* tablo: boost */
             document.querySelector('tr[data-key="boost"] .td-std span').textContent = '0 adet / yıl';
             document.querySelector('tr[data-key="boost"] .td-pro span').textContent = '✔ 36 adet / yıl';
             document.querySelector('tr[data-key="boost"] .val-amount').textContent = '₺1.800/yıl';
-            document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '36 boost × 50 TUCi<br>= 1.800 TL değer';
+            document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '36 boost × 50 TL<br>= 1.800 TL değer';
 
             /* tablo: blast */
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '36 adet / yıl · her duyuruda max 5 kişi';
             document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '72 adet / yıl · her duyuruda max 10 kişi';
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+36 Duyuru Kredisi';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+36 ekstra kredi + 2× alıcı kapasitesi · max ₺3.600/yıl TUCi tasarrufu';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+36 ekstra kredi + 2× alıcı kapasitesi · max ₺3.600/yıl tasarruf';
 
             /* tablo: reactivation */
             document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 60 ücretsiz / yıl';
             document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺600/yıl';
-            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '60 reaktivasyon × 10 TUCi<br>= 600 TL tasarruf';
+            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '60 reaktivasyon × 10 TL<br>= 600 TL tasarruf';
 
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺4.800+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺4.800+ değer</span>';
             }
 
             /* banner */
@@ -68,29 +68,29 @@
 
             /* tablo: AI */
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺100/ay';
-            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '20 sorgu × 5 TUCi<br>= 100 TL tasarruf';
+            document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '20 sorgu × 5 TL<br>= 100 TL tasarruf';
 
             /* tablo: boost */
             document.querySelector('tr[data-key="boost"] .td-std span').textContent = '0 adet / ay';
             document.querySelector('tr[data-key="boost"] .td-pro span').textContent = '✔ 3 adet / ay';
             document.querySelector('tr[data-key="boost"] .val-amount').textContent = '₺150/ay';
-            document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '3 boost × 50 TUCi<br>= 150 TL değer';
+            document.querySelector('tr[data-key="boost"] .val-desc').innerHTML = '3 boost × 50 TL<br>= 150 TL değer';
 
             /* tablo: blast */
             document.querySelector('tr[data-key="blast"] .td-std span').textContent = '3 adet / ay · her duyuruda max 5 kişi';
             document.querySelector('tr[data-key="blast"] .td-pro span').textContent = '6 adet / ay · her duyuruda max 10 kişi';
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+3 Duyuru Kredisi';
-            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+3 ekstra kredi + 2× alıcı kapasitesi · max ₺300/ay TUCi tasarrufu';
+            document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+3 ekstra kredi + 2× alıcı kapasitesi · max ₺300/ay tasarruf';
 
             /* tablo: reactivation */
             document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 5 ücretsiz / ay';
             document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺50/ay';
-            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '5 reaktivasyon × 10 TUCi<br>= 50 TL tasarruf';
+            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '5 reaktivasyon × 10 TL<br>= 50 TL tasarruf';
 
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺400+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺400+ değer</span>';
             }
 
             /* banner */

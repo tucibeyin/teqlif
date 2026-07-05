@@ -563,6 +563,57 @@
             .ctable .col-val { width: 28%; }
             .val-desc { display: none; }
         }
+        /* ── TUCi info banner ──────────────────────────────────── */
+        .tuci-info {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: linear-gradient(135deg, rgba(251,191,36,.07), rgba(251,191,36,.03));
+            border: 1px solid rgba(251,191,36,.30);
+            border-radius: 14px;
+            padding: .9rem 1.2rem;
+        }
+
+        .tuci-info-icon {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .tuci-info-body { flex: 1; min-width: 0; }
+
+        .tuci-info-rate {
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: var(--gold);
+            letter-spacing: .01em;
+            margin-bottom: .18rem;
+        }
+
+        .tuci-info-desc {
+            font-size: .76rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        .tuci-info-pill {
+            flex-shrink: 0;
+            background: rgba(251,191,36,.15);
+            border: 1px solid rgba(251,191,36,.30);
+            color: var(--gold);
+            font-size: .68rem;
+            font-weight: 800;
+            padding: .25rem .7rem;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 540px) {
+            .tuci-info { flex-wrap: wrap; }
+            .tuci-info-pill { display: none; }
+        }
+
         /* ── Footer dark override ──────────────────────────────── */
         footer {
             background: transparent;
@@ -694,17 +745,17 @@
                             <span class="feat-chevron">▾</span>
                         </div>
                     </td>
-                    <td class="td-std"><span class="v-dim">5 TUCi/kullanım</span></td>
+                    <td class="td-std"><span class="v-dim">5 TL/kullanım</span></td>
                     <td class="td-pro"><span class="v-ok">⚡ 20/ay ücretsiz</span></td>
                     <td class="td-val">
                         <div class="val-card">
                             <div class="val-amount">~₺100/ay</div>
-                            <div class="val-desc">20 sorgu × 5 TUCi<br>= 100 TL tasarruf</div>
+                            <div class="val-desc">20 sorgu × 5 TL<br>= 100 TL tasarruf</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="desc-row" data-key="ai">
-                    <td colspan="4"><div class="desc-inner">İlan oluştururken yapay zeka, platformdaki benzer ürünlerin geçmiş satışlarını analiz ederek size en rekabetçi fiyatı saniyeler içinde önerir. Pro kullanıcılar ayda 20 sorgu ücretsiz kullanabilir; standart kullanıcılar her sorgu için 5 TUCi öder.</div></td>
+                    <td colspan="4"><div class="desc-inner">İlan oluştururken yapay zeka, platformdaki benzer ürünlerin geçmiş satışlarını analiz ederek size en rekabetçi fiyatı saniyeler içinde önerir. Pro kullanıcılar ayda 20 sorgu ücretsiz kullanabilir; standart kullanıcılar her sorgu için 5 TL öder.</div></td>
                 </tr>
 
                 <!-- 4 -->
@@ -741,12 +792,12 @@
                     <td class="td-val">
                         <div class="val-card">
                             <div class="val-amount">₺150/ay</div>
-                            <div class="val-desc">3 boost × 50 TUCi<br>= 150 TL değer</div>
+                            <div class="val-desc">3 boost × 50 TL<br>= 150 TL değer</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="desc-row" data-key="boost">
-                    <td colspan="4"><div class="desc-inner">Ayda 3 ilanınızı rakiplerinizin önüne geçirecek şekilde "Sana Özel" akışında öne çıkarabilirsiniz. Her boost 50 TUCi bütçeyle çalışır ve tıklama başına 1 TUCi harcar — bütçe bitene kadar ilanınız ön sırada görünür.</div></td>
+                    <td colspan="4"><div class="desc-inner">Ayda 3 ilanınızı rakiplerinizin önüne geçirecek şekilde "Sana Özel" akışında öne çıkarabilirsiniz. Her boost 50 TL bütçeyle çalışır ve tıklama başına 1 TL harcar — bütçe bitene kadar ilanınız ön sırada görünür.</div></td>
                 </tr>
 
                 <!-- 6 -->
@@ -783,12 +834,12 @@
                     <td class="td-val">
                         <div class="val-card">
                             <div class="val-amount">+3 Duyuru Kredisi</div>
-                            <div class="val-desc">+3 ekstra kredi + 2× alıcı kapasitesi · 10 TUCi/kişi karma ödeme</div>
+                            <div class="val-desc">+3 ekstra kredi + 2× alıcı kapasitesi · 10 TL/kişi karma ödeme</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="desc-row" data-key="blast">
-                    <td colspan="4"><div class="desc-inner">Sizi takip etmeyen, kategorinizle ilgilenen aktif kullanıcılara anlık bildirim gönderin. Normal hesaplar ayda 3 duyuru ve duyuru başına max 5 kişiyle sınırlıyken Pro'da bu limitler 6 duyuru ve 10 kişiye çıkar. Krediniz varsa ücretsiz; eksik kalırsa her kişi için 10 TUCi karma olarak düşülür. Gönderim yalnızca sizi takip etmeyenlere yapılır — mükerrer bildirimden kaçınılır.</div></td>
+                    <td colspan="4"><div class="desc-inner">Sizi takip etmeyen, kategorinizle ilgilenen aktif kullanıcılara anlık bildirim gönderin. Normal hesaplar ayda 3 duyuru ve duyuru başına max 5 kişiyle sınırlıyken Pro'da bu limitler 6 duyuru ve 10 kişiye çıkar. Krediniz varsa ücretsiz; eksik kalırsa her kişi için 10 TL karma olarak düşülür. Gönderim yalnızca sizi takip etmeyenlere yapılır — mükerrer bildirimden kaçınılır.</div></td>
                 </tr>
 
                 <!-- 8 -->
@@ -799,17 +850,17 @@
                             <span class="feat-chevron">▾</span>
                         </div>
                     </td>
-                    <td class="td-std"><span class="v-dim">10 TUCi / adet</span></td>
+                    <td class="td-std"><span class="v-dim">10 TL / adet</span></td>
                     <td class="td-pro"><span class="v-ok">⚡ 5 ücretsiz / ay</span></td>
                     <td class="td-val">
                         <div class="val-card">
                             <div class="val-amount">₺50/ay</div>
-                            <div class="val-desc">5 reaktivasyon × 10 TUCi<br>= 50 TL tasarruf</div>
+                            <div class="val-desc">5 reaktivasyon × 10 TL<br>= 50 TL tasarruf</div>
                         </div>
                     </td>
                 </tr>
                 <tr class="desc-row" data-key="reactivation">
-                    <td colspan="4"><div class="desc-inner">30 günlük ücretsiz yayın süresi dolan pasif ilanları tekrar aktive etmek için standart kullanıcılar her seferinde 10 TUCi öder. Pro kullanıcılar ayda 5 reaktivasyon hakkı ücretsiz kazanır; hak bittiğinde yine 10 TUCi düşülür. İlan, sanki yeni yüklenmiş gibi akışa girer ve algoritma onu taze içerik olarak değerlendirir.</div></td>
+                    <td colspan="4"><div class="desc-inner">30 günlük ücretsiz yayın süresi dolan pasif ilanları tekrar aktive etmek için standart kullanıcılar her seferinde 10 TL öder. Pro kullanıcılar ayda 5 reaktivasyon hakkı ücretsiz kazanır; hak bittiğinde yine 10 TL düşülür. İlan, sanki yeni yüklenmiş gibi akışa girer ve algoritma onu taze içerik olarak değerlendirir.</div></td>
                 </tr>
 
                 <!-- 9 -->
@@ -850,8 +901,7 @@
                     </td>
                     <td class="tfoot-val" style="padding:.8rem .85rem; border-bottom:none;">
                         <div id="tfootValueText" style="font-size:.7rem;color:var(--text-dim);line-height:1.5;">
-                            ₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺400+ değer.</span><br>
-                            <span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>
+                            ₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺400+ değer.</span>
                         </div>
                     </td>
                 </tr>
@@ -873,6 +923,16 @@
             <div class="total-sub" id="totalSub">aylık avantaj değeri</div>
             <div class="roi-pill" id="roiPill">Maliyetin karşılanır 🎯</div>
         </div>
+    </div>
+
+    <!-- TUCi bilgi notu -->
+    <div class="tuci-info">
+        <div class="tuci-info-icon">🪙</div>
+        <div class="tuci-info-body">
+            <div class="tuci-info-rate">1 TL = 1 TUCi</div>
+            <div class="tuci-info-desc">teqlif platformunda tüm işlemler <strong style="color:var(--gold);">TUCi token</strong> ile gerçekleştirilir. TUCi, sistem içi para birimidir — 1 TUCi tam olarak 1 Türk Lirası değerindedir.</div>
+        </div>
+        <div class="tuci-info-pill">Sistem Para Birimi</div>
     </div>
 
 </div>
@@ -917,6 +977,6 @@
 </footer>
 
 <script src="/static/js/main.js"></script>
-<script src="/static/js/pro-plan.js?v=18"></script>
+<script src="/static/js/pro-plan.js?v=19"></script>
 </body>
 </html>
