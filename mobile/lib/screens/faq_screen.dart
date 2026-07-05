@@ -176,16 +176,32 @@ Widget _buildAnswerWithIcons(BuildContext context, String text) {
   );
 
   final Map<String, IconData> iconMap = {
+    // TR
     'Mavi Tik': Icons.verified,
     'teqlif PRO': Icons.workspace_premium,
     'TUCi': Icons.monetization_on,
     'Öne Çıkar (Blast)': Icons.rocket_launch,
     'Sıcak Talep': Icons.local_fire_department_outlined,
     'Otomatik Teklif': Icons.gavel,
+    // EN
+    'Blue Tick': Icons.verified,
+    'Verified Account': Icons.verified,
+    'Blast': Icons.rocket_launch,
+    'Hot Demand': Icons.local_fire_department_outlined,
+    'Auto-Bid': Icons.gavel,
+    // AR
+    'العلامة الزرقاء': Icons.verified,
+    'حساب موثق': Icons.verified,
+    'الطلب الساخن': Icons.local_fire_department_outlined,
+    'المزايدة التلقائية': Icons.gavel,
   };
 
-  final pattern = iconMap.keys.map((k) => RegExp.escape(k)).join('|');
-  final regex = RegExp('($pattern)');
+  final Map<String, IconData> lowerIconMap = {
+    for (var k in iconMap.keys) k.toLowerCase(): iconMap[k]!
+  };
+
+  final pattern = lowerIconMap.keys.map((k) => RegExp.escape(k)).join('|');
+  final regex = RegExp('($pattern)', caseSensitive: false);
 
   final List<InlineSpan> spans = [];
   int lastMatchEnd = 0;
@@ -196,7 +212,7 @@ Widget _buildAnswerWithIcons(BuildContext context, String text) {
     }
 
     final String matchedWord = match.group(0)!;
-    final IconData icon = iconMap[matchedWord]!;
+    final IconData icon = lowerIconMap[matchedWord.toLowerCase()]!;
 
     spans.add(TextSpan(text: '$matchedWord ('));
     spans.add(
