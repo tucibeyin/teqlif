@@ -1,6 +1,5 @@
 /* auction.js — Real-time açık artırma (WebSocket) */
 
-console.log('[Auction] yüklendi | confetti:', typeof confetti);
 
 const Auction = (() => {
     let _ws = null;
@@ -133,7 +132,6 @@ const Auction = (() => {
             return;
         }
 
-        console.log('[Auction] Konfeti patlatıldı, kazanan biziz!');
 
         // body'nin overflow:hidden veya transform bağlamından kaçmak için
         // canvas'ı doğrudan <html> elemanına ekle, 5s sonra temizle
