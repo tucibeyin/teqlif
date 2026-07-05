@@ -174,17 +174,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
                 ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BestStreamTimeScreen()))
                 : () => _showUpgrade(context),
           ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.podcasts,
-            iconColor: const Color(0xFF0EA5E9),
-            title: l.proToolStreamHistoryTitle,
-            description: l.proToolStreamHistoryDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveStreamHistoryScreen()))
-                : () => _showUpgrade(context),
-          ),
+
           const SizedBox(height: 10),
           _ToolCard(
             icon: Icons.pie_chart_outline,
@@ -228,7 +218,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
             description: l.proToolStreamAnalyticsDesc,
             isPremium: isPremium,
             onTap: isPremium
-                ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu özellik yakında aktif edilecektir!')))
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveStreamHistoryScreen()))
                 : () => _showUpgrade(context),
           ),
 
