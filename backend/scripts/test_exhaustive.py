@@ -88,10 +88,16 @@ def print_dates(state, prefix="Durum"):
 
 async def set_dates(listing_id: int, is_active: bool, created_days_ago: float, deact_days_ago: float = None):
     # Veritabanında tarihleri doğrudan değiştir
-    await db_exec(
-        "UPDATE listings SET is_active = :a, created_at = now() - interval '1 day' * :c, deactivated_at = CASE WHEN :d::float IS NOT NULL THEN now() - interval '1 day' * :d ELSE null END WHERE id = :id",
-        {"a": is_active, "c": created_days_ago, "d": deact_days_ago, "id": listing_id}
-    )
+    if deact_days_ago is None:
+        await db_exec(
+            "UPDATE listings SET is_active = :a, created_at = now() - interval '1 day' * :c, deactivated_at = null WHERE id = :id",
+            {"a": is_active, "c": created_days_ago, "id": listing_id}
+        )
+    else:
+        await db_exec(
+            "UPDATE listings SET is_active = :a, created_at = now() - interval '1 day' * :c, deactivated_at = now() - interval '1 day' * :d WHERE id = :id",
+            {"a": is_active, "c": created_days_ago, "d": deact_days_ago, "id": listing_id}
+        )
 
 async def run_exhaustive(client, token, user_id, listing_id):
     # Pro yap, bol kredi ver, bakiyeyi sıfırla ki credit usage test edilsin
