@@ -1154,7 +1154,6 @@ class _StreamCard extends StatelessWidget {
             if (hasThumbnail)
               CachedNetworkImage(
                 imageUrl: imgUrl(stream.thumbnailUrl),
-                memCacheWidth: 600,
                 fit: BoxFit.cover,
                 placeholder: (_, _) => const Center(
                   child: CircularProgressIndicator(strokeWidth: 2),
@@ -1357,7 +1356,6 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                   photo != null
                       ? CachedNetworkImage(
                           imageUrl: photo,
-                          memCacheWidth: 600,
                           fit: BoxFit.cover,
                           width: double.infinity,
                         )
@@ -1606,7 +1604,6 @@ class _ListingTile extends StatelessWidget {
             photo != null
                 ? CachedNetworkImage(
                     imageUrl: photo,
-                    memCacheWidth: 600,
                     fit: BoxFit.cover,
                     placeholder: (_, _) => const Center(
                       child: CircularProgressIndicator(strokeWidth: 2),

@@ -57,7 +57,6 @@ class StreamerAvatarCard extends StatelessWidget {
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                                 height: double.infinity,
-                                memCacheWidth: 150,
                                 placeholder: (_, _) => _AvatarInitial(initial: initial, context: context),
                                 errorWidget: (_, _, _) => _AvatarInitial(initial: initial, context: context),
                               )

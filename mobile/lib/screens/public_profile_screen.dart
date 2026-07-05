@@ -648,7 +648,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         photo != null
                             ? CachedNetworkImage(
                                 imageUrl: photo,
-                                memCacheWidth: 600,
                                 fit: BoxFit.cover,
                                 placeholder: (_, _) => const Center(
                                     child: CircularProgressIndicator(strokeWidth: 2)),

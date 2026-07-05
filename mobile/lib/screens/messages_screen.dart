@@ -1192,7 +1192,6 @@ class _ContextBanner extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 child: CachedNetworkImage(
                   imageUrl: imgUrl(thumbnailUrl),
-                                memCacheWidth: 600,
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,

@@ -1119,7 +1119,6 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
           Positioned.fill(
             child: CachedNetworkImage(
               imageUrl: imgUrl(widget.stream.thumbnailUrl),
-                                memCacheWidth: 600,
               fit: BoxFit.cover,
               placeholder: (_, _) => _darkBg(),
               errorWidget: (_, _, _) => _darkBg(),
@@ -1879,8 +1878,7 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
             Builder(builder: (_) {
               debugPrint('[${DateTime.now().toString()}] [EVENT: LISTING_UI_BUILD_FALLBACK] Showing THUMBNAIL for listing: ${listing['id']}');
               return CachedNetworkImage(imageUrl: imgUrl(thumbUrl),
-                                memCacheWidth: 600,
-                                memCacheHeight: 250, fit: BoxFit.cover);
+ fit: BoxFit.cover);
             })
           ] else ...[
             Builder(builder: (_) {

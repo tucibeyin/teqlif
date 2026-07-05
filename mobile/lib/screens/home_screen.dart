@@ -1102,7 +1102,6 @@ class _GridItemState extends State<_GridItem> {
             photo != null
                 ? CachedNetworkImage(
                     imageUrl: photo,
-                    memCacheWidth: 600,
                     fit: BoxFit.cover,
                     placeholder: (_, _) => const ShimmerBox(),
                     errorWidget: (_, _, _) => _placeholder(context),

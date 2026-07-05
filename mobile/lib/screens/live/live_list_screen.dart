@@ -649,7 +649,6 @@ class _StreamerAvatarCard extends StatelessWidget {
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? CachedNetworkImage(
                                 imageUrl: imageUrl,
-                                memCacheWidth: 600,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                                 height: double.infinity,
@@ -825,7 +824,6 @@ class _StreamGridTile extends StatelessWidget {
                     if (hasThumbnail)
                       CachedNetworkImage(
                         imageUrl: imgUrl(stream.thumbnailUrl),
-                        memCacheWidth: 600,
                         fit: BoxFit.cover,
                         placeholder: (_, _) => const Center(
                           child: CircularProgressIndicator(strokeWidth: 2),

@@ -243,7 +243,6 @@ class ProfileScreenState extends State<ProfileScreen> {
     return ClipOval(
       child: CachedNetworkImage(
         imageUrl: imageUrl,
-                                memCacheWidth: 600,
         width: radius * 2,
         height: radius * 2,
         fit: BoxFit.cover,
@@ -997,7 +996,6 @@ class _ListingGridItem extends StatelessWidget {
           imageUrl != null
               ? CachedNetworkImage(
                   imageUrl: imageUrl,
-                                memCacheWidth: 600,
                   fit: BoxFit.cover,
                   placeholder: (_, _) =>
                       const Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -2441,7 +2439,6 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                             child: imageUrl != null
                                 ? CachedNetworkImage(
                                     imageUrl: imageUrl,
-                                memCacheWidth: 600,
                                     width: 60, height: 60, fit: BoxFit.cover,
                                     placeholder: (_, _) => const SizedBox(
                                       width: 60, height: 60,
@@ -2612,7 +2609,6 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                             child: imageUrl != null
                                 ? CachedNetworkImage(
                                     imageUrl: imageUrl,
-                                memCacheWidth: 600,
                                     width: 60, height: 60, fit: BoxFit.cover,
                                     placeholder: (_, _) => const SizedBox(
                                       width: 60, height: 60,

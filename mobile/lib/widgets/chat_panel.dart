@@ -1098,8 +1098,6 @@ class _ChatAvatar extends StatelessWidget {
         imageUrl: _resolveImageUrl(imageUrl!),
         width: _size,
         height: _size,
-        memCacheWidth: 60,
-        memCacheHeight: 60,
         fit: BoxFit.cover,
         placeholder: (_, _) => fallback,
         errorWidget: (_, _, _) => fallback,

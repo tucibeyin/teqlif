@@ -126,7 +126,6 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                                   child: thumbnailUrl != null && thumbnailUrl.isNotEmpty
                                       ? CachedNetworkImage(
                                           imageUrl: imgUrl(thumbnailUrl),
-                                memCacheWidth: 600,
                                           width: 72,
                                           height: 72,
                                           fit: BoxFit.cover,
