@@ -287,9 +287,81 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   Future<void> _toggleActive() async {
+    if (!mounted) return;
+    final l  = AppLocalizations.of(context)!;
+    final id = widget.listing['id'] as int;
+
+    if (_isActive) {
+      // Aktif → Pasif: uyarı modal
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text(l.listingDeactivateTitle),
+          content: Text('${l.listingDeactivateWarning}\n\n${l.listingDeactivateCostHint(10)}'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.listingDeactivateConfirm, style: const TextStyle(color: Color(0xFFDC2626))),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    } else {
+      // Pasif → Aktif: maliyet bilgisi çek
+      final costData = await AnalyticsService.getReactivationCredits();
+      if (!mounted) return;
+
+      final isPremium = costData?['is_premium']    as bool? ?? false;
+      final remaining = costData?['free_remaining'] as int?  ?? 0;
+      final cost      = costData?['cost']           as int?  ?? 10;
+      final balance   = costData?['balance']        as int?  ?? 0;
+      final canAfford = costData?['can_afford']     as bool? ?? false;
+
+      if (!canAfford) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(l.listingReactivateTitle),
+            content: Text(l.listingReactivateInsufficientBalance),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: Text(l.btnDismiss)),
+            ],
+          ),
+        );
+        return;
+      }
+
+      String subtitle;
+      if (isPremium && remaining > 0) {
+        subtitle = l.listingReactivateFreeCredit(remaining);
+      } else if (isPremium) {
+        subtitle = l.listingReactivatePaidPro(cost);
+      } else {
+        subtitle = l.listingReactivatePaidNormal(cost, balance);
+      }
+      if (!isPremium) subtitle += '\n\n${l.listingReactivateProUpsell}';
+
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text(l.listingReactivateTitle),
+          content: Text(subtitle),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.listingReactivateConfirm, style: const TextStyle(color: Color(0xFF6366F1))),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    }
+
     final token = await StorageService.getToken();
     if (token == null) return;
-    final id = widget.listing['id'];
     try {
       final resp = await http.patch(
         Uri.parse('$kBaseUrl/listings/$id/toggle'),
@@ -299,9 +371,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final newActive = data['is_active'] as bool? ?? !_isActive;
         setState(() => _isActive = newActive);
-        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(newActive ? l.listingActivated : l.listingDeactivated)),
+        );
+      } else if (resp.statusCode == 402 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.listingReactivateInsufficientBalance)),
         );
       }
     } catch (_) {}

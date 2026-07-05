@@ -452,11 +452,26 @@ async def reactivation_credits(current_user: User = Depends(get_current_user)):
         _get_reactivation_used,
         _reactivation_next_billing,
         _REACTIVATION_FREE_MONTHLY,
+        _REACTIVATION_COST_TUCI,
     )
     if not current_user.is_premium:
-        return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False, "renewal_date": None}
+        can_afford = current_user.tuci_balance >= _REACTIVATION_COST_TUCI
+        return {
+            "used": 0,
+            "limit": 0,
+            "remaining": 0,
+            "free_remaining": 0,
+            "is_premium": False,
+            "renewal_date": None,
+            "cost": _REACTIVATION_COST_TUCI,
+            "balance": current_user.tuci_balance,
+            "can_afford": can_afford,
+        }
     used      = await _get_reactivation_used(current_user.id, current_user.premium_since)
     remaining = max(0, _REACTIVATION_FREE_MONTHLY - used)
+    is_free   = remaining > 0
+    cost      = 0 if is_free else _REACTIVATION_COST_TUCI
+    can_afford = is_free or current_user.tuci_balance >= _REACTIVATION_COST_TUCI
     renewal_date: str | None = None
     if current_user.premium_since:
         renewal_date = _reactivation_next_billing(current_user.premium_since).isoformat()
@@ -464,8 +479,12 @@ async def reactivation_credits(current_user: User = Depends(get_current_user)):
         "used": used,
         "limit": _REACTIVATION_FREE_MONTHLY,
         "remaining": remaining,
+        "free_remaining": remaining,
         "is_premium": True,
         "renewal_date": renewal_date,
+        "cost": cost,
+        "balance": current_user.tuci_balance,
+        "can_afford": can_afford,
     }
 
 
