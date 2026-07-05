@@ -146,7 +146,7 @@ async def audience_size(
             WHERE item_type = 'listing'
               AND item_id IN ({ids_str})
               AND event_type IN ('view', 'dwell', 'bid_hesitation')
-              AND timestamp >= now() - INTERVAL 7 DAY
+              AND timestamp >= now() - INTERVAL 30 DAY
               AND user_id IS NOT NULL
               AND user_id != {current_user.id}
             LIMIT 10001
@@ -249,26 +249,14 @@ async def send_blast(
     used  = await _get_blast_used(current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
-    # Kullanıcının seçtiği ya da maksimum alıcı sayısı
+    # İstenen maksimum kişi sayısı
     desired = body.recipient_count if body.recipient_count else cap
-    actual_count = min(desired, cap)
-
-    # Karma maliyet hesabı
-    free_used  = min(credits_remaining, actual_count)
-    paid_count = actual_count - free_used
-    tuci_cost  = paid_count * COST_PER_PERSON
-
-    # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
-    if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
-        raise HTTPException(
-            status_code=402,
-            detail=f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {tuci_cost} TUCi",
-        )
+    actual_count_max = min(desired, cap)
 
     # ── Kategorideki listing ID'leri ─────────────────────────────────────────
     listing_q = select(Listing.id).where(
-        Listing.is_deleted == False,  # noqa: E712
-        Listing.is_active == True,    # noqa: E712
+        Listing.is_deleted == False,
+        Listing.is_active == True,
     )
     if body.category:
         listing_q = listing_q.where(Listing.category == body.category)
@@ -277,7 +265,7 @@ async def send_blast(
     listing_ids = [r[0] for r in listing_result.fetchall()]
 
     if not listing_ids:
-        raise HTTPException(status_code=404, detail="Hedef kitle bulunamadı.")
+        return {"error": "Hedef kitle bulunamadı."}
 
     # ── ClickHouse: aktif user_id listesi ────────────────────────────────────
     ids_str = ", ".join(str(i) for i in listing_ids)
@@ -291,7 +279,7 @@ async def send_blast(
             WHERE item_type = 'listing'
               AND item_id IN ({ids_str})
               AND event_type IN ('view', 'dwell', 'bid_hesitation')
-              AND timestamp >= now() - INTERVAL 7 DAY
+              AND timestamp >= now() - INTERVAL 30 DAY
               AND user_id IS NOT NULL
               AND user_id != {current_user.id}
             LIMIT 10000
@@ -300,11 +288,10 @@ async def send_blast(
     except Exception as exc:
         logger.warning("[Leads] ClickHouse user listesi alınamadı: %s", exc)
 
-    # ── PostgreSQL: FCM tokenlar ──────────────────────────────────────────────
     if not target_user_ids:
-        logger.info("[Leads] ClickHouse verisi yok — blast iptal | seller=%d", current_user.id)
-        return {"sent": 0, "spent": 0, "message": "Bu kategori için henüz yeterli kitle verisi yok."}
+        return {"error": "Bildirim atılabilecek aktif cihaz bulunamadı."}
 
+    # ── PostgreSQL: FCM tokenlar ──────────────────────────────────────────────
     token_result = await db.execute(sql_text("""
         SELECT fcm_token FROM users
         WHERE id = ANY(:ids)
@@ -313,16 +300,56 @@ async def send_blast(
               SELECT follower_id FROM follows WHERE followed_id = :me
           )
         LIMIT :cap
-    """), {"ids": target_user_ids, "me": current_user.id, "cap": actual_count})
+    """), {"ids": target_user_ids, "me": current_user.id, "cap": actual_count_max})
     fcm_tokens: list[str] = [r[0] for r in token_result.fetchall() if r[0]]
 
-    if not fcm_tokens:
-        logger.info("[Leads] FCM token bulunamadı — blast iptal | seller=%d", current_user.id)
-        return {
-            "sent": 0,
-            "spent": 0,
-            "message": "Bu hedef kitlede bildirim alacak kullanıcı bulunamadı.",
-        }
+    # GERÇEK (ACTUAL) ALICI SAYISI
+    actual_count = len(fcm_tokens)
+
+    if actual_count == 0:
+        return {"error": "Bildirim atılabilecek aktif cihaz bulunamadı."}
+
+    # ── Kesin Maliyet Hesabı (Sadece Bulunan FCM Sayısına Göre) ─────────────
+    free_used  = min(credits_remaining, actual_count)
+    paid_count = actual_count - free_used
+    tuci_cost  = paid_count * COST_PER_PERSON
+
+    # ── TUCi bakiye kontrolü ─────────────────────────────────────────────────
+    if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
+        return {"error": f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {tuci_cost} TUCi"}
+
+    # ── Kampanya Kaydı Oluştur ────────────────────────────────────────────────
+    from app.models.mass_notification import MassNotificationCampaign
+    
+    campaign = MassNotificationCampaign(
+        user_id=current_user.id,
+        listing_id=body.listing_id,
+        stream_id=body.stream_id,
+        target_count=actual_count,
+        sent_count=0, # Asıl gönderimde güncellenir
+        click_count=0,
+        spent_tuci=tuci_cost,
+        spent_free_credits=free_used,
+    )
+    db.add(campaign)
+    await db.flush() # get campaign.id
+
+    # ── TUCi düş ──────────────────────────────────────────────────────────────
+    if tuci_cost > 0:
+        await db.execute(
+            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            {"cost": tuci_cost, "uid": current_user.id},
+        )
+        db.add(TuciTransaction(
+            user_id=current_user.id,
+            amount=-tuci_cost,
+            transaction_type="spend_lead_gen",
+        ))
+    
+    await db.commit()
+
+    if free_used > 0:
+        await _increment_blast(current_user.id, count=free_used, premium_since=current_user.premium_since)
 
     # ── Firebase toplu push (fire-and-forget) ─────────────────────────────────
     from app.services.firebase_service import send_push, InvalidFCMTokenError
@@ -334,47 +361,33 @@ async def send_blast(
     else:
         listing_url = "/home"
 
-    async def _send_one(token: str) -> None:
+    async def _send_one(token: str, cid: int) -> None:
         try:
             await send_push(
                 token=token,
                 title="🔥 Aradığın ürün şu an satışta!",
                 body=f'"{body.title}" — Kaçırmadan incele!',
                 notif_type="lead_blast",
-                extra_data={"url": listing_url},
+                extra_data={"url": listing_url, "campaign_id": str(cid)},
             )
         except InvalidFCMTokenError:
-            logger.info("[Leads] Geçersiz FCM token temizlendi")
-        except Exception as exc:
-            logger.warning("[Leads] Push başarısız: %s", exc)
+            pass
+        except Exception:
+            pass
 
     chunk_size = 50
     sent = 0
     for i in range(0, len(fcm_tokens), chunk_size):
         chunk = fcm_tokens[i : i + chunk_size]
-        await asyncio.gather(*[_send_one(t) for t in chunk])
+        await asyncio.gather(*[_send_one(t, campaign.id) for t in chunk])
         sent += len(chunk)
 
-    logger.info(
-        "[Leads] Blast gönderildi | seller=%d | tokens=%d | free=%d | paid=%d | cost=%d TUCi",
-        current_user.id, sent, free_used, paid_count, tuci_cost,
+    # Update sent count realistically
+    await db.execute(
+        sql_text("UPDATE mass_notification_campaigns SET sent_count = :sent WHERE id = :cid"),
+        {"sent": sent, "cid": campaign.id}
     )
-
-    # ── TUCi düş + kredi say ──────────────────────────────────────────────────
-    if tuci_cost > 0:
-        await db.execute(
-            sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-            {"cost": tuci_cost, "uid": current_user.id},
-        )
-        db.add(TuciTransaction(
-            user_id=current_user.id,
-            amount=-tuci_cost,
-            transaction_type="spend_lead_gen",
-        ))
-        await db.commit()
-
-    if free_used > 0:
-        await _increment_blast(current_user.id, count=free_used, premium_since=current_user.premium_since)
+    await db.commit()
 
     return {
         "sent": sent,
@@ -607,3 +620,47 @@ async def send_retargeting(
         "spent": tuci_cost,
         "message": f"{sent} kişiye geri hedefleme bildirimi gönderildi.",
     }
+
+
+# ── Mass Notification Report & Click Tracking ──────────────────────────────────
+
+@router.get("/mass-notification-report")
+async def get_mass_notification_report(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy import select, func
+    from app.models.mass_notification import MassNotificationCampaign
+    
+    query = select(
+        func.sum(MassNotificationCampaign.target_count).label('total_target'),
+        func.sum(MassNotificationCampaign.sent_count).label('total_sent'),
+        func.sum(MassNotificationCampaign.click_count).label('total_clicks'),
+        func.sum(MassNotificationCampaign.spent_tuci).label('total_spent_tuci')
+    ).where(MassNotificationCampaign.user_id == current_user.id)
+    
+    result = await db.execute(query)
+    row = result.fetchone()
+    
+    return {
+        "total_target": int(row.total_target or 0),
+        "total_sent": int(row.total_sent or 0),
+        "total_clicks": int(row.total_clicks or 0),
+        "total_spent_tuci": int(row.total_spent_tuci or 0),
+    }
+
+@router.post("/campaign/{campaign_id}/click", status_code=204)
+async def track_campaign_click(
+    campaign_id: int,
+    db: AsyncSession = Depends(get_db),
+    # Optional auth if we track anon clicks
+):
+    from sqlalchemy import update
+    from app.models.mass_notification import MassNotificationCampaign
+    
+    await db.execute(
+        update(MassNotificationCampaign)
+        .where(MassNotificationCampaign.id == campaign_id)
+        .values(click_count=MassNotificationCampaign.click_count + 1)
+    )
+    await db.commit()

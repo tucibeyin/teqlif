@@ -622,6 +622,40 @@ class AnalyticsService {
     } catch (_) {}
     return null;
   }
+
+  static Future<Map<String, dynamic>> getMassNotificationReport() async {
+    final token = await StorageService.getToken();
+    if (token == null) throw Exception('Yetkilendirme hatası');
+
+    final response = await http.get(
+      Uri.parse('$kBaseUrl/leads/mass-notification-report'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Rapor alınamadı: ${response.body}');
+    }
+  }
+  
+  static Future<void> trackCampaignClick(int campaignId) async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+
+    try {
+      await http.post(
+        Uri.parse('$kBaseUrl/leads/campaign/$campaignId/click'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+    } catch (e) {
+      debugPrint('Click tracking failed: $e');
+    }
+  }
 }
 
 // --- Screen Tracking Observer ---

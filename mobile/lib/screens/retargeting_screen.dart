@@ -201,29 +201,60 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Bildirim Raporu Sekmesi (Mock UI)
-    final Widget reportTab = ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Toplu Bildirim Raporu',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Bu ekran, canlı yayınlarda ve ilan detaylarında gönderdiğiniz Toplu Kitle Bildirimlerinin dönüşüm istatistiklerini gösterir.',
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        const SizedBox(height: 24),
-        _buildFunnelCard('Dönüşüm Hunisi', [
-          {'label': '📢 Hedeflenen Kitle', 'value': '12.450'},
-          {'label': '📩 Başarıyla İletilen', 'value': '11.200'},
-          {'label': '👆 Tıklama (Açma)', 'value': '1.340  (%12)'},
-          {'label': '🛒 Etkileşim/Satış', 'value': '45'},
-        ]),
-        const SizedBox(height: 16),
-        _buildROICard('Yatırım Getirisi (ROI)', '1.500 TUCi', '33 TUCi / Tıklama'),
-      ],
+    // Bildirim Raporu Sekmesi (Gerçek Veri)
+    final Widget reportTab = FutureBuilder<Map<String, dynamic>>(
+      future: AnalyticsService.getMassNotificationReport(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Rapor yüklenemedi: ${snapshot.error}', 
+              style: TextStyle(color: AppColors.textSecondary(context)))
+          );
+        }
+        final data = snapshot.data ?? {};
+        final target = data['total_target'] as int? ?? 0;
+        final sent = data['total_sent'] as int? ?? 0;
+        final clicks = data['total_clicks'] as int? ?? 0;
+        final spent = data['total_spent_tuci'] as int? ?? 0;
+        final costPerClick = clicks > 0 ? (spent / clicks).round() : 0;
+        final clickRate = sent > 0 ? ((clicks / sent) * 100).toStringAsFixed(1) : '0.0';
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              'Toplu Bildirim Raporu',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Bu ekran, canlı yayınlarda ve ilan detaylarında gönderdiğiniz Toplu Kitle Bildirimlerinin dönüşüm istatistiklerini gösterir.',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
+            const SizedBox(height: 24),
+            if (target == 0)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32.0),
+                  child: Text('Henüz toplu bildirim göndermediniz.',
+                    style: TextStyle(color: AppColors.textSecondary(context))),
+                ),
+              )
+            else ...[
+              _buildFunnelCard('Dönüşüm Hunisi', [
+                {'label': '📢 Hedeflenen Kitle', 'value': '$target'},
+                {'label': '📩 Başarıyla İletilen', 'value': '$sent'},
+                {'label': '👆 Tıklama (Açma)', 'value': '$clicks  (%$clickRate)'},
+              ]),
+              const SizedBox(height: 16),
+              _buildROICard('Yatırım Getirisi (ROI)', '$spent TUCi', '$costPerClick TUCi / Tıklama'),
+            ],
+          ],
+        );
+      },
     );
 
     // Mevcut Retargeting Sekmesi

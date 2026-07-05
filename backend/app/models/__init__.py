@@ -7,6 +7,7 @@ from .follow import Follow
 from .block import UserBlock
 from .message import DirectMessage
 from .notification import Notification
+from .mass_notification import MassNotificationCampaign
 from .listing_offer import ListingOffer
 from .listing_impression import ListingImpression
 from .rating import Rating
