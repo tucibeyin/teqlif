@@ -533,6 +533,8 @@ class ListingService:
     # ── Aktif/Pasif Geçiş ────────────────────────────────────────────────────
     async def toggle_listing(self, listing_id: int, current_user: User) -> dict:
         from fastapi import HTTPException
+        from datetime import datetime, timezone, timedelta
+        
         result = await self.db.execute(
             select(Listing).where(
                 Listing.id == listing_id,
@@ -546,27 +548,39 @@ class ListingService:
 
         reactivating = not listing.is_active  # pasif → aktif geçişi mi?
 
-        if reactivating:
-            # ── Reaktivasyon ücret kontrolü ─────────────────────────────────
-            if current_user.is_premium:
-                used = await _get_reactivation_used(current_user.id, current_user.premium_since)
-                is_free = used < _REACTIVATION_FREE_MONTHLY
-            else:
-                is_free = False
+        is_free = False
+        is_free_due_to_window = False
 
-            if not is_free:
-                if current_user.tuci_balance < _REACTIVATION_COST_TUCI:
-                    raise HTTPException(
-                        status_code=402,
-                        detail={
-                            "code": "insufficient_balance",
-                            "balance": current_user.tuci_balance,
-                            "cost": _REACTIVATION_COST_TUCI,
-                        },
-                    )
+        if reactivating:
+            # ── 30 Günlük Ücretsiz Pencere Kontrolü ─────────────────────────
+            created_at = listing.created_at
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            within_window = created_at > (datetime.now(timezone.utc) - timedelta(days=30))
+            
+            if within_window:
+                is_free = True
+                is_free_due_to_window = True
+            else:
+                # ── Reaktivasyon ücret kontrolü ─────────────────────────────────
+                if current_user.is_premium:
+                    used = await _get_reactivation_used(current_user.id, current_user.premium_since)
+                    is_free = used < _REACTIVATION_FREE_MONTHLY
+
+                if not is_free:
+                    if current_user.tuci_balance < _REACTIVATION_COST_TUCI:
+                        raise HTTPException(
+                            status_code=402,
+                            detail={
+                                "code": "insufficient_balance",
+                                "balance": current_user.tuci_balance,
+                                "cost": _REACTIVATION_COST_TUCI,
+                            },
+                        )
 
             listing.is_active = True
-            listing.created_at = datetime.now(timezone.utc)
+            if not is_free_due_to_window:
+                listing.created_at = datetime.now(timezone.utc)
             listing.deactivated_at = None
 
         else:
@@ -627,7 +641,7 @@ class ListingService:
                 pass
 
         # Ücretsiz reaktivasyon hakkı kullanıldıysa sayacı artır
-        if reactivating and is_free:
+        if reactivating and is_free and not is_free_due_to_window:
             await _increment_reactivation(current_user.id, current_user.premium_since)
 
         return {"is_active": listing.is_active}

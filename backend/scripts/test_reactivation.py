@@ -14,7 +14,7 @@ import sys
 import json
 import asyncio
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import httpx
 from sqlalchemy import select, text, update
@@ -208,14 +208,35 @@ async def reactivation_credits_api(client: httpx.AsyncClient, token: str) -> dic
 
 
 # ── Senaryo yardımcısı ────────────────────────────────────────────────────────
-async def ensure_listing_passive(client, token, listing_id):
-    """İlan aktifse önce pasife al."""
+async def ensure_listing_passive_expired(client, token, listing_id):
+    """İlan aktifse önce pasife al, ardından created_at'i 31 gün öncesine çek ki pencere dışı kalsın."""
     state = await get_listing_state(listing_id)
     if state.get("is_active"):
         info("İlan aktif, önce pasife alınıyor...")
         r = await toggle(client, token, listing_id)
         assert r["status"] == 200, f"Pasife alma başarısız: {r}"
         ok("İlan pasife alındı")
+    
+    await db_exec(
+        "UPDATE listings SET created_at = now() - interval '31 days' WHERE id = :id",
+        {"id": listing_id},
+    )
+    ok("İlan süresi 31 gün öncesine (ücretsiz pencere dışına) alındı")
+
+async def ensure_listing_passive_within_window(client, token, listing_id):
+    """İlan aktifse önce pasife al, ardından created_at'i 5 gün öncesine çek ki pencere içinde kalsın."""
+    state = await get_listing_state(listing_id)
+    if state.get("is_active"):
+        info("İlan aktif, önce pasife alınıyor...")
+        r = await toggle(client, token, listing_id)
+        assert r["status"] == 200, f"Pasife alma başarısız: {r}"
+        ok("İlan pasife alındı")
+    
+    await db_exec(
+        "UPDATE listings SET created_at = now() - interval '5 days' WHERE id = :id",
+        {"id": listing_id},
+    )
+    ok("İlan süresi 5 gün öncesine (ücretsiz pencere içine) alındı")
 
 
 async def ensure_listing_active(client, token, listing_id):
@@ -232,11 +253,11 @@ async def ensure_listing_active(client, token, listing_id):
 # ── Ana test fonksiyonları ────────────────────────────────────────────────────
 
 async def test_1_pro_free_credit(client, token, listing_id, user_id):
-    head("Senaryo 1: PRO kullanıcı → ücretsiz kredi kullanımı")
+    head("Senaryo 1: PRO kullanıcı → ücretsiz kredi kullanımı (Süresi Dolmuş İlan)")
 
     await set_premium(user_id, True)
     await clear_reactivation_credits(user_id)
-    await ensure_listing_passive(client, token, listing_id)
+    await ensure_listing_passive_expired(client, token, listing_id)
 
     # Kredi durumunu kontrol et
     credits = await reactivation_credits_api(client, token)
@@ -279,7 +300,7 @@ async def test_2_pro_paid(client, token, listing_id, user_id):
     await clear_reactivation_credits(user_id)
     await set_reactivation_used(user_id, 5, premium_since)  # 5 kredi → tükenmiş
 
-    await ensure_listing_passive(client, token, listing_id)
+    await ensure_listing_passive_expired(client, token, listing_id)
 
     credits = await reactivation_credits_api(client, token)
     info(f"Kredi durumu: {credits}")
@@ -301,11 +322,11 @@ async def test_2_pro_paid(client, token, listing_id, user_id):
 
 
 async def test_3_normal_paid(client, token, listing_id, user_id):
-    head("Senaryo 3: Normal kullanıcı → TUCi ödeme")
+    head("Senaryo 3: Normal kullanıcı → TUCi ödeme (Süresi Dolmuş İlan)")
 
     await set_premium(user_id, False)
     await set_tuci(user_id, 50)
-    await ensure_listing_passive(client, token, listing_id)
+    await ensure_listing_passive_expired(client, token, listing_id)
 
     credits = await reactivation_credits_api(client, token)
     info(f"Kredi durumu: {credits}")
@@ -330,7 +351,7 @@ async def test_4_insufficient_balance(client, token, listing_id, user_id):
 
     await set_premium(user_id, False)
     await set_tuci(user_id, 5)  # 10 TUCi'den az
-    await ensure_listing_passive(client, token, listing_id)
+    await ensure_listing_passive_expired(client, token, listing_id)
 
     credits = await reactivation_credits_api(client, token)
     info(f"Kredi durumu: {credits}")
@@ -386,6 +407,37 @@ async def test_5_deactivation_cleanup(client, token, listing_id, user_id):
     ok("Rozet durumu değişmedi (is_highlight korunur) ✔")
 
 
+async def test_6_within_30_days_window(client, token, listing_id, user_id):
+    head("Senaryo 6: 30 Günlük Ücretsiz Pencere İçinde Aç-Kapa (Yeni Feature)")
+
+    await set_premium(user_id, False)
+    await set_tuci(user_id, 0)  # Bakiye yok, normal kullanıcı
+    await ensure_listing_passive_within_window(client, token, listing_id)
+
+    # API Kontrolü
+    cost_info = await reactivation_cost_api(client, token, listing_id)
+    info(f"Maliyet durumu: {cost_info}")
+    
+    assert cost_info.get("within_window") is True, "within_window=True beklendi"
+    assert cost_info.get("cost") == 0, "cost=0 beklendi"
+    assert cost_info.get("can_afford") is True, "Bakiye 0 olsa bile can_afford=True beklendi"
+    ok("API doğru: within_window=True, cost=0")
+
+    # Toggle yapalım (Aktife Al)
+    r = await toggle(client, token, listing_id)
+    assert r["status"] == 200, f"Toggle başarısız: {r}"
+    assert r["body"].get("is_active") is True
+    ok("Toggle başarılı → is_active=True")
+
+    # created_at değişmiş mi kontrol edelim
+    state = await get_listing_state(listing_id)
+    age_sec = (datetime.now(timezone.utc) - state["created_at"].replace(tzinfo=timezone.utc)).total_seconds()
+    # 5 gün yaklaşık 432000 saniyedir. Eğer sıfırlansaydı 0'a yakın olurdu.
+    assert age_sec > 400000, f"created_at sıfırlandı! {age_sec} sn önce"
+    ok(f"created_at sıfırlanmadı, asıl tarihi korundu ({age_sec/86400:.1f} gün önce)")
+
+
+
 # ── Özet ─────────────────────────────────────────────────────────────────────
 async def main():
     parser = argparse.ArgumentParser(description="Reaktivasyon feature test")
@@ -439,6 +491,7 @@ async def main():
             3: test_3_normal_paid,
             4: test_4_insufficient_balance,
             5: test_5_deactivation_cleanup,
+            6: test_6_within_30_days_window,
         }
 
         passed = 0

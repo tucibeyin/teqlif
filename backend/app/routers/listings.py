@@ -105,8 +105,24 @@ async def create_listing(
 async def reactivation_cost(
     listing_id: int,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """Pasif ilanı aktife almak için gereken maliyet bilgisini döner."""
+    from sqlalchemy import select
+    from app.models.listing import Listing
+    from datetime import datetime, timezone, timedelta
+    from fastapi import HTTPException
+
+    listing = await db.scalar(select(Listing).where(Listing.id == listing_id))
+    if not listing:
+        raise HTTPException(status_code=404, detail="İlan bulunamadı")
+
+    created_at = listing.created_at
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+
+    within_window = created_at > (datetime.now(timezone.utc) - timedelta(days=30))
+
     if current_user.is_premium:
         used      = await _get_reactivation_used(current_user.id, current_user.premium_since)
         remaining = max(0, _REACTIVATION_FREE_MONTHLY - used)
@@ -117,7 +133,7 @@ async def reactivation_cost(
         remaining    = 0
         renewal_date = None
 
-    is_free    = remaining > 0
+    is_free    = within_window or (remaining > 0)
     cost       = 0 if is_free else _REACTIVATION_COST_TUCI
     can_afford = is_free or current_user.tuci_balance >= _REACTIVATION_COST_TUCI
 
@@ -129,6 +145,7 @@ async def reactivation_cost(
         "balance":       current_user.tuci_balance,
         "can_afford":    can_afford,
         "renewal_date":  renewal_date,
+        "within_window": within_window,
     }
 
 
