@@ -2741,15 +2741,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listingDeactivateTitle => 'إيقاف الإعلان';
 
   @override
-  String get listingDeactivateWarning => 'سيتم حذف الترويج النشط.';
+  String get listingDeactivateWarning =>
+      'إذا قمت بإلغاء التنشيط، سيتم حذف الترويج النشط.';
 
   @override
   String listingDeactivateCostHint(int cost) {
-    return 'إعادة التفعيل ستكلف $cost TUCi.';
+    return 'تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستكلف $cost TUCi من رصيدك.';
   }
 
   @override
-  String get listingDeactivateConfirm => 'إيقاف';
+  String get listingDeactivateFreeCreditHint =>
+      'تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستستخدم 1 رصيد PRO مجاني.';
+
+  @override
+  String get listingDeactivateConfirm => 'أفهم ذلك، قم بإلغاء التنشيط';
 
   @override
   String get listingReactivateTitle => 'إعادة تفعيل الإعلان';

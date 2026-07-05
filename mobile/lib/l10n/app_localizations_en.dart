@@ -2763,15 +2763,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listingDeactivateTitle => 'Deactivate Listing';
 
   @override
-  String get listingDeactivateWarning => 'Active promotion will be removed.';
+  String get listingDeactivateWarning =>
+      'If you deactivate, active showcase/promotions will be removed.';
 
   @override
   String listingDeactivateCostHint(int cost) {
-    return 'Reactivating will cost $cost TUCi.';
+    return 'Warning: Your 30-day free window has expired. Reactivating will cost $cost TUCi from your balance.';
   }
 
   @override
-  String get listingDeactivateConfirm => 'Deactivate';
+  String get listingDeactivateFreeCreditHint =>
+      'Warning: Your 30-day free window has expired. Reactivating will use 1 free PRO credit.';
+
+  @override
+  String get listingDeactivateConfirm => 'I understand, Deactivate';
 
   @override
   String get listingReactivateTitle => 'Reactivate Listing';

@@ -81,8 +81,14 @@
 
         if (isActive) {
             // Aktif → Pasif
-            if (!withinWindow && !(isPremium && remaining > 0)) {
-                const ok = confirm(`Aktif promosyon silinecek.\nTekrar aktif etmek için ${cost} TUCi gerekecek.\n\nPassife almak istiyor musunuz?`);
+            if (!withinWindow) {
+                let msg = 'İlanı pasife alırsanız aktif vitrin/promosyon hakları silinir.\n\n';
+                if (isPremium && remaining > 0) {
+                    msg += 'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için 1 adet PRO ücretsiz hakkınız kullanılacaktır.';
+                } else {
+                    msg += `Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için ${cost} TUCi bakiyenizden düşülecektir.`;
+                }
+                const ok = confirm(`${msg}\n\nAnladım, pasife almak istiyor musunuz?`);
                 if (!ok) return;
             }
         } else {

@@ -5107,19 +5107,25 @@ abstract class AppLocalizations {
   /// No description provided for @listingDeactivateWarning.
   ///
   /// In tr, this message translates to:
-  /// **'Aktif promosyon silinecek.'**
+  /// **'İlanı pasife alırsanız aktif vitrin/promosyon hakları silinir.'**
   String get listingDeactivateWarning;
 
   /// No description provided for @listingDeactivateCostHint.
   ///
   /// In tr, this message translates to:
-  /// **'Tekrar aktif etmek için {cost} TUCi gerekecek.'**
+  /// **'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için {cost} TUCi bakiyenizden düşülecektir.'**
   String listingDeactivateCostHint(int cost);
+
+  /// No description provided for @listingDeactivateFreeCreditHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için 1 adet PRO ücretsiz hakkınız kullanılacaktır.'**
+  String get listingDeactivateFreeCreditHint;
 
   /// No description provided for @listingDeactivateConfirm.
   ///
   /// In tr, this message translates to:
-  /// **'Pasife Al'**
+  /// **'Anladım, Pasife Al'**
   String get listingDeactivateConfirm;
 
   /// No description provided for @listingReactivateTitle.

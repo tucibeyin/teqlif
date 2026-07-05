@@ -303,12 +303,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
     if (_isActive) {
       // Aktif → Pasif
-      if (!withinWindow && !(isPremium && remaining > 0)) {
+      if (!withinWindow) {
+        final hintText = (isPremium && remaining > 0) 
+            ? l.listingDeactivateFreeCreditHint 
+            : l.listingDeactivateCostHint(cost);
+
         final confirm = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
             title: Text(l.listingDeactivateTitle),
-            content: Text('${l.listingDeactivateWarning}\n\n${l.listingDeactivateCostHint(cost)}'),
+            content: Text('${l.listingDeactivateWarning}\n\n$hintText'),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
               TextButton(

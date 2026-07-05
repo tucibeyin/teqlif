@@ -2763,15 +2763,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listingDeactivateTitle => 'İlanı Pasife Al';
 
   @override
-  String get listingDeactivateWarning => 'Aktif promosyon silinecek.';
+  String get listingDeactivateWarning =>
+      'İlanı pasife alırsanız aktif vitrin/promosyon hakları silinir.';
 
   @override
   String listingDeactivateCostHint(int cost) {
-    return 'Tekrar aktif etmek için $cost TUCi gerekecek.';
+    return 'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için $cost TUCi bakiyenizden düşülecektir.';
   }
 
   @override
-  String get listingDeactivateConfirm => 'Pasife Al';
+  String get listingDeactivateFreeCreditHint =>
+      'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için 1 adet PRO ücretsiz hakkınız kullanılacaktır.';
+
+  @override
+  String get listingDeactivateConfirm => 'Anladım, Pasife Al';
 
   @override
   String get listingReactivateTitle => 'İlanı Tekrar Yayınla';
