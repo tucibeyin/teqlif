@@ -152,7 +152,7 @@
   "errorConnection": "Connection error",
   "errorListingsLoad": "Failed to load listings",
   "errorVideoProcessing": "Failed to process video. Please try again.",
-  "giftInsufficientBalance": "Insufficient balance. Purchase TUCi ([ICON_TUCI]) to send a gift.",
+  "giftInsufficientBalance": "Insufficient balance. Purchase TUCi to send a gift.",
   "giftLoadBalanceButton": "Load Balance",
   "purchaseLoadError": "An error occurred while loading your purchases. Please check your internet connection and try again.",
   "purchaseEmptyState": "You don't have any purchases yet.",
@@ -589,7 +589,7 @@
   "editProfileLinkError": "Link must start with http:// or https://",
   "settingsProTools": "📈 Pro Tools",
   "settingsProActive": "ACTIVE",
-  "walletTitle": "My TUCi ([ICON_TUCI]) Wallet",
+  "walletTitle": "My TUCi Wallet",
   "walletBalance": "Current Balance",
   "walletRecentTxns": "Recent Transactions",
   "walletSpendingSummary": "Spending Summary",
@@ -601,9 +601,9 @@
   "walletTxnSpendAdCampaign": "Ad campaign",
   "walletTxnSpendAi": "AI pricing",
   "walletTxnWebTopup": "Web top-up",
-  "walletComingSoonLabel": "TUCi ([ICON_TUCI]) Purchase Coming Soon!",
-  "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 TUCi ([ICON_TUCI]) balance.",
-  "walletBuyBtn": "TUCi ([ICON_TUCI]) Purchase Coming Soon",
+  "walletComingSoonLabel": "TUCi Purchase Coming Soon!",
+  "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 TUCi balance.",
+  "walletBuyBtn": "TUCi Purchase Coming Soon",
   "reportLoading": "Preparing stream analysis…",
   "reportLoadFailed": "Could not load report.",
   "reportRetry": "Try Again",
@@ -673,7 +673,7 @@
   "proUnlockBtn": "Go Pro",
   "proUpgradeSheetDesc": "You need to upgrade to Pro to use this tool.",
   "proCreditsSummaryTitle": "Remaining Credits",
-  "proCreditsBlastName": "Audience Invite (Blast ([ICON_BLAST]))",
+  "proCreditsBlastName": "Audience Invite (Blast)",
   "proCreditsBoostName": "Promoted Listing",
   "proCreditsAiName": "AI Pricing Advisor",
   "proCreditsReactivationName": "Reactivation",
@@ -704,9 +704,9 @@
     }
   },
   "blastConfirmCostFreeLabel": "Cost",
-  "blastConfirmCostPaidLabel": "TUCi ([ICON_TUCI]) Cost",
+  "blastConfirmCostPaidLabel": "TUCi Cost",
   "blastSubtitleFree": "Push notification when stream starts • Free",
-  "blastSubtitlePaid": "Push notification when stream starts • {cost} TUCi ([ICON_TUCI])",
+  "blastSubtitlePaid": "Push notification when stream starts • {cost} TUCi",
   "@blastSubtitlePaid": {
     "placeholders": {
       "cost": {
@@ -723,7 +723,7 @@
       }
     }
   },
-  "blastBtnPaid": "{count} Ready Buyers — Send Notification ({cost} TUCi ([ICON_TUCI]))",
+  "blastBtnPaid": "{count} Ready Buyers — Send Notification ({cost} TUCi)",
   "@blastBtnPaid": {
     "placeholders": {
       "count": {
@@ -742,7 +742,7 @@
       }
     }
   },
-  "blastConfirmBodyPaid": "{count} ready buyers will be notified.\n\nTotal cost: {cost} TUCi ([ICON_TUCI])",
+  "blastConfirmBodyPaid": "{count} ready buyers will be notified.\n\nTotal cost: {cost} TUCi",
   "@blastConfirmBodyPaid": {
     "placeholders": {
       "count": {
@@ -1109,9 +1109,9 @@
   "boostDialogTitle": "Promote Listing",
   "boostDialogPlanLabel": "Campaign plan:",
   "boostDialogTotalBudget": "Total Budget",
-  "boostDialogTotalBudgetValue": "50 TUCi ([ICON_TUCI])",
+  "boostDialogTotalBudgetValue": "50 TUCi",
   "boostDialogCpc": "Cost per Click",
-  "boostDialogCpcValue": "1 TUCi ([ICON_TUCI])",
+  "boostDialogCpcValue": "1 TUCi",
   "boostDialogEstClicks": "Estimated Clicks",
   "boostDialogEstClicksValue": "~50 clicks",
   "boostDialogFeedHint": "Your listing will be featured in the \"For You\" feed.",
@@ -1138,15 +1138,15 @@
   },
   "boostDialogPaidDesc": "Your listing will still be featured in the \"For You\" feed.",
   "boostDialogPaidCost": "Cost",
-  "boostDialogPaidCostValue": "50 TUCi ([ICON_TUCI])",
+  "boostDialogPaidCostValue": "50 TUCi",
   "boostDialogPaidBalance": "Your Current Balance",
-  "boostDialogPaidConfirm": "Pay 50 TUCi ([ICON_TUCI]) & Start",
+  "boostDialogPaidConfirm": "Pay 50 TUCi & Start",
   "boostSuccessFree": "🔥 Your listing is now featured for free!",
-  "boostSuccessPaid": "🔥 Your listing is now featured! (50 TUCi ([ICON_TUCI]) spent)",
+  "boostSuccessPaid": "🔥 Your listing is now featured! (50 TUCi spent)",
   "boostSuccess": "🔥 Your listing is now featured!",
   "boostErrorDefault": "Could not start campaign.",
   "boostErrorConnection": "Connection error. Please try again.",
-  "boostErrorInsufficientTuci": "Insufficient TUCi ([ICON_TUCI]) balance. 50 TUCi ([ICON_TUCI]) is required for a paid boost.",
+  "boostErrorInsufficientTuci": "Insufficient TUCi balance. 50 TUCi is required for a paid boost.",
   "boostBtnStart": "Promote Listing",
   "boostBtnReport": "View Ad Performance",
   "adReportTitle": "AD REPORT",
@@ -1296,7 +1296,7 @@
       }
     }
   },
-  "retargetingDialogBodyPaid": "A \"Still interested?\" notification will be sent to {count} people. {cost} TUCi ([ICON_TUCI]) will be deducted from your wallet.",
+  "retargetingDialogBodyPaid": "A \"Still interested?\" notification will be sent to {count} people. {cost} TUCi will be deducted from your wallet.",
   "@retargetingDialogBodyPaid": {
     "placeholders": {
       "count": {
@@ -1307,7 +1307,7 @@
       }
     }
   },
-  "retargetingDialogBodyKarma": "A notification will be sent to {count} people.\n\n{free} credit(s) will be used + {cost} TUCi ([ICON_TUCI]) will be charged.",
+  "retargetingDialogBodyKarma": "A notification will be sent to {count} people.\n\n{free} credit(s) will be used + {cost} TUCi will be charged.",
   "@retargetingDialogBodyKarma": {
     "placeholders": {
       "count": {
@@ -1321,7 +1321,7 @@
       }
     }
   },
-  "retargetingDialogBodyInsufficient": "Insufficient TUCi ([ICON_TUCI]) balance.\nRequired: {cost} TUCi ([ICON_TUCI]) | Available: {balance} TUCi ([ICON_TUCI])",
+  "retargetingDialogBodyInsufficient": "Insufficient TUCi balance.\nRequired: {cost} TUCi | Available: {balance} TUCi",
   "@retargetingDialogBodyInsufficient": {
     "placeholders": {
       "cost": {
@@ -1349,7 +1349,7 @@
       }
     }
   },
-  "retargetingPaidSubtitle": "{count} people × 10 TUCi ([ICON_TUCI])",
+  "retargetingPaidSubtitle": "{count} people × 10 TUCi",
   "@retargetingPaidSubtitle": {
     "placeholders": {
       "count": {
@@ -1375,7 +1375,7 @@
       }
     }
   },
-  "retargetingCostBadge": "{cost} TUCi ([ICON_TUCI]) will be spent",
+  "retargetingCostBadge": "{cost} TUCi will be spent",
   "@retargetingCostBadge": {
     "placeholders": {
       "cost": {
@@ -1384,7 +1384,7 @@
     }
   },
   "retargetingFootnote": "Users will receive a \"Still interested?\" notification. Only sent to non-buyers.",
-  "retargetingInfoText": "Sends a reminder notification to people who viewed your listing but didn't buy. Free if you have monthly broadcast credits, otherwise 10 TUCi ([ICON_TUCI]) per person.",
+  "retargetingInfoText": "Sends a reminder notification to people who viewed your listing but didn't buy. Free if you have monthly broadcast credits, otherwise 10 TUCi per person.",
   "retargetingLast30Days": "Last 30 days",
   "retargetingViewerLabel": "viewed",
   "retargetingBoughtLabel": "purchased",
@@ -1450,8 +1450,8 @@
   },
   "profilePhotoUploadError": "Photo could not be uploaded. Try again.",
   "profileInviteCodeError": "Invite code could not be retrieved, try again.",
-  "profileInviteTitle": "Invite Friends, Earn TUCi ([ICON_TUCI])!",
-  "profileInviteSubtitle": "+50 TUCi ([ICON_TUCI]) per invite, your friend gets +10 TUCi ([ICON_TUCI])",
+  "profileInviteTitle": "Invite Friends, Earn TUCi!",
+  "profileInviteSubtitle": "+50 TUCi per invite, your friend gets +10 TUCi",
   "profilePickGallery": "Pick from Gallery",
   "profilePickCamera": "Take a Photo",
   "listingDeleteDialogTitle": "Delete Listing",
@@ -1460,7 +1460,7 @@
   "favoritesEmpty": "No favorites yet",
   "createNeedTitle": "Please enter the listing title first.",
   "aiPriceError": "Could not get price estimate. Please try again.",
-  "tuciSpent": "{count} TUCi ([ICON_TUCI]) spent.",
+  "tuciSpent": "{count} TUCi spent.",
   "@tuciSpent": {
     "placeholders": {
       "count": {
@@ -1508,7 +1508,7 @@
   },
   "listingDeactivateTitle": "Deactivate Listing",
   "listingDeactivateWarning": "If you deactivate, active showcase/promotions will be removed.",
-  "listingDeactivateCostHint": "Warning: Your 30-day free window has expired. Reactivating will cost {cost} TUCi ([ICON_TUCI]) from your balance.",
+  "listingDeactivateCostHint": "Warning: Your 30-day free window has expired. Reactivating will cost {cost} TUCi from your balance.",
   "@listingDeactivateCostHint": {
     "placeholders": {
       "cost": {
@@ -1527,7 +1527,7 @@
       }
     }
   },
-  "listingReactivatePaidPro": "Monthly credits exhausted. {cost} TUCi ([ICON_TUCI]) will be charged.",
+  "listingReactivatePaidPro": "Monthly credits exhausted. {cost} TUCi will be charged.",
   "@listingReactivatePaidPro": {
     "placeholders": {
       "cost": {
@@ -1535,7 +1535,7 @@
       }
     }
   },
-  "listingReactivatePaidNormal": "{cost} TUCi ([ICON_TUCI]) will be charged. Balance: {balance} TUCi ([ICON_TUCI]).",
+  "listingReactivatePaidNormal": "{cost} TUCi will be charged. Balance: {balance} TUCi.",
   "@listingReactivatePaidNormal": {
     "placeholders": {
       "cost": {
@@ -1547,7 +1547,7 @@
     }
   },
   "listingReactivateProUpsell": "Go PRO to get 5 free reactivations per month.",
-  "listingReactivateInsufficientBalance": "Insufficient balance. Top up TUCi ([ICON_TUCI]) to continue.",
+  "listingReactivateInsufficientBalance": "Insufficient balance. Top up TUCi to continue.",
   "listingReactivateConfirm": "Activate",
   "proReactivationSection": "Listing Reactivation Credits",
   "suggestedStreamers": "Suggested Broadcasters",
@@ -1616,7 +1616,7 @@
   "faqIconConversion": "Conversion Analysis: Bids and sales funnel per view.",
   "faqIconRadar": "Competitor Radar: Price and sales speed analysis of similar sellers.",
   "faqIconRetargeting": "Retargeting: Send reminders or discount messages directly to interested buyers.",
-  "proToolHotDemandTitle": "Hot Demand ([ICON_HOTDEMAND]) (Lead Gen)",
+  "proToolHotDemandTitle": "Hot Demand (Lead Gen)",
   "proToolHotDemandDesc": "Reach out directly to potential buyers interested in your listing.",
   "proToolAiPriceTitle": "AI Price Analysis",
   "proToolAiPriceDesc": "Find out your products market value in seconds with AI.",

@@ -104,9 +104,10 @@ class FaqScreen extends StatelessWidget {
               child: ExpansionTile(
                 initiallyExpanded: index == 0, // İlk kategori açık gelsin
                 leading: Icon(cat.icon, color: Theme.of(context).primaryColor),
-                title: Text(
+                title: _buildAnswerWithIcons(
+                  context, 
                   cat.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  customStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 children: cat.items.map((item) {
                   return Padding(
@@ -122,9 +123,10 @@ class FaqScreen extends StatelessWidget {
                               const SizedBox(width: 8),
                             ],
                             Expanded(
-                              child: Text(
+                              child: _buildAnswerWithIcons(
+                                context,
                                 item.question,
-                                style: const TextStyle(
+                                customStyle: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -168,8 +170,8 @@ class _FaqItem {
   _FaqItem({required this.question, required this.answer, this.icon});
 }
 
-Widget _buildAnswerWithIcons(BuildContext context, String text) {
-  final TextStyle style = TextStyle(
+Widget _buildAnswerWithIcons(BuildContext context, String text, {TextStyle? customStyle}) {
+  final TextStyle style = customStyle ?? TextStyle(
     fontSize: 13,
     color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
     height: 1.5,

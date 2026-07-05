@@ -159,7 +159,7 @@
   "suggestedSellers": "Önerilen Satıcılar",
   "msgPasswordChanged": "Şifreniz başarıyla değiştirildi.",
   "msgListingPublished": "İlan yayına alındı!",
-  "giftInsufficientBalance": "Bakiyeniz yetersiz. Hediye göndermek için TUCi ([ICON_TUCI]) satın alın.",
+  "giftInsufficientBalance": "Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.",
   "giftLoadBalanceButton": "Bakiye Yükle",
   "purchaseLoadError": "Alışverişleriniz yüklenirken bir sorun oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.",
   "purchaseEmptyState": "Henüz alışverişiniz bulunmuyor.",
@@ -588,7 +588,7 @@
   "editProfileLinkError": "Link http:// veya https:// ile başlamalı",
   "settingsProTools": "📈 Pro Araçları",
   "settingsProActive": "AKTİF",
-  "walletTitle": "TUCi ([ICON_TUCI]) Cüzdanım",
+  "walletTitle": "TUCi Cüzdanım",
   "walletBalance": "Güncel Bakiye",
   "walletRecentTxns": "Son İşlemler",
   "walletSpendingSummary": "Harcama Özeti",
@@ -600,9 +600,9 @@
   "walletTxnSpendAdCampaign": "Reklam kampanyası",
   "walletTxnSpendAi": "Yapay Zeka fiyatlama",
   "walletTxnWebTopup": "Web yükleme",
-  "walletComingSoonLabel": "TUCi ([ICON_TUCI]) Satın Alma Yakında!",
-  "walletComingSoonDesc": "Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi ([ICON_TUCI]) başlangıç bakiyesi tanımlandı.",
-  "walletBuyBtn": "TUCi ([ICON_TUCI]) Satın Alma Yakında",
+  "walletComingSoonLabel": "TUCi Satın Alma Yakında!",
+  "walletComingSoonDesc": "Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.",
+  "walletBuyBtn": "TUCi Satın Alma Yakında",
   "reportLoading": "Yayın analizi hazırlanıyor…",
   "reportLoadFailed": "Rapor yüklenemedi.",
   "reportRetry": "Tekrar Dene",
@@ -703,9 +703,9 @@
     }
   },
   "blastConfirmCostFreeLabel": "Ücret",
-  "blastConfirmCostPaidLabel": "TUCi ([ICON_TUCI]) Maliyeti",
+  "blastConfirmCostPaidLabel": "TUCi Maliyeti",
   "blastSubtitleFree": "Yayın başladığında push bildirim • Ücretsiz",
-  "blastSubtitlePaid": "Yayın başladığında push bildirim • {cost} TUCi ([ICON_TUCI])",
+  "blastSubtitlePaid": "Yayın başladığında push bildirim • {cost} TUCi",
   "@blastSubtitlePaid": {
     "placeholders": {
       "cost": {
@@ -722,7 +722,7 @@
       }
     }
   },
-  "blastBtnPaid": "{count} Hazır Alıcı — Bildirim Gönder ({cost} TUCi ([ICON_TUCI]))",
+  "blastBtnPaid": "{count} Hazır Alıcı — Bildirim Gönder ({cost} TUCi)",
   "@blastBtnPaid": {
     "placeholders": {
       "count": {
@@ -741,7 +741,7 @@
       }
     }
   },
-  "blastConfirmBodyPaid": "{count} hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: {cost} TUCi ([ICON_TUCI])",
+  "blastConfirmBodyPaid": "{count} hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: {cost} TUCi",
   "@blastConfirmBodyPaid": {
     "placeholders": {
       "count": {
@@ -1108,9 +1108,9 @@
   "boostDialogTitle": "İlanı Öne Çıkar",
   "boostDialogPlanLabel": "Kampanya planı:",
   "boostDialogTotalBudget": "Toplam Bütçe",
-  "boostDialogTotalBudgetValue": "50 TUCi ([ICON_TUCI])",
+  "boostDialogTotalBudgetValue": "50 TUCi",
   "boostDialogCpc": "Tıklama Başı Maliyet",
-  "boostDialogCpcValue": "1 TUCi ([ICON_TUCI])",
+  "boostDialogCpcValue": "1 TUCi",
   "boostDialogEstClicks": "Tahmini Tıklama",
   "boostDialogEstClicksValue": "~50 tıklama",
   "boostDialogFeedHint": "İlanınız \"Sana Özel\" akışında öne çıkarılacak.",
@@ -1137,15 +1137,15 @@
   },
   "boostDialogPaidDesc": "Ücretli boost ile ilanın yine \"Sana Özel\" akışında öne çıkarılır.",
   "boostDialogPaidCost": "Maliyet",
-  "boostDialogPaidCostValue": "50 TUCi ([ICON_TUCI])",
+  "boostDialogPaidCostValue": "50 TUCi",
   "boostDialogPaidBalance": "Mevcut Bakiyeniz",
-  "boostDialogPaidConfirm": "50 TUCi ([ICON_TUCI]) Öde ve Başlat",
+  "boostDialogPaidConfirm": "50 TUCi Öde ve Başlat",
   "boostSuccessFree": "🔥 İlanınız ücretsiz olarak öne çıkarıldı!",
-  "boostSuccessPaid": "🔥 İlanınız öne çıkarıldı! (50 TUCi ([ICON_TUCI]) harcandı)",
+  "boostSuccessPaid": "🔥 İlanınız öne çıkarıldı! (50 TUCi harcandı)",
   "boostSuccess": "🔥 İlanınız öne çıkarıldı!",
   "boostErrorDefault": "Kampanya başlatılamadı.",
   "boostErrorConnection": "Bağlantı hatası. Lütfen tekrar deneyin.",
-  "boostErrorInsufficientTuci": "Yetersiz TUCi ([ICON_TUCI]) bakiyesi. Ücretli boost için 50 TUCi ([ICON_TUCI]) gerekiyor.",
+  "boostErrorInsufficientTuci": "Yetersiz TUCi bakiyesi. Ücretli boost için 50 TUCi gerekiyor.",
   "boostBtnStart": "İlanı Öne Çıkar",
   "boostBtnReport": "Reklam Performansını Gör",
   "adReportTitle": "REKLAM RAPORU",
@@ -1295,7 +1295,7 @@
       }
     }
   },
-  "retargetingDialogBodyPaid": "{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından {cost} TUCi ([ICON_TUCI]) düşülecek.",
+  "retargetingDialogBodyPaid": "{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından {cost} TUCi düşülecek.",
   "@retargetingDialogBodyPaid": {
     "placeholders": {
       "count": {
@@ -1306,7 +1306,7 @@
       }
     }
   },
-  "retargetingDialogBodyKarma": "{count} kişiye bildirim gönderilecek.\n\n{free} kredi kullanılacak + {cost} TUCi ([ICON_TUCI]) ödenecek.",
+  "retargetingDialogBodyKarma": "{count} kişiye bildirim gönderilecek.\n\n{free} kredi kullanılacak + {cost} TUCi ödenecek.",
   "@retargetingDialogBodyKarma": {
     "placeholders": {
       "count": {
@@ -1320,7 +1320,7 @@
       }
     }
   },
-  "retargetingDialogBodyInsufficient": "Yetersiz TUCi ([ICON_TUCI]) bakiyesi.\nGerekli: {cost} TUCi ([ICON_TUCI]) | Mevcut: {balance} TUCi ([ICON_TUCI])",
+  "retargetingDialogBodyInsufficient": "Yetersiz TUCi bakiyesi.\nGerekli: {cost} TUCi | Mevcut: {balance} TUCi",
   "@retargetingDialogBodyInsufficient": {
     "placeholders": {
       "cost": {
@@ -1348,7 +1348,7 @@
       }
     }
   },
-  "retargetingPaidSubtitle": "{count} kişi × 10 TUCi ([ICON_TUCI])",
+  "retargetingPaidSubtitle": "{count} kişi × 10 TUCi",
   "@retargetingPaidSubtitle": {
     "placeholders": {
       "count": {
@@ -1374,7 +1374,7 @@
       }
     }
   },
-  "retargetingCostBadge": "{cost} TUCi ([ICON_TUCI]) harcanır",
+  "retargetingCostBadge": "{cost} TUCi harcanır",
   "@retargetingCostBadge": {
     "placeholders": {
       "cost": {
@@ -1383,7 +1383,7 @@
     }
   },
   "retargetingFootnote": "Kullanıcılar \"Hâlâ ilgileniyor musun?\" bildirimi alacak. Satın almayan kişilere gönderilir.",
-  "retargetingInfoText": "İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi ([ICON_TUCI]) harcanır.",
+  "retargetingInfoText": "İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.",
   "retargetingLast30Days": "Son 30 gün içinde",
   "retargetingViewerLabel": "kişi gördü",
   "retargetingBoughtLabel": "satın aldı",
@@ -1449,8 +1449,8 @@
   },
   "profilePhotoUploadError": "Fotoğraf yüklenemedi. Tekrar deneyin.",
   "profileInviteCodeError": "Davet kodu alınamadı, tekrar deneyin.",
-  "profileInviteTitle": "Arkadaşlarını Davet Et, TUCi ([ICON_TUCI]) Kazan!",
-  "profileInviteSubtitle": "Her davet için +50, arkadaşın +10 TUCi ([ICON_TUCI]) kazanır",
+  "profileInviteTitle": "Arkadaşlarını Davet Et, TUCi Kazan!",
+  "profileInviteSubtitle": "Her davet için +50, arkadaşın +10 TUCi kazanır",
   "profilePickGallery": "Galeriden Seç",
   "profilePickCamera": "Kameradan Çek",
   "listingDeleteDialogTitle": "İlanı Sil",
@@ -1459,7 +1459,7 @@
   "favoritesEmpty": "Henüz favori ilan yok",
   "createNeedTitle": "Önce ilan başlığını giriniz.",
   "aiPriceError": "Fiyat tahmini alınamadı. Lütfen tekrar deneyin.",
-  "tuciSpent": "{count} TUCi ([ICON_TUCI]) harcandı.",
+  "tuciSpent": "{count} TUCi harcandı.",
   "@tuciSpent": {
     "placeholders": {
       "count": {
@@ -1507,7 +1507,7 @@
   },
   "listingDeactivateTitle": "İlanı Pasife Al",
   "listingDeactivateWarning": "İlanı pasife alırsanız aktif vitrin/promosyon hakları silinir.",
-  "listingDeactivateCostHint": "Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için {cost} TUCi ([ICON_TUCI]) bakiyenizden düşülecektir.",
+  "listingDeactivateCostHint": "Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için {cost} TUCi bakiyenizden düşülecektir.",
   "@listingDeactivateCostHint": {
     "placeholders": {
       "cost": {
@@ -1526,7 +1526,7 @@
       }
     }
   },
-  "listingReactivatePaidPro": "Bu ayki hakkınız doldu. {cost} TUCi ([ICON_TUCI]) ödenecek.",
+  "listingReactivatePaidPro": "Bu ayki hakkınız doldu. {cost} TUCi ödenecek.",
   "@listingReactivatePaidPro": {
     "placeholders": {
       "cost": {
@@ -1534,7 +1534,7 @@
       }
     }
   },
-  "listingReactivatePaidNormal": "{cost} TUCi ([ICON_TUCI]) ödenecek. Bakiyeniz: {balance} TUCi ([ICON_TUCI]).",
+  "listingReactivatePaidNormal": "{cost} TUCi ödenecek. Bakiyeniz: {balance} TUCi.",
   "@listingReactivatePaidNormal": {
     "placeholders": {
       "cost": {
@@ -1546,7 +1546,7 @@
     }
   },
   "listingReactivateProUpsell": "PRO'ya geçerek ayda 5 ücretsiz hak kazanın.",
-  "listingReactivateInsufficientBalance": "Yetersiz bakiye. Devam etmek için TUCi ([ICON_TUCI]) yükleyin.",
+  "listingReactivateInsufficientBalance": "Yetersiz bakiye. Devam etmek için TUCi yükleyin.",
   "listingReactivateConfirm": "Aktif Yap",
   "proReactivationSection": "İlan Reaktivasyon Kredisi",
   "suggestedStreamers": "Önerilen Yayıncılar",
@@ -1615,7 +1615,7 @@
   "faqIconConversion": "Dönüşüm Analizi: Görüntüleme başına elde edilen teklif ve satış hunisi.",
   "faqIconRadar": "Rakip Radarı: Benzer satıcıların fiyat ve satış hızı analizleri.",
   "faqIconRetargeting": "Yeniden Hedefleme: İlgili alıcılara doğrudan hatırlatma veya indirim mesajı gönderimi.",
-  "proToolHotDemandTitle": "Sıcak Talep ([ICON_HOTDEMAND]) (Lead Gen)",
+  "proToolHotDemandTitle": "Sıcak Talep (Lead Gen)",
   "proToolHotDemandDesc": "İlanınızla ilgilenebilecek potansiyel alıcılara doğrudan ulaşın.",
   "proToolAiPriceTitle": "Yapay Zeka Fiyat Analizi",
   "proToolAiPriceDesc": "Ürününüzün piyasa değerini AI ile saniyeler içinde öğrenin.",
