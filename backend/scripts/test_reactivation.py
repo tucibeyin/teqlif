@@ -24,7 +24,7 @@ from sqlalchemy.orm import sessionmaker
 # ── Yapılandırma ──────────────────────────────────────────────────────────────
 BASE_URL   = "https://www.teqlif.com/api"
 DB_URL     = "postgresql+asyncpg://teqlif:Teqlif5664@127.0.0.1:5432/teqlif"
-TEST_EMAIL = "tucibeyin@gmail.com"
+TEST_EMAIL = "teqlif@gmail.com"
 TEST_PASS  = "SIFRENIZI_GIRIN"          # <-- buraya gir
 LISTING_TITLE = "Teqlif Deneme 2"
 
