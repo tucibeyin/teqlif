@@ -289,6 +289,7 @@ class StreamService:
                 LiveStream.id == stream_id,
                 LiveStream.host_id == user.id,
                 LiveStream.is_live == False,  # noqa: E712
+                LiveStream.ended_at.is_(None),
             )
         )
         stream = result.scalar_one_or_none()
