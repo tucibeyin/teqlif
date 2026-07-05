@@ -1028,22 +1028,25 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
                         settings.livekit_api_secret,
                     )
                     res = await svc.list_rooms(ListRoomsRequest())
-                    active_rooms = {r.name for r in res.rooms}
+                    active_rooms = {r.name: r.num_participants for r in res.rooms}
             except Exception as lk_exc:
                 logger.warning("[Worker] Stale stream cleanup: LiveKit API erişilemedi | %s", lk_exc)
                 return
 
             from app.routers.webhooks import _close_stream
             for stream in streams:
-                if stream.room_name not in active_rooms:
+                num_participants = active_rooms.get(stream.room_name)
+                # Oda yok VEYA oda boş (tüm katılımcılar ayrıldı) → kapat
+                should_close = num_participants is None or num_participants == 0
+                if should_close:
                     elapsed = int(
                         (datetime.now(timezone.utc) - stream.started_at.replace(tzinfo=timezone.utc)).total_seconds() // 60
                         if stream.started_at.tzinfo is None
                         else (datetime.now(timezone.utc) - stream.started_at).total_seconds() // 60
                     )
                     logger.warning(
-                        "[Worker] Hayalet yayın kapatılıyor | stream_id=%s room=%s elapsed=%d dk",
-                        stream.id, stream.room_name, elapsed,
+                        "[Worker] Hayalet yayın kapatılıyor | stream_id=%s room=%s participants=%s elapsed=%d dk",
+                        stream.id, stream.room_name, num_participants, elapsed,
                     )
                     await _close_stream(db, stream.room_name)
 
