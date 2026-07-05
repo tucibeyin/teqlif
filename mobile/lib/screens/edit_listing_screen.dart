@@ -551,10 +551,13 @@ class _EditListingScreenState extends State<EditListingScreen> {
       String? thumbnailUrl;
       for (final img in _images) {
         try {
-          final result = await UploadService.uploadFile(img);
-          imageUrls.add(result.url);
-          // İlk fotoğrafın thumb'ını thumbnail olarak kullan
-          thumbnailUrl ??= result.thumbUrl;
+          if (img is String) {
+            imageUrls.add(img);
+          } else if (img is File) {
+            final result = await UploadService.uploadFile(img);
+            imageUrls.add(result.url);
+            thumbnailUrl ??= result.thumbUrl;
+          }
         } catch (e) {
           debugPrint('UPLOAD EXCEPTION: $e');
           if (mounted) {
@@ -572,8 +575,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
       if (!mounted) return;
 
       await apiCall(
-        () async => http.post(
-          Uri.parse('$kBaseUrl/listings'),
+        () async => http.put(
+          Uri.parse('$kBaseUrl/listings/${widget.listing['id']}'),
           headers: {
             'Content-Type': 'application/json',
             if (token != null) 'Authorization': 'Bearer $token',
@@ -591,7 +594,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
               'location': _selectedCity,
             'image_urls': imageUrls,
             if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
-            'thumbnail_url': ?thumbnailUrl,
+            if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
             if (_videoUploadUrl != null) 'video_url': _videoUploadUrl,
           }),
         ),
