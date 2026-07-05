@@ -530,6 +530,130 @@ class ListingService:
 
         return {"id": listing.id}
 
+    # ── İlan Güncelle ────────────────────────────────────────────────────────
+    async def update_listing(self, listing_id: int, payload: dict, current_user: User) -> dict:
+        import os
+        from datetime import datetime
+        import json
+        from app.config import settings
+        from app.core.exceptions import NotFoundException, BadRequestException, ContentPolicyException, DatabaseException
+        from fastapi import HTTPException
+        
+        result = await self.db.execute(
+            select(Listing).where(
+                Listing.id == listing_id,
+                Listing.is_deleted == False,  # noqa: E712
+            )
+        )
+        listing = result.scalar_one_or_none()
+        
+        if not listing:
+            raise NotFoundException("İlan bulunamadı")
+            
+        if listing.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Bu ilanı düzenleme yetkiniz yok.")
+
+        # Profanity kontrolü
+        from app.core.auto_mod import analyze_listing_text
+        _title = (payload.get("title") or listing.title).strip()
+        _desc = (payload.get("description") or listing.description or "").strip()
+        if analyze_listing_text(_title, _desc):
+            raise ContentPolicyException()
+
+        category = (payload.get("category") or listing.category or "diger").strip().lower()
+        if category not in VALID_CATEGORIES:
+            raise BadRequestException(f"Geçersiz kategori: {category}")
+
+        # Eski medyaları al
+        old_image_urls_str = listing.image_urls
+        old_images = []
+        if old_image_urls_str:
+            try:
+                old_images = json.loads(old_image_urls_str)
+            except Exception:
+                old_images = []
+        old_video = listing.video_url
+
+        # Yeni medyalar
+        new_images = payload.get("image_urls")
+        new_video = payload.get("video_url")
+
+        # Güncellemeleri uygula
+        listing.title = payload.get("title", listing.title)
+        listing.description = payload.get("description", listing.description)
+        listing.price = payload.get("price", listing.price)
+        listing.category = category
+        listing.location = payload.get("location", listing.location)
+        listing.updated_at = datetime.utcnow()
+
+        # Medya GC (Resource Management)
+        if new_images is not None:
+            listing.image_urls = json.dumps(new_images)
+            listing.image_url = new_images[0] if new_images else None
+            listing.thumbnail_url = payload.get("thumbnail_url", listing.thumbnail_url)
+            
+            for old_img in old_images:
+                if old_img not in new_images:
+                    filename = old_img.split("/")[-1]
+                    file_path = os.path.join(settings.upload_dir, filename)
+                    try:
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                        base, ext = os.path.splitext(filename)
+                        thumb_ext = ".jpg" if ext.lower() in (".jpg", ".webp", ".gif") else ".png"
+                        thumb_path = os.path.join(settings.upload_dir, f"{base}_thumb{thumb_ext}")
+                        if os.path.exists(thumb_path):
+                            os.remove(thumb_path)
+                    except Exception as e:
+                        logger.warning(f"Eski resim silinemedi: {filename} - {e}")
+                        
+        if "video_url" in payload:
+            listing.video_url = new_video
+            if old_video and old_video != new_video:
+                filename = old_video.split("/")[-1]
+                file_path = os.path.join(settings.upload_dir, filename)
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    base, _ = os.path.splitext(filename)
+                    vthumb_path = os.path.join(settings.upload_dir, f"{base}_vthumb.jpg")
+                    if os.path.exists(vthumb_path):
+                        os.remove(vthumb_path)
+                except Exception as e:
+                    logger.warning(f"Eski video silinemedi: {filename} - {e}")
+
+        try:
+            await self.db.commit()
+            await self.db.refresh(listing)
+        except Exception as exc:
+            await self.db.rollback()
+            logger.error("[LISTINGS] İlan güncellenemedi | user_id=%s | %s", current_user.id, exc)
+            capture_exception(exc)
+            raise DatabaseException("İlan güncellenemedi")
+
+        logger.info("[LISTINGS] İlan güncellendi | user_id=%s listing_id=%s", current_user.id, listing.id)
+
+        # Embedding & Search Vector güncellemesi
+        from app.core.task_queue import get_pool
+        pool = get_pool()
+        if pool:
+            import asyncio
+            asyncio.create_task(pool.enqueue_job("generate_listing_embedding_task", listing.id))
+            
+        try:
+            from sqlalchemy import text as _text
+            await self.db.execute(_text("""
+                UPDATE listings SET search_vector =
+                    to_tsvector('turkish',
+                        coalesce(title, '') || ' ' || coalesce(description, ''))
+                WHERE id = :lid
+            """), {"lid": listing.id})
+            await self.db.commit()
+        except Exception:
+            pass
+
+        return {"id": listing.id}
+
     # ── Aktif/Pasif Geçiş ────────────────────────────────────────────────────
     async def toggle_listing(self, listing_id: int, current_user: User) -> dict:
         from fastapi import HTTPException

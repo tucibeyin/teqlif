@@ -2988,4 +2988,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get faqAAIRadar =>
       'يقارن تحليل المنافسين سعرك ونسبة النقر مع المنافسين. تحدد وحدة أفضل وقت للبث متى يكون متابعوك أكثر نشاطاً.';
+
+  @override
+  String get editListingTitle => 'تعديل الإعلان';
+
+  @override
+  String get btnUpdate => 'تحديث';
 }

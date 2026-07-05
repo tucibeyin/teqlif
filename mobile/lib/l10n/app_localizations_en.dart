@@ -3010,4 +3010,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get faqAAIRadar =>
       'Competitor Analysis compares your price and click rate with competitors. The Best Streaming Time module reports when your followers are most active.';
+
+  @override
+  String get editListingTitle => 'Edit Listing';
+
+  @override
+  String get btnUpdate => 'Update';
 }

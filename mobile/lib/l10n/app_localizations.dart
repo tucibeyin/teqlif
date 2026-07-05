@@ -5517,6 +5517,18 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Rekabet Analizi, ilanınızın fiyat durumunu ve tıklanma oranını rakiplerle kıyaslar. Yayın Saati Tahmini ise takipçilerinizin en aktif olduğu saatleri gösterir.'**
   String get faqAAIRadar;
+
+  /// No description provided for @editListingTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanı Düzenle'**
+  String get editListingTitle;
+
+  /// No description provided for @btnUpdate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güncelle'**
+  String get btnUpdate;
 }
 
 class _AppLocalizationsDelegate

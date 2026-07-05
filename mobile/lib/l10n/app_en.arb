@@ -1599,5 +1599,7 @@
   "faqQAILead": "What is the \"Hot Demand\" (Lead Gen) feature?",
   "faqAAILead": "A system that matches your listing with the most suitable potential buyers via AI and sends them a direct \"Suggested Listing\" notification.",
   "faqQAIRadar": "Competitor Analysis and Best Streaming Time",
-  "faqAAIRadar": "Competitor Analysis compares your price and click rate with competitors. The Best Streaming Time module reports when your followers are most active."
+  "faqAAIRadar": "Competitor Analysis compares your price and click rate with competitors. The Best Streaming Time module reports when your followers are most active.",
+  "editListingTitle": "Edit Listing",
+  "btnUpdate": "Update"
 }

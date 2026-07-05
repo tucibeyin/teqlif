@@ -18,6 +18,7 @@ import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import 'profile_screen.dart';
 import 'public_profile_screen.dart';
+import 'edit_listing_screen.dart';
 import 'messages_screen.dart';
 import 'ad_report_screen.dart';
 
@@ -1011,6 +1012,24 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             ),
           ),
           if (isMine) ...[
+            IconButton(
+              key: const Key('listing_detail_btn_edit'),
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: l.editListingTitle,
+              onPressed: () async {
+                final updated = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => EditListingScreen(listing: listing)),
+                );
+                if (updated == true) {
+                  // Reload by pushing loader
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => ListingDeepLinkLoader(listingId: listing['id'])),
+                  );
+                }
+              },
+            ),
             IconButton(
               key: const Key('listing_detail_btn_aktif_toggle'),
               icon: Icon(

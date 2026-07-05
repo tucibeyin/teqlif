@@ -3014,4 +3014,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get faqAAIRadar =>
       'Rekabet Analizi, ilanınızın fiyat durumunu ve tıklanma oranını rakiplerle kıyaslar. Yayın Saati Tahmini ise takipçilerinizin en aktif olduğu saatleri gösterir.';
+
+  @override
+  String get editListingTitle => 'İlanı Düzenle';
+
+  @override
+  String get btnUpdate => 'Güncelle';
 }

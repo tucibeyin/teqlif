@@ -101,6 +101,16 @@ async def create_listing(
     return result
 
 
+@router.put("/{listing_id}")
+async def update_listing(
+    listing_id: int,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await ListingService(db).update_listing(listing_id, payload, current_user)
+
+
 @router.get("/{listing_id}/reactivation-cost")
 async def reactivation_cost(
     listing_id: int,
