@@ -352,532 +352,523 @@ class HomeScreenState extends State<HomeScreen> {
     final l = AppLocalizations.of(context)!;
     final categories = _buildCategories(l);
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () => _load(bypassCache: true),
-        child: CustomScrollView(
-          controller: _scrollCtrl,
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // ── AppBar ──────────────────────────────────────────────
-            SliverAppBar(
-              title: Text(
-                l.homeAppBarTitle,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                ),
-              ),
-              centerTitle: false,
-              surfaceTintColor: Colors.transparent,
-              floating: true,
-              snap: true,
-              actions: [
-                TextButton.icon(
-                  key: const Key('home_btn_ilan_ver'),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CreateListingScreen(),
-                    ),
-                  ),
-                  icon: const Icon(Icons.add, size: 18, color: kPrimary),
-                  label: Text(
-                    l.btnCreateListing,
-                    style: const TextStyle(
-                      color: kPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
+      appBar: AppBar(
+        title: Text(
+          l.homeAppBarTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+        ),
+        centerTitle: false,
+        surfaceTintColor: Colors.transparent,
+        actions: [
+          TextButton.icon(
+            key: const Key('home_btn_ilan_ver'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreateListingScreen()),
             ),
-
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Onboarding banner ────────────────────────────
-                  if (_showOnboardingBanner)
-                    _OnboardingBanner(
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const CategoryOnboardingScreen(
-                              fromBanner: true,
-                            ),
+            icon: const Icon(Icons.add, size: 18, color: kPrimary),
+            label: Text(
+              l.btnCreateListing,
+              style: const TextStyle(
+                color: kPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Onboarding banner ────────────────────────────
+          if (_showOnboardingBanner)
+            _OnboardingBanner(
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const CategoryOnboardingScreen(fromBanner: true),
+                  ),
+                );
+                if (mounted) {
+                  setState(() => _showOnboardingBanner = false);
+                }
+              },
+            ),
+          // ── Kategori ikonları ────────────────────────────
+          SizedBox(
+            height: 90,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: categories.length,
+              itemBuilder: (context, i) {
+                final cat = categories[i];
+                final slug = cat['slug'] as String;
+                final isSelected = _selectedCategory == slug;
+                return GestureDetector(
+                  key: Key('home_cat_$slug'),
+                  onTap: () {
+                    setState(
+                      () => _selectedCategory = isSelected ? null : slug,
+                    );
+                    _load();
+                  },
+                  child: Container(
+                    width: 68,
+                    margin: const EdgeInsets.only(right: 10),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? kPrimary
+                                : AppColors.primaryBg(context),
+                            borderRadius: BorderRadius.circular(12),
+                            border: isSelected
+                                ? Border.all(color: kPrimaryDark, width: 1.5)
+                                : null,
                           ),
-                        );
-                        if (mounted) {
-                          setState(() => _showOnboardingBanner = false);
-                        }
-                      },
-                    ),
-                  // ── Kategori ikonları ────────────────────────────
-                  SizedBox(
-                    height: 90,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: categories.length,
-                      itemBuilder: (context, i) {
-                        final cat = categories[i];
-                        final slug = cat['slug'] as String;
-                        final isSelected = _selectedCategory == slug;
-                        return GestureDetector(
-                          key: Key('home_cat_$slug'),
-                          onTap: () {
-                            setState(
-                              () =>
-                                  _selectedCategory = isSelected ? null : slug,
-                            );
-                            _load();
-                          },
-                          child: Container(
-                            width: 68,
-                            margin: const EdgeInsets.only(right: 10),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 150),
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? kPrimary
-                                        : AppColors.primaryBg(context),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: isSelected
-                                        ? Border.all(
-                                            color: kPrimaryDark,
-                                            width: 1.5,
-                                          )
-                                        : null,
-                                  ),
-                                  child: Icon(
-                                    cat['icon'] as IconData,
-                                    color: isSelected ? Colors.white : kPrimary,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  cat['label'] as String,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: isSelected
-                                        ? kPrimary
-                                        : AppColors.textSecondary(context),
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
+                          child: Icon(
+                            cat['icon'] as IconData,
+                            color: isSelected ? Colors.white : kPrimary,
+                            size: 24,
                           ),
-                        );
-                      },
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          cat['label'] as String,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? kPrimary
+                                : AppColors.textSecondary(context),
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
+                );
+              },
+            ),
+          ),
 
-                  // ── Filtre chip'leri satırı ──────────────────────
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
+          // ── Filtre chip'leri satırı ──────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  // Şehir seçici chip
+                  GestureDetector(
+                    key: const Key('home_chip_sehir_sec'),
+                    onTap: _cities.isEmpty ? null : _showCityPicker,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _selectedCity != null
+                            ? kPrimary.withValues(alpha: 0.1)
+                            : AppColors.surface(context),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _selectedCity != null
+                              ? kPrimary
+                              : AppColors.border(context),
+                          width: 1.2,
+                        ),
+                      ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Şehir seçici chip
-                          GestureDetector(
-                            key: const Key('home_chip_sehir_sec'),
-                            onTap: _cities.isEmpty ? null : _showCityPicker,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _selectedCity != null
-                                    ? kPrimary.withValues(alpha: 0.1)
-                                    : AppColors.surface(context),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: _selectedCity != null
-                                      ? kPrimary
-                                      : AppColors.border(context),
-                                  width: 1.2,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.location_on_outlined,
-                                    size: 14,
-                                    color: _selectedCity != null
-                                        ? kPrimary
-                                        : AppColors.textSecondary(context),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _selectedCity ?? l.fieldCity,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: _selectedCity != null
-                                          ? FontWeight.w600
-                                          : FontWeight.w500,
-                                      color: _selectedCity != null
-                                          ? kPrimary
-                                          : AppColors.textSecondary(context),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Icon(
-                                    Icons.arrow_drop_down,
-                                    size: 16,
-                                    color: _selectedCity != null
-                                        ? kPrimary
-                                        : AppColors.textSecondary(context),
-                                  ),
-                                ],
-                              ),
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: _selectedCity != null
+                                ? kPrimary
+                                : AppColors.textSecondary(context),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _selectedCity ?? l.fieldCity,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: _selectedCity != null
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                              color: _selectedCity != null
+                                  ? kPrimary
+                                  : AppColors.textSecondary(context),
                             ),
                           ),
-
-                          // Aktif kategori chip
-                          if (_selectedCategory != null) ...[
-                            const SizedBox(width: 8),
-                            _ActiveFilterChip(
-                              label:
-                                  categories.firstWhere(
-                                        (c) => c['slug'] == _selectedCategory,
-                                      )['label']
-                                      as String,
-                              onRemove: () {
-                                setState(() => _selectedCategory = null);
-                                _load();
-                              },
-                            ),
-                          ],
-
-                          // Aktif şehir chip
-                          if (_selectedCity != null) ...[
-                            const SizedBox(width: 8),
-                            _ActiveFilterChip(
-                              label: _selectedCity!,
-                              onRemove: () {
-                                setState(() => _selectedCity = null);
-                                _load();
-                              },
-                            ),
-                          ],
-
-                          // Filtreleri Temizle
-                          if (_hasFilter) ...[
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              key: const Key('home_btn_filtreleri_temizle'),
-                              onTap: _clearAll,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.red.withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.close,
-                                      size: 13,
-                                      color: Colors.red,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      l.btnClearFilters,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.arrow_drop_down,
+                            size: 16,
+                            color: _selectedCity != null
+                                ? kPrimary
+                                : AppColors.textSecondary(context),
+                          ),
                         ],
                       ),
                     ),
                   ),
+
+                  // Aktif kategori chip
+                  if (_selectedCategory != null) ...[
+                    const SizedBox(width: 8),
+                    _ActiveFilterChip(
+                      label:
+                          categories.firstWhere(
+                                (c) => c['slug'] == _selectedCategory,
+                              )['label']
+                              as String,
+                      onRemove: () {
+                        setState(() => _selectedCategory = null);
+                        _load();
+                      },
+                    ),
+                  ],
+
+                  // Aktif şehir chip
+                  if (_selectedCity != null) ...[
+                    const SizedBox(width: 8),
+                    _ActiveFilterChip(
+                      label: _selectedCity!,
+                      onRemove: () {
+                        setState(() => _selectedCity = null);
+                        _load();
+                      },
+                    ),
+                  ],
+
+                  // Filtreleri Temizle
+                  if (_hasFilter) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      key: const Key('home_btn_filtreleri_temizle'),
+                      onTap: _clearAll,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.red.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.close,
+                              size: 13,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              l.btnClearFilters,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.red,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 8),
 
-            // ══════════════════════════════════════════════════════════
-            // FİLTRE MODU: sadece filtrelenmiş grid
-            // ══════════════════════════════════════════════════════════
-            if (_hasFilter) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Text(
-                    _filteredHeader(l),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+          // ── İLAN LİSTESİ (SADECE BURASI KAYACAK) ────────────────
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => _load(bypassCache: true),
+              child: CustomScrollView(
+                controller: _scrollCtrl,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // ══════════════════════════════════════════════════════════
+                  // FİLTRE MODU: sadece filtrelenmiş grid
+                  // ══════════════════════════════════════════════════════════
+                  if (_hasFilter) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: Text(
+                          _filteredHeader(l),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              if (_recentLoading)
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 2,
-                          mainAxisSpacing: 2,
-                          childAspectRatio: 0.78,
+                    if (_recentLoading)
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 2,
+                                mainAxisSpacing: 2,
+                                childAspectRatio: 0.78,
+                              ),
+                          delegate: SliverChildBuilderDelegate(
+                            (_, _) => const ShimmerGridCard(),
+                            childCount: 9,
+                          ),
                         ),
-                    delegate: SliverChildBuilderDelegate(
-                      (_, _) => const ShimmerGridCard(),
-                      childCount: 9,
-                    ),
-                  ),
-                )
-              else if (_recentListings.isEmpty)
-                SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.search_off_outlined,
-                          size: 56,
-                          color: AppColors.border(context),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          l.emptyFilteredListings,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          key: const Key('home_btn_filtreleri_temizle_bos'),
-                          onPressed: _clearAll,
-                          child: Text(l.btnClearFilters),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 2,
-                          mainAxisSpacing: 2,
-                        ),
-                    delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => _GridItem(
-                        key: Key(
-                          'home_listing_filtered_${_recentListings[i]['id']}',
-                        ),
-                        listing: _recentListings[i],
-                        onRemove: () =>
-                            setState(() => _recentListings.removeAt(i)),
-                        onTap: () {
-                          if (_recentListings[i]['is_sponsored'] == true) {
-                            final cid = _recentListings[i]['campaign_id'];
-                            if (cid != null) {
-                              AnalyticsService.trackAdClick(cid as int);
-                            }
-                          }
-                          Navigator.push(
-                            ctx,
-                            MaterialPageRoute(
-                              builder: (_) => ListingDetailScreen(
-                                listing: Map<String, dynamic>.from(
-                                  _recentListings[i],
+                      )
+                    else if (_recentListings.isEmpty)
+                      SliverFillRemaining(
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.search_off_outlined,
+                                size: 56,
+                                color: AppColors.border(context),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                l.emptyFilteredListings,
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton(
+                                key: const Key(
+                                  'home_btn_filtreleri_temizle_bos',
                                 ),
+                                onPressed: _clearAll,
+                                child: Text(l.btnClearFilters),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 2,
+                                mainAxisSpacing: 2,
+                              ),
+                          delegate: SliverChildBuilderDelegate(
+                            (ctx, i) => _GridItem(
+                              key: Key(
+                                'home_listing_filtered_${_recentListings[i]['id']}',
+                              ),
+                              listing: _recentListings[i],
+                              onRemove: () =>
+                                  setState(() => _recentListings.removeAt(i)),
+                              onTap: () {
+                                if (_recentListings[i]['is_sponsored'] ==
+                                    true) {
+                                  final cid = _recentListings[i]['campaign_id'];
+                                  if (cid != null) {
+                                    AnalyticsService.trackAdClick(cid as int);
+                                  }
+                                }
+                                Navigator.push(
+                                  ctx,
+                                  MaterialPageRoute(
+                                    builder: (_) => ListingDetailScreen(
+                                      listing: Map<String, dynamic>.from(
+                                        _recentListings[i],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            childCount: _recentListings.length,
+                          ),
+                        ),
+                      ),
+                  ],
+
+                  // ══════════════════════════════════════════════════════════
+                  // NORMAL MOD: Sana Özel (yatay) + En Son (dikey grid)
+                  // ══════════════════════════════════════════════════════════
+                  if (!_hasFilter) ...[
+                    // ── En Son Eklenenler ──────────────────────────────────
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time_outlined,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              l.homeRecentListings,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          );
-                        },
-                      ),
-                      childCount: _recentListings.length,
-                    ),
-                  ),
-                ),
-            ],
-
-            // ══════════════════════════════════════════════════════════
-            // NORMAL MOD: Sana Özel (yatay) + En Son (dikey grid)
-            // ══════════════════════════════════════════════════════════
-            if (!_hasFilter) ...[
-              // ── En Son Eklenenler ──────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time_outlined,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l.homeRecentListings,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              if (_recentLoading && _recentListings.isEmpty)
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 2,
-                          mainAxisSpacing: 2,
-                          childAspectRatio: 0.78,
-                        ),
-                    delegate: SliverChildBuilderDelegate(
-                      (_, _) => const ShimmerGridCard(),
-                      childCount: 9,
                     ),
-                  ),
-                )
-              else if (_error != null && _recentListings.isEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _error!,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 12),
-                        TextButton(
-                          key: const Key('home_btn_tekrar_dene'),
-                          onPressed: _load,
-                          child: Text(l.btnRetry),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else if (_recentListings.isEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(
-                      child: Text(
-                        l.emptyListings,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 2,
-                          mainAxisSpacing: 2,
-                        ),
-                    delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => _GridItem(
-                        key: Key(
-                          'home_listing_item_${_recentListings[i]['id']}',
-                        ),
-                        listing: _recentListings[i],
-                        onRemove: () =>
-                            setState(() => _recentListings.removeAt(i)),
-                        onTap: () {
-                          final item = _recentListings[i];
-                          if (item['is_sponsored'] == true) {
-                            final cid = item['campaign_id'];
-                            if (cid != null) {
-                              AnalyticsService.trackAdClick(cid as int);
-                            }
-                          } else if (_isLoggedIn) {
-                            final id = item['id'] as int?;
-                            if (id != null) {
-                              final ownerId =
-                                  (item['user'] as Map?)?['id'] as int?;
-                              unawaited(
-                                AnalyticsService.logInteraction(
-                                  itemId: id,
-                                  itemType: 'listing',
-                                  interactionType: 'click',
-                                  ownerId: ownerId,
-                                  pricePoint: item['price'] != null
-                                      ? (item['price'] as num).toDouble()
-                                      : null,
-                                ),
-                              );
-                            }
-                          }
-                          Navigator.push(
-                            ctx,
-                            MaterialPageRoute(
-                              builder: (_) => ListingDetailScreen(
-                                listing: Map<String, dynamic>.from(item),
+                    if (_recentLoading && _recentListings.isEmpty)
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 2,
+                                mainAxisSpacing: 2,
+                                childAspectRatio: 0.78,
                               ),
+                          delegate: SliverChildBuilderDelegate(
+                            (_, _) => const ShimmerGridCard(),
+                            childCount: 9,
+                          ),
+                        ),
+                      )
+                    else if (_error != null && _recentListings.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _error!,
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                              const SizedBox(height: 12),
+                              TextButton(
+                                key: const Key('home_btn_tekrar_dene'),
+                                onPressed: _load,
+                                child: Text(l.btnRetry),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if (_recentListings.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Center(
+                            child: Text(
+                              l.emptyListings,
+                              style: const TextStyle(color: Colors.grey),
                             ),
-                          );
-                        },
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 2,
+                                mainAxisSpacing: 2,
+                              ),
+                          delegate: SliverChildBuilderDelegate(
+                            (ctx, i) => _GridItem(
+                              key: Key(
+                                'home_listing_item_${_recentListings[i]['id']}',
+                              ),
+                              listing: _recentListings[i],
+                              onRemove: () =>
+                                  setState(() => _recentListings.removeAt(i)),
+                              onTap: () {
+                                final item = _recentListings[i];
+                                if (item['is_sponsored'] == true) {
+                                  final cid = item['campaign_id'];
+                                  if (cid != null) {
+                                    AnalyticsService.trackAdClick(cid as int);
+                                  }
+                                } else if (_isLoggedIn) {
+                                  final id = item['id'] as int?;
+                                  if (id != null) {
+                                    final ownerId =
+                                        (item['user'] as Map?)?['id'] as int?;
+                                    unawaited(
+                                      AnalyticsService.logInteraction(
+                                        itemId: id,
+                                        itemType: 'listing',
+                                        interactionType: 'click',
+                                        ownerId: ownerId,
+                                        pricePoint: item['price'] != null
+                                            ? (item['price'] as num).toDouble()
+                                            : null,
+                                      ),
+                                    );
+                                  }
+                                }
+                                Navigator.push(
+                                  ctx,
+                                  MaterialPageRoute(
+                                    builder: (_) => ListingDetailScreen(
+                                      listing: Map<String, dynamic>.from(item),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            childCount: _recentListings.length,
+                          ),
+                        ),
                       ),
-                      childCount: _recentListings.length,
-                    ),
-                  ),
-                ),
 
-              // ── Sonsuz scroll yükleniyor göstergesi ───────────────
-              if (_recentLoadingMore)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                ),
-            ],
-          ],
-        ),
+                    // ── Sonsuz scroll yükleniyor göstergesi ───────────────
+                    if (_recentLoadingMore)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
