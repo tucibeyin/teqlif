@@ -62,6 +62,24 @@ class FaqScreen extends StatelessWidget {
           _FaqItem(question: l.faqQAIRadar, answer: l.faqAAIRadar),
         ],
       ),
+      _FaqCategory(
+        title: l.faqCatIcons,
+        icon: Icons.grid_view_rounded,
+        items: [
+          _FaqItem(question: 'Onaylı Hesap', answer: l.faqIconVerified, icon: Icons.verified),
+          _FaqItem(question: 'teqlif PRO', answer: l.faqIconPro, icon: Icons.workspace_premium),
+          _FaqItem(question: 'TUCi', answer: l.faqIconTuci, icon: Icons.monetization_on),
+          _FaqItem(question: 'Öne Çıkar (Blast)', answer: l.faqIconBlast, icon: Icons.rocket_launch),
+          _FaqItem(question: 'Otomatik Teklif', answer: l.faqIconAutoBid, icon: Icons.gavel),
+          _FaqItem(question: 'Satış İçgörüleri', answer: l.faqIconSales, icon: Icons.auto_graph_outlined),
+          _FaqItem(question: 'İlan Analitikleri', answer: l.faqIconListings, icon: Icons.bar_chart_outlined),
+          _FaqItem(question: 'Piyasa İstihbaratı', answer: l.faqIconMarket, icon: Icons.insights_outlined),
+          _FaqItem(question: 'En İyi Yayın Zamanı', answer: l.faqIconTime, icon: Icons.schedule_outlined),
+          _FaqItem(question: 'Dönüşüm Analizi', answer: l.faqIconConversion, icon: Icons.pie_chart_outline),
+          _FaqItem(question: 'Rakip Radarı', answer: l.faqIconRadar, icon: Icons.radar),
+          _FaqItem(question: 'Yeniden Hedefleme', answer: l.faqIconRetargeting, icon: Icons.mark_email_unread_outlined),
+        ],
+      ),
     ];
 
     return Scaffold(
@@ -97,12 +115,22 @@ class FaqScreen extends StatelessWidget {
                       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                       child: ExpansionTile(
                         tilePadding: const EdgeInsets.symmetric(horizontal: 0),
-                        title: Text(
-                          item.question,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        title: Row(
+                          children: [
+                            if (item.icon != null) ...[
+                              Icon(item.icon, size: 20, color: Theme.of(context).primaryColor),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(
+                              child: Text(
+                                item.question,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         children: [
                           Container(
@@ -142,6 +170,7 @@ class _FaqCategory {
 class _FaqItem {
   final String question;
   final String answer;
+  final IconData? icon;
 
-  _FaqItem({required this.question, required this.answer});
+  _FaqItem({required this.question, required this.answer, this.icon});
 }

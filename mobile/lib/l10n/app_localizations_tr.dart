@@ -2847,7 +2847,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqQAccountSignup =>
-      'Teqlif\'e nasıl kayıt olabilirim ve giriş yapabilirim?';
+      'teqlif\'e nasıl kayıt olabilirim ve giriş yapabilirim?';
 
   @override
   String get faqAAccountSignup =>
@@ -2932,7 +2932,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqABadgesPro =>
-      'Bu rozet, ilanı paylaşan kullanıcının veya satıcının Teqlif PRO üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.';
+      'Bu rozet, ilanı paylaşan kullanıcının veya satıcının teqlif PRO üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.';
 
   @override
   String get faqQBadgesTrusted =>
@@ -2955,7 +2955,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqABadgesTuci =>
-      'TUCi, Teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.';
+      'TUCi, teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.';
 
   @override
   String get faqCatLive => 'Canlı Yayınlar (SwipeLive) ve Açık Artırma';
@@ -3023,4 +3023,76 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get btnUpdateListing => 'İlanı Güncelle';
+
+  @override
+  String get faqCatIcons => 'Sistem İkonları Sözlüğü';
+
+  @override
+  String get faqIconVerified =>
+      'Onaylı Hesap: Kullanıcının kimliğini veya telefonunu doğruladığını gösterir.';
+
+  @override
+  String get faqIconPro =>
+      'teqlif PRO: Satıcının platform tarafından öne çıkarılan bir PRO üyesi olduğunu belirtir.';
+
+  @override
+  String get faqIconTuci =>
+      'TUCi: Sistem içi harcamalarda kullanılan sanal para birimidir.';
+
+  @override
+  String get faqIconBlast =>
+      'Öne Çıkar (Blast): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.';
+
+  @override
+  String get faqIconAutoBid =>
+      'Otomatik Teklif: Sistemin sizin adınıza belirlediğiniz limite kadar teklif vermesidir.';
+
+  @override
+  String get faqIconSales =>
+      'Satış İçgörüleri: Satış hacmi ve karlılık durumunuzu gösterir.';
+
+  @override
+  String get faqIconListings =>
+      'İlan Analitikleri: İlanlarınızın görüntülenme ve favori metrikleridir.';
+
+  @override
+  String get faqIconMarket =>
+      'Piyasa İstihbaratı: Kategori bazlı piyasa fiyatları ve arz/talep eğilimleri.';
+
+  @override
+  String get faqIconTime =>
+      'En İyi Yayın Zamanı: Geçmiş verilere dayalı optimum yayın saati önerisi.';
+
+  @override
+  String get faqIconConversion =>
+      'Dönüşüm Analizi: Görüntüleme başına elde edilen teklif ve satış hunisi.';
+
+  @override
+  String get faqIconRadar =>
+      'Rakip Radarı: Benzer satıcıların fiyat ve satış hızı analizleri.';
+
+  @override
+  String get faqIconRetargeting =>
+      'Yeniden Hedefleme: İlgili alıcılara doğrudan hatırlatma veya indirim mesajı gönderimi.';
+
+  @override
+  String get proToolHotDemandTitle => 'Sıcak Talep (Lead Gen)';
+
+  @override
+  String get proToolHotDemandDesc =>
+      'İlanınızla ilgilenebilecek potansiyel alıcılara doğrudan ulaşın.';
+
+  @override
+  String get proToolAiPriceTitle => 'Yapay Zeka Fiyat Analizi';
+
+  @override
+  String get proToolAiPriceDesc =>
+      'Ürününüzün piyasa değerini AI ile saniyeler içinde öğrenin.';
+
+  @override
+  String get proToolStreamAnalyticsTitle => 'Canlı Yayın İzleyici Analizi';
+
+  @override
+  String get proToolStreamAnalyticsDesc =>
+      'Yayınlarınızdaki anlık izleyici ve hediye verilerini detaylı inceleyin.';
 }

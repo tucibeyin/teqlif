@@ -2825,7 +2825,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get faqQAccountSignup =>
-      'كيف يمكنني التسجيل وتسجيل الدخول إلى Teqlif؟';
+      'كيف يمكنني التسجيل وتسجيل الدخول إلى teqlif؟';
 
   @override
   String get faqAAccountSignup =>
@@ -2909,7 +2909,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get faqABadgesPro =>
-      'تشير هذه الشارة إلى أن البائع عضو في Teqlif PRO. بائعو PRO هم محترفون يتم الترويج لهم أكثر بواسطة الخوارزمية.';
+      'تشير هذه الشارة إلى أن البائع عضو في teqlif PRO. بائعو PRO هم محترفون يتم الترويج لهم أكثر بواسطة الخوارزمية.';
 
   @override
   String get faqQBadgesTrusted =>
@@ -2997,4 +2997,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get btnUpdateListing => 'تحديث الإعلان';
+
+  @override
+  String get faqCatIcons => 'مسرد أيقونات النظام';
+
+  @override
+  String get faqIconVerified =>
+      'حساب موثق: يظهر أن المستخدم قد تحقق من هويته أو هاتفه.';
+
+  @override
+  String get faqIconPro =>
+      'teqlif PRO: يشير إلى عضو محترف يتم الترويج له بواسطة المنصة.';
+
+  @override
+  String get faqIconTuci =>
+      'TUCi: العملة الافتراضية المستخدمة في الإنفاق داخل التطبيق.';
+
+  @override
+  String get faqIconBlast => 'Blast: يرسل إشعارًا فوريًا لقائمتك/بثك.';
+
+  @override
+  String get faqIconAutoBid =>
+      'المزايدة التلقائية: النظام يزايد نيابة عنك حتى الحد الأقصى.';
+
+  @override
+  String get faqIconSales =>
+      'رؤى المبيعات: يظهر حجم المبيعات والربحية الخاصة بك.';
+
+  @override
+  String get faqIconListings =>
+      'تحليلات القوائم: مقاييس المشاهدة والمفضلة لقوائمك.';
+
+  @override
+  String get faqIconMarket =>
+      'معلومات السوق: أسعار السوق واتجاهاته بناءً على الفئة.';
+
+  @override
+  String get faqIconTime =>
+      'أفضل وقت للبث: وقت البث الأمثل بناءً على البيانات التاريخية.';
+
+  @override
+  String get faqIconConversion =>
+      'تحليل التحويل: مسار العطاءات والمبيعات لكل مشاهدة.';
+
+  @override
+  String get faqIconRadar =>
+      'رادار المنافسين: تحليل السعر وسرعة المبيعات للبائعين المماثلين.';
+
+  @override
+  String get faqIconRetargeting =>
+      'إعادة الاستهداف: إرسال تذكيرات أو رسائل خصم للمشترين المهتمين.';
+
+  @override
+  String get proToolHotDemandTitle => 'الطلب الساخن (Lead Gen)';
+
+  @override
+  String get proToolHotDemandDesc =>
+      'تواصل مباشرة مع المشترين المحتملين المهتمين بقائمتك.';
+
+  @override
+  String get proToolAiPriceTitle => 'تحليل السعر بالذكاء الاصطناعي';
+
+  @override
+  String get proToolAiPriceDesc =>
+      'اكتشف القيمة السوقية لمنتجك في ثوانٍ باستخدام الذكاء الاصطناعي.';
+
+  @override
+  String get proToolStreamAnalyticsTitle => 'تحليلات جمهور البث المباشر';
+
+  @override
+  String get proToolStreamAnalyticsDesc =>
+      'قم بتحليل بيانات مشاهدة البث المباشر والهدايا بالتفصيل.';
 }

@@ -5245,7 +5245,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqQAccountSignup.
   ///
   /// In tr, this message translates to:
-  /// **'Teqlif\'e nasıl kayıt olabilirim ve giriş yapabilirim?'**
+  /// **'teqlif\'e nasıl kayıt olabilirim ve giriş yapabilirim?'**
   String get faqQAccountSignup;
 
   /// No description provided for @faqAAccountSignup.
@@ -5383,7 +5383,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqABadgesPro.
   ///
   /// In tr, this message translates to:
-  /// **'Bu rozet, ilanı paylaşan kullanıcının veya satıcının Teqlif PRO üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.'**
+  /// **'Bu rozet, ilanı paylaşan kullanıcının veya satıcının teqlif PRO üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.'**
   String get faqABadgesPro;
 
   /// No description provided for @faqQBadgesTrusted.
@@ -5419,7 +5419,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqABadgesTuci.
   ///
   /// In tr, this message translates to:
-  /// **'TUCi, Teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.'**
+  /// **'TUCi, teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.'**
   String get faqABadgesTuci;
 
   /// No description provided for @faqCatLive.
@@ -5535,6 +5535,120 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'İlanı Güncelle'**
   String get btnUpdateListing;
+
+  /// No description provided for @faqCatIcons.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sistem İkonları Sözlüğü'**
+  String get faqCatIcons;
+
+  /// No description provided for @faqIconVerified.
+  ///
+  /// In tr, this message translates to:
+  /// **'Onaylı Hesap: Kullanıcının kimliğini veya telefonunu doğruladığını gösterir.'**
+  String get faqIconVerified;
+
+  /// No description provided for @faqIconPro.
+  ///
+  /// In tr, this message translates to:
+  /// **'teqlif PRO: Satıcının platform tarafından öne çıkarılan bir PRO üyesi olduğunu belirtir.'**
+  String get faqIconPro;
+
+  /// No description provided for @faqIconTuci.
+  ///
+  /// In tr, this message translates to:
+  /// **'TUCi: Sistem içi harcamalarda kullanılan sanal para birimidir.'**
+  String get faqIconTuci;
+
+  /// No description provided for @faqIconBlast.
+  ///
+  /// In tr, this message translates to:
+  /// **'Öne Çıkar (Blast): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.'**
+  String get faqIconBlast;
+
+  /// No description provided for @faqIconAutoBid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Otomatik Teklif: Sistemin sizin adınıza belirlediğiniz limite kadar teklif vermesidir.'**
+  String get faqIconAutoBid;
+
+  /// No description provided for @faqIconSales.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış İçgörüleri: Satış hacmi ve karlılık durumunuzu gösterir.'**
+  String get faqIconSales;
+
+  /// No description provided for @faqIconListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan Analitikleri: İlanlarınızın görüntülenme ve favori metrikleridir.'**
+  String get faqIconListings;
+
+  /// No description provided for @faqIconMarket.
+  ///
+  /// In tr, this message translates to:
+  /// **'Piyasa İstihbaratı: Kategori bazlı piyasa fiyatları ve arz/talep eğilimleri.'**
+  String get faqIconMarket;
+
+  /// No description provided for @faqIconTime.
+  ///
+  /// In tr, this message translates to:
+  /// **'En İyi Yayın Zamanı: Geçmiş verilere dayalı optimum yayın saati önerisi.'**
+  String get faqIconTime;
+
+  /// No description provided for @faqIconConversion.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dönüşüm Analizi: Görüntüleme başına elde edilen teklif ve satış hunisi.'**
+  String get faqIconConversion;
+
+  /// No description provided for @faqIconRadar.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rakip Radarı: Benzer satıcıların fiyat ve satış hızı analizleri.'**
+  String get faqIconRadar;
+
+  /// No description provided for @faqIconRetargeting.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeniden Hedefleme: İlgili alıcılara doğrudan hatırlatma veya indirim mesajı gönderimi.'**
+  String get faqIconRetargeting;
+
+  /// No description provided for @proToolHotDemandTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sıcak Talep (Lead Gen)'**
+  String get proToolHotDemandTitle;
+
+  /// No description provided for @proToolHotDemandDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınızla ilgilenebilecek potansiyel alıcılara doğrudan ulaşın.'**
+  String get proToolHotDemandDesc;
+
+  /// No description provided for @proToolAiPriceTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay Zeka Fiyat Analizi'**
+  String get proToolAiPriceTitle;
+
+  /// No description provided for @proToolAiPriceDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ürününüzün piyasa değerini AI ile saniyeler içinde öğrenin.'**
+  String get proToolAiPriceDesc;
+
+  /// No description provided for @proToolStreamAnalyticsTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı Yayın İzleyici Analizi'**
+  String get proToolStreamAnalyticsTitle;
+
+  /// No description provided for @proToolStreamAnalyticsDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayınlarınızdaki anlık izleyici ve hediye verilerini detaylı inceleyin.'**
+  String get proToolStreamAnalyticsDesc;
 }
 
 class _AppLocalizationsDelegate

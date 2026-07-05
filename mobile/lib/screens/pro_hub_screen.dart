@@ -206,6 +206,39 @@ class _ProHubScreenState extends State<ProHubScreen> {
                 ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen()))
                 : () => _showUpgrade(context),
           ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.local_fire_department_outlined,
+            iconColor: const Color(0xFFEF4444),
+            title: l.proToolHotDemandTitle,
+            description: l.proToolHotDemandDesc,
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sıcak talep özelliğini kullanmak için ilan detayından Blast butonuna tıklayarak Lead Gen modunu seçin.')))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.batch_prediction_outlined,
+            iconColor: const Color(0xFF8B5CF6),
+            title: l.proToolAiPriceTitle,
+            description: l.proToolAiPriceDesc,
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Yapay zeka asistanını ilan oluşturma ve düzenleme ekranlarında kullanabilirsiniz.')))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.stream_outlined,
+            iconColor: const Color(0xFF14B8A6),
+            title: l.proToolStreamAnalyticsTitle,
+            description: l.proToolStreamAnalyticsDesc,
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu özellik yakında aktif edilecektir!')))
+                : () => _showUpgrade(context),
+          ),
 
 
 

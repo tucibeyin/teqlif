@@ -2846,7 +2846,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get faqCatAccount => 'Account, Profile and Support';
 
   @override
-  String get faqQAccountSignup => 'How can I register and log in to Teqlif?';
+  String get faqQAccountSignup => 'How can I register and log in to teqlif?';
 
   @override
   String get faqAAccountSignup =>
@@ -2931,7 +2931,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqABadgesPro =>
-      'This badge indicates that the seller is a Teqlif PRO member. PRO sellers are professionals who are algorithmically promoted more by the platform.';
+      'This badge indicates that the seller is a teqlif PRO member. PRO sellers are professionals who are algorithmically promoted more by the platform.';
 
   @override
   String get faqQBadgesTrusted =>
@@ -3019,4 +3019,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get btnUpdateListing => 'Update Listing';
+
+  @override
+  String get faqCatIcons => 'System Icons Glossary';
+
+  @override
+  String get faqIconVerified =>
+      'Verified Account: Shows the user has verified identity or phone.';
+
+  @override
+  String get faqIconPro =>
+      'teqlif PRO: Indicates a PRO member promoted by the platform.';
+
+  @override
+  String get faqIconTuci =>
+      'TUCi: The virtual currency used for in-app spending.';
+
+  @override
+  String get faqIconBlast =>
+      'Blast: Sends an instant push notification for your listing/stream.';
+
+  @override
+  String get faqIconAutoBid =>
+      'Auto-Bid: The system bids on your behalf up to your limit.';
+
+  @override
+  String get faqIconSales =>
+      'Sales Insights: Shows your sales volume and profitability.';
+
+  @override
+  String get faqIconListings =>
+      'Listing Analytics: View and favorite metrics of your listings.';
+
+  @override
+  String get faqIconMarket =>
+      'Market Intelligence: Category-based market prices and trends.';
+
+  @override
+  String get faqIconTime =>
+      'Best Stream Time: Optimum stream time based on historical data.';
+
+  @override
+  String get faqIconConversion =>
+      'Conversion Analysis: Bids and sales funnel per view.';
+
+  @override
+  String get faqIconRadar =>
+      'Competitor Radar: Price and sales speed analysis of similar sellers.';
+
+  @override
+  String get faqIconRetargeting =>
+      'Retargeting: Send reminders or discount messages directly to interested buyers.';
+
+  @override
+  String get proToolHotDemandTitle => 'Hot Demand (Lead Gen)';
+
+  @override
+  String get proToolHotDemandDesc =>
+      'Reach out directly to potential buyers interested in your listing.';
+
+  @override
+  String get proToolAiPriceTitle => 'AI Price Analysis';
+
+  @override
+  String get proToolAiPriceDesc =>
+      'Find out your products market value in seconds with AI.';
+
+  @override
+  String get proToolStreamAnalyticsTitle => 'Live Stream Audience Analytics';
+
+  @override
+  String get proToolStreamAnalyticsDesc =>
+      'Analyze your live stream viewership and gift data in detail.';
 }
