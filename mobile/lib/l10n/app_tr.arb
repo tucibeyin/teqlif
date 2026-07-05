@@ -1603,7 +1603,7 @@
   "btnUpdate": "Güncelle",
   "btnUpdateListing": "İlanı Güncelle",
   "faqCatIcons": "Sistem İkonları Sözlüğü",
-  "faqIconVerified": "Onaylı Hesap: Kullanıcının kimliğini veya telefonunu doğruladığını gösterir.",
+  "faqIconVerified": "Onaylı Hesap ([ICON_VERIFIED]): Kullanıcının kimliğini veya telefonunu doğruladığını gösterir.",
   "faqIconPro": "teqlif PRO ([ICON_PRO]): Satıcının platform tarafından öne çıkarılan bir PRO üyesi olduğunu belirtir.",
   "faqIconTuci": "TUCi ([ICON_TUCI]): Sistem içi harcamalarda kullanılan sanal para birimidir.",
   "faqIconBlast": "Öne Çıkar (Blast) ([ICON_BLAST]): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.",

@@ -186,6 +186,15 @@ Widget _buildAnswerWithIcons(BuildContext context, String text, {TextStyle? cust
     'AUTOBID': Icons.gavel,
   };
 
+  final Map<String, Color> tokenColorMap = {
+    'VERIFIED': Colors.blue,
+    'PRO': Colors.amber,
+    'TUCI': Colors.orange,
+    'BLAST': Colors.redAccent,
+    'HOTDEMAND': Colors.red,
+    'AUTOBID': Colors.deepPurple,
+  };
+
   final regex = RegExp(r'\[ICON_([A-Z_]+)\]');
 
   final List<InlineSpan> spans = [];
@@ -198,6 +207,7 @@ Widget _buildAnswerWithIcons(BuildContext context, String text, {TextStyle? cust
 
     final String token = match.group(1)!;
     final IconData? icon = tokenIconMap[token];
+    final Color iconColor = tokenColorMap[token] ?? Theme.of(context).primaryColor;
 
     if (icon != null) {
       spans.add(
@@ -205,7 +215,7 @@ Widget _buildAnswerWithIcons(BuildContext context, String text, {TextStyle? cust
           alignment: PlaceholderAlignment.middle,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: Icon(icon, size: 14, color: Theme.of(context).primaryColor),
+            child: Icon(icon, size: 16, color: iconColor),
           ),
         ),
       );

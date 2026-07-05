@@ -5545,7 +5545,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqIconVerified.
   ///
   /// In tr, this message translates to:
-  /// **'Onaylı Hesap: Kullanıcının kimliğini veya telefonunu doğruladığını gösterir.'**
+  /// **'Onaylı Hesap ([ICON_VERIFIED]): Kullanıcının kimliğini veya telefonunu doğruladığını gösterir.'**
   String get faqIconVerified;
 
   /// No description provided for @faqIconPro.

@@ -3032,7 +3032,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqIconVerified =>
-      'Onaylı Hesap: Kullanıcının kimliğini veya telefonunu doğruladığını gösterir.';
+      'Onaylı Hesap ([ICON_VERIFIED]): Kullanıcının kimliğini veya telefonunu doğruladığını gösterir.';
 
   @override
   String get faqIconPro =>
