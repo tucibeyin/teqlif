@@ -28,10 +28,12 @@ class SearchScreen extends StatefulWidget {
 }
 
 class SearchScreenState extends State<SearchScreen> {
-  void refresh({bool bypassCache = true}) => _loadExplore(bypassCache: bypassCache);
+  void refresh({bool bypassCache = true}) =>
+      _loadExplore(bypassCache: bypassCache);
   final _controller = TextEditingController();
   Timer? _debounce;
-  int _searchToken = 0; // her yeni arama için artar; eski yanıtlar görmezden gelinir
+  int _searchToken =
+      0; // her yeni arama için artar; eski yanıtlar görmezden gelinir
 
   List<Map<String, dynamic>> _userResults = [];
   List<Map<String, dynamic>> _listingResults = [];
@@ -84,23 +86,33 @@ class SearchScreenState extends State<SearchScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (_) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l.searchAlertTitle, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            Text(
+              l.searchAlertTitle,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 8),
-            Text(l.searchAlertBody(query), style: const TextStyle(fontSize: 14)),
+            Text(
+              l.searchAlertBody(query),
+              style: const TextStyle(fontSize: 14),
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+                    child: Text(
+                      MaterialLocalizations.of(context).cancelButtonLabel,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -200,7 +212,11 @@ class SearchScreenState extends State<SearchScreen> {
     _loadExploreStreams(bypassCache, maybeStopLoading);
 
     // ── Kişisel feed (giriş: 1 saat cache | misafir: 5 dk) ────────────────
-    _loadExploreForYou(loggedIn: loggedIn, bypassCache: bypassCache, onData: maybeStopLoading);
+    _loadExploreForYou(
+      loggedIn: loggedIn,
+      bypassCache: bypassCache,
+      onData: maybeStopLoading,
+    );
 
     // ── Önerilen Yayıncılar ve Satıcılar (Sadece giriş yapılmışsa) ───
     if (loggedIn) {
@@ -220,23 +236,24 @@ class SearchScreenState extends State<SearchScreen> {
   }
 
   void _loadExploreStreams(bool bypassCache, VoidCallback onData) {
-    StreamService.getActiveStreamsStream(bypassCache: bypassCache).listen(
-      (streams) {
-        if (mounted) setState(() => _exploreStreams = streams.take(4).toList());
-        onData();
-      },
-      onError: (_) => onData(),
-    );
+    StreamService.getActiveStreamsStream(bypassCache: bypassCache).listen((
+      streams,
+    ) {
+      if (mounted) setState(() => _exploreStreams = streams.take(4).toList());
+      onData();
+    }, onError: (_) => onData());
   }
 
   Future<void> _loadSuggestedSellers() async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return;
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/users/suggested-sellers'),
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 5));
+      final resp = await http
+          .get(
+            Uri.parse('$kBaseUrl/users/suggested-sellers'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 5));
       if (resp.statusCode == 200 && mounted) {
         final data = jsonDecode(resp.body) as List;
         setState(() => _suggestedSellers = data.cast<Map<String, dynamic>>());
@@ -249,7 +266,9 @@ class SearchScreenState extends State<SearchScreen> {
     required bool bypassCache,
     required VoidCallback onData,
   }) {
-    final url = loggedIn ? '$kBaseUrl/feed/for-you?page=0' : '$kBaseUrl/listings';
+    final url = loggedIn
+        ? '$kBaseUrl/feed/for-you?page=0'
+        : '$kBaseUrl/listings';
     final cacheKey = loggedIn ? 'explore_for_you' : 'explore_listings';
     final ttl = const Duration(minutes: 5);
 
@@ -259,40 +278,39 @@ class SearchScreenState extends State<SearchScreen> {
       cacheTtl: ttl,
       bypassCache: bypassCache,
       fromJson: (raw) => raw as List,
-    ).listen(
-      (data) {
-        if (!mounted) return;
-        setState(() {
-          _exploreListings = data;
-          if (loggedIn) {
-            _forYouPage = 1;
-            _forYouExhausted = data.length < 20;
-          }
-        });
-        onData();
-      },
-      onError: (_) => onData(),
-    );
+    ).listen((data) {
+      if (!mounted) return;
+      setState(() {
+        _exploreListings = data;
+        if (loggedIn) {
+          _forYouPage = 1;
+          _forYouExhausted = data.length < 20;
+        }
+      });
+      onData();
+    }, onError: (_) => onData());
   }
 
-  void _loadExploreRecent({required bool bypassCache, required VoidCallback onData}) {
+  void _loadExploreRecent({
+    required bool bypassCache,
+    required VoidCallback onData,
+  }) {
     ApiService.get<List<dynamic>>(
       url: '$kBaseUrl/listings',
       cacheKey: 'explore_listings',
       cacheTtl: const Duration(minutes: 5),
       bypassCache: bypassCache,
       fromJson: (raw) => raw as List,
-    ).listen(
-      (recent) {
-        if (mounted) setState(() => _recentListings = recent.take(12).toList());
-        onData();
-      },
-      onError: (_) => onData(),
-    );
+    ).listen((recent) {
+      if (mounted) setState(() => _recentListings = recent.take(12).toList());
+      onData();
+    }, onError: (_) => onData());
   }
 
   Future<void> _loadMoreForYou() async {
-    if (!_isLoggedIn || _forYouExhausted || _forYouLoadingMore || _hasQuery) return;
+    if (!_isLoggedIn || _forYouExhausted || _forYouLoadingMore || _hasQuery) {
+      return;
+    }
     setState(() => _forYouLoadingMore = true);
     try {
       final token = await StorageService.getToken();
@@ -326,18 +344,20 @@ class SearchScreenState extends State<SearchScreen> {
         final myUserId = await StorageService.getCurrentUserId();
         if (myUserId == ownerId) return;
       }
-      http.post(
-        Uri.parse('$kBaseUrl/analytics/interaction'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'item_id': itemId,
-          'item_type': 'listing',
-          'interaction_type': 'click',
-        }),
-      ).catchError((_) => http.Response('', 200));
+      http
+          .post(
+            Uri.parse('$kBaseUrl/analytics/interaction'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'item_id': itemId,
+              'item_type': 'listing',
+              'interaction_type': 'click',
+            }),
+          )
+          .catchError((_) => http.Response('', 200));
     });
   }
 
@@ -347,19 +367,25 @@ class SearchScreenState extends State<SearchScreen> {
     setState(() => _searching = true);
     try {
       final token = await StorageService.getToken();
-      final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+      final headers = token != null
+          ? {'Authorization': 'Bearer $token'}
+          : <String, String>{};
       final resp = await http.get(
         Uri.parse('$kBaseUrl/search/all').replace(queryParameters: {'q': q}),
         headers: headers,
       );
-      if (!mounted || myToken != _searchToken) return; // eski yanıt, görmezden gel
+      if (!mounted || myToken != _searchToken) {
+        return; // eski yanıt, görmezden gel
+      }
       if (resp.statusCode != 200) {
         setState(() => _searching = false);
         return;
       }
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final listingResults = (data['listings'] as List).cast<Map<String, dynamic>>();
-      final resultCount = listingResults.length +
+      final listingResults = (data['listings'] as List)
+          .cast<Map<String, dynamic>>();
+      final resultCount =
+          listingResults.length +
           (data['users'] as List).length +
           (data['streams'] as List).length;
       setState(() {
@@ -374,10 +400,11 @@ class SearchScreenState extends State<SearchScreen> {
       });
       AnalyticsService.trackSearch(query: q, resultCount: resultCount);
     } catch (_) {
-      if (mounted && myToken == _searchToken) setState(() => _searching = false);
+      if (mounted && myToken == _searchToken) {
+        setState(() => _searching = false);
+      }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -402,10 +429,23 @@ class SearchScreenState extends State<SearchScreen> {
                           children: [
                             IconButton(
                               icon: _alertCreating
-                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : const Icon(Icons.notifications_none, size: 20),
-                              tooltip: AppLocalizations.of(context)!.searchAlertTooltip,
-                              onPressed: _alertCreating ? null : () => _showAlertSheet(context),
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.notifications_none,
+                                      size: 20,
+                                    ),
+                              tooltip: AppLocalizations.of(
+                                context,
+                              )!.searchAlertTooltip,
+                              onPressed: _alertCreating
+                                  ? null
+                                  : () => _showAlertSheet(context),
                             ),
                             IconButton(
                               key: const Key('search_btn_arama_temizle'),
@@ -449,18 +489,25 @@ class SearchScreenState extends State<SearchScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search_off_outlined, size: 56, color: Color(0xFFD1D5DB)),
+            const Icon(
+              Icons.search_off_outlined,
+              size: 56,
+              color: Color(0xFFD1D5DB),
+            ),
             const SizedBox(height: 12),
-            Text(l.searchNoResults,
-                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+            Text(
+              l.searchNoResults,
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
+            ),
           ],
         ),
       );
     }
 
     // Max 5 kullanıcı göster; fazlası için "Hepsini gör" satırı
-    final visibleUsers =
-        _showAllUsers ? _userResults : _userResults.take(5).toList();
+    final visibleUsers = _showAllUsers
+        ? _userResults
+        : _userResults.take(5).toList();
     final hasMoreUsers = !_showAllUsers && _userResults.length > 5;
 
     return CustomScrollView(
@@ -473,24 +520,33 @@ class SearchScreenState extends State<SearchScreen> {
               child: Row(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: kPrimary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: kPrimary.withValues(alpha: 0.30)),
+                      border: Border.all(
+                        color: kPrimary.withValues(alpha: 0.30),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.auto_awesome_rounded, color: kPrimary, size: 14),
+                        Icon(
+                          Icons.auto_awesome_rounded,
+                          color: kPrimary,
+                          size: 14,
+                        ),
                         const SizedBox(width: 5),
                         Text(
                           'Akıllı Sonuçlar',
                           style: TextStyle(
-                              color: kPrimary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600),
+                            color: kPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -509,55 +565,56 @@ class SearchScreenState extends State<SearchScreen> {
             ),
           ),
           SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (ctx, i) {
-                final u = visibleUsers[i];
-                final imgRaw = u['profile_image_url'] as String?;
-                final img =
-                    imgRaw != null && imgRaw.isNotEmpty ? imgUrl(imgRaw) : null;
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 22,
-                        backgroundColor: kPrimary,
-                        backgroundImage:
-                            img != null ? NetworkImage(img) : null,
-                        child: img == null
-                            ? Text(
-                                (u['full_name'] as String? ?? '?')[0]
-                                    .toUpperCase(),
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600),
-                              )
-                            : null,
+            delegate: SliverChildBuilderDelegate((ctx, i) {
+              final u = visibleUsers[i];
+              final imgRaw = u['profile_image_url'] as String?;
+              final img = imgRaw != null && imgRaw.isNotEmpty
+                  ? imgUrl(imgRaw)
+                  : null;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: kPrimary,
+                      backgroundImage: img != null ? NetworkImage(img) : null,
+                      child: img == null
+                          ? Text(
+                              (u['full_name'] as String? ?? '?')[0]
+                                  .toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            )
+                          : null,
+                    ),
+                    title: Text(
+                      u['full_name'] as String? ?? '',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                       ),
-                      title: Text(
-                        u['full_name'] as String? ?? '',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        '@${u['username']}',
-                        style: const TextStyle(color: kPrimary, fontSize: 12),
-                      ),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PublicProfileScreen(
-                              username: u['username'] as String),
+                    ),
+                    subtitle: Text(
+                      '@${u['username']}',
+                      style: const TextStyle(color: kPrimary, fontSize: 12),
+                    ),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PublicProfileScreen(
+                          username: u['username'] as String,
                         ),
                       ),
                     ),
-                    if (i < visibleUsers.length - 1)
-                      const Divider(height: 1, indent: 72),
-                  ],
-                );
-              },
-              childCount: visibleUsers.length,
-            ),
+                  ),
+                  if (i < visibleUsers.length - 1)
+                    const Divider(height: 1, indent: 72),
+                ],
+              );
+            }, childCount: visibleUsers.length),
           ),
           // "Tüm hesapları gör" satırı
           if (hasMoreUsers)
@@ -571,13 +628,17 @@ class SearchScreenState extends State<SearchScreen> {
                       Text(
                         'Tüm hesapları gör (${_userResults.length})',
                         style: TextStyle(
-                            color: kPrimary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600),
+                          color: kPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.chevron_right_rounded,
-                          color: kPrimary, size: 18),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: kPrimary,
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
@@ -599,33 +660,30 @@ class SearchScreenState extends State<SearchScreen> {
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             sliver: SliverGrid(
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 crossAxisSpacing: 2,
                 mainAxisSpacing: 2,
               ),
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) {
-                  final listing = _listingResults[i];
-                  return _ListingTile(
-                    listing: listing,
-                    onTap: () {
-                      final id = listing['id'] as int?;
-                      final ownerId = (listing['user'] as Map?)?['id'] as int?;
-                      if (id != null && _isLoggedIn) _trackInteraction(id, ownerId);
-                      Navigator.push(
-                        ctx,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ListingDetailScreen(listing: listing),
-                        ),
-                      );
-                    },
-                  );
-                },
-                childCount: _listingResults.length,
-              ),
+              delegate: SliverChildBuilderDelegate((ctx, i) {
+                final listing = _listingResults[i];
+                return _ListingTile(
+                  listing: listing,
+                  onTap: () {
+                    final id = listing['id'] as int?;
+                    final ownerId = (listing['user'] as Map?)?['id'] as int?;
+                    if (id != null && _isLoggedIn) {
+                      _trackInteraction(id, ownerId);
+                    }
+                    Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => ListingDetailScreen(listing: listing),
+                      ),
+                    );
+                  },
+                );
+              }, childCount: _listingResults.length),
             ),
           ),
         ],
@@ -651,7 +709,9 @@ class SearchScreenState extends State<SearchScreen> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => SwipeLiveScreen.single(streamId: _streamResults[i].id),
+                      builder: (_) => SwipeLiveScreen.single(
+                        streamId: _streamResults[i].id,
+                      ),
                     ),
                   ),
                 ),
@@ -683,11 +743,18 @@ class SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.fiber_manual_record, color: Colors.red, size: 10),
+                    const Icon(
+                      Icons.fiber_manual_record,
+                      color: Colors.red,
+                      size: 10,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       l.searchLiveStreams,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                   ],
                 ),
@@ -705,7 +772,9 @@ class SearchScreenState extends State<SearchScreen> {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => SwipeLiveScreen.single(streamId: _exploreStreams[i].id),
+                        builder: (_) => SwipeLiveScreen.single(
+                          streamId: _exploreStreams[i].id,
+                        ),
                       ),
                     ),
                   ),
@@ -720,11 +789,18 @@ class SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.live_tv_rounded, color: Color(0xFFEF4444), size: 15),
+                    const Icon(
+                      Icons.live_tv_rounded,
+                      color: Color(0xFFEF4444),
+                      size: 15,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       l.suggestedStreamers,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -739,18 +815,23 @@ class SearchScreenState extends State<SearchScreen> {
                   itemCount: _suggestedStreamers.length,
                   itemBuilder: (ctx, i) => StreamerAvatarCard(
                     streamer: _suggestedStreamers[i],
-                    onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                      builder: (_) => PublicProfileScreen(
-                        username: _suggestedStreamers[i]['username'] as String? ?? '',
-                        userId: _suggestedStreamers[i]['id'] as int?,
+                    onTap: () => Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => PublicProfileScreen(
+                          username:
+                              _suggestedStreamers[i]['username'] as String? ??
+                              '',
+                          userId: _suggestedStreamers[i]['id'] as int?,
+                        ),
                       ),
-                    )),
+                    ),
                   ),
                 ),
               ),
             ),
           ],
-          
+
           // ── Önerilen Satıcılar ─────────────────────────────────
           if (_suggestedSellers.isNotEmpty) ...[
             SliverToBoxAdapter(
@@ -760,8 +841,13 @@ class SearchScreenState extends State<SearchScreen> {
                   children: [
                     const Icon(Icons.store_rounded, color: kPrimary, size: 15),
                     const SizedBox(width: 6),
-                    Text(l.suggestedSellers,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    Text(
+                      l.suggestedSellers,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -775,12 +861,16 @@ class SearchScreenState extends State<SearchScreen> {
                   itemCount: _suggestedSellers.length,
                   itemBuilder: (ctx, i) => SellerAvatarCard(
                     seller: _suggestedSellers[i],
-                    onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                      builder: (_) => PublicProfileScreen(
-                        username: _suggestedSellers[i]['username'] as String? ?? '',
-                        userId: _suggestedSellers[i]['id'] as int?,
+                    onTap: () => Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => PublicProfileScreen(
+                          username:
+                              _suggestedSellers[i]['username'] as String? ?? '',
+                          userId: _suggestedSellers[i]['id'] as int?,
+                        ),
                       ),
-                    )),
+                    ),
                   ),
                 ),
               ),
@@ -788,7 +878,8 @@ class SearchScreenState extends State<SearchScreen> {
           ],
 
           // ── Sana Özel / Sizin İçin Seçilen İlanlar ──────────────────────────────
-          if (_exploreListings.isNotEmpty || (_exploreLoading && _isLoggedIn)) ...[
+          if (_exploreListings.isNotEmpty ||
+              (_exploreLoading && _isLoggedIn)) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -799,13 +890,19 @@ class SearchScreenState extends State<SearchScreen> {
                     Text(
                       _isLoggedIn ? l.forYouLabel : l.listingsSelectedForYou,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 13),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                     const Spacer(),
                     if (_forYouLoadingMore)
                       const SizedBox(
-                        width: 14, height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: kPrimary),
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: kPrimary,
+                        ),
                       ),
                   ],
                 ),
@@ -831,66 +928,99 @@ class SearchScreenState extends State<SearchScreen> {
                       ),
                     )
                   : _exploreListings.isEmpty
-                      ? const SizedBox.shrink()
-                      : SizedBox(
-                          height: 190,
-                          child: ListView.builder(
-                            controller: _forYouScrollCtrl,
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: _exploreListings.length + (_forYouLoadingMore ? 1 : 0),
-                            itemBuilder: (ctx, i) {
-                              if (i == _exploreListings.length) {
-                                return const SizedBox(
-                                  width: 60,
-                                  child: Center(child: SizedBox(
-                                    width: 20, height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )),
-                                );
+                  ? const SizedBox.shrink()
+                  : SizedBox(
+                      height: 190,
+                      child: ListView.builder(
+                        controller: _forYouScrollCtrl,
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount:
+                            _exploreListings.length +
+                            (_forYouLoadingMore ? 1 : 0),
+                        itemBuilder: (ctx, i) {
+                          if (i == _exploreListings.length) {
+                            return const SizedBox(
+                              width: 60,
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          final listing =
+                              _exploreListings[i] as Map<String, dynamic>;
+                          return _HorizontalListingCard(
+                            listing: listing,
+                            onTap: () {
+                              final id = listing['id'] as int?;
+                              final ownerId =
+                                  (listing['user'] as Map?)?['id'] as int?;
+                              if (id != null && _isLoggedIn) {
+                                _trackInteraction(id, ownerId);
                               }
-                              final listing = _exploreListings[i] as Map<String, dynamic>;
-                              return _HorizontalListingCard(
-                                listing: listing,
-                                onTap: () {
-                                  final id = listing['id'] as int?;
-                                  final ownerId = (listing['user'] as Map?)?['id'] as int?;
-                                  if (id != null && _isLoggedIn) _trackInteraction(id, ownerId);
-                                  if (listing['is_highlight'] == true) {
-                                    final rawRoomId = listing['active_room_id'];
-                                    if (rawRoomId != null) {
-                                      final roomId = rawRoomId is int ? rawRoomId : int.tryParse(rawRoomId.toString());
-                                      if (roomId != null) {
-                                        Navigator.push(ctx, MaterialPageRoute(
-                                          builder: (_) => SwipeLiveScreen.single(streamId: roomId),
-                                        ));
-                                        return;
-                                      }
-                                    }
+                              if (listing['is_highlight'] == true) {
+                                final rawRoomId = listing['active_room_id'];
+                                if (rawRoomId != null) {
+                                  final roomId = rawRoomId is int
+                                      ? rawRoomId
+                                      : int.tryParse(rawRoomId.toString());
+                                  if (roomId != null) {
+                                    Navigator.push(
+                                      ctx,
+                                      MaterialPageRoute(
+                                        builder: (_) => SwipeLiveScreen.single(
+                                          streamId: roomId,
+                                        ),
+                                      ),
+                                    );
+                                    return;
                                   }
-                                  Navigator.push(ctx, MaterialPageRoute(
-                                    builder: (_) => ListingDetailScreen(listing: listing),
-                                  ));
-                                },
+                                }
+                              }
+                              Navigator.push(
+                                ctx,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      ListingDetailScreen(listing: listing),
+                                ),
                               );
                             },
-                          ),
-                        ),
+                          );
+                        },
+                      ),
+                    ),
             ),
           ],
 
           // ── Sizin İçin Seçilen İlanlar (login, /api/listings) ─────────────────
           if (_isLoggedIn && _recentListings.isNotEmpty) ...[
-            const SliverToBoxAdapter(child: Divider(height: 1, indent: 16, endIndent: 16)),
+            const SliverToBoxAdapter(
+              child: Divider(height: 1, indent: 16, endIndent: 16),
+            ),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.grid_view_rounded, size: 15, color: Colors.grey),
+                    const Icon(
+                      Icons.grid_view_rounded,
+                      size: 15,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(width: 6),
-                    Text(l.listingsSelectedForYou,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    Text(
+                      l.listingsSelectedForYou,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -899,26 +1029,30 @@ class SearchScreenState extends State<SearchScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 2),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 2,
+                  mainAxisSpacing: 2,
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, i) {
-                    final listing = _recentListings[i] as Map<String, dynamic>;
-                    return _ListingTile(
-                      listing: listing,
-                      onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                delegate: SliverChildBuilderDelegate((ctx, i) {
+                  final listing = _recentListings[i] as Map<String, dynamic>;
+                  return _ListingTile(
+                    listing: listing,
+                    onTap: () => Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
                         builder: (_) => ListingDetailScreen(listing: listing),
-                      )),
-                    );
-                  },
-                  childCount: _recentListings.length,
-                ),
+                      ),
+                    ),
+                  );
+                }, childCount: _recentListings.length),
               ),
             ),
           ],
 
           // ── Boş durum ────────────────────────────────────────────
-          if (!_exploreLoading && _exploreStreams.isEmpty && _exploreListings.isEmpty)
+          if (!_exploreLoading &&
+              _exploreStreams.isEmpty &&
+              _exploreListings.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
@@ -927,23 +1061,23 @@ class SearchScreenState extends State<SearchScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                    Icon(
-                      _isLoggedIn
-                          ? Icons.auto_awesome_outlined
-                          : Icons.explore_outlined,
-                      size: 56,
-                      color: const Color(0xFFD1D5DB),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _isLoggedIn
-                          ? 'Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!'
-                          : l.searchNoContent,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFF6B7280)),
-                    ),
-                  ],
-                ),
+                      Icon(
+                        _isLoggedIn
+                            ? Icons.auto_awesome_outlined
+                            : Icons.explore_outlined,
+                        size: 56,
+                        color: const Color(0xFFD1D5DB),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _isLoggedIn
+                            ? 'Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!'
+                            : l.searchNoContent,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Color(0xFF6B7280)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -958,7 +1092,11 @@ class _SectionHeader extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color? iconColor;
-  const _SectionHeader({required this.icon, required this.label, this.iconColor});
+  const _SectionHeader({
+    required this.icon,
+    required this.label,
+    this.iconColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -971,9 +1109,10 @@ class _SectionHeader extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: Color(0xFF374151)),
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: Color(0xFF374151),
+            ),
           ),
         ],
       ),
@@ -1015,9 +1154,12 @@ class _StreamCard extends StatelessWidget {
             if (hasThumbnail)
               CachedNetworkImage(
                 imageUrl: imgUrl(stream.thumbnailUrl),
+                memCacheWidth: 250,
+                memCacheHeight: 250,
                 fit: BoxFit.cover,
-                placeholder: (_, _) =>
-                    const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                placeholder: (_, _) => const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
                 errorWidget: (_, _, _) => _gradient(),
               )
             else
@@ -1072,10 +1214,7 @@ class _StreamCard extends StatelessWidget {
                     ),
                     Text(
                       '@${stream.host.username}',
-                      style: const TextStyle(
-                        color: kPrimary,
-                        fontSize: 10,
-                      ),
+                      style: const TextStyle(color: kPrimary, fontSize: 10),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1090,17 +1229,17 @@ class _StreamCard extends StatelessWidget {
   }
 
   Widget _gradient() => Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [kPrimaryDark, kPrimaryLight],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: const Center(
-          child: Icon(Icons.videocam_rounded, color: Colors.white30, size: 36),
-        ),
-      );
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [kPrimaryDark, kPrimaryLight],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: const Center(
+      child: Icon(Icons.videocam_rounded, color: Colors.white30, size: 36),
+    ),
+  );
 }
 
 // ── Yatay ilan kartı (Sana Özel) ────────────────────────────────────────────
@@ -1127,9 +1266,10 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
         vsync: this,
         duration: const Duration(milliseconds: 900),
       )..repeat(reverse: true);
-      _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
-        CurvedAnimation(parent: _pulseCtrl!, curve: Curves.easeInOut),
-      );
+      _pulseAnim = Tween<double>(
+        begin: 0.6,
+        end: 1.0,
+      ).animate(CurvedAnimation(parent: _pulseCtrl!, curve: Curves.easeInOut));
     }
     if (widget.listing['is_sponsored'] == true) {
       final cid = widget.listing['campaign_id'];
@@ -1143,7 +1283,9 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
         eventType: 'impression',
         ownerId: ownerId,
         dwellTimeMs: 0,
-        contentType: (widget.listing['video_url'] as String?) != null ? 'video' : 'photo',
+        contentType: (widget.listing['video_url'] as String?) != null
+            ? 'video'
+            : 'photo',
       );
     }
   }
@@ -1168,7 +1310,9 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
   @override
   Widget build(BuildContext context) {
     final imgs = widget.listing['image_urls'] as List? ?? [];
-    final raw = imgs.isNotEmpty ? imgs[0] as String : widget.listing['image_url'] as String?;
+    final raw = imgs.isNotEmpty
+        ? imgs[0] as String
+        : widget.listing['image_url'] as String?;
     final photo = raw != null ? imgUrl(raw) : null;
     final price = _fmt(widget.listing['price']);
 
@@ -1182,7 +1326,9 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
             eventType: 'click',
             ownerId: ownerId,
             dwellTimeMs: 0,
-            contentType: (widget.listing['video_url'] as String?) != null ? 'video' : 'photo',
+            contentType: (widget.listing['video_url'] as String?) != null
+                ? 'video'
+                : 'photo',
           );
         }
         widget.onTap();
@@ -1193,7 +1339,13 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: AppColors.card(context),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 6, offset: const Offset(0, 2))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -1204,32 +1356,58 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                 fit: StackFit.expand,
                 children: [
                   photo != null
-                      ? CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, width: double.infinity)
+                      ? CachedNetworkImage(
+                          imageUrl: photo,
+                          memCacheWidth: 250,
+                          memCacheHeight: 250,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        )
                       : Container(
                           color: AppColors.surfaceVariant(context),
-                          child: Center(child: Icon(Icons.image_outlined, color: AppColors.border(context))),
+                          child: Center(
+                            child: Icon(
+                              Icons.image_outlined,
+                              color: AppColors.border(context),
+                            ),
+                          ),
                         ),
                   if (widget.listing['is_sponsored'] == true)
                     Positioned(
-                      top: 5, left: 5,
+                      top: 5,
+                      left: 5,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.62),
                           borderRadius: BorderRadius.circular(5),
                         ),
-                        child: const Text('Sponsorlu',
-                            style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                        child: const Text(
+                          'Sponsorlu',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   if (widget.listing['seller_is_premium'] == true)
                     Positioned(
-                      top: 5, right: 5,
+                      top: 5,
+                      right: 5,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                              colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
+                            colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                          ),
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: const Text('👑', style: TextStyle(fontSize: 9)),
@@ -1240,7 +1418,10 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                       top: widget.listing['seller_is_premium'] == true ? 24 : 5,
                       right: 5,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF16A34A),
                           borderRadius: BorderRadius.circular(5),
@@ -1253,7 +1434,10 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                       top: widget.listing['seller_is_premium'] == true ? 24 : 5,
                       right: 5,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF59E0B),
                           borderRadius: BorderRadius.circular(5),
@@ -1263,16 +1447,24 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                     ),
                   if (widget.listing['is_trending'] == true)
                     Positioned(
-                      bottom: 5, right: 5,
+                      bottom: 5,
+                      right: 5,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.deepOrange.withValues(alpha: 0.88),
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: Text(
                           AppLocalizations.of(context)!.badgeTrending,
-                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
@@ -1298,7 +1490,8 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                                 builder: (_, _) => Opacity(
                                   opacity: _pulseAnim!.value,
                                   child: Container(
-                                    width: 8, height: 8,
+                                    width: 8,
+                                    height: 8,
                                     margin: const EdgeInsets.only(bottom: 4),
                                     decoration: const BoxDecoration(
                                       color: Colors.white,
@@ -1335,7 +1528,11 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                 child: const Text(
                   'Canlı Yayına Katıl →',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               )
             else
@@ -1346,14 +1543,24 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                   children: [
                     Text(
                       widget.listing['title'] as String? ?? '',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary(context)),
-                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(context),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (price.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(price,
-                          style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700)),
+                      Text(
+                        price,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: kPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -1392,122 +1599,156 @@ class _ListingTile extends StatelessWidget {
     final photo = raw != null ? imgUrl(raw) : null;
     final price = _fmt(listing['price']);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          photo != null
-              ? CachedNetworkImage(
-                  imageUrl: photo,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) =>
-                      const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                  errorWidget: (_, _, _) => _placeholder(context),
-                )
-              : _placeholder(context),
-          if (price.isNotEmpty)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black54],
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            photo != null
+                ? CachedNetworkImage(
+                    imageUrl: photo,
+                    memCacheWidth: 250,
+                    memCacheHeight: 250,
+                    fit: BoxFit.cover,
+                    placeholder: (_, _) => const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    errorWidget: (_, _, _) => _placeholder(context),
+                  )
+                : _placeholder(context),
+            if (price.isNotEmpty)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black54],
+                    ),
+                  ),
+                  child: Text(
+                    price,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                child: Text(
-                  price,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+              ),
+            // ── Sol üst: Sponsorlu ──────────────────────────────────────────
+            if (listing['is_sponsored'] == true)
+              Positioned(
+                top: 4,
+                left: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'Sponsorlu',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          // ── Sol üst: Sponsorlu ──────────────────────────────────────────
-          if (listing['is_sponsored'] == true)
-            Positioned(
-              top: 4, left: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(4),
+            // ── Sağ üst: Premium + Rozet ────────────────────────────────────
+            if (listing['seller_is_premium'] == true)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('👑', style: TextStyle(fontSize: 8)),
                 ),
-                child: const Text('Sponsorlu',
-                    style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w600)),
               ),
-            ),
-          // ── Sağ üst: Premium + Rozet ────────────────────────────────────
-          if (listing['seller_is_premium'] == true)
-            Positioned(
-              top: 4, right: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
-                  borderRadius: BorderRadius.circular(4),
+            if (listing['seller_badge'] == 'trusted_seller')
+              Positioned(
+                top: listing['seller_is_premium'] == true ? 22 : 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16A34A),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('✅', style: TextStyle(fontSize: 8)),
                 ),
-                child: const Text('👑', style: TextStyle(fontSize: 8)),
-              ),
-            ),
-          if (listing['seller_badge'] == 'trusted_seller')
-            Positioned(
-              top: listing['seller_is_premium'] == true ? 22 : 4,
-              right: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16A34A),
-                  borderRadius: BorderRadius.circular(4),
+              )
+            else if (listing['seller_badge'] == 'active_seller')
+              Positioned(
+                top: listing['seller_is_premium'] == true ? 22 : 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('⭐', style: TextStyle(fontSize: 8)),
                 ),
-                child: const Text('✅', style: TextStyle(fontSize: 8)),
               ),
-            )
-          else if (listing['seller_badge'] == 'active_seller')
-            Positioned(
-              top: listing['seller_is_premium'] == true ? 22 : 4,
-              right: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B),
-                  borderRadius: BorderRadius.circular(4),
+            // ── Sağ alt: Trending ───────────────────────────────────────────
+            if (listing['is_trending'] == true)
+              Positioned(
+                bottom: 22,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.deepOrange.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('🔥', style: TextStyle(fontSize: 8)),
                 ),
-                child: const Text('⭐', style: TextStyle(fontSize: 8)),
               ),
-            ),
-          // ── Sağ alt: Trending ───────────────────────────────────────────
-          if (listing['is_trending'] == true)
-            Positioned(
-              bottom: 22, right: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.deepOrange.withValues(alpha: 0.88),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text('🔥', style: TextStyle(fontSize: 8)),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _placeholder(BuildContext context) => Container(
-        color: AppColors.surfaceVariant(context),
-        child: Center(
-          child: Icon(Icons.image_outlined,
-              size: 28, color: AppColors.border(context)),
-        ),
-      );
+    color: AppColors.surfaceVariant(context),
+    child: Center(
+      child: Icon(
+        Icons.image_outlined,
+        size: 28,
+        color: AppColors.border(context),
+      ),
+    ),
+  );
 }

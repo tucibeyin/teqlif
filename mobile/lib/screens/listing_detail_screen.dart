@@ -1427,7 +1427,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           children: [
                             Expanded(
                               child: photo != null
-                                ? CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, width: double.infinity)
+                                ? CachedNetworkImage(imageUrl: photo,
+                                memCacheWidth: 250,
+                                memCacheHeight: 250, fit: BoxFit.cover, width: double.infinity)
                                 : Container(color: AppColors.surfaceVariant(context)),
                             ),
                             Padding(
@@ -1617,6 +1619,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 onDoubleTap: _triggerHeartAnimation,
                 child: CachedNetworkImage(
                   imageUrl: _images[imgIdx],
+                                memCacheWidth: 250,
+                                memCacheHeight: 250,
                   fit: BoxFit.cover,
                   width: double.infinity,
                   placeholder: (_, _) => const ShimmerBox(),
@@ -1871,6 +1875,8 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
           child: Center(
             child: CachedNetworkImage(
               imageUrl: widget.images[i],
+                                memCacheWidth: 250,
+                                memCacheHeight: 250,
               fit: BoxFit.contain,
               placeholder: (_, _) => const Center(
                   child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2)),

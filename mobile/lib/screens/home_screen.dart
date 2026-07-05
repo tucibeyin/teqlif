@@ -48,11 +48,27 @@ class HomeScreenState extends State<HomeScreen> {
   bool _showOnboardingBanner = false;
 
   List<Map<String, dynamic>> _buildCategories(AppLocalizations l) => [
-    {'slug': 'elektronik', 'label': l.catElectronics, 'icon': Icons.devices_outlined},
-    {'slug': 'vasita', 'label': l.catVehicles, 'icon': Icons.directions_car_outlined},
-    {'slug': 'emlak', 'label': l.catRealEstate, 'icon': Icons.home_work_outlined},
+    {
+      'slug': 'elektronik',
+      'label': l.catElectronics,
+      'icon': Icons.devices_outlined,
+    },
+    {
+      'slug': 'vasita',
+      'label': l.catVehicles,
+      'icon': Icons.directions_car_outlined,
+    },
+    {
+      'slug': 'emlak',
+      'label': l.catRealEstate,
+      'icon': Icons.home_work_outlined,
+    },
     {'slug': 'giyim', 'label': l.catClothing, 'icon': Icons.checkroom_outlined},
-    {'slug': 'spor', 'label': l.catSports, 'icon': Icons.sports_soccer_outlined},
+    {
+      'slug': 'spor',
+      'label': l.catSports,
+      'icon': Icons.sports_soccer_outlined,
+    },
     {'slug': 'kitap', 'label': l.catBooks, 'icon': Icons.menu_book_outlined},
     {'slug': 'ev', 'label': l.catHomeLife, 'icon': Icons.home_outlined},
     {'slug': 'diger', 'label': l.catOther, 'icon': Icons.more_horiz},
@@ -77,7 +93,8 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 300) {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 300) {
       _loadMoreRecent();
     }
   }
@@ -97,12 +114,14 @@ class HomeScreenState extends State<HomeScreen> {
     if (loggedIn) {
       final userInfo = await StorageService.getUserInfo();
       final prefs = await SharedPreferences.getInstance();
-      
+
       if (userInfo == null) {
         // Profil henüz yüklenemediyse banner'ı gösterme
         if (mounted) setState(() => _showOnboardingBanner = false);
       } else {
-        final done = (userInfo['onboarding_completed'] == true) || (prefs.getBool('onboarding_done') == true);
+        final done =
+            (userInfo['onboarding_completed'] == true) ||
+            (prefs.getBool('onboarding_done') == true);
         final skipped = prefs.getBool('onboarding_skipped') == true;
         if (mounted) setState(() => _showOnboardingBanner = !(done || skipped));
       }
@@ -121,7 +140,10 @@ class HomeScreenState extends State<HomeScreen> {
   /// SWR stream: filtre yoksa Hive cache önce, sonra API. Filtre varsa her zaman API.
   Future<void> _loadRecent(String? token, {bool bypassCache = false}) async {
     if (!mounted) return;
-    setState(() { _recentLoading = true; _recentListings = []; });
+    setState(() {
+      _recentLoading = true;
+      _recentListings = [];
+    });
     try {
       await for (final listings in ApiService.get<List<dynamic>>(
         url: '$kBaseUrl/feed/recent',
@@ -142,7 +164,10 @@ class HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       if (_recentListings.isEmpty) {
         final l = AppLocalizations.of(context)!;
-        setState(() { _error = l.errorConnection; _recentLoading = false; });
+        setState(() {
+          _error = l.errorConnection;
+          _recentLoading = false;
+        });
       } else {
         setState(() => _recentLoading = false);
       }
@@ -162,7 +187,10 @@ class HomeScreenState extends State<HomeScreen> {
       if (resp.statusCode == 200) {
         final more = jsonDecode(resp.body) as List;
         if (more.isEmpty) {
-          setState(() { _recentExhausted = true; _recentLoadingMore = false; });
+          setState(() {
+            _recentExhausted = true;
+            _recentLoadingMore = false;
+          });
         } else {
           setState(() {
             _recentListings = [..._recentListings, ...more];
@@ -182,21 +210,31 @@ class HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadFiltered(String? token) async {
     if (!mounted) return;
-    setState(() { _recentLoading = true; _recentListings = []; });
+    setState(() {
+      _recentLoading = true;
+      _recentListings = [];
+    });
     try {
       final params = <String, String>{};
       if (_selectedCategory != null) params['category'] = _selectedCategory!;
       if (_selectedCity != null) params['location'] = _selectedCity!;
-      final uri = Uri.parse('$kBaseUrl/listings').replace(queryParameters: params);
+      final uri = Uri.parse(
+        '$kBaseUrl/listings',
+      ).replace(queryParameters: params);
       final resp = await http.get(
         uri,
         headers: token != null ? {'Authorization': 'Bearer $token'} : null,
       );
       if (!mounted) return;
       if (resp.statusCode == 200) {
-        setState(() { _recentListings = jsonDecode(resp.body) as List; _recentLoading = false; });
+        setState(() {
+          _recentListings = jsonDecode(resp.body) as List;
+          _recentLoading = false;
+        });
       } else {
-        setState(() { _recentLoading = false; });
+        setState(() {
+          _recentLoading = false;
+        });
       }
     } catch (_) {
       if (mounted) setState(() => _recentLoading = false);
@@ -279,8 +317,9 @@ class HomeScreenState extends State<HomeScreen> {
                     title: Text(
                       city,
                       style: TextStyle(
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
                         color: selected
                             ? kPrimary
                             : AppColors.textPrimary(context),
@@ -323,7 +362,10 @@ class HomeScreenState extends State<HomeScreen> {
             SliverAppBar(
               title: Text(
                 l.homeAppBarTitle,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 20,
+                ),
               ),
               centerTitle: false,
               surfaceTintColor: Colors.transparent,
@@ -335,15 +377,17 @@ class HomeScreenState extends State<HomeScreen> {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const CreateListingScreen()),
+                      builder: (_) => const CreateListingScreen(),
+                    ),
                   ),
                   icon: const Icon(Icons.add, size: 18, color: kPrimary),
                   label: Text(
                     l.btnCreateListing,
                     style: const TextStyle(
-                        color: kPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13),
+                      color: kPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -359,9 +403,15 @@ class HomeScreenState extends State<HomeScreen> {
                       onTap: () async {
                         await Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const CategoryOnboardingScreen(fromBanner: true)),
+                          MaterialPageRoute(
+                            builder: (_) => const CategoryOnboardingScreen(
+                              fromBanner: true,
+                            ),
+                          ),
                         );
-                        if (mounted) setState(() => _showOnboardingBanner = false);
+                        if (mounted) {
+                          setState(() => _showOnboardingBanner = false);
+                        }
                       },
                     ),
                   // ── Kategori ikonları ────────────────────────────
@@ -378,8 +428,10 @@ class HomeScreenState extends State<HomeScreen> {
                         return GestureDetector(
                           key: Key('home_cat_$slug'),
                           onTap: () {
-                            setState(() => _selectedCategory =
-                                isSelected ? null : slug);
+                            setState(
+                              () =>
+                                  _selectedCategory = isSelected ? null : slug,
+                            );
                             _load();
                           },
                           child: Container(
@@ -399,14 +451,14 @@ class HomeScreenState extends State<HomeScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                     border: isSelected
                                         ? Border.all(
-                                            color: kPrimaryDark, width: 1.5)
+                                            color: kPrimaryDark,
+                                            width: 1.5,
+                                          )
                                         : null,
                                   ),
                                   child: Icon(
                                     cat['icon'] as IconData,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : kPrimary,
+                                    color: isSelected ? Colors.white : kPrimary,
                                     size: 24,
                                   ),
                                 ),
@@ -448,7 +500,9 @@ class HomeScreenState extends State<HomeScreen> {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 150),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 7),
+                                horizontal: 12,
+                                vertical: 7,
+                              ),
                               decoration: BoxDecoration(
                                 color: _selectedCity != null
                                     ? kPrimary.withValues(alpha: 0.1)
@@ -501,9 +555,11 @@ class HomeScreenState extends State<HomeScreen> {
                           if (_selectedCategory != null) ...[
                             const SizedBox(width: 8),
                             _ActiveFilterChip(
-                              label: categories.firstWhere(
-                                      (c) => c['slug'] == _selectedCategory)[
-                                  'label'] as String,
+                              label:
+                                  categories.firstWhere(
+                                        (c) => c['slug'] == _selectedCategory,
+                                      )['label']
+                                      as String,
                               onRemove: () {
                                 setState(() => _selectedCategory = null);
                                 _load();
@@ -531,19 +587,25 @@ class HomeScreenState extends State<HomeScreen> {
                               onTap: _clearAll,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 7),
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.red.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                      color: Colors.red.withValues(alpha: 0.3),
-                                      width: 1),
+                                    color: Colors.red.withValues(alpha: 0.3),
+                                    width: 1,
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.close,
-                                        size: 13, color: Colors.red),
+                                    const Icon(
+                                      Icons.close,
+                                      size: 13,
+                                      color: Colors.red,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       l.btnClearFilters,
@@ -562,7 +624,6 @@ class HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-
                 ],
               ),
             ),
@@ -576,7 +637,10 @@ class HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: Text(
                     _filteredHeader(l),
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -584,12 +648,16 @@ class HomeScreenState extends State<HomeScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
-                      childAspectRatio: 0.78,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                          childAspectRatio: 0.78,
+                        ),
                     delegate: SliverChildBuilderDelegate(
-                      (_, _) => const ShimmerGridCard(), childCount: 9,
+                      (_, _) => const ShimmerGridCard(),
+                      childCount: 9,
                     ),
                   ),
                 )
@@ -599,9 +667,16 @@ class HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.search_off_outlined, size: 56, color: AppColors.border(context)),
+                        Icon(
+                          Icons.search_off_outlined,
+                          size: 56,
+                          color: AppColors.border(context),
+                        ),
                         const SizedBox(height: 12),
-                        Text(l.emptyFilteredListings, style: const TextStyle(color: Colors.grey)),
+                        Text(
+                          l.emptyFilteredListings,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
                         const SizedBox(height: 8),
                         TextButton(
                           key: const Key('home_btn_filtreleri_temizle_bos'),
@@ -616,23 +691,37 @@ class HomeScreenState extends State<HomeScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                        ),
                     delegate: SliverChildBuilderDelegate(
                       (ctx, i) => _GridItem(
-                        key: Key('home_listing_filtered_${_recentListings[i]['id']}'),
+                        key: Key(
+                          'home_listing_filtered_${_recentListings[i]['id']}',
+                        ),
                         listing: _recentListings[i],
-                        onRemove: () => setState(() => _recentListings.removeAt(i)),
+                        onRemove: () =>
+                            setState(() => _recentListings.removeAt(i)),
                         onTap: () {
                           if (_recentListings[i]['is_sponsored'] == true) {
                             final cid = _recentListings[i]['campaign_id'];
-                            if (cid != null) AnalyticsService.trackAdClick(cid as int);
+                            if (cid != null) {
+                              AnalyticsService.trackAdClick(cid as int);
+                            }
                           }
-                          Navigator.push(ctx, MaterialPageRoute(
-                            builder: (_) => ListingDetailScreen(
-                                listing: Map<String, dynamic>.from(_recentListings[i])),
-                          ));
+                          Navigator.push(
+                            ctx,
+                            MaterialPageRoute(
+                              builder: (_) => ListingDetailScreen(
+                                listing: Map<String, dynamic>.from(
+                                  _recentListings[i],
+                                ),
+                              ),
+                            ),
+                          );
                         },
                       ),
                       childCount: _recentListings.length,
@@ -645,17 +734,25 @@ class HomeScreenState extends State<HomeScreen> {
             // NORMAL MOD: Sana Özel (yatay) + En Son (dikey grid)
             // ══════════════════════════════════════════════════════════
             if (!_hasFilter) ...[
-
               // ── En Son Eklenenler ──────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                   child: Row(
                     children: [
-                      const Icon(Icons.access_time_outlined, size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.access_time_outlined,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 6),
-                      Text(l.homeRecentListings,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                      Text(
+                        l.homeRecentListings,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -664,12 +761,16 @@ class HomeScreenState extends State<HomeScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
-                      childAspectRatio: 0.78,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                          childAspectRatio: 0.78,
+                        ),
                     delegate: SliverChildBuilderDelegate(
-                      (_, _) => const ShimmerGridCard(), childCount: 9,
+                      (_, _) => const ShimmerGridCard(),
+                      childCount: 9,
                     ),
                   ),
                 )
@@ -680,7 +781,10 @@ class HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(_error!, style: const TextStyle(color: Colors.grey)),
+                        Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
                         const SizedBox(height: 12),
                         TextButton(
                           key: const Key('home_btn_tekrar_dene'),
@@ -696,8 +800,10 @@ class HomeScreenState extends State<HomeScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(32),
                     child: Center(
-                      child: Text(l.emptyListings,
-                          style: const TextStyle(color: Colors.grey)),
+                      child: Text(
+                        l.emptyListings,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
                     ),
                   ),
                 )
@@ -705,34 +811,53 @@ class HomeScreenState extends State<HomeScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                        ),
                     delegate: SliverChildBuilderDelegate(
                       (ctx, i) => _GridItem(
-                        key: Key('home_listing_item_${_recentListings[i]['id']}'),
+                        key: Key(
+                          'home_listing_item_${_recentListings[i]['id']}',
+                        ),
                         listing: _recentListings[i],
-                        onRemove: () => setState(() => _recentListings.removeAt(i)),
+                        onRemove: () =>
+                            setState(() => _recentListings.removeAt(i)),
                         onTap: () {
                           final item = _recentListings[i];
                           if (item['is_sponsored'] == true) {
                             final cid = item['campaign_id'];
-                            if (cid != null) AnalyticsService.trackAdClick(cid as int);
+                            if (cid != null) {
+                              AnalyticsService.trackAdClick(cid as int);
+                            }
                           } else if (_isLoggedIn) {
                             final id = item['id'] as int?;
-                            if (id != null) { 
-                              final ownerId = (item['user'] as Map?)?['id'] as int?;
-                              unawaited(AnalyticsService.logInteraction(
-                                itemId: id, itemType: 'listing', interactionType: 'click',
-                                ownerId: ownerId,
-                                pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
-                              )); 
+                            if (id != null) {
+                              final ownerId =
+                                  (item['user'] as Map?)?['id'] as int?;
+                              unawaited(
+                                AnalyticsService.logInteraction(
+                                  itemId: id,
+                                  itemType: 'listing',
+                                  interactionType: 'click',
+                                  ownerId: ownerId,
+                                  pricePoint: item['price'] != null
+                                      ? (item['price'] as num).toDouble()
+                                      : null,
+                                ),
+                              );
                             }
                           }
-                          Navigator.push(ctx, MaterialPageRoute(
-                            builder: (_) => ListingDetailScreen(
-                                listing: Map<String, dynamic>.from(item)),
-                          ));
+                          Navigator.push(
+                            ctx,
+                            MaterialPageRoute(
+                              builder: (_) => ListingDetailScreen(
+                                listing: Map<String, dynamic>.from(item),
+                              ),
+                            ),
+                          );
                         },
                       ),
                       childCount: _recentListings.length,
@@ -745,7 +870,9 @@ class HomeScreenState extends State<HomeScreen> {
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.all(20),
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
                   ),
                 ),
             ],
@@ -800,7 +927,12 @@ class _GridItem extends StatefulWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
   final VoidCallback? onRemove;
-  const _GridItem({super.key, required this.listing, required this.onTap, this.onRemove});
+  const _GridItem({
+    super.key,
+    required this.listing,
+    required this.onTap,
+    this.onRemove,
+  });
 
   @override
   State<_GridItem> createState() => _GridItemState();
@@ -815,7 +947,9 @@ class _GridItemState extends State<_GridItem> {
     super.initState();
     final id = widget.listing['id'] as int;
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
-    _isLiked = ListingService.getCachedLike(id) ?? (widget.listing['is_liked'] as bool? ?? false);
+    _isLiked =
+        ListingService.getCachedLike(id) ??
+        (widget.listing['is_liked'] as bool? ?? false);
     if (widget.listing['is_sponsored'] == true) {
       final cid = widget.listing['campaign_id'];
       if (cid != null) AnalyticsService.trackAdImpression(cid as int);
@@ -829,7 +963,9 @@ class _GridItemState extends State<_GridItem> {
     if (oldWidget.listing['id'] != id) {
       // Farklı ilan → tamamen sıfırla
       _likesCount = widget.listing['likes_count'] as int? ?? 0;
-      _isLiked = ListingService.getCachedLike(id) ?? (widget.listing['is_liked'] as bool? ?? false);
+      _isLiked =
+          ListingService.getCachedLike(id) ??
+          (widget.listing['is_liked'] as bool? ?? false);
       if (widget.listing['is_sponsored'] == true) {
         final cid = widget.listing['campaign_id'];
         if (cid != null) AnalyticsService.trackAdImpression(cid as int);
@@ -854,7 +990,10 @@ class _GridItemState extends State<_GridItem> {
       );
       if (resp.statusCode == 204 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.notInterestedConfirmed), duration: const Duration(seconds: 2)),
+          SnackBar(
+            content: Text(l.notInterestedConfirmed),
+            duration: const Duration(seconds: 2),
+          ),
         );
         widget.onRemove?.call();
       }
@@ -924,7 +1063,12 @@ class _GridItemState extends State<_GridItem> {
       // Hata → eski state'e dön
       widget.listing['likes_count'] = prevCount;
       widget.listing['is_liked'] = prevLiked;
-      if (mounted) setState(() { _isLiked = prevLiked; _likesCount = prevCount; });
+      if (mounted) {
+        setState(() {
+          _isLiked = prevLiked;
+          _likesCount = prevCount;
+        });
+      }
     }
   }
 
@@ -948,153 +1092,190 @@ class _GridItemState extends State<_GridItem> {
     final photo = raw != null ? imgUrl(raw) : null;
     final price = _fmt(widget.listing['price']);
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      onLongPress: _showLongPressMenu,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          photo != null
-              ? CachedNetworkImage(
-                  imageUrl: photo,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) => const ShimmerBox(),
-                  errorWidget: (_, _, _) => _placeholder(context),
-                )
-              : _placeholder(context),
-          if (price.isNotEmpty)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black54],
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onLongPress: _showLongPressMenu,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            photo != null
+                ? CachedNetworkImage(
+                    imageUrl: photo,
+                    memCacheWidth: 250,
+                    memCacheHeight: 250,
+                    fit: BoxFit.cover,
+                    placeholder: (_, _) => const ShimmerBox(),
+                    errorWidget: (_, _, _) => _placeholder(context),
+                  )
+                : _placeholder(context),
+            if (price.isNotEmpty)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black54],
+                    ),
                   ),
-                ),
-                child: Text(
-                  price,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                  child: Text(
+                    price,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-          // Sponsorlu rozeti — sol üst köşe
-          if (widget.listing['is_sponsored'] == true)
+            // Sponsorlu rozeti — sol üst köşe
+            if (widget.listing['is_sponsored'] == true)
+              Positioned(
+                top: 6,
+                left: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.62),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: const Text(
+                    'Sponsorlu',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            // Seller badge — sol alt (sponsorlu yokken sol üst)
+            if (widget.listing['seller_badge'] == 'trusted_seller')
+              Positioned(
+                bottom: price.isNotEmpty ? 26 : 6,
+                left: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16A34A).withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(
+                    AppLocalizations.of(context)!.badgeTrustedSeller,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              )
+            else if (widget.listing['seller_badge'] == 'active_seller')
+              Positioned(
+                bottom: price.isNotEmpty ? 26 : 6,
+                left: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(
+                    AppLocalizations.of(context)!.badgeActiveSeller,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            // Trend rozeti — sağ alt
+            if (widget.listing['is_trending'] == true)
+              Positioned(
+                bottom: price.isNotEmpty ? 26 : 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.deepOrange.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: const Text('🔥', style: TextStyle(fontSize: 10)),
+                ),
+              ),
+            // Kalp butonu — sağ üst köşe
             Positioned(
               top: 6,
-              left: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.62),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: const Text(
-                  'Sponsorlu',
-                  style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-          // Seller badge — sol alt (sponsorlu yokken sol üst)
-          if (widget.listing['seller_badge'] == 'trusted_seller')
-            Positioned(
-              bottom: price.isNotEmpty ? 26 : 6,
-              left: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16A34A).withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Text(AppLocalizations.of(context)!.badgeTrustedSeller, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
-              ),
-            )
-          else if (widget.listing['seller_badge'] == 'active_seller')
-            Positioned(
-              bottom: price.isNotEmpty ? 26 : 6,
-              left: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: Text(AppLocalizations.of(context)!.badgeActiveSeller, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
-              ),
-            ),
-          // Trend rozeti — sağ alt
-          if (widget.listing['is_trending'] == true)
-            Positioned(
-              bottom: price.isNotEmpty ? 26 : 6,
               right: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.deepOrange.withValues(alpha: 0.88),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: const Text('🔥', style: TextStyle(fontSize: 10)),
-              ),
-            ),
-          // Kalp butonu — sağ üst köşe
-          Positioned(
-            top: 6,
-            right: 6,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _toggleLike,
-              child: Container(
-                padding: const EdgeInsets.all(5),
-                decoration: const BoxDecoration(
-                  color: Colors.black45,
-                  shape: BoxShape.circle,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: _isLiked ? Colors.red : Colors.white,
-                      size: 16,
-                    ),
-                    if (_likesCount > 0) ...[
-                      const SizedBox(width: 3),
-                      Text(
-                        '$_likesCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _toggleLike,
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: const BoxDecoration(
+                    color: Colors.black45,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _isLiked ? Icons.favorite : Icons.favorite_border,
+                        color: _isLiked ? Colors.red : Colors.white,
+                        size: 16,
                       ),
+                      if (_likesCount > 0) ...[
+                        const SizedBox(width: 3),
+                        Text(
+                          '$_likesCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _placeholder(BuildContext context) => Container(
-        color: AppColors.surfaceVariant(context),
-        child: Center(
-          child: Icon(Icons.image_outlined,
-              size: 28, color: AppColors.border(context)),
-        ),
-      );
+    color: AppColors.surfaceVariant(context),
+    child: Center(
+      child: Icon(
+        Icons.image_outlined,
+        size: 28,
+        color: AppColors.border(context),
+      ),
+    ),
+  );
 }
 
 class _OnboardingBanner extends StatelessWidget {
@@ -1111,7 +1292,9 @@ class _OnboardingBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF06B6D4).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.35)),
+        border: Border.all(
+          color: const Color(0xFF06B6D4).withValues(alpha: 0.35),
+        ),
       ),
       child: Row(
         children: [
@@ -1134,7 +1317,10 @@ class _OnboardingBanner extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     l.onboardingBannerSubtitle,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
                   ),
                 ],
               ),
@@ -1157,4 +1343,3 @@ class _OnboardingBanner extends StatelessWidget {
     );
   }
 }
-

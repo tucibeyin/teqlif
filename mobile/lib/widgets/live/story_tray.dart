@@ -530,6 +530,8 @@ class _StoryGroupItem extends StatelessWidget {
                       child: resolvedUrl != null && resolvedUrl.isNotEmpty
                           ? CachedNetworkImage(
                               imageUrl: resolvedUrl,
+                                memCacheWidth: 250,
+                                memCacheHeight: 250,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,

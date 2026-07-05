@@ -253,6 +253,8 @@ class _HostBanner extends StatelessWidget {
               child: thumbnailUrl != null
                   ? CachedNetworkImage(
                       imageUrl: imgUrl(thumbnailUrl!),
+                                memCacheWidth: 250,
+                                memCacheHeight: 250,
                       fit: BoxFit.cover,
                       errorWidget: (_, _, _) => _fallback(),
                     )
@@ -328,6 +330,8 @@ class _RaidTargetCard extends StatelessWidget {
                 child: thumbUrl != null
                     ? CachedNetworkImage(
                         imageUrl: imgUrl(thumbUrl),
+                                memCacheWidth: 250,
+                                memCacheHeight: 250,
                         fit: BoxFit.cover,
                         placeholder: (_, _) => const ShimmerBox(
                           width: double.infinity,

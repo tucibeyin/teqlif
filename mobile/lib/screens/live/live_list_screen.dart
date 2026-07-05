@@ -40,9 +40,9 @@ const _kCatLabels = {
 };
 
 class LiveListScreenState extends ConsumerState<LiveListScreen> {
-  List<StreamOut> _streams = [];                          // tüm aktif yayınlar (En Son)
-  List<StreamOut> _recommended = [];                      // kişiselleştirilmiş (Sana Özel)
-  List<Map<String, dynamic>> _suggestedStreamers = [];    // önerilen yayıncılar
+  List<StreamOut> _streams = []; // tüm aktif yayınlar (En Son)
+  List<StreamOut> _recommended = []; // kişiselleştirilmiş (Sana Özel)
+  List<Map<String, dynamic>> _suggestedStreamers = []; // önerilen yayıncılar
   bool _loading = true;
   bool _isLoggedIn = false;
   String? _selectedCategory; // null = Tümü
@@ -159,15 +159,13 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     if (!mounted) return;
     // Çevrimdışıyken yayına girmeyi engelle
     if (_isOffline) return;
-    
+
     // Erken bağlantı (Early Connection) - WebRTC handshake'i animasyon süresince başlat
     StreamConnectionManager.instance.prefetchForImmediateJoin(stream.id);
-    
+
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => SwipeLiveScreen.fromStream(stream),
-      ),
+      MaterialPageRoute(builder: (_) => SwipeLiveScreen.fromStream(stream)),
     ).then((_) => _load(bypassCache: true));
   }
 
@@ -216,10 +214,18 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
           TextButton.icon(
             key: const Key('live_list_btn_yayin_ac'),
             onPressed: _showStartDialog,
-            icon: const Icon(Icons.videocam_outlined, size: 18, color: Colors.red),
+            icon: const Icon(
+              Icons.videocam_outlined,
+              size: 18,
+              color: Colors.red,
+            ),
             label: Text(
               l.liveStartStream,
-              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 13),
+              style: const TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -238,7 +244,10 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               height: 44,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 children: [
                   _CategoryChip(
                     key: const Key('live_list_chip_tumü'),
@@ -246,12 +255,14 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                     active: _selectedCategory == null,
                     onTap: () => setState(() => _selectedCategory = null),
                   ),
-                  ...cats.map((c) => _CategoryChip(
-                        key: Key('live_list_chip_$c'),
-                        label: _kCatLabels[c] ?? c,
-                        active: _selectedCategory == c,
-                        onTap: () => setState(() => _selectedCategory = c),
-                      )),
+                  ...cats.map(
+                    (c) => _CategoryChip(
+                      key: Key('live_list_chip_$c'),
+                      label: _kCatLabels[c] ?? c,
+                      active: _selectedCategory == c,
+                      onTap: () => setState(() => _selectedCategory = c),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -261,12 +272,14 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               color: kPrimary,
               onRefresh: _load,
               child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: kPrimary))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: kPrimary),
+                    )
                   : _error != null
-                      ? _ErrorState(message: _error!)
-                      : filtered.isEmpty
-                          ? const _EmptyState()
-                          : _buildContent(l, filtered),
+                  ? _ErrorState(message: _error!)
+                  : filtered.isEmpty
+                  ? const _EmptyState()
+                  : _buildContent(l, filtered),
             ),
           ),
         ],
@@ -290,7 +303,11 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               child: Row(
                 children: const [
-                  Icon(Icons.live_tv_rounded, color: Color(0xFFEF4444), size: 15),
+                  Icon(
+                    Icons.live_tv_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 15,
+                  ),
                   SizedBox(width: 6),
                   Text(
                     'Önerilen Yayıncılar',
@@ -309,12 +326,16 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 itemCount: _suggestedStreamers.length,
                 itemBuilder: (ctx, i) => _StreamerAvatarCard(
                   streamer: _suggestedStreamers[i],
-                  onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                    builder: (_) => PublicProfileScreen(
-                      username: _suggestedStreamers[i]['username'] as String? ?? '',
-                      userId: _suggestedStreamers[i]['id'] as int?,
+                  onTap: () => Navigator.push(
+                    ctx,
+                    MaterialPageRoute(
+                      builder: (_) => PublicProfileScreen(
+                        username:
+                            _suggestedStreamers[i]['username'] as String? ?? '',
+                        userId: _suggestedStreamers[i]['id'] as int?,
+                      ),
                     ),
-                  )),
+                  ),
                 ),
               ),
             ),
@@ -333,8 +354,13 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 children: [
                   const Icon(Icons.auto_awesome, color: kPrimary, size: 15),
                   const SizedBox(width: 6),
-                  Text(l.forYouStreams,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  Text(
+                    l.forYouStreams,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -359,7 +385,9 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               ),
             ),
           ),
-          const SliverToBoxAdapter(child: Divider(height: 1, indent: 12, endIndent: 12)),
+          const SliverToBoxAdapter(
+            child: Divider(height: 1, indent: 12, endIndent: 12),
+          ),
         ],
 
         // ── En Son Canlı Yayınlar ──────────────────────────────
@@ -368,14 +396,23 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: Row(
               children: [
-                Container(width: 7, height: 7,
-                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
                 const SizedBox(width: 6),
                 Text(
                   _selectedCategory != null
                       ? '${_kCatLabels[_selectedCategory!] ?? _selectedCategory!} Yayınları'
                       : 'En Son Canlı Yayınlar',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -388,11 +425,16 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10,
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
                 childAspectRatio: 0.78,
               ),
               delegate: SliverChildBuilderDelegate(
-                (_, i) => _StreamGridTile(stream: filtered[i], onTap: () => _joinStream(filtered[i])),
+                (_, i) => _StreamGridTile(
+                  stream: filtered[i],
+                  onTap: () => _joinStream(filtered[i]),
+                ),
                 childCount: filtered.length,
               ),
             ),
@@ -404,7 +446,9 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   }
 
   List<Widget> _buildSectionedSlivers(List<String> cats, List<StreamOut> all) {
-    final groups = {for (var c in cats) c: all.where((s) => s.category == c).toList()};
+    final groups = {
+      for (var c in cats) c: all.where((s) => s.category == c).toList(),
+    };
     return [
       for (final c in cats)
         if (groups[c]!.isNotEmpty) ...[
@@ -413,8 +457,12 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
               child: Text(
                 _kCatLabels[c] ?? c,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13,
-                    color: Color(0xFF6B7280), letterSpacing: 0.3),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: Color(0xFF6B7280),
+                  letterSpacing: 0.3,
+                ),
               ),
             ),
           ),
@@ -422,12 +470,16 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10,
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
                 childAspectRatio: 0.78,
               ),
               delegate: SliverChildBuilderDelegate(
                 (ctx, i) => _StreamGridTile(
-                    stream: groups[c]![i], onTap: () => _joinStream(groups[c]![i])),
+                  stream: groups[c]![i],
+                  onTap: () => _joinStream(groups[c]![i]),
+                ),
                 childCount: groups[c]!.length,
               ),
             ),
@@ -435,7 +487,6 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
         ],
     ];
   }
-
 }
 
 class _CategoryChip extends StatelessWidget {
@@ -443,7 +494,12 @@ class _CategoryChip extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
 
-  const _CategoryChip({super.key, required this.label, required this.active, required this.onTap});
+  const _CategoryChip({
+    super.key,
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -488,7 +544,11 @@ class _ErrorState extends StatelessWidget {
         SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
         Column(
           children: [
-            const Icon(Icons.cloud_off_outlined, size: 56, color: Color(0xFFD1D5DB)),
+            const Icon(
+              Icons.cloud_off_outlined,
+              size: 56,
+              color: Color(0xFFD1D5DB),
+            ),
             const SizedBox(height: 12),
             Text(
               message,
@@ -517,7 +577,11 @@ class _EmptyState extends StatelessWidget {
         SizedBox(height: 120),
         Column(
           children: [
-            Icon(Icons.videocam_off_outlined, size: 56, color: Color(0xFFD1D5DB)),
+            Icon(
+              Icons.videocam_off_outlined,
+              size: 56,
+              color: Color(0xFFD1D5DB),
+            ),
             SizedBox(height: 12),
             Text(
               'Şu an aktif yayın yok',
@@ -585,13 +649,24 @@ class _StreamerAvatarCard extends StatelessWidget {
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? CachedNetworkImage(
                                 imageUrl: imageUrl,
+                                memCacheWidth: 250,
+                                memCacheHeight: 250,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                                 height: double.infinity,
-                                placeholder: (_, _) => _AvatarInitial(initial: initial, context: context),
-                                errorWidget: (_, _, _) => _AvatarInitial(initial: initial, context: context),
+                                placeholder: (_, _) => _AvatarInitial(
+                                  initial: initial,
+                                  context: context,
+                                ),
+                                errorWidget: (_, _, _) => _AvatarInitial(
+                                  initial: initial,
+                                  context: context,
+                                ),
                               )
-                            : _AvatarInitial(initial: initial, context: context),
+                            : _AvatarInitial(
+                                initial: initial,
+                                context: context,
+                              ),
                       ),
                     ),
                   ),
@@ -606,9 +681,14 @@ class _StreamerAvatarCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: const Color(0xFFF59E0B),
-                          border: Border.all(color: AppColors.surface(context), width: 1.5),
+                          border: Border.all(
+                            color: AppColors.surface(context),
+                            width: 1.5,
+                          ),
                         ),
-                        child: const Center(child: Text('👑', style: TextStyle(fontSize: 10))),
+                        child: const Center(
+                          child: Text('👑', style: TextStyle(fontSize: 10)),
+                        ),
                       ),
                     )
                   // Verified badge
@@ -622,9 +702,16 @@ class _StreamerAvatarCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: const Color(0xFF2563EB),
-                          border: Border.all(color: AppColors.surface(context), width: 1.5),
+                          border: Border.all(
+                            color: AppColors.surface(context),
+                            width: 1.5,
+                          ),
                         ),
-                        child: const Icon(Icons.check, size: 11, color: Colors.white),
+                        child: const Icon(
+                          Icons.check,
+                          size: 11,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   // CANLI badge (üst kısım)
@@ -633,11 +720,17 @@ class _StreamerAvatarCard extends StatelessWidget {
                       top: 0,
                       left: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: AppColors.surface(context), width: 1),
+                          border: Border.all(
+                            color: AppColors.surface(context),
+                            width: 1,
+                          ),
                         ),
                         child: const Text(
                           'CANLI',
@@ -702,116 +795,128 @@ class _StreamGridTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasThumbnail = stream.thumbnailUrl != null && stream.thumbnailUrl!.isNotEmpty;
+    final hasThumbnail =
+        stream.thumbnailUrl != null && stream.thumbnailUrl!.isNotEmpty;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.card(context),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Square thumbnail area
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Background
-                  if (hasThumbnail)
-                    CachedNetworkImage(
-                      imageUrl: imgUrl(stream.thumbnailUrl),
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) =>
-                          const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      errorWidget: (_, _, _) => _gradientBox(),
-                    )
-                  else
-                    _gradientBox(),
-                  // CANLI badge
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context)!.liveBadgeLabel,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.card(context),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.07),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Square thumbnail area
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Background
+                    if (hasThumbnail)
+                      CachedNetworkImage(
+                        imageUrl: imgUrl(stream.thumbnailUrl),
+                        memCacheWidth: 250,
+                        memCacheHeight: 250,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        errorWidget: (_, _, _) => _gradientBox(),
+                      )
+                    else
+                      _gradientBox(),
+                    // CANLI badge
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          AppLocalizations.of(context)!.liveBadgeLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  // Viewer badge
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '👁 ${stream.viewerCount}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
+                    // Viewer badge
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '👁 ${stream.viewerCount}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            // Info section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    stream.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12.5,
-                      color: AppColors.textPrimary(context),
+              // Info section
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      stream.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.5,
+                        color: AppColors.textPrimary(context),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '@${stream.host.username}',
-                    style: const TextStyle(
-                      color: kPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(height: 2),
+                    Text(
+                      '@${stream.host.username}',
+                      style: const TextStyle(
+                        color: kPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -831,5 +936,4 @@ class _StreamGridTile extends StatelessWidget {
       ),
     );
   }
-
 }
