@@ -59,8 +59,8 @@ async def test_mass_notification():
             "category": target_listing.get("category"),
             "recipient_count": 1000 # Max limit
         }
-        blast_resp = await client.post("/api/leads/send-mass-notification", json=blast_payload, headers=headers)
-        if blast_resp.status_code != 200:
+        blast_resp = await client.post("/api/leads/send-blast", json=blast_payload, headers=headers)
+        if blast_resp.status_code != 202:
             print("❌ Bildirim Gönderimi Başarısız:", blast_resp.text)
             return
         
