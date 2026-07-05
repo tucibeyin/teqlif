@@ -514,32 +514,9 @@
             </a>
         </div>
     </div>
-
-    <!-- Akordiyon JS Mantığı -->
-    <script>
-        (function() {
-            const accordionHeaders = document.querySelectorAll('.accordion-header');
-            
-            accordionHeaders.forEach(header => {
-                header.addEventListener('click', function(e) {
-                    e.preventDefault(); // Varsayılan button davranışını engelle
-                    const item = this.parentElement;
-                    const content = item.querySelector('.accordion-content');
-                    
-                    if (item.classList.contains('active')) {
-                        item.classList.remove('active');
-                        content.style.maxHeight = null;
-                    } else {
-                        item.classList.add('active');
-                        content.style.maxHeight = content.scrollHeight + "px";
-                    }
-                });
-            });
-        })();
-    </script>
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js?v=4"></script>
-    <script src="/static/js/support-page.js?v=1"></script>
+    <script src="/static/js/support-page.js?v=2"></script>
 </body>
 
 </html>
