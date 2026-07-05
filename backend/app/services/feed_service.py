@@ -834,10 +834,7 @@ async def get_mixed_recent_feed(
       - pos 2, 7, 12  → sponsored (yalnızca page 0, mevcut _inject_ads mantığıyla)
     """
     offset = page * _RECENT_PAGE_SIZE
-    uid_clause = "AND l.user_id != :uid" if user_id else ""
     params: dict = {"lim": _RECENT_PAGE_SIZE, "off": offset}
-    if user_id:
-        params["uid"] = user_id
 
     base_result = await db.execute(
         text(f"""
@@ -845,7 +842,6 @@ async def get_mixed_recent_feed(
             FROM listings l
             WHERE l.is_active = TRUE
               AND l.is_deleted = FALSE
-              {uid_clause}
             ORDER BY l.created_at DESC
             LIMIT :lim OFFSET :off
         """),
@@ -923,13 +919,12 @@ async def _fetch_interest_items(
             SELECT l.id FROM listings l
             WHERE l.is_active = TRUE
               AND l.is_deleted = FALSE
-              AND l.user_id != :uid
               AND l.category = ANY(:cats)
               {excl}
             ORDER BY RANDOM()
             LIMIT :lim
         """),
-        {"uid": user_id, "cats": categories, "lim": count},
+        {"cats": categories, "lim": count},
     )
     ids = [r.id for r in res]
     if not ids:

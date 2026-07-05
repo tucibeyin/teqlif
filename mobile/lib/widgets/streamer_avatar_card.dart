@@ -79,23 +79,8 @@ class StreamerAvatarCard extends StatelessWidget {
                         ),
                         child: const Center(child: Text('👑', style: TextStyle(fontSize: 10))),
                       ),
-                    )
-                  // Verified badge
-                  else if (isVerified)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFF2563EB),
-                          border: Border.all(color: AppColors.surface(context), width: 1.5),
-                        ),
-                        child: const Icon(Icons.check, size: 11, color: Colors.white),
-                      ),
                     ),
+                  
                   // CANLI badge (üst kısım)
                   if (isLive)
                     Positioned(
@@ -122,16 +107,29 @@ class StreamerAvatarCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 5),
-              Text(
-                '@$username',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary(context),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      '@$username',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                  ),
+                  if (isVerified)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 3),
+                      child: Icon(Icons.verified, size: 12, color: Color(0xFF2563EB)),
+                    ),
+                ],
               ),
             ],
           ),

@@ -59,6 +59,21 @@ class StorageService {
     }
   }
 
+  /// Mevcut oturumdaki kullanıcının ID'sini JWT token üzerinden çözer.
+  static Future<int?> getCurrentUserId() async {
+    final token = await getToken();
+    if (token == null) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final map = jsonDecode(payload);
+      return int.tryParse(map['sub'].toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
   static const _userEmailKey = 'teqlif_user_email';
   static const _userNameKey = 'teqlif_user_name';
   static const _userFullNameKey = 'teqlif_user_fullname';

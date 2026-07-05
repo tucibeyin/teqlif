@@ -319,9 +319,13 @@ class SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  void _trackInteraction(int itemId) {
-    StorageService.getToken().then((token) {
+  void _trackInteraction(int itemId, int? ownerId) {
+    StorageService.getToken().then((token) async {
       if (token == null) return;
+      if (ownerId != null) {
+        final myUserId = await StorageService.getCurrentUserId();
+        if (myUserId == ownerId) return;
+      }
       http.post(
         Uri.parse('$kBaseUrl/analytics/interaction'),
         headers: {
@@ -608,7 +612,8 @@ class SearchScreenState extends State<SearchScreen> {
                     listing: listing,
                     onTap: () {
                       final id = listing['id'] as int?;
-                      if (id != null && _isLoggedIn) _trackInteraction(id);
+                      final ownerId = (listing['user'] as Map?)?['id'] as int?;
+                      if (id != null && _isLoggedIn) _trackInteraction(id, ownerId);
                       Navigator.push(
                         ctx,
                         MaterialPageRoute(
@@ -849,7 +854,8 @@ class SearchScreenState extends State<SearchScreen> {
                                 listing: listing,
                                 onTap: () {
                                   final id = listing['id'] as int?;
-                                  if (id != null && _isLoggedIn) _trackInteraction(id);
+                                  final ownerId = (listing['user'] as Map?)?['id'] as int?;
+                                  if (id != null && _isLoggedIn) _trackInteraction(id, ownerId);
                                   if (listing['is_highlight'] == true) {
                                     final rawRoomId = listing['active_room_id'];
                                     if (rawRoomId != null) {
@@ -1131,9 +1137,11 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
     }
     final lid = widget.listing['id'];
     if (lid != null) {
+      final ownerId = (widget.listing['user'] as Map?)?['id'] as int?;
       FeedTelemetryService.instance.logEvent(
         listingId: lid.toString(),
         eventType: 'impression',
+        ownerId: ownerId,
         dwellTimeMs: 0,
         contentType: (widget.listing['video_url'] as String?) != null ? 'video' : 'photo',
       );
@@ -1168,9 +1176,11 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
       onTap: () {
         final lid = widget.listing['id'];
         if (lid != null) {
+          final ownerId = (widget.listing['user'] as Map?)?['id'] as int?;
           FeedTelemetryService.instance.logEvent(
             listingId: lid.toString(),
             eventType: 'click',
+            ownerId: ownerId,
             dwellTimeMs: 0,
             contentType: (widget.listing['video_url'] as String?) != null ? 'video' : 'photo',
           );

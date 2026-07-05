@@ -721,10 +721,14 @@ class HomeScreenState extends State<HomeScreen> {
                             if (cid != null) AnalyticsService.trackAdClick(cid as int);
                           } else if (_isLoggedIn) {
                             final id = item['id'] as int?;
-                            if (id != null) { unawaited(AnalyticsService.logInteraction(
-                              itemId: id, itemType: 'listing', interactionType: 'click',
-                              pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
-                            )); }
+                            if (id != null) { 
+                              final ownerId = (item['user'] as Map?)?['id'] as int?;
+                              unawaited(AnalyticsService.logInteraction(
+                                itemId: id, itemType: 'listing', interactionType: 'click',
+                                ownerId: ownerId,
+                                pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
+                              )); 
+                            }
                           }
                           Navigator.push(ctx, MaterialPageRoute(
                             builder: (_) => ListingDetailScreen(

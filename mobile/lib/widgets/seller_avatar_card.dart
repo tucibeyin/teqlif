@@ -51,30 +51,29 @@ class SellerAvatarCard extends StatelessWidget {
                         child: Text('👑', style: TextStyle(fontSize: 10)),
                       ),
                     ),
-                  )
-                else if (isVerified)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFF2563EB),
-                      ),
-                      child: const Icon(Icons.check, size: 12, color: Colors.white),
-                    ),
                   ),
               ],
             ),
             const SizedBox(height: 6),
-            Text(
-              '@$username',
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    '@$username',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                if (isVerified)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 3),
+                    child: Icon(Icons.verified, size: 12, color: Color(0xFF2563EB)),
+                  ),
+              ],
             ),
           ],
         ),

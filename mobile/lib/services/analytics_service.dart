@@ -310,11 +310,17 @@ class AnalyticsService {
     required int itemId,
     required String itemType,
     required String interactionType,
+    int? ownerId,
     double? durationSeconds,
     double? pricePoint,
     Map<String, dynamic>? metadata,
   }) async {
     try {
+      if (ownerId != null) {
+        final myUserId = await StorageService.getCurrentUserId();
+        if (myUserId == ownerId) return; // Kendi içeriği, analitik atla
+      }
+
       final token = await StorageService.getToken();
       final headers = {
         'Content-Type': 'application/json',

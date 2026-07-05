@@ -40,14 +40,20 @@ class FeedTelemetryService with WidgetsBindingObserver {
   }
 
   /// Olayı kuyruğa ekler; eleman sayısı eşiğe ulaşırsa otomatik flush tetikler.
-  void logEvent({
+  Future<void> logEvent({
     required String listingId,
     required String eventType,
     required int dwellTimeMs,
+    int? ownerId,
     String contentType = 'video',
     int slotIndex = 0,
     String streamCategory = '',
-  }) {
+  }) async {
+    if (ownerId != null) {
+      final myUserId = await StorageService.getCurrentUserId();
+      if (myUserId == ownerId) return; // Kendi içeriği, analitik atla
+    }
+
     _eventQueue.add({
       'listing_id': listingId,
       'event_type': eventType,
