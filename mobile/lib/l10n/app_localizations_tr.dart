@@ -1588,7 +1588,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get proCreditsSummaryTitle => 'Kalan Krediler';
 
   @override
-  String get proCreditsBlastName => 'Kitle Davet (Blast)';
+  String get proCreditsBlastName => 'Toplu Kitle Bildirimi';
 
   @override
   String get proCreditsBoostName => 'Öne Çıkarılmış İlan';
@@ -2066,11 +2066,11 @@ class AppLocalizationsTr extends AppLocalizations {
       'Fiyatın rakiplere kıyasla nerede? Kaçırdığın geliri gör.';
 
   @override
-  String get proToolRetargetingTitle => 'İlgilenen Alıcılara Ulaş';
+  String get proToolRetargetingTitle => 'Bildirim Merkezi';
 
   @override
   String get proToolRetargetingDesc =>
-      'İlanını görüp almayan kişilere otomatik hatırlatma gönder.';
+      'İlanlarınız ve canlı yayınlarınız için potansiyel alıcılara push bildirim gönderin ve raporları inceleyin.';
 
   @override
   String get proToolBestTimeTitle => 'En İyi Yayın Saati';
@@ -2958,7 +2958,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqABadgesTuci =>
-      'TUCi ([ICON_TUCI]), teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep ([ICON_HOTDEMAND])\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.';
+      'TUCi ([ICON_TUCI]), teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Toplu Kitle Bildirimi ([ICON_HOTDEMAND])\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.';
 
   @override
   String get faqCatLive => 'Canlı Yayınlar (SwipeLive) ve Açık Artırma';
@@ -3005,7 +3005,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqQAILead =>
-      '\"Sıcak Talep ([ICON_HOTDEMAND])\" (Alıcı Bul / Lead Gen) özelliği nedir?';
+      '\"Toplu Kitle Bildirimi ([ICON_HOTDEMAND])\" özelliği nedir?';
 
   @override
   String get faqAAILead =>
@@ -3044,7 +3044,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqIconBlast =>
-      'Öne Çıkar (Blast) ([ICON_BLAST]): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.';
+      'Toplu Kitle Bildirimi ([ICON_BLAST]): İlanınızı/yayınınızı potansiyel alıcılara anlık push bildirim olarak yollar.';
 
   @override
   String get faqIconAutoBid =>
@@ -3079,7 +3079,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yeniden Hedefleme: İlgili alıcılara doğrudan hatırlatma veya indirim mesajı gönderimi.';
 
   @override
-  String get proToolHotDemandTitle => 'Sıcak Talep (Lead Gen)';
+  String get proToolHotDemandTitle => 'Toplu Kitle Bildirimi';
 
   @override
   String get proToolHotDemandDesc =>
@@ -3109,7 +3109,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get faqIconNameTuci => 'TUCi ([ICON_TUCI])';
 
   @override
-  String get faqIconNameBlast => 'Öne Çıkar (Blast) ([ICON_BLAST])';
+  String get faqIconNameBlast => 'Toplu Kitle Bildirimi ([ICON_BLAST])';
 
   @override
   String get faqIconNameAutoBid => 'Otomatik Teklif ([ICON_AUTOBID])';
@@ -3134,4 +3134,20 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqIconNameRetargeting => 'Yeniden Hedefleme';
+
+  @override
+  String get listingBlastEstimateLoading => 'Hedef kitle hesaplanıyor...';
+
+  @override
+  String get listingBlastDialogTitle => 'Toplu Kitle Bildirimi';
+
+  @override
+  String listingBlastDialogBody(int count) {
+    return 'İlanınızla ilgilenebilecek potansiyel $count kişi bulundu. Bu kişilere anında bildirim göndermek ister misiniz?';
+  }
+
+  @override
+  String listingBlastCost(int cost) {
+    return 'Maliyet: $cost TUCi';
+  }
 }

@@ -9,7 +9,8 @@ import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
 
 class RetargetingScreen extends StatefulWidget {
-  const RetargetingScreen({super.key});
+  final int initialIndex;
+  const RetargetingScreen({super.key, this.initialIndex = 0});
 
   @override
   State<RetargetingScreen> createState() => _RetargetingScreenState();
@@ -200,38 +201,144 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    return Scaffold(
-      backgroundColor: AppColors.bg(context),
-      appBar: AppBar(
-        title: Text(l.proToolRetargetingTitle),
+    // Bildirim Raporu Sekmesi (Mock UI)
+    final Widget reportTab = ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Toplu Bildirim Raporu',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Bu ekran, canlı yayınlarda ve ilan detaylarında gönderdiğiniz Toplu Kitle Bildirimlerinin dönüşüm istatistiklerini gösterir.',
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
+        const SizedBox(height: 24),
+        _buildFunnelCard('Dönüşüm Hunisi', [
+          {'label': '📢 Hedeflenen Kitle', 'value': '12.450'},
+          {'label': '📩 Başarıyla İletilen', 'value': '11.200'},
+          {'label': '👆 Tıklama (Açma)', 'value': '1.340  (%12)'},
+          {'label': '🛒 Etkileşim/Satış', 'value': '45'},
+        ]),
+        const SizedBox(height: 16),
+        _buildROICard('Yatırım Getirisi (ROI)', '1.500 TUCi', '33 TUCi / Tıklama'),
+      ],
+    );
+
+    // Mevcut Retargeting Sekmesi
+    final Widget retargetingTab = _loadingListings
+        ? const Center(child: CircularProgressIndicator())
+        : _listings.isEmpty
+            ? _emptyState()
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                children: [
+                  _infoCard(),
+                  const SizedBox(height: 16),
+                  _ListingPicker(
+                    listings: _listings,
+                    selected: _selectedListing!,
+                    onChanged: (listing) {
+                      setState(() => _selectedListing = listing);
+                      _loadAudience();
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  if (_loadingAudience)
+                    const _AudienceSkeleton()
+                  else if (_audienceData != null)
+                    _audienceCard(),
+                ],
+              );
+
+    return DefaultTabController(
+      length: 2,
+      initialIndex: widget.initialIndex,
+      child: Scaffold(
         backgroundColor: AppColors.bg(context),
-        elevation: 0,
+        appBar: AppBar(
+          title: const Text('Bildirim & Kitle Merkezi'),
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+          bottom: const TabBar(
+            indicatorColor: Color(0xFF14B8A6),
+            labelColor: Color(0xFF14B8A6),
+            unselectedLabelColor: Colors.grey,
+            tabs: [
+              Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
+              Tab(icon: Icon(Icons.analytics), text: 'Toplu Bildirim Raporu'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            retargetingTab,
+            reportTab,
+          ],
+        ),
       ),
-      body: _loadingListings
-          ? const Center(child: CircularProgressIndicator())
-          : _listings.isEmpty
-              ? _emptyState()
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+    );
+  }
+
+  Widget _buildFunnelCard(String title, List<Map<String, String>> steps) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 16),
+          ...steps.map((s) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _infoCard(),
-                    const SizedBox(height: 16),
-                    _ListingPicker(
-                      listings: _listings,
-                      selected: _selectedListing!,
-                      onChanged: (l) {
-                        setState(() => _selectedListing = l);
-                        _loadAudience();
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    if (_loadingAudience)
-                      const _AudienceSkeleton()
-                    else if (_audienceData != null)
-                      _audienceCard(),
+                    Text(s['label']!, style: TextStyle(color: AppColors.textSecondary(context))),
+                    Text(s['value']!, style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.w600)),
                   ],
                 ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildROICard(String title, String totalSpend, String costPerClick) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF14B8A6).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF14B8A6).withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: Color(0xFF14B8A6), fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Toplam Harcama:', style: TextStyle(color: Colors.white70)),
+              Text(totalSpend, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Tıklama Başı Maliyet:', style: TextStyle(color: Colors.white70)),
+              Text(costPerClick, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

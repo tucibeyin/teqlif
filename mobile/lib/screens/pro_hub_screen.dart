@@ -203,20 +203,10 @@ class _ProHubScreenState extends State<ProHubScreen> {
             description: l.proToolRetargetingDesc,
             isPremium: isPremium,
             onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen()))
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen(initialIndex: 0)))
                 : () => _showUpgrade(context),
           ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.local_fire_department_outlined,
-            iconColor: const Color(0xFFEF4444),
-            title: l.proToolHotDemandTitle,
-            description: l.proToolHotDemandDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sıcak talep özelliğini kullanmak için ilan detayından Blast butonuna tıklayarak Lead Gen modunu seçin.')))
-                : () => _showUpgrade(context),
-          ),
+
           const SizedBox(height: 10),
           _ToolCard(
             icon: Icons.batch_prediction_outlined,

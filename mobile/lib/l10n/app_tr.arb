@@ -672,7 +672,7 @@
   "proUnlockBtn": "Pro'ya Geç",
   "proUpgradeSheetDesc": "Bu aracı kullanmak için Pro'ya geçmeniz gerekiyor.",
   "proCreditsSummaryTitle": "Kalan Krediler",
-  "proCreditsBlastName": "Kitle Davet (Blast)",
+  "proCreditsBlastName": "Toplu Kitle Bildirimi",
   "proCreditsBoostName": "Öne Çıkarılmış İlan",
   "proCreditsAiName": "Yapay Zeka Danışmanı",
   "proCreditsReactivationName": "Reaktivasyon",
@@ -995,8 +995,8 @@
   "audienceLowBudget": "Düşük Bütçe (<250₺)",
   "proToolCompetitorRadarTitle": "Rakip Fiyat Radarı",
   "proToolCompetitorRadarDesc": "Fiyatın rakiplere kıyasla nerede? Kaçırdığın geliri gör.",
-  "proToolRetargetingTitle": "İlgilenen Alıcılara Ulaş",
-  "proToolRetargetingDesc": "İlanını görüp almayan kişilere otomatik hatırlatma gönder.",
+  "proToolRetargetingTitle": "Bildirim Merkezi",
+  "proToolRetargetingDesc": "İlanlarınız ve canlı yayınlarınız için potansiyel alıcılara push bildirim gönderin ve raporları inceleyin.",
   "proToolBestTimeTitle": "En İyi Yayın Saati",
   "proToolBestTimeDesc": "Geçmiş yayın verilerinize göre en yüksek dönüşüm sağlayan gün ve saat dilimlerini görün.",
   "proToolConversionTitle": "Dönüşüm Analizi",
@@ -1582,7 +1582,7 @@
   "faqQBadgesSponsored": "\"Sponsorlu\", \"Trending\" ve \"LIVE\" etiketleri neyi ifade eder?",
   "faqABadgesSponsored": "Sponsorlu: Satıcının TUCi ([ICON_TUCI]) kredisi kullanarak ilanını öne çıkardığını belirtir. Trending (Ateş): İlanın son zamanlarda çok kişi tarafından incelendiğini veya favoriye eklendiğini (sıcak fırsat) gösterir. LIVE (Yanıp Sönen): Satıcının o an söz konusu ürün için canlı yayın (SwipeLive) yaptığını gösterir.",
   "faqQBadgesTuci": "TUCi ([ICON_TUCI]) nedir, nerelerde kullanılır?",
-  "faqABadgesTuci": "TUCi ([ICON_TUCI]), teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep ([ICON_HOTDEMAND])\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.",
+  "faqABadgesTuci": "TUCi ([ICON_TUCI]), teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Toplu Kitle Bildirimi ([ICON_HOTDEMAND])\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.",
   "faqCatLive": "Canlı Yayınlar (SwipeLive) ve Açık Artırma",
   "faqQLiveHost": "Yayıncı (Host) ekranında neler yapabilirim?",
   "faqALiveHost": "Host ekranında sohbeti yönetebilir, ürününüz için Açık Artırma başlatabilir, gelen teklifleri (Bid) anlık görebilir ve sürenin sonunda en yüksek teklifi kabul edip satışı onaylayabilirsiniz.",
@@ -1595,7 +1595,7 @@
   "faqAAIInsights": "PRO satıcılara özel olan bu araç, ilanınızın görüntülenme sayısını, ziyaretçilerin ilan detayında geçirdiği süreyi ve tereddüt (hesitation) oranını raporlar.",
   "faqQAIPrice": "Yapay Zeka Fiyat Tahmini (AI Price Intel) nasıl çalışır?",
   "faqAAIPrice": "Yapay zekamız ürününüzün başlığına ve kategorisine bakarak en hızlı satılabilecek optimum fiyatı size önerir.",
-  "faqQAILead": "\"Sıcak Talep ([ICON_HOTDEMAND])\" (Alıcı Bul / Lead Gen) özelliği nedir?",
+  "faqQAILead": "\"Toplu Kitle Bildirimi ([ICON_HOTDEMAND])\" özelliği nedir?",
   "faqAAILead": "İlanınıza en uygun potansiyel alıcıları yapay zeka ile eşleştirerek, doğrudan onlara \"Önerilen İlan\" bildirimi gönderen sistemdir.",
   "faqQAIRadar": "Rekabet Analizi ve En İyi Yayın Saati Tahmini",
   "faqAAIRadar": "Rekabet Analizi, ilanınızın fiyat durumunu ve tıklanma oranını rakiplerle kıyaslar. Yayın Saati Tahmini ise takipçilerinizin en aktif olduğu saatleri gösterir.",
@@ -1606,7 +1606,7 @@
   "faqIconVerified": "Onaylı Hesap ([ICON_VERIFIED]): Kullanıcının kimliğini veya telefonunu doğruladığını gösterir.",
   "faqIconPro": "teqlif PRO ([ICON_PRO]): Satıcının platform tarafından öne çıkarılan bir PRO üyesi olduğunu belirtir.",
   "faqIconTuci": "TUCi ([ICON_TUCI]): Sistem içi harcamalarda kullanılan sanal para birimidir.",
-  "faqIconBlast": "Öne Çıkar (Blast) ([ICON_BLAST]): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.",
+  "faqIconBlast": "Toplu Kitle Bildirimi ([ICON_BLAST]): İlanınızı/yayınınızı potansiyel alıcılara anlık push bildirim olarak yollar.",
   "faqIconAutoBid": "Otomatik Teklif ([ICON_AUTOBID]): Sistemin sizin adınıza belirlediğiniz limite kadar teklif vermesidir.",
   "faqIconSales": "Satış İçgörüleri: Satış hacmi ve karlılık durumunuzu gösterir.",
   "faqIconListings": "İlan Analitikleri: İlanlarınızın görüntülenme ve favori metrikleridir.",
@@ -1615,7 +1615,7 @@
   "faqIconConversion": "Dönüşüm Analizi: Görüntüleme başına elde edilen teklif ve satış hunisi.",
   "faqIconRadar": "Rakip Radarı: Benzer satıcıların fiyat ve satış hızı analizleri.",
   "faqIconRetargeting": "Yeniden Hedefleme: İlgili alıcılara doğrudan hatırlatma veya indirim mesajı gönderimi.",
-  "proToolHotDemandTitle": "Sıcak Talep (Lead Gen)",
+  "proToolHotDemandTitle": "Toplu Kitle Bildirimi",
   "proToolHotDemandDesc": "İlanınızla ilgilenebilecek potansiyel alıcılara doğrudan ulaşın.",
   "proToolAiPriceTitle": "Yapay Zeka Fiyat Analizi",
   "proToolAiPriceDesc": "Ürününüzün piyasa değerini AI ile saniyeler içinde öğrenin.",
@@ -1624,7 +1624,7 @@
   "faqIconNameVerified": "Onaylı Hesap",
   "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
   "faqIconNameTuci": "TUCi ([ICON_TUCI])",
-  "faqIconNameBlast": "Öne Çıkar (Blast) ([ICON_BLAST])",
+  "faqIconNameBlast": "Toplu Kitle Bildirimi ([ICON_BLAST])",
   "faqIconNameAutoBid": "Otomatik Teklif ([ICON_AUTOBID])",
   "faqIconNameSales": "Satış İçgörüleri",
   "faqIconNameListings": "İlan Analitikleri",
@@ -1632,5 +1632,23 @@
   "faqIconNameTime": "En İyi Yayın Zamanı",
   "faqIconNameConversion": "Dönüşüm Analizi",
   "faqIconNameRadar": "Rakip Radarı",
-  "faqIconNameRetargeting": "Yeniden Hedefleme"
+  "faqIconNameRetargeting": "Yeniden Hedefleme",
+  "listingBlastEstimateLoading": "Hedef kitle hesaplanıyor...",
+  "listingBlastDialogTitle": "Toplu Kitle Bildirimi",
+  "listingBlastDialogBody": "İlanınızla ilgilenebilecek potansiyel {count} kişi bulundu. Bu kişilere anında bildirim göndermek ister misiniz?",
+  "@listingBlastDialogBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listingBlastCost": "Maliyet: {cost} TUCi",
+  "@listingBlastCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  }
 }

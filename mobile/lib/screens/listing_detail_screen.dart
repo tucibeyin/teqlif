@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'retargeting_screen.dart';
 import '../config/api.dart';
 import '../services/analytics_service.dart';
 import '../services/share_service.dart';
@@ -39,6 +40,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   bool _isFavorited = false;
   bool _isActive = true;
   int? _campaignId;
+
+  // Toplu Kitle Bildirimi (Mass Notification)
+  bool _massNotificationSending = false;
+  bool _massNotificationSent = false;
 
   // Video player
   String? _videoUrl;
@@ -654,6 +659,74 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           listingTitle: widget.listing['title'] as String? ?? 'İlan',
         ),
       ),
+    );
+  }
+
+
+  Future<void> _sendMassNotification(BuildContext ctx) async {
+    setState(() => _massNotificationSending = true);
+    final listingId = widget.listing['id'] as int;
+
+    // Hedef kitle büyüklüğünü çek
+    final est = await AnalyticsService.estimateAudienceForListing(listingId);
+    if (est == null || !mounted) {
+      setState(() => _massNotificationSending = false);
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Kitle hesaplanırken bir hata oluştu.')));
+      return;
+    }
+
+    final maxAudience = est['audience_size'] as int? ?? 0;
+    if (maxAudience == 0) {
+      setState(() => _massNotificationSending = false);
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Şu an bu ilanla ilgilenebilecek yeni potansiyel alıcı bulunamadı.')));
+      return;
+    }
+
+    final creditsLeft = est['blast_credits_remaining'] as int? ?? 0;
+    final perBlastCap = est['per_blast_cap'] as int? ?? maxAudience;
+    final tuciBalance = est['tuci_balance'] as int? ?? 0;
+    setState(() => _massNotificationSending = false);
+
+    // Onay penceresi (Akıllı Modal)
+    final result = await showDialog<Map<String, int>>(
+      context: ctx,
+      builder: (_) => _MassNotificationDialog(
+        maxAudience: maxAudience,
+        creditsLeft: creditsLeft,
+        perBlastCap: perBlastCap,
+        tuciBalance: tuciBalance,
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    setState(() => _massNotificationSending = true);
+    final apiResult = await AnalyticsService.sendMassNotificationForListing(
+      listingId: listingId,
+      estimatedCost: result['cost']!,
+      recipientCount: result['count']!,
+    );
+    if (!mounted) return;
+    setState(() => _massNotificationSending = false);
+
+    if (apiResult != null && apiResult.containsKey('error')) {
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(apiResult['error'])));
+    } else if (apiResult != null) {
+      setState(() => _massNotificationSent = true);
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+        content: Text('Toplu Kitle Bildirimi başarıyla gönderildi! 🚀'),
+        backgroundColor: Color(0xFF14B8A6),
+      ));
+    } else {
+      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Gönderim sırasında hata oluştu.')));
+    }
+  }
+
+
+  void _openMassNotificationReport(BuildContext ctx) {
+    Navigator.push(
+      ctx,
+      MaterialPageRoute(builder: (_) => const RetargetingScreen(initialIndex: 1)),
     );
   }
 
@@ -1470,31 +1543,56 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                     padding: const EdgeInsets.all(12),
                     child: Builder(builder: (ctx) {
                     final l = AppLocalizations.of(ctx)!;
-                    return _campaignId != null
-                        ? ElevatedButton.icon(
-                            onPressed: () => _openAdReport(context),
-                            icon: const Text('📊', style: TextStyle(fontSize: 16)),
-                            label: Text(l.boostBtnReport),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF6366F1),
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                            ),
-                          )
-                        : ElevatedButton.icon(
-                            onPressed: () => _boostListing(context),
-                            icon: const Text('🔥', style: TextStyle(fontSize: 16)),
-                            label: Text(l.boostBtnStart),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF97316),
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                            ),
-                          );
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _massNotificationSending 
+                              ? null 
+                              : () => _massNotificationSent 
+                                  ? _openMassNotificationReport(context) 
+                                  : _sendMassNotification(context),
+                          icon: _massNotificationSending 
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text('📢', style: TextStyle(fontSize: 16)),
+                          label: Text(_massNotificationSent ? 'Bildirim Raporunu Gör' : 'Toplu Kitle Bildirimi Gönder'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF14B8A6),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0x6614B8A6),
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _campaignId != null
+                            ? ElevatedButton.icon(
+                                onPressed: () => _openAdReport(context),
+                                icon: const Text('📊', style: TextStyle(fontSize: 16)),
+                                label: Text(l.boostBtnReport),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF6366F1),
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size(double.infinity, 50),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                                ),
+                              )
+                            : ElevatedButton.icon(
+                                onPressed: () => _boostListing(context),
+                                icon: const Text('🔥', style: TextStyle(fontSize: 16)),
+                                label: Text(l.boostBtnStart),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF97316),
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size(double.infinity, 50),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                      ],
+                    );
                   }),
               ),
             )
@@ -1989,5 +2087,175 @@ class _BoostRow extends StatelessWidget {
       ),
     );
 
+  }
+}
+
+class _MassNotificationDialog extends StatefulWidget {
+  final int maxAudience;
+  final int creditsLeft;
+  final int perBlastCap;
+  final int tuciBalance;
+
+  const _MassNotificationDialog({
+    required this.maxAudience,
+    required this.creditsLeft,
+    required this.perBlastCap,
+    required this.tuciBalance,
+  });
+
+  @override
+  State<_MassNotificationDialog> createState() => _MassNotificationDialogState();
+}
+
+class _MassNotificationDialogState extends State<_MassNotificationDialog> {
+  bool _useCustomCount = false;
+  late TextEditingController _countCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final defaultCount = widget.maxAudience < widget.perBlastCap ? widget.maxAudience : widget.perBlastCap;
+    _countCtrl = TextEditingController(text: defaultCount.toString());
+    _countCtrl.addListener(_onCountChanged);
+  }
+
+  @override
+  void dispose() {
+    _countCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onCountChanged() {
+    setState(() {}); // Recalculate
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    int requestedCount = int.tryParse(_countCtrl.text) ?? 0;
+    if (!_useCustomCount) {
+      requestedCount = widget.maxAudience < widget.perBlastCap ? widget.maxAudience : widget.perBlastCap;
+    }
+    if (requestedCount > widget.maxAudience) requestedCount = widget.maxAudience;
+
+    final actualCount = requestedCount;
+    final freeUsed = widget.creditsLeft < actualCount ? widget.creditsLeft : actualCount;
+    final paidCount = actualCount - freeUsed;
+    final tuciCost = paidCount * 10;
+    final bool hasEnoughBalance = widget.tuciBalance >= tuciCost;
+
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1E293B),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Toplu Kitle Bildirimi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'İlanınızla ilgilenebilecek potansiyel ${widget.maxAudience} kişi bulundu. Bu kişilere anında bildirim göndermek ister misiniz?',
+            style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
+          ),
+          const SizedBox(height: 16),
+          // Checkbox for custom count
+          Row(
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: Checkbox(
+                  value: _useCustomCount,
+                  activeColor: const Color(0xFF14B8A6),
+                  side: const BorderSide(color: Color(0xFF64748B)),
+                  onChanged: (val) {
+                    setState(() => _useCustomCount = val ?? false);
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(child: Text('Belirli bir kişi sayısına gönder', style: TextStyle(color: Color(0xFFCBD5E1)))),
+            ],
+          ),
+          if (_useCustomCount)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, left: 32.0),
+              child: TextField(
+                controller: _countCtrl,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Kişi sayısı',
+                  hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+          // Calculation Card
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0x3314B8A6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0x5514B8A6)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Bildirim Gidecek:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                    Text('$actualCount Kişi', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Aylık Ücretsiz Hak:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                    Text('-$freeUsed Kişi', style: const TextStyle(color: Color(0xFF2DD4BF), fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 4),
+                  child: Divider(color: Color(0x5514B8A6)),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Toplam Maliyet:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text('$tuciCost TUCi', style: TextStyle(color: hasEnoughBalance ? const Color(0xFF2DD4BF) : const Color(0xFFEF4444), fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (!hasEnoughBalance)
+            const Padding(
+              padding: EdgeInsets.only(top: 8.0),
+              child: Text('⚠️ Yetersiz TUCi bakiyesi, lütfen yükleme yapın.', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null),
+          child: const Text('İptal', style: TextStyle(color: Color(0xFF64748B))),
+        ),
+        FilledButton(
+          onPressed: hasEnoughBalance && actualCount > 0
+              ? () => Navigator.pop(context, {'count': actualCount, 'cost': tuciCost})
+              : null,
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF14B8A6),
+            disabledBackgroundColor: const Color(0x6614B8A6),
+          ),
+          child: const Text('Gönder', style: TextStyle(fontWeight: FontWeight.w700)),
+        ),
+      ],
+    );
   }
 }

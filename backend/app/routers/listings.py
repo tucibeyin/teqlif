@@ -298,3 +298,130 @@ async def get_similar_listings(
         }
         for r in rows
     ]
+
+
+# ── Toplu Kitle Bildirimi (Mass Audience Notification) ───────────────────────
+
+@router.get("/{listing_id}/audience-estimate")
+async def estimate_audience_for_listing(
+    listing_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Belirtilen ilanın kategorisindeki diğer ilanlarla etkileşime giren,
+    ancak bu ilanı henüz görmemiş / etkileşime girmemiş kullanıcı sayısını hesaplar.
+    Ayrıca kullanıcının TUCi bakiyesi ve Blast kredi limitlerini döner.
+    """
+    from sqlalchemy import select
+    from app.models.listing import Listing
+    from app.routers.leads import _PER_BLAST_CAP_PRO, _PER_BLAST_CAP_STANDARD, _BLAST_LIMIT_PRO, _BLAST_LIMIT_STANDARD, _get_blast_used
+    from app.database import engine
+    from sqlalchemy import text as sql_text
+
+    listing = await db.scalar(select(Listing).where(Listing.id == listing_id))
+    if not listing:
+        raise HTTPException(status_code=404, detail="İlan bulunamadı.")
+        
+    if listing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok.")
+
+    category = listing.category or ""
+    
+    listing_q = select(Listing.id).where(
+        Listing.is_deleted == False,
+        Listing.is_active == True,
+    )
+    if category:
+        listing_q = listing_q.where(Listing.category == category)
+    listing_q = listing_q.limit(500)
+
+    result = await db.execute(listing_q)
+    listing_ids = [row[0] for row in result.fetchall()]
+
+    if not listing_ids:
+        return {"audience_size": 0, "estimated_cost": 0, "blast_credits_remaining": 0, "per_blast_cap": 10, "tuci_balance": current_user.tuci_balance}
+
+    ids_str = ", ".join(str(i) for i in listing_ids)
+    target_user_ids = []
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        ch_result = await ch.query(f"""
+            SELECT DISTINCT user_id
+            FROM user_events
+            WHERE item_type = 'listing'
+              AND item_id IN ({ids_str})
+              AND event_type IN ('view', 'dwell', 'bid_hesitation')
+              AND timestamp >= now() - INTERVAL 30 DAY
+              AND user_id IS NOT NULL
+              AND user_id != {current_user.id}
+            LIMIT 10000
+        """)
+        target_user_ids = [int(r[0]) for r in ch_result.result_rows if r[0]]
+    except Exception as exc:
+        pass
+
+    reachable = 0
+    if target_user_ids:
+        token_count = await db.scalar(sql_text("""
+            SELECT COUNT(*) FROM users
+            WHERE id = ANY(:ids)
+              AND fcm_token IS NOT NULL AND fcm_token != ''
+              AND id NOT IN (
+                  SELECT follower_id FROM follows WHERE followed_id = :me
+              )
+        """), {"ids": target_user_ids, "me": current_user.id})
+        reachable = int(token_count or 0)
+
+    cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
+    limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
+    used  = await _get_blast_used(current_user.id, current_user.premium_since)
+    credits_remaining = max(0, limit - used)
+
+    return {
+        "audience_size": reachable,
+        "estimated_cost": 0,
+        "blast_credits_remaining": credits_remaining,
+        "per_blast_cap": cap,
+        "tuci_balance": current_user.tuci_balance
+    }
+
+from pydantic import BaseModel, Field
+class MassNotificationRequest(BaseModel):
+    estimated_cost: int = Field(ge=0)
+    recipient_count: int | None = Field(default=None, ge=1)
+
+@router.post("/{listing_id}/send-mass-notification", status_code=202)
+async def send_mass_notification_for_listing(
+    listing_id: int,
+    body: MassNotificationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    İlan için Toplu Kitle Bildirimi gönderir.
+    Ücretsiz krediler ve/veya TUCi bakiyesi kullanılır.
+    """
+    from app.routers.leads import BlastRequest, send_blast
+    from app.models.listing import Listing
+    from sqlalchemy import select
+    
+    listing = await db.scalar(select(Listing).where(Listing.id == listing_id))
+    if not listing:
+        raise HTTPException(status_code=404, detail="İlan bulunamadı.")
+        
+    if listing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok.")
+
+    # Reuse send_blast logic
+    blast_req = BlastRequest(
+        title=listing.title,
+        category=listing.category or "",
+        listing_id=listing.id,
+        estimated_cost=body.estimated_cost,
+        recipient_count=body.recipient_count,
+    )
+    
+    # send_blast expects the request object and dependencies
+    return await send_blast(body=blast_req, db=db, current_user=current_user)

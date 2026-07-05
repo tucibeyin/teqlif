@@ -1588,7 +1588,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proCreditsSummaryTitle => 'Remaining Credits';
 
   @override
-  String get proCreditsBlastName => 'Audience Invite (Blast)';
+  String get proCreditsBlastName => 'Mass Audience Notification';
 
   @override
   String get proCreditsBoostName => 'Promoted Listing';
@@ -2065,11 +2065,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'See where your price stands vs. competitors and how much revenue you\'re leaving behind.';
 
   @override
-  String get proToolRetargetingTitle => 'Reach Interested Buyers';
+  String get proToolRetargetingTitle => 'Notification Center';
 
   @override
   String get proToolRetargetingDesc =>
-      'Send automatic reminders to people who viewed your listing but didn\'t buy.';
+      'Send push notifications to potential buyers for your listings and live streams, and analyze reports.';
 
   @override
   String get proToolBestTimeTitle => 'Best Stream Time';
@@ -3001,7 +3001,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqQAILead =>
-      'What is the \"Hot Demand ([ICON_HOTDEMAND])\" (Lead Gen) feature?';
+      'What is the \"Mass Audience Notification ([ICON_HOTDEMAND])\" feature?';
 
   @override
   String get faqAAILead =>
@@ -3040,7 +3040,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqIconBlast =>
-      'Blast ([ICON_BLAST]): Sends an instant push notification for your listing/stream.';
+      'Mass Audience Notification ([ICON_BLAST]): Sends your listing/stream as an instant push notification to potential buyers.';
 
   @override
   String get faqIconAutoBid =>
@@ -3075,7 +3075,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Retargeting: Send reminders or discount messages directly to interested buyers.';
 
   @override
-  String get proToolHotDemandTitle => 'Hot Demand (Lead Gen)';
+  String get proToolHotDemandTitle => 'Mass Audience Notification';
 
   @override
   String get proToolHotDemandDesc =>
@@ -3105,7 +3105,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get faqIconNameTuci => 'TUCi ([ICON_TUCI])';
 
   @override
-  String get faqIconNameBlast => 'Blast ([ICON_BLAST])';
+  String get faqIconNameBlast => 'Mass Audience Notification ([ICON_BLAST])';
 
   @override
   String get faqIconNameAutoBid => 'Auto-Bid ([ICON_AUTOBID])';
@@ -3130,4 +3130,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqIconNameRetargeting => 'Retargeting';
+
+  @override
+  String get listingBlastEstimateLoading => 'Estimating audience...';
+
+  @override
+  String get listingBlastDialogTitle => 'Mass Audience Notification';
+
+  @override
+  String listingBlastDialogBody(int count) {
+    return 'Found $count potential buyers who might be interested in your listing. Would you like to send them an instant notification?';
+  }
+
+  @override
+  String listingBlastCost(int cost) {
+    return 'Cost: $cost TUCi';
+  }
 }

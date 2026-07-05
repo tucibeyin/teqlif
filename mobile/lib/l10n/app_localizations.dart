@@ -3091,7 +3091,7 @@ abstract class AppLocalizations {
   /// No description provided for @proCreditsBlastName.
   ///
   /// In tr, this message translates to:
-  /// **'Kitle Davet (Blast)'**
+  /// **'Toplu Kitle Bildirimi'**
   String get proCreditsBlastName;
 
   /// No description provided for @proCreditsBoostName.
@@ -3913,13 +3913,13 @@ abstract class AppLocalizations {
   /// No description provided for @proToolRetargetingTitle.
   ///
   /// In tr, this message translates to:
-  /// **'İlgilenen Alıcılara Ulaş'**
+  /// **'Bildirim Merkezi'**
   String get proToolRetargetingTitle;
 
   /// No description provided for @proToolRetargetingDesc.
   ///
   /// In tr, this message translates to:
-  /// **'İlanını görüp almayan kişilere otomatik hatırlatma gönder.'**
+  /// **'İlanlarınız ve canlı yayınlarınız için potansiyel alıcılara push bildirim gönderin ve raporları inceleyin.'**
   String get proToolRetargetingDesc;
 
   /// No description provided for @proToolBestTimeTitle.
@@ -5419,7 +5419,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqABadgesTuci.
   ///
   /// In tr, this message translates to:
-  /// **'TUCi ([ICON_TUCI]), teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep ([ICON_HOTDEMAND])\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.'**
+  /// **'TUCi ([ICON_TUCI]), teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Toplu Kitle Bildirimi ([ICON_HOTDEMAND])\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.'**
   String get faqABadgesTuci;
 
   /// No description provided for @faqCatLive.
@@ -5497,7 +5497,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqQAILead.
   ///
   /// In tr, this message translates to:
-  /// **'\"Sıcak Talep ([ICON_HOTDEMAND])\" (Alıcı Bul / Lead Gen) özelliği nedir?'**
+  /// **'\"Toplu Kitle Bildirimi ([ICON_HOTDEMAND])\" özelliği nedir?'**
   String get faqQAILead;
 
   /// No description provided for @faqAAILead.
@@ -5563,7 +5563,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqIconBlast.
   ///
   /// In tr, this message translates to:
-  /// **'Öne Çıkar (Blast) ([ICON_BLAST]): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.'**
+  /// **'Toplu Kitle Bildirimi ([ICON_BLAST]): İlanınızı/yayınınızı potansiyel alıcılara anlık push bildirim olarak yollar.'**
   String get faqIconBlast;
 
   /// No description provided for @faqIconAutoBid.
@@ -5617,7 +5617,7 @@ abstract class AppLocalizations {
   /// No description provided for @proToolHotDemandTitle.
   ///
   /// In tr, this message translates to:
-  /// **'Sıcak Talep (Lead Gen)'**
+  /// **'Toplu Kitle Bildirimi'**
   String get proToolHotDemandTitle;
 
   /// No description provided for @proToolHotDemandDesc.
@@ -5671,7 +5671,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqIconNameBlast.
   ///
   /// In tr, this message translates to:
-  /// **'Öne Çıkar (Blast) ([ICON_BLAST])'**
+  /// **'Toplu Kitle Bildirimi ([ICON_BLAST])'**
   String get faqIconNameBlast;
 
   /// No description provided for @faqIconNameAutoBid.
@@ -5721,6 +5721,30 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Yeniden Hedefleme'**
   String get faqIconNameRetargeting;
+
+  /// No description provided for @listingBlastEstimateLoading.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef kitle hesaplanıyor...'**
+  String get listingBlastEstimateLoading;
+
+  /// No description provided for @listingBlastDialogTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplu Kitle Bildirimi'**
+  String get listingBlastDialogTitle;
+
+  /// No description provided for @listingBlastDialogBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınızla ilgilenebilecek potansiyel {count} kişi bulundu. Bu kişilere anında bildirim göndermek ister misiniz?'**
+  String listingBlastDialogBody(int count);
+
+  /// No description provided for @listingBlastCost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Maliyet: {cost} TUCi'**
+  String listingBlastCost(int cost);
 }
 
 class _AppLocalizationsDelegate

@@ -573,6 +573,55 @@ class AnalyticsService {
     } catch (_) {}
     return null;
   }
+
+  /// İlanlar için kitle büyüklüğü tahmini → `GET /api/listings/{listingId}/audience-estimate`
+  static Future<Map<String, dynamic>?> estimateAudienceForListing(int listingId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final uri = Uri.parse('$kBaseUrl/listings/$listingId/audience-estimate');
+      final resp = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// İlanlar için toplu kitle bildirimi gönder → `POST /api/listings/{listingId}/send-mass-notification`
+  static Future<Map<String, dynamic>?> sendMassNotificationForListing({
+    required int listingId,
+    required int estimatedCost,
+    int? recipientCount,
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/listings/$listingId/send-mass-notification'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'estimated_cost': estimatedCost,
+          'recipient_count': recipientCount,
+        }),
+      );
+      if (resp.statusCode == 200 || resp.statusCode == 202) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      try {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        return {'error': body['detail'] ?? 'Bildirim gönderilemedi.'};
+      } catch (_) {}
+      return {'error': 'Bildirim gönderilemedi.'};
+    } catch (_) {}
+    return null;
+  }
 }
 
 // --- Screen Tracking Observer ---

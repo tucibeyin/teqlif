@@ -673,7 +673,7 @@
   "proUnlockBtn": "Go Pro",
   "proUpgradeSheetDesc": "You need to upgrade to Pro to use this tool.",
   "proCreditsSummaryTitle": "Remaining Credits",
-  "proCreditsBlastName": "Audience Invite (Blast)",
+  "proCreditsBlastName": "Mass Audience Notification",
   "proCreditsBoostName": "Promoted Listing",
   "proCreditsAiName": "AI Pricing Advisor",
   "proCreditsReactivationName": "Reactivation",
@@ -996,8 +996,8 @@
   "audienceLowBudget": "Low Budget (<250₺)",
   "proToolCompetitorRadarTitle": "Competitor Price Radar",
   "proToolCompetitorRadarDesc": "See where your price stands vs. competitors and how much revenue you're leaving behind.",
-  "proToolRetargetingTitle": "Reach Interested Buyers",
-  "proToolRetargetingDesc": "Send automatic reminders to people who viewed your listing but didn't buy.",
+  "proToolRetargetingTitle": "Notification Center",
+  "proToolRetargetingDesc": "Send push notifications to potential buyers for your listings and live streams, and analyze reports.",
   "proToolBestTimeTitle": "Best Stream Time",
   "proToolBestTimeDesc": "See the days and hours with the highest conversion rate based on your past streams.",
   "proToolConversionTitle": "Conversion Analysis",
@@ -1596,7 +1596,7 @@
   "faqAAIInsights": "An exclusive tool for PRO sellers that reports view counts, dwell time, and hesitation rates to optimize your sales strategy.",
   "faqQAIPrice": "How does AI Price Intel work?",
   "faqAAIPrice": "Our AI analyzes millions of data rows to suggest the optimum selling price based on your product's title and category.",
-  "faqQAILead": "What is the \"Hot Demand ([ICON_HOTDEMAND])\" (Lead Gen) feature?",
+  "faqQAILead": "What is the \"Mass Audience Notification ([ICON_HOTDEMAND])\" feature?",
   "faqAAILead": "A system that matches your listing with the most suitable potential buyers via AI and sends them a direct \"Suggested Listing\" notification.",
   "faqQAIRadar": "Competitor Analysis and Best Streaming Time",
   "faqAAIRadar": "Competitor Analysis compares your price and click rate with competitors. The Best Streaming Time module reports when your followers are most active.",
@@ -1607,7 +1607,7 @@
   "faqIconVerified": "Verified Account ([ICON_VERIFIED]): Shows the user has verified identity or phone.",
   "faqIconPro": "teqlif PRO ([ICON_PRO]): Indicates a PRO member promoted by the platform.",
   "faqIconTuci": "TUCi ([ICON_TUCI]): The virtual currency used for in-app spending.",
-  "faqIconBlast": "Blast ([ICON_BLAST]): Sends an instant push notification for your listing/stream.",
+  "faqIconBlast": "Mass Audience Notification ([ICON_BLAST]): Sends your listing/stream as an instant push notification to potential buyers.",
   "faqIconAutoBid": "Auto-Bid ([ICON_AUTOBID]): The system bids on your behalf up to your limit.",
   "faqIconSales": "Sales Insights: Shows your sales volume and profitability.",
   "faqIconListings": "Listing Analytics: View and favorite metrics of your listings.",
@@ -1616,7 +1616,7 @@
   "faqIconConversion": "Conversion Analysis: Bids and sales funnel per view.",
   "faqIconRadar": "Competitor Radar: Price and sales speed analysis of similar sellers.",
   "faqIconRetargeting": "Retargeting: Send reminders or discount messages directly to interested buyers.",
-  "proToolHotDemandTitle": "Hot Demand (Lead Gen)",
+  "proToolHotDemandTitle": "Mass Audience Notification",
   "proToolHotDemandDesc": "Reach out directly to potential buyers interested in your listing.",
   "proToolAiPriceTitle": "AI Price Analysis",
   "proToolAiPriceDesc": "Find out your products market value in seconds with AI.",
@@ -1625,7 +1625,7 @@
   "faqIconNameVerified": "Verified Account ([ICON_VERIFIED])",
   "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
   "faqIconNameTuci": "TUCi ([ICON_TUCI])",
-  "faqIconNameBlast": "Blast ([ICON_BLAST])",
+  "faqIconNameBlast": "Mass Audience Notification ([ICON_BLAST])",
   "faqIconNameAutoBid": "Auto-Bid ([ICON_AUTOBID])",
   "faqIconNameSales": "Sales Insights",
   "faqIconNameListings": "Listing Analytics",
@@ -1633,5 +1633,23 @@
   "faqIconNameTime": "Best Stream Time",
   "faqIconNameConversion": "Conversion Analysis",
   "faqIconNameRadar": "Competitor Radar",
-  "faqIconNameRetargeting": "Retargeting"
+  "faqIconNameRetargeting": "Retargeting",
+  "listingBlastEstimateLoading": "Estimating audience...",
+  "listingBlastDialogTitle": "Mass Audience Notification",
+  "listingBlastDialogBody": "Found {count} potential buyers who might be interested in your listing. Would you like to send them an instant notification?",
+  "@listingBlastDialogBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "listingBlastCost": "Cost: {cost} TUCi",
+  "@listingBlastCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  }
 }

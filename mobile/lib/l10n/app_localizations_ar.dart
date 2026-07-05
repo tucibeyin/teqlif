@@ -3107,4 +3107,20 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get faqIconNameRetargeting => 'إعادة الاستهداف';
+
+  @override
+  String get listingBlastEstimateLoading => 'Hedef kitle hesaplanıyor...';
+
+  @override
+  String get listingBlastDialogTitle => 'Toplu Kitle Bildirimi';
+
+  @override
+  String listingBlastDialogBody(int count) {
+    return 'İlanınızla ilgilenebilecek potansiyel $count kişi bulundu. Bu kişilere anında bildirim göndermek ister misiniz?';
+  }
+
+  @override
+  String listingBlastCost(int cost) {
+    return 'Maliyet: $cost TUCi';
+  }
 }
