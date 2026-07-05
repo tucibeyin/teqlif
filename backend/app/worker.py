@@ -295,6 +295,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                     "interaction_type": str(data["interaction_type"])[:30],
                     "duration_seconds": float(data["duration_seconds"]) if data.get("duration_seconds") is not None else None,
                     "price_point": float(data["price_point"]) if data.get("price_point") is not None else None,
+                    "metadata": json.dumps(data["metadata"]) if data.get("metadata") else "",
                     "created_at": now,
                 })
             except Exception:
@@ -316,13 +317,14 @@ async def flush_interactions_to_db(ctx: dict) -> None:
             ch = await get_clickhouse_client()
             ch_data = [
                 [
-                    r["user_id"],                    # Nullable(UInt32)
-                    r["item_id"],                    # UInt32
-                    r["item_type"],                  # LowCardinality(String)
-                    r["interaction_type"],           # event_type
-                    r["price_point"],                 # Nullable(Float64) — ClickHouse'a ilet
-                    r["duration_seconds"],           # Nullable(Float64)
-                    r["created_at"],                 # DateTime
+                    r["user_id"],          # Nullable(UInt32)
+                    r["item_id"],          # UInt32
+                    r["item_type"],        # LowCardinality(String)
+                    r["interaction_type"], # event_type
+                    r["price_point"],      # Nullable(Float64)
+                    r["duration_seconds"], # Nullable(Float64)
+                    r["metadata"],         # String (JSON)
+                    r["created_at"],       # DateTime
                 ]
                 for r in rows
             ]
@@ -332,7 +334,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                 column_names=[
                     "user_id", "item_id", "item_type",
                     "event_type", "price_point",
-                    "duration_seconds", "timestamp",
+                    "duration_seconds", "metadata", "timestamp",
                 ],
             )
             logger.info(

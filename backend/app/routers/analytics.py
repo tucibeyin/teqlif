@@ -288,7 +288,7 @@ async def get_seller_report(
                 SELECT
                     countDistinct(user_id)                          AS unique_viewers,
                     avgIf(price_point, price_point > 0)             AS avg_budget,
-                    countIf(event_type = 'bid_hesitation')          AS hesitation_count
+                    countDistinctIf(user_id, event_type = 'bid_hesitation') AS hesitation_count
                 FROM user_events
                 WHERE item_id IN ({ids_str})
                   AND item_type = 'listing'
@@ -915,7 +915,7 @@ async def pro_insights(
                     SELECT
                         countIf(event_type = 'view')              AS views,
                         countIf(event_type = 'dwell')             AS dwells,
-                        countIf(event_type = 'bid_hesitation')    AS hesitations
+                        countDistinctIf(user_id, event_type = 'bid_hesitation') AS hesitations
                     FROM user_events
                     WHERE item_type = 'listing'
                       AND item_id IN ({ids_str})
@@ -960,7 +960,7 @@ async def pro_insights(
                 ch_r2 = await ch.query(f"""
                     SELECT item_id,
                            countIf(event_type = 'view') AS views,
-                           countIf(event_type = 'bid_hesitation') AS hes
+                           countDistinctIf(user_id, event_type = 'bid_hesitation') AS hes
                     FROM user_events
                     WHERE item_type = 'listing' AND item_id IN ({ids_str})
                       AND timestamp >= now() - INTERVAL 30 DAY

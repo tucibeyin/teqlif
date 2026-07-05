@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS user_events
     event_type       LowCardinality(String),
     price_point      Nullable(Float64),
     duration_seconds Nullable(Float64),
+    metadata         String DEFAULT '',
     timestamp        DateTime DEFAULT now()
 )
 ENGINE = MergeTree()
@@ -56,6 +57,10 @@ PARTITION BY toYYYYMM(timestamp)
 ORDER BY (timestamp, item_id)
 SETTINGS index_granularity = 8192
 """
+
+_ALTER_USER_EVENTS = [
+    "ALTER TABLE user_events ADD COLUMN IF NOT EXISTS metadata String DEFAULT ''",
+]
 
 _CREATE_FEED_ANALYTICS_TABLE = """
 CREATE TABLE IF NOT EXISTS feed_analytics
@@ -141,6 +146,8 @@ async def init_clickhouse() -> None:
             send_receive_timeout=30,
         )
         await _client.command(_CREATE_USER_EVENTS_TABLE)
+        for stmt in _ALTER_USER_EVENTS:
+            await _client.command(stmt)
         await _client.command(_CREATE_FEED_ANALYTICS_TABLE)
         for stmt in _ALTER_FEED_ANALYTICS:
             await _client.command(stmt)

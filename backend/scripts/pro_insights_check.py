@@ -94,7 +94,7 @@ async def main():
                 ch_r = await ch.query(f"""
                     SELECT countIf(event_type='view') AS views,
                            countIf(event_type='dwell') AS dwells,
-                           countIf(event_type='bid_hesitation') AS hesitations
+                           countDistinctIf(user_id, event_type='bid_hesitation') AS hesitations
                     FROM user_events
                     WHERE item_type='listing' AND item_id IN ({ids_str})
                       AND timestamp >= now() - INTERVAL 30 DAY
@@ -131,7 +131,7 @@ async def main():
                 ch_r2 = await ch.query(f"""
                     SELECT item_id,
                            countIf(event_type='view') AS views,
-                           countIf(event_type='bid_hesitation') AS hes
+                           countDistinctIf(user_id, event_type='bid_hesitation') AS hes
                     FROM user_events
                     WHERE item_type='listing' AND item_id IN ({ids_str2})
                       AND timestamp >= now() - INTERVAL 30 DAY

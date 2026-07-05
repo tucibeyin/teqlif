@@ -152,13 +152,25 @@ async def test_clickhouse():
     sep("5. metadata / peak_progress ClickHouse'da var mı?")
     r3 = await ch.query("DESCRIBE TABLE user_events")
     col_names = [row[0] for row in r3.result_rows]
-    has_metadata = "metadata" in col_names or "peak_progress" in col_names
+    has_metadata = "metadata" in col_names
     check("ClickHouse user_events tablosunda metadata kolonu VAR", has_metadata,
           f"kolonlar={col_names}")
-    if not has_metadata:
-        print(f"  {INFO} peak_progress worker'da Redis'ten okunuyor ama"
-              " user_events'e yazılmıyor → veri sessizce kayboluyor.")
-        print(f"  {INFO} Hangi ilan için yüksek niyet (>%80 swipe) var bilinemiyor.")
+
+    if has_metadata:
+        # peak_progress içeren bir event insert et ve geri oku
+        peak_row = [[9999, TEST_ITEM_ID, "listing", "bid_hesitation", None, None,
+                     '{"peak_progress": 0.87}', now]]
+        await ch.insert("user_events", peak_row,
+                        column_names=["user_id","item_id","item_type","event_type",
+                                      "price_point","duration_seconds","metadata","timestamp"])
+        await asyncio.sleep(1)
+        r_meta = await ch.query(f"""
+            SELECT metadata FROM user_events
+            WHERE item_id = {TEST_ITEM_ID} AND metadata != ''
+            LIMIT 1
+        """)
+        saved_meta = r_meta.result_rows[0][0] if r_meta.result_rows else ""
+        check("peak_progress metadata okunuyor", "0.87" in saved_meta, f"metadata='{saved_meta}'")
 
     # ── Cleanup ───────────────────────────────────────────────────────────────
     sep("Cleanup")
