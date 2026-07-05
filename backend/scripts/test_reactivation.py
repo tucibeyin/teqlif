@@ -126,10 +126,14 @@ async def set_premium(user_id: int, is_premium: bool):
     )
 
 
+async def _redis():
+    import redis.asyncio as aioredis
+    return aioredis.from_url("redis://localhost:6379")
+
+
 async def clear_reactivation_credits(user_id: int):
     """Redis'ten reactivation_credits anahtarlarını sil."""
-    import redis.asyncio as aioredis
-    r = aioredis.from_url("redis://localhost:6379")
+    r = await _redis()
     keys = await r.keys(f"reactivation_credits:{user_id}:*")
     if keys:
         await r.delete(*keys)
@@ -137,18 +141,46 @@ async def clear_reactivation_credits(user_id: int):
     info(f"Redis reaktivasyon kredileri temizlendi ({len(keys)} anahtar)")
 
 
+async def set_reactivation_used(user_id: int, count: int, premium_since_date):
+    """Redis'e anniversary-based key ile kredi sayısı yaz (servisle aynı mantık)."""
+    import calendar
+    from datetime import date
+    today      = date.today()
+    day        = premium_since_date.day
+    last_this  = calendar.monthrange(today.year, today.month)[1]
+    ann_this   = date(today.year, today.month, min(day, last_this))
+    if today >= ann_this:
+        period = ann_this
+    else:
+        prev_m = today.month - 1 if today.month > 1 else 12
+        prev_y = today.year if today.month > 1 else today.year - 1
+        period = date(prev_y, prev_m, min(day, calendar.monthrange(prev_y, prev_m)[1]))
+
+    key = f"reactivation_credits:{user_id}:{period.isoformat()}"
+    r   = await _redis()
+    if count == 0:
+        await r.delete(key)
+    else:
+        await r.set(key, count, ex=3600 * 24 * 35)
+    await r.aclose()
+    info(f"Redis key={key} → {count}")
+
+
 async def insert_fake_impressions(listing_id: int, n: int = 3):
-    """Test için sahte listing_impressions satırları ekle."""
-    for i in range(n):
+    """Test için gerçek user_id'lerle listing_impressions satırları ekle."""
+    rows = await db_fetchall("SELECT id FROM users ORDER BY id LIMIT :n", {"n": n})
+    inserted = 0
+    for row in rows:
         await db_exec(
             """
             INSERT INTO listing_impressions (user_id, listing_id, seen_at)
             VALUES (:uid, :lid, now())
             ON CONFLICT DO NOTHING
             """,
-            {"uid": 9000 + i, "lid": listing_id},
+            {"uid": row["id"], "lid": listing_id},
         )
-    info(f"{n} sahte impression eklendi")
+        inserted += 1
+    info(f"{inserted} impression eklendi")
 
 
 async def toggle(client: httpx.AsyncClient, token: str, listing_id: int) -> dict:
@@ -238,34 +270,28 @@ async def test_2_pro_paid(client, token, listing_id, user_id):
 
     await set_premium(user_id, True)
     await set_tuci(user_id, 50)
+
+    # premium_since'i DB'den çek → anniversary key'i doğru hesapla
+    row = await db_fetchone("SELECT premium_since FROM users WHERE id = :id", {"id": user_id})
+    premium_since = row["premium_since"]
+    info(f"premium_since = {premium_since}")
+
     await clear_reactivation_credits(user_id)
-    # 5 krediyi tüket (Redis'e 5 yaz)
-    import redis.asyncio as aioredis
-    r = aioredis.from_url("redis://localhost:6379")
-    from datetime import date, timedelta
-    today = date.today()
-    key = f"reactivation_credits:{user_id}:{today.replace(day=1).isoformat()}"
-    # anniversary-based key — basit ay başı kullan
-    from calendar import monthrange
-    keys = await r.keys(f"reactivation_credits:{user_id}:*")
-    # Tüm muhtemel keyleri tüket
-    key_to_use = f"reactivation_credits:{user_id}:{today.isoformat()[:7]}-01"
-    await r.set(key_to_use, 5, ex=3600)
-    await r.aclose()
-    info(f"Redis'e 5 kredi yazıldı (key: {key_to_use})")
+    await set_reactivation_used(user_id, 5, premium_since)  # 5 kredi → tükenmiş
 
     await ensure_listing_passive(client, token, listing_id)
 
     credits = await reactivation_credits_api(client, token)
     info(f"Kredi durumu: {credits}")
-    assert credits["free_remaining"] == 0, f"free_remaining=0 beklendi"
-    assert credits["cost"] == 10, f"cost=10 beklendi"
+    assert credits["free_remaining"] == 0, \
+        f"free_remaining=0 beklendi, {credits['free_remaining']} geldi"
+    assert credits["cost"] == 10, f"cost=10 beklendi, {credits['cost']} geldi"
     assert credits["can_afford"] is True, "50 TUCi ile afford edebilmeli"
     ok("Kredi tükendi, bakiye yeterli")
 
     balance_before = (await db_fetchone("SELECT tuci_balance FROM users WHERE id = :id", {"id": user_id}))["tuci_balance"]
-    r2 = await toggle(client, token, listing_id)
-    assert r2["status"] == 200, f"Toggle başarısız: {r2}"
+    r = await toggle(client, token, listing_id)
+    assert r["status"] == 200, f"Toggle başarısız: {r}"
     ok("Toggle başarılı")
 
     balance_after = (await db_fetchone("SELECT tuci_balance FROM users WHERE id = :id", {"id": user_id}))["tuci_balance"]
@@ -312,9 +338,12 @@ async def test_4_insufficient_balance(client, token, listing_id, user_id):
     ok("API doğru: can_afford=False")
 
     r = await toggle(client, token, listing_id)
-    assert r["status"] == 402, f"402 beklendi, {r['status']} geldi: {r}"
-    assert r["body"].get("detail", {}).get("code") == "insufficient_balance"
-    ok(f"402 döndü, code=insufficient_balance ✔")
+    assert r["status"] == 402, f"402 beklendi, {r['status']} geldi: {r['body']}"
+    detail = r["body"].get("detail", r["body"])
+    code   = detail.get("code") if isinstance(detail, dict) else str(detail)
+    assert code == "insufficient_balance", \
+        f"detail.code='insufficient_balance' beklendi, geldi: {r['body']}"
+    ok("402 döndü, code=insufficient_balance ✔")
 
     # Bakiye değişmedi mi?
     balance_after = (await db_fetchone("SELECT tuci_balance FROM users WHERE id = :id", {"id": user_id}))["tuci_balance"]
