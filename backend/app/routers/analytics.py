@@ -589,7 +589,7 @@ async def price_estimate(
     """)
     result = await db.execute(candidates_q, {
         "emb": emb_str, "excl": body.exclude_listing_id,
-        "cat": body_category,
+        "cat": body.category.strip(),
     })
     rows = result.fetchall()
 
