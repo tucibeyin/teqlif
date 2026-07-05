@@ -10,6 +10,7 @@ import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/stream_service.dart';
 import '../services/ws_service.dart';
+import '../services/analytics_service.dart';
 import 'home_screen.dart';
 import 'listing_detail_screen.dart';
 import 'profile_screen.dart';
