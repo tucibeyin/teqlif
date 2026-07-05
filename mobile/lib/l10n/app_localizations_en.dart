@@ -1561,6 +1561,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proStatusDesc => 'All analytics tools are active';
 
   @override
+  String proRenewalDate(String date) {
+    return 'Renews: $date';
+  }
+
+  @override
   String get proUnlockTitle => 'Unlock Pro Tools';
 
   @override

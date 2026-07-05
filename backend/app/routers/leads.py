@@ -203,6 +203,10 @@ async def blast_credits(
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
     cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     used  = await _get_blast_used(current_user.id, current_user.premium_since)
+    renewal_date: str | None = None
+    if current_user.premium_since:
+        next_period = _next_billing_period_start(current_user.premium_since)
+        renewal_date = next_period.isoformat()
     return {
         "used":          used,
         "limit":         limit,
@@ -210,6 +214,7 @@ async def blast_credits(
         "is_premium":    current_user.is_premium,
         "per_blast_cap": cap,
         "tuci_balance":  current_user.tuci_balance,
+        "renewal_date":  renewal_date,
     }
 
 

@@ -656,6 +656,8 @@
   "proBenefit4": "ما يبحث عنه الناس — اسد الفجوة وبِع",
   "proStatusTitle": "👑 مستخدم Pro",
   "proStatusDesc": "جميع أدوات التحليل نشطة",
+  "proRenewalDate": "التجديد: {date}",
+  "@proRenewalDate": { "placeholders": { "date": { "type": "String" } } },
   "proUnlockTitle": "فتح أدوات Pro",
   "proUnlockDesc": "بِع بالبيانات، لا بالتخمين",
   "proUnlockBtn": "الترقية إلى Pro",

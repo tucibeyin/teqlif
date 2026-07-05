@@ -1547,6 +1547,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proStatusDesc => 'جميع أدوات التحليل نشطة';
 
   @override
+  String proRenewalDate(String date) {
+    return 'التجديد: $date';
+  }
+
+  @override
   String get proUnlockTitle => 'فتح أدوات Pro';
 
   @override

@@ -656,6 +656,8 @@
   "proBenefit4": "What people search for — fill the gap, sell",
   "proStatusTitle": "👑 Pro User",
   "proStatusDesc": "All analytics tools are active",
+  "proRenewalDate": "Renews: {date}",
+  "@proRenewalDate": { "placeholders": { "date": { "type": "String" } } },
   "proUnlockTitle": "Unlock Pro Tools",
   "proUnlockDesc": "Sell with data, not guesswork",
   "proUnlockBtn": "Go Pro",

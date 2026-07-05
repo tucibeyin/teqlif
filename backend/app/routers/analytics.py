@@ -372,30 +372,55 @@ async def get_seller_report(
 # ── Yapay Zeka Fiyatlama Danışmanı ───────────────────────────────────────────
 
 import calendar as _calendar
-from datetime import datetime as _datetime
+from datetime import datetime as _datetime, date as _date
 
-def _ai_redis_key(user_id: int) -> str:
+def _ai_billing_start(premium_since: _datetime) -> _date:
+    today = _date.today()
+    day   = premium_since.day
+    last_this = _calendar.monthrange(today.year, today.month)[1]
+    ann_this  = _date(today.year, today.month, min(day, last_this))
+    if today >= ann_this:
+        return ann_this
+    prev_m = today.month - 1 if today.month > 1 else 12
+    prev_y = today.year if today.month > 1 else today.year - 1
+    return _date(prev_y, prev_m, min(day, _calendar.monthrange(prev_y, prev_m)[1]))
+
+def _ai_next_billing(premium_since: _datetime) -> _date:
+    p   = _ai_billing_start(premium_since)
+    day = premium_since.day
+    nm  = p.month + 1 if p.month < 12 else 1
+    ny  = p.year if p.month < 12 else p.year + 1
+    return _date(ny, nm, min(day, _calendar.monthrange(ny, nm)[1]))
+
+def _ai_redis_key(user_id: int, premium_since: _datetime | None = None) -> str:
+    if premium_since:
+        period = _ai_billing_start(premium_since)
+        return f"ai_price_credits:{user_id}:{period.isoformat()}"
     month = _datetime.now().strftime("%Y-%m")
     return f"ai_price_credits:{user_id}:{month}"
 
-async def _get_ai_used(user_id: int) -> int:
+async def _get_ai_used(user_id: int, premium_since: _datetime | None = None) -> int:
     try:
         redis = await get_redis()
-        val = await redis.get(_ai_redis_key(user_id))
+        val = await redis.get(_ai_redis_key(user_id, premium_since))
         return int(val) if val else 0
     except Exception:
         return 0
 
-async def _increment_ai(user_id: int) -> None:
+async def _increment_ai(user_id: int, premium_since: _datetime | None = None) -> None:
     try:
         redis = await get_redis()
-        key = _ai_redis_key(user_id)
+        key   = _ai_redis_key(user_id, premium_since)
         count = await redis.incr(key)
         if count == 1:
             now = _datetime.now()
-            last_day = _calendar.monthrange(now.year, now.month)[1]
-            end_of_month = _datetime(now.year, now.month, last_day, 23, 59, 59)
-            ttl_secs = int((end_of_month - now).total_seconds()) + 1
+            if premium_since:
+                nxt      = _ai_next_billing(premium_since)
+                end_dt   = _datetime(nxt.year, nxt.month, nxt.day, 0, 0, 0)
+            else:
+                last_day = _calendar.monthrange(now.year, now.month)[1]
+                end_dt   = _datetime(now.year, now.month, last_day, 23, 59, 59)
+            ttl_secs = int((end_dt - now).total_seconds()) + 1
             await redis.expire(key, ttl_secs)
     except Exception:
         pass
@@ -405,14 +430,18 @@ async def _increment_ai(user_id: int) -> None:
 async def ai_price_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki AI fiyat danışmanı kredi durumunu döndürür."""
     if not current_user.is_premium:
-        return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False}
-    used = await _get_ai_used(current_user.id)
+        return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False, "renewal_date": None}
+    used = await _get_ai_used(current_user.id, current_user.premium_since)
     remaining = max(0, AI_PRICE_LIMIT_PRO - used)
+    renewal_date: str | None = None
+    if current_user.premium_since:
+        renewal_date = _ai_next_billing(current_user.premium_since).isoformat()
     return {
         "used": used,
         "limit": AI_PRICE_LIMIT_PRO,
         "remaining": remaining,
         "is_premium": True,
+        "renewal_date": renewal_date,
     }
 
 
@@ -452,7 +481,7 @@ async def price_estimate(
 
     # ── Limit / bakiye kontrolü ───────────────────────────────────────────────
     if current_user.is_premium:
-        ai_used = await _get_ai_used(current_user.id)
+        ai_used = await _get_ai_used(current_user.id, current_user.premium_since)
         if ai_used >= AI_PRICE_LIMIT_PRO and current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
             raise HTTPException(
                 status_code=402,
@@ -643,9 +672,9 @@ async def price_estimate(
     # ── TUCi düş + sayaç güncelle ─────────────────────────────────────────────
     tuci_spent = 0
     if current_user.is_premium:
-        ai_used = await _get_ai_used(current_user.id)
+        ai_used = await _get_ai_used(current_user.id, current_user.premium_since)
         if ai_used < AI_PRICE_LIMIT_PRO:
-            await _increment_ai(current_user.id)
+            await _increment_ai(current_user.id, current_user.premium_since)
         else:
             await db.execute(
                 sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),

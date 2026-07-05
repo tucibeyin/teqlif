@@ -85,7 +85,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           // ── Durum Kartı ────────────────────────────────────────────────────
-          if (isPremium) _ProStatusCard() else _UpgradeBanner(),
+          if (isPremium) _ProStatusCard(renewalDate: _credits?['renewal_date'] as String?) else _UpgradeBanner(),
           const SizedBox(height: 24),
 
           // ── Araçlar Başlığı ────────────────────────────────────────────────
@@ -266,6 +266,9 @@ class _ProHubScreenState extends State<ProHubScreen> {
 // ── Durum Kartları ─────────────────────────────────────────────────────────────
 
 class _ProStatusCard extends StatelessWidget {
+  final String? renewalDate;
+  const _ProStatusCard({this.renewalDate});
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -311,6 +314,19 @@ class _ProStatusCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.75),
                   ),
                 ),
+                if (renewalDate != null) ...[
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Icon(Icons.event_repeat_outlined, size: 11, color: Colors.white.withValues(alpha: 0.55)),
+                      const SizedBox(width: 4),
+                      Text(
+                        l.proRenewalDate(_fmtRenewal(renewalDate)),
+                        style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.55)),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -682,6 +698,7 @@ class _BlastCreditCard extends StatelessWidget {
                 : l.blastCreditUsed(used, remaining),
             style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
           ),
+          _RenewalRow(renewalDate: credits?['renewal_date'] as String?),
         ],
       ),
     );
@@ -803,6 +820,7 @@ class _AiCreditCard extends StatelessWidget {
                   : '$used sorgu kullanıldı, $remaining sorgu kaldı',
               style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
             ),
+            _RenewalRow(renewalDate: credits?['renewal_date'] as String?),
           ] else ...[
             const SizedBox(height: 8),
             Text(
@@ -922,8 +940,41 @@ class _BoostCreditCard extends StatelessWidget {
                 : l.boostCreditUsed(used, remaining),
             style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
           ),
+          _RenewalRow(renewalDate: credits?['renewal_date'] as String?),
         ],
       ),
     );
+  }
+}
+
+// ── Yenileme Tarihi Satırı ──────────────────────────────────────────────────
+class _RenewalRow extends StatelessWidget {
+  final String? renewalDate;
+  const _RenewalRow({this.renewalDate});
+
+  @override
+  Widget build(BuildContext context) {
+    final formatted = _fmtRenewal(renewalDate);
+    if (formatted.isEmpty) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(children: [
+        Icon(Icons.event_repeat_outlined, size: 10, color: AppColors.textSecondary(context)),
+        const SizedBox(width: 4),
+        Text(l.proRenewalDate(formatted), style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+      ]),
+    );
+  }
+}
+
+String _fmtRenewal(String? iso) {
+  if (iso == null) return '';
+  try {
+    final d = DateTime.parse(iso);
+    const m = ['', 'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+    return '${d.day} ${m[d.month]}';
+  } catch (_) {
+    return '';
   }
 }

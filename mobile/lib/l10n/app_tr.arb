@@ -657,6 +657,8 @@
   "proBenefit4": "İnsanlar ne arıyor — boşluğu doldur, sat",
   "proStatusTitle": "👑 Pro Kullanıcı",
   "proStatusDesc": "Tüm analitik araçlara erişiminiz aktif",
+  "proRenewalDate": "Yenileme: {date}",
+  "@proRenewalDate": { "placeholders": { "date": { "type": "String" } } },
   "proUnlockTitle": "Pro araçları kilidi aç",
   "proUnlockDesc": "Verilerle sat, değil tahminle",
   "proUnlockBtn": "Pro'ya Geç",

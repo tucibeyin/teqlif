@@ -1561,6 +1561,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get proStatusDesc => 'Tüm analitik araçlara erişiminiz aktif';
 
   @override
+  String proRenewalDate(String date) {
+    return 'Yenileme: $date';
+  }
+
+  @override
   String get proUnlockTitle => 'Pro araçları kilidi aç';
 
   @override

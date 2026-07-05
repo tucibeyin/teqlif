@@ -3040,6 +3040,12 @@ abstract class AppLocalizations {
   /// **'Tüm analitik araçlara erişiminiz aktif'**
   String get proStatusDesc;
 
+  /// No description provided for @proRenewalDate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yenileme: {date}'**
+  String proRenewalDate(String date);
+
   /// No description provided for @proUnlockTitle.
   ///
   /// In tr, this message translates to:
