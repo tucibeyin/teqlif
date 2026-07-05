@@ -1335,5 +1335,22 @@
   "forYouStreams": "بثوث مخصصة لك",
   "searchNoResults": "لا توجد نتائج",
   "proSearchCount": "{count} بحث",
-  "@proSearchCount": { "placeholders": { "count": { "type": "int" } } }
+  "@proSearchCount": { "placeholders": { "count": { "type": "int" } } },
+
+  "listingDeactivateTitle": "إيقاف الإعلان",
+  "listingDeactivateWarning": "سيتم حذف الترويج النشط.",
+  "listingDeactivateCostHint": "إعادة التفعيل ستكلف {cost} TUCi.",
+  "@listingDeactivateCostHint": { "placeholders": { "cost": { "type": "int" } } },
+  "listingDeactivateConfirm": "إيقاف",
+  "listingReactivateTitle": "إعادة تفعيل الإعلان",
+  "listingReactivateFreeCredit": "لديك {remaining} رصيد مجاني. سيُستخدم 1.",
+  "@listingReactivateFreeCredit": { "placeholders": { "remaining": { "type": "int" } } },
+  "listingReactivatePaidPro": "استُنفدت الأرصدة الشهرية. سيُخصم {cost} TUCi.",
+  "@listingReactivatePaidPro": { "placeholders": { "cost": { "type": "int" } } },
+  "listingReactivatePaidNormal": "سيُخصم {cost} TUCi. رصيدك: {balance} TUCi.",
+  "@listingReactivatePaidNormal": { "placeholders": { "cost": { "type": "int" }, "balance": { "type": "int" } } },
+  "listingReactivateProUpsell": "اشترك في PRO واحصل على 5 إعادة تفعيل مجانية شهرياً.",
+  "listingReactivateInsufficientBalance": "رصيد غير كافٍ. أضف TUCi للمتابعة.",
+  "listingReactivateConfirm": "تفعيل",
+  "proReactivationSection": "أرصدة إعادة تفعيل الإعلان"
 }

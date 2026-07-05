@@ -5097,6 +5097,78 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'{count} arama'**
   String proSearchCount(int count);
+
+  /// No description provided for @listingDeactivateTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanı Pasife Al'**
+  String get listingDeactivateTitle;
+
+  /// No description provided for @listingDeactivateWarning.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif promosyon silinecek.'**
+  String get listingDeactivateWarning;
+
+  /// No description provided for @listingDeactivateCostHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tekrar aktif etmek için {cost} TUCi gerekecek.'**
+  String listingDeactivateCostHint(int cost);
+
+  /// No description provided for @listingDeactivateConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pasife Al'**
+  String get listingDeactivateConfirm;
+
+  /// No description provided for @listingReactivateTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanı Tekrar Yayınla'**
+  String get listingReactivateTitle;
+
+  /// No description provided for @listingReactivateFreeCredit.
+  ///
+  /// In tr, this message translates to:
+  /// **'{remaining} ücretsiz hakkınız var. 1 hak kullanılacak.'**
+  String listingReactivateFreeCredit(int remaining);
+
+  /// No description provided for @listingReactivatePaidPro.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ayki hakkınız doldu. {cost} TUCi ödenecek.'**
+  String listingReactivatePaidPro(int cost);
+
+  /// No description provided for @listingReactivatePaidNormal.
+  ///
+  /// In tr, this message translates to:
+  /// **'{cost} TUCi ödenecek. Bakiyeniz: {balance} TUCi.'**
+  String listingReactivatePaidNormal(int cost, int balance);
+
+  /// No description provided for @listingReactivateProUpsell.
+  ///
+  /// In tr, this message translates to:
+  /// **'PRO\'ya geçerek ayda 5 ücretsiz hak kazanın.'**
+  String get listingReactivateProUpsell;
+
+  /// No description provided for @listingReactivateInsufficientBalance.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yetersiz bakiye. Devam etmek için TUCi yükleyin.'**
+  String get listingReactivateInsufficientBalance;
+
+  /// No description provided for @listingReactivateConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif Yap'**
+  String get listingReactivateConfirm;
+
+  /// No description provided for @proReactivationSection.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan Reaktivasyon Kredisi'**
+  String get proReactivationSection;
 }
 
 class _AppLocalizationsDelegate

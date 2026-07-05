@@ -445,6 +445,30 @@ async def ai_price_credits(current_user: User = Depends(get_current_user)):
     }
 
 
+@router.get("/reactivation-credits")
+async def reactivation_credits(current_user: User = Depends(get_current_user)):
+    """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
+    from app.services.listing_service import (
+        _get_reactivation_used,
+        _reactivation_next_billing,
+        _REACTIVATION_FREE_MONTHLY,
+    )
+    if not current_user.is_premium:
+        return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False, "renewal_date": None}
+    used      = await _get_reactivation_used(current_user.id, current_user.premium_since)
+    remaining = max(0, _REACTIVATION_FREE_MONTHLY - used)
+    renewal_date: str | None = None
+    if current_user.premium_since:
+        renewal_date = _reactivation_next_billing(current_user.premium_since).isoformat()
+    return {
+        "used": used,
+        "limit": _REACTIVATION_FREE_MONTHLY,
+        "remaining": remaining,
+        "is_premium": True,
+        "renewal_date": renewal_date,
+    }
+
+
 _PRICE_CAT_LABELS: dict[str, str] = {
     "elektronik": "Elektronik ve Teknoloji",
     "vasita": "Araç ve Taşıt",

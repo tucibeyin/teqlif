@@ -2758,4 +2758,50 @@ class AppLocalizationsTr extends AppLocalizations {
   String proSearchCount(int count) {
     return '$count arama';
   }
+
+  @override
+  String get listingDeactivateTitle => 'İlanı Pasife Al';
+
+  @override
+  String get listingDeactivateWarning => 'Aktif promosyon silinecek.';
+
+  @override
+  String listingDeactivateCostHint(int cost) {
+    return 'Tekrar aktif etmek için $cost TUCi gerekecek.';
+  }
+
+  @override
+  String get listingDeactivateConfirm => 'Pasife Al';
+
+  @override
+  String get listingReactivateTitle => 'İlanı Tekrar Yayınla';
+
+  @override
+  String listingReactivateFreeCredit(int remaining) {
+    return '$remaining ücretsiz hakkınız var. 1 hak kullanılacak.';
+  }
+
+  @override
+  String listingReactivatePaidPro(int cost) {
+    return 'Bu ayki hakkınız doldu. $cost TUCi ödenecek.';
+  }
+
+  @override
+  String listingReactivatePaidNormal(int cost, int balance) {
+    return '$cost TUCi ödenecek. Bakiyeniz: $balance TUCi.';
+  }
+
+  @override
+  String get listingReactivateProUpsell =>
+      'PRO\'ya geçerek ayda 5 ücretsiz hak kazanın.';
+
+  @override
+  String get listingReactivateInsufficientBalance =>
+      'Yetersiz bakiye. Devam etmek için TUCi yükleyin.';
+
+  @override
+  String get listingReactivateConfirm => 'Aktif Yap';
+
+  @override
+  String get proReactivationSection => 'İlan Reaktivasyon Kredisi';
 }

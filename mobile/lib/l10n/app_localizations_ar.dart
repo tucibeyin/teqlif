@@ -2736,4 +2736,50 @@ class AppLocalizationsAr extends AppLocalizations {
   String proSearchCount(int count) {
     return '$count بحث';
   }
+
+  @override
+  String get listingDeactivateTitle => 'إيقاف الإعلان';
+
+  @override
+  String get listingDeactivateWarning => 'سيتم حذف الترويج النشط.';
+
+  @override
+  String listingDeactivateCostHint(int cost) {
+    return 'إعادة التفعيل ستكلف $cost TUCi.';
+  }
+
+  @override
+  String get listingDeactivateConfirm => 'إيقاف';
+
+  @override
+  String get listingReactivateTitle => 'إعادة تفعيل الإعلان';
+
+  @override
+  String listingReactivateFreeCredit(int remaining) {
+    return 'لديك $remaining رصيد مجاني. سيُستخدم 1.';
+  }
+
+  @override
+  String listingReactivatePaidPro(int cost) {
+    return 'استُنفدت الأرصدة الشهرية. سيُخصم $cost TUCi.';
+  }
+
+  @override
+  String listingReactivatePaidNormal(int cost, int balance) {
+    return 'سيُخصم $cost TUCi. رصيدك: $balance TUCi.';
+  }
+
+  @override
+  String get listingReactivateProUpsell =>
+      'اشترك في PRO واحصل على 5 إعادة تفعيل مجانية شهرياً.';
+
+  @override
+  String get listingReactivateInsufficientBalance =>
+      'رصيد غير كافٍ. أضف TUCi للمتابعة.';
+
+  @override
+  String get listingReactivateConfirm => 'تفعيل';
+
+  @override
+  String get proReactivationSection => 'أرصدة إعادة تفعيل الإعلان';
 }

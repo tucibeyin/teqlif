@@ -19,7 +19,13 @@ from fastapi_cache.decorator import cache
 from app.database import get_db
 from app.models.user import User
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
-from app.services.listing_service import ListingService
+from app.services.listing_service import (
+    ListingService,
+    _get_reactivation_used,
+    _reactivation_next_billing,
+    _REACTIVATION_FREE_MONTHLY,
+    _REACTIVATION_COST_TUCI,
+)
 from app.services.like_service import LikeService
 from app.schemas.listing import ListingOfferCreate
 from app.core.task_queue import get_pool
@@ -93,6 +99,37 @@ async def create_listing(
     if pool:
         await pool.enqueue_job("generate_listing_embedding_task", result["id"])
     return result
+
+
+@router.get("/{listing_id}/reactivation-cost")
+async def reactivation_cost(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    """Pasif ilanı aktife almak için gereken maliyet bilgisini döner."""
+    if current_user.is_premium:
+        used      = await _get_reactivation_used(current_user.id, current_user.premium_since)
+        remaining = max(0, _REACTIVATION_FREE_MONTHLY - used)
+        renewal_date: str | None = None
+        if current_user.premium_since:
+            renewal_date = _reactivation_next_billing(current_user.premium_since).isoformat()
+    else:
+        remaining    = 0
+        renewal_date = None
+
+    is_free    = remaining > 0
+    cost       = 0 if is_free else _REACTIVATION_COST_TUCI
+    can_afford = is_free or current_user.tuci_balance >= _REACTIVATION_COST_TUCI
+
+    return {
+        "is_premium":    current_user.is_premium,
+        "free_remaining": remaining,
+        "free_limit":    _REACTIVATION_FREE_MONTHLY,
+        "cost":          cost,
+        "balance":       current_user.tuci_balance,
+        "can_afford":    can_afford,
+        "renewal_date":  renewal_date,
+    }
 
 
 @router.patch("/{listing_id}/toggle")

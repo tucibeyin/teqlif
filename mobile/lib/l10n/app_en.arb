@@ -1336,5 +1336,22 @@
   "forYouStreams": "Streams For You",
   "searchNoResults": "No results found",
   "proSearchCount": "{count} searches",
-  "@proSearchCount": { "placeholders": { "count": { "type": "int" } } }
+  "@proSearchCount": { "placeholders": { "count": { "type": "int" } } },
+
+  "listingDeactivateTitle": "Deactivate Listing",
+  "listingDeactivateWarning": "Active promotion will be removed.",
+  "listingDeactivateCostHint": "Reactivating will cost {cost} TUCi.",
+  "@listingDeactivateCostHint": { "placeholders": { "cost": { "type": "int" } } },
+  "listingDeactivateConfirm": "Deactivate",
+  "listingReactivateTitle": "Reactivate Listing",
+  "listingReactivateFreeCredit": "You have {remaining} free credits. 1 will be used.",
+  "@listingReactivateFreeCredit": { "placeholders": { "remaining": { "type": "int" } } },
+  "listingReactivatePaidPro": "Monthly credits exhausted. {cost} TUCi will be charged.",
+  "@listingReactivatePaidPro": { "placeholders": { "cost": { "type": "int" } } },
+  "listingReactivatePaidNormal": "{cost} TUCi will be charged. Balance: {balance} TUCi.",
+  "@listingReactivatePaidNormal": { "placeholders": { "cost": { "type": "int" }, "balance": { "type": "int" } } },
+  "listingReactivateProUpsell": "Go PRO to get 5 free reactivations per month.",
+  "listingReactivateInsufficientBalance": "Insufficient balance. Top up TUCi to continue.",
+  "listingReactivateConfirm": "Activate",
+  "proReactivationSection": "Listing Reactivation Credits"
 }

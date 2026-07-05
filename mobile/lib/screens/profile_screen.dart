@@ -15,6 +15,7 @@ import '../core/app_exception.dart';
 import '../core/logger_service.dart';
 import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
+import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/listing_service.dart';
@@ -2240,15 +2241,97 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
   }
 
   Future<void> _toggle(dynamic listing) async {
+    if (!mounted) return;
+    final l   = AppLocalizations.of(context)!;
+    final id  = listing['id'] as int;
+    final isActive = listing['is_active'] as bool? ?? true;
+
+    if (isActive) {
+      // Aktif → Pasif: uyarı modal göster
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text(l.listingDeactivateTitle),
+          content: Text('${l.listingDeactivateWarning}\n\n${l.listingDeactivateCostHint(10)}'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.listingDeactivateConfirm, style: const TextStyle(color: Color(0xFFDC2626))),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    } else {
+      // Pasif → Aktif: maliyet bilgisi çek, modal göster
+      final costData = await AnalyticsService.getReactivationCredits();
+      if (!mounted) return;
+
+      final isPremium    = costData?['is_premium']    as bool?  ?? false;
+      final remaining    = costData?['free_remaining'] as int?   ?? 0;
+      final cost         = costData?['cost']           as int?   ?? 10;
+      final balance      = costData?['balance']        as int?   ?? 0;
+      final canAfford    = costData?['can_afford']     as bool?  ?? false;
+
+      String subtitle;
+      if (isPremium && remaining > 0) {
+        subtitle = l.listingReactivateFreeCredit(remaining);
+      } else if (isPremium) {
+        subtitle = l.listingReactivatePaidPro(cost);
+      } else {
+        subtitle = l.listingReactivatePaidNormal(cost, balance);
+      }
+
+      if (!canAfford) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(l.listingReactivateTitle),
+            content: Text(l.listingReactivateInsufficientBalance),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: Text(l.btnDismiss)),
+            ],
+          ),
+        );
+        return;
+      }
+
+      String extraHint = '';
+      if (!isPremium) extraHint = '\n\n${l.listingReactivateProUpsell}';
+
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text(l.listingReactivateTitle),
+          content: Text(subtitle + extraHint),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.listingReactivateConfirm, style: const TextStyle(color: Color(0xFF6366F1))),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    }
+
     final token = await StorageService.getToken();
     if (token == null) return;
-    final id = listing['id'];
     try {
       final resp = await http.patch(
         Uri.parse('$kBaseUrl/listings/$id/toggle'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) await _load();
+      if (resp.statusCode == 200) {
+        await _load();
+      } else if (resp.statusCode == 402 && mounted) {
+        final l2 = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l2.listingReactivateInsufficientBalance)),
+        );
+      }
     } catch (e) {
       LoggerService.instance.warning('MyListingsScreen', 'İlan durumu değiştirilemedi: $e');
     }

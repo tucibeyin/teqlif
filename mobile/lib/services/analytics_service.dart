@@ -259,6 +259,19 @@ class AnalyticsService {
     return null;
   }
 
+  static Future<Map<String, dynamic>?> getReactivationCredits() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/reactivation-credits'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
   /// Feed istatistikleri → `GET /api/analytics/my-feed-stats?days=7|30`
   static Future<Map<String, dynamic>?> getFeedStats({int days = 7}) async {
     try {

@@ -2758,4 +2758,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String proSearchCount(int count) {
     return '$count searches';
   }
+
+  @override
+  String get listingDeactivateTitle => 'Deactivate Listing';
+
+  @override
+  String get listingDeactivateWarning => 'Active promotion will be removed.';
+
+  @override
+  String listingDeactivateCostHint(int cost) {
+    return 'Reactivating will cost $cost TUCi.';
+  }
+
+  @override
+  String get listingDeactivateConfirm => 'Deactivate';
+
+  @override
+  String get listingReactivateTitle => 'Reactivate Listing';
+
+  @override
+  String listingReactivateFreeCredit(int remaining) {
+    return 'You have $remaining free credits. 1 will be used.';
+  }
+
+  @override
+  String listingReactivatePaidPro(int cost) {
+    return 'Monthly credits exhausted. $cost TUCi will be charged.';
+  }
+
+  @override
+  String listingReactivatePaidNormal(int cost, int balance) {
+    return '$cost TUCi will be charged. Balance: $balance TUCi.';
+  }
+
+  @override
+  String get listingReactivateProUpsell =>
+      'Go PRO to get 5 free reactivations per month.';
+
+  @override
+  String get listingReactivateInsufficientBalance =>
+      'Insufficient balance. Top up TUCi to continue.';
+
+  @override
+  String get listingReactivateConfirm => 'Activate';
+
+  @override
+  String get proReactivationSection => 'Listing Reactivation Credits';
 }

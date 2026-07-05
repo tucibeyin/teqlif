@@ -25,6 +25,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
   Map<String, dynamic>? _credits;
   Map<String, dynamic>? _boostCredits;
   Map<String, dynamic>? _aiCredits;
+  Map<String, dynamic>? _reactivationCredits;
   bool _isPremium = false;
 
   @override
@@ -56,14 +57,16 @@ class _ProHubScreenState extends State<ProHubScreen> {
   }
 
   Future<void> _loadCredits() async {
-    final blastData = await AnalyticsService.getBlastCredits();
-    final boostData = await AnalyticsService.getBoostCredits();
-    final aiData    = await AnalyticsService.getAiPriceCredits();
+    final blastData        = await AnalyticsService.getBlastCredits();
+    final boostData        = await AnalyticsService.getBoostCredits();
+    final aiData           = await AnalyticsService.getAiPriceCredits();
+    final reactivationData = await AnalyticsService.getReactivationCredits();
     if (mounted) {
       setState(() {
-        _credits      = blastData;
-        _boostCredits = boostData;
-        _aiCredits    = aiData;
+        _credits             = blastData;
+        _boostCredits        = boostData;
+        _aiCredits           = aiData;
+        _reactivationCredits = reactivationData;
       });
     }
   }
@@ -228,6 +231,22 @@ class _ProHubScreenState extends State<ProHubScreen> {
             ),
           ),
           _AiCreditCard(credits: _aiCredits, isPremium: isPremium),
+
+          // ── Reaktivasyon Kredi Kartı ───────────────────────────────────
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 12),
+            child: Text(
+              l.proReactivationSection,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary(context),
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+          _ReactivationCreditCard(credits: _reactivationCredits, isPremium: isPremium),
 
           if (!isPremium) ...[
             const SizedBox(height: 28),
@@ -964,6 +983,119 @@ class _RenewalRow extends StatelessWidget {
         const SizedBox(width: 4),
         Text(l.proRenewalDate(formatted), style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
       ]),
+    );
+  }
+}
+
+class _ReactivationCreditCard extends StatelessWidget {
+  final Map<String, dynamic>? credits;
+  final bool isPremium;
+
+  const _ReactivationCreditCard({required this.credits, required this.isPremium});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final used      = credits?['used']      as int? ?? 0;
+    final limit     = credits?['limit']     as int? ?? (isPremium ? 5 : 0);
+    final remaining = credits?['remaining'] as int? ?? (isPremium ? 5 : 0);
+    final progress  = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
+
+    final Color barColor = remaining == 0
+        ? const Color(0xFFEF4444)
+        : remaining <= limit ~/ 4
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF22C55E);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.replay_outlined, color: Color(0xFF8B5CF6), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l.blastRemainingTitle,
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                    ),
+                    const SizedBox(height: 2),
+                    RichText(
+                      text: TextSpan(
+                        style: TextStyle(color: AppColors.textPrimary(context)),
+                        children: [
+                          TextSpan(
+                            text: '$remaining',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: barColor,
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' / $limit',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isPremium)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text('PRO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF8B5CF6))),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: AppColors.border(context),
+              valueColor: AlwaysStoppedAnimation<Color>(barColor),
+            ),
+          ),
+          if (isPremium) ...[
+            const SizedBox(height: 8),
+            _RenewalRow(renewalDate: credits?['renewal_date'] as String?),
+          ] else ...[
+            const SizedBox(height: 8),
+            Text(
+              l.listingReactivateProUpsell,
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -12,17 +12,19 @@ Hata Yönetimi:
     İş kuralları      → BadRequest / NotFound / TooManyRequests / Conflict
 """
 import json
+import calendar
 from typing import Optional
+from datetime import datetime, timezone, date
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_
-from datetime import datetime, timezone
+from sqlalchemy import select, func, or_, delete, text as sql_text
 
 from app.models.listing import Listing
 from app.models.listing_offer import ListingOffer
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
 from app.models.listing_impression import ListingImpression
+from app.models.tuci_transaction import TuciTransaction
 from app.services.like_service import LikeService
 from app.schemas.stream import VALID_CATEGORIES
 from app.core.exceptions import (
@@ -37,6 +39,68 @@ from app.core.action_guard import check_user_action_rate, acquire_action_lock, r
 from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
+
+# ── İlan Reaktivasyon Kredisi (PRO) ──────────────────────────────────────────
+_REACTIVATION_FREE_MONTHLY = 5   # PRO: ayda 5 ücretsiz reaktivasyon
+_REACTIVATION_COST_TUCI    = 10  # Hak bitince veya normal kullanıcı: 10 TUCi
+
+
+def _reactivation_billing_start(premium_since: datetime) -> date:
+    today = date.today()
+    day   = premium_since.day
+    last_this = calendar.monthrange(today.year, today.month)[1]
+    ann_this  = date(today.year, today.month, min(day, last_this))
+    if today >= ann_this:
+        return ann_this
+    prev_m = today.month - 1 if today.month > 1 else 12
+    prev_y = today.year if today.month > 1 else today.year - 1
+    return date(prev_y, prev_m, min(day, calendar.monthrange(prev_y, prev_m)[1]))
+
+
+def _reactivation_next_billing(premium_since: datetime) -> date:
+    p   = _reactivation_billing_start(premium_since)
+    day = premium_since.day
+    nm  = p.month + 1 if p.month < 12 else 1
+    ny  = p.year if p.month < 12 else p.year + 1
+    return date(ny, nm, min(day, calendar.monthrange(ny, nm)[1]))
+
+
+def _reactivation_redis_key(user_id: int, premium_since: datetime | None = None) -> str:
+    if premium_since:
+        period = _reactivation_billing_start(premium_since)
+        return f"reactivation_credits:{user_id}:{period.isoformat()}"
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    return f"reactivation_credits:{user_id}:{month}"
+
+
+async def _get_reactivation_used(user_id: int, premium_since: datetime | None = None) -> int:
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        val = await redis.get(_reactivation_redis_key(user_id, premium_since))
+        return int(val) if val else 0
+    except Exception:
+        return 0
+
+
+async def _increment_reactivation(user_id: int, premium_since: datetime | None = None) -> None:
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        key   = _reactivation_redis_key(user_id, premium_since)
+        count = await redis.incr(key)
+        if count == 1:
+            now = datetime.now(timezone.utc)
+            if premium_since:
+                nxt    = _reactivation_next_billing(premium_since)
+                end_dt = datetime(nxt.year, nxt.month, nxt.day, 0, 0, 0, tzinfo=timezone.utc)
+            else:
+                last_day = calendar.monthrange(now.year, now.month)[1]
+                end_dt   = now.replace(day=last_day, hour=23, minute=59, second=59)
+            ttl = int((end_dt - now).total_seconds()) + 1
+            await redis.expire(key, ttl)
+    except Exception:
+        pass
 
 
 # ── Yardımcı: model → dict dönüşümü ─────────────────────────────────────────
@@ -468,6 +532,7 @@ class ListingService:
 
     # ── Aktif/Pasif Geçiş ────────────────────────────────────────────────────
     async def toggle_listing(self, listing_id: int, current_user: User) -> dict:
+        from fastapi import HTTPException
         result = await self.db.execute(
             select(Listing).where(
                 Listing.id == listing_id,
@@ -480,15 +545,61 @@ class ListingService:
             raise NotFoundException("İlan bulunamadı")
 
         reactivating = not listing.is_active  # pasif → aktif geçişi mi?
-        listing.is_active = not listing.is_active
 
         if reactivating:
-            # created_at sıfırla → cron 30 günlük sayacı yeniden başlatır
+            # ── Reaktivasyon ücret kontrolü ─────────────────────────────────
+            if current_user.is_premium:
+                used = await _get_reactivation_used(current_user.id, current_user.premium_since)
+                is_free = used < _REACTIVATION_FREE_MONTHLY
+            else:
+                is_free = False
+
+            if not is_free:
+                if current_user.tuci_balance < _REACTIVATION_COST_TUCI:
+                    raise HTTPException(
+                        status_code=402,
+                        detail={
+                            "code": "insufficient_balance",
+                            "balance": current_user.tuci_balance,
+                            "cost": _REACTIVATION_COST_TUCI,
+                        },
+                    )
+
+            listing.is_active = True
             listing.created_at = datetime.now(timezone.utc)
-            listing.deactivated_at = None  # eski otomatik pasife alım damgasını temizle
+            listing.deactivated_at = None
+
+        else:
+            # ── Pasife alma: kampanya + izlenim temizliği (rozet korunur) ──
+            listing.is_active = False
 
         try:
+            if reactivating and not is_free:
+                # TUCi düş + işlem kaydet
+                await self.db.execute(
+                    sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                    {"cost": _REACTIVATION_COST_TUCI, "uid": current_user.id},
+                )
+                self.db.add(TuciTransaction(
+                    user_id=current_user.id,
+                    amount=-_REACTIVATION_COST_TUCI,
+                    transaction_type="spend_reactivation",
+                ))
+
+            if not reactivating:
+                # AdCampaign'leri komple sil
+                await self.db.execute(
+                    delete(AdCampaign).where(AdCampaign.listing_id == listing_id)
+                )
+
+            # İzlenimler temizle (hem aktifleştirme hem pasife alma sonrası fresh start)
+            await self.db.execute(
+                delete(ListingImpression).where(ListingImpression.listing_id == listing_id)
+            )
+
             await self.db.commit()
+        except HTTPException:
+            raise
         except Exception as exc:
             await self.db.rollback()
             logger.error(
@@ -497,6 +608,27 @@ class ListingService:
             )
             capture_exception(exc)
             raise DatabaseException("İlan güncellenemedi")
+
+        # Redis ALS vektörünü temizle
+        try:
+            from app.utils.listing_cleanup import cleanup_listing_redis
+            import asyncio as _asyncio_t
+            _asyncio_t.create_task(cleanup_listing_redis(listing_id))
+        except Exception:
+            pass
+
+        # AdCampaign Redis cache'ini güncelle (pasife almada kampanyalar silindi)
+        if not reactivating:
+            try:
+                from app.services.ad_service import load_active_campaigns_to_redis
+                import asyncio as _asyncio_t2
+                _asyncio_t2.create_task(load_active_campaigns_to_redis())
+            except Exception:
+                pass
+
+        # Ücretsiz reaktivasyon hakkı kullanıldıysa sayacı artır
+        if reactivating and is_free:
+            await _increment_reactivation(current_user.id, current_user.premium_since)
 
         return {"is_active": listing.is_active}
 

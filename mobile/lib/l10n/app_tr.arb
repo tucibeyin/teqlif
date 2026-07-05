@@ -1335,5 +1335,22 @@
   "forYouStreams": "Sana Özel Yayınlar",
   "searchNoResults": "Sonuç bulunamadı",
   "proSearchCount": "{count} arama",
-  "@proSearchCount": { "placeholders": { "count": { "type": "int" } } }
+  "@proSearchCount": { "placeholders": { "count": { "type": "int" } } },
+
+  "listingDeactivateTitle": "İlanı Pasife Al",
+  "listingDeactivateWarning": "Aktif promosyon silinecek.",
+  "listingDeactivateCostHint": "Tekrar aktif etmek için {cost} TUCi gerekecek.",
+  "@listingDeactivateCostHint": { "placeholders": { "cost": { "type": "int" } } },
+  "listingDeactivateConfirm": "Pasife Al",
+  "listingReactivateTitle": "İlanı Tekrar Yayınla",
+  "listingReactivateFreeCredit": "{remaining} ücretsiz hakkınız var. 1 hak kullanılacak.",
+  "@listingReactivateFreeCredit": { "placeholders": { "remaining": { "type": "int" } } },
+  "listingReactivatePaidPro": "Bu ayki hakkınız doldu. {cost} TUCi ödenecek.",
+  "@listingReactivatePaidPro": { "placeholders": { "cost": { "type": "int" } } },
+  "listingReactivatePaidNormal": "{cost} TUCi ödenecek. Bakiyeniz: {balance} TUCi.",
+  "@listingReactivatePaidNormal": { "placeholders": { "cost": { "type": "int" }, "balance": { "type": "int" } } },
+  "listingReactivateProUpsell": "PRO'ya geçerek ayda 5 ücretsiz hak kazanın.",
+  "listingReactivateInsufficientBalance": "Yetersiz bakiye. Devam etmek için TUCi yükleyin.",
+  "listingReactivateConfirm": "Aktif Yap",
+  "proReactivationSection": "İlan Reaktivasyon Kredisi"
 }
