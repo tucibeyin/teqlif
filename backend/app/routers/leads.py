@@ -391,6 +391,7 @@ async def send_blast(
     await db.commit()
 
     return {
+        "campaign_id": campaign.id,
         "sent": sent,
         "spent": tuci_cost,
         "message": f"{sent} kişiye bildirim gönderildi.",
