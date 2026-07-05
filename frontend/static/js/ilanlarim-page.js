@@ -77,27 +77,30 @@
             // Pasif → Aktif: maliyet bilgisi çek
             let costData = null;
             try { costData = await apiFetch(`/listings/${id}/reactivation-cost`); } catch (_) {}
-            const isPremium  = costData?.is_premium    ?? false;
-            const remaining  = costData?.free_remaining ?? 0;
-            const cost       = costData?.cost           ?? 10;
-            const balance    = costData?.balance        ?? 0;
-            const canAfford  = costData?.can_afford     ?? false;
+            const isPremium    = costData?.is_premium    ?? false;
+            const remaining    = costData?.free_remaining ?? 0;
+            const cost         = costData?.cost           ?? 10;
+            const balance      = costData?.balance        ?? 0;
+            const canAfford    = costData?.can_afford     ?? false;
+            const withinWindow = costData?.within_window  ?? false;
 
-            if (!canAfford) {
-                alert(`Yetersiz bakiye. Devam etmek için TUCi yükleyin.\nBakiyeniz: ${balance} TUCi`);
-                return;
-            }
+            if (!withinWindow) {
+                if (!canAfford) {
+                    alert(`Yetersiz bakiye. Devam etmek için TUCi yükleyin.\nBakiyeniz: ${balance} TUCi`);
+                    return;
+                }
 
-            let msg;
-            if (isPremium && remaining > 0) {
-                msg = `${remaining} ücretsiz hakkınız var. 1 hak kullanılacak.`;
-            } else if (isPremium) {
-                msg = `Bu ayki hakkınız doldu. ${cost} TUCi ödenecek.`;
-            } else {
-                msg = `${cost} TUCi ödenecek. Bakiyeniz: ${balance} TUCi.\nPRO'ya geçerek ayda 5 ücretsiz hak kazanın.`;
+                let msg;
+                if (isPremium && remaining > 0) {
+                    msg = `${remaining} ücretsiz hakkınız var. 1 hak kullanılacak.`;
+                } else if (isPremium) {
+                    msg = `Bu ayki hakkınız doldu. ${cost} TUCi ödenecek.`;
+                } else {
+                    msg = `${cost} TUCi ödenecek. Bakiyeniz: ${balance} TUCi.\nPRO'ya geçerek ayda 5 ücretsiz hak kazanın.`;
+                }
+                const ok = confirm(`İlanı Tekrar Yayınla\n\n${msg}`);
+                if (!ok) return;
             }
-            const ok = confirm(`İlanı Tekrar Yayınla\n\n${msg}`);
-            if (!ok) return;
         }
 
         try {

@@ -2265,7 +2265,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       if (confirm != true) return;
     } else {
       // Pasif → Aktif: maliyet bilgisi çek, modal göster
-      final costData = await AnalyticsService.getReactivationCredits();
+      final costData = await ListingService.getReactivationCost(id);
       if (!mounted) return;
 
       final isPremium    = costData?['is_premium']    as bool?  ?? false;
@@ -2273,48 +2273,51 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       final cost         = costData?['cost']           as int?   ?? 10;
       final balance      = costData?['balance']        as int?   ?? 0;
       final canAfford    = costData?['can_afford']     as bool?  ?? false;
+      final withinWindow = costData?['within_window']  as bool?  ?? false;
 
-      String subtitle;
-      if (isPremium && remaining > 0) {
-        subtitle = l.listingReactivateFreeCredit(remaining);
-      } else if (isPremium) {
-        subtitle = l.listingReactivatePaidPro(cost);
-      } else {
-        subtitle = l.listingReactivatePaidNormal(cost, balance);
-      }
+      if (!withinWindow) {
+        String subtitle;
+        if (isPremium && remaining > 0) {
+          subtitle = l.listingReactivateFreeCredit(remaining);
+        } else if (isPremium) {
+          subtitle = l.listingReactivatePaidPro(cost);
+        } else {
+          subtitle = l.listingReactivatePaidNormal(cost, balance);
+        }
 
-      if (!canAfford) {
-        await showDialog<void>(
+        if (!canAfford) {
+          await showDialog<void>(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: Text(l.listingReactivateTitle),
+              content: Text(l.listingReactivateInsufficientBalance),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: Text(l.btnDismiss)),
+              ],
+            ),
+          );
+          return;
+        }
+
+        String extraHint = '';
+        if (!isPremium) extraHint = '\n\n${l.listingReactivateProUpsell}';
+
+        final confirm = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
             title: Text(l.listingReactivateTitle),
-            content: Text(l.listingReactivateInsufficientBalance),
+            content: Text(subtitle + extraHint),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: Text(l.btnDismiss)),
+              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(l.listingReactivateConfirm, style: const TextStyle(color: Color(0xFF6366F1))),
+              ),
             ],
           ),
         );
-        return;
+        if (confirm != true) return;
       }
-
-      String extraHint = '';
-      if (!isPremium) extraHint = '\n\n${l.listingReactivateProUpsell}';
-
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: Text(l.listingReactivateTitle),
-          content: Text(subtitle + extraHint),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l.listingReactivateConfirm, style: const TextStyle(color: Color(0xFF6366F1))),
-            ),
-          ],
-        ),
-      );
-      if (confirm != true) return;
     }
 
     final token = await StorageService.getToken();

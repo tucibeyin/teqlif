@@ -47,6 +47,19 @@ class ListingService {
     );
   }
 
+  static Future<Map<String, dynamic>?> getReactivationCost(int listingId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/$listingId/reactivation-cost'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> getListingById(int listingId) async {
     try {
       final resp = await http.get(
