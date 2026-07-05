@@ -204,7 +204,6 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
 
     // Uzak track geldiğinde (yeni katılanlar veya bağlantı sonrası)
     _room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
-        console.log('[LiveKit] TrackSubscribed:', track.kind, 'participant:', participant.identity);
         if (track.kind === Track.Kind.Video) {
             if (_isHostParticipant(participant)) {
                 // Host'un video track'i → ana ekrana
@@ -238,14 +237,12 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
     // Track yayınlandığında ama henüz abone olunmadıysa (auto-subscribe devre dışıysa fallback)
     // Host dahil herkes için aktif — co-host publish ettiğinde host da alabilsin.
     _room.on(RoomEvent.TrackPublished, (pub, participant) => {
-        console.log('[LiveKit] TrackPublished:', pub.kind, 'isSubscribed:', pub.isSubscribed, 'participant:', participant.identity);
         if (!pub.isSubscribed) {
             pub.setSubscribed(true);
         }
     });
 
     _room.on(RoomEvent.ConnectionStateChanged, (state) => {
-        console.log('[LiveKit] ConnectionStateChanged:', state);
     });
 
     // Katılımcı odadan ayrıldığında — co-host ise PiP'i temizle
@@ -284,7 +281,6 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
     };
 
     await _room.connect(livekit_url, token, connectOpts);
-    console.log('[LiveKit] Bağlandı. RemoteParticipants:', _room.remoteParticipants.size);
 
     if (isHost) {
         if (!hostIdentity) {
@@ -328,11 +324,9 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
     } else {
         // Bağlantı sonrası mevcut yayınlanan track'leri kontrol et (race condition fix)
         for (const participant of _room.remoteParticipants.values()) {
-            console.log('[LiveKit] Mevcut katılımcı:', participant.identity, '| trackPublications:', participant.trackPublications.size);
             const isHost = _isHostParticipant(participant);
             if (isHost) _hostParticipantSid = participant.sid;
             for (const pub of participant.trackPublications.values()) {
-                console.log('[LiveKit] Track:', pub.kind, 'isSubscribed:', pub.isSubscribed, 'track:', !!pub.track);
                 if (pub.isSubscribed && pub.track) {
                     if (pub.track.kind === Track.Kind.Video) {
                         if (isHost && remoteVideoEl) {
