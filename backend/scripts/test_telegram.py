@@ -3,7 +3,10 @@ import sys
 import os
 
 # app modüllerine erişebilmek için backend dizinini sys.path'e ekleyelim
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(backend_dir)
+# .env dosyasının doğru okunabilmesi için çalışma dizinini değiştirelim
+os.chdir(backend_dir)
 
 from app.utils.telegram import send_telegram_message
 from app.config import settings
