@@ -15,7 +15,7 @@ import '../core/app_exception.dart';
 import '../core/logger_service.dart';
 import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
-import '../services/analytics_service.dart';
+
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/listing_service.dart';
@@ -272,7 +272,7 @@ class ProfileScreenState extends State<ProfileScreen> {
     final username = _user?['username'] ?? '';
     final email = _user?['email'] ?? '';
     final isVerified = _user?['is_verified'] == true;
-    final phoneVerified = _user?['phone_verified'] == true;
+
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
 
     return Scaffold(

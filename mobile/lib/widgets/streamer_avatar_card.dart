@@ -7,7 +7,7 @@ import '../config/api.dart'; // for imgUrl
 class StreamerAvatarCard extends StatelessWidget {
   final Map<String, dynamic> streamer;
   final VoidCallback? onTap;
-  const StreamerAvatarCard({Key? key, required this.streamer, this.onTap}) : super(key: key);
+  const StreamerAvatarCard({super.key, required this.streamer, this.onTap});
 
   @override
   Widget build(BuildContext context) {

@@ -112,7 +112,7 @@ class AnalyticsService {
           'estimated_cost': estimatedCost,
           'listing_id': ?listingId,
           'stream_id': ?streamId,
-          if (recipientCount != null) 'recipient_count': recipientCount,
+          'recipient_count': ?recipientCount,
         }),
       );
       if (resp.statusCode == 202) {
@@ -559,7 +559,7 @@ class AnalyticsService {
           'listing_id': listingId,
           'estimated_audience': estimatedAudience,
           'estimated_cost': estimatedCost,
-          if (recipientCount != null) 'recipient_count': recipientCount,
+          'recipient_count': ?recipientCount,
         }),
       );
       if (resp.statusCode == 200 || resp.statusCode == 202) {

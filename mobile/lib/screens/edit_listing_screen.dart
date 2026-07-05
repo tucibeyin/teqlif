@@ -594,8 +594,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
               'location': _selectedCity,
             'image_urls': imageUrls,
             if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
-            if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
-            if (_videoUploadUrl != null) 'video_url': _videoUploadUrl,
+            'thumbnail_url': ?thumbnailUrl,
+            'video_url': ?_videoUploadUrl,
           }),
         ),
       );

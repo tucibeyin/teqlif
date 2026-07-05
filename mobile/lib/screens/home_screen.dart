@@ -11,15 +11,14 @@ import '../config/theme.dart';
 import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 import '../services/city_service.dart';
-import '../services/feed_telemetry_service.dart';
+
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
 import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
-import 'live/swipe_live_screen.dart';
-import 'public_profile_screen.dart';
+
 import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {

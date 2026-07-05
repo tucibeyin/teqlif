@@ -1022,6 +1022,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                   MaterialPageRoute(builder: (_) => EditListingScreen(listing: listing)),
                 );
                 if (updated == true) {
+                  if (!context.mounted) return;
                   // Reload by pushing loader
                   Navigator.pushReplacement(
                     context,

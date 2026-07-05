@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
-import '../config/theme.dart';
+
 import '../config/api.dart';
 
 class SellerAvatarCard extends StatelessWidget {
   final Map<String, dynamic> seller;
   final VoidCallback onTap;
 
-  const SellerAvatarCard({Key? key, required this.seller, required this.onTap}) : super(key: key);
+  const SellerAvatarCard({super.key, required this.seller, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
