@@ -479,7 +479,14 @@ class ListingService:
         if not listing:
             raise NotFoundException("İlan bulunamadı")
 
+        reactivating = not listing.is_active  # pasif → aktif geçişi mi?
         listing.is_active = not listing.is_active
+
+        if reactivating:
+            # created_at sıfırla → cron 30 günlük sayacı yeniden başlatır
+            listing.created_at = datetime.now(timezone.utc)
+            listing.deactivated_at = None  # eski otomatik pasife alım damgasını temizle
+
         try:
             await self.db.commit()
         except Exception as exc:
