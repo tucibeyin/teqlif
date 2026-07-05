@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import calendar
 import logging
-from datetime import datetime
+from datetime import datetime, date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -35,36 +35,72 @@ _PER_BLAST_CAP_PRO      = 10     # tek blast'ta maks. alıcı (PRO)
 
 # ── Blast Kredi Yardımcıları (Redis) ─────────────────────────────────────────
 
-def _blast_redis_key(user_id: int) -> str:
-    month = datetime.now().strftime("%Y-%m")
-    return f"blast_credits:{user_id}:{month}"
+def _billing_period_start(premium_since: datetime) -> date:
+    """Kullanıcının abonelik dönümüne göre mevcut fatura dönemi başlangıcını döner."""
+    today = date.today()
+    day = premium_since.day
+
+    # Bu aydaki dönüm günü (ayın son günü aşılıyorsa kırp)
+    last_day_this = calendar.monthrange(today.year, today.month)[1]
+    this_anniversary = date(today.year, today.month, min(day, last_day_this))
+
+    if today >= this_anniversary:
+        return this_anniversary
+
+    # Geçen aydaki dönüm günü
+    prev_month = today.month - 1 if today.month > 1 else 12
+    prev_year  = today.year if today.month > 1 else today.year - 1
+    last_day_prev = calendar.monthrange(prev_year, prev_month)[1]
+    return date(prev_year, prev_month, min(day, last_day_prev))
 
 
-async def _get_blast_used(user_id: int) -> int:
+def _next_billing_period_start(premium_since: datetime) -> date:
+    """Bir sonraki fatura dönemi başlangıcını döner."""
+    period = _billing_period_start(premium_since)
+    day = premium_since.day
+    next_month = period.month + 1 if period.month < 12 else 1
+    next_year  = period.year if period.month < 12 else period.year + 1
+    last_day   = calendar.monthrange(next_year, next_month)[1]
+    return date(next_year, next_month, min(day, last_day))
+
+
+def _blast_redis_key(user_id: int, premium_since: datetime | None = None) -> str:
+    if premium_since:
+        period = _billing_period_start(premium_since)
+        return f"blast_credits:{user_id}:{period.isoformat()}"
+    # Fallback: takvim ayı (premium_since henüz set edilmemiş eski kullanıcılar)
+    return f"blast_credits:{user_id}:{datetime.now().strftime('%Y-%m')}"
+
+
+async def _get_blast_used(user_id: int, premium_since: datetime | None = None) -> int:
     try:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
-        val = await redis.get(_blast_redis_key(user_id))
+        val = await redis.get(_blast_redis_key(user_id, premium_since))
         return int(val) if val else 0
     except Exception:
         return 0
 
 
-async def _increment_blast(user_id: int, count: int = 1) -> None:
+async def _increment_blast(user_id: int, count: int = 1, premium_since: datetime | None = None) -> None:
     """Kullanılan ücretsiz alıcı sayısını Redis'e yazar (INCRBY)."""
     if count <= 0:
         return
     try:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
-        key = _blast_redis_key(user_id)
+        key = _blast_redis_key(user_id, premium_since)
         new_val = await redis.incrby(key, count)
         if new_val <= count:
-            # Anahtar bu ay ilk kez oluşturuldu — ayın sonuna TTL ayarla
+            # Anahtar bu dönemde ilk kez oluşturuldu — dönem sonuna TTL ayarla
             now = datetime.now()
-            last_day = calendar.monthrange(now.year, now.month)[1]
-            end_of_month = datetime(now.year, now.month, last_day, 23, 59, 59)
-            ttl_secs = int((end_of_month - now).total_seconds()) + 1
+            if premium_since:
+                next_period = _next_billing_period_start(premium_since)
+                end_dt = datetime(next_period.year, next_period.month, next_period.day, 0, 0, 0)
+            else:
+                last_day = calendar.monthrange(now.year, now.month)[1]
+                end_dt = datetime(now.year, now.month, last_day, 23, 59, 59)
+            ttl_secs = int((end_dt - now).total_seconds()) + 1
             await redis.expire(key, ttl_secs)
     except Exception:
         pass
@@ -138,7 +174,7 @@ async def audience_size(
 
     cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
-    used  = await _get_blast_used(current_user.id)
+    used  = await _get_blast_used(current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
     actual_cap      = min(reachable, cap)
@@ -166,7 +202,7 @@ async def blast_credits(
     """Kullanıcının bu ayki blast kredi durumunu döndürür."""
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
     cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
-    used  = await _get_blast_used(current_user.id)
+    used  = await _get_blast_used(current_user.id, current_user.premium_since)
     return {
         "used":          used,
         "limit":         limit,
@@ -205,7 +241,7 @@ async def send_blast(
     """
     cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
-    used  = await _get_blast_used(current_user.id)
+    used  = await _get_blast_used(current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
     # Kullanıcının seçtiği ya da maksimum alıcı sayısı
@@ -333,7 +369,7 @@ async def send_blast(
         await db.commit()
 
     if free_used > 0:
-        await _increment_blast(current_user.id, count=free_used)
+        await _increment_blast(current_user.id, count=free_used, premium_since=current_user.premium_since)
 
     return {
         "sent": sent,
@@ -403,7 +439,7 @@ async def retargeting_audience(
             reachable_with_token = 0
 
         cap   = _PER_BLAST_CAP_PRO
-        used  = await _get_blast_used(current_user.id)
+        used  = await _get_blast_used(current_user.id, current_user.premium_since)
         credits_remaining = max(0, _BLAST_LIMIT_PRO - used)
         actual_cap   = min(reachable_with_token, cap)
         free_used    = min(credits_remaining, actual_cap)
@@ -469,7 +505,7 @@ async def send_retargeting(
 
     # Karma model: kredi ücretsiz, kalan × 10 TUCi
     cap   = _PER_BLAST_CAP_PRO
-    used  = await _get_blast_used(current_user.id)
+    used  = await _get_blast_used(current_user.id, current_user.premium_since)
     credits_remaining = max(0, _BLAST_LIMIT_PRO - used)
 
     desired      = body.recipient_count if body.recipient_count else cap
@@ -556,7 +592,7 @@ async def send_retargeting(
         await db.commit()
 
     if free_used > 0:
-        await _increment_blast(current_user.id, count=free_used)
+        await _increment_blast(current_user.id, count=free_used, premium_since=current_user.premium_since)
 
     logger.info("[Retargeting] Gönderildi | seller=%d | sent=%d | free=%d | paid=%d | cost=%d TUCi",
                 current_user.id, sent, free_used, paid_count, tuci_cost)
