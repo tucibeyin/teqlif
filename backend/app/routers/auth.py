@@ -107,6 +107,15 @@ async def _create_user_and_send_code(
 @limiter.limit("5/minute")
 async def register(request: Request, data: UserRegister, db: AsyncSession = Depends(get_db)):
     await _create_user_and_send_code(request, data, db)
+    
+    # Telegram Bildirimi (Asenkron)
+    try:
+        phone_info = data.phone if data.phone else 'Yok'
+        msg = f"⏳ <b>Yeni Bir Kullanıcı Kayıt Oldu!</b> (Henüz Onaysız)\n\n👤 <b>İsim:</b> {data.full_name}\n📧 <b>E-posta:</b> {data.email}\n📱 <b>Telefon:</b> {phone_info}"
+        await request.app.state.arq_pool.enqueue_job("send_telegram_notification_task", msg)
+    except Exception as exc:
+        logger.error("[Register] Telegram bildirimi kuyruğa eklenemedi: %s", exc)
+        
     return {"message": "Kayıt başarılı. E-posta adresinize doğrulama kodu gönderdik."}
 
 
@@ -149,6 +158,13 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
             await send_welcome_email(user.email, user.full_name, has_phone=bool(user.phone), lang=lang)
         except Exception as exc2:
             logger.error("[WELCOME] Gönderilemedi | %s", exc2)
+
+    # Telegram Bildirimi (Asenkron)
+    try:
+        msg = f"✅ <b>Kullanıcı E-postasını Onayladı!</b>\n\n👤 <b>İsim:</b> {user.full_name}\n📧 <b>E-posta:</b> {user.email}"
+        await request.app.state.arq_pool.enqueue_job("send_telegram_notification_task", msg)
+    except Exception as exc:
+        logger.error("[Verify] Telegram bildirimi kuyruğa eklenemedi: %s", exc)
 
     token = create_access_token(user.id)
     refresh = create_refresh_token()

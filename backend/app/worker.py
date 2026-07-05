@@ -52,6 +52,30 @@ async def send_verification_email_task(
         raise  # ARQ görevi "failed" olarak işaretlenir
 
 
+async def send_telegram_notification_task(
+    ctx: dict,
+    message: str,
+) -> None:
+    """
+    Telegram üzerinden sistem bildirimleri gönderir.
+    ARQ üzerinden asenkron çalıştığı için API'yi bloklamaz.
+    """
+    try:
+        from app.utils.telegram import send_telegram_message
+        success = await send_telegram_message(message)
+        if success:
+            logger.info("[Worker] Telegram bildirimi gönderildi.")
+        else:
+            logger.warning("[Worker] Telegram bildirimi gönderilemedi (success=False).")
+    except Exception as exc:
+        logger.error(
+            "[Worker] Telegram bildirimi gönderilirken beklenmeyen hata: %s",
+            str(exc),
+            exc_info=True,
+        )
+        capture_exception(exc)
+        raise
+
 async def send_welcome_email_task(
     ctx: dict,
     email: str,
@@ -1721,6 +1745,7 @@ class WorkerSettings:
         nsfw_backfill_task,
         rebuild_faiss_index_task,
         cleanup_stale_streams_task,
+        send_telegram_notification_task,
     ]
 
     cron_jobs = [
