@@ -468,7 +468,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorListingsLoad => 'Failed to load listings';
 
   @override
-  String get errorPhotoUpload => 'Fotoğraf yüklenemedi. Tekrar deneyin.';
+  String get errorPhotoUpload => 'Failed to upload photo. Please try again.';
 
   @override
   String get errorCaptchaFailed =>
@@ -1122,7 +1122,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorInsufficientBalance =>
-      'Bakiyeniz yetersiz. Lütfen bakiye yükleyin.';
+      'Insufficient balance. Please top up your balance.';
 
   @override
   String get auctionStartBtn => '▶ Start';
@@ -2361,7 +2361,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String adReportInsightGreat(int clicks) {
-    return 'Great! $clicks out of every 100 people who saw your listing clicked on it — that\'s an excellent engagement rate. Your title and photo are attracting buyers.';
+    return 'Great! About $clicks out of every 100 people who saw your listing clicked on it — that\'s an excellent engagement rate. Your title and photo are attracting buyers.';
   }
 
   @override
@@ -2404,10 +2404,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adMetricBestHour => 'Best Hour';
 
   @override
-  String get adMetricCategoryAvgCtr => 'Category Avg CTR';
+  String get adMetricCategoryAvgCtr => 'Similar Listings\' Interest';
 
   @override
-  String get adMetricBurnRate => 'Budget Burn Rate';
+  String get adMetricBurnRate => 'Time Remaining';
 
   @override
   String get proBoostSection => 'Promoted Listing Credits';

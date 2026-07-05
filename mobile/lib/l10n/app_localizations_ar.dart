@@ -1112,8 +1112,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get auctionBuyNowRejectInline => 'رفض';
 
   @override
-  String get errorInsufficientBalance =>
-      'Bakiyeniz yetersiz. Lütfen bakiye yükleyin.';
+  String get errorInsufficientBalance => 'رصيدك غير كافٍ. يرجى شحن رصيدك.';
 
   @override
   String get auctionStartBtn => '▶ ابدأ';
@@ -2340,7 +2339,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String adReportInsightGreat(int clicks) {
-    return 'رائع! نقر $clicks من كل 100 شخص رأوا إعلانك — هذه نسبة تفاعل ممتازة. العنوان والصورة يجذبان المشترين.';
+    return 'رائع! نقر ما يقارب $clicks من كل 100 شخص رأوا إعلانك — هذه نسبة تفاعل ممتازة. العنوان والصورة يجذبان المشترين.';
   }
 
   @override
@@ -2383,10 +2382,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adMetricBestHour => 'أفضل ساعة';
 
   @override
-  String get adMetricCategoryAvgCtr => 'متوسط CTR للفئة';
+  String get adMetricCategoryAvgCtr => 'اهتمام الإعلانات المشابهة';
 
   @override
-  String get adMetricBurnRate => 'معدل نفاد الميزانية';
+  String get adMetricBurnRate => 'الوقت المتبقي';
 
   @override
   String get proBoostSection => 'رصيد الإعلان المميز';
