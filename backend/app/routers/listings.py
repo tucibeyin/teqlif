@@ -55,6 +55,7 @@ async def get_listings(
 
 
 @router.get("/my")
+@router.get("/my-listings")
 async def get_my_listings(
     active: Optional[bool] = None,
     current_user: User = Depends(get_current_user),
