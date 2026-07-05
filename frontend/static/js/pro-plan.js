@@ -40,17 +40,22 @@
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+36 Duyuru Kredisi';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+36 ekstra kredi + 2× alıcı kapasitesi · max ₺3.600/yıl TUCi tasarrufu';
 
+            /* tablo: reactivation */
+            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 60 ücretsiz / yıl';
+            document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺600/yıl';
+            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '60 reaktivasyon × 10 TUCi<br>= 600 TL tasarruf';
+
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺4.200+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺4.800+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺4.200+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + AI danışman (₺1.200) + Toplu Duyuru (~₺1.200) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺4.800+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + AI danışman (₺1.200) + Toplu Duyuru (~₺1.200) + Reaktivasyon (₺600) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺4.200+';
+            if (totalVal) totalVal.textContent = '₺4.800+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'yıllık avantaj değeri';
             var roiPill = document.getElementById('roiPill');
@@ -77,17 +82,22 @@
             document.querySelector('tr[data-key="blast"] .val-amount').textContent = '+3 Duyuru Kredisi';
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+3 ekstra kredi + 2× alıcı kapasitesi · max ₺300/ay TUCi tasarrufu';
 
+            /* tablo: reactivation */
+            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 5 ücretsiz / ay';
+            document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺50/ay';
+            document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '5 reaktivasyon × 10 TUCi<br>= 50 TL tasarruf';
+
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺350+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
+                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺400+ değer</span><br><span style="color:var(--text-dim);font-size:.63rem;">1 TUCi = 1 TL</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺350+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + AI danışman (₺100) + Toplu Duyuru (~₺100) haklarını kullandığında her ay kazancın maliyeti karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺400+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + AI danışman (₺100) + Toplu Duyuru (~₺100) + Reaktivasyon (₺50) haklarını kullandığında her ay kazancın maliyeti karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺350+';
+            if (totalVal) totalVal.textContent = '₺400+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'aylık avantaj değeri';
             var roiPill = document.getElementById('roiPill');
