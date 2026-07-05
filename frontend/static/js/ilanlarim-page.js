@@ -69,21 +69,24 @@
     }
 
     async function toggleListing(id, isActive) {
-        if (isActive) {
-            // Aktif → Pasif: uyarı
-            const ok = confirm('Aktif promosyon silinecek.\nTekrar aktif etmek için 10 TUCi gerekecek.\n\nPassife almak istiyor musunuz?');
-            if (!ok) return;
-        } else {
-            // Pasif → Aktif: maliyet bilgisi çek
-            let costData = null;
-            try { costData = await apiFetch(`/listings/${id}/reactivation-cost`); } catch (_) {}
-            const isPremium    = costData?.is_premium    ?? false;
-            const remaining    = costData?.free_remaining ?? 0;
-            const cost         = costData?.cost           ?? 10;
-            const balance      = costData?.balance        ?? 0;
-            const canAfford    = costData?.can_afford     ?? false;
-            const withinWindow = costData?.within_window  ?? false;
+        let costData = null;
+        try { costData = await apiFetch(`/listings/${id}/reactivation-cost`); } catch (_) {}
+        
+        const withinWindow = costData?.within_window  ?? false;
+        const isPremium    = costData?.is_premium    ?? false;
+        const remaining    = costData?.free_remaining ?? 0;
+        const cost         = costData?.cost           ?? 10;
+        const balance      = costData?.balance        ?? 0;
+        const canAfford    = costData?.can_afford     ?? false;
 
+        if (isActive) {
+            // Aktif → Pasif
+            if (!withinWindow && !(isPremium && remaining > 0)) {
+                const ok = confirm(`Aktif promosyon silinecek.\nTekrar aktif etmek için ${cost} TUCi gerekecek.\n\nPassife almak istiyor musunuz?`);
+                if (!ok) return;
+            }
+        } else {
+            // Pasif → Aktif
             if (!withinWindow) {
                 if (!canAfford) {
                     alert(`Yetersiz bakiye. Devam etmek için TUCi yükleyin.\nBakiyeniz: ${balance} TUCi`);

@@ -2246,35 +2246,37 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     final id  = listing['id'] as int;
     final isActive = listing['is_active'] as bool? ?? true;
 
+    final costData = await ListingService.getReactivationCost(id);
+    if (!mounted) return;
+
+    final isPremium    = costData?['is_premium']    as bool?  ?? false;
+    final remaining    = costData?['free_remaining'] as int?   ?? 0;
+    final cost         = costData?['cost']           as int?   ?? 10;
+    final balance      = costData?['balance']        as int?   ?? 0;
+    final canAfford    = costData?['can_afford']     as bool?  ?? false;
+    final withinWindow = costData?['within_window']  as bool?  ?? false;
+
     if (isActive) {
-      // Aktif → Pasif: uyarı modal göster
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: Text(l.listingDeactivateTitle),
-          content: Text('${l.listingDeactivateWarning}\n\n${l.listingDeactivateCostHint(10)}'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l.listingDeactivateConfirm, style: const TextStyle(color: Color(0xFFDC2626))),
-            ),
-          ],
-        ),
-      );
-      if (confirm != true) return;
+      // Aktif → Pasif
+      if (!withinWindow && !(isPremium && remaining > 0)) {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(l.listingDeactivateTitle),
+            content: Text('${l.listingDeactivateWarning}\n\n${l.listingDeactivateCostHint(cost)}'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(l.listingDeactivateConfirm, style: const TextStyle(color: Color(0xFFDC2626))),
+              ),
+            ],
+          ),
+        );
+        if (confirm != true) return;
+      }
     } else {
-      // Pasif → Aktif: maliyet bilgisi çek, modal göster
-      final costData = await ListingService.getReactivationCost(id);
-      if (!mounted) return;
-
-      final isPremium    = costData?['is_premium']    as bool?  ?? false;
-      final remaining    = costData?['free_remaining'] as int?   ?? 0;
-      final cost         = costData?['cost']           as int?   ?? 10;
-      final balance      = costData?['balance']        as int?   ?? 0;
-      final canAfford    = costData?['can_afford']     as bool?  ?? false;
-      final withinWindow = costData?['within_window']  as bool?  ?? false;
-
+      // Pasif → Aktif
       if (!withinWindow) {
         String subtitle;
         if (isPremium && remaining > 0) {
