@@ -1907,7 +1907,7 @@ async def get_pro_metrics(
 
     # 2. Arama görünürlüğü — kullanıcının kategorisinde kaç arama yapıldı (proxy)
     vis_result = await db.execute(sql_text("""
-        SELECT l.category, COUNT(ae.id) AS search_count
+        SELECT l.category, COUNT(DISTINCT ae.id) AS search_count
         FROM listings l
         INNER JOIN analytics_events ae
             ON ae.event_type = 'search'
@@ -1924,7 +1924,7 @@ async def get_pro_metrics(
     hour_result = await db.execute(sql_text("""
         SELECT
             EXTRACT(HOUR FROM l.created_at) AS hour,
-            COUNT(ae.id) AS clicks,
+            COUNT(DISTINCT ae.id) AS clicks,
             COUNT(DISTINCT imp.user_id) AS impressions
         FROM listings l
         LEFT JOIN analytics_events ae
@@ -1936,7 +1936,7 @@ async def get_pro_metrics(
           AND l.created_at > NOW() - INTERVAL '90 days'
         GROUP BY hour
         HAVING COUNT(DISTINCT imp.user_id) >= 10
-        ORDER BY (COUNT(ae.id)::float / NULLIF(COUNT(DISTINCT imp.user_id), 0)) DESC
+        ORDER BY (COUNT(DISTINCT ae.id)::float / NULLIF(COUNT(DISTINCT imp.user_id), 0)) DESC
         LIMIT 1
     """), {"uid": uid})
     hour_row = hour_result.fetchone()
