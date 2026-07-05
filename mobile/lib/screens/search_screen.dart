@@ -13,6 +13,8 @@ import '../services/feed_telemetry_service.dart';
 import '../services/storage_service.dart';
 import '../services/stream_service.dart';
 import '../widgets/shimmer_loading.dart';
+import '../widgets/streamer_avatar_card.dart';
+import '../widgets/seller_avatar_card.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
@@ -43,9 +45,10 @@ class SearchScreenState extends State<SearchScreen> {
   // Explore data
   // Sana Özel (for-you, personalized)
   List<dynamic> _exploreListings = [];
-  // En Son İlanlar (recent, /api/listings)
   List<dynamic> _recentListings = [];
   List<StreamOut> _exploreStreams = [];
+  List<Map<String, dynamic>> _suggestedSellers = [];
+  List<Map<String, dynamic>> _suggestedStreamers = [];
   bool _exploreLoading = true;
   bool _isLoggedIn = false;
   int _forYouPage = 0;
@@ -54,7 +57,6 @@ class SearchScreenState extends State<SearchScreen> {
   final ScrollController _scrollCtrl = ScrollController();
   final ScrollController _forYouScrollCtrl = ScrollController();
   static const double _cardWidth = 130.0;
-
   @override
   void initState() {
     super.initState();
@@ -200,6 +202,14 @@ class SearchScreenState extends State<SearchScreen> {
     // ── Kişisel feed (giriş: 1 saat cache | misafir: 5 dk) ────────────────
     _loadExploreForYou(loggedIn: loggedIn, bypassCache: bypassCache, onData: maybeStopLoading);
 
+    // ── Önerilen Yayıncılar ve Satıcılar (Sadece giriş yapılmışsa) ───
+    if (loggedIn) {
+      _loadSuggestedSellers();
+      StreamService.getSuggestedStreamers().then((streamers) {
+        if (mounted) setState(() => _suggestedStreamers = streamers);
+      });
+    }
+
     // ── En son ilanlar (5 dk cache, yalnızca giriş yapılmışsa ayrı çek) ───
     if (loggedIn) {
       _loadExploreRecent(bypassCache: bypassCache, onData: maybeStopLoading);
@@ -217,6 +227,21 @@ class SearchScreenState extends State<SearchScreen> {
       },
       onError: (_) => onData(),
     );
+  }
+
+  Future<void> _loadSuggestedSellers() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/users/suggested-sellers'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 5));
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() => _suggestedSellers = data.cast<Map<String, dynamic>>());
+      }
+    } catch (_) {}
   }
 
   void _loadExploreForYou({
@@ -683,20 +708,93 @@ class SearchScreenState extends State<SearchScreen> {
               ),
             ),
           ],
-          // ── Sana Özel / Son İlanlar ──────────────────────────────
+          // ── Önerilen Yayıncılar ────────────────────────────────
+          if (_suggestedStreamers.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.live_tv_rounded, color: Color(0xFFEF4444), size: 15),
+                    const SizedBox(width: 6),
+                    Text(
+                      l.suggestedStreamers,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 106,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _suggestedStreamers.length,
+                  itemBuilder: (ctx, i) => StreamerAvatarCard(
+                    streamer: _suggestedStreamers[i],
+                    onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                      builder: (_) => PublicProfileScreen(
+                        username: _suggestedStreamers[i]['username'] as String? ?? '',
+                        userId: _suggestedStreamers[i]['id'] as int?,
+                      ),
+                    )),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          
+          // ── Önerilen Satıcılar ─────────────────────────────────
+          if (_suggestedSellers.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.store_rounded, color: kPrimary, size: 15),
+                    const SizedBox(width: 6),
+                    Text(l.suggestedSellers,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 96,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _suggestedSellers.length,
+                  itemBuilder: (ctx, i) => SellerAvatarCard(
+                    seller: _suggestedSellers[i],
+                    onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                      builder: (_) => PublicProfileScreen(
+                        username: _suggestedSellers[i]['username'] as String? ?? '',
+                        userId: _suggestedSellers[i]['id'] as int?,
+                      ),
+                    )),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          // ── Sana Özel / Sizin İçin Seçilen İlanlar ──────────────────────────────
           if (_exploreListings.isNotEmpty || (_exploreLoading && _isLoggedIn)) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Row(
                   children: [
-                    if (_isLoggedIn)
-                      const Icon(Icons.auto_awesome, color: kPrimary, size: 16),
-                    if (_isLoggedIn) const SizedBox(width: 6),
+                    const Icon(Icons.auto_awesome, color: kPrimary, size: 15),
+                    const SizedBox(width: 6),
                     Text(
-                      _isLoggedIn ? 'Sana Özel' : l.homeRecentListings,
+                      _isLoggedIn ? l.forYouLabel : l.listingsSelectedForYou,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15),
+                          fontWeight: FontWeight.w700, fontSize: 13),
                     ),
                     const Spacer(),
                     if (_forYouLoadingMore)
@@ -775,7 +873,7 @@ class SearchScreenState extends State<SearchScreen> {
             ),
           ],
 
-          // ── En Son İlanlar (login, /api/listings) ─────────────────
+          // ── Sizin İçin Seçilen İlanlar (login, /api/listings) ─────────────────
           if (_isLoggedIn && _recentListings.isNotEmpty) ...[
             const SliverToBoxAdapter(child: Divider(height: 1, indent: 16, endIndent: 16)),
             SliverToBoxAdapter(
@@ -783,10 +881,10 @@ class SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.access_time_outlined, size: 16, color: Colors.grey),
+                    const Icon(Icons.grid_view_rounded, size: 15, color: Colors.grey),
                     const SizedBox(width: 6),
-                    Text(l.homeRecentListings,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                    Text(l.listingsSelectedForYou,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                   ],
                 ),
               ),

@@ -2832,4 +2832,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get proReactivationSection => 'Listing Reactivation Credits';
+
+  @override
+  String get suggestedStreamers => 'Suggested Broadcasters';
+
+  @override
+  String get listingsSelectedForYou => 'Listings Selected For You';
 }

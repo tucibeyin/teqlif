@@ -2832,4 +2832,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get proReactivationSection => 'İlan Reaktivasyon Kredisi';
+
+  @override
+  String get suggestedStreamers => 'Önerilen Yayıncılar';
+
+  @override
+  String get listingsSelectedForYou => 'Sizin İçin Seçilen İlanlar';
 }

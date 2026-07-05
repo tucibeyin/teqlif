@@ -2810,4 +2810,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get proReactivationSection => 'أرصدة إعادة تفعيل الإعلان';
+
+  @override
+  String get suggestedStreamers => 'المذيعون المقترحون';
+
+  @override
+  String get listingsSelectedForYou => 'القوائم المختارة لك';
 }

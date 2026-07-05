@@ -1352,5 +1352,7 @@
   "listingReactivateProUpsell": "اشترك في PRO واحصل على 5 إعادة تفعيل مجانية شهرياً.",
   "listingReactivateInsufficientBalance": "رصيد غير كافٍ. أضف TUCi للمتابعة.",
   "listingReactivateConfirm": "تفعيل",
-  "proReactivationSection": "أرصدة إعادة تفعيل الإعلان"
+  "proReactivationSection": "أرصدة إعادة تفعيل الإعلان",
+  "suggestedStreamers": "المذيعون المقترحون",
+  "listingsSelectedForYou": "القوائم المختارة لك"
 }

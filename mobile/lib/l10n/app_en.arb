@@ -1353,5 +1353,7 @@
   "listingReactivateProUpsell": "Go PRO to get 5 free reactivations per month.",
   "listingReactivateInsufficientBalance": "Insufficient balance. Top up TUCi to continue.",
   "listingReactivateConfirm": "Activate",
-  "proReactivationSection": "Listing Reactivation Credits"
+  "proReactivationSection": "Listing Reactivation Credits",
+  "suggestedStreamers": "Suggested Broadcasters",
+  "listingsSelectedForYou": "Listings Selected For You"
 }

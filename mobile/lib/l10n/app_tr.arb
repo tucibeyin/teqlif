@@ -1352,5 +1352,7 @@
   "listingReactivateProUpsell": "PRO'ya geçerek ayda 5 ücretsiz hak kazanın.",
   "listingReactivateInsufficientBalance": "Yetersiz bakiye. Devam etmek için TUCi yükleyin.",
   "listingReactivateConfirm": "Aktif Yap",
-  "proReactivationSection": "İlan Reaktivasyon Kredisi"
+  "proReactivationSection": "İlan Reaktivasyon Kredisi",
+  "suggestedStreamers": "Önerilen Yayıncılar",
+  "listingsSelectedForYou": "Sizin İçin Seçilen İlanlar"
 }

@@ -31,22 +31,12 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> {
   void refresh({bool bypassCache = true}) => _load(bypassCache: bypassCache);
-  // Kişiselleştirilmiş (Sana Özel) — yatay scroll, giriş yapanlar için
-  List<dynamic> _forYouListings = [];
-  bool _forYouLoading = false;
-  bool _forYouLoadingMore = false;
-  bool _forYouExhausted = false;
-  int _forYouPage = 0;
-
   // En Son Eklenenler — dikey grid, sonsuz scroll
   List<dynamic> _recentListings = [];
   bool _recentLoading = true;
   bool _recentLoadingMore = false;
   bool _recentExhausted = false;
   int _recentPage = 0;
-
-  // Önerilen satıcılar — yatay avatar şeridi, giriş yapanlar için
-  List<Map<String, dynamic>> _suggestedSellers = [];
 
   // Filtreli sonuçlar (filtre aktifken _recentListings'in yerine geçer)
   bool _isLoggedIn = false;
@@ -55,8 +45,6 @@ class HomeScreenState extends State<HomeScreen> {
   String? _selectedCity;
   List<String> _cities = [];
   final ScrollController _scrollCtrl = ScrollController();
-  final ScrollController _forYouScrollCtrl = ScrollController();
-  static const double _cardWidth = 130.0;
 
   bool _showOnboardingBanner = false;
 
@@ -81,27 +69,17 @@ class HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _cities = c);
     });
     _scrollCtrl.addListener(_onScroll);
-    _forYouScrollCtrl.addListener(_onForYouScroll);
   }
 
   @override
   void dispose() {
     _scrollCtrl.dispose();
-    _forYouScrollCtrl.dispose();
     super.dispose();
   }
 
   void _onScroll() {
     if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 300) {
       _loadMoreRecent();
-    }
-  }
-
-  void _onForYouScroll() {
-    if (!_forYouScrollCtrl.hasClients) return;
-    final pos = _forYouScrollCtrl.position;
-    if (pos.pixels >= pos.maxScrollExtent - _cardWidth * 3) {
-      _loadMoreForYou();
     }
   }
 
@@ -135,84 +113,7 @@ class HomeScreenState extends State<HomeScreen> {
       await _loadFiltered(token);
     } else {
       // Paralel yükleme: ForYou beklenmeden arka planda başlar
-      if (loggedIn) {
-        unawaited(_loadForYou(bypassCache: bypassCache));
-        unawaited(_loadSuggestedSellers());
-      }
       await _loadRecent(token, bypassCache: bypassCache);
-    }
-  }
-
-  // ── Sana Özel (yatay, ClickHouse kişiselleştirilmiş) ─────────────────────
-
-
-
-  Future<void> _loadSuggestedSellers() async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/users/suggested-sellers'),
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 5));
-      if (resp.statusCode == 200 && mounted) {
-        final data = jsonDecode(resp.body) as List;
-        setState(() => _suggestedSellers = data.cast<Map<String, dynamic>>());
-      }
-    } catch (_) {}
-  }
-
-  /// SWR stream'den dinler: 1. event cache'ten anlık, 2. event API'den taze.
-  Future<void> _loadForYou({bool bypassCache = false}) async {
-    if (!mounted) return;
-    setState(() { _forYouLoading = true; _forYouExhausted = false; _forYouPage = 0; });
-    try {
-      await for (final items in ApiService.get<List<Map<String, dynamic>>>(
-        url: '$kBaseUrl/feed/for-you?page=0',
-        cacheKey: 'home_for_you',
-        cacheTtl: const Duration(minutes: 10),
-        bypassCache: bypassCache,
-        fromJson: (raw) => (raw as List).cast<Map<String, dynamic>>(),
-      )) {
-        if (!mounted) return;
-        setState(() {
-          _forYouListings = items;
-          _forYouExhausted = items.length < 20;
-          _forYouPage = 1;
-          _forYouLoading = false;
-        });
-      }
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _forYouLoading = false);
-    }
-  }
-
-  /// Load-more: pagination, cache kullanmaz — her zaman ağdan çeker.
-  Future<void> _loadMoreForYou() async {
-    if (_forYouLoadingMore || _forYouExhausted || !_isLoggedIn) return;
-    setState(() => _forYouLoadingMore = true);
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/feed/for-you?page=$_forYouPage'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final data = (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
-        setState(() {
-          _forYouListings = [..._forYouListings, ...data];
-          _forYouPage++;
-          if (data.length < 20) _forYouExhausted = true;
-        });
-      } else {
-        setState(() => _forYouExhausted = true);
-      }
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _forYouLoadingMore = false);
     }
   }
 
@@ -282,7 +183,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadFiltered(String? token) async {
     if (!mounted) return;
-    setState(() { _recentLoading = true; _recentListings = []; _forYouListings = []; _forYouExhausted = false; });
+    setState(() { _recentLoading = true; _recentListings = []; });
     try {
       final params = <String, String>{};
       if (_selectedCategory != null) params['category'] = _selectedCategory!;
@@ -746,133 +647,6 @@ class HomeScreenState extends State<HomeScreen> {
             // ══════════════════════════════════════════════════════════
             if (!_hasFilter) ...[
 
-              // ── Sana Özel ─────────────────────────────────────────
-              if (_isLoggedIn) ...[
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.auto_awesome, color: kPrimary, size: 16),
-                        const SizedBox(width: 6),
-                        Text(l.forYouLabel,
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                        const Spacer(),
-                        if (_forYouLoading && _forYouListings.isNotEmpty)
-                          const SizedBox(
-                            width: 14, height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: kPrimary),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: _forYouLoading && _forYouListings.isEmpty
-                      ? SizedBox(
-                          height: 190,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: 4,
-                            itemBuilder: (_, _) => Container(
-                              width: 120,
-                              margin: const EdgeInsets.only(right: 10),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                color: Colors.grey.withValues(alpha: 0.15),
-                              ),
-                              child: const ShimmerBox(),
-                            ),
-                          ),
-                        )
-                      : _forYouListings.isEmpty
-                          ? const SizedBox.shrink()
-                          : SizedBox(
-                              height: 190,
-                              child: ListView.builder(
-                                controller: _forYouScrollCtrl,
-                                scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                itemCount: _forYouListings.length + (_forYouLoadingMore ? 1 : 0),
-                                itemBuilder: (ctx, i) {
-                                  if (i == _forYouListings.length) {
-                                    return const SizedBox(
-                                      width: 60,
-                                      child: Center(child: SizedBox(
-                                        width: 20, height: 20,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      )),
-                                    );
-                                  }
-                                  final item = _forYouListings[i] as Map<String, dynamic>;
-                                  return _HorizontalListingCard(
-                                    listing: item,
-                                    onTap: () {
-                                      if (item['is_sponsored'] == true) {
-                                        final cid = item['campaign_id'];
-                                        if (cid != null) { AnalyticsService.trackAdClick(cid as int); }
-                                      } else if (_isLoggedIn) {
-                                        final id = item['id'] as int?;
-                                        if (id != null) { unawaited(AnalyticsService.logInteraction(
-                                          itemId: id, itemType: 'listing', interactionType: 'click',
-                                          pricePoint: item['price'] != null ? (item['price'] as num).toDouble() : null,
-                                          metadata: {'source': 'for_you_feed'},
-                                        )); }
-                                      }
-                                      if (item['is_highlight'] == true) {
-                                        final rawRoomId = item['active_room_id'];
-                                        if (rawRoomId != null) {
-                                          final roomId = rawRoomId is int ? rawRoomId : int.tryParse(rawRoomId.toString());
-                                          if (roomId != null) {
-                                            Navigator.push(ctx, MaterialPageRoute(
-                                              builder: (_) => SwipeLiveScreen.single(streamId: roomId),
-                                            ));
-                                            return;
-                                          }
-                                        }
-                                      }
-                                      Navigator.push(ctx, MaterialPageRoute(
-                                        builder: (_) => ListingDetailScreen(listing: Map<String, dynamic>.from(item)),
-                                      ));
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                ),
-              ],
-
-              // ── Önerilen Satıcılar ─────────────────────────────────
-              if (_isLoggedIn && _suggestedSellers.isNotEmpty) ...[
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                    child: Text(l.suggestedSellers,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 96,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _suggestedSellers.length,
-                      itemBuilder: (ctx, i) => _SellerAvatarCard(
-                        seller: _suggestedSellers[i],
-                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                          builder: (_) => PublicProfileScreen(
-                            username: _suggestedSellers[i]['username'] as String? ?? '',
-                            userId: _suggestedSellers[i]['id'] as int?,
-                          ),
-                        )),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-
               // ── En Son Eklenenler ──────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
@@ -972,302 +746,6 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Yatay scroll ilan kartı (Sana Özel) ────────────────────────────────────
-class _HorizontalListingCard extends StatefulWidget {
-  final Map<String, dynamic> listing;
-  final VoidCallback onTap;
-
-  const _HorizontalListingCard({required this.listing, required this.onTap});
-
-  @override
-  State<_HorizontalListingCard> createState() => _HorizontalListingCardState();
-}
-
-class _HorizontalListingCardState extends State<_HorizontalListingCard>
-    with SingleTickerProviderStateMixin {
-  AnimationController? _pulseCtrl;
-  Animation<double>? _pulseAnim;
-  bool _clicked = false;
-
-  void _sendFeedSignal(String event) {
-    final lid = widget.listing['id'];
-    if (lid == null) return;
-    unawaited(() async {
-      try {
-        final token = await StorageService.getToken();
-        if (token == null) return;
-        await http.post(
-          Uri.parse('$kBaseUrl/feed/signal'),
-          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-          body: jsonEncode({'listing_id': lid, 'event': event}),
-        ).timeout(const Duration(seconds: 3));
-      } catch (_) {}
-    }());
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.listing['is_highlight'] == true) {
-      _pulseCtrl = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 900),
-      )..repeat(reverse: true);
-      _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
-        CurvedAnimation(parent: _pulseCtrl!, curve: Curves.easeInOut),
-      );
-    }
-    if (widget.listing['is_sponsored'] == true) {
-      final cid = widget.listing['campaign_id'];
-      if (cid != null) AnalyticsService.trackAdImpression(cid as int);
-    }
-    // Kart görüntülendi → ClickHouse feed_analytics (impression)
-    final lid = widget.listing['id'];
-    if (lid != null) {
-      FeedTelemetryService.instance.logEvent(
-        listingId: lid.toString(),
-        eventType: 'impression',
-        dwellTimeMs: 0,
-        contentType: (widget.listing['video_url'] as String?) != null ? 'video' : 'photo',
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    if (!_clicked) _sendFeedSignal('skip');
-    _pulseCtrl?.dispose();
-    super.dispose();
-  }
-
-  String _fmt(dynamic price) {
-    if (price == null) return '';
-    final s = (price as num).toInt().toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return '${buf.toString()} ₺';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final imgs = widget.listing['image_urls'] as List? ?? [];
-    final raw = imgs.isNotEmpty ? imgs[0] as String : widget.listing['image_url'] as String?;
-    final photo = raw != null ? imgUrl(raw) : null;
-    final price = _fmt(widget.listing['price']);
-
-    return GestureDetector(
-      onTap: () {
-        _clicked = true;
-        _sendFeedSignal('click');
-        // Tıklandı → ClickHouse feed_analytics (click)
-        final lid = widget.listing['id'];
-        if (lid != null) {
-          FeedTelemetryService.instance.logEvent(
-            listingId: lid.toString(),
-            eventType: 'click',
-            dwellTimeMs: 0,
-            contentType: (widget.listing['video_url'] as String?) != null ? 'video' : 'photo',
-          );
-        }
-        widget.onTap();
-      },
-      child: Container(
-        width: 120,
-        margin: const EdgeInsets.only(right: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: AppColors.card(context),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 6, offset: const Offset(0, 2))],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  photo != null
-                      ? CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, width: double.infinity)
-                      : Container(
-                          color: AppColors.surfaceVariant(context),
-                          child: Center(child: Icon(Icons.image_outlined, color: AppColors.border(context))),
-                        ),
-                  if (widget.listing['is_sponsored'] == true)
-                    Positioned(
-                      top: 5,
-                      left: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.62),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: const Text(
-                          'Sponsorlu',
-                          style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  if (widget.listing['seller_is_premium'] == true)
-                    Positioned(
-                      top: 5,
-                      right: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: const Text(
-                          '👑',
-                          style: TextStyle(fontSize: 9),
-                        ),
-                      ),
-                    ),
-                  // ── Seller badge (trusted / active) ────────────────────
-                  if (widget.listing['seller_badge'] == 'trusted_seller')
-                    Positioned(
-                      top: widget.listing['seller_is_premium'] == true ? 24 : 5,
-                      right: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF16A34A),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: const Text('✅', style: TextStyle(fontSize: 9)),
-                      ),
-                    )
-                  else if (widget.listing['seller_badge'] == 'active_seller')
-                    Positioned(
-                      top: widget.listing['seller_is_premium'] == true ? 24 : 5,
-                      right: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: const Text('⭐', style: TextStyle(fontSize: 9)),
-                      ),
-                    ),
-                  // ── Trend rozeti ────────────────────────────────────────
-                  if (widget.listing['is_trending'] == true)
-                    Positioned(
-                      bottom: 5,
-                      right: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.deepOrange.withValues(alpha: 0.88),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          AppLocalizations.of(context)!.badgeTrending,
-                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  // ── Highlight (Canlı Yayın Kesiği) badge ──────────────
-                  if (widget.listing['is_highlight'] == true)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withValues(alpha: 0.15),
-                              Colors.red.withValues(alpha: 0.75),
-                            ],
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (_pulseAnim != null)
-                              AnimatedBuilder(
-                                animation: _pulseAnim!,
-                                builder: (_, _) => Opacity(
-                                  opacity: _pulseAnim!.value,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    margin: const EdgeInsets.only(bottom: 4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            const Padding(
-                              padding: EdgeInsets.fromLTRB(4, 0, 4, 6),
-                              child: Text(
-                                '🔴 Alev\nAlev!',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.25,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (widget.listing['is_highlight'] == true)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                color: Colors.red,
-                child: const Text(
-                  'Canlı Yayına Katıl →',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(6, 5, 6, 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.listing['title'] as String? ?? '',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary(context)),
-                      maxLines: 2, overflow: TextOverflow.ellipsis,
-                    ),
-                    if (price.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(price, style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700)),
-                    ],
-                  ],
-                ),
-              ),
           ],
         ),
       ),
@@ -1677,83 +1155,3 @@ class _OnboardingBanner extends StatelessWidget {
   }
 }
 
-// ── Önerilen satıcı avatar kartı ────────────────────────────────────────────
-class _SellerAvatarCard extends StatelessWidget {
-  final Map<String, dynamic> seller;
-  final VoidCallback onTap;
-
-  const _SellerAvatarCard({required this.seller, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final rawAvatar = seller['profile_image_url'] as String?;
-    final avatarUrl = rawAvatar != null ? imgUrl(rawAvatar) : null;
-    final username = seller['username'] as String? ?? '';
-    final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
-    final isVerified = seller['is_verified'] == true;
-    final isPremium = seller['is_premium'] == true;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 72,
-        margin: const EdgeInsets.only(right: 12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: AppColors.surfaceVariant(context),
-                  backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                  child: avatarUrl == null
-                    ? Text(initial, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18))
-                    : null,
-                ),
-                if (isPremium)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFFF59E0B),
-                      ),
-                      child: const Center(
-                        child: Text('👑', style: TextStyle(fontSize: 10)),
-                      ),
-                    ),
-                  )
-                else if (isVerified)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFF2563EB),
-                      ),
-                      child: const Icon(Icons.check, size: 12, color: Colors.white),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '@$username',
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

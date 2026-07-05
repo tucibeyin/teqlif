@@ -5217,6 +5217,18 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'İlan Reaktivasyon Kredisi'**
   String get proReactivationSection;
+
+  /// No description provided for @suggestedStreamers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Önerilen Yayıncılar'**
+  String get suggestedStreamers;
+
+  /// No description provided for @listingsSelectedForYou.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sizin İçin Seçilen İlanlar'**
+  String get listingsSelectedForYou;
 }
 
 class _AppLocalizationsDelegate

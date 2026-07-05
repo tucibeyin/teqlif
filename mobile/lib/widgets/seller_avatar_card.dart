@@ -1,0 +1,84 @@
+import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../config/theme.dart';
+import '../config/api.dart';
+
+class SellerAvatarCard extends StatelessWidget {
+  final Map<String, dynamic> seller;
+  final VoidCallback onTap;
+
+  const SellerAvatarCard({Key? key, required this.seller, required this.onTap}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final rawAvatar = seller['profile_image_url'] as String?;
+    final avatarUrl = rawAvatar != null ? imgUrl(rawAvatar) : null;
+    final username = seller['username'] as String? ?? '';
+    final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
+    final isVerified = seller['is_verified'] == true;
+    final isPremium = seller['is_premium'] == true;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 72,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: AppColors.surfaceVariant(context),
+                  backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                  child: avatarUrl == null
+                    ? Text(initial, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18))
+                    : null,
+                ),
+                if (isPremium)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFFF59E0B),
+                      ),
+                      child: const Center(
+                        child: Text('👑', style: TextStyle(fontSize: 10)),
+                      ),
+                    ),
+                  )
+                else if (isVerified)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF2563EB),
+                      ),
+                      child: const Icon(Icons.check, size: 12, color: Colors.white),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '@$username',
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
