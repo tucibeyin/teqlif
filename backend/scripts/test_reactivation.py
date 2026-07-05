@@ -339,11 +339,10 @@ async def test_4_insufficient_balance(client, token, listing_id, user_id):
 
     r = await toggle(client, token, listing_id)
     assert r["status"] == 402, f"402 beklendi, {r['status']} geldi: {r['body']}"
-    detail = r["body"].get("detail", r["body"])
-    code   = detail.get("code") if isinstance(detail, dict) else str(detail)
-    assert code == "insufficient_balance", \
-        f"detail.code='insufficient_balance' beklendi, geldi: {r['body']}"
-    ok("402 döndü, code=insufficient_balance ✔")
+    # Backend middleware hatayı {"success":false,"error":{"code":"HTTP_402","message":"..."}} formatına sarar
+    assert "insufficient_balance" in str(r["body"]), \
+        f"'insufficient_balance' response'da bulunamadı: {r['body']}"
+    ok("402 döndü, insufficient_balance ✔")
 
     # Bakiye değişmedi mi?
     balance_after = (await db_fetchone("SELECT tuci_balance FROM users WHERE id = :id", {"id": user_id}))["tuci_balance"]
