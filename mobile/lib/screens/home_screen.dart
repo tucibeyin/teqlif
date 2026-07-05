@@ -120,9 +120,15 @@ class HomeScreenState extends State<HomeScreen> {
     if (loggedIn) {
       final userInfo = await StorageService.getUserInfo();
       final prefs = await SharedPreferences.getInstance();
-      final done = (userInfo?['onboarding_completed'] == true) || (prefs.getBool('onboarding_done') == true);
-      final skipped = prefs.getBool('onboarding_skipped') == true;
-      if (mounted) setState(() => _showOnboardingBanner = !(done || skipped));
+      
+      if (userInfo == null) {
+        // Profil henüz yüklenemediyse banner'ı gösterme
+        if (mounted) setState(() => _showOnboardingBanner = false);
+      } else {
+        final done = (userInfo['onboarding_completed'] == true) || (prefs.getBool('onboarding_done') == true);
+        final skipped = prefs.getBool('onboarding_skipped') == true;
+        if (mounted) setState(() => _showOnboardingBanner = !(done || skipped));
+      }
     }
 
     if (_hasFilter) {

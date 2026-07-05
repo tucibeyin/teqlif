@@ -48,17 +48,32 @@ class _CategoryOnboardingScreenState extends State<CategoryOnboardingScreen> {
     setState(() => _loading = true);
     try {
       await AuthService.seedOnboardingInterests(_selected.toList());
-      final user = await AuthService.me(); // Update local user profile cache
-      await StorageService.saveUserInfo(
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        fullName: user.fullName,
-        isPremium: user.isPremium,
-        onboardingCompleted: user.onboardingCompleted,
-        isVerified: user.isVerified,
-        phoneVerified: user.phoneVerified,
-      );
+      try {
+        final user = await AuthService.me(); // Update local user profile cache
+        await StorageService.saveUserInfo(
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          fullName: user.fullName,
+          isPremium: user.isPremium,
+          onboardingCompleted: true, // Zorla true yap
+          isVerified: user.isVerified,
+          phoneVerified: user.phoneVerified,
+        );
+      } catch (_) {
+        // me() API'si patlasa bile en azından local storage'ı force update edelim ki bir daha çıkmasın.
+        final oldInfo = await StorageService.getUserInfo();
+        if (oldInfo != null) {
+          await StorageService.saveUserInfo(
+            id: oldInfo['id'] as int,
+            email: oldInfo['email'] as String,
+            username: oldInfo['username'] as String,
+            fullName: oldInfo['full_name'] as String,
+            isPremium: oldInfo['is_premium'] as bool? ?? false,
+            onboardingCompleted: true,
+          );
+        }
+      }
     } catch (_) {
       // API hatası olsa bile devam et — feed popüler ilanlarla açılır
     }
