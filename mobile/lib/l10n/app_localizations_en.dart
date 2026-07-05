@@ -2838,4 +2838,176 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listingsSelectedForYou => 'Listings Selected For You';
+
+  @override
+  String get profileFaq => 'Frequently Asked Questions';
+
+  @override
+  String get faqCatAccount => 'Account, Profile and Support';
+
+  @override
+  String get faqQAccountSignup => 'How can I register and log in to Teqlif?';
+
+  @override
+  String get faqAAccountSignup =>
+      'You can create your account in seconds using your E-mail address by clicking the \"Login / Register\" button on the homepage, or securely log into your existing account.';
+
+  @override
+  String get faqQAccountEmail => 'Why do I need to verify my e-mail address?';
+
+  @override
+  String get faqAAccountEmail =>
+      'Email verification is mandatory to ensure the security of your account and perform critical operations such as password reset. Verified emails are also the first step for the Verified Account (Blue Tick) process.';
+
+  @override
+  String get faqQAccountProfile =>
+      'How can I edit my profile (Name, Photo, Bio)?';
+
+  @override
+  String get faqAAccountProfile =>
+      'You can click the Edit Profile button by going to the \"My Profile\" tab in the app. You can change your avatar, update your name, and write a bio to introduce yourself better to potential buyers.';
+
+  @override
+  String get faqQAccountPassword => 'I forgot my password, what should I do?';
+
+  @override
+  String get faqAAccountPassword =>
+      'By clicking the \"Forgot Password\" link on the login screen, you can request a reset link to your email and set a new password.';
+
+  @override
+  String get faqQAccountDelete => 'How can I delete my account?';
+
+  @override
+  String get faqAAccountDelete =>
+      'You can permanently delete your account by following Settings > Delete Account. This process cannot be undone; all your data and listings will be permanently removed.';
+
+  @override
+  String get faqCatExplore => 'Explore, Suggestions and Menus';
+
+  @override
+  String get faqQExploreSellers =>
+      'Who is featured in the \"Suggested Sellers\" section?';
+
+  @override
+  String get faqAExploreSellers =>
+      'This list is automatically determined by our AI algorithm. Users with high ratings, frequently visited listings, fast response rates, and usually a PRO subscription or \"Trusted Seller\" badge are featured here.';
+
+  @override
+  String get faqQExploreStreamers =>
+      'How does the \"Suggested Streamers\" section work?';
+
+  @override
+  String get faqAExploreStreamers =>
+      'Streamers who regularly broadcast on SwipeLive, achieve high \"Hype\" points, and have an active audience are automatically moved to the top of the Explore page.';
+
+  @override
+  String get faqQExploreListings =>
+      'What is the difference between \"Listings\" and \"Explore\" pages?';
+
+  @override
+  String get faqAExploreListings =>
+      'The Listings page is a vertical feed of newly added listings selected specifically for your interests by AI. The Explore page is the main search hub where you can make detailed category searches and discover popular sellers.';
+
+  @override
+  String get faqQExploreLiveMessages =>
+      'What are the \"Live\" and \"Messages\" menus for?';
+
+  @override
+  String get faqAExploreLiveMessages =>
+      'Live: Takes you to the SwipeLive feed where sellers showcase products live. Messages: You can chat directly with sellers and safely negotiate prices (bids).';
+
+  @override
+  String get faqCatBadges => 'Badges, Tags and TUCi Credits';
+
+  @override
+  String get faqQBadgesVerified => 'What is the Blue Tick (Verified Account)?';
+
+  @override
+  String get faqABadgesVerified =>
+      'The blue tick indicates that the seller has successfully verified their email and phone number, proving they are a reliable real person.';
+
+  @override
+  String get faqQBadgesPro => 'What does the \"👑 (Crown)\" badge mean?';
+
+  @override
+  String get faqABadgesPro =>
+      'This badge indicates that the seller is a Teqlif PRO member. PRO sellers are professionals who are algorithmically promoted more by the platform.';
+
+  @override
+  String get faqQBadgesTrusted =>
+      'What do \"✅ Trusted\" and \"⭐ Active\" Seller badges mean?';
+
+  @override
+  String get faqABadgesTrusted =>
+      '✅ Trusted Seller: Given to experienced sellers who have verified identity info and built trust. ⭐ Active Seller: Represents dynamic sellers who use the platform frequently and respond quickly.';
+
+  @override
+  String get faqQBadgesSponsored =>
+      'What do \"Sponsored\", \"Trending\" and \"LIVE\" tags indicate?';
+
+  @override
+  String get faqABadgesSponsored =>
+      'Sponsored: Promoted listing using TUCi credits. Trending (Fire): The listing is highly viewed or favorited recently. LIVE (Blinking): The seller is currently streaming live for that product.';
+
+  @override
+  String get faqQBadgesTuci => 'What is TUCi and where is it used?';
+
+  @override
+  String get faqABadgesTuci =>
+      'TUCi is our virtual credit currency. It\'s used to promote listings, send gifts in live streams, get AI price analysis, and reach buyers directly via the Lead Gen feature.';
+
+  @override
+  String get faqCatLive => 'Live Streams (SwipeLive) and Auctions';
+
+  @override
+  String get faqQLiveHost => 'What can I do on the Host (Streamer) screen?';
+
+  @override
+  String get faqALiveHost =>
+      'You can manage the chat, start an Auction for your product, view incoming Bids instantly, and accept the highest bid to confirm the sale in seconds.';
+
+  @override
+  String get faqQLiveViewer => 'What are the features of the Viewer screen?';
+
+  @override
+  String get faqALiveViewer =>
+      'You can watch streams seamlessly by swiping vertically. You can join the chat, send gifts, and place Live Bids on auctions.';
+
+  @override
+  String get faqQLiveHype => 'What is the Hype level?';
+
+  @override
+  String get faqALiveHype =>
+      'As viewers chat and send gifts, the room\'s Hype score increases. When it exceeds a limit, the system records that exciting moment as a \"Highlight Video\".';
+
+  @override
+  String get faqCatAI => 'PRO Tools and Artificial Intelligence';
+
+  @override
+  String get faqQAIInsights => 'What is the Conversion Funnel (Pro Insights)?';
+
+  @override
+  String get faqAAIInsights =>
+      'An exclusive tool for PRO sellers that reports view counts, dwell time, and hesitation rates to optimize your sales strategy.';
+
+  @override
+  String get faqQAIPrice => 'How does AI Price Intel work?';
+
+  @override
+  String get faqAAIPrice =>
+      'Our AI analyzes millions of data rows to suggest the optimum selling price based on your product\'s title and category.';
+
+  @override
+  String get faqQAILead => 'What is the \"Hot Demand\" (Lead Gen) feature?';
+
+  @override
+  String get faqAAILead =>
+      'A system that matches your listing with the most suitable potential buyers via AI and sends them a direct \"Suggested Listing\" notification.';
+
+  @override
+  String get faqQAIRadar => 'Competitor Analysis and Best Streaming Time';
+
+  @override
+  String get faqAAIRadar =>
+      'Competitor Analysis compares your price and click rate with competitors. The Best Streaming Time module reports when your followers are most active.';
 }

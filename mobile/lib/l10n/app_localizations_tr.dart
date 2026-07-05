@@ -2838,4 +2838,180 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listingsSelectedForYou => 'Sizin İçin Seçilen İlanlar';
+
+  @override
+  String get profileFaq => 'Sıkça Sorulan Sorular';
+
+  @override
+  String get faqCatAccount => 'Hesap İşlemleri, Profil ve Destek';
+
+  @override
+  String get faqQAccountSignup =>
+      'Teqlif\'e nasıl kayıt olabilirim ve giriş yapabilirim?';
+
+  @override
+  String get faqAAccountSignup =>
+      'Ana sayfadaki \"Giriş Yap / Kayıt Ol\" butonunu kullanarak E-posta adresinizle saniyeler içinde hesabınızı oluşturabilir veya mevcut hesabınıza güvenle giriş yapabilirsiniz.';
+
+  @override
+  String get faqQAccountEmail => 'E-posta adresimi neden doğrulamalıyım?';
+
+  @override
+  String get faqAAccountEmail =>
+      'Hesabınızın güvenliğini sağlamak ve şifre sıfırlama gibi kritik işlemleri yapabilmek için e-posta doğrulamanız zorunludur. Doğrulanmış e-postalar Mavi Tik (Onaylı Hesap) sürecinin de ilk adımıdır.';
+
+  @override
+  String get faqQAccountProfile =>
+      'Profilimi nasıl düzenleyebilirim (İsim, Fotoğraf, Bio)?';
+
+  @override
+  String get faqAAccountProfile =>
+      'Uygulama içerisinden \"Profilim\" sekmesine giderek Profili Düzenle butonuna tıklayabilirsiniz. Açılan ekranda profil fotoğrafınızı (avatar) değiştirebilir, ad-soyad bilgilerinizi güncelleyebilir ve potansiyel alıcıların sizi daha iyi tanıması için \"Hakkımda (Bio)\" kısmına kendinizi anlatan bir açıklama yazabilirsiniz.';
+
+  @override
+  String get faqQAccountPassword => 'Şifremi unuttum, ne yapmalıyım?';
+
+  @override
+  String get faqAAccountPassword =>
+      'Giriş ekranındaki \"Şifremi Unuttum\" bağlantısına tıklayarak e-posta adresinize bir sıfırlama bağlantısı isteyebilir ve yeni şifrenizi belirleyebilirsiniz.';
+
+  @override
+  String get faqQAccountDelete => 'Hesabımı nasıl silebilirim?';
+
+  @override
+  String get faqAAccountDelete =>
+      'Ayarlar > Hesabı Sil yolunu izleyerek hesabınızı kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz; tüm verileriniz ve ilanlarınız sistemden kalıcı olarak kaldırılır.';
+
+  @override
+  String get faqCatExplore => 'Keşif, Öneriler ve Menüler';
+
+  @override
+  String get faqQExploreSellers =>
+      '\"Önerilen Satıcılar\" bölümünde kimler yer alır?';
+
+  @override
+  String get faqAExploreSellers =>
+      'Bu liste yapay zeka algoritmamız tarafından otomatik belirlenir. Profilinde yüksek puanlama alan, ilanları sık ziyaret edilen, mesajlara hızlı yanıt veren ve genellikle PRO aboneliğine veya \"Güvenilir Satıcı\" rozetine sahip kullanıcılar burada sergilenerek platformdaki binlerce kişiye tavsiye edilir.';
+
+  @override
+  String get faqQExploreStreamers =>
+      '\"Önerilen Yayıncılar\" bölümü nasıl çalışır?';
+
+  @override
+  String get faqAExploreStreamers =>
+      'SwipeLive platformunda düzenli olarak canlı yayın açan, yayınlarında yüksek \"Hype\" (Heyecan) puanına ulaşan ve aktif bir takipçi/izleyici kitlesine sahip yayıncılar sistem tarafından otomatik olarak Keşfet sayfasının en üstüne taşınır.';
+
+  @override
+  String get faqQExploreListings =>
+      '\"İlanlar\" ve \"Keşfet\" sayfaları arasındaki fark nedir?';
+
+  @override
+  String get faqAExploreListings =>
+      'İlanlar sayfası yapay zekanın tamamen sizin ilgi alanlarınıza özel seçtiği ilanların ve en son eklenenlerin bulunduğu dikey bir akıştır. Keşfet sayfası ise; kategori bazlı detaylı aramalar yapabileceğiniz, popüler satıcı ve yayıncıları keşfedebileceğiniz ana arama merkezidir.';
+
+  @override
+  String get faqQExploreLiveMessages =>
+      '\"Canlı\" ve \"Mesajlar\" menüleri ne işe yarar?';
+
+  @override
+  String get faqAExploreLiveMessages =>
+      'Canlı: Satıcıların ürünlerini canlı yayında tanıttığı SwipeLive akışına ulaşmanızı sağlar. Mesajlar: İlgilendiğiniz ürünler için satıcılarla doğrudan sohbet edebilir ve güvenli bir şekilde fiyat pazarlığı (teklif) yapabilirsiniz.';
+
+  @override
+  String get faqCatBadges => 'Rozetler, Etiketler ve TUCi Kredisi';
+
+  @override
+  String get faqQBadgesVerified => 'Mavi Tik (Doğrulanmış Hesap) nedir?';
+
+  @override
+  String get faqABadgesVerified =>
+      'Mavi tik, satıcının e-posta adresini ve telefon numarasını başarıyla doğruladığını gösterir. Bu rozet, potansiyel alıcılara sizin güvenilir bir gerçek kişi olduğunuzu kanıtlar.';
+
+  @override
+  String get faqQBadgesPro => 'İlanlarda gördüğüm \"👑 (Taç)\" rozeti nedir?';
+
+  @override
+  String get faqABadgesPro =>
+      'Bu rozet, ilanı paylaşan kullanıcının veya satıcının Teqlif PRO üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.';
+
+  @override
+  String get faqQBadgesTrusted =>
+      '\"✅ Güvenilir\" ve \"⭐ Aktif\" Satıcı rozetleri ne anlama gelir?';
+
+  @override
+  String get faqABadgesTrusted =>
+      '✅ Güvenilir Satıcı: Kimlik bilgilerini doğrulamış, işlemleri sorunsuz tamamlanan ve platformda tam bir güven inşa etmiş deneyimli satıcılara verilir. ⭐ Aktif Satıcı: Platformu sık kullanan, alıcıların mesajlarına hızlı yanıt veren ve düzenli aralıklarla yeni ilanlar giren dinamik satıcıları temsil eder.';
+
+  @override
+  String get faqQBadgesSponsored =>
+      '\"Sponsorlu\", \"Trending\" ve \"LIVE\" etiketleri neyi ifade eder?';
+
+  @override
+  String get faqABadgesSponsored =>
+      'Sponsorlu: Satıcının TUCi kredisi kullanarak ilanını öne çıkardığını belirtir. Trending (Ateş): İlanın son zamanlarda çok kişi tarafından incelendiğini veya favoriye eklendiğini (sıcak fırsat) gösterir. LIVE (Yanıp Sönen): Satıcının o an söz konusu ürün için canlı yayın (SwipeLive) yaptığını gösterir.';
+
+  @override
+  String get faqQBadgesTuci => 'TUCi nedir, nerelerde kullanılır?';
+
+  @override
+  String get faqABadgesTuci =>
+      'TUCi, Teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.';
+
+  @override
+  String get faqCatLive => 'Canlı Yayınlar (SwipeLive) ve Açık Artırma';
+
+  @override
+  String get faqQLiveHost => 'Yayıncı (Host) ekranında neler yapabilirim?';
+
+  @override
+  String get faqALiveHost =>
+      'Host ekranında sohbeti yönetebilir, ürününüz için Açık Artırma başlatabilir, gelen teklifleri (Bid) anlık görebilir ve sürenin sonunda en yüksek teklifi kabul edip satışı onaylayabilirsiniz.';
+
+  @override
+  String get faqQLiveViewer =>
+      'İzleyici (Viewer) ekranının özellikleri nelerdir?';
+
+  @override
+  String get faqALiveViewer =>
+      'Yayınları ekranı dikey olarak kaydırarak (SwipeLive) kesintisiz izleyebilirsiniz. Sohbete katılabilir, hediye gönderebilir ve açık artırmaya Canlı Teklif verebilirsiniz.';
+
+  @override
+  String get faqQLiveHype => 'Hype (Heyecan) seviyesi nedir?';
+
+  @override
+  String get faqALiveHype =>
+      'İzleyiciler sohbete katıldıkça ve hediye gönderdikçe odanın Hype puanı artar. Puan limiti aştığında, yayın otomatik olarak \"Öne Çıkan Video (Highlight)\" kaydedilir.';
+
+  @override
+  String get faqCatAI => 'PRO Araçları (Pro Tools) ve Yapay Zeka';
+
+  @override
+  String get faqQAIInsights => 'Dönüşüm Hunisi (Pro Insights) nedir?';
+
+  @override
+  String get faqAAIInsights =>
+      'PRO satıcılara özel olan bu araç, ilanınızın görüntülenme sayısını, ziyaretçilerin ilan detayında geçirdiği süreyi ve tereddüt (hesitation) oranını raporlar.';
+
+  @override
+  String get faqQAIPrice =>
+      'Yapay Zeka Fiyat Tahmini (AI Price Intel) nasıl çalışır?';
+
+  @override
+  String get faqAAIPrice =>
+      'Yapay zekamız ürününüzün başlığına ve kategorisine bakarak en hızlı satılabilecek optimum fiyatı size önerir.';
+
+  @override
+  String get faqQAILead =>
+      '\"Sıcak Talep\" (Alıcı Bul / Lead Gen) özelliği nedir?';
+
+  @override
+  String get faqAAILead =>
+      'İlanınıza en uygun potansiyel alıcıları yapay zeka ile eşleştirerek, doğrudan onlara \"Önerilen İlan\" bildirimi gönderen sistemdir.';
+
+  @override
+  String get faqQAIRadar => 'Rekabet Analizi ve En İyi Yayın Saati Tahmini';
+
+  @override
+  String get faqAAIRadar =>
+      'Rekabet Analizi, ilanınızın fiyat durumunu ve tıklanma oranını rakiplerle kıyaslar. Yayın Saati Tahmini ise takipçilerinizin en aktif olduğu saatleri gösterir.';
 }

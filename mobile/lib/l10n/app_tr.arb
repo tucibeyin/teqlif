@@ -660,7 +660,13 @@
   "planLifetime": "Ömür Boyu",
   "proStatusDesc": "Tüm analitik araçlara erişiminiz aktif",
   "proRenewalDate": "Yenileme: {date}",
-  "@proRenewalDate": { "placeholders": { "date": { "type": "String" } } },
+  "@proRenewalDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "proUnlockTitle": "Pro araçları kilidi aç",
   "proUnlockDesc": "Verilerle sat, değil tahminle",
   "proUnlockBtn": "Pro'ya Geç",
@@ -677,15 +683,23 @@
   "proCreditsUsedFormat": "{used} kullanıldı, {remaining} kaldı",
   "@proCreditsUsedFormat": {
     "placeholders": {
-      "used": { "type": "int" },
-      "remaining": { "type": "int" }
+      "used": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
     }
   },
   "proCreditsLimitFormat": "{remaining} / {limit}",
   "@proCreditsLimitFormat": {
     "placeholders": {
-      "remaining": { "type": "int" },
-      "limit": { "type": "int" }
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
     }
   },
   "blastConfirmCostFreeLabel": "Ücret",
@@ -1245,36 +1259,129 @@
   "hostAcceptSaleBtnCapture": "Çek ve Onayla",
   "hostAcceptSaleBtnSkip": "Çekmeden Onayla",
   "radarSuggestedCopied": "{price} ₺ panoya kopyalandı",
-  "@radarSuggestedCopied": { "placeholders": { "price": { "type": "String" } } },
+  "@radarSuggestedCopied": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "radarCopyBtn": "Önerilen fiyatı kopyala: {price} ₺",
-  "@radarCopyBtn": { "placeholders": { "price": { "type": "String" } } },
+  "@radarCopyBtn": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "retargetingBlastSent": "{count} kişiye bildirim gönderildi!",
-  "@retargetingBlastSent": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingBlastSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingBlastCooldown": "Bir sonraki toplu duyuru için 7 gün beklemeniz gerekiyor.",
   "retargetingDialogTitle": "Bildirim gönderilsin mi?",
   "retargetingDialogBodyFree": "{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. {credits} bildirim krediniz var, ücretsiz gönderilecek.",
-  "@retargetingDialogBodyFree": { "placeholders": { "count": { "type": "int" }, "credits": { "type": "int" } } },
+  "@retargetingDialogBodyFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "credits": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingDialogBodyPaid": "{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından {cost} TUCi düşülecek.",
-  "@retargetingDialogBodyPaid": { "placeholders": { "count": { "type": "int" }, "cost": { "type": "int" } } },
+  "@retargetingDialogBodyPaid": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingDialogBodyKarma": "{count} kişiye bildirim gönderilecek.\n\n{free} kredi kullanılacak + {cost} TUCi ödenecek.",
-  "@retargetingDialogBodyKarma": { "placeholders": { "count": { "type": "int" }, "free": { "type": "int" }, "cost": { "type": "int" } } },
+  "@retargetingDialogBodyKarma": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "free": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingDialogBodyInsufficient": "Yetersiz TUCi bakiyesi.\nGerekli: {cost} TUCi | Mevcut: {balance} TUCi",
-  "@retargetingDialogBodyInsufficient": { "placeholders": { "cost": { "type": "int" }, "balance": { "type": "int" } } },
+  "@retargetingDialogBodyInsufficient": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingCostFree": "Ücretsiz",
   "retargetingCreditsLeft": "{count} kredi kaldı",
-  "@retargetingCreditsLeft": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingCreditsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingFreeSubtitle": "{count} kişi — 1 toplu duyuru krediniz kullanılır",
-  "@retargetingFreeSubtitle": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingFreeSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingPaidSubtitle": "{count} kişi × 10 TUCi",
-  "@retargetingPaidSubtitle": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingPaidSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingEstimatedCost": "Tahmini maliyet",
   "retargetingSending": "Gönderiliyor...",
   "retargetingSendBtnLabel": "{count} kişiye bildirim gönder",
-  "@retargetingSendBtnLabel": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingSendBtnLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingCreditsBadge": "{count} kredi kaldı · ücretsiz gönderilir",
-  "@retargetingCreditsBadge": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingCreditsBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingCostBadge": "{cost} TUCi harcanır",
-  "@retargetingCostBadge": { "placeholders": { "cost": { "type": "int" } } },
+  "@retargetingCostBadge": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingFootnote": "Kullanıcılar \"Hâlâ ilgileniyor musun?\" bildirimi alacak. Satın almayan kişilere gönderilir.",
   "retargetingInfoText": "İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.",
   "retargetingLast30Days": "Son 30 gün içinde",
@@ -1291,9 +1398,21 @@
   "btnResetPassword": "Şifreyi Sıfırla",
   "radarScreenTitle": "Rakip Radarı & Satış Hızı",
   "priceMinLabel": "{price} ₺ (min)",
-  "@priceMinLabel": { "placeholders": { "price": { "type": "String" } } },
+  "@priceMinLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "priceMaxLabel": "{price} ₺ (max)",
-  "@priceMaxLabel": { "placeholders": { "price": { "type": "String" } } },
+  "@priceMaxLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "forYouLabel": "Sana Özel",
   "messagesUpdateFailed": "Güncellenemedi",
   "btnRefresh": "Yenile",
@@ -1305,11 +1424,29 @@
   "hostNotifDialogTitle": "Bildirim Gönder",
   "hostStreamDataError": "Veri alınamadı",
   "hostInviteError": "Davet gönderilemedi: {error}",
-  "@hostInviteError": { "placeholders": { "error": { "type": "String" } } },
+  "@hostInviteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "hostModRemoved": "✖ @{username} moderatörlükten alındı",
-  "@hostModRemoved": { "placeholders": { "username": { "type": "String" } } },
+  "@hostModRemoved": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "genericErrorDetail": "Hata: {error}",
-  "@genericErrorDetail": { "placeholders": { "error": { "type": "String" } } },
+  "@genericErrorDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "profilePhotoUploadError": "Fotoğraf yüklenemedi. Tekrar deneyin.",
   "profileInviteCodeError": "Davet kodu alınamadı, tekrar deneyin.",
   "profileInviteTitle": "Arkadaşlarını Davet Et, TUCi Kazan!",
@@ -1323,36 +1460,143 @@
   "createNeedTitle": "Önce ilan başlığını giriniz.",
   "aiPriceError": "Fiyat tahmini alınamadı. Lütfen tekrar deneyin.",
   "tuciSpent": "{count} TUCi harcandı.",
-  "@tuciSpent": { "placeholders": { "count": { "type": "int" } } },
+  "@tuciSpent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "videoTooLong": "Video {max} saniyeyi geçemez ({actual}s).",
-  "@videoTooLong": { "placeholders": { "max": { "type": "int" }, "actual": { "type": "int" } } },
+  "@videoTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
   "createPickCamera": "Kamera ile çek (maks {sec} sn)",
-  "@createPickCamera": { "placeholders": { "sec": { "type": "int" } } },
+  "@createPickCamera": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
   "videoUploading": "Video henüz yükleniyor, lütfen bekleyin.",
   "videoLabel": "Video (maks {sec} sn)",
-  "@videoLabel": { "placeholders": { "sec": { "type": "int" } } },
+  "@videoLabel": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
   "forYouStreams": "Sana Özel Yayınlar",
   "searchNoResults": "Sonuç bulunamadı",
   "proSearchCount": "{count} arama",
-  "@proSearchCount": { "placeholders": { "count": { "type": "int" } } },
-
+  "@proSearchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listingDeactivateTitle": "İlanı Pasife Al",
   "listingDeactivateWarning": "İlanı pasife alırsanız aktif vitrin/promosyon hakları silinir.",
   "listingDeactivateCostHint": "Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için {cost} TUCi bakiyenizden düşülecektir.",
-  "@listingDeactivateCostHint": { "placeholders": { "cost": { "type": "int" } } },
+  "@listingDeactivateCostHint": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "listingDeactivateFreeCreditHint": "Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için 1 adet PRO ücretsiz hakkınız kullanılacaktır.",
   "listingDeactivateConfirm": "Anladım, Pasife Al",
   "listingReactivateTitle": "İlanı Tekrar Yayınla",
   "listingReactivateFreeCredit": "{remaining} ücretsiz hakkınız var. 1 hak kullanılacak.",
-  "@listingReactivateFreeCredit": { "placeholders": { "remaining": { "type": "int" } } },
+  "@listingReactivateFreeCredit": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
   "listingReactivatePaidPro": "Bu ayki hakkınız doldu. {cost} TUCi ödenecek.",
-  "@listingReactivatePaidPro": { "placeholders": { "cost": { "type": "int" } } },
+  "@listingReactivatePaidPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "listingReactivatePaidNormal": "{cost} TUCi ödenecek. Bakiyeniz: {balance} TUCi.",
-  "@listingReactivatePaidNormal": { "placeholders": { "cost": { "type": "int" }, "balance": { "type": "int" } } },
+  "@listingReactivatePaidNormal": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
   "listingReactivateProUpsell": "PRO'ya geçerek ayda 5 ücretsiz hak kazanın.",
   "listingReactivateInsufficientBalance": "Yetersiz bakiye. Devam etmek için TUCi yükleyin.",
   "listingReactivateConfirm": "Aktif Yap",
   "proReactivationSection": "İlan Reaktivasyon Kredisi",
   "suggestedStreamers": "Önerilen Yayıncılar",
-  "listingsSelectedForYou": "Sizin İçin Seçilen İlanlar"
+  "listingsSelectedForYou": "Sizin İçin Seçilen İlanlar",
+  "profileFaq": "Sıkça Sorulan Sorular",
+  "faqCatAccount": "Hesap İşlemleri, Profil ve Destek",
+  "faqQAccountSignup": "Teqlif'e nasıl kayıt olabilirim ve giriş yapabilirim?",
+  "faqAAccountSignup": "Ana sayfadaki \"Giriş Yap / Kayıt Ol\" butonunu kullanarak E-posta adresinizle saniyeler içinde hesabınızı oluşturabilir veya mevcut hesabınıza güvenle giriş yapabilirsiniz.",
+  "faqQAccountEmail": "E-posta adresimi neden doğrulamalıyım?",
+  "faqAAccountEmail": "Hesabınızın güvenliğini sağlamak ve şifre sıfırlama gibi kritik işlemleri yapabilmek için e-posta doğrulamanız zorunludur. Doğrulanmış e-postalar Mavi Tik (Onaylı Hesap) sürecinin de ilk adımıdır.",
+  "faqQAccountProfile": "Profilimi nasıl düzenleyebilirim (İsim, Fotoğraf, Bio)?",
+  "faqAAccountProfile": "Uygulama içerisinden \"Profilim\" sekmesine giderek Profili Düzenle butonuna tıklayabilirsiniz. Açılan ekranda profil fotoğrafınızı (avatar) değiştirebilir, ad-soyad bilgilerinizi güncelleyebilir ve potansiyel alıcıların sizi daha iyi tanıması için \"Hakkımda (Bio)\" kısmına kendinizi anlatan bir açıklama yazabilirsiniz.",
+  "faqQAccountPassword": "Şifremi unuttum, ne yapmalıyım?",
+  "faqAAccountPassword": "Giriş ekranındaki \"Şifremi Unuttum\" bağlantısına tıklayarak e-posta adresinize bir sıfırlama bağlantısı isteyebilir ve yeni şifrenizi belirleyebilirsiniz.",
+  "faqQAccountDelete": "Hesabımı nasıl silebilirim?",
+  "faqAAccountDelete": "Ayarlar > Hesabı Sil yolunu izleyerek hesabınızı kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz; tüm verileriniz ve ilanlarınız sistemden kalıcı olarak kaldırılır.",
+  "faqCatExplore": "Keşif, Öneriler ve Menüler",
+  "faqQExploreSellers": "\"Önerilen Satıcılar\" bölümünde kimler yer alır?",
+  "faqAExploreSellers": "Bu liste yapay zeka algoritmamız tarafından otomatik belirlenir. Profilinde yüksek puanlama alan, ilanları sık ziyaret edilen, mesajlara hızlı yanıt veren ve genellikle PRO aboneliğine veya \"Güvenilir Satıcı\" rozetine sahip kullanıcılar burada sergilenerek platformdaki binlerce kişiye tavsiye edilir.",
+  "faqQExploreStreamers": "\"Önerilen Yayıncılar\" bölümü nasıl çalışır?",
+  "faqAExploreStreamers": "SwipeLive platformunda düzenli olarak canlı yayın açan, yayınlarında yüksek \"Hype\" (Heyecan) puanına ulaşan ve aktif bir takipçi/izleyici kitlesine sahip yayıncılar sistem tarafından otomatik olarak Keşfet sayfasının en üstüne taşınır.",
+  "faqQExploreListings": "\"İlanlar\" ve \"Keşfet\" sayfaları arasındaki fark nedir?",
+  "faqAExploreListings": "İlanlar sayfası yapay zekanın tamamen sizin ilgi alanlarınıza özel seçtiği ilanların ve en son eklenenlerin bulunduğu dikey bir akıştır. Keşfet sayfası ise; kategori bazlı detaylı aramalar yapabileceğiniz, popüler satıcı ve yayıncıları keşfedebileceğiniz ana arama merkezidir.",
+  "faqQExploreLiveMessages": "\"Canlı\" ve \"Mesajlar\" menüleri ne işe yarar?",
+  "faqAExploreLiveMessages": "Canlı: Satıcıların ürünlerini canlı yayında tanıttığı SwipeLive akışına ulaşmanızı sağlar. Mesajlar: İlgilendiğiniz ürünler için satıcılarla doğrudan sohbet edebilir ve güvenli bir şekilde fiyat pazarlığı (teklif) yapabilirsiniz.",
+  "faqCatBadges": "Rozetler, Etiketler ve TUCi Kredisi",
+  "faqQBadgesVerified": "Mavi Tik (Doğrulanmış Hesap) nedir?",
+  "faqABadgesVerified": "Mavi tik, satıcının e-posta adresini ve telefon numarasını başarıyla doğruladığını gösterir. Bu rozet, potansiyel alıcılara sizin güvenilir bir gerçek kişi olduğunuzu kanıtlar.",
+  "faqQBadgesPro": "İlanlarda gördüğüm \"👑 (Taç)\" rozeti nedir?",
+  "faqABadgesPro": "Bu rozet, ilanı paylaşan kullanıcının veya satıcının Teqlif PRO üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.",
+  "faqQBadgesTrusted": "\"✅ Güvenilir\" ve \"⭐ Aktif\" Satıcı rozetleri ne anlama gelir?",
+  "faqABadgesTrusted": "✅ Güvenilir Satıcı: Kimlik bilgilerini doğrulamış, işlemleri sorunsuz tamamlanan ve platformda tam bir güven inşa etmiş deneyimli satıcılara verilir. ⭐ Aktif Satıcı: Platformu sık kullanan, alıcıların mesajlarına hızlı yanıt veren ve düzenli aralıklarla yeni ilanlar giren dinamik satıcıları temsil eder.",
+  "faqQBadgesSponsored": "\"Sponsorlu\", \"Trending\" ve \"LIVE\" etiketleri neyi ifade eder?",
+  "faqABadgesSponsored": "Sponsorlu: Satıcının TUCi kredisi kullanarak ilanını öne çıkardığını belirtir. Trending (Ateş): İlanın son zamanlarda çok kişi tarafından incelendiğini veya favoriye eklendiğini (sıcak fırsat) gösterir. LIVE (Yanıp Sönen): Satıcının o an söz konusu ürün için canlı yayın (SwipeLive) yaptığını gösterir.",
+  "faqQBadgesTuci": "TUCi nedir, nerelerde kullanılır?",
+  "faqABadgesTuci": "TUCi, Teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.",
+  "faqCatLive": "Canlı Yayınlar (SwipeLive) ve Açık Artırma",
+  "faqQLiveHost": "Yayıncı (Host) ekranında neler yapabilirim?",
+  "faqALiveHost": "Host ekranında sohbeti yönetebilir, ürününüz için Açık Artırma başlatabilir, gelen teklifleri (Bid) anlık görebilir ve sürenin sonunda en yüksek teklifi kabul edip satışı onaylayabilirsiniz.",
+  "faqQLiveViewer": "İzleyici (Viewer) ekranının özellikleri nelerdir?",
+  "faqALiveViewer": "Yayınları ekranı dikey olarak kaydırarak (SwipeLive) kesintisiz izleyebilirsiniz. Sohbete katılabilir, hediye gönderebilir ve açık artırmaya Canlı Teklif verebilirsiniz.",
+  "faqQLiveHype": "Hype (Heyecan) seviyesi nedir?",
+  "faqALiveHype": "İzleyiciler sohbete katıldıkça ve hediye gönderdikçe odanın Hype puanı artar. Puan limiti aştığında, yayın otomatik olarak \"Öne Çıkan Video (Highlight)\" kaydedilir.",
+  "faqCatAI": "PRO Araçları (Pro Tools) ve Yapay Zeka",
+  "faqQAIInsights": "Dönüşüm Hunisi (Pro Insights) nedir?",
+  "faqAAIInsights": "PRO satıcılara özel olan bu araç, ilanınızın görüntülenme sayısını, ziyaretçilerin ilan detayında geçirdiği süreyi ve tereddüt (hesitation) oranını raporlar.",
+  "faqQAIPrice": "Yapay Zeka Fiyat Tahmini (AI Price Intel) nasıl çalışır?",
+  "faqAAIPrice": "Yapay zekamız ürününüzün başlığına ve kategorisine bakarak en hızlı satılabilecek optimum fiyatı size önerir.",
+  "faqQAILead": "\"Sıcak Talep\" (Alıcı Bul / Lead Gen) özelliği nedir?",
+  "faqAAILead": "İlanınıza en uygun potansiyel alıcıları yapay zeka ile eşleştirerek, doğrudan onlara \"Önerilen İlan\" bildirimi gönderen sistemdir.",
+  "faqQAIRadar": "Rekabet Analizi ve En İyi Yayın Saati Tahmini",
+  "faqAAIRadar": "Rekabet Analizi, ilanınızın fiyat durumunu ve tıklanma oranını rakiplerle kıyaslar. Yayın Saati Tahmini ise takipçilerinizin en aktif olduğu saatleri gösterir."
 }

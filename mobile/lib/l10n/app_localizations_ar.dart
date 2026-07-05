@@ -2816,4 +2816,176 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listingsSelectedForYou => 'القوائم المختارة لك';
+
+  @override
+  String get profileFaq => 'الأسئلة الشائعة';
+
+  @override
+  String get faqCatAccount => 'الحساب والملف الشخصي والدعم';
+
+  @override
+  String get faqQAccountSignup =>
+      'كيف يمكنني التسجيل وتسجيل الدخول إلى Teqlif؟';
+
+  @override
+  String get faqAAccountSignup =>
+      'يمكنك إنشاء حسابك في ثوانٍ باستخدام بريدك الإلكتروني بالنقر على زر \"تسجيل الدخول / التسجيل\" في الصفحة الرئيسية، أو تسجيل الدخول بأمان إلى حسابك الحالي.';
+
+  @override
+  String get faqQAccountEmail =>
+      'لماذا يجب علي التحقق من عنوان بريدي الإلكتروني؟';
+
+  @override
+  String get faqAAccountEmail =>
+      'يعد التحقق من البريد الإلكتروني إلزامياً لضمان أمان حسابك وإجراء عمليات مهمة مثل إعادة تعيين كلمة المرور. كما أنها الخطوة الأولى للحصول على الحساب الموثق (العلامة الزرقاء).';
+
+  @override
+  String get faqQAccountProfile =>
+      'كيف يمكنني تعديل ملفي الشخصي (الاسم، الصورة، النبذة)؟';
+
+  @override
+  String get faqAAccountProfile =>
+      'يمكنك النقر على زر \"تعديل الملف الشخصي\" من خلال الانتقال إلى علامة التبويب \"ملفي الشخصي\". يمكنك تغيير الصورة الرمزية وتحديث اسمك وكتابة نبذة عنك لتعريف المشترين بك.';
+
+  @override
+  String get faqQAccountPassword => 'نسيت كلمة المرور الخاصة بي، ماذا أفعل؟';
+
+  @override
+  String get faqAAccountPassword =>
+      'بالنقر على رابط \"نسيت كلمة المرور\" في شاشة تسجيل الدخول، يمكنك طلب رابط إعادة التعيين لبريدك الإلكتروني وتعيين كلمة مرور جديدة.';
+
+  @override
+  String get faqQAccountDelete => 'كيف يمكنني حذف حسابي؟';
+
+  @override
+  String get faqAAccountDelete =>
+      'يمكنك حذف حسابك نهائياً بالانتقال إلى الإعدادات > حذف الحساب. لا يمكن التراجع عن هذه العملية؛ سيتم إزالة جميع بياناتك وإعلاناتك نهائياً.';
+
+  @override
+  String get faqCatExplore => 'الاستكشاف والاقتراحات والقوائم';
+
+  @override
+  String get faqQExploreSellers => 'من يظهر في قسم \"البائعون المقترحون\"؟';
+
+  @override
+  String get faqAExploreSellers =>
+      'يتم تحديد هذه القائمة تلقائياً بواسطة خوارزمية الذكاء الاصطناعي الخاصة بنا. يظهر هنا المستخدمون ذوو التقييم العالي والإعلانات التي يتم زيارتها بشكل متكرر، والذين يمتلكون عادةً اشتراك PRO أو شارة \"بائع موثوق\".';
+
+  @override
+  String get faqQExploreStreamers => 'كيف يعمل قسم \"المذيعون المقترحون\"؟';
+
+  @override
+  String get faqAExploreStreamers =>
+      'يتم نقل المذيعين الذين يبثون بانتظام على SwipeLive، ويحققون نقاط \"حماس\" عالية، ولديهم جمهور نشط تلقائياً إلى أعلى صفحة الاستكشاف.';
+
+  @override
+  String get faqQExploreListings =>
+      'ما الفرق بين صفحة \"الإعلانات\" وصفحة \"الاستكشاف\"؟';
+
+  @override
+  String get faqAExploreListings =>
+      'صفحة الإعلانات هي موجز عمودي للإعلانات المضافة حديثاً والتي تم اختيارها خصيصاً لاهتماماتك بواسطة الذكاء الاصطناعي. أما الاستكشاف فهي مركز البحث الرئيسي حيث يمكنك اكتشاف بائعين مشهورين.';
+
+  @override
+  String get faqQExploreLiveMessages =>
+      'ما هي قوائم \"البث المباشر\" و \"الرسائل\"؟';
+
+  @override
+  String get faqAExploreLiveMessages =>
+      'البث المباشر: يأخذك إلى موجز SwipeLive حيث يعرض البائعون المنتجات مباشرة. الرسائل: يمكنك الدردشة مباشرة مع البائعين والتفاوض على الأسعار بأمان.';
+
+  @override
+  String get faqCatBadges => 'الشارات والعلامات ورصيد TUCi';
+
+  @override
+  String get faqQBadgesVerified => 'ما هي العلامة الزرقاء (حساب موثق)؟';
+
+  @override
+  String get faqABadgesVerified =>
+      'تشير العلامة الزرقاء إلى أن البائع قد تحقق بنجاح من بريده الإلكتروني ورقم هاتفه، مما يثبت أنه شخص حقيقي موثوق.';
+
+  @override
+  String get faqQBadgesPro => 'ماذا تعني شارة \"👑 (التاج)\"؟';
+
+  @override
+  String get faqABadgesPro =>
+      'تشير هذه الشارة إلى أن البائع عضو في Teqlif PRO. بائعو PRO هم محترفون يتم الترويج لهم أكثر بواسطة الخوارزمية.';
+
+  @override
+  String get faqQBadgesTrusted =>
+      'ماذا تعني شارات بائع \"✅ موثوق\" و \"⭐ نشط\"؟';
+
+  @override
+  String get faqABadgesTrusted =>
+      'بائع موثوق: تُمنح للبائعين ذوي الخبرة الذين أثبتوا هويتهم وبنوا الثقة. بائع نشط: يمثل البائعين الذين يستخدمون المنصة بشكل متكرر ويردون بسرعة.';
+
+  @override
+  String get faqQBadgesSponsored =>
+      'إلى ماذا تشير علامات \"ممولة\" و \"شائعة\" و \"مباشر\"؟';
+
+  @override
+  String get faqABadgesSponsored =>
+      'ممولة: إعلان مروج باستخدام رصيد TUCi. شائعة (نار): إعلان يحظى بمشاهدات عالية مؤخراً. مباشر (يومض): البائع يبث حالياً لهذا المنتج.';
+
+  @override
+  String get faqQBadgesTuci => 'ما هو TUCi وأين يتم استخدامه؟';
+
+  @override
+  String get faqABadgesTuci =>
+      'TUCi هي عملتنا الافتراضية. تستخدم للترويج للإعلانات، إرسال الهدايا في البث المباشر، الحصول على تحليل الأسعار بالذكاء الاصطناعي، والوصول إلى المشترين مباشرة.';
+
+  @override
+  String get faqCatLive => 'البث المباشر (SwipeLive) والمزادات';
+
+  @override
+  String get faqQLiveHost => 'ماذا يمكنني أن أفعل في شاشة المذيع (المضيف)؟';
+
+  @override
+  String get faqALiveHost =>
+      'يمكنك إدارة الدردشة، بدء مزاد لمنتجك، رؤية العطاءات الواردة فوراً، وقبول أعلى عطاء لتأكيد البيع في ثوانٍ.';
+
+  @override
+  String get faqQLiveViewer => 'ما هي ميزات شاشة المشاهد؟';
+
+  @override
+  String get faqALiveViewer =>
+      'يمكنك مشاهدة البث بسلاسة عن طريق التمرير عمودياً. يمكنك الانضمام للدردشة، وإرسال الهدايا، والمزايدة المباشرة في المزادات.';
+
+  @override
+  String get faqQLiveHype => 'ما هو مستوى الحماس (Hype)؟';
+
+  @override
+  String get faqALiveHype =>
+      'كلما تفاعل المشاهدون وأرسلوا الهدايا، تزداد نقاط الحماس. عندما تتجاوز الحد، يسجل النظام تلك اللحظة المثيرة كـ \"فيديو مميز\".';
+
+  @override
+  String get faqCatAI => 'أدوات PRO والذكاء الاصطناعي';
+
+  @override
+  String get faqQAIInsights => 'ما هو قمع التحويل (Pro Insights)؟';
+
+  @override
+  String get faqAAIInsights =>
+      'أداة حصرية لبائعي PRO تبلغ عن عدد المشاهدات ووقت البقاء ومعدلات التردد لتحسين استراتيجية المبيعات الخاصة بك.';
+
+  @override
+  String get faqQAIPrice => 'كيف يعمل تسعير الذكاء الاصطناعي (AI Price Intel)؟';
+
+  @override
+  String get faqAAIPrice =>
+      'يحلل الذكاء الاصطناعي ملايين البيانات لاقتراح أفضل سعر بناءً على عنوان منتجك وفئته.';
+
+  @override
+  String get faqQAILead => 'ما هي ميزة \"الطلب الساخن\" (العثور على مشترٍ)؟';
+
+  @override
+  String get faqAAILead =>
+      'نظام يطابق إعلانك مع أفضل المشترين المحتملين عبر الذكاء الاصطناعي ويرسل لهم إشعار \"إعلان مقترح\" مباشرة.';
+
+  @override
+  String get faqQAIRadar => 'تحليل المنافسين وأفضل وقت للبث';
+
+  @override
+  String get faqAAIRadar =>
+      'يقارن تحليل المنافسين سعرك ونسبة النقر مع المنافسين. تحدد وحدة أفضل وقت للبث متى يكون متابعوك أكثر نشاطاً.';
 }

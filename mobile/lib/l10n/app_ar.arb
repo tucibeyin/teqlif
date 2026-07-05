@@ -660,7 +660,13 @@
   "planLifetime": "مدى الحياة",
   "proStatusDesc": "جميع أدوات التحليل نشطة",
   "proRenewalDate": "التجديد: {date}",
-  "@proRenewalDate": { "placeholders": { "date": { "type": "String" } } },
+  "@proRenewalDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "proUnlockTitle": "فتح أدوات Pro",
   "proUnlockDesc": "بِع بالبيانات، لا بالتخمين",
   "proUnlockBtn": "الترقية إلى Pro",
@@ -677,15 +683,23 @@
   "proCreditsUsedFormat": "تم استخدام {used}، {remaining} متبقٍ",
   "@proCreditsUsedFormat": {
     "placeholders": {
-      "used": { "type": "int" },
-      "remaining": { "type": "int" }
+      "used": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
     }
   },
   "proCreditsLimitFormat": "{remaining} / {limit}",
   "@proCreditsLimitFormat": {
     "placeholders": {
-      "remaining": { "type": "int" },
-      "limit": { "type": "int" }
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
     }
   },
   "blastConfirmCostFreeLabel": "التكلفة",
@@ -1245,36 +1259,129 @@
   "hostAcceptSaleBtnCapture": "التقاط وتأكيد",
   "hostAcceptSaleBtnSkip": "تأكيد بدون صورة",
   "radarSuggestedCopied": "تم نسخ {price} ₺ إلى الحافظة",
-  "@radarSuggestedCopied": { "placeholders": { "price": { "type": "String" } } },
+  "@radarSuggestedCopied": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "radarCopyBtn": "نسخ السعر المقترح: {price} ₺",
-  "@radarCopyBtn": { "placeholders": { "price": { "type": "String" } } },
+  "@radarCopyBtn": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "retargetingBlastSent": "تم إرسال إشعار إلى {count} شخص!",
-  "@retargetingBlastSent": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingBlastSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingBlastCooldown": "يجب الانتظار 7 أيام حتى الإرسال التالي.",
   "retargetingDialogTitle": "إرسال إشعار؟",
   "retargetingDialogBodyFree": "سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى {count} شخص. لديك {credits} رصيد إشعار، سيُرسل مجانًا.",
-  "@retargetingDialogBodyFree": { "placeholders": { "count": { "type": "int" }, "credits": { "type": "int" } } },
+  "@retargetingDialogBodyFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "credits": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingDialogBodyPaid": "سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى {count} شخص. سيُخصم {cost} TUCi من محفظتك.",
-  "@retargetingDialogBodyPaid": { "placeholders": { "count": { "type": "int" }, "cost": { "type": "int" } } },
+  "@retargetingDialogBodyPaid": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingDialogBodyKarma": "سيتم إرسال إشعار إلى {count} شخص.\n\nسيُستخدم {free} رصيد + سيُدفع {cost} TUCi.",
-  "@retargetingDialogBodyKarma": { "placeholders": { "count": { "type": "int" }, "free": { "type": "int" }, "cost": { "type": "int" } } },
+  "@retargetingDialogBodyKarma": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "free": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingDialogBodyInsufficient": "رصيد TUCi غير كافٍ.\nالمطلوب: {cost} TUCi | المتاح: {balance} TUCi",
-  "@retargetingDialogBodyInsufficient": { "placeholders": { "cost": { "type": "int" }, "balance": { "type": "int" } } },
+  "@retargetingDialogBodyInsufficient": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingCostFree": "مجاني",
   "retargetingCreditsLeft": "{count} رصيد متبقٍ",
-  "@retargetingCreditsLeft": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingCreditsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingFreeSubtitle": "{count} شخص — يُستخدم رصيد بث واحد",
-  "@retargetingFreeSubtitle": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingFreeSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingPaidSubtitle": "{count} شخص × 10 TUCi",
-  "@retargetingPaidSubtitle": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingPaidSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingEstimatedCost": "التكلفة المتوقعة",
   "retargetingSending": "جارٍ الإرسال...",
   "retargetingSendBtnLabel": "إرسال إشعار إلى {count} شخص",
-  "@retargetingSendBtnLabel": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingSendBtnLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingCreditsBadge": "{count} رصيد متبقٍ · يُرسل مجانًا",
-  "@retargetingCreditsBadge": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingCreditsBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingCostBadge": "سيُنفق {cost} TUCi",
-  "@retargetingCostBadge": { "placeholders": { "cost": { "type": "int" } } },
+  "@retargetingCostBadge": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingFootnote": "سيتلقى المستخدمون إشعارًا \"هل لا تزال مهتمًا؟\". يُرسل فقط لغير المشترين.",
   "retargetingInfoText": "يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 10 TUCi لكل شخص.",
   "retargetingLast30Days": "آخر 30 يومًا",
@@ -1291,9 +1398,21 @@
   "btnResetPassword": "إعادة تعيين كلمة المرور",
   "radarScreenTitle": "رادار المنافسين وسرعة المبيعات",
   "priceMinLabel": "{price} ₺ (الحد الأدنى)",
-  "@priceMinLabel": { "placeholders": { "price": { "type": "String" } } },
+  "@priceMinLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "priceMaxLabel": "{price} ₺ (الحد الأقصى)",
-  "@priceMaxLabel": { "placeholders": { "price": { "type": "String" } } },
+  "@priceMaxLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "forYouLabel": "مخصص لك",
   "messagesUpdateFailed": "فشل التحديث",
   "btnRefresh": "تحديث",
@@ -1305,11 +1424,29 @@
   "hostNotifDialogTitle": "إرسال إشعار",
   "hostStreamDataError": "تعذّر تحميل البيانات",
   "hostInviteError": "تعذّر إرسال الدعوة: {error}",
-  "@hostInviteError": { "placeholders": { "error": { "type": "String" } } },
+  "@hostInviteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "hostModRemoved": "✖ @{username} تمت إزالته من المشرفين",
-  "@hostModRemoved": { "placeholders": { "username": { "type": "String" } } },
+  "@hostModRemoved": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "genericErrorDetail": "خطأ: {error}",
-  "@genericErrorDetail": { "placeholders": { "error": { "type": "String" } } },
+  "@genericErrorDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "profilePhotoUploadError": "تعذّر تحميل الصورة. حاول مرة أخرى.",
   "profileInviteCodeError": "تعذّر استرداد رمز الدعوة، حاول مرة أخرى.",
   "profileInviteTitle": "ادعُ أصدقاءك، اكسب TUCi!",
@@ -1323,36 +1460,143 @@
   "createNeedTitle": "يرجى إدخال عنوان الإعلان أولاً.",
   "aiPriceError": "تعذّر الحصول على تقدير السعر. حاول مرة أخرى.",
   "tuciSpent": "تم إنفاق {count} TUCi.",
-  "@tuciSpent": { "placeholders": { "count": { "type": "int" } } },
+  "@tuciSpent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "videoTooLong": "لا يمكن أن يتجاوز الفيديو {max} ثانية ({actual}ث).",
-  "@videoTooLong": { "placeholders": { "max": { "type": "int" }, "actual": { "type": "int" } } },
+  "@videoTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
   "createPickCamera": "تسجيل بالكاميرا (حد أقصى {sec} ث)",
-  "@createPickCamera": { "placeholders": { "sec": { "type": "int" } } },
+  "@createPickCamera": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
   "videoUploading": "الفيديو لا يزال يُحمَّل، يرجى الانتظار.",
   "videoLabel": "فيديو (حد أقصى {sec} ث)",
-  "@videoLabel": { "placeholders": { "sec": { "type": "int" } } },
+  "@videoLabel": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
   "forYouStreams": "بثوث مخصصة لك",
   "searchNoResults": "لا توجد نتائج",
   "proSearchCount": "{count} بحث",
-  "@proSearchCount": { "placeholders": { "count": { "type": "int" } } },
-
+  "@proSearchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listingDeactivateTitle": "إيقاف الإعلان",
   "listingDeactivateWarning": "إذا قمت بإلغاء التنشيط، سيتم حذف الترويج النشط.",
   "listingDeactivateCostHint": "تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستكلف {cost} TUCi من رصيدك.",
-  "@listingDeactivateCostHint": { "placeholders": { "cost": { "type": "int" } } },
+  "@listingDeactivateCostHint": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "listingDeactivateFreeCreditHint": "تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستستخدم 1 رصيد PRO مجاني.",
   "listingDeactivateConfirm": "أفهم ذلك، قم بإلغاء التنشيط",
   "listingReactivateTitle": "إعادة تفعيل الإعلان",
   "listingReactivateFreeCredit": "لديك {remaining} رصيد مجاني. سيُستخدم 1.",
-  "@listingReactivateFreeCredit": { "placeholders": { "remaining": { "type": "int" } } },
+  "@listingReactivateFreeCredit": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
   "listingReactivatePaidPro": "استُنفدت الأرصدة الشهرية. سيُخصم {cost} TUCi.",
-  "@listingReactivatePaidPro": { "placeholders": { "cost": { "type": "int" } } },
+  "@listingReactivatePaidPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "listingReactivatePaidNormal": "سيُخصم {cost} TUCi. رصيدك: {balance} TUCi.",
-  "@listingReactivatePaidNormal": { "placeholders": { "cost": { "type": "int" }, "balance": { "type": "int" } } },
+  "@listingReactivatePaidNormal": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
   "listingReactivateProUpsell": "اشترك في PRO واحصل على 5 إعادة تفعيل مجانية شهرياً.",
   "listingReactivateInsufficientBalance": "رصيد غير كافٍ. أضف TUCi للمتابعة.",
   "listingReactivateConfirm": "تفعيل",
   "proReactivationSection": "أرصدة إعادة تفعيل الإعلان",
   "suggestedStreamers": "المذيعون المقترحون",
-  "listingsSelectedForYou": "القوائم المختارة لك"
+  "listingsSelectedForYou": "القوائم المختارة لك",
+  "profileFaq": "الأسئلة الشائعة",
+  "faqCatAccount": "الحساب والملف الشخصي والدعم",
+  "faqQAccountSignup": "كيف يمكنني التسجيل وتسجيل الدخول إلى Teqlif؟",
+  "faqAAccountSignup": "يمكنك إنشاء حسابك في ثوانٍ باستخدام بريدك الإلكتروني بالنقر على زر \"تسجيل الدخول / التسجيل\" في الصفحة الرئيسية، أو تسجيل الدخول بأمان إلى حسابك الحالي.",
+  "faqQAccountEmail": "لماذا يجب علي التحقق من عنوان بريدي الإلكتروني؟",
+  "faqAAccountEmail": "يعد التحقق من البريد الإلكتروني إلزامياً لضمان أمان حسابك وإجراء عمليات مهمة مثل إعادة تعيين كلمة المرور. كما أنها الخطوة الأولى للحصول على الحساب الموثق (العلامة الزرقاء).",
+  "faqQAccountProfile": "كيف يمكنني تعديل ملفي الشخصي (الاسم، الصورة، النبذة)؟",
+  "faqAAccountProfile": "يمكنك النقر على زر \"تعديل الملف الشخصي\" من خلال الانتقال إلى علامة التبويب \"ملفي الشخصي\". يمكنك تغيير الصورة الرمزية وتحديث اسمك وكتابة نبذة عنك لتعريف المشترين بك.",
+  "faqQAccountPassword": "نسيت كلمة المرور الخاصة بي، ماذا أفعل؟",
+  "faqAAccountPassword": "بالنقر على رابط \"نسيت كلمة المرور\" في شاشة تسجيل الدخول، يمكنك طلب رابط إعادة التعيين لبريدك الإلكتروني وتعيين كلمة مرور جديدة.",
+  "faqQAccountDelete": "كيف يمكنني حذف حسابي؟",
+  "faqAAccountDelete": "يمكنك حذف حسابك نهائياً بالانتقال إلى الإعدادات > حذف الحساب. لا يمكن التراجع عن هذه العملية؛ سيتم إزالة جميع بياناتك وإعلاناتك نهائياً.",
+  "faqCatExplore": "الاستكشاف والاقتراحات والقوائم",
+  "faqQExploreSellers": "من يظهر في قسم \"البائعون المقترحون\"؟",
+  "faqAExploreSellers": "يتم تحديد هذه القائمة تلقائياً بواسطة خوارزمية الذكاء الاصطناعي الخاصة بنا. يظهر هنا المستخدمون ذوو التقييم العالي والإعلانات التي يتم زيارتها بشكل متكرر، والذين يمتلكون عادةً اشتراك PRO أو شارة \"بائع موثوق\".",
+  "faqQExploreStreamers": "كيف يعمل قسم \"المذيعون المقترحون\"؟",
+  "faqAExploreStreamers": "يتم نقل المذيعين الذين يبثون بانتظام على SwipeLive، ويحققون نقاط \"حماس\" عالية، ولديهم جمهور نشط تلقائياً إلى أعلى صفحة الاستكشاف.",
+  "faqQExploreListings": "ما الفرق بين صفحة \"الإعلانات\" وصفحة \"الاستكشاف\"؟",
+  "faqAExploreListings": "صفحة الإعلانات هي موجز عمودي للإعلانات المضافة حديثاً والتي تم اختيارها خصيصاً لاهتماماتك بواسطة الذكاء الاصطناعي. أما الاستكشاف فهي مركز البحث الرئيسي حيث يمكنك اكتشاف بائعين مشهورين.",
+  "faqQExploreLiveMessages": "ما هي قوائم \"البث المباشر\" و \"الرسائل\"؟",
+  "faqAExploreLiveMessages": "البث المباشر: يأخذك إلى موجز SwipeLive حيث يعرض البائعون المنتجات مباشرة. الرسائل: يمكنك الدردشة مباشرة مع البائعين والتفاوض على الأسعار بأمان.",
+  "faqCatBadges": "الشارات والعلامات ورصيد TUCi",
+  "faqQBadgesVerified": "ما هي العلامة الزرقاء (حساب موثق)؟",
+  "faqABadgesVerified": "تشير العلامة الزرقاء إلى أن البائع قد تحقق بنجاح من بريده الإلكتروني ورقم هاتفه، مما يثبت أنه شخص حقيقي موثوق.",
+  "faqQBadgesPro": "ماذا تعني شارة \"👑 (التاج)\"؟",
+  "faqABadgesPro": "تشير هذه الشارة إلى أن البائع عضو في Teqlif PRO. بائعو PRO هم محترفون يتم الترويج لهم أكثر بواسطة الخوارزمية.",
+  "faqQBadgesTrusted": "ماذا تعني شارات بائع \"✅ موثوق\" و \"⭐ نشط\"؟",
+  "faqABadgesTrusted": "بائع موثوق: تُمنح للبائعين ذوي الخبرة الذين أثبتوا هويتهم وبنوا الثقة. بائع نشط: يمثل البائعين الذين يستخدمون المنصة بشكل متكرر ويردون بسرعة.",
+  "faqQBadgesSponsored": "إلى ماذا تشير علامات \"ممولة\" و \"شائعة\" و \"مباشر\"؟",
+  "faqABadgesSponsored": "ممولة: إعلان مروج باستخدام رصيد TUCi. شائعة (نار): إعلان يحظى بمشاهدات عالية مؤخراً. مباشر (يومض): البائع يبث حالياً لهذا المنتج.",
+  "faqQBadgesTuci": "ما هو TUCi وأين يتم استخدامه؟",
+  "faqABadgesTuci": "TUCi هي عملتنا الافتراضية. تستخدم للترويج للإعلانات، إرسال الهدايا في البث المباشر، الحصول على تحليل الأسعار بالذكاء الاصطناعي، والوصول إلى المشترين مباشرة.",
+  "faqCatLive": "البث المباشر (SwipeLive) والمزادات",
+  "faqQLiveHost": "ماذا يمكنني أن أفعل في شاشة المذيع (المضيف)؟",
+  "faqALiveHost": "يمكنك إدارة الدردشة، بدء مزاد لمنتجك، رؤية العطاءات الواردة فوراً، وقبول أعلى عطاء لتأكيد البيع في ثوانٍ.",
+  "faqQLiveViewer": "ما هي ميزات شاشة المشاهد؟",
+  "faqALiveViewer": "يمكنك مشاهدة البث بسلاسة عن طريق التمرير عمودياً. يمكنك الانضمام للدردشة، وإرسال الهدايا، والمزايدة المباشرة في المزادات.",
+  "faqQLiveHype": "ما هو مستوى الحماس (Hype)؟",
+  "faqALiveHype": "كلما تفاعل المشاهدون وأرسلوا الهدايا، تزداد نقاط الحماس. عندما تتجاوز الحد، يسجل النظام تلك اللحظة المثيرة كـ \"فيديو مميز\".",
+  "faqCatAI": "أدوات PRO والذكاء الاصطناعي",
+  "faqQAIInsights": "ما هو قمع التحويل (Pro Insights)؟",
+  "faqAAIInsights": "أداة حصرية لبائعي PRO تبلغ عن عدد المشاهدات ووقت البقاء ومعدلات التردد لتحسين استراتيجية المبيعات الخاصة بك.",
+  "faqQAIPrice": "كيف يعمل تسعير الذكاء الاصطناعي (AI Price Intel)؟",
+  "faqAAIPrice": "يحلل الذكاء الاصطناعي ملايين البيانات لاقتراح أفضل سعر بناءً على عنوان منتجك وفئته.",
+  "faqQAILead": "ما هي ميزة \"الطلب الساخن\" (العثور على مشترٍ)؟",
+  "faqAAILead": "نظام يطابق إعلانك مع أفضل المشترين المحتملين عبر الذكاء الاصطناعي ويرسل لهم إشعار \"إعلان مقترح\" مباشرة.",
+  "faqQAIRadar": "تحليل المنافسين وأفضل وقت للبث",
+  "faqAAIRadar": "يقارن تحليل المنافسين سعرك ونسبة النقر مع المنافسين. تحدد وحدة أفضل وقت للبث متى يكون متابعوك أكثر نشاطاً."
 }

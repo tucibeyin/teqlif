@@ -36,6 +36,7 @@ import 'purchases_screen.dart';
 import 'sales_screen.dart';
 import '../services/share_service.dart';
 import '../services/wallet_service.dart';
+import 'faq_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -1701,6 +1702,13 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
+                },
+              ),
+              _SettingsTile(
+                icon: Icons.question_answer_outlined,
+                label: l.profileFaq,
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqScreen()));
                 },
               ),
               _SettingsTile(

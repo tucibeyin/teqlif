@@ -5229,6 +5229,294 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Sizin İçin Seçilen İlanlar'**
   String get listingsSelectedForYou;
+
+  /// No description provided for @profileFaq.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sıkça Sorulan Sorular'**
+  String get profileFaq;
+
+  /// No description provided for @faqCatAccount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap İşlemleri, Profil ve Destek'**
+  String get faqCatAccount;
+
+  /// No description provided for @faqQAccountSignup.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teqlif\'e nasıl kayıt olabilirim ve giriş yapabilirim?'**
+  String get faqQAccountSignup;
+
+  /// No description provided for @faqAAccountSignup.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ana sayfadaki \"Giriş Yap / Kayıt Ol\" butonunu kullanarak E-posta adresinizle saniyeler içinde hesabınızı oluşturabilir veya mevcut hesabınıza güvenle giriş yapabilirsiniz.'**
+  String get faqAAccountSignup;
+
+  /// No description provided for @faqQAccountEmail.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta adresimi neden doğrulamalıyım?'**
+  String get faqQAccountEmail;
+
+  /// No description provided for @faqAAccountEmail.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabınızın güvenliğini sağlamak ve şifre sıfırlama gibi kritik işlemleri yapabilmek için e-posta doğrulamanız zorunludur. Doğrulanmış e-postalar Mavi Tik (Onaylı Hesap) sürecinin de ilk adımıdır.'**
+  String get faqAAccountEmail;
+
+  /// No description provided for @faqQAccountProfile.
+  ///
+  /// In tr, this message translates to:
+  /// **'Profilimi nasıl düzenleyebilirim (İsim, Fotoğraf, Bio)?'**
+  String get faqQAccountProfile;
+
+  /// No description provided for @faqAAccountProfile.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulama içerisinden \"Profilim\" sekmesine giderek Profili Düzenle butonuna tıklayabilirsiniz. Açılan ekranda profil fotoğrafınızı (avatar) değiştirebilir, ad-soyad bilgilerinizi güncelleyebilir ve potansiyel alıcıların sizi daha iyi tanıması için \"Hakkımda (Bio)\" kısmına kendinizi anlatan bir açıklama yazabilirsiniz.'**
+  String get faqAAccountProfile;
+
+  /// No description provided for @faqQAccountPassword.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifremi unuttum, ne yapmalıyım?'**
+  String get faqQAccountPassword;
+
+  /// No description provided for @faqAAccountPassword.
+  ///
+  /// In tr, this message translates to:
+  /// **'Giriş ekranındaki \"Şifremi Unuttum\" bağlantısına tıklayarak e-posta adresinize bir sıfırlama bağlantısı isteyebilir ve yeni şifrenizi belirleyebilirsiniz.'**
+  String get faqAAccountPassword;
+
+  /// No description provided for @faqQAccountDelete.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabımı nasıl silebilirim?'**
+  String get faqQAccountDelete;
+
+  /// No description provided for @faqAAccountDelete.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ayarlar > Hesabı Sil yolunu izleyerek hesabınızı kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz; tüm verileriniz ve ilanlarınız sistemden kalıcı olarak kaldırılır.'**
+  String get faqAAccountDelete;
+
+  /// No description provided for @faqCatExplore.
+  ///
+  /// In tr, this message translates to:
+  /// **'Keşif, Öneriler ve Menüler'**
+  String get faqCatExplore;
+
+  /// No description provided for @faqQExploreSellers.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"Önerilen Satıcılar\" bölümünde kimler yer alır?'**
+  String get faqQExploreSellers;
+
+  /// No description provided for @faqAExploreSellers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu liste yapay zeka algoritmamız tarafından otomatik belirlenir. Profilinde yüksek puanlama alan, ilanları sık ziyaret edilen, mesajlara hızlı yanıt veren ve genellikle PRO aboneliğine veya \"Güvenilir Satıcı\" rozetine sahip kullanıcılar burada sergilenerek platformdaki binlerce kişiye tavsiye edilir.'**
+  String get faqAExploreSellers;
+
+  /// No description provided for @faqQExploreStreamers.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"Önerilen Yayıncılar\" bölümü nasıl çalışır?'**
+  String get faqQExploreStreamers;
+
+  /// No description provided for @faqAExploreStreamers.
+  ///
+  /// In tr, this message translates to:
+  /// **'SwipeLive platformunda düzenli olarak canlı yayın açan, yayınlarında yüksek \"Hype\" (Heyecan) puanına ulaşan ve aktif bir takipçi/izleyici kitlesine sahip yayıncılar sistem tarafından otomatik olarak Keşfet sayfasının en üstüne taşınır.'**
+  String get faqAExploreStreamers;
+
+  /// No description provided for @faqQExploreListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"İlanlar\" ve \"Keşfet\" sayfaları arasındaki fark nedir?'**
+  String get faqQExploreListings;
+
+  /// No description provided for @faqAExploreListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanlar sayfası yapay zekanın tamamen sizin ilgi alanlarınıza özel seçtiği ilanların ve en son eklenenlerin bulunduğu dikey bir akıştır. Keşfet sayfası ise; kategori bazlı detaylı aramalar yapabileceğiniz, popüler satıcı ve yayıncıları keşfedebileceğiniz ana arama merkezidir.'**
+  String get faqAExploreListings;
+
+  /// No description provided for @faqQExploreLiveMessages.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"Canlı\" ve \"Mesajlar\" menüleri ne işe yarar?'**
+  String get faqQExploreLiveMessages;
+
+  /// No description provided for @faqAExploreLiveMessages.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı: Satıcıların ürünlerini canlı yayında tanıttığı SwipeLive akışına ulaşmanızı sağlar. Mesajlar: İlgilendiğiniz ürünler için satıcılarla doğrudan sohbet edebilir ve güvenli bir şekilde fiyat pazarlığı (teklif) yapabilirsiniz.'**
+  String get faqAExploreLiveMessages;
+
+  /// No description provided for @faqCatBadges.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rozetler, Etiketler ve TUCi Kredisi'**
+  String get faqCatBadges;
+
+  /// No description provided for @faqQBadgesVerified.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mavi Tik (Doğrulanmış Hesap) nedir?'**
+  String get faqQBadgesVerified;
+
+  /// No description provided for @faqABadgesVerified.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mavi tik, satıcının e-posta adresini ve telefon numarasını başarıyla doğruladığını gösterir. Bu rozet, potansiyel alıcılara sizin güvenilir bir gerçek kişi olduğunuzu kanıtlar.'**
+  String get faqABadgesVerified;
+
+  /// No description provided for @faqQBadgesPro.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanlarda gördüğüm \"👑 (Taç)\" rozeti nedir?'**
+  String get faqQBadgesPro;
+
+  /// No description provided for @faqABadgesPro.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu rozet, ilanı paylaşan kullanıcının veya satıcının Teqlif PRO üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.'**
+  String get faqABadgesPro;
+
+  /// No description provided for @faqQBadgesTrusted.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"✅ Güvenilir\" ve \"⭐ Aktif\" Satıcı rozetleri ne anlama gelir?'**
+  String get faqQBadgesTrusted;
+
+  /// No description provided for @faqABadgesTrusted.
+  ///
+  /// In tr, this message translates to:
+  /// **'✅ Güvenilir Satıcı: Kimlik bilgilerini doğrulamış, işlemleri sorunsuz tamamlanan ve platformda tam bir güven inşa etmiş deneyimli satıcılara verilir. ⭐ Aktif Satıcı: Platformu sık kullanan, alıcıların mesajlarına hızlı yanıt veren ve düzenli aralıklarla yeni ilanlar giren dinamik satıcıları temsil eder.'**
+  String get faqABadgesTrusted;
+
+  /// No description provided for @faqQBadgesSponsored.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"Sponsorlu\", \"Trending\" ve \"LIVE\" etiketleri neyi ifade eder?'**
+  String get faqQBadgesSponsored;
+
+  /// No description provided for @faqABadgesSponsored.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sponsorlu: Satıcının TUCi kredisi kullanarak ilanını öne çıkardığını belirtir. Trending (Ateş): İlanın son zamanlarda çok kişi tarafından incelendiğini veya favoriye eklendiğini (sıcak fırsat) gösterir. LIVE (Yanıp Sönen): Satıcının o an söz konusu ürün için canlı yayın (SwipeLive) yaptığını gösterir.'**
+  String get faqABadgesSponsored;
+
+  /// No description provided for @faqQBadgesTuci.
+  ///
+  /// In tr, this message translates to:
+  /// **'TUCi nedir, nerelerde kullanılır?'**
+  String get faqQBadgesTuci;
+
+  /// No description provided for @faqABadgesTuci.
+  ///
+  /// In tr, this message translates to:
+  /// **'TUCi, Teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.'**
+  String get faqABadgesTuci;
+
+  /// No description provided for @faqCatLive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı Yayınlar (SwipeLive) ve Açık Artırma'**
+  String get faqCatLive;
+
+  /// No description provided for @faqQLiveHost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayıncı (Host) ekranında neler yapabilirim?'**
+  String get faqQLiveHost;
+
+  /// No description provided for @faqALiveHost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Host ekranında sohbeti yönetebilir, ürününüz için Açık Artırma başlatabilir, gelen teklifleri (Bid) anlık görebilir ve sürenin sonunda en yüksek teklifi kabul edip satışı onaylayabilirsiniz.'**
+  String get faqALiveHost;
+
+  /// No description provided for @faqQLiveViewer.
+  ///
+  /// In tr, this message translates to:
+  /// **'İzleyici (Viewer) ekranının özellikleri nelerdir?'**
+  String get faqQLiveViewer;
+
+  /// No description provided for @faqALiveViewer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayınları ekranı dikey olarak kaydırarak (SwipeLive) kesintisiz izleyebilirsiniz. Sohbete katılabilir, hediye gönderebilir ve açık artırmaya Canlı Teklif verebilirsiniz.'**
+  String get faqALiveViewer;
+
+  /// No description provided for @faqQLiveHype.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hype (Heyecan) seviyesi nedir?'**
+  String get faqQLiveHype;
+
+  /// No description provided for @faqALiveHype.
+  ///
+  /// In tr, this message translates to:
+  /// **'İzleyiciler sohbete katıldıkça ve hediye gönderdikçe odanın Hype puanı artar. Puan limiti aştığında, yayın otomatik olarak \"Öne Çıkan Video (Highlight)\" kaydedilir.'**
+  String get faqALiveHype;
+
+  /// No description provided for @faqCatAI.
+  ///
+  /// In tr, this message translates to:
+  /// **'PRO Araçları (Pro Tools) ve Yapay Zeka'**
+  String get faqCatAI;
+
+  /// No description provided for @faqQAIInsights.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dönüşüm Hunisi (Pro Insights) nedir?'**
+  String get faqQAIInsights;
+
+  /// No description provided for @faqAAIInsights.
+  ///
+  /// In tr, this message translates to:
+  /// **'PRO satıcılara özel olan bu araç, ilanınızın görüntülenme sayısını, ziyaretçilerin ilan detayında geçirdiği süreyi ve tereddüt (hesitation) oranını raporlar.'**
+  String get faqAAIInsights;
+
+  /// No description provided for @faqQAIPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay Zeka Fiyat Tahmini (AI Price Intel) nasıl çalışır?'**
+  String get faqQAIPrice;
+
+  /// No description provided for @faqAAIPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay zekamız ürününüzün başlığına ve kategorisine bakarak en hızlı satılabilecek optimum fiyatı size önerir.'**
+  String get faqAAIPrice;
+
+  /// No description provided for @faqQAILead.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"Sıcak Talep\" (Alıcı Bul / Lead Gen) özelliği nedir?'**
+  String get faqQAILead;
+
+  /// No description provided for @faqAAILead.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınıza en uygun potansiyel alıcıları yapay zeka ile eşleştirerek, doğrudan onlara \"Önerilen İlan\" bildirimi gönderen sistemdir.'**
+  String get faqAAILead;
+
+  /// No description provided for @faqQAIRadar.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rekabet Analizi ve En İyi Yayın Saati Tahmini'**
+  String get faqQAIRadar;
+
+  /// No description provided for @faqAAIRadar.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rekabet Analizi, ilanınızın fiyat durumunu ve tıklanma oranını rakiplerle kıyaslar. Yayın Saati Tahmini ise takipçilerinizin en aktif olduğu saatleri gösterir.'**
+  String get faqAAIRadar;
 }
 
 class _AppLocalizationsDelegate

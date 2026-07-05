@@ -661,7 +661,13 @@
   "planLifetime": "Lifetime",
   "proStatusDesc": "All analytics tools are active",
   "proRenewalDate": "Renews: {date}",
-  "@proRenewalDate": { "placeholders": { "date": { "type": "String" } } },
+  "@proRenewalDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "proUnlockTitle": "Unlock Pro Tools",
   "proUnlockDesc": "Sell with data, not guesswork",
   "proUnlockBtn": "Go Pro",
@@ -678,15 +684,23 @@
   "proCreditsUsedFormat": "{used} used, {remaining} remaining",
   "@proCreditsUsedFormat": {
     "placeholders": {
-      "used": { "type": "int" },
-      "remaining": { "type": "int" }
+      "used": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
     }
   },
   "proCreditsLimitFormat": "{remaining} / {limit}",
   "@proCreditsLimitFormat": {
     "placeholders": {
-      "remaining": { "type": "int" },
-      "limit": { "type": "int" }
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
     }
   },
   "blastConfirmCostFreeLabel": "Cost",
@@ -1246,36 +1260,129 @@
   "hostAcceptSaleBtnCapture": "Capture & Confirm",
   "hostAcceptSaleBtnSkip": "Confirm Without Photo",
   "radarSuggestedCopied": "{price} ₺ copied to clipboard",
-  "@radarSuggestedCopied": { "placeholders": { "price": { "type": "String" } } },
+  "@radarSuggestedCopied": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "radarCopyBtn": "Copy suggested price: {price} ₺",
-  "@radarCopyBtn": { "placeholders": { "price": { "type": "String" } } },
+  "@radarCopyBtn": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "retargetingBlastSent": "Notification sent to {count} people!",
-  "@retargetingBlastSent": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingBlastSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingBlastCooldown": "You need to wait 7 days for the next broadcast.",
   "retargetingDialogTitle": "Send notification?",
   "retargetingDialogBodyFree": "A \"Still interested?\" notification will be sent to {count} people. You have {credits} notification credits, sent for free.",
-  "@retargetingDialogBodyFree": { "placeholders": { "count": { "type": "int" }, "credits": { "type": "int" } } },
+  "@retargetingDialogBodyFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "credits": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingDialogBodyPaid": "A \"Still interested?\" notification will be sent to {count} people. {cost} TUCi will be deducted from your wallet.",
-  "@retargetingDialogBodyPaid": { "placeholders": { "count": { "type": "int" }, "cost": { "type": "int" } } },
+  "@retargetingDialogBodyPaid": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingDialogBodyKarma": "A notification will be sent to {count} people.\n\n{free} credit(s) will be used + {cost} TUCi will be charged.",
-  "@retargetingDialogBodyKarma": { "placeholders": { "count": { "type": "int" }, "free": { "type": "int" }, "cost": { "type": "int" } } },
+  "@retargetingDialogBodyKarma": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "free": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingDialogBodyInsufficient": "Insufficient TUCi balance.\nRequired: {cost} TUCi | Available: {balance} TUCi",
-  "@retargetingDialogBodyInsufficient": { "placeholders": { "cost": { "type": "int" }, "balance": { "type": "int" } } },
+  "@retargetingDialogBodyInsufficient": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingCostFree": "Free",
   "retargetingCreditsLeft": "{count} credits left",
-  "@retargetingCreditsLeft": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingCreditsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingFreeSubtitle": "{count} people — 1 broadcast credit used",
-  "@retargetingFreeSubtitle": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingFreeSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingPaidSubtitle": "{count} people × 10 TUCi",
-  "@retargetingPaidSubtitle": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingPaidSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingEstimatedCost": "Estimated cost",
   "retargetingSending": "Sending...",
   "retargetingSendBtnLabel": "Send notification to {count} people",
-  "@retargetingSendBtnLabel": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingSendBtnLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingCreditsBadge": "{count} credits left · sent free",
-  "@retargetingCreditsBadge": { "placeholders": { "count": { "type": "int" } } },
+  "@retargetingCreditsBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingCostBadge": "{cost} TUCi will be spent",
-  "@retargetingCostBadge": { "placeholders": { "cost": { "type": "int" } } },
+  "@retargetingCostBadge": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "retargetingFootnote": "Users will receive a \"Still interested?\" notification. Only sent to non-buyers.",
   "retargetingInfoText": "Sends a reminder notification to people who viewed your listing but didn't buy. Free if you have monthly broadcast credits, otherwise 10 TUCi per person.",
   "retargetingLast30Days": "Last 30 days",
@@ -1292,9 +1399,21 @@
   "btnResetPassword": "Reset Password",
   "radarScreenTitle": "Competitor Radar & Sales Speed",
   "priceMinLabel": "{price} ₺ (min)",
-  "@priceMinLabel": { "placeholders": { "price": { "type": "String" } } },
+  "@priceMinLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "priceMaxLabel": "{price} ₺ (max)",
-  "@priceMaxLabel": { "placeholders": { "price": { "type": "String" } } },
+  "@priceMaxLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "forYouLabel": "For You",
   "messagesUpdateFailed": "Update failed",
   "btnRefresh": "Refresh",
@@ -1306,11 +1425,29 @@
   "hostNotifDialogTitle": "Send Notification",
   "hostStreamDataError": "Could not load data",
   "hostInviteError": "Invite could not be sent: {error}",
-  "@hostInviteError": { "placeholders": { "error": { "type": "String" } } },
+  "@hostInviteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "hostModRemoved": "✖ @{username} removed as moderator",
-  "@hostModRemoved": { "placeholders": { "username": { "type": "String" } } },
+  "@hostModRemoved": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "genericErrorDetail": "Error: {error}",
-  "@genericErrorDetail": { "placeholders": { "error": { "type": "String" } } },
+  "@genericErrorDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "profilePhotoUploadError": "Photo could not be uploaded. Try again.",
   "profileInviteCodeError": "Invite code could not be retrieved, try again.",
   "profileInviteTitle": "Invite Friends, Earn TUCi!",
@@ -1324,36 +1461,143 @@
   "createNeedTitle": "Please enter the listing title first.",
   "aiPriceError": "Could not get price estimate. Please try again.",
   "tuciSpent": "{count} TUCi spent.",
-  "@tuciSpent": { "placeholders": { "count": { "type": "int" } } },
+  "@tuciSpent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "videoTooLong": "Video cannot exceed {max} seconds ({actual}s).",
-  "@videoTooLong": { "placeholders": { "max": { "type": "int" }, "actual": { "type": "int" } } },
+  "@videoTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
   "createPickCamera": "Record with camera (max {sec}s)",
-  "@createPickCamera": { "placeholders": { "sec": { "type": "int" } } },
+  "@createPickCamera": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
   "videoUploading": "Video is still uploading, please wait.",
   "videoLabel": "Video (max {sec}s)",
-  "@videoLabel": { "placeholders": { "sec": { "type": "int" } } },
+  "@videoLabel": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
   "forYouStreams": "Streams For You",
   "searchNoResults": "No results found",
   "proSearchCount": "{count} searches",
-  "@proSearchCount": { "placeholders": { "count": { "type": "int" } } },
-
+  "@proSearchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "listingDeactivateTitle": "Deactivate Listing",
   "listingDeactivateWarning": "If you deactivate, active showcase/promotions will be removed.",
   "listingDeactivateCostHint": "Warning: Your 30-day free window has expired. Reactivating will cost {cost} TUCi from your balance.",
-  "@listingDeactivateCostHint": { "placeholders": { "cost": { "type": "int" } } },
+  "@listingDeactivateCostHint": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "listingDeactivateFreeCreditHint": "Warning: Your 30-day free window has expired. Reactivating will use 1 free PRO credit.",
   "listingDeactivateConfirm": "I understand, Deactivate",
   "listingReactivateTitle": "Reactivate Listing",
   "listingReactivateFreeCredit": "You have {remaining} free credits. 1 will be used.",
-  "@listingReactivateFreeCredit": { "placeholders": { "remaining": { "type": "int" } } },
+  "@listingReactivateFreeCredit": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
   "listingReactivatePaidPro": "Monthly credits exhausted. {cost} TUCi will be charged.",
-  "@listingReactivatePaidPro": { "placeholders": { "cost": { "type": "int" } } },
+  "@listingReactivatePaidPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
   "listingReactivatePaidNormal": "{cost} TUCi will be charged. Balance: {balance} TUCi.",
-  "@listingReactivatePaidNormal": { "placeholders": { "cost": { "type": "int" }, "balance": { "type": "int" } } },
+  "@listingReactivatePaidNormal": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
   "listingReactivateProUpsell": "Go PRO to get 5 free reactivations per month.",
   "listingReactivateInsufficientBalance": "Insufficient balance. Top up TUCi to continue.",
   "listingReactivateConfirm": "Activate",
   "proReactivationSection": "Listing Reactivation Credits",
   "suggestedStreamers": "Suggested Broadcasters",
-  "listingsSelectedForYou": "Listings Selected For You"
+  "listingsSelectedForYou": "Listings Selected For You",
+  "profileFaq": "Frequently Asked Questions",
+  "faqCatAccount": "Account, Profile and Support",
+  "faqQAccountSignup": "How can I register and log in to Teqlif?",
+  "faqAAccountSignup": "You can create your account in seconds using your E-mail address by clicking the \"Login / Register\" button on the homepage, or securely log into your existing account.",
+  "faqQAccountEmail": "Why do I need to verify my e-mail address?",
+  "faqAAccountEmail": "Email verification is mandatory to ensure the security of your account and perform critical operations such as password reset. Verified emails are also the first step for the Verified Account (Blue Tick) process.",
+  "faqQAccountProfile": "How can I edit my profile (Name, Photo, Bio)?",
+  "faqAAccountProfile": "You can click the Edit Profile button by going to the \"My Profile\" tab in the app. You can change your avatar, update your name, and write a bio to introduce yourself better to potential buyers.",
+  "faqQAccountPassword": "I forgot my password, what should I do?",
+  "faqAAccountPassword": "By clicking the \"Forgot Password\" link on the login screen, you can request a reset link to your email and set a new password.",
+  "faqQAccountDelete": "How can I delete my account?",
+  "faqAAccountDelete": "You can permanently delete your account by following Settings > Delete Account. This process cannot be undone; all your data and listings will be permanently removed.",
+  "faqCatExplore": "Explore, Suggestions and Menus",
+  "faqQExploreSellers": "Who is featured in the \"Suggested Sellers\" section?",
+  "faqAExploreSellers": "This list is automatically determined by our AI algorithm. Users with high ratings, frequently visited listings, fast response rates, and usually a PRO subscription or \"Trusted Seller\" badge are featured here.",
+  "faqQExploreStreamers": "How does the \"Suggested Streamers\" section work?",
+  "faqAExploreStreamers": "Streamers who regularly broadcast on SwipeLive, achieve high \"Hype\" points, and have an active audience are automatically moved to the top of the Explore page.",
+  "faqQExploreListings": "What is the difference between \"Listings\" and \"Explore\" pages?",
+  "faqAExploreListings": "The Listings page is a vertical feed of newly added listings selected specifically for your interests by AI. The Explore page is the main search hub where you can make detailed category searches and discover popular sellers.",
+  "faqQExploreLiveMessages": "What are the \"Live\" and \"Messages\" menus for?",
+  "faqAExploreLiveMessages": "Live: Takes you to the SwipeLive feed where sellers showcase products live. Messages: You can chat directly with sellers and safely negotiate prices (bids).",
+  "faqCatBadges": "Badges, Tags and TUCi Credits",
+  "faqQBadgesVerified": "What is the Blue Tick (Verified Account)?",
+  "faqABadgesVerified": "The blue tick indicates that the seller has successfully verified their email and phone number, proving they are a reliable real person.",
+  "faqQBadgesPro": "What does the \"👑 (Crown)\" badge mean?",
+  "faqABadgesPro": "This badge indicates that the seller is a Teqlif PRO member. PRO sellers are professionals who are algorithmically promoted more by the platform.",
+  "faqQBadgesTrusted": "What do \"✅ Trusted\" and \"⭐ Active\" Seller badges mean?",
+  "faqABadgesTrusted": "✅ Trusted Seller: Given to experienced sellers who have verified identity info and built trust. ⭐ Active Seller: Represents dynamic sellers who use the platform frequently and respond quickly.",
+  "faqQBadgesSponsored": "What do \"Sponsored\", \"Trending\" and \"LIVE\" tags indicate?",
+  "faqABadgesSponsored": "Sponsored: Promoted listing using TUCi credits. Trending (Fire): The listing is highly viewed or favorited recently. LIVE (Blinking): The seller is currently streaming live for that product.",
+  "faqQBadgesTuci": "What is TUCi and where is it used?",
+  "faqABadgesTuci": "TUCi is our virtual credit currency. It's used to promote listings, send gifts in live streams, get AI price analysis, and reach buyers directly via the Lead Gen feature.",
+  "faqCatLive": "Live Streams (SwipeLive) and Auctions",
+  "faqQLiveHost": "What can I do on the Host (Streamer) screen?",
+  "faqALiveHost": "You can manage the chat, start an Auction for your product, view incoming Bids instantly, and accept the highest bid to confirm the sale in seconds.",
+  "faqQLiveViewer": "What are the features of the Viewer screen?",
+  "faqALiveViewer": "You can watch streams seamlessly by swiping vertically. You can join the chat, send gifts, and place Live Bids on auctions.",
+  "faqQLiveHype": "What is the Hype level?",
+  "faqALiveHype": "As viewers chat and send gifts, the room's Hype score increases. When it exceeds a limit, the system records that exciting moment as a \"Highlight Video\".",
+  "faqCatAI": "PRO Tools and Artificial Intelligence",
+  "faqQAIInsights": "What is the Conversion Funnel (Pro Insights)?",
+  "faqAAIInsights": "An exclusive tool for PRO sellers that reports view counts, dwell time, and hesitation rates to optimize your sales strategy.",
+  "faqQAIPrice": "How does AI Price Intel work?",
+  "faqAAIPrice": "Our AI analyzes millions of data rows to suggest the optimum selling price based on your product's title and category.",
+  "faqQAILead": "What is the \"Hot Demand\" (Lead Gen) feature?",
+  "faqAAILead": "A system that matches your listing with the most suitable potential buyers via AI and sends them a direct \"Suggested Listing\" notification.",
+  "faqQAIRadar": "Competitor Analysis and Best Streaming Time",
+  "faqAAIRadar": "Competitor Analysis compares your price and click rate with competitors. The Best Streaming Time module reports when your followers are most active."
 }

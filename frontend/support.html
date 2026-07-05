@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Destek — teqlif</title>
-    <meta name="description" content="teqlif destek merkezi — sık sorulan sorular ve yardım.">
+    <title>Teqlif Bilgi ve Destek Merkezi</title>
+    <meta name="description" content="teqlif platformu kullanım rehberi, destek merkezi ve sık sorulan sorular.">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://teqlif.com/support">
+    <link rel="canonical" href="https://teqlif.com/support.html">
     <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
@@ -20,121 +20,183 @@
 
     <style>
         .support-wrap {
-            max-width: 760px;
+            max-width: 800px;
             margin: 2.5rem auto;
             padding: 0 1.25rem 4rem;
         }
 
         .support-hero {
             text-align: center;
-            margin-bottom: 2.5rem;
+            margin-bottom: 3rem;
         }
 
         .support-hero h1 {
-            font-size: 1.8rem;
+            font-size: 2rem;
             font-weight: 800;
             margin-bottom: 0.5rem;
+            color: var(--text-main);
         }
 
         .support-hero p {
             color: var(--text-muted);
-            font-size: 1rem;
+            font-size: 1.05rem;
+            max-width: 500px;
+            margin: 0 auto;
+            line-height: 1.5;
         }
 
-        .support-section {
+        .category-block {
+            margin-bottom: 2rem;
             background: var(--white);
             border-radius: 14px;
-            box-shadow: var(--shadow);
-            padding: 1.75rem;
-            margin-bottom: 1.25rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            overflow: hidden;
+            border: 1px solid var(--border);
         }
 
-        .support-section h2 {
-            font-size: 1.05rem;
+        .category-title {
+            background: #f8fafc;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
             font-weight: 700;
-            margin-bottom: 1rem;
-            color: var(--text);
-        }
-
-        .faq-item {
-            border-top: 1px solid #f1f5f9;
-            padding: 0.9rem 0;
-        }
-
-        .faq-item:first-of-type {
-            border-top: none;
-        }
-
-        .faq-q {
-            font-weight: 600;
-            font-size: 0.92rem;
-            margin-bottom: 0.35rem;
-        }
-
-        .faq-a {
-            font-size: 0.87rem;
-            color: var(--text-muted);
-            line-height: 1.55;
-        }
-
-        .contact-row {
+            color: var(--primary-dark);
+            border-bottom: 1px solid var(--border);
+            margin: 0;
             display: flex;
             align-items: center;
-            gap: 0.85rem;
-            padding: 0.75rem 0;
-            border-top: 1px solid #f1f5f9;
-            text-decoration: none;
-            color: inherit;
+            gap: 0.5rem;
         }
 
-        .contact-row:first-of-type {
-            border-top: none;
+        /* Accordion CSS */
+        .accordion-item {
+            border-bottom: 1px solid var(--border);
+        }
+        .accordion-item:last-child {
+            border-bottom: none;
+        }
+
+        .accordion-header {
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            padding: 1.25rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+
+        .accordion-header:hover {
+            background: #fcfcfd;
+        }
+
+        .accordion-header .icon {
+            transition: transform 0.3s ease;
+            color: var(--primary);
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+
+        .accordion-item.active .accordion-header .icon {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            background: #fff;
+        }
+
+        .accordion-content-inner {
+            padding: 0 1.5rem 1.25rem 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        
+        .accordion-content-inner strong {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        /* Contact Cards */
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 3rem;
+        }
+
+        .contact-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .contact-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.06);
         }
 
         .contact-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            background: var(--primary-bg);
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #ecfeff;
+            color: var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
         }
 
-        .contact-icon svg {
-            width: 18px;
-            height: 18px;
-            stroke: var(--primary);
-            fill: none;
-            stroke-width: 1.8;
-            stroke-linecap: round;
-            stroke-linejoin: round;
+        .contact-info h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin: 0 0 0.2rem 0;
+            color: var(--text-main);
         }
 
-        .contact-label {
-            font-size: 0.93rem;
-        }
-
-        .contact-value {
-            font-size: 0.82rem;
+        .contact-info p {
+            margin: 0;
+            font-size: 0.85rem;
             color: var(--text-muted);
         }
 
-        .links-row {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .links-row a {
-            font-size: 0.88rem;
-            color: var(--primary);
-            text-decoration: none;
-        }
-
-        .links-row a:hover {
-            text-decoration: underline;
+        @media (max-width: 640px) {
+            .support-wrap {
+                margin: 1.5rem auto;
+            }
+            .support-hero h1 {
+                font-size: 1.75rem;
+            }
+            .category-title {
+                font-size: 1rem;
+                padding: 1rem;
+            }
+            .accordion-header {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+            .accordion-content-inner {
+                padding: 0 1rem 1rem 1rem;
+            }
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -142,123 +204,338 @@
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
-        <div class="nav-links" id="navLinks"></div>
+        <div class="nav-links" id="navLinks">
+            <a href="/giris.html">Giriş Yap</a>
+        </div>
     </nav>
 
     <div class="support-wrap">
         <div class="support-hero">
-            <h1>Destek Merkezi</h1>
-            <p>Sorularınız için buradayız. Size yardımcı olmaktan mutluluk duyarız.</p>
+            <h1>Bilgi ve Destek Merkezi</h1>
+            <p>Teqlif'in gelişmiş özelliklerini keşfedin veya aradığınız yanıtı anında bulun.</p>
         </div>
 
-        <!-- Sık Sorulan Sorular -->
-        <div class="support-section">
-            <h2>Sık Sorulan Sorular</h2>
-
-            <div class="faq-item">
-                <div class="faq-q">Hesabımı nasıl silebilirim?</div>
-                <div class="faq-a">
-                    Hesabım &gt; Hesap &gt; Hesabı Sil yolunu izleyerek hesabınızı kalıcı olarak silebilirsiniz.
-                    Bu işlem geri alınamaz; tüm verileriniz sistemden kaldırılır.
+        <!-- KATEGORİ 1 -->
+        <div class="category-block">
+            <h2 class="category-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                Hesap İşlemleri, Profil ve Destek
+            </h2>
+            
+            <div class="accordion-item">
+                <button class="accordion-header">Teqlif'e nasıl kayıt olabilirim ve giriş yapabilirim?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Ana sayfadaki "Giriş Yap / Kayıt Ol" butonunu kullanarak E-posta adresinizle saniyeler içinde hesabınızı oluşturabilir veya mevcut hesabınıza güvenle giriş yapabilirsiniz.
+                    </div>
                 </div>
             </div>
 
-            <div class="faq-item">
-                <div class="faq-q">Uygunsuz içeriği veya kullanıcıyı nasıl şikâyet ederim?</div>
-                <div class="faq-a">
-                    Bir yayın veya kullanıcı sayfasında "Şikâyet Et" düğmesini kullanabilirsiniz.
-                    Ayrıca <a href="mailto:destek@teqlif.com">destek@teqlif.com</a> adresine e-posta gönderebilirsiniz.
-                    Tüm şikâyetler 24 saat içinde incelenir.
+            <div class="accordion-item">
+                <button class="accordion-header">E-posta adresimi neden doğrulamalıyım?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Hesabınızın güvenliğini sağlamak ve şifre sıfırlama gibi kritik işlemleri yapabilmek için e-posta doğrulamanız zorunludur. Doğrulanmış e-postalar <strong>Mavi Tik</strong> (Onaylı Hesap) sürecinin de ilk adımıdır.
+                    </div>
                 </div>
             </div>
 
-            <div class="faq-item">
-                <div class="faq-q">Bir kullanıcıyı nasıl engellerim?</div>
-                <div class="faq-a">
-                    Kullanıcı profilinde "Engelle" seçeneğine tıklayarak o kullanıcının size mesaj göndermesini
-                    ve içeriklerinizi görmesini engelleyebilirsiniz.
+            <div class="accordion-item">
+                <button class="accordion-header">Profilimi nasıl düzenleyebilirim (İsim, Fotoğraf, Bio)?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Uygulama içerisinden <strong>"Profilim"</strong> sekmesine giderek <strong>Profili Düzenle</strong> butonuna tıklayabilirsiniz. Açılan ekranda profil fotoğrafınızı (avatar) değiştirebilir, ad-soyad bilgilerinizi güncelleyebilir ve potansiyel alıcıların sizi daha iyi tanıması için "Hakkımda (Bio)" kısmına kendinizi anlatan bir açıklama yazabilirsiniz.
+                    </div>
                 </div>
             </div>
 
-            <div class="faq-item">
-                <div class="faq-q">Şifremi unuttum, ne yapmalıyım?</div>
-                <div class="faq-a">
-                    Giriş ekranında "Şifremi Unuttum" bağlantısına tıklayın; e-posta adresinize sıfırlama bağlantısı
-                    gönderilecektir.
+            <div class="accordion-item">
+                <button class="accordion-header">Şifremi unuttum, ne yapmalıyım?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Giriş ekranındaki "Şifremi Unuttum" bağlantısına tıklayarak e-posta adresinize bir sıfırlama bağlantısı isteyebilir ve yeni şifrenizi belirleyebilirsiniz.
+                    </div>
                 </div>
             </div>
-
-            <div class="faq-item">
-                <div class="faq-q">Canlı yayın başlatmak için ne gerekiyor?</div>
-                <div class="faq-a">
-                    Kayıtlı ve doğrulanmış bir hesap yeterlidir. Mobil uygulamada veya web sitesinde
-                    "+ Yayın Başlat" düğmesine tıklayarak hemen yayına geçebilirsiniz.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-q">Verilerimi nasıl koruyorsunuz?</div>
-                <div class="faq-a">
-                    Tüm bağlantılar HTTPS/TLS ile şifrelenmektedir. Şifreler asla düz metin olarak saklanmaz.
-                    Daha fazla bilgi için <a href="/kullanim-sartlari.html">Kullanım Şartları</a> sayfamızı inceleyin.
+            
+            <div class="accordion-item">
+                <button class="accordion-header">Hesabımı nasıl silebilirim?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Ayarlar &gt; Hesabı Sil yolunu izleyerek hesabınızı kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz; tüm verileriniz ve ilanlarınız sistemden kalıcı olarak kaldırılır.
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- İletişim -->
-        <div class="support-section">
-            <h2>Bize Ulaşın</h2>
+        <!-- KATEGORİ 2 -->
+        <div class="category-block">
+            <h2 class="category-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                Keşif, Öneriler ve Menüler
+            </h2>
 
-            <a class="contact-row" href="mailto:destek@teqlif.com">
-                <span class="contact-icon">
-                    <svg viewBox="0 0 24 24">
-                        <path
-                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                </span>
-                <div>
-                    <div class="contact-label">E-posta Desteği</div>
-                    <div class="contact-value">destek@teqlif.com</div>
+            <div class="accordion-item">
+                <button class="accordion-header">"Önerilen Satıcılar" bölümünde kimler yer alır?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Bu liste yapay zeka algoritmamız tarafından otomatik belirlenir. Profilinde yüksek puanlama alan, ilanları sık ziyaret edilen, mesajlara hızlı yanıt veren ve genellikle <strong>PRO</strong> aboneliğine veya "Güvenilir Satıcı" rozetine sahip kullanıcılar burada sergilenerek platformdaki binlerce kişiye tavsiye edilir.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">"Önerilen Yayıncılar" bölümü nasıl çalışır?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        SwipeLive platformunda düzenli olarak canlı yayın açan, yayınlarında yüksek <strong>"Hype" (Heyecan)</strong> puanına ulaşan ve aktif bir takipçi/izleyici kitlesine sahip yayıncılar sistem tarafından otomatik olarak Keşfet sayfasının en üstüne taşınır.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">"İlanlar" ve "Keşfet" sayfaları arasındaki fark nedir?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <strong>İlanlar</strong> sayfası yapay zekanın tamamen sizin ilgi alanlarınıza özel seçtiği ilanların ve en son eklenenlerin bulunduğu dikey bir akıştır. <strong>Keşfet</strong> sayfası ise; kategori bazlı detaylı aramalar yapabileceğiniz, popüler satıcı ve yayıncıları keşfedebileceğiniz ana arama merkezidir.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">"Canlı" ve "Mesajlar" menüleri ne işe yarar?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <strong>Canlı:</strong> Satıcıların ürünlerini canlı yayında tanıttığı SwipeLive akışına ulaşmanızı sağlar. Canlı yayınları izleyebilir, açık artırmalara katılabilirsiniz.<br><br>
+                        <strong>Mesajlar:</strong> İlgilendiğiniz ürünler için satıcılarla doğrudan sohbet edebilir ve güvenli bir şekilde fiyat pazarlığı (teklif) yapabilirsiniz.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KATEGORİ 3 -->
+        <div class="category-block">
+            <h2 class="category-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Rozetler, Etiketler ve TUCi Kredisi
+            </h2>
+
+            <div class="accordion-item">
+                <button class="accordion-header">Mavi Tik (Doğrulanmış Hesap) nedir?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Mavi tik, satıcının e-posta adresini ve telefon numarasını başarıyla doğruladığını gösterir. Bu rozet, potansiyel alıcılara sizin güvenilir bir gerçek kişi olduğunuzu kanıtlar.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">İlanlarda gördüğüm "👑 (Taç)" rozeti nedir?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Bu rozet, ilanı paylaşan kullanıcının veya satıcının <strong>Teqlif PRO</strong> üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">"✅ Güvenilir" ve "⭐ Aktif" Satıcı rozetleri ne anlama gelir?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <strong>✅ Güvenilir Satıcı:</strong> Kimlik bilgilerini doğrulamış, işlemleri sorunsuz tamamlanan ve platformda tam bir güven inşa etmiş deneyimli satıcılara verilir.<br><br>
+                        <strong>⭐ Aktif Satıcı:</strong> Platformu sık kullanan, alıcıların mesajlarına hızlı yanıt veren ve düzenli aralıklarla yeni ilanlar giren dinamik satıcıları temsil eder.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">"Sponsorlu", "Trending" ve "LIVE" etiketleri neyi ifade eder?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <strong>Sponsorlu:</strong> Satıcının TUCi kredisi kullanarak ilanını öne çıkardığını belirtir.<br><br>
+                        <strong>Trending (Ateş):</strong> İlanın son zamanlarda çok kişi tarafından incelendiğini veya favoriye eklendiğini (sıcak fırsat) gösterir.<br><br>
+                        <strong>LIVE (Yanıp Sönen):</strong> Satıcının o an söz konusu ürün için canlı yayın (SwipeLive) yaptığını gösterir. Doğrudan açık artırmaya katılabilirsiniz.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">TUCi nedir, nerelerde kullanılır?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        TUCi, Teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak (Sponsorlu yapmak), canlı yayınlarda favori satıcılarınıza hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve "Sıcak Talep" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır. TUCi bakiyenizi "Ayarlar" sekmesinden yönetebilirsiniz.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KATEGORİ 4 -->
+        <div class="category-block">
+            <h2 class="category-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                Canlı Yayınlar (SwipeLive) ve Açık Artırma
+            </h2>
+
+            <div class="accordion-item">
+                <button class="accordion-header">Yayıncı (Host) ekranında neler yapabilirim?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Kendi canlı yayınınızı başlatarak satmak istediğiniz ürünü etkileşimli şekilde tanıtabilirsiniz. Host ekranında sohbeti yönetebilir, ürününüz için <strong>Açık Artırma başlatabilir</strong>, gelen teklifleri (Bid) anlık görebilir ve sürenin sonunda en yüksek teklifi <strong>kabul edip satışı saniyeler içinde onaylayabilirsiniz</strong>. Ayrıca izleyicilerden gelen TUCi hediyelerini anlık olarak ekranda görürsünüz.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">İzleyici (Viewer) ekranının özellikleri nelerdir?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Diğer satıcıların canlı yayınlarını <strong>ekranı dikey olarak kaydırarak (SwipeLive)</strong> kesintisiz bir şekilde izleyebilirsiniz. İzleyici olarak sohbete katılabilir, yayıncıyı desteklemek için TUCi hediyeleri gönderebilir ve eğer o an bir açık artırma varsa ürüne <strong>Canlı Teklif</strong> verebilirsiniz.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">Hype (Heyecan) seviyesi nedir?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        İzleyiciler sohbete katıldıkça, yayıncıyı beğendikçe ve hediye gönderdikçe odanın Hype (Heyecan) puanı artar. Puan belirli bir limiti aştığında, sistem otomatik olarak yayının o heyecanlı anını yakalar ve <strong>"Öne Çıkan Video (Highlight)"</strong> olarak kaydederek satıcının ilan vitrinine ekler.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KATEGORİ 5 -->
+        <div class="category-block">
+            <h2 class="category-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                PRO Araçları (Pro Tools) ve Yapay Zeka
+            </h2>
+
+            <div class="accordion-item">
+                <button class="accordion-header">Dönüşüm Hunisi (Pro Insights) nedir?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Sadece PRO satıcılara özel olan kapsamlı bir araçtır. İlanınızın kaç kez görüntülendiğini, alıcıların ilan detayında ne kadar vakit geçirdiğini (dwell time) ve teklif vermekte tereddüt edenlerin (hesitation) oranını detaylıca raporlayarak satış stratejinizi optimize etmenizi sağlar.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">Yapay Zeka Fiyat Tahmini (AI Price Intel) nasıl çalışır?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        Platformumuzdaki milyonlarca satır veriyi anlık analiz eden yapay zekamız, ürününüzün başlığına ve kategorisine bakarak en hızlı satılabilecek optimum fiyatı size önerir. PRO kullanıcılar bu özelliği her ay 20 kez ücretsiz kullanabilir.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">"Sıcak Talep" (Alıcı Bul / Lead Gen) özelliği nedir?
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        İlanınıza en uygun potansiyel alıcıları yapay zeka ile eşleştirerek, doğrudan onların telefonlarına veya mail adreslerine "Önerilen İlan" bildirimi gönderen sistemdir. PRO üyeler her ay 6 kez "Sıcak Talep" blast hakkını ücretsiz olarak kullanabilir!
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <button class="accordion-header">Rekabet Analizi ve En İyi Yayın Saati Tahmini
+                    <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <strong>Rekabet Analizi:</strong> İlanınızın pazar ortalamasına göre fiyat durumunu, rakiplerinize kıyasla tıklanma oranınızı ve kullanıcıların ilan galerinizden kaçıncı fotoğrafta ayrıldığını gösterir.<br><br>
+                        <strong>Yayın Saati Tahmini:</strong> PRO Araçlarındaki "En İyi Yayın Saati" modülü, takipçilerinizin ve platformdaki potansiyel alıcıların en aktif olduğu saatleri size raporlar.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- İLETİŞİM / DESTEK -->
+        <div class="contact-grid">
+            <a href="mailto:destek@teqlif.com" class="contact-card">
+                <div class="contact-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                </div>
+                <div class="contact-info">
+                    <h3>Genel Destek</h3>
+                    <p>destek@teqlif.com</p>
                 </div>
             </a>
-
-            <a class="contact-row" href="mailto:destek@teqlif.com">
-                <span class="contact-icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                </span>
-                <div>
-                    <div class="contact-label">Güvenlik & Abuse</div>
-                    <div class="contact-value">destek@teqlif.com</div>
+            
+            <a href="mailto:destek@teqlif.com" class="contact-card">
+                <div class="contact-icon" style="background:#fef2f2; color:#ef4444;">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
+                <div class="contact-info">
+                    <h3>Güvenlik & Şikayet</h3>
+                    <p>destek@teqlif.com</p>
                 </div>
             </a>
-
-            <div class="contact-row" style="cursor:default;">
-                <span class="contact-icon">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="M12 6v6l4 2" />
-                    </svg>
-                </span>
-                <div>
-                    <div class="contact-label">Yanıt Süresi</div>
-                    <div class="contact-value">Genellikle 24 saat içinde yanıtlanır</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bağlantılar -->
-        <div class="support-section">
-            <h2>Faydalı Bağlantılar</h2>
-            <div class="links-row">
-                <a href="/kullanim-sartlari.html">Kullanım Şartları & EULA</a>
-                <a href="mailto:destek@teqlif.com">Şikâyet Gönder</a>
-                <a href="mailto:destek@teqlif.com">Güvenlik İhlali Bildir</a>
-            </div>
         </div>
     </div>
 
+    <!-- Akordiyon JS Mantığı -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const accordionHeaders = document.querySelectorAll('.accordion-header');
+            
+            accordionHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const item = header.parentElement;
+                    const content = item.querySelector('.accordion-content');
+                    
+                    if (item.classList.contains('active')) {
+                        item.classList.remove('active');
+                        content.style.maxHeight = null;
+                    } else {
+                        item.classList.add('active');
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+            });
+        });
+    </script>
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js?v=4"></script>
     <script src="/static/js/support-page.js?v=1"></script>
