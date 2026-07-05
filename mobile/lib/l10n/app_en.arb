@@ -1,6 +1,7 @@
 {
   "@@locale": "en",
   "appName": "teqlif",
+  "pro": "PRO",
   "navLive": "Live",
   "navListings": "Listings",
   "navSearch": "Search",
@@ -1651,5 +1652,29 @@
         "type": "int"
       }
     }
-  }
+  },
+  "reportMassNotificationTitle": "Mass Notification Report",
+  "reportMassNotificationDesc": "This screen shows the conversion statistics of Mass Audience Notifications sent in live streams and listing details.",
+  "reportLoadError": "Could not load report: ",
+  "reportNoNotificationYet": "You haven't sent any mass notifications yet.",
+  "centerNotificationAudience": "Notification & Audience Center",
+  "reportTotalSpent": "Total Spent:",
+  "reportCostPerClick": "Cost Per Click:",
+  "reportConversionFunnel": "Conversion Funnel",
+  "reportTargetAudience": "Target Audience",
+  "reportSuccessfullyDelivered": "Successfully Delivered",
+  "reportClickOpen": "Click (Open)",
+  "reportROI": "Return on Investment (ROI)",
+  "actionConfirmAndStart": "Confirm and Start",
+  "auctionBuyNowRejected": "Buy Now request rejected.",
+  "massAudienceNotification": "Mass Audience Notification",
+  "actionSendMessageToSeller": "Send Message to Seller",
+  "badgeVerified": "Verified",
+  "titleActions": "Actions",
+  "langTR": "TR",
+  "langEN": "EN",
+  "langAR": "AR",
+  "kickedFromStream": "🚫 You were kicked from this stream",
+  "actionLeaveLiveStream": "Leave Live Stream",
+  "streamNotificationAutoSent": "Notification will be sent automatically when stream starts."
 }

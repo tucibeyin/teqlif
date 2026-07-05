@@ -269,10 +269,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'tr', label: Text('TR')),
-                      ButtonSegment(value: 'en', label: Text('EN')),
-                      ButtonSegment(value: 'ar', label: Text('AR')),
+                    segments: [
+                      ButtonSegment(value: 'tr', label: Text(AppLocalizations.of(context)!.langTR)),
+                      ButtonSegment(value: 'en', label: Text(AppLocalizations.of(context)!.langEN)),
+                      ButtonSegment(value: 'ar', label: Text(AppLocalizations.of(context)!.langAR)),
                     ],
                     selected: {currentLocale.languageCode},
                     showSelectedIcon: false,

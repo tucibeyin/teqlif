@@ -12,6 +12,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appName => 'teqlif';
 
   @override
+  String get pro => 'PRO';
+
+  @override
   String get navLive => 'Live';
 
   @override
@@ -3146,4 +3149,79 @@ class AppLocalizationsEn extends AppLocalizations {
   String listingBlastCost(int cost) {
     return 'Cost: $cost TUCi';
   }
+
+  @override
+  String get reportMassNotificationTitle => 'Mass Notification Report';
+
+  @override
+  String get reportMassNotificationDesc =>
+      'This screen shows the conversion statistics of Mass Audience Notifications sent in live streams and listing details.';
+
+  @override
+  String get reportLoadError => 'Could not load report: ';
+
+  @override
+  String get reportNoNotificationYet =>
+      'You haven\'t sent any mass notifications yet.';
+
+  @override
+  String get centerNotificationAudience => 'Notification & Audience Center';
+
+  @override
+  String get reportTotalSpent => 'Total Spent:';
+
+  @override
+  String get reportCostPerClick => 'Cost Per Click:';
+
+  @override
+  String get reportConversionFunnel => 'Conversion Funnel';
+
+  @override
+  String get reportTargetAudience => 'Target Audience';
+
+  @override
+  String get reportSuccessfullyDelivered => 'Successfully Delivered';
+
+  @override
+  String get reportClickOpen => 'Click (Open)';
+
+  @override
+  String get reportROI => 'Return on Investment (ROI)';
+
+  @override
+  String get actionConfirmAndStart => 'Confirm and Start';
+
+  @override
+  String get auctionBuyNowRejected => 'Buy Now request rejected.';
+
+  @override
+  String get massAudienceNotification => 'Mass Audience Notification';
+
+  @override
+  String get actionSendMessageToSeller => 'Send Message to Seller';
+
+  @override
+  String get badgeVerified => 'Verified';
+
+  @override
+  String get titleActions => 'Actions';
+
+  @override
+  String get langTR => 'TR';
+
+  @override
+  String get langEN => 'EN';
+
+  @override
+  String get langAR => 'AR';
+
+  @override
+  String get kickedFromStream => '🚫 You were kicked from this stream';
+
+  @override
+  String get actionLeaveLiveStream => 'Leave Live Stream';
+
+  @override
+  String get streamNotificationAutoSent =>
+      'Notification will be sent automatically when stream starts.';
 }

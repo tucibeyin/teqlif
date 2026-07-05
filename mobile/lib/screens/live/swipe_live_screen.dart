@@ -877,8 +877,8 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     widget.session.room?.disconnect();
     if (!widget.isActive) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('🚫 Bu yayından atıldınız'),
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.kickedFromStream),
         backgroundColor: Color(0xFFEF4444),
         duration: Duration(seconds: 4),
       ),

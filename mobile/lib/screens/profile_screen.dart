@@ -1528,7 +1528,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
                           borderRadius: BorderRadius.circular(50),
                         ),
-                        child: const Text('PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
+                        child: Text(AppLocalizations.of(context)!.pro, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
                       ),
                 onTap: () async {
                   // StorageService'ten güncel is_premium oku — widget.user stale olabilir
@@ -1672,10 +1672,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 title: Text(l.settingsLanguage,
                     style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
                 trailing: SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'tr', label: Text('TR')),
-                    ButtonSegment(value: 'en', label: Text('EN')),
-                    ButtonSegment(value: 'ar', label: Text('AR')),
+                  segments: [
+                    ButtonSegment(value: 'tr', label: Text(AppLocalizations.of(context)!.langTR)),
+                    ButtonSegment(value: 'en', label: Text(AppLocalizations.of(context)!.langEN)),
+                    ButtonSegment(value: 'ar', label: Text(AppLocalizations.of(context)!.langAR)),
                   ],
                   selected: {currentLocale.languageCode},
                   showSelectedIcon: false,

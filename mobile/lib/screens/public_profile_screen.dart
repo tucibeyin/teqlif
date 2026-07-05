@@ -317,12 +317,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               color: const Color(0xFF2563EB),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.verified, size: 12, color: Colors.white),
-                                SizedBox(width: 4),
-                                Text('Verified', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                const Icon(Icons.verified, size: 12, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(AppLocalizations.of(context)!.badgeVerified, style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
                               ],
                             ),
                           ),
@@ -335,12 +335,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('👑', style: TextStyle(fontSize: 10)),
-                                SizedBox(width: 4),
-                                Text('PRO', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                                const Text('👑', style: TextStyle(fontSize: 10)),
+                                const SizedBox(width: 4),
+                                Text(AppLocalizations.of(context)!.pro, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                               ],
                             ),
                           ),
@@ -471,7 +471,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('İşlemler', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary(context))),
+                              Text(AppLocalizations.of(context)!.titleActions, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary(context))),
                               const SizedBox(width: 6),
                               Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textPrimary(context)),
                             ],

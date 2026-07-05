@@ -106,6 +106,12 @@ abstract class AppLocalizations {
   /// **'teqlif'**
   String get appName;
 
+  /// No description provided for @pro.
+  ///
+  /// In tr, this message translates to:
+  /// **'PRO'**
+  String get pro;
+
   /// No description provided for @navLive.
   ///
   /// In tr, this message translates to:
@@ -5745,6 +5751,150 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Maliyet: {cost} TUCi'**
   String listingBlastCost(int cost);
+
+  /// No description provided for @reportMassNotificationTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplu Bildirim Raporu'**
+  String get reportMassNotificationTitle;
+
+  /// No description provided for @reportMassNotificationDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ekran, canlı yayınlarda ve ilan detaylarında gönderdiğiniz Toplu Kitle Bildirimlerinin dönüşüm istatistiklerini gösterir.'**
+  String get reportMassNotificationDesc;
+
+  /// No description provided for @reportLoadError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rapor yüklenemedi: '**
+  String get reportLoadError;
+
+  /// No description provided for @reportNoNotificationYet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz toplu bildirim göndermediniz.'**
+  String get reportNoNotificationYet;
+
+  /// No description provided for @centerNotificationAudience.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bildirim & Kitle Merkezi'**
+  String get centerNotificationAudience;
+
+  /// No description provided for @reportTotalSpent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Harcama:'**
+  String get reportTotalSpent;
+
+  /// No description provided for @reportCostPerClick.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tıklama Başı Maliyet:'**
+  String get reportCostPerClick;
+
+  /// No description provided for @reportConversionFunnel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dönüşüm Hunisi'**
+  String get reportConversionFunnel;
+
+  /// No description provided for @reportTargetAudience.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedeflenen Kitle'**
+  String get reportTargetAudience;
+
+  /// No description provided for @reportSuccessfullyDelivered.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başarıyla İletilen'**
+  String get reportSuccessfullyDelivered;
+
+  /// No description provided for @reportClickOpen.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tıklama (Açma)'**
+  String get reportClickOpen;
+
+  /// No description provided for @reportROI.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yatırım Getirisi (ROI)'**
+  String get reportROI;
+
+  /// No description provided for @actionConfirmAndStart.
+  ///
+  /// In tr, this message translates to:
+  /// **'Onayla ve Başlat'**
+  String get actionConfirmAndStart;
+
+  /// No description provided for @auctionBuyNowRejected.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hemen Al talebi reddedildi.'**
+  String get auctionBuyNowRejected;
+
+  /// No description provided for @massAudienceNotification.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplu Kitle Bildirimi'**
+  String get massAudienceNotification;
+
+  /// No description provided for @actionSendMessageToSeller.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satıcıya Mesaj Gönder'**
+  String get actionSendMessageToSeller;
+
+  /// No description provided for @badgeVerified.
+  ///
+  /// In tr, this message translates to:
+  /// **'Verified'**
+  String get badgeVerified;
+
+  /// No description provided for @titleActions.
+  ///
+  /// In tr, this message translates to:
+  /// **'İşlemler'**
+  String get titleActions;
+
+  /// No description provided for @langTR.
+  ///
+  /// In tr, this message translates to:
+  /// **'TR'**
+  String get langTR;
+
+  /// No description provided for @langEN.
+  ///
+  /// In tr, this message translates to:
+  /// **'EN'**
+  String get langEN;
+
+  /// No description provided for @langAR.
+  ///
+  /// In tr, this message translates to:
+  /// **'AR'**
+  String get langAR;
+
+  /// No description provided for @kickedFromStream.
+  ///
+  /// In tr, this message translates to:
+  /// **'🚫 Bu yayından atıldınız'**
+  String get kickedFromStream;
+
+  /// No description provided for @actionLeaveLiveStream.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı Yayından Ayrıl'**
+  String get actionLeaveLiveStream;
+
+  /// No description provided for @streamNotificationAutoSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın başladığında bildirim otomatik gönderilir.'**
+  String get streamNotificationAutoSent;
 }
 
 class _AppLocalizationsDelegate

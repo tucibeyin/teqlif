@@ -1,6 +1,7 @@
 {
   "@@locale": "tr",
   "appName": "teqlif",
+  "pro": "PRO",
   "navLive": "Canlı",
   "navListings": "İlanlar",
   "navSearch": "Keşfet",
@@ -1650,5 +1651,29 @@
         "type": "int"
       }
     }
-  }
+  },
+  "reportMassNotificationTitle": "Toplu Bildirim Raporu",
+  "reportMassNotificationDesc": "Bu ekran, canlı yayınlarda ve ilan detaylarında gönderdiğiniz Toplu Kitle Bildirimlerinin dönüşüm istatistiklerini gösterir.",
+  "reportLoadError": "Rapor yüklenemedi: ",
+  "reportNoNotificationYet": "Henüz toplu bildirim göndermediniz.",
+  "centerNotificationAudience": "Bildirim & Kitle Merkezi",
+  "reportTotalSpent": "Toplam Harcama:",
+  "reportCostPerClick": "Tıklama Başı Maliyet:",
+  "reportConversionFunnel": "Dönüşüm Hunisi",
+  "reportTargetAudience": "Hedeflenen Kitle",
+  "reportSuccessfullyDelivered": "Başarıyla İletilen",
+  "reportClickOpen": "Tıklama (Açma)",
+  "reportROI": "Yatırım Getirisi (ROI)",
+  "actionConfirmAndStart": "Onayla ve Başlat",
+  "auctionBuyNowRejected": "Hemen Al talebi reddedildi.",
+  "massAudienceNotification": "Toplu Kitle Bildirimi",
+  "actionSendMessageToSeller": "Satıcıya Mesaj Gönder",
+  "badgeVerified": "Verified",
+  "titleActions": "İşlemler",
+  "langTR": "TR",
+  "langEN": "EN",
+  "langAR": "AR",
+  "kickedFromStream": "🚫 Bu yayından atıldınız",
+  "actionLeaveLiveStream": "Canlı Yayından Ayrıl",
+  "streamNotificationAutoSent": "Yayın başladığında bildirim otomatik gönderilir."
 }

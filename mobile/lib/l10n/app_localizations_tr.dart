@@ -12,6 +12,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get appName => 'teqlif';
 
   @override
+  String get pro => 'PRO';
+
+  @override
   String get navLive => 'Canlı';
 
   @override
@@ -3150,4 +3153,78 @@ class AppLocalizationsTr extends AppLocalizations {
   String listingBlastCost(int cost) {
     return 'Maliyet: $cost TUCi';
   }
+
+  @override
+  String get reportMassNotificationTitle => 'Toplu Bildirim Raporu';
+
+  @override
+  String get reportMassNotificationDesc =>
+      'Bu ekran, canlı yayınlarda ve ilan detaylarında gönderdiğiniz Toplu Kitle Bildirimlerinin dönüşüm istatistiklerini gösterir.';
+
+  @override
+  String get reportLoadError => 'Rapor yüklenemedi: ';
+
+  @override
+  String get reportNoNotificationYet => 'Henüz toplu bildirim göndermediniz.';
+
+  @override
+  String get centerNotificationAudience => 'Bildirim & Kitle Merkezi';
+
+  @override
+  String get reportTotalSpent => 'Toplam Harcama:';
+
+  @override
+  String get reportCostPerClick => 'Tıklama Başı Maliyet:';
+
+  @override
+  String get reportConversionFunnel => 'Dönüşüm Hunisi';
+
+  @override
+  String get reportTargetAudience => 'Hedeflenen Kitle';
+
+  @override
+  String get reportSuccessfullyDelivered => 'Başarıyla İletilen';
+
+  @override
+  String get reportClickOpen => 'Tıklama (Açma)';
+
+  @override
+  String get reportROI => 'Yatırım Getirisi (ROI)';
+
+  @override
+  String get actionConfirmAndStart => 'Onayla ve Başlat';
+
+  @override
+  String get auctionBuyNowRejected => 'Hemen Al talebi reddedildi.';
+
+  @override
+  String get massAudienceNotification => 'Toplu Kitle Bildirimi';
+
+  @override
+  String get actionSendMessageToSeller => 'Satıcıya Mesaj Gönder';
+
+  @override
+  String get badgeVerified => 'Verified';
+
+  @override
+  String get titleActions => 'İşlemler';
+
+  @override
+  String get langTR => 'TR';
+
+  @override
+  String get langEN => 'EN';
+
+  @override
+  String get langAR => 'AR';
+
+  @override
+  String get kickedFromStream => '🚫 Bu yayından atıldınız';
+
+  @override
+  String get actionLeaveLiveStream => 'Canlı Yayından Ayrıl';
+
+  @override
+  String get streamNotificationAutoSent =>
+      'Yayın başladığında bildirim otomatik gönderilir.';
 }

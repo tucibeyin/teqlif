@@ -2146,7 +2146,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('Toplu Kitle Bildirimi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(AppLocalizations.of(context)!.massAudienceNotification, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2243,7 +2243,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, null),
-          child: const Text('İptal', style: TextStyle(color: Color(0xFF64748B))),
+          child: Text(AppLocalizations.of(context)!.btnCancel, style: const TextStyle(color: Color(0xFF64748B))),
         ),
         FilledButton(
           onPressed: hasEnoughBalance && actualCount > 0
@@ -2253,7 +2253,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
             backgroundColor: const Color(0xFF14B8A6),
             disabledBackgroundColor: const Color(0x6614B8A6),
           ),
-          child: const Text('Gönder', style: TextStyle(fontWeight: FontWeight.w700)),
+          child: Text(AppLocalizations.of(context)!.btnSend, style: const TextStyle(fontWeight: FontWeight.w700)),
         ),
       ],
     );

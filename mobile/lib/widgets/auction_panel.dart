@@ -1275,7 +1275,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       await AuctionService.rejectBuyItNow(widget.streamId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Hemen Al talebi reddedildi.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.auctionBuyNowRejected)),
         );
       }
     } on AppException catch (e) {
@@ -2233,7 +2233,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Tamam', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                child: Text(AppLocalizations.of(context)!.btnOk, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               ),
             ),
           ] else ...[
@@ -2277,7 +2277,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
             const SizedBox(height: 10),
             TextButton(
               onPressed: widget.onClose,
-              child: const Text('İptal', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+              child: Text(AppLocalizations.of(context)!.btnCancel, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
             ),
           ],
         ],

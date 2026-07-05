@@ -508,7 +508,7 @@ class _ToolCard extends StatelessWidget {
                   color: const Color(0xFFFFB800),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                child: Text(AppLocalizations.of(context)!.pro, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
               )
             else
               Icon(Icons.chevron_right, color: AppColors.textSecondary(context), size: 20),

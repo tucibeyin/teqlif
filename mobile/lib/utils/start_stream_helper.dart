@@ -379,8 +379,8 @@ Future<bool?> _showBlastConfirmDialog(
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Yayın başladığında bildirim otomatik gönderilir.',
+          Text(
+            l.streamNotificationAutoSent,
             style: TextStyle(fontSize: 12, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
@@ -389,12 +389,12 @@ Future<bool?> _showBlastConfirmDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dlgCtx, false),
-          child: const Text('Vazgeç'),
+          child: Text(l.btnDismiss),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dlgCtx, true),
           style: FilledButton.styleFrom(backgroundColor: kPrimary),
-          child: const Text('Onayla ve Başlat'),
+          child: Text(l.actionConfirmAndStart),
         ),
       ],
     );

@@ -153,7 +153,7 @@ class PurchaseDetailScreen extends StatelessWidget {
             if (sellerId != null)
               ElevatedButton.icon(
                 icon: const Icon(Icons.message_rounded, color: Colors.white),
-                label: const Text('Satıcıya Mesaj Gönder', style: TextStyle(color: Colors.white)),
+                label: Text(AppLocalizations.of(context)!.actionSendMessageToSeller, style: const TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6B21A8),
                   padding: const EdgeInsets.symmetric(vertical: 14),

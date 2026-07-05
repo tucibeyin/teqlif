@@ -210,7 +210,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         }
         if (snapshot.hasError) {
           return Center(
-            child: Text('Rapor yüklenemedi: ${snapshot.error}', 
+            child: Text('${AppLocalizations.of(context)!.reportLoadError}${snapshot.error}', 
               style: TextStyle(color: AppColors.textSecondary(context)))
           );
         }
@@ -225,13 +225,13 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const Text(
-              'Toplu Bildirim Raporu',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              AppLocalizations.of(context)!.reportMassNotificationTitle,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Bu ekran, canlı yayınlarda ve ilan detaylarında gönderdiğiniz Toplu Kitle Bildirimlerinin dönüşüm istatistiklerini gösterir.',
+              AppLocalizations.of(context)!.reportMassNotificationDesc,
               style: TextStyle(color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 24),
@@ -239,18 +239,18 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32.0),
-                  child: Text('Henüz toplu bildirim göndermediniz.',
+                  child: Text(AppLocalizations.of(context)!.reportNoNotificationYet,
                     style: TextStyle(color: AppColors.textSecondary(context))),
                 ),
               )
             else ...[
-              _buildFunnelCard('Dönüşüm Hunisi', [
-                {'label': '📢 Hedeflenen Kitle', 'value': '$target'},
-                {'label': '📩 Başarıyla İletilen', 'value': '$sent'},
-                {'label': '👆 Tıklama (Açma)', 'value': '$clicks  (%$clickRate)'},
+              _buildFunnelCard(AppLocalizations.of(context)!.reportConversionFunnel, [
+                {'label': '📢 ${AppLocalizations.of(context)!.reportTargetAudience}', 'value': '$target'},
+                {'label': '📩 ${AppLocalizations.of(context)!.reportSuccessfullyDelivered}', 'value': '$sent'},
+                {'label': '👆 ${AppLocalizations.of(context)!.reportClickOpen}', 'value': '$clicks  (%$clickRate)'},
               ]),
               const SizedBox(height: 16),
-              _buildROICard('Yatırım Getirisi (ROI)', '$spent TUCi', '$costPerClick TUCi / Tıklama'),
+              _buildROICard(AppLocalizations.of(context)!.reportROI, '$spent TUCi', '$costPerClick TUCi / Tıklama'),
             ],
           ],
         );
@@ -289,7 +289,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       child: Scaffold(
         backgroundColor: AppColors.bg(context),
         appBar: AppBar(
-          title: const Text('Bildirim & Kitle Merkezi'),
+          title: Text(AppLocalizations.of(context)!.centerNotificationAudience),
           backgroundColor: AppColors.bg(context),
           elevation: 0,
           bottom: const TabBar(
@@ -356,7 +356,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Toplam Harcama:', style: TextStyle(color: Colors.white70)),
+              Text(AppLocalizations.of(context)!.reportTotalSpent, style: TextStyle(color: Colors.white70)),
               Text(totalSpend, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ],
           ),
@@ -364,7 +364,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Tıklama Başı Maliyet:', style: TextStyle(color: Colors.white70)),
+              Text(AppLocalizations.of(context)!.reportCostPerClick, style: TextStyle(color: Colors.white70)),
               Text(costPerClick, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ],
           ),

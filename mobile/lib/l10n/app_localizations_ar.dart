@@ -12,6 +12,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get appName => 'teqlif';
 
   @override
+  String get pro => 'PRO';
+
+  @override
   String get navLive => 'مباشر';
 
   @override
@@ -3123,4 +3126,78 @@ class AppLocalizationsAr extends AppLocalizations {
   String listingBlastCost(int cost) {
     return 'Maliyet: $cost TUCi';
   }
+
+  @override
+  String get reportMassNotificationTitle => 'تقرير الإشعارات الجماعية';
+
+  @override
+  String get reportMassNotificationDesc =>
+      'تعرض هذه الشاشة إحصائيات تحويل إشعارات الجمهور الجماعية المرسلة في البث المباشر وتفاصيل القائمة.';
+
+  @override
+  String get reportLoadError => 'تعذر تحميل التقرير: ';
+
+  @override
+  String get reportNoNotificationYet => 'لم ترسل أي إشعارات جماعية بعد.';
+
+  @override
+  String get centerNotificationAudience => 'مركز الإشعارات والجمهور';
+
+  @override
+  String get reportTotalSpent => 'إجمالي الإنفاق:';
+
+  @override
+  String get reportCostPerClick => 'تكلفة النقرة:';
+
+  @override
+  String get reportConversionFunnel => 'مسار التحويل';
+
+  @override
+  String get reportTargetAudience => 'الجمهور المستهدف';
+
+  @override
+  String get reportSuccessfullyDelivered => 'تم التوصيل بنجاح';
+
+  @override
+  String get reportClickOpen => 'نقرة (فتح)';
+
+  @override
+  String get reportROI => 'عائد الاستثمار (ROI)';
+
+  @override
+  String get actionConfirmAndStart => 'تأكيد وبدء';
+
+  @override
+  String get auctionBuyNowRejected => 'تم رفض طلب الشراء الآن.';
+
+  @override
+  String get massAudienceNotification => 'إشعار الجمهور الجماعي';
+
+  @override
+  String get actionSendMessageToSeller => 'إرسال رسالة للبائع';
+
+  @override
+  String get badgeVerified => 'موثق';
+
+  @override
+  String get titleActions => 'إجراءات';
+
+  @override
+  String get langTR => 'TR';
+
+  @override
+  String get langEN => 'EN';
+
+  @override
+  String get langAR => 'AR';
+
+  @override
+  String get kickedFromStream => '🚫 لقد تم طردك من هذا البث';
+
+  @override
+  String get actionLeaveLiveStream => 'مغادرة البث المباشر';
+
+  @override
+  String get streamNotificationAutoSent =>
+      'سيتم إرسال الإشعار تلقائيًا عند بدء البث.';
 }
