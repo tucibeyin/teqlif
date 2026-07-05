@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../config/api.dart';
 
@@ -28,13 +29,26 @@ class SellerAvatarCard extends StatelessWidget {
           children: [
             Stack(
               children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: AppColors.surfaceVariant(context),
-                  backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                  child: avatarUrl == null
-                    ? Text(initial, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18))
-                    : null,
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.border(context),
+                      width: 1.0,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: avatarUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: avatarUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => _buildPlaceholder(context, initial),
+                            errorWidget: (context, url, error) => _buildPlaceholder(context, initial),
+                          )
+                        : _buildPlaceholder(context, initial),
+                  ),
                 ),
                 if (isPremium)
                   Positioned(
@@ -76,6 +90,18 @@ class SellerAvatarCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder(BuildContext context, String initial) {
+    return Container(
+      color: AppColors.surfaceVariant(context),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
         ),
       ),
     );
