@@ -495,7 +495,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get msgListingPublished => 'تم نشر الإعلان!';
 
   @override
-  String get giftInsufficientBalance => 'رصيد غير كاف. شراء TUCi لإرسال هدية.';
+  String get giftInsufficientBalance =>
+      'رصيد غير كاف. شراء TUCi ([ICON_TUCI]) لإرسال هدية.';
 
   @override
   String get giftLoadBalanceButton => 'شحن الرصيد';
@@ -1357,7 +1358,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsProActive => 'نشط';
 
   @override
-  String get walletTitle => 'محفظة TUCi الخاصة بي';
+  String get walletTitle => 'محفظة TUCi ([ICON_TUCI]) الخاصة بي';
 
   @override
   String get walletBalance => 'الرصيد الحالي';
@@ -1393,14 +1394,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get walletTxnWebTopup => 'شحن الرصيد عبر الويب';
 
   @override
-  String get walletComingSoonLabel => 'شراء TUCi قريباً!';
+  String get walletComingSoonLabel => 'شراء TUCi ([ICON_TUCI]) قريباً!';
 
   @override
   String get walletComingSoonDesc =>
-      'جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TUCi كرصيد بداية.';
+      'جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TUCi ([ICON_TUCI]) كرصيد بداية.';
 
   @override
-  String get walletBuyBtn => 'شراء TUCi قريباً';
+  String get walletBuyBtn => 'شراء TUCi ([ICON_TUCI]) قريباً';
 
   @override
   String get reportLoading => 'جارٍ إعداد تحليل البث...';
@@ -1573,7 +1574,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proCreditsSummaryTitle => 'الأرصدة المتبقية';
 
   @override
-  String get proCreditsBlastName => 'دعوة الجمهور (Blast)';
+  String get proCreditsBlastName => 'دعوة الجمهور (Blast ([ICON_BLAST]))';
 
   @override
   String get proCreditsBoostName => 'إعلان مميز';
@@ -1614,14 +1615,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get blastConfirmCostFreeLabel => 'التكلفة';
 
   @override
-  String get blastConfirmCostPaidLabel => 'تكلفة TUCi';
+  String get blastConfirmCostPaidLabel => 'تكلفة TUCi ([ICON_TUCI])';
 
   @override
   String get blastSubtitleFree => 'إشعار عند بدء البث • مجاني';
 
   @override
   String blastSubtitlePaid(int cost) {
-    return 'إشعار عند بدء البث • $cost TUCi';
+    return 'إشعار عند بدء البث • $cost TUCi ([ICON_TUCI])';
   }
 
   @override
@@ -1634,7 +1635,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String blastBtnPaid(int count, int cost) {
-    return '$count مشترٍ جاهز — أرسل إشعاراً ($cost TUCi)';
+    return '$count مشترٍ جاهز — أرسل إشعاراً ($cost TUCi ([ICON_TUCI]))';
   }
 
   @override
@@ -1644,7 +1645,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String blastConfirmBodyPaid(int count, int cost) {
-    return 'سيتم إشعار $count مشترٍ جاهز.\n\nالتكلفة الإجمالية: $cost TUCi';
+    return 'سيتم إشعار $count مشترٍ جاهز.\n\nالتكلفة الإجمالية: $cost TUCi ([ICON_TUCI])';
   }
 
   @override
@@ -2243,13 +2244,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get boostDialogTotalBudget => 'إجمالي الميزانية';
 
   @override
-  String get boostDialogTotalBudgetValue => '50 TUCi';
+  String get boostDialogTotalBudgetValue => '50 TUCi ([ICON_TUCI])';
 
   @override
   String get boostDialogCpc => 'التكلفة لكل نقرة';
 
   @override
-  String get boostDialogCpcValue => '1 TUCi';
+  String get boostDialogCpcValue => '1 TUCi ([ICON_TUCI])';
 
   @override
   String get boostDialogEstClicks => 'النقرات المتوقعة';
@@ -2283,19 +2284,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get boostDialogPaidCost => 'التكلفة';
 
   @override
-  String get boostDialogPaidCostValue => '50 TUCi';
+  String get boostDialogPaidCostValue => '50 TUCi ([ICON_TUCI])';
 
   @override
   String get boostDialogPaidBalance => 'رصيدك الحالي';
 
   @override
-  String get boostDialogPaidConfirm => 'ادفع 50 TUCi وابدأ';
+  String get boostDialogPaidConfirm => 'ادفع 50 TUCi ([ICON_TUCI]) وابدأ';
 
   @override
   String get boostSuccessFree => '🔥 تم تمييز إعلانك مجاناً!';
 
   @override
-  String get boostSuccessPaid => '🔥 تم تمييز إعلانك! (تم خصم 50 TUCi)';
+  String get boostSuccessPaid =>
+      '🔥 تم تمييز إعلانك! (تم خصم 50 TUCi ([ICON_TUCI]))';
 
   @override
   String get boostSuccess => '🔥 تم تمييز إعلانك!';
@@ -2308,7 +2310,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get boostErrorInsufficientTuci =>
-      'رصيد TUCi غير كافٍ. يلزم 50 TUCi للتمييز المدفوع.';
+      'رصيد TUCi ([ICON_TUCI]) غير كافٍ. يلزم 50 TUCi ([ICON_TUCI]) للتمييز المدفوع.';
 
   @override
   String get boostBtnStart => 'تمييز الإعلان';
@@ -2531,17 +2533,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String retargetingDialogBodyPaid(int count, int cost) {
-    return 'سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى $count شخص. سيُخصم $cost TUCi من محفظتك.';
+    return 'سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى $count شخص. سيُخصم $cost TUCi ([ICON_TUCI]) من محفظتك.';
   }
 
   @override
   String retargetingDialogBodyKarma(int count, int free, int cost) {
-    return 'سيتم إرسال إشعار إلى $count شخص.\n\nسيُستخدم $free رصيد + سيُدفع $cost TUCi.';
+    return 'سيتم إرسال إشعار إلى $count شخص.\n\nسيُستخدم $free رصيد + سيُدفع $cost TUCi ([ICON_TUCI]).';
   }
 
   @override
   String retargetingDialogBodyInsufficient(int cost, int balance) {
-    return 'رصيد TUCi غير كافٍ.\nالمطلوب: $cost TUCi | المتاح: $balance TUCi';
+    return 'رصيد TUCi ([ICON_TUCI]) غير كافٍ.\nالمطلوب: $cost TUCi ([ICON_TUCI]) | المتاح: $balance TUCi ([ICON_TUCI])';
   }
 
   @override
@@ -2559,7 +2561,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String retargetingPaidSubtitle(int count) {
-    return '$count شخص × 10 TUCi';
+    return '$count شخص × 10 TUCi ([ICON_TUCI])';
   }
 
   @override
@@ -2580,7 +2582,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String retargetingCostBadge(int cost) {
-    return 'سيُنفق $cost TUCi';
+    return 'سيُنفق $cost TUCi ([ICON_TUCI])';
   }
 
   @override
@@ -2589,7 +2591,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get retargetingInfoText =>
-      'يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 10 TUCi لكل شخص.';
+      'يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 10 TUCi ([ICON_TUCI]) لكل شخص.';
 
   @override
   String get retargetingLast30Days => 'آخر 30 يومًا';
@@ -2695,11 +2697,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر استرداد رمز الدعوة، حاول مرة أخرى.';
 
   @override
-  String get profileInviteTitle => 'ادعُ أصدقاءك، اكسب TUCi!';
+  String get profileInviteTitle => 'ادعُ أصدقاءك، اكسب TUCi ([ICON_TUCI])!';
 
   @override
   String get profileInviteSubtitle =>
-      '+50 TUCi لكل دعوة، صديقك يحصل على +10 TUCi';
+      '+50 TUCi ([ICON_TUCI]) لكل دعوة، صديقك يحصل على +10 TUCi ([ICON_TUCI])';
 
   @override
   String get profilePickGallery => 'اختر من المعرض';
@@ -2728,7 +2730,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String tuciSpent(int count) {
-    return 'تم إنفاق $count TUCi.';
+    return 'تم إنفاق $count TUCi ([ICON_TUCI]).';
   }
 
   @override
@@ -2769,7 +2771,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String listingDeactivateCostHint(int cost) {
-    return 'تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستكلف $cost TUCi من رصيدك.';
+    return 'تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستكلف $cost TUCi ([ICON_TUCI]) من رصيدك.';
   }
 
   @override
@@ -2789,12 +2791,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String listingReactivatePaidPro(int cost) {
-    return 'استُنفدت الأرصدة الشهرية. سيُخصم $cost TUCi.';
+    return 'استُنفدت الأرصدة الشهرية. سيُخصم $cost TUCi ([ICON_TUCI]).';
   }
 
   @override
   String listingReactivatePaidNormal(int cost, int balance) {
-    return 'سيُخصم $cost TUCi. رصيدك: $balance TUCi.';
+    return 'سيُخصم $cost TUCi ([ICON_TUCI]). رصيدك: $balance TUCi ([ICON_TUCI]).';
   }
 
   @override
@@ -2803,7 +2805,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listingReactivateInsufficientBalance =>
-      'رصيد غير كافٍ. أضف TUCi للمتابعة.';
+      'رصيد غير كافٍ. أضف TUCi ([ICON_TUCI]) للمتابعة.';
 
   @override
   String get listingReactivateConfirm => 'تفعيل';
@@ -2837,7 +2839,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get faqAAccountEmail =>
-      'يعد التحقق من البريد الإلكتروني إلزامياً لضمان أمان حسابك وإجراء عمليات مهمة مثل إعادة تعيين كلمة المرور. كما أنها الخطوة الأولى للحصول على الحساب الموثق (العلامة الزرقاء).';
+      'يعد التحقق من البريد الإلكتروني إلزامياً لضمان أمان حسابك وإجراء عمليات مهمة مثل إعادة تعيين كلمة المرور. كما أنها الخطوة الأولى للحصول على الحساب الموثق (العلامة الزرقاء ([ICON_VERIFIED])).';
 
   @override
   String get faqQAccountProfile =>
@@ -2895,21 +2897,22 @@ class AppLocalizationsAr extends AppLocalizations {
       'البث المباشر: يأخذك إلى موجز SwipeLive حيث يعرض البائعون المنتجات مباشرة. الرسائل: يمكنك الدردشة مباشرة مع البائعين والتفاوض على الأسعار بأمان.';
 
   @override
-  String get faqCatBadges => 'الشارات والعلامات ورصيد TUCi';
+  String get faqCatBadges => 'الشارات والعلامات ورصيد TUCi ([ICON_TUCI])';
 
   @override
-  String get faqQBadgesVerified => 'ما هي العلامة الزرقاء (حساب موثق)؟';
+  String get faqQBadgesVerified =>
+      'ما هي العلامة الزرقاء ([ICON_VERIFIED]) (حساب موثق ([ICON_VERIFIED]))؟';
 
   @override
   String get faqABadgesVerified =>
-      'تشير العلامة الزرقاء إلى أن البائع قد تحقق بنجاح من بريده الإلكتروني ورقم هاتفه، مما يثبت أنه شخص حقيقي موثوق.';
+      'تشير العلامة الزرقاء ([ICON_VERIFIED]) إلى أن البائع قد تحقق بنجاح من بريده الإلكتروني ورقم هاتفه، مما يثبت أنه شخص حقيقي موثوق.';
 
   @override
   String get faqQBadgesPro => 'ماذا تعني شارة \"👑 (التاج)\"؟';
 
   @override
   String get faqABadgesPro =>
-      'تشير هذه الشارة إلى أن البائع عضو في teqlif PRO. بائعو PRO هم محترفون يتم الترويج لهم أكثر بواسطة الخوارزمية.';
+      'تشير هذه الشارة إلى أن البائع عضو في teqlif PRO ([ICON_PRO]). بائعو PRO هم محترفون يتم الترويج لهم أكثر بواسطة الخوارزمية.';
 
   @override
   String get faqQBadgesTrusted =>
@@ -2925,14 +2928,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get faqABadgesSponsored =>
-      'ممولة: إعلان مروج باستخدام رصيد TUCi. شائعة (نار): إعلان يحظى بمشاهدات عالية مؤخراً. مباشر (يومض): البائع يبث حالياً لهذا المنتج.';
+      'ممولة: إعلان مروج باستخدام رصيد TUCi ([ICON_TUCI]). شائعة (نار): إعلان يحظى بمشاهدات عالية مؤخراً. مباشر (يومض): البائع يبث حالياً لهذا المنتج.';
 
   @override
-  String get faqQBadgesTuci => 'ما هو TUCi وأين يتم استخدامه؟';
+  String get faqQBadgesTuci => 'ما هو TUCi ([ICON_TUCI]) وأين يتم استخدامه؟';
 
   @override
   String get faqABadgesTuci =>
-      'TUCi هي عملتنا الافتراضية. تستخدم للترويج للإعلانات، إرسال الهدايا في البث المباشر، الحصول على تحليل الأسعار بالذكاء الاصطناعي، والوصول إلى المشترين مباشرة.';
+      'TUCi ([ICON_TUCI]) هي عملتنا الافتراضية. تستخدم للترويج للإعلانات، إرسال الهدايا في البث المباشر، الحصول على تحليل الأسعار بالذكاء الاصطناعي، والوصول إلى المشترين مباشرة.';
 
   @override
   String get faqCatLive => 'البث المباشر (SwipeLive) والمزادات';
@@ -2976,7 +2979,8 @@ class AppLocalizationsAr extends AppLocalizations {
       'يحلل الذكاء الاصطناعي ملايين البيانات لاقتراح أفضل سعر بناءً على عنوان منتجك وفئته.';
 
   @override
-  String get faqQAILead => 'ما هي ميزة \"الطلب الساخن\" (العثور على مشترٍ)؟';
+  String get faqQAILead =>
+      'ما هي ميزة \"الطلب الساخن ([ICON_HOTDEMAND])\" (العثور على مشترٍ)؟';
 
   @override
   String get faqAAILead =>
@@ -3003,22 +3007,23 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get faqIconVerified =>
-      'حساب موثق: يظهر أن المستخدم قد تحقق من هويته أو هاتفه.';
+      'حساب موثق ([ICON_VERIFIED]): يظهر أن المستخدم قد تحقق من هويته أو هاتفه.';
 
   @override
   String get faqIconPro =>
-      'teqlif PRO: يشير إلى عضو محترف يتم الترويج له بواسطة المنصة.';
+      'teqlif PRO ([ICON_PRO]): يشير إلى عضو محترف يتم الترويج له بواسطة المنصة.';
 
   @override
   String get faqIconTuci =>
-      'TUCi: العملة الافتراضية المستخدمة في الإنفاق داخل التطبيق.';
+      'TUCi ([ICON_TUCI]): العملة الافتراضية المستخدمة في الإنفاق داخل التطبيق.';
 
   @override
-  String get faqIconBlast => 'Blast: يرسل إشعارًا فوريًا لقائمتك/بثك.';
+  String get faqIconBlast =>
+      'Blast ([ICON_BLAST]): يرسل إشعارًا فوريًا لقائمتك/بثك.';
 
   @override
   String get faqIconAutoBid =>
-      'المزايدة التلقائية: النظام يزايد نيابة عنك حتى الحد الأقصى.';
+      'المزايدة التلقائية ([ICON_AUTOBID]): النظام يزايد نيابة عنك حتى الحد الأقصى.';
 
   @override
   String get faqIconSales =>
@@ -3049,7 +3054,8 @@ class AppLocalizationsAr extends AppLocalizations {
       'إعادة الاستهداف: إرسال تذكيرات أو رسائل خصم للمشترين المهتمين.';
 
   @override
-  String get proToolHotDemandTitle => 'الطلب الساخن (Lead Gen)';
+  String get proToolHotDemandTitle =>
+      'الطلب الساخن ([ICON_HOTDEMAND]) (Lead Gen)';
 
   @override
   String get proToolHotDemandDesc =>
@@ -3068,4 +3074,40 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get proToolStreamAnalyticsDesc =>
       'قم بتحليل بيانات مشاهدة البث المباشر والهدايا بالتفصيل.';
+
+  @override
+  String get faqIconNameVerified => 'حساب موثق ([ICON_VERIFIED])';
+
+  @override
+  String get faqIconNamePro => 'teqlif PRO ([ICON_PRO])';
+
+  @override
+  String get faqIconNameTuci => 'TUCi ([ICON_TUCI])';
+
+  @override
+  String get faqIconNameBlast => 'Blast ([ICON_BLAST])';
+
+  @override
+  String get faqIconNameAutoBid => 'المزايدة التلقائية ([ICON_AUTOBID])';
+
+  @override
+  String get faqIconNameSales => 'رؤى المبيعات';
+
+  @override
+  String get faqIconNameListings => 'تحليلات القوائم';
+
+  @override
+  String get faqIconNameMarket => 'معلومات السوق';
+
+  @override
+  String get faqIconNameTime => 'أفضل وقت للبث';
+
+  @override
+  String get faqIconNameConversion => 'تحليل التحويل';
+
+  @override
+  String get faqIconNameRadar => 'رادار المنافسين';
+
+  @override
+  String get faqIconNameRetargeting => 'إعادة الاستهداف';
 }

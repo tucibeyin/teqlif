@@ -1057,7 +1057,7 @@ abstract class AppLocalizations {
   /// No description provided for @giftInsufficientBalance.
   ///
   /// In tr, this message translates to:
-  /// **'Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.'**
+  /// **'Bakiyeniz yetersiz. Hediye göndermek için TUCi ([ICON_TUCI]) satın alın.'**
   String get giftInsufficientBalance;
 
   /// No description provided for @giftLoadBalanceButton.
@@ -2671,7 +2671,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletTitle.
   ///
   /// In tr, this message translates to:
-  /// **'TUCi Cüzdanım'**
+  /// **'TUCi ([ICON_TUCI]) Cüzdanım'**
   String get walletTitle;
 
   /// No description provided for @walletBalance.
@@ -2743,19 +2743,19 @@ abstract class AppLocalizations {
   /// No description provided for @walletComingSoonLabel.
   ///
   /// In tr, this message translates to:
-  /// **'TUCi Satın Alma Yakında!'**
+  /// **'TUCi ([ICON_TUCI]) Satın Alma Yakında!'**
   String get walletComingSoonLabel;
 
   /// No description provided for @walletComingSoonDesc.
   ///
   /// In tr, this message translates to:
-  /// **'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.'**
+  /// **'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi ([ICON_TUCI]) başlangıç bakiyesi tanımlandı.'**
   String get walletComingSoonDesc;
 
   /// No description provided for @walletBuyBtn.
   ///
   /// In tr, this message translates to:
-  /// **'TUCi Satın Alma Yakında'**
+  /// **'TUCi ([ICON_TUCI]) Satın Alma Yakında'**
   String get walletBuyBtn;
 
   /// No description provided for @reportLoading.
@@ -3157,7 +3157,7 @@ abstract class AppLocalizations {
   /// No description provided for @blastConfirmCostPaidLabel.
   ///
   /// In tr, this message translates to:
-  /// **'TUCi Maliyeti'**
+  /// **'TUCi ([ICON_TUCI]) Maliyeti'**
   String get blastConfirmCostPaidLabel;
 
   /// No description provided for @blastSubtitleFree.
@@ -3169,7 +3169,7 @@ abstract class AppLocalizations {
   /// No description provided for @blastSubtitlePaid.
   ///
   /// In tr, this message translates to:
-  /// **'Yayın başladığında push bildirim • {cost} TUCi'**
+  /// **'Yayın başladığında push bildirim • {cost} TUCi ([ICON_TUCI])'**
   String blastSubtitlePaid(int cost);
 
   /// No description provided for @blastConfirmCostFree.
@@ -3187,7 +3187,7 @@ abstract class AppLocalizations {
   /// No description provided for @blastBtnPaid.
   ///
   /// In tr, this message translates to:
-  /// **'{count} Hazır Alıcı — Bildirim Gönder ({cost} TUCi)'**
+  /// **'{count} Hazır Alıcı — Bildirim Gönder ({cost} TUCi ([ICON_TUCI]))'**
   String blastBtnPaid(int count, int cost);
 
   /// No description provided for @blastConfirmBodyFree.
@@ -3199,7 +3199,7 @@ abstract class AppLocalizations {
   /// No description provided for @blastConfirmBodyPaid.
   ///
   /// In tr, this message translates to:
-  /// **'{count} hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: {cost} TUCi'**
+  /// **'{count} hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: {cost} TUCi ([ICON_TUCI])'**
   String blastConfirmBodyPaid(int count, int cost);
 
   /// No description provided for @proAnalyticsTitle.
@@ -4261,7 +4261,7 @@ abstract class AppLocalizations {
   /// No description provided for @boostDialogTotalBudgetValue.
   ///
   /// In tr, this message translates to:
-  /// **'50 TUCi'**
+  /// **'50 TUCi ([ICON_TUCI])'**
   String get boostDialogTotalBudgetValue;
 
   /// No description provided for @boostDialogCpc.
@@ -4273,7 +4273,7 @@ abstract class AppLocalizations {
   /// No description provided for @boostDialogCpcValue.
   ///
   /// In tr, this message translates to:
-  /// **'1 TUCi'**
+  /// **'1 TUCi ([ICON_TUCI])'**
   String get boostDialogCpcValue;
 
   /// No description provided for @boostDialogEstClicks.
@@ -4333,7 +4333,7 @@ abstract class AppLocalizations {
   /// No description provided for @boostDialogPaidCostValue.
   ///
   /// In tr, this message translates to:
-  /// **'50 TUCi'**
+  /// **'50 TUCi ([ICON_TUCI])'**
   String get boostDialogPaidCostValue;
 
   /// No description provided for @boostDialogPaidBalance.
@@ -4345,7 +4345,7 @@ abstract class AppLocalizations {
   /// No description provided for @boostDialogPaidConfirm.
   ///
   /// In tr, this message translates to:
-  /// **'50 TUCi Öde ve Başlat'**
+  /// **'50 TUCi ([ICON_TUCI]) Öde ve Başlat'**
   String get boostDialogPaidConfirm;
 
   /// No description provided for @boostSuccessFree.
@@ -4357,7 +4357,7 @@ abstract class AppLocalizations {
   /// No description provided for @boostSuccessPaid.
   ///
   /// In tr, this message translates to:
-  /// **'🔥 İlanınız öne çıkarıldı! (50 TUCi harcandı)'**
+  /// **'🔥 İlanınız öne çıkarıldı! (50 TUCi ([ICON_TUCI]) harcandı)'**
   String get boostSuccessPaid;
 
   /// No description provided for @boostSuccess.
@@ -4381,7 +4381,7 @@ abstract class AppLocalizations {
   /// No description provided for @boostErrorInsufficientTuci.
   ///
   /// In tr, this message translates to:
-  /// **'Yetersiz TUCi bakiyesi. Ücretli boost için 50 TUCi gerekiyor.'**
+  /// **'Yetersiz TUCi ([ICON_TUCI]) bakiyesi. Ücretli boost için 50 TUCi ([ICON_TUCI]) gerekiyor.'**
   String get boostErrorInsufficientTuci;
 
   /// No description provided for @boostBtnStart.
@@ -4771,19 +4771,19 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingDialogBodyPaid.
   ///
   /// In tr, this message translates to:
-  /// **'{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından {cost} TUCi düşülecek.'**
+  /// **'{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından {cost} TUCi ([ICON_TUCI]) düşülecek.'**
   String retargetingDialogBodyPaid(int count, int cost);
 
   /// No description provided for @retargetingDialogBodyKarma.
   ///
   /// In tr, this message translates to:
-  /// **'{count} kişiye bildirim gönderilecek.\n\n{free} kredi kullanılacak + {cost} TUCi ödenecek.'**
+  /// **'{count} kişiye bildirim gönderilecek.\n\n{free} kredi kullanılacak + {cost} TUCi ([ICON_TUCI]) ödenecek.'**
   String retargetingDialogBodyKarma(int count, int free, int cost);
 
   /// No description provided for @retargetingDialogBodyInsufficient.
   ///
   /// In tr, this message translates to:
-  /// **'Yetersiz TUCi bakiyesi.\nGerekli: {cost} TUCi | Mevcut: {balance} TUCi'**
+  /// **'Yetersiz TUCi ([ICON_TUCI]) bakiyesi.\nGerekli: {cost} TUCi ([ICON_TUCI]) | Mevcut: {balance} TUCi ([ICON_TUCI])'**
   String retargetingDialogBodyInsufficient(int cost, int balance);
 
   /// No description provided for @retargetingCostFree.
@@ -4807,7 +4807,7 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingPaidSubtitle.
   ///
   /// In tr, this message translates to:
-  /// **'{count} kişi × 10 TUCi'**
+  /// **'{count} kişi × 10 TUCi ([ICON_TUCI])'**
   String retargetingPaidSubtitle(int count);
 
   /// No description provided for @retargetingEstimatedCost.
@@ -4837,7 +4837,7 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingCostBadge.
   ///
   /// In tr, this message translates to:
-  /// **'{cost} TUCi harcanır'**
+  /// **'{cost} TUCi ([ICON_TUCI]) harcanır'**
   String retargetingCostBadge(int cost);
 
   /// No description provided for @retargetingFootnote.
@@ -4849,7 +4849,7 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingInfoText.
   ///
   /// In tr, this message translates to:
-  /// **'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.'**
+  /// **'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi ([ICON_TUCI]) harcanır.'**
   String get retargetingInfoText;
 
   /// No description provided for @retargetingLast30Days.
@@ -5035,13 +5035,13 @@ abstract class AppLocalizations {
   /// No description provided for @profileInviteTitle.
   ///
   /// In tr, this message translates to:
-  /// **'Arkadaşlarını Davet Et, TUCi Kazan!'**
+  /// **'Arkadaşlarını Davet Et, TUCi ([ICON_TUCI]) Kazan!'**
   String get profileInviteTitle;
 
   /// No description provided for @profileInviteSubtitle.
   ///
   /// In tr, this message translates to:
-  /// **'Her davet için +50, arkadaşın +10 TUCi kazanır'**
+  /// **'Her davet için +50, arkadaşın +10 TUCi ([ICON_TUCI]) kazanır'**
   String get profileInviteSubtitle;
 
   /// No description provided for @profilePickGallery.
@@ -5095,7 +5095,7 @@ abstract class AppLocalizations {
   /// No description provided for @tuciSpent.
   ///
   /// In tr, this message translates to:
-  /// **'{count} TUCi harcandı.'**
+  /// **'{count} TUCi ([ICON_TUCI]) harcandı.'**
   String tuciSpent(int count);
 
   /// No description provided for @videoTooLong.
@@ -5155,7 +5155,7 @@ abstract class AppLocalizations {
   /// No description provided for @listingDeactivateCostHint.
   ///
   /// In tr, this message translates to:
-  /// **'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için {cost} TUCi bakiyenizden düşülecektir.'**
+  /// **'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için {cost} TUCi ([ICON_TUCI]) bakiyenizden düşülecektir.'**
   String listingDeactivateCostHint(int cost);
 
   /// No description provided for @listingDeactivateFreeCreditHint.
@@ -5185,13 +5185,13 @@ abstract class AppLocalizations {
   /// No description provided for @listingReactivatePaidPro.
   ///
   /// In tr, this message translates to:
-  /// **'Bu ayki hakkınız doldu. {cost} TUCi ödenecek.'**
+  /// **'Bu ayki hakkınız doldu. {cost} TUCi ([ICON_TUCI]) ödenecek.'**
   String listingReactivatePaidPro(int cost);
 
   /// No description provided for @listingReactivatePaidNormal.
   ///
   /// In tr, this message translates to:
-  /// **'{cost} TUCi ödenecek. Bakiyeniz: {balance} TUCi.'**
+  /// **'{cost} TUCi ([ICON_TUCI]) ödenecek. Bakiyeniz: {balance} TUCi ([ICON_TUCI]).'**
   String listingReactivatePaidNormal(int cost, int balance);
 
   /// No description provided for @listingReactivateProUpsell.
@@ -5203,7 +5203,7 @@ abstract class AppLocalizations {
   /// No description provided for @listingReactivateInsufficientBalance.
   ///
   /// In tr, this message translates to:
-  /// **'Yetersiz bakiye. Devam etmek için TUCi yükleyin.'**
+  /// **'Yetersiz bakiye. Devam etmek için TUCi ([ICON_TUCI]) yükleyin.'**
   String get listingReactivateInsufficientBalance;
 
   /// No description provided for @listingReactivateConfirm.
@@ -5263,7 +5263,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqAAccountEmail.
   ///
   /// In tr, this message translates to:
-  /// **'Hesabınızın güvenliğini sağlamak ve şifre sıfırlama gibi kritik işlemleri yapabilmek için e-posta doğrulamanız zorunludur. Doğrulanmış e-postalar Mavi Tik (Onaylı Hesap) sürecinin de ilk adımıdır.'**
+  /// **'Hesabınızın güvenliğini sağlamak ve şifre sıfırlama gibi kritik işlemleri yapabilmek için e-posta doğrulamanız zorunludur. Doğrulanmış e-postalar Mavi Tik ([ICON_VERIFIED]) (Onaylı Hesap) sürecinin de ilk adımıdır.'**
   String get faqAAccountEmail;
 
   /// No description provided for @faqQAccountProfile.
@@ -5359,19 +5359,19 @@ abstract class AppLocalizations {
   /// No description provided for @faqCatBadges.
   ///
   /// In tr, this message translates to:
-  /// **'Rozetler, Etiketler ve TUCi Kredisi'**
+  /// **'Rozetler, Etiketler ve TUCi ([ICON_TUCI]) Kredisi'**
   String get faqCatBadges;
 
   /// No description provided for @faqQBadgesVerified.
   ///
   /// In tr, this message translates to:
-  /// **'Mavi Tik (Doğrulanmış Hesap) nedir?'**
+  /// **'Mavi Tik ([ICON_VERIFIED]) (Doğrulanmış Hesap) nedir?'**
   String get faqQBadgesVerified;
 
   /// No description provided for @faqABadgesVerified.
   ///
   /// In tr, this message translates to:
-  /// **'Mavi tik, satıcının e-posta adresini ve telefon numarasını başarıyla doğruladığını gösterir. Bu rozet, potansiyel alıcılara sizin güvenilir bir gerçek kişi olduğunuzu kanıtlar.'**
+  /// **'Mavi tik ([ICON_VERIFIED]), satıcının e-posta adresini ve telefon numarasını başarıyla doğruladığını gösterir. Bu rozet, potansiyel alıcılara sizin güvenilir bir gerçek kişi olduğunuzu kanıtlar.'**
   String get faqABadgesVerified;
 
   /// No description provided for @faqQBadgesPro.
@@ -5383,7 +5383,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqABadgesPro.
   ///
   /// In tr, this message translates to:
-  /// **'Bu rozet, ilanı paylaşan kullanıcının veya satıcının teqlif PRO üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.'**
+  /// **'Bu rozet, ilanı paylaşan kullanıcının veya satıcının teqlif PRO ([ICON_PRO]) üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.'**
   String get faqABadgesPro;
 
   /// No description provided for @faqQBadgesTrusted.
@@ -5407,19 +5407,19 @@ abstract class AppLocalizations {
   /// No description provided for @faqABadgesSponsored.
   ///
   /// In tr, this message translates to:
-  /// **'Sponsorlu: Satıcının TUCi kredisi kullanarak ilanını öne çıkardığını belirtir. Trending (Ateş): İlanın son zamanlarda çok kişi tarafından incelendiğini veya favoriye eklendiğini (sıcak fırsat) gösterir. LIVE (Yanıp Sönen): Satıcının o an söz konusu ürün için canlı yayın (SwipeLive) yaptığını gösterir.'**
+  /// **'Sponsorlu: Satıcının TUCi ([ICON_TUCI]) kredisi kullanarak ilanını öne çıkardığını belirtir. Trending (Ateş): İlanın son zamanlarda çok kişi tarafından incelendiğini veya favoriye eklendiğini (sıcak fırsat) gösterir. LIVE (Yanıp Sönen): Satıcının o an söz konusu ürün için canlı yayın (SwipeLive) yaptığını gösterir.'**
   String get faqABadgesSponsored;
 
   /// No description provided for @faqQBadgesTuci.
   ///
   /// In tr, this message translates to:
-  /// **'TUCi nedir, nerelerde kullanılır?'**
+  /// **'TUCi ([ICON_TUCI]) nedir, nerelerde kullanılır?'**
   String get faqQBadgesTuci;
 
   /// No description provided for @faqABadgesTuci.
   ///
   /// In tr, this message translates to:
-  /// **'TUCi, teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.'**
+  /// **'TUCi ([ICON_TUCI]), teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep ([ICON_HOTDEMAND])\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.'**
   String get faqABadgesTuci;
 
   /// No description provided for @faqCatLive.
@@ -5497,7 +5497,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqQAILead.
   ///
   /// In tr, this message translates to:
-  /// **'\"Sıcak Talep\" (Alıcı Bul / Lead Gen) özelliği nedir?'**
+  /// **'\"Sıcak Talep ([ICON_HOTDEMAND])\" (Alıcı Bul / Lead Gen) özelliği nedir?'**
   String get faqQAILead;
 
   /// No description provided for @faqAAILead.
@@ -5551,25 +5551,25 @@ abstract class AppLocalizations {
   /// No description provided for @faqIconPro.
   ///
   /// In tr, this message translates to:
-  /// **'teqlif PRO: Satıcının platform tarafından öne çıkarılan bir PRO üyesi olduğunu belirtir.'**
+  /// **'teqlif PRO ([ICON_PRO]): Satıcının platform tarafından öne çıkarılan bir PRO üyesi olduğunu belirtir.'**
   String get faqIconPro;
 
   /// No description provided for @faqIconTuci.
   ///
   /// In tr, this message translates to:
-  /// **'TUCi: Sistem içi harcamalarda kullanılan sanal para birimidir.'**
+  /// **'TUCi ([ICON_TUCI]): Sistem içi harcamalarda kullanılan sanal para birimidir.'**
   String get faqIconTuci;
 
   /// No description provided for @faqIconBlast.
   ///
   /// In tr, this message translates to:
-  /// **'Öne Çıkar (Blast): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.'**
+  /// **'Öne Çıkar (Blast) ([ICON_BLAST]): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.'**
   String get faqIconBlast;
 
   /// No description provided for @faqIconAutoBid.
   ///
   /// In tr, this message translates to:
-  /// **'Otomatik Teklif: Sistemin sizin adınıza belirlediğiniz limite kadar teklif vermesidir.'**
+  /// **'Otomatik Teklif ([ICON_AUTOBID]): Sistemin sizin adınıza belirlediğiniz limite kadar teklif vermesidir.'**
   String get faqIconAutoBid;
 
   /// No description provided for @faqIconSales.
@@ -5617,7 +5617,7 @@ abstract class AppLocalizations {
   /// No description provided for @proToolHotDemandTitle.
   ///
   /// In tr, this message translates to:
-  /// **'Sıcak Talep (Lead Gen)'**
+  /// **'Sıcak Talep ([ICON_HOTDEMAND]) (Lead Gen)'**
   String get proToolHotDemandTitle;
 
   /// No description provided for @proToolHotDemandDesc.
@@ -5649,6 +5649,78 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Yayınlarınızdaki anlık izleyici ve hediye verilerini detaylı inceleyin.'**
   String get proToolStreamAnalyticsDesc;
+
+  /// No description provided for @faqIconNameVerified.
+  ///
+  /// In tr, this message translates to:
+  /// **'Onaylı Hesap'**
+  String get faqIconNameVerified;
+
+  /// No description provided for @faqIconNamePro.
+  ///
+  /// In tr, this message translates to:
+  /// **'teqlif PRO ([ICON_PRO])'**
+  String get faqIconNamePro;
+
+  /// No description provided for @faqIconNameTuci.
+  ///
+  /// In tr, this message translates to:
+  /// **'TUCi ([ICON_TUCI])'**
+  String get faqIconNameTuci;
+
+  /// No description provided for @faqIconNameBlast.
+  ///
+  /// In tr, this message translates to:
+  /// **'Öne Çıkar (Blast) ([ICON_BLAST])'**
+  String get faqIconNameBlast;
+
+  /// No description provided for @faqIconNameAutoBid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Otomatik Teklif ([ICON_AUTOBID])'**
+  String get faqIconNameAutoBid;
+
+  /// No description provided for @faqIconNameSales.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış İçgörüleri'**
+  String get faqIconNameSales;
+
+  /// No description provided for @faqIconNameListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan Analitikleri'**
+  String get faqIconNameListings;
+
+  /// No description provided for @faqIconNameMarket.
+  ///
+  /// In tr, this message translates to:
+  /// **'Piyasa İstihbaratı'**
+  String get faqIconNameMarket;
+
+  /// No description provided for @faqIconNameTime.
+  ///
+  /// In tr, this message translates to:
+  /// **'En İyi Yayın Zamanı'**
+  String get faqIconNameTime;
+
+  /// No description provided for @faqIconNameConversion.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dönüşüm Analizi'**
+  String get faqIconNameConversion;
+
+  /// No description provided for @faqIconNameRadar.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rakip Radarı'**
+  String get faqIconNameRadar;
+
+  /// No description provided for @faqIconNameRetargeting.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeniden Hedefleme'**
+  String get faqIconNameRetargeting;
 }
 
 class _AppLocalizationsDelegate

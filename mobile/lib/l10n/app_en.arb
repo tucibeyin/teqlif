@@ -152,7 +152,7 @@
   "errorConnection": "Connection error",
   "errorListingsLoad": "Failed to load listings",
   "errorVideoProcessing": "Failed to process video. Please try again.",
-  "giftInsufficientBalance": "Insufficient balance. Purchase TUCi to send a gift.",
+  "giftInsufficientBalance": "Insufficient balance. Purchase TUCi ([ICON_TUCI]) to send a gift.",
   "giftLoadBalanceButton": "Load Balance",
   "purchaseLoadError": "An error occurred while loading your purchases. Please check your internet connection and try again.",
   "purchaseEmptyState": "You don't have any purchases yet.",
@@ -589,7 +589,7 @@
   "editProfileLinkError": "Link must start with http:// or https://",
   "settingsProTools": "📈 Pro Tools",
   "settingsProActive": "ACTIVE",
-  "walletTitle": "My TUCi Wallet",
+  "walletTitle": "My TUCi ([ICON_TUCI]) Wallet",
   "walletBalance": "Current Balance",
   "walletRecentTxns": "Recent Transactions",
   "walletSpendingSummary": "Spending Summary",
@@ -601,9 +601,9 @@
   "walletTxnSpendAdCampaign": "Ad campaign",
   "walletTxnSpendAi": "AI pricing",
   "walletTxnWebTopup": "Web top-up",
-  "walletComingSoonLabel": "TUCi Purchase Coming Soon!",
-  "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 TUCi balance.",
-  "walletBuyBtn": "TUCi Purchase Coming Soon",
+  "walletComingSoonLabel": "TUCi ([ICON_TUCI]) Purchase Coming Soon!",
+  "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 TUCi ([ICON_TUCI]) balance.",
+  "walletBuyBtn": "TUCi ([ICON_TUCI]) Purchase Coming Soon",
   "reportLoading": "Preparing stream analysis…",
   "reportLoadFailed": "Could not load report.",
   "reportRetry": "Try Again",
@@ -673,7 +673,7 @@
   "proUnlockBtn": "Go Pro",
   "proUpgradeSheetDesc": "You need to upgrade to Pro to use this tool.",
   "proCreditsSummaryTitle": "Remaining Credits",
-  "proCreditsBlastName": "Audience Invite (Blast)",
+  "proCreditsBlastName": "Audience Invite (Blast ([ICON_BLAST]))",
   "proCreditsBoostName": "Promoted Listing",
   "proCreditsAiName": "AI Pricing Advisor",
   "proCreditsReactivationName": "Reactivation",
@@ -704,9 +704,9 @@
     }
   },
   "blastConfirmCostFreeLabel": "Cost",
-  "blastConfirmCostPaidLabel": "TUCi Cost",
+  "blastConfirmCostPaidLabel": "TUCi ([ICON_TUCI]) Cost",
   "blastSubtitleFree": "Push notification when stream starts • Free",
-  "blastSubtitlePaid": "Push notification when stream starts • {cost} TUCi",
+  "blastSubtitlePaid": "Push notification when stream starts • {cost} TUCi ([ICON_TUCI])",
   "@blastSubtitlePaid": {
     "placeholders": {
       "cost": {
@@ -723,7 +723,7 @@
       }
     }
   },
-  "blastBtnPaid": "{count} Ready Buyers — Send Notification ({cost} TUCi)",
+  "blastBtnPaid": "{count} Ready Buyers — Send Notification ({cost} TUCi ([ICON_TUCI]))",
   "@blastBtnPaid": {
     "placeholders": {
       "count": {
@@ -742,7 +742,7 @@
       }
     }
   },
-  "blastConfirmBodyPaid": "{count} ready buyers will be notified.\n\nTotal cost: {cost} TUCi",
+  "blastConfirmBodyPaid": "{count} ready buyers will be notified.\n\nTotal cost: {cost} TUCi ([ICON_TUCI])",
   "@blastConfirmBodyPaid": {
     "placeholders": {
       "count": {
@@ -1109,9 +1109,9 @@
   "boostDialogTitle": "Promote Listing",
   "boostDialogPlanLabel": "Campaign plan:",
   "boostDialogTotalBudget": "Total Budget",
-  "boostDialogTotalBudgetValue": "50 TUCi",
+  "boostDialogTotalBudgetValue": "50 TUCi ([ICON_TUCI])",
   "boostDialogCpc": "Cost per Click",
-  "boostDialogCpcValue": "1 TUCi",
+  "boostDialogCpcValue": "1 TUCi ([ICON_TUCI])",
   "boostDialogEstClicks": "Estimated Clicks",
   "boostDialogEstClicksValue": "~50 clicks",
   "boostDialogFeedHint": "Your listing will be featured in the \"For You\" feed.",
@@ -1138,15 +1138,15 @@
   },
   "boostDialogPaidDesc": "Your listing will still be featured in the \"For You\" feed.",
   "boostDialogPaidCost": "Cost",
-  "boostDialogPaidCostValue": "50 TUCi",
+  "boostDialogPaidCostValue": "50 TUCi ([ICON_TUCI])",
   "boostDialogPaidBalance": "Your Current Balance",
-  "boostDialogPaidConfirm": "Pay 50 TUCi & Start",
+  "boostDialogPaidConfirm": "Pay 50 TUCi ([ICON_TUCI]) & Start",
   "boostSuccessFree": "🔥 Your listing is now featured for free!",
-  "boostSuccessPaid": "🔥 Your listing is now featured! (50 TUCi spent)",
+  "boostSuccessPaid": "🔥 Your listing is now featured! (50 TUCi ([ICON_TUCI]) spent)",
   "boostSuccess": "🔥 Your listing is now featured!",
   "boostErrorDefault": "Could not start campaign.",
   "boostErrorConnection": "Connection error. Please try again.",
-  "boostErrorInsufficientTuci": "Insufficient TUCi balance. 50 TUCi is required for a paid boost.",
+  "boostErrorInsufficientTuci": "Insufficient TUCi ([ICON_TUCI]) balance. 50 TUCi ([ICON_TUCI]) is required for a paid boost.",
   "boostBtnStart": "Promote Listing",
   "boostBtnReport": "View Ad Performance",
   "adReportTitle": "AD REPORT",
@@ -1296,7 +1296,7 @@
       }
     }
   },
-  "retargetingDialogBodyPaid": "A \"Still interested?\" notification will be sent to {count} people. {cost} TUCi will be deducted from your wallet.",
+  "retargetingDialogBodyPaid": "A \"Still interested?\" notification will be sent to {count} people. {cost} TUCi ([ICON_TUCI]) will be deducted from your wallet.",
   "@retargetingDialogBodyPaid": {
     "placeholders": {
       "count": {
@@ -1307,7 +1307,7 @@
       }
     }
   },
-  "retargetingDialogBodyKarma": "A notification will be sent to {count} people.\n\n{free} credit(s) will be used + {cost} TUCi will be charged.",
+  "retargetingDialogBodyKarma": "A notification will be sent to {count} people.\n\n{free} credit(s) will be used + {cost} TUCi ([ICON_TUCI]) will be charged.",
   "@retargetingDialogBodyKarma": {
     "placeholders": {
       "count": {
@@ -1321,7 +1321,7 @@
       }
     }
   },
-  "retargetingDialogBodyInsufficient": "Insufficient TUCi balance.\nRequired: {cost} TUCi | Available: {balance} TUCi",
+  "retargetingDialogBodyInsufficient": "Insufficient TUCi ([ICON_TUCI]) balance.\nRequired: {cost} TUCi ([ICON_TUCI]) | Available: {balance} TUCi ([ICON_TUCI])",
   "@retargetingDialogBodyInsufficient": {
     "placeholders": {
       "cost": {
@@ -1349,7 +1349,7 @@
       }
     }
   },
-  "retargetingPaidSubtitle": "{count} people × 10 TUCi",
+  "retargetingPaidSubtitle": "{count} people × 10 TUCi ([ICON_TUCI])",
   "@retargetingPaidSubtitle": {
     "placeholders": {
       "count": {
@@ -1375,7 +1375,7 @@
       }
     }
   },
-  "retargetingCostBadge": "{cost} TUCi will be spent",
+  "retargetingCostBadge": "{cost} TUCi ([ICON_TUCI]) will be spent",
   "@retargetingCostBadge": {
     "placeholders": {
       "cost": {
@@ -1384,7 +1384,7 @@
     }
   },
   "retargetingFootnote": "Users will receive a \"Still interested?\" notification. Only sent to non-buyers.",
-  "retargetingInfoText": "Sends a reminder notification to people who viewed your listing but didn't buy. Free if you have monthly broadcast credits, otherwise 10 TUCi per person.",
+  "retargetingInfoText": "Sends a reminder notification to people who viewed your listing but didn't buy. Free if you have monthly broadcast credits, otherwise 10 TUCi ([ICON_TUCI]) per person.",
   "retargetingLast30Days": "Last 30 days",
   "retargetingViewerLabel": "viewed",
   "retargetingBoughtLabel": "purchased",
@@ -1450,8 +1450,8 @@
   },
   "profilePhotoUploadError": "Photo could not be uploaded. Try again.",
   "profileInviteCodeError": "Invite code could not be retrieved, try again.",
-  "profileInviteTitle": "Invite Friends, Earn TUCi!",
-  "profileInviteSubtitle": "+50 TUCi per invite, your friend gets +10 TUCi",
+  "profileInviteTitle": "Invite Friends, Earn TUCi ([ICON_TUCI])!",
+  "profileInviteSubtitle": "+50 TUCi ([ICON_TUCI]) per invite, your friend gets +10 TUCi ([ICON_TUCI])",
   "profilePickGallery": "Pick from Gallery",
   "profilePickCamera": "Take a Photo",
   "listingDeleteDialogTitle": "Delete Listing",
@@ -1460,7 +1460,7 @@
   "favoritesEmpty": "No favorites yet",
   "createNeedTitle": "Please enter the listing title first.",
   "aiPriceError": "Could not get price estimate. Please try again.",
-  "tuciSpent": "{count} TUCi spent.",
+  "tuciSpent": "{count} TUCi ([ICON_TUCI]) spent.",
   "@tuciSpent": {
     "placeholders": {
       "count": {
@@ -1508,7 +1508,7 @@
   },
   "listingDeactivateTitle": "Deactivate Listing",
   "listingDeactivateWarning": "If you deactivate, active showcase/promotions will be removed.",
-  "listingDeactivateCostHint": "Warning: Your 30-day free window has expired. Reactivating will cost {cost} TUCi from your balance.",
+  "listingDeactivateCostHint": "Warning: Your 30-day free window has expired. Reactivating will cost {cost} TUCi ([ICON_TUCI]) from your balance.",
   "@listingDeactivateCostHint": {
     "placeholders": {
       "cost": {
@@ -1527,7 +1527,7 @@
       }
     }
   },
-  "listingReactivatePaidPro": "Monthly credits exhausted. {cost} TUCi will be charged.",
+  "listingReactivatePaidPro": "Monthly credits exhausted. {cost} TUCi ([ICON_TUCI]) will be charged.",
   "@listingReactivatePaidPro": {
     "placeholders": {
       "cost": {
@@ -1535,7 +1535,7 @@
       }
     }
   },
-  "listingReactivatePaidNormal": "{cost} TUCi will be charged. Balance: {balance} TUCi.",
+  "listingReactivatePaidNormal": "{cost} TUCi ([ICON_TUCI]) will be charged. Balance: {balance} TUCi ([ICON_TUCI]).",
   "@listingReactivatePaidNormal": {
     "placeholders": {
       "cost": {
@@ -1547,7 +1547,7 @@
     }
   },
   "listingReactivateProUpsell": "Go PRO to get 5 free reactivations per month.",
-  "listingReactivateInsufficientBalance": "Insufficient balance. Top up TUCi to continue.",
+  "listingReactivateInsufficientBalance": "Insufficient balance. Top up TUCi ([ICON_TUCI]) to continue.",
   "listingReactivateConfirm": "Activate",
   "proReactivationSection": "Listing Reactivation Credits",
   "suggestedStreamers": "Suggested Broadcasters",
@@ -1557,7 +1557,7 @@
   "faqQAccountSignup": "How can I register and log in to teqlif?",
   "faqAAccountSignup": "You can create your account in seconds using your E-mail address by clicking the \"Login / Register\" button on the homepage, or securely log into your existing account.",
   "faqQAccountEmail": "Why do I need to verify my e-mail address?",
-  "faqAAccountEmail": "Email verification is mandatory to ensure the security of your account and perform critical operations such as password reset. Verified emails are also the first step for the Verified Account (Blue Tick) process.",
+  "faqAAccountEmail": "Email verification is mandatory to ensure the security of your account and perform critical operations such as password reset. Verified emails are also the first step for the Verified Account ([ICON_VERIFIED]) (Blue Tick ([ICON_VERIFIED])) process.",
   "faqQAccountProfile": "How can I edit my profile (Name, Photo, Bio)?",
   "faqAAccountProfile": "You can click the Edit Profile button by going to the \"My Profile\" tab in the app. You can change your avatar, update your name, and write a bio to introduce yourself better to potential buyers.",
   "faqQAccountPassword": "I forgot my password, what should I do?",
@@ -1573,17 +1573,17 @@
   "faqAExploreListings": "The Listings page is a vertical feed of newly added listings selected specifically for your interests by AI. The Explore page is the main search hub where you can make detailed category searches and discover popular sellers.",
   "faqQExploreLiveMessages": "What are the \"Live\" and \"Messages\" menus for?",
   "faqAExploreLiveMessages": "Live: Takes you to the SwipeLive feed where sellers showcase products live. Messages: You can chat directly with sellers and safely negotiate prices (bids).",
-  "faqCatBadges": "Badges, Tags and TUCi Credits",
-  "faqQBadgesVerified": "What is the Blue Tick (Verified Account)?",
+  "faqCatBadges": "Badges, Tags and TUCi ([ICON_TUCI]) Credits",
+  "faqQBadgesVerified": "What is the Blue Tick ([ICON_VERIFIED]) (Verified Account ([ICON_VERIFIED]))?",
   "faqABadgesVerified": "The blue tick indicates that the seller has successfully verified their email and phone number, proving they are a reliable real person.",
   "faqQBadgesPro": "What does the \"👑 (Crown)\" badge mean?",
-  "faqABadgesPro": "This badge indicates that the seller is a teqlif PRO member. PRO sellers are professionals who are algorithmically promoted more by the platform.",
+  "faqABadgesPro": "This badge indicates that the seller is a teqlif PRO ([ICON_PRO]) member. PRO sellers are professionals who are algorithmically promoted more by the platform.",
   "faqQBadgesTrusted": "What do \"✅ Trusted\" and \"⭐ Active\" Seller badges mean?",
   "faqABadgesTrusted": "✅ Trusted Seller: Given to experienced sellers who have verified identity info and built trust. ⭐ Active Seller: Represents dynamic sellers who use the platform frequently and respond quickly.",
   "faqQBadgesSponsored": "What do \"Sponsored\", \"Trending\" and \"LIVE\" tags indicate?",
-  "faqABadgesSponsored": "Sponsored: Promoted listing using TUCi credits. Trending (Fire): The listing is highly viewed or favorited recently. LIVE (Blinking): The seller is currently streaming live for that product.",
-  "faqQBadgesTuci": "What is TUCi and where is it used?",
-  "faqABadgesTuci": "TUCi is our virtual credit currency. It's used to promote listings, send gifts in live streams, get AI price analysis, and reach buyers directly via the Lead Gen feature.",
+  "faqABadgesSponsored": "Sponsored: Promoted listing using TUCi ([ICON_TUCI]) credits. Trending (Fire): The listing is highly viewed or favorited recently. LIVE (Blinking): The seller is currently streaming live for that product.",
+  "faqQBadgesTuci": "What is TUCi ([ICON_TUCI]) and where is it used?",
+  "faqABadgesTuci": "TUCi ([ICON_TUCI]) is our virtual credit currency. It's used to promote listings, send gifts in live streams, get AI price analysis, and reach buyers directly via the Lead Gen feature.",
   "faqCatLive": "Live Streams (SwipeLive) and Auctions",
   "faqQLiveHost": "What can I do on the Host (Streamer) screen?",
   "faqALiveHost": "You can manage the chat, start an Auction for your product, view incoming Bids instantly, and accept the highest bid to confirm the sale in seconds.",
@@ -1596,7 +1596,7 @@
   "faqAAIInsights": "An exclusive tool for PRO sellers that reports view counts, dwell time, and hesitation rates to optimize your sales strategy.",
   "faqQAIPrice": "How does AI Price Intel work?",
   "faqAAIPrice": "Our AI analyzes millions of data rows to suggest the optimum selling price based on your product's title and category.",
-  "faqQAILead": "What is the \"Hot Demand\" (Lead Gen) feature?",
+  "faqQAILead": "What is the \"Hot Demand ([ICON_HOTDEMAND])\" (Lead Gen) feature?",
   "faqAAILead": "A system that matches your listing with the most suitable potential buyers via AI and sends them a direct \"Suggested Listing\" notification.",
   "faqQAIRadar": "Competitor Analysis and Best Streaming Time",
   "faqAAIRadar": "Competitor Analysis compares your price and click rate with competitors. The Best Streaming Time module reports when your followers are most active.",
@@ -1604,11 +1604,11 @@
   "btnUpdate": "Update",
   "btnUpdateListing": "Update Listing",
   "faqCatIcons": "System Icons Glossary",
-  "faqIconVerified": "Verified Account: Shows the user has verified identity or phone.",
-  "faqIconPro": "teqlif PRO: Indicates a PRO member promoted by the platform.",
-  "faqIconTuci": "TUCi: The virtual currency used for in-app spending.",
-  "faqIconBlast": "Blast: Sends an instant push notification for your listing/stream.",
-  "faqIconAutoBid": "Auto-Bid: The system bids on your behalf up to your limit.",
+  "faqIconVerified": "Verified Account ([ICON_VERIFIED]): Shows the user has verified identity or phone.",
+  "faqIconPro": "teqlif PRO ([ICON_PRO]): Indicates a PRO member promoted by the platform.",
+  "faqIconTuci": "TUCi ([ICON_TUCI]): The virtual currency used for in-app spending.",
+  "faqIconBlast": "Blast ([ICON_BLAST]): Sends an instant push notification for your listing/stream.",
+  "faqIconAutoBid": "Auto-Bid ([ICON_AUTOBID]): The system bids on your behalf up to your limit.",
   "faqIconSales": "Sales Insights: Shows your sales volume and profitability.",
   "faqIconListings": "Listing Analytics: View and favorite metrics of your listings.",
   "faqIconMarket": "Market Intelligence: Category-based market prices and trends.",
@@ -1616,10 +1616,22 @@
   "faqIconConversion": "Conversion Analysis: Bids and sales funnel per view.",
   "faqIconRadar": "Competitor Radar: Price and sales speed analysis of similar sellers.",
   "faqIconRetargeting": "Retargeting: Send reminders or discount messages directly to interested buyers.",
-  "proToolHotDemandTitle": "Hot Demand (Lead Gen)",
+  "proToolHotDemandTitle": "Hot Demand ([ICON_HOTDEMAND]) (Lead Gen)",
   "proToolHotDemandDesc": "Reach out directly to potential buyers interested in your listing.",
   "proToolAiPriceTitle": "AI Price Analysis",
   "proToolAiPriceDesc": "Find out your products market value in seconds with AI.",
   "proToolStreamAnalyticsTitle": "Live Stream Audience Analytics",
-  "proToolStreamAnalyticsDesc": "Analyze your live stream viewership and gift data in detail."
+  "proToolStreamAnalyticsDesc": "Analyze your live stream viewership and gift data in detail.",
+  "faqIconNameVerified": "Verified Account ([ICON_VERIFIED])",
+  "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
+  "faqIconNameTuci": "TUCi ([ICON_TUCI])",
+  "faqIconNameBlast": "Blast ([ICON_BLAST])",
+  "faqIconNameAutoBid": "Auto-Bid ([ICON_AUTOBID])",
+  "faqIconNameSales": "Sales Insights",
+  "faqIconNameListings": "Listing Analytics",
+  "faqIconNameMarket": "Market Intelligence",
+  "faqIconNameTime": "Best Stream Time",
+  "faqIconNameConversion": "Conversion Analysis",
+  "faqIconNameRadar": "Competitor Radar",
+  "faqIconNameRetargeting": "Retargeting"
 }

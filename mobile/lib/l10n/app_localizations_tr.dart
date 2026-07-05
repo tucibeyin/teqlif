@@ -495,7 +495,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get giftInsufficientBalance =>
-      'Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.';
+      'Bakiyeniz yetersiz. Hediye göndermek için TUCi ([ICON_TUCI]) satın alın.';
 
   @override
   String get giftLoadBalanceButton => 'Bakiye Yükle';
@@ -1368,7 +1368,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsProActive => 'AKTİF';
 
   @override
-  String get walletTitle => 'TUCi Cüzdanım';
+  String get walletTitle => 'TUCi ([ICON_TUCI]) Cüzdanım';
 
   @override
   String get walletBalance => 'Güncel Bakiye';
@@ -1404,14 +1404,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get walletTxnWebTopup => 'Web yükleme';
 
   @override
-  String get walletComingSoonLabel => 'TUCi Satın Alma Yakında!';
+  String get walletComingSoonLabel => 'TUCi ([ICON_TUCI]) Satın Alma Yakında!';
 
   @override
   String get walletComingSoonDesc =>
-      'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.';
+      'Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi ([ICON_TUCI]) başlangıç bakiyesi tanımlandı.';
 
   @override
-  String get walletBuyBtn => 'TUCi Satın Alma Yakında';
+  String get walletBuyBtn => 'TUCi ([ICON_TUCI]) Satın Alma Yakında';
 
   @override
   String get reportLoading => 'Yayın analizi hazırlanıyor…';
@@ -1629,14 +1629,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get blastConfirmCostFreeLabel => 'Ücret';
 
   @override
-  String get blastConfirmCostPaidLabel => 'TUCi Maliyeti';
+  String get blastConfirmCostPaidLabel => 'TUCi ([ICON_TUCI]) Maliyeti';
 
   @override
   String get blastSubtitleFree => 'Yayın başladığında push bildirim • Ücretsiz';
 
   @override
   String blastSubtitlePaid(int cost) {
-    return 'Yayın başladığında push bildirim • $cost TUCi';
+    return 'Yayın başladığında push bildirim • $cost TUCi ([ICON_TUCI])';
   }
 
   @override
@@ -1649,7 +1649,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String blastBtnPaid(int count, int cost) {
-    return '$count Hazır Alıcı — Bildirim Gönder ($cost TUCi)';
+    return '$count Hazır Alıcı — Bildirim Gönder ($cost TUCi ([ICON_TUCI]))';
   }
 
   @override
@@ -1659,7 +1659,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String blastConfirmBodyPaid(int count, int cost) {
-    return '$count hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: $cost TUCi';
+    return '$count hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: $cost TUCi ([ICON_TUCI])';
   }
 
   @override
@@ -2262,13 +2262,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get boostDialogTotalBudget => 'Toplam Bütçe';
 
   @override
-  String get boostDialogTotalBudgetValue => '50 TUCi';
+  String get boostDialogTotalBudgetValue => '50 TUCi ([ICON_TUCI])';
 
   @override
   String get boostDialogCpc => 'Tıklama Başı Maliyet';
 
   @override
-  String get boostDialogCpcValue => '1 TUCi';
+  String get boostDialogCpcValue => '1 TUCi ([ICON_TUCI])';
 
   @override
   String get boostDialogEstClicks => 'Tahmini Tıklama';
@@ -2304,20 +2304,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get boostDialogPaidCost => 'Maliyet';
 
   @override
-  String get boostDialogPaidCostValue => '50 TUCi';
+  String get boostDialogPaidCostValue => '50 TUCi ([ICON_TUCI])';
 
   @override
   String get boostDialogPaidBalance => 'Mevcut Bakiyeniz';
 
   @override
-  String get boostDialogPaidConfirm => '50 TUCi Öde ve Başlat';
+  String get boostDialogPaidConfirm => '50 TUCi ([ICON_TUCI]) Öde ve Başlat';
 
   @override
   String get boostSuccessFree => '🔥 İlanınız ücretsiz olarak öne çıkarıldı!';
 
   @override
   String get boostSuccessPaid =>
-      '🔥 İlanınız öne çıkarıldı! (50 TUCi harcandı)';
+      '🔥 İlanınız öne çıkarıldı! (50 TUCi ([ICON_TUCI]) harcandı)';
 
   @override
   String get boostSuccess => '🔥 İlanınız öne çıkarıldı!';
@@ -2330,7 +2330,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get boostErrorInsufficientTuci =>
-      'Yetersiz TUCi bakiyesi. Ücretli boost için 50 TUCi gerekiyor.';
+      'Yetersiz TUCi ([ICON_TUCI]) bakiyesi. Ücretli boost için 50 TUCi ([ICON_TUCI]) gerekiyor.';
 
   @override
   String get boostBtnStart => 'İlanı Öne Çıkar';
@@ -2553,17 +2553,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String retargetingDialogBodyPaid(int count, int cost) {
-    return '$count kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından $cost TUCi düşülecek.';
+    return '$count kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. Bunun karşılığında cüzdanından $cost TUCi ([ICON_TUCI]) düşülecek.';
   }
 
   @override
   String retargetingDialogBodyKarma(int count, int free, int cost) {
-    return '$count kişiye bildirim gönderilecek.\n\n$free kredi kullanılacak + $cost TUCi ödenecek.';
+    return '$count kişiye bildirim gönderilecek.\n\n$free kredi kullanılacak + $cost TUCi ([ICON_TUCI]) ödenecek.';
   }
 
   @override
   String retargetingDialogBodyInsufficient(int cost, int balance) {
-    return 'Yetersiz TUCi bakiyesi.\nGerekli: $cost TUCi | Mevcut: $balance TUCi';
+    return 'Yetersiz TUCi ([ICON_TUCI]) bakiyesi.\nGerekli: $cost TUCi ([ICON_TUCI]) | Mevcut: $balance TUCi ([ICON_TUCI])';
   }
 
   @override
@@ -2581,7 +2581,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String retargetingPaidSubtitle(int count) {
-    return '$count kişi × 10 TUCi';
+    return '$count kişi × 10 TUCi ([ICON_TUCI])';
   }
 
   @override
@@ -2602,7 +2602,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String retargetingCostBadge(int cost) {
-    return '$cost TUCi harcanır';
+    return '$cost TUCi ([ICON_TUCI]) harcanır';
   }
 
   @override
@@ -2611,7 +2611,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get retargetingInfoText =>
-      'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi harcanır.';
+      'İlanını daha önce görüntüleyen ama satın almayan kişilere hatırlatma bildirimi gönderir. Aylık toplu duyuru krediniz varsa ücretsiz, bitince her kişi için 10 TUCi ([ICON_TUCI]) harcanır.';
 
   @override
   String get retargetingLast30Days => 'Son 30 gün içinde';
@@ -2717,11 +2717,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profileInviteCodeError => 'Davet kodu alınamadı, tekrar deneyin.';
 
   @override
-  String get profileInviteTitle => 'Arkadaşlarını Davet Et, TUCi Kazan!';
+  String get profileInviteTitle =>
+      'Arkadaşlarını Davet Et, TUCi ([ICON_TUCI]) Kazan!';
 
   @override
   String get profileInviteSubtitle =>
-      'Her davet için +50, arkadaşın +10 TUCi kazanır';
+      'Her davet için +50, arkadaşın +10 TUCi ([ICON_TUCI]) kazanır';
 
   @override
   String get profilePickGallery => 'Galeriden Seç';
@@ -2750,7 +2751,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String tuciSpent(int count) {
-    return '$count TUCi harcandı.';
+    return '$count TUCi ([ICON_TUCI]) harcandı.';
   }
 
   @override
@@ -2791,7 +2792,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String listingDeactivateCostHint(int cost) {
-    return 'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için $cost TUCi bakiyenizden düşülecektir.';
+    return 'Uyarı: Ücretsiz 30 günlük pencere süreniz dolmuş. İlanı tekrar yayına almak için $cost TUCi ([ICON_TUCI]) bakiyenizden düşülecektir.';
   }
 
   @override
@@ -2811,12 +2812,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String listingReactivatePaidPro(int cost) {
-    return 'Bu ayki hakkınız doldu. $cost TUCi ödenecek.';
+    return 'Bu ayki hakkınız doldu. $cost TUCi ([ICON_TUCI]) ödenecek.';
   }
 
   @override
   String listingReactivatePaidNormal(int cost, int balance) {
-    return '$cost TUCi ödenecek. Bakiyeniz: $balance TUCi.';
+    return '$cost TUCi ([ICON_TUCI]) ödenecek. Bakiyeniz: $balance TUCi ([ICON_TUCI]).';
   }
 
   @override
@@ -2825,7 +2826,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listingReactivateInsufficientBalance =>
-      'Yetersiz bakiye. Devam etmek için TUCi yükleyin.';
+      'Yetersiz bakiye. Devam etmek için TUCi ([ICON_TUCI]) yükleyin.';
 
   @override
   String get listingReactivateConfirm => 'Aktif Yap';
@@ -2858,7 +2859,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqAAccountEmail =>
-      'Hesabınızın güvenliğini sağlamak ve şifre sıfırlama gibi kritik işlemleri yapabilmek için e-posta doğrulamanız zorunludur. Doğrulanmış e-postalar Mavi Tik (Onaylı Hesap) sürecinin de ilk adımıdır.';
+      'Hesabınızın güvenliğini sağlamak ve şifre sıfırlama gibi kritik işlemleri yapabilmek için e-posta doğrulamanız zorunludur. Doğrulanmış e-postalar Mavi Tik ([ICON_VERIFIED]) (Onaylı Hesap) sürecinin de ilk adımıdır.';
 
   @override
   String get faqQAccountProfile =>
@@ -2918,21 +2919,23 @@ class AppLocalizationsTr extends AppLocalizations {
       'Canlı: Satıcıların ürünlerini canlı yayında tanıttığı SwipeLive akışına ulaşmanızı sağlar. Mesajlar: İlgilendiğiniz ürünler için satıcılarla doğrudan sohbet edebilir ve güvenli bir şekilde fiyat pazarlığı (teklif) yapabilirsiniz.';
 
   @override
-  String get faqCatBadges => 'Rozetler, Etiketler ve TUCi Kredisi';
+  String get faqCatBadges =>
+      'Rozetler, Etiketler ve TUCi ([ICON_TUCI]) Kredisi';
 
   @override
-  String get faqQBadgesVerified => 'Mavi Tik (Doğrulanmış Hesap) nedir?';
+  String get faqQBadgesVerified =>
+      'Mavi Tik ([ICON_VERIFIED]) (Doğrulanmış Hesap) nedir?';
 
   @override
   String get faqABadgesVerified =>
-      'Mavi tik, satıcının e-posta adresini ve telefon numarasını başarıyla doğruladığını gösterir. Bu rozet, potansiyel alıcılara sizin güvenilir bir gerçek kişi olduğunuzu kanıtlar.';
+      'Mavi tik ([ICON_VERIFIED]), satıcının e-posta adresini ve telefon numarasını başarıyla doğruladığını gösterir. Bu rozet, potansiyel alıcılara sizin güvenilir bir gerçek kişi olduğunuzu kanıtlar.';
 
   @override
   String get faqQBadgesPro => 'İlanlarda gördüğüm \"👑 (Taç)\" rozeti nedir?';
 
   @override
   String get faqABadgesPro =>
-      'Bu rozet, ilanı paylaşan kullanıcının veya satıcının teqlif PRO üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.';
+      'Bu rozet, ilanı paylaşan kullanıcının veya satıcının teqlif PRO ([ICON_PRO]) üyesi olduğunu gösterir. PRO satıcılar platform tarafından algoritmik olarak daha çok öne çıkarılan profesyonellerdir.';
 
   @override
   String get faqQBadgesTrusted =>
@@ -2948,14 +2951,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqABadgesSponsored =>
-      'Sponsorlu: Satıcının TUCi kredisi kullanarak ilanını öne çıkardığını belirtir. Trending (Ateş): İlanın son zamanlarda çok kişi tarafından incelendiğini veya favoriye eklendiğini (sıcak fırsat) gösterir. LIVE (Yanıp Sönen): Satıcının o an söz konusu ürün için canlı yayın (SwipeLive) yaptığını gösterir.';
+      'Sponsorlu: Satıcının TUCi ([ICON_TUCI]) kredisi kullanarak ilanını öne çıkardığını belirtir. Trending (Ateş): İlanın son zamanlarda çok kişi tarafından incelendiğini veya favoriye eklendiğini (sıcak fırsat) gösterir. LIVE (Yanıp Sönen): Satıcının o an söz konusu ürün için canlı yayın (SwipeLive) yaptığını gösterir.';
 
   @override
-  String get faqQBadgesTuci => 'TUCi nedir, nerelerde kullanılır?';
+  String get faqQBadgesTuci =>
+      'TUCi ([ICON_TUCI]) nedir, nerelerde kullanılır?';
 
   @override
   String get faqABadgesTuci =>
-      'TUCi, teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.';
+      'TUCi ([ICON_TUCI]), teqlif içerisindeki sanal para/kredi birimimizdir. İlanlarınızı öne çıkarmak, canlı yayınlarda hediye göndermek, Yapay Zeka ile fiyat analizi yaptırmak ve \"Sıcak Talep ([ICON_HOTDEMAND])\" özelliğiyle doğrudan alıcılara ulaşmak için kullanılır.';
 
   @override
   String get faqCatLive => 'Canlı Yayınlar (SwipeLive) ve Açık Artırma';
@@ -3002,7 +3006,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqQAILead =>
-      '\"Sıcak Talep\" (Alıcı Bul / Lead Gen) özelliği nedir?';
+      '\"Sıcak Talep ([ICON_HOTDEMAND])\" (Alıcı Bul / Lead Gen) özelliği nedir?';
 
   @override
   String get faqAAILead =>
@@ -3033,19 +3037,19 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get faqIconPro =>
-      'teqlif PRO: Satıcının platform tarafından öne çıkarılan bir PRO üyesi olduğunu belirtir.';
+      'teqlif PRO ([ICON_PRO]): Satıcının platform tarafından öne çıkarılan bir PRO üyesi olduğunu belirtir.';
 
   @override
   String get faqIconTuci =>
-      'TUCi: Sistem içi harcamalarda kullanılan sanal para birimidir.';
+      'TUCi ([ICON_TUCI]): Sistem içi harcamalarda kullanılan sanal para birimidir.';
 
   @override
   String get faqIconBlast =>
-      'Öne Çıkar (Blast): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.';
+      'Öne Çıkar (Blast) ([ICON_BLAST]): İlanınızı/yayınınızı kullanıcılara anlık bildirim olarak yollar.';
 
   @override
   String get faqIconAutoBid =>
-      'Otomatik Teklif: Sistemin sizin adınıza belirlediğiniz limite kadar teklif vermesidir.';
+      'Otomatik Teklif ([ICON_AUTOBID]): Sistemin sizin adınıza belirlediğiniz limite kadar teklif vermesidir.';
 
   @override
   String get faqIconSales =>
@@ -3076,7 +3080,8 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yeniden Hedefleme: İlgili alıcılara doğrudan hatırlatma veya indirim mesajı gönderimi.';
 
   @override
-  String get proToolHotDemandTitle => 'Sıcak Talep (Lead Gen)';
+  String get proToolHotDemandTitle =>
+      'Sıcak Talep ([ICON_HOTDEMAND]) (Lead Gen)';
 
   @override
   String get proToolHotDemandDesc =>
@@ -3095,4 +3100,40 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get proToolStreamAnalyticsDesc =>
       'Yayınlarınızdaki anlık izleyici ve hediye verilerini detaylı inceleyin.';
+
+  @override
+  String get faqIconNameVerified => 'Onaylı Hesap';
+
+  @override
+  String get faqIconNamePro => 'teqlif PRO ([ICON_PRO])';
+
+  @override
+  String get faqIconNameTuci => 'TUCi ([ICON_TUCI])';
+
+  @override
+  String get faqIconNameBlast => 'Öne Çıkar (Blast) ([ICON_BLAST])';
+
+  @override
+  String get faqIconNameAutoBid => 'Otomatik Teklif ([ICON_AUTOBID])';
+
+  @override
+  String get faqIconNameSales => 'Satış İçgörüleri';
+
+  @override
+  String get faqIconNameListings => 'İlan Analitikleri';
+
+  @override
+  String get faqIconNameMarket => 'Piyasa İstihbaratı';
+
+  @override
+  String get faqIconNameTime => 'En İyi Yayın Zamanı';
+
+  @override
+  String get faqIconNameConversion => 'Dönüşüm Analizi';
+
+  @override
+  String get faqIconNameRadar => 'Rakip Radarı';
+
+  @override
+  String get faqIconNameRetargeting => 'Yeniden Hedefleme';
 }

@@ -150,7 +150,7 @@
   "emptyPassiveListings": "لا توجد إعلانات معلّقة",
   "emptyFavorites": "لا توجد إعلانات مفضّلة بعد",
   "errorConnection": "خطأ في الاتصال",
-  "giftInsufficientBalance": "رصيد غير كاف. شراء TUCi لإرسال هدية.",
+  "giftInsufficientBalance": "رصيد غير كاف. شراء TUCi ([ICON_TUCI]) لإرسال هدية.",
   "giftLoadBalanceButton": "شحن الرصيد",
   "purchaseLoadError": "حدث خطأ أثناء تحميل مشترياتك. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.",
   "purchaseEmptyState": "ليس لديك أي مشتريات حتى الآن.",
@@ -588,7 +588,7 @@
   "editProfileLinkError": "يجب أن يبدأ الرابط بـ http:// أو https://",
   "settingsProTools": "📈 أدوات Pro",
   "settingsProActive": "نشط",
-  "walletTitle": "محفظة TUCi الخاصة بي",
+  "walletTitle": "محفظة TUCi ([ICON_TUCI]) الخاصة بي",
   "walletBalance": "الرصيد الحالي",
   "walletRecentTxns": "آخر المعاملات",
   "walletSpendingSummary": "ملخص الإنفاق",
@@ -600,9 +600,9 @@
   "walletTxnSpendAdCampaign": "حملة إعلانية",
   "walletTxnSpendAi": "تسعير الذكاء الاصطناعي",
   "walletTxnWebTopup": "شحن الرصيد عبر الويب",
-  "walletComingSoonLabel": "شراء TUCi قريباً!",
-  "walletComingSoonDesc": "جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TUCi كرصيد بداية.",
-  "walletBuyBtn": "شراء TUCi قريباً",
+  "walletComingSoonLabel": "شراء TUCi ([ICON_TUCI]) قريباً!",
+  "walletComingSoonDesc": "جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TUCi ([ICON_TUCI]) كرصيد بداية.",
+  "walletBuyBtn": "شراء TUCi ([ICON_TUCI]) قريباً",
   "reportLoading": "جارٍ إعداد تحليل البث...",
   "reportLoadFailed": "تعذّر تحميل التقرير.",
   "reportRetry": "حاول مجدداً",
@@ -672,7 +672,7 @@
   "proUnlockBtn": "الترقية إلى Pro",
   "proUpgradeSheetDesc": "تحتاج إلى الترقية إلى Pro لاستخدام هذه الأداة.",
   "proCreditsSummaryTitle": "الأرصدة المتبقية",
-  "proCreditsBlastName": "دعوة الجمهور (Blast)",
+  "proCreditsBlastName": "دعوة الجمهور (Blast ([ICON_BLAST]))",
   "proCreditsBoostName": "إعلان مميز",
   "proCreditsAiName": "مستشار التسعير بالذكاء الاصطناعي",
   "proCreditsReactivationName": "إعادة التنشيط",
@@ -703,9 +703,9 @@
     }
   },
   "blastConfirmCostFreeLabel": "التكلفة",
-  "blastConfirmCostPaidLabel": "تكلفة TUCi",
+  "blastConfirmCostPaidLabel": "تكلفة TUCi ([ICON_TUCI])",
   "blastSubtitleFree": "إشعار عند بدء البث • مجاني",
-  "blastSubtitlePaid": "إشعار عند بدء البث • {cost} TUCi",
+  "blastSubtitlePaid": "إشعار عند بدء البث • {cost} TUCi ([ICON_TUCI])",
   "@blastSubtitlePaid": {
     "placeholders": {
       "cost": {
@@ -722,7 +722,7 @@
       }
     }
   },
-  "blastBtnPaid": "{count} مشترٍ جاهز — أرسل إشعاراً ({cost} TUCi)",
+  "blastBtnPaid": "{count} مشترٍ جاهز — أرسل إشعاراً ({cost} TUCi ([ICON_TUCI]))",
   "@blastBtnPaid": {
     "placeholders": {
       "count": {
@@ -741,7 +741,7 @@
       }
     }
   },
-  "blastConfirmBodyPaid": "سيتم إشعار {count} مشترٍ جاهز.\n\nالتكلفة الإجمالية: {cost} TUCi",
+  "blastConfirmBodyPaid": "سيتم إشعار {count} مشترٍ جاهز.\n\nالتكلفة الإجمالية: {cost} TUCi ([ICON_TUCI])",
   "@blastConfirmBodyPaid": {
     "placeholders": {
       "count": {
@@ -1108,9 +1108,9 @@
   "boostDialogTitle": "تمييز الإعلان",
   "boostDialogPlanLabel": "خطة الحملة:",
   "boostDialogTotalBudget": "إجمالي الميزانية",
-  "boostDialogTotalBudgetValue": "50 TUCi",
+  "boostDialogTotalBudgetValue": "50 TUCi ([ICON_TUCI])",
   "boostDialogCpc": "التكلفة لكل نقرة",
-  "boostDialogCpcValue": "1 TUCi",
+  "boostDialogCpcValue": "1 TUCi ([ICON_TUCI])",
   "boostDialogEstClicks": "النقرات المتوقعة",
   "boostDialogEstClicksValue": "~50 نقرة",
   "boostDialogFeedHint": "سيظهر إعلانك بشكل مميز في خلاصة \"لك\".",
@@ -1137,15 +1137,15 @@
   },
   "boostDialogPaidDesc": "سيظهر إعلانك بشكل مميز في خلاصة \"لك\".",
   "boostDialogPaidCost": "التكلفة",
-  "boostDialogPaidCostValue": "50 TUCi",
+  "boostDialogPaidCostValue": "50 TUCi ([ICON_TUCI])",
   "boostDialogPaidBalance": "رصيدك الحالي",
-  "boostDialogPaidConfirm": "ادفع 50 TUCi وابدأ",
+  "boostDialogPaidConfirm": "ادفع 50 TUCi ([ICON_TUCI]) وابدأ",
   "boostSuccessFree": "🔥 تم تمييز إعلانك مجاناً!",
-  "boostSuccessPaid": "🔥 تم تمييز إعلانك! (تم خصم 50 TUCi)",
+  "boostSuccessPaid": "🔥 تم تمييز إعلانك! (تم خصم 50 TUCi ([ICON_TUCI]))",
   "boostSuccess": "🔥 تم تمييز إعلانك!",
   "boostErrorDefault": "تعذّر بدء الحملة.",
   "boostErrorConnection": "خطأ في الاتصال. يرجى المحاولة مجدداً.",
-  "boostErrorInsufficientTuci": "رصيد TUCi غير كافٍ. يلزم 50 TUCi للتمييز المدفوع.",
+  "boostErrorInsufficientTuci": "رصيد TUCi ([ICON_TUCI]) غير كافٍ. يلزم 50 TUCi ([ICON_TUCI]) للتمييز المدفوع.",
   "boostBtnStart": "تمييز الإعلان",
   "boostBtnReport": "عرض أداء الإعلان",
   "adReportTitle": "تقرير الإعلان",
@@ -1295,7 +1295,7 @@
       }
     }
   },
-  "retargetingDialogBodyPaid": "سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى {count} شخص. سيُخصم {cost} TUCi من محفظتك.",
+  "retargetingDialogBodyPaid": "سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى {count} شخص. سيُخصم {cost} TUCi ([ICON_TUCI]) من محفظتك.",
   "@retargetingDialogBodyPaid": {
     "placeholders": {
       "count": {
@@ -1306,7 +1306,7 @@
       }
     }
   },
-  "retargetingDialogBodyKarma": "سيتم إرسال إشعار إلى {count} شخص.\n\nسيُستخدم {free} رصيد + سيُدفع {cost} TUCi.",
+  "retargetingDialogBodyKarma": "سيتم إرسال إشعار إلى {count} شخص.\n\nسيُستخدم {free} رصيد + سيُدفع {cost} TUCi ([ICON_TUCI]).",
   "@retargetingDialogBodyKarma": {
     "placeholders": {
       "count": {
@@ -1320,7 +1320,7 @@
       }
     }
   },
-  "retargetingDialogBodyInsufficient": "رصيد TUCi غير كافٍ.\nالمطلوب: {cost} TUCi | المتاح: {balance} TUCi",
+  "retargetingDialogBodyInsufficient": "رصيد TUCi ([ICON_TUCI]) غير كافٍ.\nالمطلوب: {cost} TUCi ([ICON_TUCI]) | المتاح: {balance} TUCi ([ICON_TUCI])",
   "@retargetingDialogBodyInsufficient": {
     "placeholders": {
       "cost": {
@@ -1348,7 +1348,7 @@
       }
     }
   },
-  "retargetingPaidSubtitle": "{count} شخص × 10 TUCi",
+  "retargetingPaidSubtitle": "{count} شخص × 10 TUCi ([ICON_TUCI])",
   "@retargetingPaidSubtitle": {
     "placeholders": {
       "count": {
@@ -1374,7 +1374,7 @@
       }
     }
   },
-  "retargetingCostBadge": "سيُنفق {cost} TUCi",
+  "retargetingCostBadge": "سيُنفق {cost} TUCi ([ICON_TUCI])",
   "@retargetingCostBadge": {
     "placeholders": {
       "cost": {
@@ -1383,7 +1383,7 @@
     }
   },
   "retargetingFootnote": "سيتلقى المستخدمون إشعارًا \"هل لا تزال مهتمًا؟\". يُرسل فقط لغير المشترين.",
-  "retargetingInfoText": "يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 10 TUCi لكل شخص.",
+  "retargetingInfoText": "يرسل إشعار تذكير للأشخاص الذين شاهدوا إعلانك ولم يشتروا. مجاني إذا كان لديك رصيد بث شهري، وإلا 10 TUCi ([ICON_TUCI]) لكل شخص.",
   "retargetingLast30Days": "آخر 30 يومًا",
   "retargetingViewerLabel": "شاهد",
   "retargetingBoughtLabel": "اشترى",
@@ -1449,8 +1449,8 @@
   },
   "profilePhotoUploadError": "تعذّر تحميل الصورة. حاول مرة أخرى.",
   "profileInviteCodeError": "تعذّر استرداد رمز الدعوة، حاول مرة أخرى.",
-  "profileInviteTitle": "ادعُ أصدقاءك، اكسب TUCi!",
-  "profileInviteSubtitle": "+50 TUCi لكل دعوة، صديقك يحصل على +10 TUCi",
+  "profileInviteTitle": "ادعُ أصدقاءك، اكسب TUCi ([ICON_TUCI])!",
+  "profileInviteSubtitle": "+50 TUCi ([ICON_TUCI]) لكل دعوة، صديقك يحصل على +10 TUCi ([ICON_TUCI])",
   "profilePickGallery": "اختر من المعرض",
   "profilePickCamera": "التقط صورة",
   "listingDeleteDialogTitle": "حذف الإعلان",
@@ -1459,7 +1459,7 @@
   "favoritesEmpty": "لا توجد مفضلات بعد",
   "createNeedTitle": "يرجى إدخال عنوان الإعلان أولاً.",
   "aiPriceError": "تعذّر الحصول على تقدير السعر. حاول مرة أخرى.",
-  "tuciSpent": "تم إنفاق {count} TUCi.",
+  "tuciSpent": "تم إنفاق {count} TUCi ([ICON_TUCI]).",
   "@tuciSpent": {
     "placeholders": {
       "count": {
@@ -1507,7 +1507,7 @@
   },
   "listingDeactivateTitle": "إيقاف الإعلان",
   "listingDeactivateWarning": "إذا قمت بإلغاء التنشيط، سيتم حذف الترويج النشط.",
-  "listingDeactivateCostHint": "تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستكلف {cost} TUCi من رصيدك.",
+  "listingDeactivateCostHint": "تحذير: انتهت فترة الـ 30 يومًا المجانية. إعادة التفعيل ستكلف {cost} TUCi ([ICON_TUCI]) من رصيدك.",
   "@listingDeactivateCostHint": {
     "placeholders": {
       "cost": {
@@ -1526,7 +1526,7 @@
       }
     }
   },
-  "listingReactivatePaidPro": "استُنفدت الأرصدة الشهرية. سيُخصم {cost} TUCi.",
+  "listingReactivatePaidPro": "استُنفدت الأرصدة الشهرية. سيُخصم {cost} TUCi ([ICON_TUCI]).",
   "@listingReactivatePaidPro": {
     "placeholders": {
       "cost": {
@@ -1534,7 +1534,7 @@
       }
     }
   },
-  "listingReactivatePaidNormal": "سيُخصم {cost} TUCi. رصيدك: {balance} TUCi.",
+  "listingReactivatePaidNormal": "سيُخصم {cost} TUCi ([ICON_TUCI]). رصيدك: {balance} TUCi ([ICON_TUCI]).",
   "@listingReactivatePaidNormal": {
     "placeholders": {
       "cost": {
@@ -1546,7 +1546,7 @@
     }
   },
   "listingReactivateProUpsell": "اشترك في PRO واحصل على 5 إعادة تفعيل مجانية شهرياً.",
-  "listingReactivateInsufficientBalance": "رصيد غير كافٍ. أضف TUCi للمتابعة.",
+  "listingReactivateInsufficientBalance": "رصيد غير كافٍ. أضف TUCi ([ICON_TUCI]) للمتابعة.",
   "listingReactivateConfirm": "تفعيل",
   "proReactivationSection": "أرصدة إعادة تفعيل الإعلان",
   "suggestedStreamers": "المذيعون المقترحون",
@@ -1556,7 +1556,7 @@
   "faqQAccountSignup": "كيف يمكنني التسجيل وتسجيل الدخول إلى teqlif؟",
   "faqAAccountSignup": "يمكنك إنشاء حسابك في ثوانٍ باستخدام بريدك الإلكتروني بالنقر على زر \"تسجيل الدخول / التسجيل\" في الصفحة الرئيسية، أو تسجيل الدخول بأمان إلى حسابك الحالي.",
   "faqQAccountEmail": "لماذا يجب علي التحقق من عنوان بريدي الإلكتروني؟",
-  "faqAAccountEmail": "يعد التحقق من البريد الإلكتروني إلزامياً لضمان أمان حسابك وإجراء عمليات مهمة مثل إعادة تعيين كلمة المرور. كما أنها الخطوة الأولى للحصول على الحساب الموثق (العلامة الزرقاء).",
+  "faqAAccountEmail": "يعد التحقق من البريد الإلكتروني إلزامياً لضمان أمان حسابك وإجراء عمليات مهمة مثل إعادة تعيين كلمة المرور. كما أنها الخطوة الأولى للحصول على الحساب الموثق (العلامة الزرقاء ([ICON_VERIFIED])).",
   "faqQAccountProfile": "كيف يمكنني تعديل ملفي الشخصي (الاسم، الصورة، النبذة)؟",
   "faqAAccountProfile": "يمكنك النقر على زر \"تعديل الملف الشخصي\" من خلال الانتقال إلى علامة التبويب \"ملفي الشخصي\". يمكنك تغيير الصورة الرمزية وتحديث اسمك وكتابة نبذة عنك لتعريف المشترين بك.",
   "faqQAccountPassword": "نسيت كلمة المرور الخاصة بي، ماذا أفعل؟",
@@ -1572,17 +1572,17 @@
   "faqAExploreListings": "صفحة الإعلانات هي موجز عمودي للإعلانات المضافة حديثاً والتي تم اختيارها خصيصاً لاهتماماتك بواسطة الذكاء الاصطناعي. أما الاستكشاف فهي مركز البحث الرئيسي حيث يمكنك اكتشاف بائعين مشهورين.",
   "faqQExploreLiveMessages": "ما هي قوائم \"البث المباشر\" و \"الرسائل\"؟",
   "faqAExploreLiveMessages": "البث المباشر: يأخذك إلى موجز SwipeLive حيث يعرض البائعون المنتجات مباشرة. الرسائل: يمكنك الدردشة مباشرة مع البائعين والتفاوض على الأسعار بأمان.",
-  "faqCatBadges": "الشارات والعلامات ورصيد TUCi",
-  "faqQBadgesVerified": "ما هي العلامة الزرقاء (حساب موثق)؟",
-  "faqABadgesVerified": "تشير العلامة الزرقاء إلى أن البائع قد تحقق بنجاح من بريده الإلكتروني ورقم هاتفه، مما يثبت أنه شخص حقيقي موثوق.",
+  "faqCatBadges": "الشارات والعلامات ورصيد TUCi ([ICON_TUCI])",
+  "faqQBadgesVerified": "ما هي العلامة الزرقاء ([ICON_VERIFIED]) (حساب موثق ([ICON_VERIFIED]))؟",
+  "faqABadgesVerified": "تشير العلامة الزرقاء ([ICON_VERIFIED]) إلى أن البائع قد تحقق بنجاح من بريده الإلكتروني ورقم هاتفه، مما يثبت أنه شخص حقيقي موثوق.",
   "faqQBadgesPro": "ماذا تعني شارة \"👑 (التاج)\"؟",
-  "faqABadgesPro": "تشير هذه الشارة إلى أن البائع عضو في teqlif PRO. بائعو PRO هم محترفون يتم الترويج لهم أكثر بواسطة الخوارزمية.",
+  "faqABadgesPro": "تشير هذه الشارة إلى أن البائع عضو في teqlif PRO ([ICON_PRO]). بائعو PRO هم محترفون يتم الترويج لهم أكثر بواسطة الخوارزمية.",
   "faqQBadgesTrusted": "ماذا تعني شارات بائع \"✅ موثوق\" و \"⭐ نشط\"؟",
   "faqABadgesTrusted": "بائع موثوق: تُمنح للبائعين ذوي الخبرة الذين أثبتوا هويتهم وبنوا الثقة. بائع نشط: يمثل البائعين الذين يستخدمون المنصة بشكل متكرر ويردون بسرعة.",
   "faqQBadgesSponsored": "إلى ماذا تشير علامات \"ممولة\" و \"شائعة\" و \"مباشر\"؟",
-  "faqABadgesSponsored": "ممولة: إعلان مروج باستخدام رصيد TUCi. شائعة (نار): إعلان يحظى بمشاهدات عالية مؤخراً. مباشر (يومض): البائع يبث حالياً لهذا المنتج.",
-  "faqQBadgesTuci": "ما هو TUCi وأين يتم استخدامه؟",
-  "faqABadgesTuci": "TUCi هي عملتنا الافتراضية. تستخدم للترويج للإعلانات، إرسال الهدايا في البث المباشر، الحصول على تحليل الأسعار بالذكاء الاصطناعي، والوصول إلى المشترين مباشرة.",
+  "faqABadgesSponsored": "ممولة: إعلان مروج باستخدام رصيد TUCi ([ICON_TUCI]). شائعة (نار): إعلان يحظى بمشاهدات عالية مؤخراً. مباشر (يومض): البائع يبث حالياً لهذا المنتج.",
+  "faqQBadgesTuci": "ما هو TUCi ([ICON_TUCI]) وأين يتم استخدامه؟",
+  "faqABadgesTuci": "TUCi ([ICON_TUCI]) هي عملتنا الافتراضية. تستخدم للترويج للإعلانات، إرسال الهدايا في البث المباشر، الحصول على تحليل الأسعار بالذكاء الاصطناعي، والوصول إلى المشترين مباشرة.",
   "faqCatLive": "البث المباشر (SwipeLive) والمزادات",
   "faqQLiveHost": "ماذا يمكنني أن أفعل في شاشة المذيع (المضيف)؟",
   "faqALiveHost": "يمكنك إدارة الدردشة، بدء مزاد لمنتجك، رؤية العطاءات الواردة فوراً، وقبول أعلى عطاء لتأكيد البيع في ثوانٍ.",
@@ -1595,7 +1595,7 @@
   "faqAAIInsights": "أداة حصرية لبائعي PRO تبلغ عن عدد المشاهدات ووقت البقاء ومعدلات التردد لتحسين استراتيجية المبيعات الخاصة بك.",
   "faqQAIPrice": "كيف يعمل تسعير الذكاء الاصطناعي (AI Price Intel)؟",
   "faqAAIPrice": "يحلل الذكاء الاصطناعي ملايين البيانات لاقتراح أفضل سعر بناءً على عنوان منتجك وفئته.",
-  "faqQAILead": "ما هي ميزة \"الطلب الساخن\" (العثور على مشترٍ)؟",
+  "faqQAILead": "ما هي ميزة \"الطلب الساخن ([ICON_HOTDEMAND])\" (العثور على مشترٍ)؟",
   "faqAAILead": "نظام يطابق إعلانك مع أفضل المشترين المحتملين عبر الذكاء الاصطناعي ويرسل لهم إشعار \"إعلان مقترح\" مباشرة.",
   "faqQAIRadar": "تحليل المنافسين وأفضل وقت للبث",
   "faqAAIRadar": "يقارن تحليل المنافسين سعرك ونسبة النقر مع المنافسين. تحدد وحدة أفضل وقت للبث متى يكون متابعوك أكثر نشاطاً.",
@@ -1603,11 +1603,11 @@
   "btnUpdate": "تحديث",
   "btnUpdateListing": "تحديث الإعلان",
   "faqCatIcons": "مسرد أيقونات النظام",
-  "faqIconVerified": "حساب موثق: يظهر أن المستخدم قد تحقق من هويته أو هاتفه.",
-  "faqIconPro": "teqlif PRO: يشير إلى عضو محترف يتم الترويج له بواسطة المنصة.",
-  "faqIconTuci": "TUCi: العملة الافتراضية المستخدمة في الإنفاق داخل التطبيق.",
-  "faqIconBlast": "Blast: يرسل إشعارًا فوريًا لقائمتك/بثك.",
-  "faqIconAutoBid": "المزايدة التلقائية: النظام يزايد نيابة عنك حتى الحد الأقصى.",
+  "faqIconVerified": "حساب موثق ([ICON_VERIFIED]): يظهر أن المستخدم قد تحقق من هويته أو هاتفه.",
+  "faqIconPro": "teqlif PRO ([ICON_PRO]): يشير إلى عضو محترف يتم الترويج له بواسطة المنصة.",
+  "faqIconTuci": "TUCi ([ICON_TUCI]): العملة الافتراضية المستخدمة في الإنفاق داخل التطبيق.",
+  "faqIconBlast": "Blast ([ICON_BLAST]): يرسل إشعارًا فوريًا لقائمتك/بثك.",
+  "faqIconAutoBid": "المزايدة التلقائية ([ICON_AUTOBID]): النظام يزايد نيابة عنك حتى الحد الأقصى.",
   "faqIconSales": "رؤى المبيعات: يظهر حجم المبيعات والربحية الخاصة بك.",
   "faqIconListings": "تحليلات القوائم: مقاييس المشاهدة والمفضلة لقوائمك.",
   "faqIconMarket": "معلومات السوق: أسعار السوق واتجاهاته بناءً على الفئة.",
@@ -1615,10 +1615,22 @@
   "faqIconConversion": "تحليل التحويل: مسار العطاءات والمبيعات لكل مشاهدة.",
   "faqIconRadar": "رادار المنافسين: تحليل السعر وسرعة المبيعات للبائعين المماثلين.",
   "faqIconRetargeting": "إعادة الاستهداف: إرسال تذكيرات أو رسائل خصم للمشترين المهتمين.",
-  "proToolHotDemandTitle": "الطلب الساخن (Lead Gen)",
+  "proToolHotDemandTitle": "الطلب الساخن ([ICON_HOTDEMAND]) (Lead Gen)",
   "proToolHotDemandDesc": "تواصل مباشرة مع المشترين المحتملين المهتمين بقائمتك.",
   "proToolAiPriceTitle": "تحليل السعر بالذكاء الاصطناعي",
   "proToolAiPriceDesc": "اكتشف القيمة السوقية لمنتجك في ثوانٍ باستخدام الذكاء الاصطناعي.",
   "proToolStreamAnalyticsTitle": "تحليلات جمهور البث المباشر",
-  "proToolStreamAnalyticsDesc": "قم بتحليل بيانات مشاهدة البث المباشر والهدايا بالتفصيل."
+  "proToolStreamAnalyticsDesc": "قم بتحليل بيانات مشاهدة البث المباشر والهدايا بالتفصيل.",
+  "faqIconNameVerified": "حساب موثق ([ICON_VERIFIED])",
+  "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
+  "faqIconNameTuci": "TUCi ([ICON_TUCI])",
+  "faqIconNameBlast": "Blast ([ICON_BLAST])",
+  "faqIconNameAutoBid": "المزايدة التلقائية ([ICON_AUTOBID])",
+  "faqIconNameSales": "رؤى المبيعات",
+  "faqIconNameListings": "تحليلات القوائم",
+  "faqIconNameMarket": "معلومات السوق",
+  "faqIconNameTime": "أفضل وقت للبث",
+  "faqIconNameConversion": "تحليل التحويل",
+  "faqIconNameRadar": "رادار المنافسين",
+  "faqIconNameRetargeting": "إعادة الاستهداف"
 }

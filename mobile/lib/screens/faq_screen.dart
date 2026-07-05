@@ -66,18 +66,18 @@ class FaqScreen extends StatelessWidget {
         title: l.faqCatIcons,
         icon: Icons.grid_view_rounded,
         items: [
-          _FaqItem(question: 'Onaylı Hesap', answer: l.faqIconVerified, icon: Icons.verified),
-          _FaqItem(question: 'teqlif PRO', answer: l.faqIconPro, icon: Icons.workspace_premium),
-          _FaqItem(question: 'TUCi', answer: l.faqIconTuci, icon: Icons.monetization_on),
-          _FaqItem(question: 'Öne Çıkar (Blast)', answer: l.faqIconBlast, icon: Icons.rocket_launch),
-          _FaqItem(question: 'Otomatik Teklif', answer: l.faqIconAutoBid, icon: Icons.gavel),
-          _FaqItem(question: 'Satış İçgörüleri', answer: l.faqIconSales, icon: Icons.auto_graph_outlined),
-          _FaqItem(question: 'İlan Analitikleri', answer: l.faqIconListings, icon: Icons.bar_chart_outlined),
-          _FaqItem(question: 'Piyasa İstihbaratı', answer: l.faqIconMarket, icon: Icons.insights_outlined),
-          _FaqItem(question: 'En İyi Yayın Zamanı', answer: l.faqIconTime, icon: Icons.schedule_outlined),
-          _FaqItem(question: 'Dönüşüm Analizi', answer: l.faqIconConversion, icon: Icons.pie_chart_outline),
-          _FaqItem(question: 'Rakip Radarı', answer: l.faqIconRadar, icon: Icons.radar),
-          _FaqItem(question: 'Yeniden Hedefleme', answer: l.faqIconRetargeting, icon: Icons.mark_email_unread_outlined),
+          _FaqItem(question: l.faqIconNameVerified, answer: l.faqIconVerified, icon: Icons.verified),
+          _FaqItem(question: l.faqIconNamePro, answer: l.faqIconPro, icon: Icons.workspace_premium),
+          _FaqItem(question: l.faqIconNameTuci, answer: l.faqIconTuci, icon: Icons.monetization_on),
+          _FaqItem(question: l.faqIconNameBlast, answer: l.faqIconBlast, icon: Icons.rocket_launch),
+          _FaqItem(question: l.faqIconNameAutoBid, answer: l.faqIconAutoBid, icon: Icons.gavel),
+          _FaqItem(question: l.faqIconNameSales, answer: l.faqIconSales, icon: Icons.auto_graph_outlined),
+          _FaqItem(question: l.faqIconNameListings, answer: l.faqIconListings, icon: Icons.bar_chart_outlined),
+          _FaqItem(question: l.faqIconNameMarket, answer: l.faqIconMarket, icon: Icons.insights_outlined),
+          _FaqItem(question: l.faqIconNameTime, answer: l.faqIconTime, icon: Icons.schedule_outlined),
+          _FaqItem(question: l.faqIconNameConversion, answer: l.faqIconConversion, icon: Icons.pie_chart_outline),
+          _FaqItem(question: l.faqIconNameRadar, answer: l.faqIconRadar, icon: Icons.radar),
+          _FaqItem(question: l.faqIconNameRetargeting, answer: l.faqIconRetargeting, icon: Icons.mark_email_unread_outlined),
         ],
       ),
     ];
@@ -175,33 +175,16 @@ Widget _buildAnswerWithIcons(BuildContext context, String text) {
     height: 1.5,
   );
 
-  final Map<String, IconData> iconMap = {
-    // TR
-    'Mavi Tik': Icons.verified,
-    'teqlif PRO': Icons.workspace_premium,
-    'TUCi': Icons.monetization_on,
-    'Öne Çıkar (Blast)': Icons.rocket_launch,
-    'Sıcak Talep': Icons.local_fire_department_outlined,
-    'Otomatik Teklif': Icons.gavel,
-    // EN
-    'Blue Tick': Icons.verified,
-    'Verified Account': Icons.verified,
-    'Blast': Icons.rocket_launch,
-    'Hot Demand': Icons.local_fire_department_outlined,
-    'Auto-Bid': Icons.gavel,
-    // AR
-    'العلامة الزرقاء': Icons.verified,
-    'حساب موثق': Icons.verified,
-    'الطلب الساخن': Icons.local_fire_department_outlined,
-    'المزايدة التلقائية': Icons.gavel,
+  final Map<String, IconData> tokenIconMap = {
+    'VERIFIED': Icons.verified,
+    'PRO': Icons.workspace_premium,
+    'TUCI': Icons.monetization_on,
+    'BLAST': Icons.rocket_launch,
+    'HOTDEMAND': Icons.local_fire_department_outlined,
+    'AUTOBID': Icons.gavel,
   };
 
-  final Map<String, IconData> lowerIconMap = {
-    for (var k in iconMap.keys) k.toLowerCase(): iconMap[k]!
-  };
-
-  final pattern = lowerIconMap.keys.map((k) => RegExp.escape(k)).join('|');
-  final regex = RegExp('($pattern)', caseSensitive: false);
+  final regex = RegExp(r'\[ICON_([A-Z_]+)\]');
 
   final List<InlineSpan> spans = [];
   int lastMatchEnd = 0;
@@ -211,20 +194,20 @@ Widget _buildAnswerWithIcons(BuildContext context, String text) {
       spans.add(TextSpan(text: text.substring(lastMatchEnd, match.start)));
     }
 
-    final String matchedWord = match.group(0)!;
-    final IconData icon = lowerIconMap[matchedWord.toLowerCase()]!;
+    final String token = match.group(1)!;
+    final IconData? icon = tokenIconMap[token];
 
-    spans.add(TextSpan(text: '$matchedWord ('));
-    spans.add(
-      WidgetSpan(
-        alignment: PlaceholderAlignment.middle,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: Icon(icon, size: 14, color: Theme.of(context).primaryColor),
+    if (icon != null) {
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Icon(icon, size: 14, color: Theme.of(context).primaryColor),
+          ),
         ),
-      ),
-    );
-    spans.add(const TextSpan(text: ')'));
+      );
+    }
 
     lastMatchEnd = match.end;
   }
