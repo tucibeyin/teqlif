@@ -3096,7 +3096,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Ürününüzün piyasa değerini AI ile saniyeler içinde öğrenin.';
 
   @override
-  String get proToolStreamAnalyticsTitle => 'Canlı Yayın İzleyici Analizi';
+  String get proToolStreamAnalyticsTitle => 'Yayın Analizi';
 
   @override
   String get proToolStreamAnalyticsDesc =>
@@ -3227,4 +3227,50 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get streamNotificationAutoSent =>
       'Yayın başladığında bildirim otomatik gönderilir.';
+
+  @override
+  String get proToolStreamHistoryTitle => 'Geçmiş Yayınlarım';
+
+  @override
+  String get proToolStreamHistoryEmpty =>
+      'Henüz tamamlanmış bir yayınınız yok.';
+
+  @override
+  String get analyticsRevenue => 'Toplam Ciro';
+
+  @override
+  String get analyticsUniqueViewers => 'Tekil İzleyici';
+
+  @override
+  String get analyticsAvgBudget => 'Ortalama Bütçe';
+
+  @override
+  String get analyticsPeakViewers => 'Anlık Maksimum';
+
+  @override
+  String get analyticsHesitation => 'Tereddüt Sayısı';
+
+  @override
+  String get analyticsFeedImpressions => 'Akış Gösterimi';
+
+  @override
+  String get analyticsFeedReach => 'Akış Erişimi';
+
+  @override
+  String get analyticsAiRecommendation => 'Yapay Zeka Önerisi';
+
+  @override
+  String get analyticsNoAuctions => 'Bu yayında ihale açılmamış.';
+
+  @override
+  String get analyticsItemsSold => 'Satılan Ürünler';
+
+  @override
+  String analyticsDuration(int minutes) {
+    return '$minutes dk';
+  }
+
+  @override
+  String get proToolStreamHistoryDesc =>
+      'Geçmiş canlı yayınlarınızın satış ve izleyici istatistiklerini detaylı inceleyin.';
 }

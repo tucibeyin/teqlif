@@ -43,6 +43,56 @@ async def _optional_user_id(
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
+@router.get("/my-history")
+async def get_my_stream_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    limit: int = 20,
+    offset: int = 0
+):
+    """Kullanıcının geçmiş yayınlarını listeler (ended_at is not null)"""
+    from app.models.auction import Auction
+    from sqlalchemy import func
+    
+    # Yayınları al
+    query = (
+        select(LiveStream)
+        .where(LiveStream.host_id == current_user.id)
+        .where(LiveStream.ended_at.is_not(None))
+        .order_by(LiveStream.started_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    streams = result.scalars().all()
+    
+    # Her yayın için ciro (revenue) topla
+    stream_ids = [s.id for s in streams]
+    revenues = {}
+    if stream_ids:
+        rev_query = (
+            select(Auction.stream_id, func.sum(Auction.final_price))
+            .where(Auction.stream_id.in_(stream_ids))
+            .where(Auction.winner_username.is_not(None))
+            .group_by(Auction.stream_id)
+        )
+        rev_result = await db.execute(rev_query)
+        for row in rev_result.all():
+            revenues[row[0]] = float(row[1] or 0.0)
+            
+    out = []
+    for s in streams:
+        out.append({
+            "id": s.id,
+            "title": s.title,
+            "started_at": s.started_at,
+            "ended_at": s.ended_at,
+            "viewer_count": s.viewer_count,
+            "revenue": revenues.get(s.id, 0.0)
+        })
+        
+    return out
+
 @router.get("/{stream_id}/check")
 async def check_stream_active(
     stream_id: int,

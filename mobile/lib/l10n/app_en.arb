@@ -1621,7 +1621,7 @@
   "proToolHotDemandDesc": "Reach out directly to potential buyers interested in your listing.",
   "proToolAiPriceTitle": "AI Price Analysis",
   "proToolAiPriceDesc": "Find out your products market value in seconds with AI.",
-  "proToolStreamAnalyticsTitle": "Live Stream Audience Analytics",
+  "proToolStreamAnalyticsTitle": "Stream Analytics",
   "proToolStreamAnalyticsDesc": "Analyze your live stream viewership and gift data in detail.",
   "faqIconNameVerified": "Verified Account ([ICON_VERIFIED])",
   "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
@@ -1676,5 +1676,26 @@
   "langAR": "AR",
   "kickedFromStream": "🚫 You were kicked from this stream",
   "actionLeaveLiveStream": "Leave Live Stream",
-  "streamNotificationAutoSent": "Notification will be sent automatically when stream starts."
+  "streamNotificationAutoSent": "Notification will be sent automatically when stream starts.",
+  "proToolStreamHistoryTitle": "Past Streams",
+  "proToolStreamHistoryEmpty": "You have no completed streams yet.",
+  "analyticsRevenue": "Total Revenue",
+  "analyticsUniqueViewers": "Unique Viewers",
+  "analyticsAvgBudget": "Avg. Budget",
+  "analyticsPeakViewers": "Peak Viewers",
+  "analyticsHesitation": "Hesitations",
+  "analyticsFeedImpressions": "Feed Impressions",
+  "analyticsFeedReach": "Feed Reach",
+  "analyticsAiRecommendation": "AI Recommendation",
+  "analyticsNoAuctions": "No auctions created in this stream.",
+  "analyticsItemsSold": "Sold Items",
+  "analyticsDuration": "{minutes} min",
+  "@analyticsDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "proToolStreamHistoryDesc": "Analyze the sales and audience statistics of your past live streams in detail."
 }

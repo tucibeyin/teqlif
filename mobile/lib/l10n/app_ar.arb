@@ -1620,7 +1620,7 @@
   "proToolHotDemandDesc": "تواصل مباشرة مع المشترين المحتملين المهتمين بقائمتك.",
   "proToolAiPriceTitle": "تحليل السعر بالذكاء الاصطناعي",
   "proToolAiPriceDesc": "اكتشف القيمة السوقية لمنتجك في ثوانٍ باستخدام الذكاء الاصطناعي.",
-  "proToolStreamAnalyticsTitle": "تحليلات جمهور البث المباشر",
+  "proToolStreamAnalyticsTitle": "تحليلات البث",
   "proToolStreamAnalyticsDesc": "قم بتحليل بيانات مشاهدة البث المباشر والهدايا بالتفصيل.",
   "faqIconNameVerified": "حساب موثق ([ICON_VERIFIED])",
   "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
@@ -1657,5 +1657,26 @@
   "langAR": "AR",
   "kickedFromStream": "🚫 لقد تم طردك من هذا البث",
   "actionLeaveLiveStream": "مغادرة البث المباشر",
-  "streamNotificationAutoSent": "سيتم إرسال الإشعار تلقائيًا عند بدء البث."
+  "streamNotificationAutoSent": "سيتم إرسال الإشعار تلقائيًا عند بدء البث.",
+  "proToolStreamHistoryTitle": "البثوث السابقة",
+  "proToolStreamHistoryEmpty": "ليس لديك بثوث مكتملة بعد.",
+  "analyticsRevenue": "إجمالي الإيرادات",
+  "analyticsUniqueViewers": "مشاهدون فريدون",
+  "analyticsAvgBudget": "متوسط الميزانية",
+  "analyticsPeakViewers": "ذروة المشاهدين",
+  "analyticsHesitation": "عدد التردد",
+  "analyticsFeedImpressions": "ظهور في الموجز",
+  "analyticsFeedReach": "الوصول في الموجز",
+  "analyticsAiRecommendation": "توصية الذكاء الاصطناعي",
+  "analyticsNoAuctions": "لم يتم إنشاء مزادات في هذا البث.",
+  "analyticsItemsSold": "العناصر المباعة",
+  "analyticsDuration": "{minutes} دقيقة",
+  "@analyticsDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "proToolStreamHistoryDesc": "قم بتحليل إحصائيات المبيعات والجمهور لبثوثك المباشرة السابقة بالتفصيل."
 }

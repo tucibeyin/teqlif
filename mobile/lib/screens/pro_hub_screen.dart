@@ -12,6 +12,7 @@ import 'market_intelligence_screen.dart';
 import 'pro_insights_screen.dart';
 import 'pro_stream_analytics_screen.dart';
 import 'retargeting_screen.dart';
+import 'live_stream_history_screen.dart';
 
 class ProHubScreen extends StatefulWidget {
   final bool isPremium;
@@ -171,6 +172,17 @@ class _ProHubScreenState extends State<ProHubScreen> {
             isPremium: isPremium,
             onTap: isPremium
                 ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BestStreamTimeScreen()))
+                : () => _showUpgrade(context),
+          ),
+          const SizedBox(height: 10),
+          _ToolCard(
+            icon: Icons.podcasts,
+            iconColor: const Color(0xFF0EA5E9),
+            title: l.proToolStreamHistoryTitle,
+            description: l.proToolStreamHistoryDesc,
+            isPremium: isPremium,
+            onTap: isPremium
+                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveStreamHistoryScreen()))
                 : () => _showUpgrade(context),
           ),
           const SizedBox(height: 10),

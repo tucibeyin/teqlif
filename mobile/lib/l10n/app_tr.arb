@@ -1620,7 +1620,7 @@
   "proToolHotDemandDesc": "İlanınızla ilgilenebilecek potansiyel alıcılara doğrudan ulaşın.",
   "proToolAiPriceTitle": "Yapay Zeka Fiyat Analizi",
   "proToolAiPriceDesc": "Ürününüzün piyasa değerini AI ile saniyeler içinde öğrenin.",
-  "proToolStreamAnalyticsTitle": "Canlı Yayın İzleyici Analizi",
+  "proToolStreamAnalyticsTitle": "Yayın Analizi",
   "proToolStreamAnalyticsDesc": "Yayınlarınızdaki anlık izleyici ve hediye verilerini detaylı inceleyin.",
   "faqIconNameVerified": "Onaylı Hesap",
   "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
@@ -1675,5 +1675,26 @@
   "langAR": "AR",
   "kickedFromStream": "🚫 Bu yayından atıldınız",
   "actionLeaveLiveStream": "Canlı Yayından Ayrıl",
-  "streamNotificationAutoSent": "Yayın başladığında bildirim otomatik gönderilir."
+  "streamNotificationAutoSent": "Yayın başladığında bildirim otomatik gönderilir.",
+  "proToolStreamHistoryTitle": "Geçmiş Yayınlarım",
+  "proToolStreamHistoryEmpty": "Henüz tamamlanmış bir yayınınız yok.",
+  "analyticsRevenue": "Toplam Ciro",
+  "analyticsUniqueViewers": "Tekil İzleyici",
+  "analyticsAvgBudget": "Ortalama Bütçe",
+  "analyticsPeakViewers": "Anlık Maksimum",
+  "analyticsHesitation": "Tereddüt Sayısı",
+  "analyticsFeedImpressions": "Akış Gösterimi",
+  "analyticsFeedReach": "Akış Erişimi",
+  "analyticsAiRecommendation": "Yapay Zeka Önerisi",
+  "analyticsNoAuctions": "Bu yayında ihale açılmamış.",
+  "analyticsItemsSold": "Satılan Ürünler",
+  "analyticsDuration": "{minutes} dk",
+  "@analyticsDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "proToolStreamHistoryDesc": "Geçmiş canlı yayınlarınızın satış ve izleyici istatistiklerini detaylı inceleyin."
 }

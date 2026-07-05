@@ -3092,7 +3092,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Find out your products market value in seconds with AI.';
 
   @override
-  String get proToolStreamAnalyticsTitle => 'Live Stream Audience Analytics';
+  String get proToolStreamAnalyticsTitle => 'Stream Analytics';
 
   @override
   String get proToolStreamAnalyticsDesc =>
@@ -3224,4 +3224,49 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get streamNotificationAutoSent =>
       'Notification will be sent automatically when stream starts.';
+
+  @override
+  String get proToolStreamHistoryTitle => 'Past Streams';
+
+  @override
+  String get proToolStreamHistoryEmpty => 'You have no completed streams yet.';
+
+  @override
+  String get analyticsRevenue => 'Total Revenue';
+
+  @override
+  String get analyticsUniqueViewers => 'Unique Viewers';
+
+  @override
+  String get analyticsAvgBudget => 'Avg. Budget';
+
+  @override
+  String get analyticsPeakViewers => 'Peak Viewers';
+
+  @override
+  String get analyticsHesitation => 'Hesitations';
+
+  @override
+  String get analyticsFeedImpressions => 'Feed Impressions';
+
+  @override
+  String get analyticsFeedReach => 'Feed Reach';
+
+  @override
+  String get analyticsAiRecommendation => 'AI Recommendation';
+
+  @override
+  String get analyticsNoAuctions => 'No auctions created in this stream.';
+
+  @override
+  String get analyticsItemsSold => 'Sold Items';
+
+  @override
+  String analyticsDuration(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get proToolStreamHistoryDesc =>
+      'Analyze the sales and audience statistics of your past live streams in detail.';
 }

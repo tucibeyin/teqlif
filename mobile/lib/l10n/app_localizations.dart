@@ -5647,7 +5647,7 @@ abstract class AppLocalizations {
   /// No description provided for @proToolStreamAnalyticsTitle.
   ///
   /// In tr, this message translates to:
-  /// **'Canlı Yayın İzleyici Analizi'**
+  /// **'Yayın Analizi'**
   String get proToolStreamAnalyticsTitle;
 
   /// No description provided for @proToolStreamAnalyticsDesc.
@@ -5895,6 +5895,90 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Yayın başladığında bildirim otomatik gönderilir.'**
   String get streamNotificationAutoSent;
+
+  /// No description provided for @proToolStreamHistoryTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçmiş Yayınlarım'**
+  String get proToolStreamHistoryTitle;
+
+  /// No description provided for @proToolStreamHistoryEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz tamamlanmış bir yayınınız yok.'**
+  String get proToolStreamHistoryEmpty;
+
+  /// No description provided for @analyticsRevenue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Ciro'**
+  String get analyticsRevenue;
+
+  /// No description provided for @analyticsUniqueViewers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tekil İzleyici'**
+  String get analyticsUniqueViewers;
+
+  /// No description provided for @analyticsAvgBudget.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama Bütçe'**
+  String get analyticsAvgBudget;
+
+  /// No description provided for @analyticsPeakViewers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Anlık Maksimum'**
+  String get analyticsPeakViewers;
+
+  /// No description provided for @analyticsHesitation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tereddüt Sayısı'**
+  String get analyticsHesitation;
+
+  /// No description provided for @analyticsFeedImpressions.
+  ///
+  /// In tr, this message translates to:
+  /// **'Akış Gösterimi'**
+  String get analyticsFeedImpressions;
+
+  /// No description provided for @analyticsFeedReach.
+  ///
+  /// In tr, this message translates to:
+  /// **'Akış Erişimi'**
+  String get analyticsFeedReach;
+
+  /// No description provided for @analyticsAiRecommendation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay Zeka Önerisi'**
+  String get analyticsAiRecommendation;
+
+  /// No description provided for @analyticsNoAuctions.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu yayında ihale açılmamış.'**
+  String get analyticsNoAuctions;
+
+  /// No description provided for @analyticsItemsSold.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satılan Ürünler'**
+  String get analyticsItemsSold;
+
+  /// No description provided for @analyticsDuration.
+  ///
+  /// In tr, this message translates to:
+  /// **'{minutes} dk'**
+  String analyticsDuration(int minutes);
+
+  /// No description provided for @proToolStreamHistoryDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçmiş canlı yayınlarınızın satış ve izleyici istatistiklerini detaylı inceleyin.'**
+  String get proToolStreamHistoryDesc;
 }
 
 class _AppLocalizationsDelegate

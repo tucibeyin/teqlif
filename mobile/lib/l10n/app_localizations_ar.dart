@@ -3069,7 +3069,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'اكتشف القيمة السوقية لمنتجك في ثوانٍ باستخدام الذكاء الاصطناعي.';
 
   @override
-  String get proToolStreamAnalyticsTitle => 'تحليلات جمهور البث المباشر';
+  String get proToolStreamAnalyticsTitle => 'تحليلات البث';
 
   @override
   String get proToolStreamAnalyticsDesc =>
@@ -3200,4 +3200,49 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get streamNotificationAutoSent =>
       'سيتم إرسال الإشعار تلقائيًا عند بدء البث.';
+
+  @override
+  String get proToolStreamHistoryTitle => 'البثوث السابقة';
+
+  @override
+  String get proToolStreamHistoryEmpty => 'ليس لديك بثوث مكتملة بعد.';
+
+  @override
+  String get analyticsRevenue => 'إجمالي الإيرادات';
+
+  @override
+  String get analyticsUniqueViewers => 'مشاهدون فريدون';
+
+  @override
+  String get analyticsAvgBudget => 'متوسط الميزانية';
+
+  @override
+  String get analyticsPeakViewers => 'ذروة المشاهدين';
+
+  @override
+  String get analyticsHesitation => 'عدد التردد';
+
+  @override
+  String get analyticsFeedImpressions => 'ظهور في الموجز';
+
+  @override
+  String get analyticsFeedReach => 'الوصول في الموجز';
+
+  @override
+  String get analyticsAiRecommendation => 'توصية الذكاء الاصطناعي';
+
+  @override
+  String get analyticsNoAuctions => 'لم يتم إنشاء مزادات في هذا البث.';
+
+  @override
+  String get analyticsItemsSold => 'العناصر المباعة';
+
+  @override
+  String analyticsDuration(int minutes) {
+    return '$minutes دقيقة';
+  }
+
+  @override
+  String get proToolStreamHistoryDesc =>
+      'قم بتحليل إحصائيات المبيعات والجمهور لبثوثك المباشرة السابقة بالتفصيل.';
 }
