@@ -1086,6 +1086,16 @@ class _ReactivationCreditCard extends StatelessWidget {
           ),
           if (isPremium) ...[
             const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '$used hak kullanıldı, $remaining hak kaldı',
+                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             _RenewalRow(renewalDate: credits?['renewal_date'] as String?),
           ] else ...[
             const SizedBox(height: 8),
