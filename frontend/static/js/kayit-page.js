@@ -1,4 +1,4 @@
-    if (Auth.getToken()) window.location.href = '/';
+    if (Auth.getToken() || Auth.getUser()) window.location.href = '/';
 
     let registeredEmail = '';
 

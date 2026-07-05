@@ -50,11 +50,9 @@
         try {
             const fd = new FormData();
             fd.append('file', file);
-            const token = localStorage.getItem('teqlif_token');
             const res = await fetch('/api/upload/listing-video', {
                 method: 'POST',
                 credentials: 'include',
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                 body: fd,
             });
             videoPBar.style.width = '100%';

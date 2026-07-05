@@ -3,23 +3,23 @@
 let _initCtxPromise = null;
 
 const Auth = (() => {
-    // Token'lar artık HttpOnly cookie'de; XSS ile okunamaz.
-    // Sadece user bilgisi (non-sensitive) localStorage'da tutulur.
-    // In-memory token: sayfa yenilenmediği sürece WS auth için kullanılır.
+    // Access token artık yalnızca bellekte (_memToken) tutulur — localStorage/sessionStorage'a yazılmaz.
+    // XSS bu değişkeni okuyamaz. Sayfa yenilenince Auth.ready promise'i üzerinden restore edilir.
     const USER_KEY     = 'teqlif_user';
-    const _TOKEN_KEY   = 'teqlif_token';    // eski localStorage key (migration)
-    const _REFRESH_KEY = 'teqlif_refresh';  // eski localStorage key (migration)
-    const _SS_TOKEN    = 'teqlif_ss_token'; // sessionStorage key (tab ömrü boyunca)
+    const _TOKEN_KEY   = 'teqlif_token';    // eski key — temizlik için tutuldu
+    const _REFRESH_KEY = 'teqlif_refresh';  // eski key — temizlik için tutuldu
+    const _SS_TOKEN    = 'teqlif_ss_token'; // eski key — temizlik için tutuldu
 
-    // Token okuma önceliği:
-    // 1. sessionStorage (sayfa navigi sırasında hayatta kalır, tab kapanınca silinir)
-    // 2. eski localStorage (geçiş dönemi için)
-    // Cookie her request'te credentials:include ile otomatik gider (backup)
+    // Migration: eski depolamadan bir kerelik oku, hemen sil.
+    // Sonraki sayfa yüklemelerinde _memToken null olur; Auth.ready tryRefresh ile restore eder.
     let _memToken = (() => {
         const ss = sessionStorage.getItem(_SS_TOKEN);
-        if (ss && ss !== 'undefined') return ss;
         const ls = localStorage.getItem(_TOKEN_KEY);
-        return ls && ls !== 'undefined' ? ls : null;
+        sessionStorage.removeItem(_SS_TOKEN);
+        localStorage.removeItem(_TOKEN_KEY);
+        localStorage.removeItem(_REFRESH_KEY);
+        const t = (ss && ss !== 'undefined') ? ss : (ls && ls !== 'undefined' ? ls : null);
+        return t;
     })();
 
     function getToken() {
@@ -38,22 +38,16 @@ const Auth = (() => {
 
     function _save(data) {
         _memToken = data.access_token || null;
-        if (_memToken) {
-            sessionStorage.setItem(_SS_TOKEN, _memToken);
-            // localStorage'a da yaz: yeni tab / WhatsApp IAB gibi
-            // sessionStorage'ın boş geldiği bağlamlarda token bulunabilsin
-            localStorage.setItem(_TOKEN_KEY, _memToken);
-        }
-        localStorage.removeItem(_REFRESH_KEY);
         if (data.user) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     }
 
     async function logout() {
         _memToken = null;
-        sessionStorage.removeItem(_SS_TOKEN);
+        localStorage.removeItem(USER_KEY);
+        // Eski depolama anahtarlarını temizle
         localStorage.removeItem(_TOKEN_KEY);
         localStorage.removeItem(_REFRESH_KEY);
-        localStorage.removeItem(USER_KEY);
+        sessionStorage.removeItem(_SS_TOKEN);
         try {
             await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         } catch (_) {}
@@ -61,23 +55,18 @@ const Auth = (() => {
     }
 
     async function tryRefresh() {
-        // Geçiş dönemi: eski localStorage refresh token'ı varsa body'de gönder
-        const legacyRefresh = localStorage.getItem(_REFRESH_KEY);
         try {
             const res = await fetch('/api/auth/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify(legacyRefresh ? { refresh_token: legacyRefresh } : {}),
+                body: JSON.stringify({}),
             });
             if (!res.ok) { return false; }
             let data;
             try { data = await res.json(); } catch (_) { return false; }
             if (!data?.access_token) { return false; }
             _memToken = data.access_token;
-            sessionStorage.setItem(_SS_TOKEN, _memToken);
-            localStorage.setItem(_TOKEN_KEY, _memToken);
-            localStorage.removeItem(_REFRESH_KEY);
             return true;
         } catch (err) {
             console.error('[Auth] tryRefresh ağ hatası:', err);
@@ -121,7 +110,7 @@ const Auth = (() => {
     }
 
     function getInitContext() {
-        if (!_memToken) return Promise.resolve(null);
+        if (!getUser()) return Promise.resolve(null);
         if (!_initCtxPromise) {
             _initCtxPromise = apiFetch('/auth/init').catch(() => null);
         }
@@ -129,6 +118,15 @@ const Auth = (() => {
     }
 
     return { getToken, getUser, login, register, verify, logout, tryRefresh, me, getInitContext };
+})();
+
+// Sayfa yüklenince token bellekte yoksa HttpOnly cookie üzerinden restore et.
+// WS bağlantıları ve auth gerektiren işlemler Auth.ready'yi await ederek token'ın
+// hazır olmasını bekler.
+Auth.ready = (() => {
+    if (Auth.getToken()) return Promise.resolve(true);
+    if (!Auth.getUser())  return Promise.resolve(false);
+    return Auth.tryRefresh();
 })();
 
 // ── Unread count helper ────────────────────────────────────────────────────────

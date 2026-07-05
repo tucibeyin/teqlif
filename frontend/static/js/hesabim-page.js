@@ -1,4 +1,4 @@
-    if (!Auth.getToken()) window.location.href = '/giris.html';
+    if (!Auth.getUser()) window.location.href = '/giris.html';
 
     const user = Auth.getUser();
 
@@ -60,7 +60,7 @@
         try {
             const uploadResp = await fetch('/api/upload', {
                 method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + Auth.getToken() },
+                credentials: 'include',
                 body: formData,
             });
             if (!uploadResp.ok) throw new Error('Yükleme başarısız');

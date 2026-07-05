@@ -1,4 +1,4 @@
-    if (!Auth.getToken()) window.location.href = '/giris.html';
+    if (!Auth.getUser()) window.location.href = '/giris.html';
 
     function fmt(p) {
         if (!p && p !== 0) return '';

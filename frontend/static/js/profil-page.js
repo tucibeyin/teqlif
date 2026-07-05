@@ -710,10 +710,10 @@
 
     async function loadWalletBadge() {
         const badge = document.getElementById('walletAmountBadge');
-        if (!badge || !Auth.getToken()) return;
+        if (!badge || !Auth.getUser()) return;
         try {
             const res = await fetch('/api/wallet/balance', {
-                headers: { 'Authorization': 'Bearer ' + Auth.getToken() },
+                credentials: 'include',
             });
             if (!res.ok) return;
             const data = await res.json();

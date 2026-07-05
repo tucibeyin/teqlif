@@ -409,11 +409,10 @@
 
         // Görüntüleme kaydı yardımcısı
         function recordView() {
-            const token = Auth.getToken();
-            if (token) {
+            if (Auth.getUser()) {
                 fetch(`/api/stories/${item.id}/view`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
+                    credentials: 'include',
                 }).catch(() => {});
             }
         }
@@ -789,14 +788,13 @@
 
             // ── 3. Yükleme (sıkıştırma sunucuda yapılır) ─────────
             _setStoryUploading(true);
-            const token = Auth.getToken();
             const form  = new FormData();
             form.append('file', file);
 
             try {
                 const res = await fetch('/api/stories/upload', {
                     method: 'POST',
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    credentials: 'include',
                     body: form,
                 });
 

@@ -2,9 +2,6 @@ const API = '/api';
 
 async function apiFetch(path, options = {}, retried = false) {
     const headers = { 'Content-Type': 'application/json', ...options.headers };
-    // Bearer header: in-memory token varsa gönder (mobile compat + WS için)
-    const token = Auth && Auth.getToken ? Auth.getToken() : null;
-    if (token) headers['Authorization'] = `Bearer ${token}`;
 
     let res;
     try {

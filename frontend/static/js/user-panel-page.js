@@ -1,5 +1,5 @@
 // Auth guard — giriş yoksa yönlendir
-if (!Auth.getToken()) {
+if (!Auth.getUser()) {
     window.location.href = '/giris.html?next=' + encodeURIComponent(window.location.pathname);
 }
 
@@ -15,7 +15,7 @@ function showToast(msg, color) {
 async function loadWallet() {
     try {
         const res = await fetch('/api/wallet/balance', {
-            headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
+            credentials: 'include',
         });
         if (!res.ok) {
             if (res.status === 401) { window.location.href = '/giris.html'; return; }
@@ -71,10 +71,8 @@ async function doTopup() {
     try {
         const res = await fetch('/api/wallet/topup-manual', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + Auth.getToken(),
-            },
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: selectedAmount }),
         });
         const data = await res.json();

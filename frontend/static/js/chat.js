@@ -52,7 +52,9 @@ const Chat = (() => {
         _onUsernameTap = fn || null;
     }
 
-    function _connectWS() {
+    async function _connectWS() {
+        // Token bellekte yoksa (sayfa yenileme) HttpOnly cookie'den restore et
+        if (Auth.ready) await Auth.ready;
         const token = Auth.getToken();
         if (!token || !_streamId) return;
 

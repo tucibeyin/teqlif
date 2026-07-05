@@ -1,4 +1,4 @@
-    if (!Auth.getToken()) window.location.href = '/giris.html';
+    if (!Auth.getUser()) window.location.href = '/giris.html';
 
     const nav = document.getElementById('navHesabim');
     if (nav) nav.style.display = '';

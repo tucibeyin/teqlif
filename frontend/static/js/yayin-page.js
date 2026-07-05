@@ -189,9 +189,8 @@
             popup.innerHTML = '<div class="viewer-popup-empty">Yükleniyor...</div>';
             popup.classList.add('open');
             try {
-                const token = Auth.getToken();
                 const res = await fetch(`/api/streams/${streamId}/viewers`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    credentials: 'include',
                 });
                 const data = await res.json();
                 const viewers = data.viewers || [];
@@ -232,10 +231,9 @@
             if (!blob) return;
             const form = new FormData();
             form.append('file', blob, 'thumb.jpg');
-            const token = Auth.getToken();
             await fetch(`/api/streams/${sid}/thumbnail`, {
                 method: 'PATCH',
-                headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+                credentials: 'include',
                 body: form,
             });
         } catch (e) { /* sessiz geç */ }
@@ -266,10 +264,9 @@
             if (!blob) return null;
             const form = new FormData();
             form.append('file', blob, 'proof.jpg');
-            const token = Auth.getToken();
             const res = await fetch(`/api/upload`, {
                 method: 'POST',
-                headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+                credentials: 'include',
                 body: form,
             });
             if (!res.ok) return null;
@@ -1923,10 +1920,8 @@
                 try {
                     const res = await fetch('/api/wallet/send-gift', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${Auth.getToken()}`,
-                        },
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             stream_id: sid,
                             receiver_username: hostUsername,
