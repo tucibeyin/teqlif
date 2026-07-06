@@ -1,16 +1,13 @@
 import asyncio
 import httpx
-from colorama import init, Fore, Style
 import sys
-
-init(autoreset=True)
 
 BASE_URL = "http://127.0.0.1:8000/api"
 TEST_EMAIL = "teqlif@gmail.com"
 
 async def get_token():
     import getpass
-    print(Fore.YELLOW + f"{TEST_EMAIL} hesabı ile test yapılacaktır.")
+    print(f"{TEST_EMAIL} hesabı ile test yapılacaktır.")
     password = getpass.getpass("Lütfen teqlif@gmail.com şifresini girin: ")
     
     async with httpx.AsyncClient() as client:
@@ -21,12 +18,12 @@ async def get_token():
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
         if resp.status_code != 200:
-            print(Fore.RED + f"[HATA] Login başarısız! Lütfen TEST_PASSWORD değişkenini script içinden ({__file__}) güncelleyin. Yanıt: {resp.text}")
+            print(f"[HATA] Login başarısız! Yanıt: {resp.text}")
             return None
         return resp.json()["access_token"]
 
 async def run_test(name, token, payload, expected_status=200):
-    print(Fore.CYAN + f"--- TEST: {name} ---")
+    print(f"--- TEST: {name} ---")
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             f"{BASE_URL}/analytics/price-estimate",
@@ -36,16 +33,16 @@ async def run_test(name, token, payload, expected_status=200):
         )
         
         if resp.status_code == expected_status:
-            print(Fore.GREEN + f"[BAŞARILI] {name} (HTTP {resp.status_code})")
+            print(f"[BAŞARILI] {name} (HTTP {resp.status_code})")
             if resp.status_code == 200:
                 data = resp.json()
                 print(f"  Gelen Tahmin: {data.get('suggested_start_price')} TUCi")
                 print(f"  Güven Skoru: {data.get('confidence')}")
                 print(f"  Bulunan Benzer İlan: {data.get('found_similar')}")
                 if data.get('found_similar') == 0:
-                    print(Fore.YELLOW + "  [DİKKAT] Hiç benzer ilan bulunamadı! Veritabanında (last_sold_price > 0) olan benzer ilan yok.")
+                    print("  [DİKKAT] Hiç benzer ilan bulunamadı! Veritabanında (last_sold_price > 0) olan benzer ilan yok.")
         else:
-            print(Fore.RED + f"[BAŞARISIZ] Beklenen HTTP {expected_status}, Gelen HTTP {resp.status_code}")
+            print(f"[BAŞARISIZ] Beklenen HTTP {expected_status}, Gelen HTTP {resp.status_code}")
             print(f"  Hata Detayı: {resp.text}")
         print("")
 
