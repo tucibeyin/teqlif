@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     db_max_overflow: int = 10
     db_pool_timeout: int = 30
     db_pool_recycle: int = 1800
+    use_pgbouncer: bool = False
     redis_url: str = "redis://localhost:6379"
     secret_key: str
     algorithm: str = "HS256"

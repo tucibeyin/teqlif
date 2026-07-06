@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any, Optional
-from sqlalchemy import String, Float, DateTime, ForeignKey, Boolean, Text, Index, func
+from sqlalchemy import String, Float, DateTime, ForeignKey, Boolean, Text, Index, func, text
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
@@ -12,6 +12,8 @@ class Listing(Base):
     __table_args__ = (
         Index('ix_listings_search_vector', 'search_vector', postgresql_using='gin'),
         Index('ix_listings_embedding_hnsw', 'embedding', postgresql_using='hnsw', postgresql_with={'m': 16, 'ef_construction': 64}, postgresql_ops={'embedding': 'vector_cosine_ops'}),
+        Index('ix_listings_feed_organic', 'category', 'is_active', 'is_deleted', text('created_at DESC')),
+        Index('ix_listings_feed_recent', 'is_active', 'is_deleted', text('created_at DESC')),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -49,5 +51,5 @@ class Listing(Base):
     deactivated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     likes: Mapped[list["ListingLike"]] = relationship(  # type: ignore[name-defined]
-        "ListingLike", cascade="all, delete-orphan", passive_deletes=True
+        "ListingLike", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
     )

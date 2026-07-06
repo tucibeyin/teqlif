@@ -22,5 +22,5 @@ class Auction(Base):
     bid_count: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(20), default="completed")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     proof_image_url: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)

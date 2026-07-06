@@ -34,7 +34,7 @@ class Story(Base):
     )
 
     likes: Mapped[list["StoryLike"]] = relationship(  # type: ignore[name-defined]
-        "StoryLike", cascade="all, delete-orphan", passive_deletes=True
+        "StoryLike", cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
     )
 
 
