@@ -132,97 +132,122 @@ class _ProHubScreenState extends State<ProHubScreen> {
             ),
           ),
 
-          // ── 3 Araç Kartı ──────────────────────────────────────────────────
-          _ToolCard(
-            icon: Icons.auto_graph_outlined,
+          // ── 1. Satış & Performans ──────────────────────────────────────────
+          _buildAccordion(
+            context: context,
+            title: l.proHubTabSales,
+            icon: Icons.trending_up,
             iconColor: const Color(0xFF6366F1),
-            title: l.proToolSalesTitle,
-            description: l.proToolSalesDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()))
-                : () => _showUpgrade(context),
+            children: [
+              _ToolCard(
+                icon: Icons.auto_graph_outlined,
+                iconColor: const Color(0xFF6366F1),
+                title: l.proToolSalesTitle,
+                description: l.proToolSalesDesc,
+                isPremium: isPremium,
+                onTap: isPremium
+                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()))
+                    : () => _showUpgrade(context),
+              ),
+              const SizedBox(height: 10),
+              _ToolCard(
+                icon: Icons.bar_chart_outlined,
+                iconColor: const Color(0xFF10B981),
+                title: l.proToolListingsTitle,
+                description: l.proToolListingsDesc,
+                isPremium: isPremium,
+                onTap: isPremium
+                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(isPremium: isPremium)))
+                    : () => _showUpgrade(context),
+              ),
+              const SizedBox(height: 10),
+              _ToolCard(
+                icon: Icons.pie_chart_outline,
+                iconColor: const Color(0xFFEC4899),
+                title: l.proToolConversionTitle,
+                description: l.proToolConversionDesc,
+                isPremium: isPremium,
+                onTap: isPremium
+                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversionBreakdownScreen()))
+                    : () => _showUpgrade(context),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.bar_chart_outlined,
-            iconColor: const Color(0xFF10B981),
-            title: l.proToolListingsTitle,
-            description: l.proToolListingsDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(isPremium: isPremium)))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.insights_outlined,
+          const SizedBox(height: 16),
+
+          // ── 2. Piyasa & Rekabet ────────────────────────────────────────────
+          _buildAccordion(
+            context: context,
+            title: l.proHubTabMarket,
+            icon: Icons.public,
             iconColor: const Color(0xFFF59E0B),
-            title: l.proToolMarketTitle,
-            description: l.proToolMarketDesc,
-            isPremium: isPremium,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => MarketIntelligenceScreen(isPremium: isPremium)),
-            ),
+            children: [
+              _ToolCard(
+                icon: Icons.insights_outlined,
+                iconColor: const Color(0xFFF59E0B),
+                title: l.proToolMarketTitle,
+                description: l.proToolMarketDesc,
+                isPremium: isPremium,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MarketIntelligenceScreen(isPremium: isPremium)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _ToolCard(
+                icon: Icons.radar,
+                iconColor: const Color(0xFF6366F1),
+                title: l.proToolCompetitorRadarTitle,
+                description: l.proToolCompetitorRadarDesc,
+                isPremium: isPremium,
+                onTap: isPremium
+                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CompetitorRadarScreen()))
+                    : () => _showUpgrade(context),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.schedule_outlined,
-            iconColor: const Color(0xFF8B5CF6),
-            title: l.proToolBestTimeTitle,
-            description: l.proToolBestTimeDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BestStreamTimeScreen()))
-                : () => _showUpgrade(context),
-          ),
+          const SizedBox(height: 16),
 
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.pie_chart_outline,
-            iconColor: const Color(0xFFEC4899),
-            title: l.proToolConversionTitle,
-            description: l.proToolConversionDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversionBreakdownScreen()))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.radar,
-            iconColor: const Color(0xFF6366F1),
-            title: l.proToolCompetitorRadarTitle,
-            description: l.proToolCompetitorRadarDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CompetitorRadarScreen()))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.mark_email_unread_outlined,
-            iconColor: const Color(0xFF0EA5E9),
-            title: l.proToolRetargetingTitle,
-            description: l.proToolRetargetingDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen(initialIndex: 0)))
-                : () => _showUpgrade(context),
-          ),
-
-
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.stream_outlined,
+          // ── 3. Canlı Yayın & Kitle ─────────────────────────────────────────
+          _buildAccordion(
+            context: context,
+            title: l.proHubTabAudience,
+            icon: Icons.stream,
             iconColor: const Color(0xFF14B8A6),
-            title: l.proToolStreamAnalyticsTitle,
-            description: l.proToolStreamAnalyticsDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveStreamHistoryScreen()))
-                : () => _showUpgrade(context),
+            children: [
+              _ToolCard(
+                icon: Icons.schedule_outlined,
+                iconColor: const Color(0xFF8B5CF6),
+                title: l.proToolBestTimeTitle,
+                description: l.proToolBestTimeDesc,
+                isPremium: isPremium,
+                onTap: isPremium
+                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BestStreamTimeScreen()))
+                    : () => _showUpgrade(context),
+              ),
+              const SizedBox(height: 10),
+              _ToolCard(
+                icon: Icons.stream_outlined,
+                iconColor: const Color(0xFF14B8A6),
+                title: l.proToolStreamAnalyticsTitle,
+                description: l.proToolStreamAnalyticsDesc,
+                isPremium: isPremium,
+                onTap: isPremium
+                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveStreamHistoryScreen()))
+                    : () => _showUpgrade(context),
+              ),
+              const SizedBox(height: 10),
+              _ToolCard(
+                icon: Icons.mark_email_unread_outlined,
+                iconColor: const Color(0xFF0EA5E9),
+                title: l.proToolRetargetingTitle,
+                description: l.proToolRetargetingDesc,
+                isPremium: isPremium,
+                onTap: isPremium
+                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen(initialIndex: 0)))
+                    : () => _showUpgrade(context),
+              ),
+            ],
           ),
 
 
@@ -247,6 +272,49 @@ class _ProHubScreenState extends State<ProHubScreen> {
             _BenefitRow(icon: Icons.search_outlined,        text: l.proBenefit4),
           ],
         ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccordion({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          iconColor: AppColors.textSecondary(context),
+          collapsedIconColor: AppColors.textSecondary(context),
+          children: children,
         ),
       ),
     );
