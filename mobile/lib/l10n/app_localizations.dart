@@ -5140,6 +5140,12 @@ abstract class AppLocalizations {
   /// **'İlanı Sil'**
   String get listingDeleteDialogTitle;
 
+  /// No description provided for @shareLinkCopied.
+  ///
+  /// In tr, this message translates to:
+  /// **'Link kopyalandı'**
+  String get shareLinkCopied;
+
   /// No description provided for @listingDeleteDialogBody.
   ///
   /// In tr, this message translates to:
@@ -6507,6 +6513,54 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Veri bulunamadı.'**
   String get swipeListNoData;
+
+  /// No description provided for @shareTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaş'**
+  String get shareTitle;
+
+  /// No description provided for @shareInstagramLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Instagram Story'**
+  String get shareInstagramLabel;
+
+  /// No description provided for @shareInstagramSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Story\'ne görsel olarak ekle'**
+  String get shareInstagramSubtitle;
+
+  /// No description provided for @shareWhatsAppLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'WhatsApp'**
+  String get shareWhatsAppLabel;
+
+  /// No description provided for @shareWhatsAppSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrudan WhatsApp\'a gönder'**
+  String get shareWhatsAppSubtitle;
+
+  /// No description provided for @shareCopyLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Link Kopyala'**
+  String get shareCopyLabel;
+
+  /// No description provided for @shareOtherLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Diğer...'**
+  String get shareOtherLabel;
+
+  /// No description provided for @shareOtherSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm uygulamaları göster'**
+  String get shareOtherSubtitle;
 }
 
 class _AppLocalizationsDelegate

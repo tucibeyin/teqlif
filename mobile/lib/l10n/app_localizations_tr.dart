@@ -2781,6 +2781,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listingDeleteDialogTitle => 'İlanı Sil';
 
   @override
+  String get shareLinkCopied => 'Link kopyalandı';
+
+  @override
   String get listingDeleteDialogBody =>
       'Bu ilanı kalıcı olarak silmek istiyor musunuz?';
 
@@ -3550,4 +3553,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get swipeListNoData => 'Veri bulunamadı.';
+
+  @override
+  String get shareTitle => 'Paylaş';
+
+  @override
+  String get shareInstagramLabel => 'Instagram Story';
+
+  @override
+  String get shareInstagramSubtitle => 'Story\'ne görsel olarak ekle';
+
+  @override
+  String get shareWhatsAppLabel => 'WhatsApp';
+
+  @override
+  String get shareWhatsAppSubtitle => 'Doğrudan WhatsApp\'a gönder';
+
+  @override
+  String get shareCopyLabel => 'Link Kopyala';
+
+  @override
+  String get shareOtherLabel => 'Diğer...';
+
+  @override
+  String get shareOtherSubtitle => 'Tüm uygulamaları göster';
 }

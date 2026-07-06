@@ -1499,6 +1499,7 @@
   "profilePickGallery": "Pick from Gallery",
   "profilePickCamera": "Take a Photo",
   "listingDeleteDialogTitle": "Delete Listing",
+  "shareLinkCopied": "Link copied",
   "listingDeleteDialogBody": "Are you sure you want to permanently delete this listing?",
   "btnDeleteConfirm": "Delete",
   "favoritesEmpty": "No favorites yet",
@@ -1816,5 +1817,13 @@
   "storyTrayTakePhoto": "Take Photo",
   "storyTrayGalleryPhoto": "Gallery Photo",
   "phoneInputHint": "Phone number",
-  "swipeListNoData": "No data found."
+  "swipeListNoData": "No data found.",
+  "shareTitle": "Share",
+  "shareInstagramLabel": "Instagram Story",
+  "shareInstagramSubtitle": "Add visually to your story",
+  "shareWhatsAppLabel": "WhatsApp",
+  "shareWhatsAppSubtitle": "Send directly to WhatsApp",
+  "shareCopyLabel": "Copy Link",
+  "shareOtherLabel": "Other...",
+  "shareOtherSubtitle": "Show all applications"
 }

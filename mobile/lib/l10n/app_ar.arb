@@ -1498,6 +1498,7 @@
   "profilePickGallery": "اختر من المعرض",
   "profilePickCamera": "التقط صورة",
   "listingDeleteDialogTitle": "حذف الإعلان",
+  "shareLinkCopied": "تم نسخ الرابط",
   "listingDeleteDialogBody": "هل أنت متأكد أنك تريد حذف هذا الإعلان نهائياً؟",
   "btnDeleteConfirm": "حذف",
   "favoritesEmpty": "لا توجد مفضلات بعد",
@@ -1795,5 +1796,13 @@
   "storyTrayTakePhoto": "التقاط صورة",
   "storyTrayGalleryPhoto": "صورة من المعرض",
   "phoneInputHint": "رقم الهاتف",
-  "swipeListNoData": "لم يتم العثور على بيانات."
+  "swipeListNoData": "لم يتم العثور على بيانات.",
+  "shareTitle": "مشاركة",
+  "shareInstagramLabel": "قصة إنستغرام",
+  "shareInstagramSubtitle": "أضف بصريًا إلى قصتك",
+  "shareWhatsAppLabel": "واتساب",
+  "shareWhatsAppSubtitle": "أرسل مباشرة إلى واتساب",
+  "shareCopyLabel": "نسخ الرابط",
+  "shareOtherLabel": "أخرى...",
+  "shareOtherSubtitle": "عرض جميع التطبيقات"
 }

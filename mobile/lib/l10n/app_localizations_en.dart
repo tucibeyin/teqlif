@@ -2780,6 +2780,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listingDeleteDialogTitle => 'Delete Listing';
 
   @override
+  String get shareLinkCopied => 'Link copied';
+
+  @override
   String get listingDeleteDialogBody =>
       'Are you sure you want to permanently delete this listing?';
 
@@ -3546,4 +3549,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get swipeListNoData => 'No data found.';
+
+  @override
+  String get shareTitle => 'Share';
+
+  @override
+  String get shareInstagramLabel => 'Instagram Story';
+
+  @override
+  String get shareInstagramSubtitle => 'Add visually to your story';
+
+  @override
+  String get shareWhatsAppLabel => 'WhatsApp';
+
+  @override
+  String get shareWhatsAppSubtitle => 'Send directly to WhatsApp';
+
+  @override
+  String get shareCopyLabel => 'Copy Link';
+
+  @override
+  String get shareOtherLabel => 'Other...';
+
+  @override
+  String get shareOtherSubtitle => 'Show all applications';
 }

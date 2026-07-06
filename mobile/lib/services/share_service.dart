@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -82,8 +83,7 @@ class ShareService {
     await Clipboard.setData(ClipboardData(text: url));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Link kopyalandı'),
+        SnackBar(content: Text(AppLocalizations.of(context)!.shareLinkCopied),
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -171,10 +171,7 @@ class _ShareSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'Paylaş',
+          Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(AppLocalizations.of(context)!.shareTitle,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
           ),
@@ -182,8 +179,8 @@ class _ShareSheet extends StatelessWidget {
           // Seçenekler
           _ShareOption(
             icon: _instagramIcon(),
-            label: 'Instagram Story',
-            subtitle: 'Story\'ne görsel olarak ekle',
+            label: AppLocalizations.of(context)!.shareInstagramLabel,
+            subtitle: AppLocalizations.of(context)!.shareInstagramSubtitle,
             onTap: () async {
               Navigator.of(context).pop();
               await ShareService.shareToInstagramStory(
@@ -197,8 +194,8 @@ class _ShareSheet extends StatelessWidget {
           ),
           _ShareOption(
             icon: const _WhatsAppIcon(),
-            label: 'WhatsApp',
-            subtitle: 'Doğrudan WhatsApp\'a gönder',
+            label: AppLocalizations.of(context)!.shareWhatsAppLabel,
+            subtitle: AppLocalizations.of(context)!.shareWhatsAppSubtitle,
             onTap: () async {
               Navigator.of(context).pop();
               await ShareService.shareToWhatsApp(context, url: url, text: text, origin: origin);
@@ -207,7 +204,7 @@ class _ShareSheet extends StatelessWidget {
           if (url.isNotEmpty)
             _ShareOption(
               icon: const Icon(Icons.copy_rounded, size: 28, color: Color(0xFF6B7280)),
-              label: 'Link Kopyala',
+              label: AppLocalizations.of(context)!.shareCopyLabel,
               subtitle: url,
               onTap: () async {
                 Navigator.of(context).pop();
@@ -216,8 +213,8 @@ class _ShareSheet extends StatelessWidget {
             ),
           _ShareOption(
             icon: const Icon(Icons.ios_share_rounded, size: 28, color: Color(0xFF6B7280)),
-            label: 'Diğer...',
-            subtitle: 'Tüm uygulamaları göster',
+            label: AppLocalizations.of(context)!.shareOtherLabel,
+            subtitle: AppLocalizations.of(context)!.shareOtherSubtitle,
             onTap: () async {
               Navigator.of(context).pop();
               await ShareService.shareOther(context, url: url, text: text, origin: origin);

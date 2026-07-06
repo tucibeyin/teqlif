@@ -1498,6 +1498,7 @@
   "profilePickGallery": "Galeriden Seç",
   "profilePickCamera": "Kameradan Çek",
   "listingDeleteDialogTitle": "İlanı Sil",
+  "shareLinkCopied": "Link kopyalandı",
   "listingDeleteDialogBody": "Bu ilanı kalıcı olarak silmek istiyor musunuz?",
   "btnDeleteConfirm": "Sil",
   "favoritesEmpty": "Henüz favori ilan yok",
@@ -1815,5 +1816,13 @@
   "storyTrayTakePhoto": "Fotoğraf Çek",
   "storyTrayGalleryPhoto": "Galeriden Fotoğraf",
   "phoneInputHint": "Telefon numarası",
-  "swipeListNoData": "Veri bulunamadı."
+  "swipeListNoData": "Veri bulunamadı.",
+  "shareTitle": "Paylaş",
+  "shareInstagramLabel": "Instagram Story",
+  "shareInstagramSubtitle": "Story'ne görsel olarak ekle",
+  "shareWhatsAppLabel": "WhatsApp",
+  "shareWhatsAppSubtitle": "Doğrudan WhatsApp'a gönder",
+  "shareCopyLabel": "Link Kopyala",
+  "shareOtherLabel": "Diğer...",
+  "shareOtherSubtitle": "Tüm uygulamaları göster"
 }

@@ -2759,6 +2759,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listingDeleteDialogTitle => 'حذف الإعلان';
 
   @override
+  String get shareLinkCopied => 'تم نسخ الرابط';
+
+  @override
   String get listingDeleteDialogBody =>
       'هل أنت متأكد أنك تريد حذف هذا الإعلان نهائياً؟';
 
@@ -3521,4 +3524,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get swipeListNoData => 'لم يتم العثور على بيانات.';
+
+  @override
+  String get shareTitle => 'مشاركة';
+
+  @override
+  String get shareInstagramLabel => 'قصة إنستغرام';
+
+  @override
+  String get shareInstagramSubtitle => 'أضف بصريًا إلى قصتك';
+
+  @override
+  String get shareWhatsAppLabel => 'واتساب';
+
+  @override
+  String get shareWhatsAppSubtitle => 'أرسل مباشرة إلى واتساب';
+
+  @override
+  String get shareCopyLabel => 'نسخ الرابط';
+
+  @override
+  String get shareOtherLabel => 'أخرى...';
+
+  @override
+  String get shareOtherSubtitle => 'عرض جميع التطبيقات';
 }
