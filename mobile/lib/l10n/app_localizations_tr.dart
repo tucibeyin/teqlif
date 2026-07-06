@@ -2743,6 +2743,24 @@ class AppLocalizationsTr extends AppLocalizations {
       'Her davet için +50, arkadaşın +10 TUCi kazanır';
 
   @override
+  String profileInviteShareText(String code, String expiry) {
+    return 'Teqlif\'e katıl! Canlı mezat ve ikinci el alışverişin adresi 🎁\n\nKayıt olurken şu davet kodunu gir ve anında bonus TUCi kazan:\n\n🔑 Kod: $code\n⏳ Son kullanım: $expiry içinde\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: https://teqlif.com';
+  }
+
+  @override
+  String profileInviteExpiryDays(int days) {
+    return '$days gün';
+  }
+
+  @override
+  String profileInviteExpiryHours(int hours) {
+    return '$hours saat';
+  }
+
+  @override
+  String get profileInviteExpirySoon => 'kısa süre';
+
+  @override
   String get profilePickGallery => 'Galeriden Seç';
 
   @override

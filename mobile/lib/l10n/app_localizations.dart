@@ -5080,6 +5080,30 @@ abstract class AppLocalizations {
   /// **'Her davet için +50, arkadaşın +10 TUCi kazanır'**
   String get profileInviteSubtitle;
 
+  /// No description provided for @profileInviteShareText.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teqlif\'e katıl! Canlı mezat ve ikinci el alışverişin adresi 🎁\n\nKayıt olurken şu davet kodunu gir ve anında bonus TUCi kazan:\n\n🔑 Kod: {code}\n⏳ Son kullanım: {expiry} içinde\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: https://teqlif.com'**
+  String profileInviteShareText(String code, String expiry);
+
+  /// No description provided for @profileInviteExpiryDays.
+  ///
+  /// In tr, this message translates to:
+  /// **'{days} gün'**
+  String profileInviteExpiryDays(int days);
+
+  /// No description provided for @profileInviteExpiryHours.
+  ///
+  /// In tr, this message translates to:
+  /// **'{hours} saat'**
+  String profileInviteExpiryHours(int hours);
+
+  /// No description provided for @profileInviteExpirySoon.
+  ///
+  /// In tr, this message translates to:
+  /// **'kısa süre'**
+  String get profileInviteExpirySoon;
+
   /// No description provided for @profilePickGallery.
   ///
   /// In tr, this message translates to:

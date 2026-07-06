@@ -2742,25 +2742,25 @@ class AppLocalizationsEn extends AppLocalizations {
       '+50 TUCi per invite, your friend gets +10 TUCi';
 
   @override
-  String profileInviteShareText(String code, String expiry) =>
-      'Join Teqlif! Live auctions & second-hand shopping 🎁\n\n'
-      'Use this invite code when signing up to earn bonus TUCi instantly:\n\n'
-      '🔑 Code: $code\n'
-      '⏳ Expires in: $expiry\n\n'
-      '📱 iOS App Store: https://apps.apple.com/app/teqlif\n'
-      '🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n'
-      '🌐 Website: https://teqlif.com';
+  String profileInviteShareText(String code, String expiry) {
+    return 'Join Teqlif! Live auctions & second-hand shopping 🎁\n\nUse this invite code when signing up to earn bonus TUCi instantly:\n\n🔑 Code: $code\n⏳ Expires in: $expiry\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Website: https://teqlif.com';
+  }
 
   @override
-  String profileInviteExpiryDays(int days) => '$days days';
+  String profileInviteExpiryDays(int days) {
+    return '$days days';
+  }
 
   @override
-  String profileInviteExpiryHours(int hours) => '$hours hours';
+  String profileInviteExpiryHours(int hours) {
+    return '$hours hours';
+  }
 
   @override
   String get profileInviteExpirySoon => 'a short time';
 
-
+  @override
+  String get profilePickGallery => 'Pick from Gallery';
 
   @override
   String get profilePickCamera => 'Take a Photo';
