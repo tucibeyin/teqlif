@@ -48,12 +48,13 @@ async def get_listings(
     user_id: Optional[int] = None,
     category: Optional[str] = None,
     location: Optional[str] = None,
+    q: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
     current_user_id: Optional[int] = Depends(_optional_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ListingService(db).get_listings(user_id, category, location, current_user_id, limit, offset)
+    return await ListingService(db).get_listings(user_id, category, location, q, current_user_id, limit, offset)
 
 
 @router.get("/my")

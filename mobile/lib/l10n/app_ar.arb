@@ -1686,5 +1686,13 @@
   "proToolStreamHistoryDesc": "قم بتحليل إحصائيات المبيعات والجمهور لبثوثك المباشرة السابقة بالتفصيل.",
   "proTabSales": "الأداء",
   "proTabMarket": "السوق",
-  "proTabAudience": "الجمهور"
+  "proTabAudience": "الجمهور",
+  "searchHintTextListing": "البحث في العنوان أو الوصف...",
+  "filterTitle": "التصفيات",
+  "categoryLabel": "فئة",
+  "cityLabel": "مدينة",
+  "clearFilters": "مسح",
+  "applyFilters": "تطبيق",
+  "selectCity": "اختر مدينة",
+  "allCategories": "جميع الفئات"
 }

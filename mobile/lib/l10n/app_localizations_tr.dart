@@ -3304,4 +3304,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get audienceTotalViewers => 'Toplam İzleyici';
+
+  @override
+  String get searchHintTextListing => 'İlan başlığı veya açıklamasında ara...';
+
+  @override
+  String get filterTitle => 'Filtreler';
+
+  @override
+  String get categoryLabel => 'Kategori';
+
+  @override
+  String get cityLabel => 'Şehir';
+
+  @override
+  String get clearFilters => 'Temizle';
+
+  @override
+  String get applyFilters => 'Uygula';
+
+  @override
+  String get selectCity => 'Şehir Seçin';
+
+  @override
+  String get allCategories => 'Tüm Kategoriler';
 }

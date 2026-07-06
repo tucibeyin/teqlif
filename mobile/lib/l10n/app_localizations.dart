@@ -6039,6 +6039,54 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Toplam İzleyici'**
   String get audienceTotalViewers;
+
+  /// No description provided for @searchHintTextListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan başlığı veya açıklamasında ara...'**
+  String get searchHintTextListing;
+
+  /// No description provided for @filterTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Filtreler'**
+  String get filterTitle;
+
+  /// No description provided for @categoryLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori'**
+  String get categoryLabel;
+
+  /// No description provided for @cityLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şehir'**
+  String get cityLabel;
+
+  /// No description provided for @clearFilters.
+  ///
+  /// In tr, this message translates to:
+  /// **'Temizle'**
+  String get clearFilters;
+
+  /// No description provided for @applyFilters.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygula'**
+  String get applyFilters;
+
+  /// No description provided for @selectCity.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şehir Seçin'**
+  String get selectCity;
+
+  /// No description provided for @allCategories.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm Kategoriler'**
+  String get allCategories;
 }
 
 class _AppLocalizationsDelegate

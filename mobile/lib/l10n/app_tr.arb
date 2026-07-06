@@ -1706,5 +1706,13 @@
   "proTabMarket": "Piyasa",
   "proTabAudience": "Kitle",
   "listingVideoComplete": "Video Tamamlandı",
-  "audienceTotalViewers": "Toplam İzleyici"
+  "audienceTotalViewers": "Toplam İzleyici",
+  "searchHintTextListing": "İlan başlığı veya açıklamasında ara...",
+  "filterTitle": "Filtreler",
+  "categoryLabel": "Kategori",
+  "cityLabel": "Şehir",
+  "clearFilters": "Temizle",
+  "applyFilters": "Uygula",
+  "selectCity": "Şehir Seçin",
+  "allCategories": "Tüm Kategoriler"
 }

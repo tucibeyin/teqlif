@@ -43,6 +43,9 @@ class HomeScreenState extends State<HomeScreen> {
   String? _error;
   String? _selectedCategory;
   String? _selectedCity;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
   List<String> _cities = [];
   final ScrollController _scrollCtrl = ScrollController();
 
@@ -76,7 +79,7 @@ class HomeScreenState extends State<HomeScreen> {
     {'slug': 'diger', 'label': l.catOther, 'icon': Icons.more_horiz},
   ];
 
-  bool get _hasFilter => _selectedCategory != null || _selectedCity != null;
+  bool get _hasFilter => _selectedCategory != null || _selectedCity != null || _searchQuery.isNotEmpty;
 
   @override
   void initState() {
@@ -90,8 +93,20 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted && _searchQuery != query) {
+        setState(() => _searchQuery = query);
+        _load();
+      }
+    });
   }
 
   void _onScroll() {
@@ -220,6 +235,7 @@ class HomeScreenState extends State<HomeScreen> {
       final params = <String, String>{};
       if (_selectedCategory != null) params['category'] = _selectedCategory!;
       if (_selectedCity != null) params['location'] = _selectedCity!;
+      if (_searchQuery.isNotEmpty) params['q'] = _searchQuery;
       final uri = Uri.parse(
         '$kBaseUrl/listings',
       ).replace(queryParameters: params);
@@ -244,9 +260,11 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   void _clearAll() {
+    _searchController.clear();
     setState(() {
       _selectedCategory = null;
       _selectedCity = null;
+      _searchQuery = '';
     });
     _load();
   }
@@ -606,6 +624,35 @@ class HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 8),
+
+          // ── Arama kutusu ─────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: l.searchHintTextListing,
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppColors.inputFill(context),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
 
           // ── İLAN LİSTESİ (SADECE BURASI KAYACAK) ────────────────
           Expanded(

@@ -3299,4 +3299,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get audienceTotalViewers => 'Total Viewers';
+
+  @override
+  String get searchHintTextListing => 'Search in title or description...';
+
+  @override
+  String get filterTitle => 'Filters';
+
+  @override
+  String get categoryLabel => 'Category';
+
+  @override
+  String get cityLabel => 'City';
+
+  @override
+  String get clearFilters => 'Clear';
+
+  @override
+  String get applyFilters => 'Apply';
+
+  @override
+  String get selectCity => 'Select City';
+
+  @override
+  String get allCategories => 'All Categories';
 }

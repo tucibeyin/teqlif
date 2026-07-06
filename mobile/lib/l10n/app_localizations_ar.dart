@@ -3276,4 +3276,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get audienceTotalViewers => 'Toplam İzleyici';
+
+  @override
+  String get searchHintTextListing => 'البحث في العنوان أو الوصف...';
+
+  @override
+  String get filterTitle => 'التصفيات';
+
+  @override
+  String get categoryLabel => 'فئة';
+
+  @override
+  String get cityLabel => 'مدينة';
+
+  @override
+  String get clearFilters => 'مسح';
+
+  @override
+  String get applyFilters => 'تطبيق';
+
+  @override
+  String get selectCity => 'اختر مدينة';
+
+  @override
+  String get allCategories => 'جميع الفئات';
 }

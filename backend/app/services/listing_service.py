@@ -236,11 +236,12 @@ class ListingService:
         user_id: Optional[int] = None,
         category: Optional[str] = None,
         location: Optional[str] = None,
+        q: Optional[str] = None,
         current_user_id: Optional[int] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list:
-        q = (
+        q_stmt = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(
@@ -250,13 +251,35 @@ class ListingService:
             )
         )
         if user_id:
-            q = q.where(Listing.user_id == user_id)
+            q_stmt = q_stmt.where(Listing.user_id == user_id)
         if category:
-            q = q.where(Listing.category == category)
+            q_stmt = q_stmt.where(Listing.category == category)
         if location:
-            q = q.where(Listing.location.ilike(f"%{location}%"))
-        q = q.order_by(User.is_premium.desc(), Listing.created_at.desc()).limit(limit).offset(offset)
-        result = await self.db.execute(q)
+            q_stmt = q_stmt.where(Listing.location.ilike(f"%{location}%"))
+        
+        if q:
+            # Using pg_trgm for advanced similarity search
+            q_stmt = q_stmt.where(
+                or_(
+                    Listing.title.op('%%')(q),
+                    Listing.description.op('%%')(q),
+                    func.similarity(Listing.title, q) > 0.2,
+                    func.similarity(Listing.description, q) > 0.2
+                )
+            )
+            # Order by similarity if query is provided, and then by other heuristics
+            q_stmt = q_stmt.order_by(
+                func.greatest(
+                    func.similarity(Listing.title, q),
+                    func.similarity(Listing.description, q)
+                ).desc(),
+                User.is_premium.desc(), 
+                Listing.created_at.desc()
+            ).limit(limit).offset(offset)
+        else:
+            q_stmt = q_stmt.order_by(User.is_premium.desc(), Listing.created_at.desc()).limit(limit).offset(offset)
+            
+        result = await self.db.execute(q_stmt)
         rows = result.all()
 
         listing_ids = [listing.id for listing, _ in rows]

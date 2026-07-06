@@ -1707,5 +1707,13 @@
   "proTabMarket": "Market",
   "proTabAudience": "Audience",
   "listingVideoComplete": "Video Complete",
-  "audienceTotalViewers": "Total Viewers"
+  "audienceTotalViewers": "Total Viewers",
+  "searchHintTextListing": "Search in title or description...",
+  "filterTitle": "Filters",
+  "categoryLabel": "Category",
+  "cityLabel": "City",
+  "clearFilters": "Clear",
+  "applyFilters": "Apply",
+  "selectCity": "Select City",
+  "allCategories": "All Categories"
 }
