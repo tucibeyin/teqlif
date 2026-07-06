@@ -56,7 +56,8 @@ class ShareService {
     }
     // Görsel yoksa veya indirilemezse native sheet aç
     if (context.mounted) {
-      await _shareNative(context, text: '$text\n$url', origin: origin);
+      final shareStr = url.isNotEmpty ? '$text\n$url' : text;
+      await _shareNative(context, text: shareStr, origin: origin);
     }
   }
 
@@ -66,13 +67,14 @@ class ShareService {
     required String text,
     Rect? origin,
   }) async {
-    final encoded = Uri.encodeComponent('$text\n$url');
+    final shareStr = url.isNotEmpty ? '$text\n$url' : text;
+    final encoded = Uri.encodeComponent(shareStr);
     final waUrl = Uri.parse('whatsapp://send?text=$encoded');
     if (await canLaunchUrl(waUrl)) {
       await launchUrl(waUrl);
     } else if (context.mounted) {
       // WhatsApp yüklü değil → native share
-      await _shareNative(context, text: '$text\n$url', origin: origin);
+      await _shareNative(context, text: shareStr, origin: origin);
     }
   }
 
@@ -95,7 +97,8 @@ class ShareService {
     required String text,
     Rect? origin,
   }) async {
-    await _shareNative(context, text: '$text\n$url', origin: origin);
+    final shareStr = url.isNotEmpty ? '$text\n$url' : text;
+    await _shareNative(context, text: shareStr, origin: origin);
   }
 
   // ── Yardımcılar ──────────────────────────────────────────────────
@@ -198,7 +201,7 @@ class _ShareSheet extends StatelessWidget {
             subtitle: 'Doğrudan WhatsApp\'a gönder',
             onTap: () async {
               Navigator.of(context).pop();
-              await ShareService.shareToWhatsApp(context, url: url.isNotEmpty ? url : text, text: url.isNotEmpty ? text : '', origin: origin);
+              await ShareService.shareToWhatsApp(context, url: url, text: text, origin: origin);
             },
           ),
           if (url.isNotEmpty)
