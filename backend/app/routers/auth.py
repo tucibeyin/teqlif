@@ -101,6 +101,7 @@ async def _create_user_and_send_code(
         email_verified=False,
         phone=data.phone or None,
         referral_code=None,
+        pending_referred_by=data.referred_by.strip().upper() if data.referred_by else None,
     )
     db.add(user)
     await db.commit()
@@ -108,8 +109,6 @@ async def _create_user_and_send_code(
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
-    if data.referred_by:
-        await redis.setex(f"referral_pending:{data.email}", VERIFY_CODE_TTL, data.referred_by.strip().upper())
     lang = _detect_lang(request)
     await _send_verification_email(request, data.email, data.full_name, code, has_phone=bool(data.phone), lang=lang)
 
@@ -149,13 +148,12 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
     await db.refresh(user)
     await redis.delete(f"verify:{data.email}")
 
-    pending_ref = await redis.get(f"referral_pending:{data.email}")
-    if pending_ref:
+    if user.pending_referred_by and user.is_verified:
         try:
-            await apply_referral(db, user, pending_ref)
+            from app.services.referral_service import apply_referral
+            await apply_referral(db, user, user.pending_referred_by)
         except Exception:
             pass  # Geçersiz/süresi dolmuş kod — doğrulamayı engelleme
-        await redis.delete(f"referral_pending:{data.email}")
 
     lang = _detect_lang(request)
     try:
@@ -965,6 +963,13 @@ async def confirm_phone_verification(
         if user.phone == phone:
             user.phone_verified = True
             await db.commit()
+            await db.refresh(user)
+            if user.pending_referred_by and user.is_verified:
+                try:
+                    from app.services.referral_service import apply_referral
+                    await apply_referral(db, user, user.pending_referred_by)
+                except Exception:
+                    pass
         await redis.delete(f"phone_verify:{token}")
         return HTMLResponse(_phone_verify_html(
             "Telefon Doğrulandı ✓",

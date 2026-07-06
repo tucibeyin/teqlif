@@ -62,14 +62,18 @@ async def ensure_valid_referral_code(db: AsyncSession, user: User) -> dict:
     raise RuntimeError("Benzersiz referral kodu üretilemedi")
 
 
-async def apply_referral(db: AsyncSession, current_user: User, referral_code: str) -> dict:
+async def apply_referral(db: AsyncSession, current_user: User, referral_code: str, lang: str = "tr") -> dict:
     """
     Davet kodunu uygular:
       1. Kullanıcı daha önce kod kullanmamışsa devam et.
       2. Kodu bulan referrer'ı bul ve süresinin dolmadığından emin ol.
-      3. referrals tablosuna kayıt ekle.
-      4. Referrer'a +50 TUCi, referred'a +10 TUCi yatır.
+      3. Kullanıcı tam onaylı değilse (E-posta + Telefon) kodu pending_referred_by olarak kaydet ve bekle.
+      4. Tam onaylıysa referrals tablosuna kayıt ekle, ödülleri dağıt, FCM bildirimi at.
     """
+    from app.services.firebase_service import send_push
+    from app.utils.email import _get_t
+    t = _get_t(lang)
+    
     code = referral_code.strip().upper()
 
     # Daha önce bu kullanıcı bir kod kullandı mı?
@@ -77,20 +81,36 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         select(Referral).where(Referral.referred_id == current_user.id)
     )
     if already:
-        raise BadRequestException("Daha önce bir davet kodu kullandınız. Her hesap yalnızca bir kez kullanabilir.")
+        raise BadRequestException(t.get("apiErrReferralUsed", "Daha önce bir davet kodu kullandınız. Her hesap yalnızca bir kez kullanabilir."))
 
     # Kendi kodunu giremez
     if current_user.referral_code and current_user.referral_code.upper() == code:
-        raise BadRequestException("Kendi davet kodunuzu kullanamazsınız.")
+        raise BadRequestException(t.get("apiErrReferralSelf", "Kendi davet kodunuzu kullanamazsınız."))
 
     # Kodu bul
     referrer = await db.scalar(select(User).where(User.referral_code == code))
     if not referrer:
-        raise NotFoundException("Geçersiz davet kodu. Lütfen kontrol edip tekrar deneyin.")
+        raise NotFoundException(t.get("apiErrReferralInvalid", "Geçersiz davet kodu. Lütfen kontrol edip tekrar deneyin."))
 
     now = datetime.now(timezone.utc)
     if not referrer.referral_code_expires_at or referrer.referral_code_expires_at < now:
-        raise BadRequestException("Bu davet kodunun süresi dolmuş (3 günlük geçerlilik süresi bitmiş).")
+        raise BadRequestException(t.get("apiErrReferralExpired", "Bu davet kodunun süresi dolmuş (3 günlük geçerlilik süresi bitmiş)."))
+
+    # Eğer e-posta veya telefon onaylı değilse: kodu pending olarak kaydet ve çık
+    if not current_user.is_verified:
+        current_user.pending_referred_by = code
+        db.add(current_user)
+        await db.commit()
+        return {
+            "ok": True,
+            "is_pending": True,
+            "message": t.get("apiMsgReferralSavedVerify", "Davet kodunuz kaydedildi! Ödül kazanmak için lütfen E-posta ve Telefon doğrulamanızı tamamlayın.")
+        }
+
+    # Eğer tam onaylıysa ve kodu başarıyla kullanıyorsa pending'i temizle
+    if current_user.pending_referred_by == code:
+        current_user.pending_referred_by = None
+        db.add(current_user)
 
     # Kayıt ekle
     referral = Referral(
@@ -130,12 +150,27 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
         referrer.id, current_user.id, REFERRER_BONUS, REFERRED_BONUS,
     )
 
+    # Referans sahibine bildirim gönder
+    if referrer.fcm_token:
+        try:
+            import asyncio
+            asyncio.create_task(
+                send_push(
+                    token=referrer.fcm_token,
+                    title=t.get("notifReferralTitle", "Davet Ödülü!"),
+                    body=t.get("notifReferralBody", "Bir arkadaşınız ({username}) kodunuzu kullandı ve doğrulamasını tamamladı! {bonus} TUCi kazandınız.").format(username=current_user.username, bonus=REFERRER_BONUS),
+                    notif_type="referral_bonus",
+                )
+            )
+        except Exception as e:
+            logger.error(f"[REFERRAL] Push notification failed for {referrer.id}: {e}")
+
     return {
         "ok": True,
+        "is_pending": False,
         "referrer_username": referrer.username,
         "referrer_bonus": REFERRER_BONUS,
         "your_bonus": REFERRED_BONUS,
         "new_balance": current_user.tuci_balance,
-        "message": f"Davet kodu kabul edildi! {referrer.username} sizi davet etti. "
-                   f"Hesabınıza {REFERRED_BONUS} TUCi eklendi.",
+        "message": t.get("apiMsgReferralSuccess", "Doğrulamalar tamamlandı! {referrer_username} sizi davet etti. Hesabınıza {your_bonus} TUCi eklendi.").format(referrer_username=referrer.username, your_bonus=REFERRED_BONUS),
     }

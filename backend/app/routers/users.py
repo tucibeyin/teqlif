@@ -11,7 +11,7 @@ app.services.user_service.UserService'e taşınmıştır.
 """
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, text as sa_text
@@ -77,12 +77,14 @@ async def unblock_user(
 
 @router.post("/apply-referral")
 async def apply_referral_code(
+    request: Request,
     body: ApplyReferralBody,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Davet kodunu uygular — referrer +50 TUCi, referred +10 TUCi."""
-    return await apply_referral(db, current_user, body.referral_code)
+    from app.routers.auth import _detect_lang
+    lang = _detect_lang(request)
+    return await apply_referral(db, current_user, body.referral_code, lang)
 
 
 from app.services.referral_service import ensure_valid_referral_code

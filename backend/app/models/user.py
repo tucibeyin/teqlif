@@ -44,3 +44,4 @@ class User(Base):
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     referral_code: Mapped[str | None] = mapped_column(String(12), unique=True, index=True, nullable=True)
     referral_code_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    pending_referred_by: Mapped[str | None] = mapped_column(String(12), nullable=True, default=None)
