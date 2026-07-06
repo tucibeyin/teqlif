@@ -4,6 +4,10 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dotenv import load_dotenv
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(backend_dir, ".env"))
+
 from sqlalchemy import delete, select
 from app.database import AsyncSessionLocal
 from app.models.user import User
