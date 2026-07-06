@@ -11,6 +11,7 @@ import '../services/analytics_service.dart';
 import '../services/share_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../widgets/async_button.dart';
 import '../models/listing_offer.dart';
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
@@ -730,6 +731,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     );
   }
 
+
   Future<void> _boostListing(BuildContext ctx) async {
     final boostMessenger = ScaffoldMessenger.of(ctx);
     final l = AppLocalizations.of(ctx)!;
@@ -738,6 +740,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     int limit = 0;
     bool isPro = false;
     int tuciBalance = 0;
+    
+    // Check loading state while fetching data — spinner shown by AsyncElevatedButton
+    
     try {
       final token = await StorageService.getToken();
       final cr = await http.get(
@@ -776,11 +781,60 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     // Ücretli veya ücretsiz boost dialog'ını göster
     final bool isFreeMode = remaining > 0;
 
-    final confirmed = await showDialog<bool>(
-      // ignore: use_build_context_synchronously
+    // ignore: use_build_context_synchronously
+    showDialog<void>(
       context: ctx,
       builder: (dlgCtx) {
         final dl = AppLocalizations.of(dlgCtx)!;
+        
+        Future<void> performBoost() async {
+          final token = await StorageService.getToken();
+          try {
+            final resp = await http.post(
+              Uri.parse('$kBaseUrl/ads/campaigns'),
+              headers: {
+                'Content-Type': 'application/json',
+                if (token != null) 'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({
+                'listing_id': widget.listing['id'],
+                'total_budget': 50,
+                'cpc_bid': 1,
+              }),
+            );
+            if (!mounted) return;
+            Navigator.pop(dlgCtx);
+            final ll = AppLocalizations.of(ctx)!;
+            if (resp.statusCode == 201) {
+              final data = jsonDecode(resp.body) as Map<String, dynamic>;
+              final wasFree = data['is_free'] == true;
+              setState(() {
+                _campaignId = data['id'] as int?;
+                widget.listing['campaign_id'] = _campaignId;
+                widget.listing['is_sponsored'] = true;
+              });
+              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                content: Text(wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid),
+                backgroundColor: const Color(0xFFF97316),
+              ));
+            } else {
+              final body = jsonDecode(resp.body) as Map<String, dynamic>;
+              final msg = body['detail'] ?? ll.boostErrorDefault;
+              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                content: Text(msg.toString()),
+                backgroundColor: resp.statusCode == 402 ? const Color(0xFFDC2626) : null,
+              ));
+            }
+          } catch (_) {
+            if (mounted) {
+              final ll = AppLocalizations.of(ctx)!;
+              Navigator.pop(dlgCtx);
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(content: Text(ll.boostErrorConnection)),
+              );
+            }
+          }
+        }
         if (isFreeMode) {
           // Ücretsiz boost dialog'ı
           return AlertDialog(
@@ -815,8 +869,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: Text(dl.btnCancel)),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(dlgCtx, true),
+              AsyncElevatedButton(
+                onPressed: performBoost,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF97316),
                   foregroundColor: Colors.white,
@@ -879,53 +933,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         }
       },
     );
-
-    if (confirmed != true || !mounted) return;
-
-    try {
-      final token = await StorageService.getToken();
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/ads/campaigns'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'listing_id': widget.listing['id'],
-          'total_budget': 50,
-          'cpc_bid': 1,
-        }),
-      );
-      if (!mounted) return;
-      final ll = AppLocalizations.of(context)!;
-      if (resp.statusCode == 201) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final wasFree = data['is_free'] == true;
-        setState(() {
-          _campaignId = data['id'] as int?;
-          widget.listing['campaign_id'] = _campaignId;
-          widget.listing['is_sponsored'] = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid),
-          backgroundColor: const Color(0xFFF97316),
-        ));
-      } else {
-        final body = jsonDecode(resp.body) as Map<String, dynamic>;
-        final msg = body['detail'] ?? ll.boostErrorDefault;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(msg.toString()),
-          backgroundColor: resp.statusCode == 402 ? const Color(0xFFDC2626) : null,
-        ));
-      }
-    } catch (_) {
-      if (mounted) {
-        final ll = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ll.boostErrorConnection)),
-        );
-      }
-    }
   }
 
   void _openReport(BuildContext context) {
@@ -1579,16 +1586,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                                   textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                                 ),
                               )
-                            : ElevatedButton.icon(
+                            : AsyncElevatedButton(
                                 onPressed: () => _boostListing(context),
-                                icon: const Text('🔥', style: TextStyle(fontSize: 16)),
-                                label: Text(l.boostBtnStart),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFFF97316),
                                   foregroundColor: Colors.white,
                                   minimumSize: const Size(double.infinity, 50),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('🔥', style: TextStyle(fontSize: 16)),
+                                    const SizedBox(width: 8),
+                                    Text(l.boostBtnStart),
+                                  ],
                                 ),
                               ),
                       ],

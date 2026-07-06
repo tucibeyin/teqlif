@@ -28,6 +28,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
   Map<String, dynamic>? _boostCredits;
   Map<String, dynamic>? _aiCredits;
   Map<String, dynamic>? _reactivationCredits;
+  bool _isLoading = true;
   bool _isPremium = false;
   String? _planType;
 
@@ -74,6 +75,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
   }
 
   Future<void> _loadCredits() async {
+    if (mounted) setState(() => _isLoading = true);
     final results = await Future.wait([
       AnalyticsService.getBlastCredits(),
       AnalyticsService.getBoostCredits(),
@@ -87,6 +89,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
         _boostCredits        = results[1];
         _aiCredits           = results[2];
         _reactivationCredits = results[3];
+        _isLoading           = false;
       });
     }
   }
@@ -116,6 +119,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
             aiCredits: _aiCredits,
             reactivationCredits: _reactivationCredits,
             isPremium: isPremium,
+            isLoading: _isLoading,
           ),
           const SizedBox(height: 24),
           // ── Araçlar Başlığı ────────────────────────────────────────────────
@@ -719,6 +723,7 @@ class _CreditsSummaryCard extends StatelessWidget {
   final Map<String, dynamic>? aiCredits;
   final Map<String, dynamic>? reactivationCredits;
   final bool isPremium;
+  final bool isLoading;
 
   const _CreditsSummaryCard({
     required this.blastCredits,
@@ -726,6 +731,7 @@ class _CreditsSummaryCard extends StatelessWidget {
     required this.aiCredits,
     required this.reactivationCredits,
     required this.isPremium,
+    required this.isLoading,
   });
 
   void _showInfoSheet(BuildContext context, String title, String desc) {
@@ -839,10 +845,12 @@ class _CreditsSummaryCard extends StatelessWidget {
 
             return Column(
               children: [
-                InkWell(
-                  onTap: () => _showInfoSheet(context, item.titleBuilder(l), item.descBuilder(l)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                AbsorbPointer(
+                  absorbing: isLoading,
+                  child: InkWell(
+                    onTap: () => _showInfoSheet(context, item.titleBuilder(l), item.descBuilder(l)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
                         Container(
@@ -881,18 +889,29 @@ class _CreditsSummaryCard extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              l.proCreditsLimitFormat(remaining, limit),
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: barColor),
-                            ),
-                            const SizedBox(height: 4),
+                            if (isLoading)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 8),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            else ...[
+                              Text(
+                                l.proCreditsLimitFormat(remaining, limit),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: barColor),
+                              ),
+                              const SizedBox(height: 4),
+                            ],
                             SizedBox(
                               width: 60,
                               height: 4,
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(2),
                                 child: LinearProgressIndicator(
-                                  value: progress,
+                                  value: isLoading ? null : progress,
                                   backgroundColor: AppColors.border(context),
                                   valueColor: AlwaysStoppedAnimation<Color>(barColor),
                                 ),
@@ -904,8 +923,9 @@ class _CreditsSummaryCard extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
                 if (index < items.length - 1)
-                  Divider(height: 1, indent: 68, color: AppColors.border(context)),
+                  Divider(height: 1, color: AppColors.border(context), indent: 16, endIndent: 16),
               ],
             );
           }),
