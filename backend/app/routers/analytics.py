@@ -782,6 +782,17 @@ async def market_trends(
     - trending_categories: teklif hacmi en çok artan 3 kategori
     - average_spend_growth: ortalama harcama değişim yüzdesi (önceki 30 güne göre)
     """
+    try:
+        redis = await get_redis()
+        cache_key = "cache:market_trends"
+        cached_data = await redis.get(cache_key)
+        if cached_data:
+            import json
+            return json.loads(cached_data)
+    except Exception:
+        redis = None
+        cache_key = None
+
     # ── 1. Peak hours — ClickHouse ────────────────────────────────────────────
     peak_hours: list[dict] = []
     try:
@@ -881,11 +892,20 @@ async def market_trends(
     except Exception as exc:
         logger.warning("[MarketTrends] avg_spend_growth başarısız: %s", exc)
 
-    return {
+    response_data = {
         "peak_hours": peak_hours,
         "trending_categories": trending_categories,
         "average_spend_growth": avg_spend_growth,
     }
+
+    if redis and cache_key:
+        try:
+            import json
+            await redis.setex(cache_key, 300, json.dumps(response_data))
+        except Exception as e:
+            logger.warning("[MarketTrends] Redis cache set hatası: %s", e)
+
+    return response_data
 
 
 _CAT_LABELS: dict[str, str] = {
@@ -906,6 +926,18 @@ async def pro_insights(
              yayın performansı · pazar trendleri · akıllı öneriler
     """
     uid = current_user.id
+
+    # ── Cache Check ─────────────────────────────────────────────────────────
+    try:
+        redis = await get_redis()
+        cache_key = f"cache:pro_insights:{uid}"
+        cached_data = await redis.get(cache_key)
+        if cached_data:
+            import json
+            return json.loads(cached_data)
+    except Exception:
+        redis = None
+        cache_key = None
 
     # ── 1. Satıcı KPI'ları — PostgreSQL ─────────────────────────────────────
     kpis: dict = {}
@@ -1243,7 +1275,7 @@ async def pro_insights(
     except Exception as exc:
         logger.warning("[ProInsights] tips başarısız: %s", exc)
 
-    return {
+    response_data = {
         "kpis": kpis,
         "funnel": funnel,
         "hot_leads": hot_leads,
@@ -1252,6 +1284,15 @@ async def pro_insights(
         "peak_hours": peak_hours,
         "tips": tips,
     }
+    
+    if redis and cache_key:
+        try:
+            import json
+            await redis.setex(cache_key, 300, json.dumps(response_data)) # 5 mins TTL
+        except Exception as e:
+            logger.warning("[ProInsights] Redis cache set hatası: %s", e)
+
+    return response_data
 
 
 @router.get("/pro/best-stream-time")
@@ -1831,9 +1872,20 @@ async def demand_radar(
         raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
 
     try:
+        redis = await get_redis()
+        cache_key = f"cache:demand_radar:{days}"
+        cached = await redis.get(cache_key)
+        if cached:
+            import json
+            return json.loads(cached)
+    except Exception:
+        redis = None
+        cache_key = None
+
+    try:
         ch = await get_clickhouse_client()
 
-        top_queries = await ch.query(f"""
+        q_top = f"""
             SELECT query, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
@@ -1842,9 +1894,9 @@ async def demand_radar(
             HAVING cnt >= 2
             ORDER BY cnt DESC
             LIMIT 20
-        """)
+        """
 
-        by_category = await ch.query(f"""
+        q_cat = f"""
             SELECT category, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
@@ -1853,21 +1905,37 @@ async def demand_radar(
             HAVING cnt >= 2
             ORDER BY cnt DESC
             LIMIT 10
-        """)
+        """
 
-        daily_volume = await ch.query(f"""
+        q_vol = f"""
             SELECT toDate(timestamp) AS day, COUNT(*) AS cnt
             FROM search_events
             WHERE timestamp >= now() - INTERVAL {days} DAY
             GROUP BY day
             ORDER BY day
-        """)
+        """
 
-        return {
+        # asyncio.gather ile eşzamanlı sorgular
+        top_queries, by_category, daily_volume = await asyncio.gather(
+            ch.query(q_top),
+            ch.query(q_cat),
+            ch.query(q_vol)
+        )
+
+        response_data = {
             "top_queries": [{"query": r[0], "count": int(r[1])} for r in top_queries.result_rows],
             "by_category": [{"category": r[0] or "diğer", "count": int(r[1])} for r in by_category.result_rows],
             "daily_volume": [{"day": str(r[0]), "count": int(r[1])} for r in daily_volume.result_rows],
         }
+
+        if redis and cache_key:
+            try:
+                import json
+                await redis.setex(cache_key, 300, json.dumps(response_data))
+            except Exception:
+                pass
+
+        return response_data
     except Exception as exc:
         logger.error("[demand-radar] ClickHouse sorgu hatası: %s", exc, exc_info=True)
         return {"top_queries": [], "by_category": [], "daily_volume": []}
@@ -2047,18 +2115,18 @@ async def competitor_radar(
         """), {"cat": listing.category, "lid": listing_id,
                "uid": current_user.id, "price": float(listing.price)})).fetchall()
     else:
-        vec_literal = "'" + "[" + ",".join(f"{x:.8f}" for x in listing.embedding) + "]" + "'::vector"
-        rows = (await db.execute(sql_text(f"""
+        emb_str = "[" + ",".join(f"{v:.6f}" for v in listing.embedding) + "]"
+        rows = (await db.execute(sql_text("""
             SELECT l.id, l.title, l.price, l.user_id
             FROM listings l
             WHERE l.is_active = TRUE AND l.is_deleted = FALSE
               AND l.embedding IS NOT NULL
               AND l.id != :lid AND l.user_id != :uid
               AND l.price IS NOT NULL
-              AND (l.embedding <=> {vec_literal}) < 0.45
-            ORDER BY l.embedding <=> {vec_literal}
+              AND (l.embedding <=> CAST(:emb AS vector)) < 0.45
+            ORDER BY l.embedding <=> CAST(:emb AS vector)
             LIMIT 20
-        """), {"lid": listing_id, "uid": current_user.id})).fetchall()
+        """), {"lid": listing_id, "uid": current_user.id, "emb": emb_str})).fetchall()
 
     if not rows:
         return {"signal": "no_data", "competitors": [], "stats": {}}
