@@ -31,13 +31,15 @@ class AuthService {
     required String password,
     String? phone,
     String? referredBy,
+    String lang = "tr",
   }) async {
     final payload = {
       'email': email,
       'username': username,
       'full_name': fullName,
       'password': password,
-      'phone': ?phone,
+      'phone': phone,
+      'lang': lang,
       if (referredBy != null && referredBy.isNotEmpty) 'referred_by': referredBy,
     };
     final body = await apiCall(
@@ -80,12 +82,12 @@ class AuthService {
     return user;
   }
 
-  static Future<String> resendCode(String email) async {
+  static Future<String> resendCode(String email, {String lang = "tr"}) async {
     final body = await apiCall(
       () => http.post(
         Uri.parse('$kBaseUrl/auth/resend-code'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
+        body: jsonEncode({'email': email, 'lang': lang}),
       ),
     );
     return body['message'] as String;
@@ -161,12 +163,12 @@ class AuthService {
     }
   }
   
-  static Future<void> requestPasswordReset(String email) async {
+  static Future<void> requestPasswordReset(String email, {String lang = "tr"}) async {
     await apiCall(
       () => http.post(
         Uri.parse('$kBaseUrl/auth/forgot-password'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
+        body: jsonEncode({'email': email, 'lang': lang}),
       ),
     );
   }

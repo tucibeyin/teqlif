@@ -11,6 +11,7 @@ class UserRegister(BaseModel):
     password: str
     phone: str | None = None
     referred_by: str | None = None  # davet kodu (isteğe bağlı)
+    lang: str = "tr"
 
     @field_validator("username")
     @classmethod
@@ -83,6 +84,7 @@ class VerifyEmail(BaseModel):
 
 class ResendCode(BaseModel):
     email: EmailStr
+    lang: str = "tr"
 
 
 DEFAULT_NOTIF_PREFS = {
@@ -131,6 +133,7 @@ class ChangePasswordConfirm(BaseModel):
 
 class ForgotPassword(BaseModel):
     email: EmailStr
+    lang: str = "tr"
 
 
 class ResetPassword(BaseModel):

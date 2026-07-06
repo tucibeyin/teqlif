@@ -42,7 +42,7 @@ def _detect_lang(request: Request) -> str:
 
 async def _send_verification_email(
     request: Request, email: str, full_name: str, code: str, *,
-    raise_on_failure: bool = False, has_phone: bool = False,
+    raise_on_failure: bool = False, has_phone: bool = False, lang: str = "tr"
 ) -> None:
     """Doğrulama e-postasını ARQ kuyruğu üzerinden gönderir; başarısız olursa doğrudan gönderir.
 
@@ -50,12 +50,12 @@ async def _send_verification_email(
     """
     try:
         await request.app.state.arq_pool.enqueue_job(
-            "send_verification_email_task", email, full_name, code, has_phone
+            "send_verification_email_task", email, full_name, code, has_phone, lang
         )
     except Exception as e:
         logger.warning("ARQ enqueue başarısız, direkt gönderilecek [%s]: %s", email, str(e))
         try:
-            await send_verification_code(email, full_name, code, has_phone=has_phone)
+            await send_verification_code(email, full_name, code, has_phone=has_phone, lang=lang)
         except Exception as e2:
             logger.error(
                 "Doğrulama e-postası gönderilemedi [%s]: %s", email, str(e2), exc_info=True
@@ -99,7 +99,8 @@ async def _create_user_and_send_code(
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
     if data.referred_by:
         await redis.setex(f"referral_pending:{data.email}", VERIFY_CODE_TTL, data.referred_by.strip().upper())
-    await _send_verification_email(request, data.email, data.full_name, code, has_phone=bool(data.phone))
+    lang = _detect_lang(request)
+    await _send_verification_email(request, data.email, data.full_name, code, has_phone=bool(data.phone), lang=lang)
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -224,7 +225,8 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
-    await _send_verification_email(request, data.email, user.full_name, code, raise_on_failure=True)
+    lang = _detect_lang(request)
+    await _send_verification_email(request, data.email, user.full_name, code, raise_on_failure=True, lang=lang)
     return {"message": "Kod tekrar gönderildi"}
 
 
