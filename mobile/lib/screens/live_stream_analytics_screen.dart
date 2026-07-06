@@ -8,10 +8,16 @@ import '../services/storage_service.dart';
 
 class LiveStreamAnalyticsScreen extends StatefulWidget {
   final int streamId;
-  const LiveStreamAnalyticsScreen({super.key, required this.streamId});
+  final bool isEmbedded;
+  const LiveStreamAnalyticsScreen({
+    super.key,
+    required this.streamId,
+    this.isEmbedded = false,
+  });
 
   @override
-  State<LiveStreamAnalyticsScreen> createState() => _LiveStreamAnalyticsScreenState();
+  State<LiveStreamAnalyticsScreen> createState() =>
+      _LiveStreamAnalyticsScreenState();
 }
 
 class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
@@ -59,29 +65,49 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+
+    final bodyContent = _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _hasError
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.wifi_off_outlined,
+                  size: 48,
+                  color: AppColors.textSecondary(context),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l.proLoadError,
+                  style: TextStyle(color: AppColors.textSecondary(context)),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: _fetchAnalytics,
+                  child: Text(l.btnRetry),
+                ),
+              ],
+            ),
+          )
+        : _buildDashboard(context);
+
+    if (widget.isEmbedded) {
+      return bodyContent;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: Text(l.proToolStreamAnalyticsTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(
+          l.proToolStreamAnalyticsTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _hasError
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textSecondary(context)),
-                      const SizedBox(height: 16),
-                      Text(l.proLoadError, style: TextStyle(color: AppColors.textSecondary(context))),
-                      const SizedBox(height: 16),
-                      FilledButton(onPressed: _fetchAnalytics, child: Text(l.btnRetry)),
-                    ],
-                  ),
-                )
-              : _buildDashboard(context),
+      body: bodyContent,
     );
   }
 
@@ -111,35 +137,69 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                     ),
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
-                      BoxShadow(color: const Color(0xFF1E293B).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
+                      BoxShadow(
+                        color: const Color(0xFF1E293B).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
                     ],
                   ),
                   child: Column(
                     children: [
-                      Text(l.analyticsRevenue.toUpperCase(), style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
+                      Text(
+                        l.analyticsRevenue.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         '${revenue.toStringAsFixed(2)} TUCi',
-                        style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.timer_outlined, color: Colors.white70, size: 14),
+                            const Icon(
+                              Icons.timer_outlined,
+                              color: Colors.white70,
+                              size: 14,
+                            ),
                             const SizedBox(width: 6),
-                            Text(l.analyticsDuration(duration), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                            Text(
+                              l.analyticsDuration(duration),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Recommendation Alert
                 if (recommendation.isNotEmpty)
                   Container(
@@ -152,15 +212,33 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.tips_and_updates, color: Color(0xFFD97706), size: 32),
+                        const Icon(
+                          Icons.tips_and_updates,
+                          color: Color(0xFFD97706),
+                          size: 32,
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(l.analyticsAiRecommendation, style: const TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text(
+                                l.analyticsAiRecommendation,
+                                style: const TextStyle(
+                                  color: Color(0xFF92400E),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
                               const SizedBox(height: 4),
-                              Text(recommendation, style: const TextStyle(color: Color(0xFFB45309), fontSize: 13, height: 1.3)),
+                              Text(
+                                recommendation,
+                                style: const TextStyle(
+                                  color: Color(0xFFB45309),
+                                  fontSize: 13,
+                                  height: 1.3,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -177,28 +255,74 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                   crossAxisSpacing: 12,
                   childAspectRatio: 1.5,
                   children: [
-                    _MetricCard(title: l.analyticsUniqueViewers, value: '${d['unique_viewers'] ?? 0}', icon: Icons.people_alt, color: Colors.blue),
-                    _MetricCard(title: l.analyticsPeakViewers, value: '${d['peak_viewers'] ?? 0}', icon: Icons.show_chart, color: Colors.purple),
-                    _MetricCard(title: l.analyticsAvgBudget, value: d['avg_budget'] != null ? '${d['avg_budget']} ₺' : '-', icon: Icons.account_balance_wallet, color: Colors.green),
-                    _MetricCard(title: l.analyticsHesitation, value: '${d['hesitation_count'] ?? 0}', icon: Icons.psychology_alt, color: Colors.orange),
+                    _MetricCard(
+                      title: l.analyticsUniqueViewers,
+                      value: '${d['unique_viewers'] ?? 0}',
+                      icon: Icons.people_alt,
+                      color: Colors.blue,
+                    ),
+                    _MetricCard(
+                      title: l.analyticsPeakViewers,
+                      value: '${d['peak_viewers'] ?? 0}',
+                      icon: Icons.show_chart,
+                      color: Colors.purple,
+                    ),
+                    _MetricCard(
+                      title: l.analyticsAvgBudget,
+                      value: d['avg_budget'] != null
+                          ? '${d['avg_budget']} ₺'
+                          : '-',
+                      icon: Icons.account_balance_wallet,
+                      color: Colors.green,
+                    ),
+                    _MetricCard(
+                      title: l.analyticsHesitation,
+                      value: '${d['hesitation_count'] ?? 0}',
+                      icon: Icons.psychology_alt,
+                      color: Colors.orange,
+                    ),
                   ],
                 ),
 
                 const SizedBox(height: 24),
 
                 // Reach Section
-                Text(l.analyticsFeedReach, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                Text(
+                  l.analyticsFeedReach,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _ReachStat(title: l.analyticsFeedImpressions, value: '${d['swipe_impressions'] ?? 0}', icon: Icons.swipe)),
+                    Expanded(
+                      child: _ReachStat(
+                        title: l.analyticsFeedImpressions,
+                        value: '${d['swipe_impressions'] ?? 0}',
+                        icon: Icons.swipe,
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: _ReachStat(title: l.analyticsFeedReach, value: '${d['swipe_reach'] ?? 0}', icon: Icons.radar)),
+                    Expanded(
+                      child: _ReachStat(
+                        title: l.analyticsFeedReach,
+                        value: '${d['swipe_reach'] ?? 0}',
+                        icon: Icons.radar,
+                      ),
+                    ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 32),
-                Text(l.analyticsItemsSold, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                Text(
+                  l.analyticsItemsSold,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
               ],
             ),
           ),
@@ -214,41 +338,60 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 32.0),
           child: Center(
-            child: Text(l.analyticsNoAuctions, style: TextStyle(color: AppColors.textSecondary(context))),
+            child: Text(
+              l.analyticsNoAuctions,
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
           ),
         ),
       );
     }
 
     return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final item = items[index];
-          final sold = item['sold'] == true;
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.card(context),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border(context)),
-            ),
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: sold ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(sold ? Icons.check : Icons.close, color: sold ? Colors.green : Colors.red, size: 20),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        final item = items[index];
+        final sold = item['sold'] == true;
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.card(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: sold
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-              title: Text(item['item_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(sold ? '${item['winner_username']} (${item['bid_count']} bids)' : 'Unsold'),
-              trailing: Text('${item['final_price'] ?? item['start_price']} TUCi', style: TextStyle(fontWeight: FontWeight.bold, color: sold ? Colors.green : AppColors.textSecondary(context))),
+              child: Icon(
+                sold ? Icons.check : Icons.close,
+                color: sold ? Colors.green : Colors.red,
+                size: 20,
+              ),
             ),
-          );
-        },
-        childCount: items.length,
-      ),
+            title: Text(
+              item['item_name'] ?? '',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              sold
+                  ? '${item['winner_username']} (${item['bid_count']} bids)'
+                  : 'Unsold',
+            ),
+            trailing: Text(
+              '${item['final_price'] ?? item['start_price']} TUCi',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: sold ? Colors.green : AppColors.textSecondary(context),
+              ),
+            ),
+          ),
+        );
+      }, childCount: items.length),
     );
   }
 }
@@ -259,7 +402,12 @@ class _MetricCard extends StatelessWidget {
   final IconData icon;
   final MaterialColor color;
 
-  const _MetricCard({required this.title, required this.value, required this.icon, required this.color});
+  const _MetricCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -278,11 +426,29 @@ class _MetricCard extends StatelessWidget {
             children: [
               Icon(icon, size: 16, color: color),
               const SizedBox(width: 6),
-              Expanded(child: Text(title, style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context), fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Spacer(),
-          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color.shade700)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color.shade700,
+            ),
+          ),
         ],
       ),
     );
@@ -294,7 +460,11 @@ class _ReachStat extends StatelessWidget {
   final String value;
   final IconData icon;
 
-  const _ReachStat({required this.title, required this.value, required this.icon});
+  const _ReachStat({
+    required this.title,
+    required this.value,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -312,10 +482,19 @@ class _ReachStat extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
             ],
-          )
+          ),
         ],
       ),
     );

@@ -8,7 +8,11 @@ import '../services/analytics_service.dart';
 class ListingAnalyticsScreen extends StatefulWidget {
   final bool isPremium;
   final bool isEmbedded;
-  const ListingAnalyticsScreen({super.key, required this.isPremium, this.isEmbedded = false});
+  const ListingAnalyticsScreen({
+    super.key,
+    required this.isPremium,
+    this.isEmbedded = false,
+  });
 
   @override
   State<ListingAnalyticsScreen> createState() => _ListingAnalyticsScreenState();
@@ -18,8 +22,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   int _days = 30;
   bool _loading = true;
   bool _hasError = false;
-  bool _showAllListings = false;
-  static const int _kMax = 5;
+  String? _selectedListingId;
 
   List<_ListingMetric> _listings = [];
   double _videoCtr = 0;
@@ -38,7 +41,10 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _hasError = false; });
+    setState(() {
+      _loading = true;
+      _hasError = false;
+    });
 
     final results = await Future.wait([
       AnalyticsService.getVideoRoi(days: _days),
@@ -48,25 +54,31 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
     if (!mounted) return;
 
-    final roi       = results[0];
+    final roi = results[0];
     final videoPerf = results[1];
-    final gallery   = results[2];
+    final gallery = results[2];
 
     if (roi == null && videoPerf == null && gallery == null) {
-      setState(() { _loading = false; _hasError = true; });
+      setState(() {
+        _loading = false;
+        _hasError = true;
+      });
       return;
     }
 
     final videoMap = <String, Map<String, dynamic>>{
-      for (final s in (videoPerf?['stats'] as List? ?? []).cast<Map<String, dynamic>>())
+      for (final s
+          in (videoPerf?['stats'] as List? ?? []).cast<Map<String, dynamic>>())
         s['listing_id'].toString(): s,
     };
     final galleryMap = <String, Map<String, dynamic>>{
-      for (final s in (gallery?['stats'] as List? ?? []).cast<Map<String, dynamic>>())
+      for (final s
+          in (gallery?['stats'] as List? ?? []).cast<Map<String, dynamic>>())
         s['listing_id'].toString(): s,
     };
 
-    final byListing = (roi?['by_listing'] as List? ?? []).cast<Map<String, dynamic>>();
+    final byListing = (roi?['by_listing'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
     final merged = byListing.map((l) {
       final lid = l['listing_id'].toString();
       final isVideo = (l['content_type'] as String?) == 'video';
@@ -83,8 +95,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             ? (galleryMap[lid]?['avg_swipe_depth'] as num?)?.toDouble()
             : null,
       );
-    }).toList()
-      ..sort((a, b) => b.impressions.compareTo(a.impressions));
+    }).toList()..sort((a, b) => b.impressions.compareTo(a.impressions));
 
     setState(() {
       _loading = false;
@@ -103,13 +114,13 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
     final bodyContent = _loading
         ? const Center(child: CircularProgressIndicator())
         : (_hasError && widget.isPremium)
-            ? _buildError(l)
-            : Stack(
-                children: [
-                  _buildContent(l),
-                  if (!widget.isPremium) _buildPaywall(context, l),
-                ],
-              );
+        ? _buildError(l)
+        : Stack(
+            children: [
+              _buildContent(l),
+              if (!widget.isPremium) _buildPaywall(context, l),
+            ],
+          );
 
     if (widget.isEmbedded) {
       return bodyContent;
@@ -131,9 +142,16 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.textSecondary(context)),
+          Icon(
+            Icons.wifi_off_outlined,
+            size: 48,
+            color: AppColors.textSecondary(context),
+          ),
           const SizedBox(height: 12),
-          Text(l.proLoadFailed, style: TextStyle(color: AppColors.textSecondary(context))),
+          Text(
+            l.proLoadFailed,
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
           const SizedBox(height: 16),
           TextButton(onPressed: _load, child: Text(l.btnRetry)),
         ],
@@ -142,32 +160,161 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   }
 
   Widget _buildContent(AppLocalizations l) {
-    final totalImp = _videoImp + _photoImp;
-    final totalCtr = totalImp > 0
-        ? ((_videoCtr * _videoImp + _photoCtr * _photoImp) / totalImp)
-        : 0.0;
+    final _ListingMetric? selectedItem = _selectedListingId == null
+        ? null
+        : _listings.where((m) => m.id == _selectedListingId).firstOrNull;
+
+    final displayImp = selectedItem != null
+        ? selectedItem.impressions
+        : (_videoImp + _photoImp);
+    final displayCtr = selectedItem != null
+        ? selectedItem.ctr
+        : (_videoImp + _photoImp > 0
+              ? ((_videoCtr * _videoImp + _photoCtr * _photoImp) /
+                    (_videoImp + _photoImp))
+              : 0.0);
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
+      child: ListView(
+        shrinkWrap: widget.isEmbedded,
+        physics: widget.isEmbedded
+            ? const NeverScrollableScrollPhysics()
+            : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
-          _DayFilter(days: _days, l: l, onChanged: (d) { setState(() => _days = d); _load(); }),
+          _DayFilter(
+            days: _days,
+            l: l,
+            onChanged: (d) {
+              setState(() => _days = d);
+              _load();
+            },
+          ),
           const SizedBox(height: 16),
 
           if (_listings.isNotEmpty) ...[
+            // Horizontal Carousel for Selection
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _listings.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    final isSelected = _selectedListingId == null;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedListingId = null),
+                      child: Container(
+                        width: 90,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF6366F1).withValues(alpha: 0.1)
+                              : AppColors.card(context),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF6366F1)
+                                : AppColors.border(context),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.dashboard_outlined,
+                              color: isSelected
+                                  ? const Color(0xFF6366F1)
+                                  : AppColors.textSecondary(context),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              l.liveAllCategory, // "Tümü" / "All"
+                              style: TextStyle(
+                                color: isSelected
+                                    ? const Color(0xFF6366F1)
+                                    : AppColors.textPrimary(context),
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final metric = _listings[index - 1];
+                  final isSelected = _selectedListingId == metric.id;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedListingId = metric.id),
+                    child: Container(
+                      width: 140,
+                      margin: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF6366F1).withValues(alpha: 0.1)
+                            : AppColors.card(context),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF6366F1)
+                              : AppColors.border(context),
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            metric.isVideo
+                                ? Icons.play_circle_outline
+                                : Icons.photo_library_outlined,
+                            size: 20,
+                            color: AppColors.textSecondary(context),
+                          ),
+                          const Spacer(),
+                          Text(
+                            metric.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Metrics Display Area
             Row(
               children: [
                 _SummaryTile(
                   label: l.listingTotalViews,
-                  value: '+${_fmt(totalImp)}',
+                  value: '+${_fmt(displayImp)}',
                   icon: Icons.visibility_outlined,
                   color: const Color(0xFF6366F1),
                 ),
                 const SizedBox(width: 10),
                 _SummaryTile(
                   label: l.listingAvgCtr,
-                  value: '%${totalCtr.toStringAsFixed(1)}',
+                  value: '%${displayCtr.toStringAsFixed(1)}',
                   icon: Icons.ads_click_outlined,
                   color: const Color(0xFF10B981),
                 ),
@@ -175,18 +322,117 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             ),
             const SizedBox(height: 12),
 
-            if (_videoImp > 0 && _photoImp > 0)
+            if (selectedItem == null && _videoImp > 0 && _photoImp > 0)
               _ComparisonCard(videoCtr: _videoCtr, photoCtr: _photoCtr, l: l),
 
-            const SizedBox(height: 20),
-            Text(
-              l.listingPerfTitle,
-              style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary(context),
-              ),
-            ),
-            const SizedBox(height: 10),
+            if (selectedItem != null) ...[
+              const SizedBox(height: 16),
+              if (selectedItem.isVideo && selectedItem.completionPct != null)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.card(context),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border(context)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEC4899).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.av_timer,
+                          color: Color(0xFFEC4899),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l.listingVideoComplete,
+                              style: TextStyle(
+                                color: AppColors.textSecondary(context),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '%${selectedItem.completionPct!.toStringAsFixed(1)}',
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (!selectedItem.isVideo && selectedItem.avgPhotoDepth != null)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.card(context),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border(context)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.collections,
+                          color: Color(0xFFF59E0B),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l.listingGalleryLabel,
+                              style: TextStyle(
+                                color: AppColors.textSecondary(context),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              selectedItem.avgPhotoDepth! > 1.5
+                                  ? l.listingGalleryDeep(
+                                      selectedItem.avgPhotoDepth!
+                                          .toStringAsFixed(1),
+                                    )
+                                  : l.listingGalleryShallow,
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ],
 
           if (_listings.isEmpty)
@@ -194,32 +440,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
               icon: Icons.bar_chart_outlined,
               title: l.listingNoDataTitle,
               subtitle: l.listingNoDataDesc,
-            )
-          else ...[
-            ...( _showAllListings ? _listings : _listings.take(_kMax).toList())
-                .map((m) => _ListingCard(metric: m, l: l)),
-            if (_listings.length > _kMax)
-              GestureDetector(
-                onTap: () => setState(() => _showAllListings = !_showAllListings),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _showAllListings
-                            ? l.proShowLess
-                            : l.proShowAll(_listings.length - _kMax),
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context)),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(_showAllListings ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          size: 16, color: AppColors.textSecondary(context)),
-                    ],
-                  ),
-                ),
-              ),
-          ],
+            ),
         ],
       ),
     );
@@ -235,51 +456,90 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             child: Center(
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 32),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.card(context),
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: AppColors.isDark(context) ? 0.5 : 0.12), blurRadius: 24)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: AppColors.isDark(context) ? 0.5 : 0.12,
+                      ),
+                      blurRadius: 24,
+                    ),
+                  ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 64, height: 64,
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                        ),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.bar_chart_outlined, color: Colors.white, size: 32),
+                      child: const Icon(
+                        Icons.bar_chart_outlined,
+                        color: Colors.white,
+                        size: 32,
+                      ),
                     ),
                     const SizedBox(height: 20),
-                    Text(l.proUpgradeTitle,
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary(context))),
+                    Text(
+                      l.proUpgradeTitle,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Text(
                       l.listingPaywallDesc,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary(context),
+                        height: 1.5,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                          ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ElevatedButton(
-                          onPressed: () => launchUrl(Uri.parse('https://www.teqlif.com/pro-plan.html'),
-                              mode: LaunchMode.inAppWebView),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent, shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          onPressed: () => launchUrl(
+                            Uri.parse('https://www.teqlif.com/pro-plan.html'),
+                            mode: LaunchMode.inAppWebView,
                           ),
-                          child: Text(l.proUpgradeBtn,
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            l.proUpgradeBtn,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -311,9 +571,13 @@ class _ListingMetric {
   final double? completionPct;
   final double? avgPhotoDepth;
   const _ListingMetric({
-    required this.id, required this.title, required this.isVideo,
-    required this.impressions, required this.ctr,
-    this.completionPct, this.avgPhotoDepth,
+    required this.id,
+    required this.title,
+    required this.isVideo,
+    required this.impressions,
+    required this.ctr,
+    this.completionPct,
+    this.avgPhotoDepth,
   });
 }
 
@@ -323,7 +587,11 @@ class _DayFilter extends StatelessWidget {
   final int days;
   final AppLocalizations l;
   final ValueChanged<int> onChanged;
-  const _DayFilter({required this.days, required this.l, required this.onChanged});
+  const _DayFilter({
+    required this.days,
+    required this.l,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -332,23 +600,39 @@ class _DayFilter extends StatelessWidget {
         final active = days == d;
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(right: d == 7 ? 6 : 0, left: d == 30 ? 6 : 0),
+            padding: EdgeInsets.only(
+              right: d == 7 ? 6 : 0,
+              left: d == 30 ? 6 : 0,
+            ),
             child: GestureDetector(
-              onTap: () { if (days != d) onChanged(d); },
+              onTap: () {
+                if (days != d) onChanged(d);
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFF6366F1) : AppColors.card(context),
+                  color: active
+                      ? const Color(0xFF6366F1)
+                      : AppColors.card(context),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: active ? const Color(0xFF6366F1) : AppColors.border(context)),
+                  border: Border.all(
+                    color: active
+                        ? const Color(0xFF6366F1)
+                        : AppColors.border(context),
+                  ),
                 ),
-                child: Text(l.listingDayFilterN(d),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 13,
-                      color: active ? Colors.white : AppColors.textPrimary(context),
-                    )),
+                child: Text(
+                  l.listingDayFilterN(d),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: active
+                        ? Colors.white
+                        : AppColors.textPrimary(context),
+                  ),
+                ),
               ),
             ),
           ),
@@ -363,7 +647,12 @@ class _SummaryTile extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
-  const _SummaryTile({required this.label, required this.value, required this.icon, required this.color});
+  const _SummaryTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -378,7 +667,8 @@ class _SummaryTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 36, height: 36,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(9),
@@ -390,8 +680,21 @@ class _SummaryTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary(context))),
-                  Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -406,7 +709,11 @@ class _ComparisonCard extends StatelessWidget {
   final double videoCtr;
   final double photoCtr;
   final AppLocalizations l;
-  const _ComparisonCard({required this.videoCtr, required this.photoCtr, required this.l});
+  const _ComparisonCard({
+    required this.videoCtr,
+    required this.photoCtr,
+    required this.l,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -427,13 +734,21 @@ class _ComparisonCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF6366F1).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
+        border: Border.all(
+          color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(message,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF6366F1))),
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6366F1),
+            ),
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -462,8 +777,14 @@ class _SegChip extends StatelessWidget {
         color: AppColors.card(context),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text('$emoji $label  %${ctr.toStringAsFixed(1)}',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
+      child: Text(
+        '$emoji $label  %${ctr.toStringAsFixed(1)}',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary(context),
+        ),
+      ),
     );
   }
 }
@@ -478,20 +799,22 @@ class _ListingCard extends StatelessWidget {
     final ctrColor = metric.ctr >= 10
         ? const Color(0xFF22C55E)
         : metric.ctr >= 5
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFFEF4444);
+        ? const Color(0xFFF59E0B)
+        : const Color(0xFFEF4444);
 
     String? extraLabel;
     String? extraValue;
     Color extraColor = const Color(0xFF6366F1);
     if (metric.isVideo && metric.completionPct != null) {
       extraLabel = l.listingWatchRateLabel;
-      extraValue = l.listingWatchedPct(metric.completionPct!.toStringAsFixed(0));
+      extraValue = l.listingWatchedPct(
+        metric.completionPct!.toStringAsFixed(0),
+      );
       extraColor = metric.completionPct! >= 60
           ? const Color(0xFF22C55E)
           : metric.completionPct! >= 30
-              ? const Color(0xFFF59E0B)
-              : const Color(0xFFEF4444);
+          ? const Color(0xFFF59E0B)
+          : const Color(0xFFEF4444);
     } else if (!metric.isVideo && metric.avgPhotoDepth != null) {
       final depth = metric.avgPhotoDepth!;
       extraLabel = l.listingGalleryLabel;
@@ -501,8 +824,8 @@ class _ListingCard extends StatelessWidget {
       extraColor = depth >= 3
           ? const Color(0xFF22C55E)
           : depth >= 1.5
-              ? const Color(0xFFF59E0B)
-              : const Color(0xFF94A3B8);
+          ? const Color(0xFFF59E0B)
+          : const Color(0xFF94A3B8);
     }
 
     return Container(
@@ -519,12 +842,22 @@ class _ListingCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(metric.title,
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text(
+                  metric.title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(context),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const SizedBox(width: 6),
-              Text(metric.isVideo ? '🎬' : '📸', style: const TextStyle(fontSize: 16)),
+              Text(
+                metric.isVideo ? '🎬' : '📸',
+                style: const TextStyle(fontSize: 16),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -547,7 +880,10 @@ class _ListingCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: extraColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -555,8 +891,25 @@ class _ListingCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(extraValue, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: extraColor)),
-                        Text(extraLabel!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
+                        Text(
+                          extraValue,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: extraColor,
+                          ),
+                        ),
+                        Text(
+                          extraLabel!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -580,7 +933,12 @@ class _MetricPill extends StatelessWidget {
   final String value;
   final String label;
   final Color color;
-  const _MetricPill({required this.icon, required this.value, required this.label, required this.color});
+  const _MetricPill({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -598,8 +956,21 @@ class _MetricPill extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color)),
-              Text(label, style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
             ],
           ),
         ],
@@ -612,7 +983,11 @@ class _EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  const _EmptyState({required this.icon, required this.title, required this.subtitle});
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -622,12 +997,24 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(icon, size: 52, color: AppColors.textSecondary(context)),
           const SizedBox(height: 14),
-          Text(title,
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context), height: 1.5)),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary(context),
+              height: 1.5,
+            ),
+          ),
         ],
       ),
     );
