@@ -15,7 +15,7 @@ class ShareService {
   /// [origin]    — iOS iPad popup konumu (opsiyonel)
   static Future<void> show(
     BuildContext context, {
-    required String url,
+    String? url,
     required String text,
     String? imageUrl,
     Rect? origin,
@@ -24,7 +24,7 @@ class ShareService {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => _ShareSheet(
-        url: url,
+        url: url ?? '',
         text: text,
         imageUrl: imageUrl,
         origin: origin,
@@ -198,18 +198,19 @@ class _ShareSheet extends StatelessWidget {
             subtitle: 'Doğrudan WhatsApp\'a gönder',
             onTap: () async {
               Navigator.of(context).pop();
-              await ShareService.shareToWhatsApp(context, url: url, text: text, origin: origin);
+              await ShareService.shareToWhatsApp(context, url: url.isNotEmpty ? url : text, text: url.isNotEmpty ? text : '', origin: origin);
             },
           ),
-          _ShareOption(
-            icon: const Icon(Icons.copy_rounded, size: 28, color: Color(0xFF6B7280)),
-            label: 'Link Kopyala',
-            subtitle: url,
-            onTap: () async {
-              Navigator.of(context).pop();
-              await ShareService.copyLink(context, url);
-            },
-          ),
+          if (url.isNotEmpty)
+            _ShareOption(
+              icon: const Icon(Icons.copy_rounded, size: 28, color: Color(0xFF6B7280)),
+              label: 'Link Kopyala',
+              subtitle: url,
+              onTap: () async {
+                Navigator.of(context).pop();
+                await ShareService.copyLink(context, url);
+              },
+            ),
           _ShareOption(
             icon: const Icon(Icons.ios_share_rounded, size: 28, color: Color(0xFF6B7280)),
             label: 'Diğer...',
