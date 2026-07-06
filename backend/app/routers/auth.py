@@ -389,6 +389,9 @@ async def update_me(
             raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrLinkFormat", "Link http:// veya https:// ile başlamalı"))
         current_user.website_url = url or None
 
+    if data.locale is not None:
+        current_user.locale = data.locale.strip()
+
     await db.commit()
     await db.refresh(current_user)
     return current_user

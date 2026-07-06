@@ -68,6 +68,7 @@ class UserUpdate(BaseModel):
     profile_image_thumb_url: Optional[str] = None
     bio: Optional[str] = None
     website_url: Optional[str] = None
+    locale: Optional[str] = None
 
 
 class TokenOut(BaseModel):
