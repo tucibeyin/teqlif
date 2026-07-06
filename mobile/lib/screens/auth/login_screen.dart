@@ -29,6 +29,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscure = true;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingReferral();
+    });
+  }
+
+  Future<void> _checkPendingReferral() async {
+    final code = await StorageService.getPendingReferralCode();
+    if (code != null && code.isNotEmpty && mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+      );
+    }
+  }
+
+  @override
   void dispose() {
     _identifierCtrl.dispose();
     _passCtrl.dispose();
