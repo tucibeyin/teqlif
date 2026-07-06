@@ -26,6 +26,7 @@ import '../utils/error_helper.dart';
 import '../utils/start_stream_helper.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/async_button.dart';
+import '../utils/once.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'create_listing_screen.dart';
@@ -53,6 +54,7 @@ class ProfileScreenState extends State<ProfileScreen> {
   bool _purchasesLoading = false;
   int? _tuciBalance;
   List<dynamic> _tuciHistory = [];
+  final _websiteGuard = OnceGuard(); // Çift tıklama engeli
 
   // ── Arama & kategori filtresi ─────────────────────────────────────────────
   String _searchQuery = '';
@@ -584,13 +586,13 @@ class ProfileScreenState extends State<ProfileScreen> {
                         if ((_user?['website_url'] as String?)?.isNotEmpty == true) ...[
                           const SizedBox(height: 4),
                           GestureDetector(
-                            onTap: () async {
+                            onTap: () => _websiteGuard.run(() async {
                               final raw = _user!['website_url'] as String;
                               final uri = Uri.tryParse(raw);
                               if (uri != null && await canLaunchUrl(uri)) {
                                 launchUrl(uri, mode: LaunchMode.externalApplication);
                               }
-                            },
+                            }),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1141,6 +1143,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _shareLoading = false;
   final GlobalKey _shareTileKey = GlobalKey();
 
+  // Çift tıklama guard'ları
+  final _logoutGuard = OnceGuard();
+  final _proHubGuard = OnceGuard();
+  final _urlGuard    = OnceGuard();
+
   Future<void> _shareInvite() async {
     if (_shareLoading) return;
     final token = await StorageService.getToken();
@@ -1531,7 +1538,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         ),
                         child: Text(AppLocalizations.of(context)!.pro, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
                       ),
-                onTap: () async {
+                onTap: () => _proHubGuard.run(() async {
                   // StorageService'ten güncel is_premium oku — widget.user stale olabilir
                   final freshInfo = await StorageService.getUserInfo();
                   if (!context.mounted) return;
@@ -1541,7 +1548,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       builder: (_) => ProHubScreen(isPremium: freshInfo?['is_premium'] == true),
                     ),
                   );
-                },
+                }),
               ),
             ],
           ),
@@ -1698,12 +1705,12 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.help_outline,
                 label: l.profileSupportCenter,
-                onTap: () async {
+                onTap: () => _urlGuard.run(() async {
                   final uri = Uri.parse('https://www.teqlif.com/support.html');
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
-                },
+                }),
               ),
               _SettingsTile(
                 icon: Icons.question_answer_outlined,
@@ -1715,22 +1722,22 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.description_outlined,
                 label: l.profileTerms,
-                onTap: () async {
+                onTap: () => _urlGuard.run(() async {
                   final uri = Uri.parse('https://www.teqlif.com/kullanim-sartlari.html');
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
-                },
+                }),
               ),
               _SettingsTile(
                 icon: Icons.lock_outline,
                 label: l.profilePrivacy,
-                onTap: () async {
+                onTap: () => _urlGuard.run(() async {
                   final uri = Uri.parse('https://www.teqlif.com/gizlilik-politikasi');
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
-                },
+                }),
               ),
             ],
           ),
@@ -1762,11 +1769,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  onTap: () async {
+                  onTap: () => _logoutGuard.run(() async {
                     final nav = Navigator.of(context);
                     await AuthService.logout();
                     nav.pushNamedAndRemoveUntil('/login', (_) => false);
-                  },
+                  }),
                 ),
               ],
             ),

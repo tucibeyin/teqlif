@@ -15,6 +15,7 @@ import '../services/city_service.dart';
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
+import '../utils/once.dart';
 import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
@@ -46,6 +47,7 @@ class HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollCtrl = ScrollController();
 
   bool _showOnboardingBanner = false;
+  final _bannerGuard = OnceGuard();
 
   List<Map<String, dynamic>> _buildCategories(AppLocalizations l) => [
     {
@@ -384,7 +386,7 @@ class HomeScreenState extends State<HomeScreen> {
           // ── Onboarding banner ────────────────────────────
           if (_showOnboardingBanner)
             _OnboardingBanner(
-              onTap: () async {
+              onTap: () => _bannerGuard.run(() async {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -395,7 +397,7 @@ class HomeScreenState extends State<HomeScreen> {
                 if (mounted) {
                   setState(() => _showOnboardingBanner = false);
                 }
-              },
+              }),
             ),
           // ── Kategori ikonları ────────────────────────────
           SizedBox(
