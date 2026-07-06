@@ -2965,7 +2965,7 @@ abstract class AppLocalizations {
   /// No description provided for @proHubTabSales.
   ///
   /// In tr, this message translates to:
-  /// **'Satış & Perf.'**
+  /// **'Satış & Performans'**
   String get proHubTabSales;
 
   /// No description provided for @proHubTabMarket.

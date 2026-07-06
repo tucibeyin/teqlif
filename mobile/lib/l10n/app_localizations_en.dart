@@ -1521,7 +1521,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proHubTitle => 'Pro Tools';
 
   @override
-  String get proHubTabSales => 'Sales & Perf';
+  String get proHubTabSales => 'Sales & Performance';
 
   @override
   String get proHubTabMarket => 'Market & Rivals';

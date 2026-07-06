@@ -1519,7 +1519,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get proHubTitle => 'Pro Araçları';
 
   @override
-  String get proHubTabSales => 'Satış & Perf.';
+  String get proHubTabSales => 'Satış & Performans';
 
   @override
   String get proHubTabMarket => 'Piyasa & Rekabet';
