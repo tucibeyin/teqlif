@@ -2760,6 +2760,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileInviteExpirySoon => 'a short time';
 
   @override
+  String get profileInviteCodeCopied => 'Code copied!';
+
+  @override
+  String profileInviteModalExpiry(String expiry) {
+    return '⏳ Expires in: $expiry';
+  }
+
+  @override
+  String get profileInviteShareBtn => 'Share Invite Link';
+
+  @override
   String get profilePickGallery => 'Pick from Gallery';
 
   @override

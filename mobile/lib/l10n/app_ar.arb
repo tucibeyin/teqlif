@@ -1477,6 +1477,14 @@
     }
   },
   "profileInviteExpirySoon": "وقت قصير",
+  "profileInviteCodeCopied": "تم نسخ الرمز!",
+  "profileInviteModalExpiry": "⏳ صالح لمدة: {expiry}",
+  "@profileInviteModalExpiry": {
+    "placeholders": {
+      "expiry": {"type": "String"}
+    }
+  },
+  "profileInviteShareBtn": "مشاركة رابط الدعوة",
   "profilePickGallery": "اختر من المعرض",
   "profilePickCamera": "التقط صورة",
   "listingDeleteDialogTitle": "حذف الإعلان",

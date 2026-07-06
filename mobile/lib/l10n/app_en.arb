@@ -1478,6 +1478,14 @@
     }
   },
   "profileInviteExpirySoon": "a short time",
+  "profileInviteCodeCopied": "Code copied!",
+  "profileInviteModalExpiry": "⏳ Expires in: {expiry}",
+  "@profileInviteModalExpiry": {
+    "placeholders": {
+      "expiry": {"type": "String"}
+    }
+  },
+  "profileInviteShareBtn": "Share Invite Link",
   "profilePickGallery": "Pick from Gallery",
   "profilePickCamera": "Take a Photo",
   "listingDeleteDialogTitle": "Delete Listing",

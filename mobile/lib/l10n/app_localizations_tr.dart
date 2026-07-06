@@ -2761,6 +2761,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profileInviteExpirySoon => 'kısa süre';
 
   @override
+  String get profileInviteCodeCopied => 'Kod kopyalandı!';
+
+  @override
+  String profileInviteModalExpiry(String expiry) {
+    return '⏳ Son kullanım: $expiry içinde';
+  }
+
+  @override
+  String get profileInviteShareBtn => 'Davet Linkini Paylaş';
+
+  @override
   String get profilePickGallery => 'Galeriden Seç';
 
   @override

@@ -1477,6 +1477,14 @@
     }
   },
   "profileInviteExpirySoon": "kısa süre",
+  "profileInviteCodeCopied": "Kod kopyalandı!",
+  "profileInviteModalExpiry": "⏳ Son kullanım: {expiry} içinde",
+  "@profileInviteModalExpiry": {
+    "placeholders": {
+      "expiry": {"type": "String"}
+    }
+  },
+  "profileInviteShareBtn": "Davet Linkini Paylaş",
   "profilePickGallery": "Galeriden Seç",
   "profilePickCamera": "Kameradan Çek",
   "listingDeleteDialogTitle": "İlanı Sil",

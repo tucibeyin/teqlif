@@ -5104,6 +5104,24 @@ abstract class AppLocalizations {
   /// **'kısa süre'**
   String get profileInviteExpirySoon;
 
+  /// No description provided for @profileInviteCodeCopied.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kod kopyalandı!'**
+  String get profileInviteCodeCopied;
+
+  /// No description provided for @profileInviteModalExpiry.
+  ///
+  /// In tr, this message translates to:
+  /// **'⏳ Son kullanım: {expiry} içinde'**
+  String profileInviteModalExpiry(String expiry);
+
+  /// No description provided for @profileInviteShareBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet Linkini Paylaş'**
+  String get profileInviteShareBtn;
+
   /// No description provided for @profilePickGallery.
   ///
   /// In tr, this message translates to:

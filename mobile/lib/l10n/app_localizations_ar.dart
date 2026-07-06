@@ -2739,6 +2739,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileInviteExpirySoon => 'وقت قصير';
 
   @override
+  String get profileInviteCodeCopied => 'تم نسخ الرمز!';
+
+  @override
+  String profileInviteModalExpiry(String expiry) {
+    return '⏳ صالح لمدة: $expiry';
+  }
+
+  @override
+  String get profileInviteShareBtn => 'مشاركة رابط الدعوة';
+
+  @override
   String get profilePickGallery => 'اختر من المعرض';
 
   @override
