@@ -56,6 +56,9 @@ class SearchScreenState extends State<SearchScreen> {
   int _forYouPage = 0;
   bool _forYouExhausted = false;
   bool _forYouLoadingMore = false;
+  int _recentOffset = 0;
+  bool _recentExhausted = false;
+  bool _recentLoadingMore = false;
   final ScrollController _scrollCtrl = ScrollController();
   final ScrollController _forYouScrollCtrl = ScrollController();
   static const double _cardWidth = 130.0;
@@ -156,7 +159,13 @@ class SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  void _onScroll() {}
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      _loadMoreRecentListings();
+    }
+  }
 
   void _onForYouScroll() {
     if (!_forYouScrollCtrl.hasClients) return;
@@ -296,15 +305,49 @@ class SearchScreenState extends State<SearchScreen> {
     required VoidCallback onData,
   }) {
     ApiService.get<List<dynamic>>(
-      url: '$kBaseUrl/listings',
-      cacheKey: 'explore_listings',
+      url: '$kBaseUrl/listings?limit=15&offset=0',
+      cacheKey: 'explore_listings_recent',
       cacheTtl: const Duration(minutes: 5),
       bypassCache: bypassCache,
       fromJson: (raw) => raw as List,
     ).listen((recent) {
-      if (mounted) setState(() => _recentListings = recent.take(12).toList());
+      if (mounted) {
+        setState(() {
+          _recentListings = recent;
+          _recentOffset = 15;
+          _recentExhausted = recent.length < 15;
+        });
+      }
       onData();
     }, onError: (_) => onData());
+  }
+
+  Future<void> _loadMoreRecentListings() async {
+    if (!_isLoggedIn || _recentExhausted || _recentLoadingMore || _hasQuery) return;
+    setState(() => _recentLoadingMore = true);
+    try {
+      final token = await StorageService.getToken();
+      final headers = token != null ? {'Authorization': 'Bearer $token'} : null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings?limit=15&offset=$_recentOffset'),
+        headers: headers,
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() {
+          _recentListings.addAll(data);
+          _recentOffset += 15;
+          if (data.length < 15) _recentExhausted = true;
+        });
+      } else {
+        setState(() => _recentExhausted = true);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _recentExhausted = false);
+    } finally {
+      if (mounted) setState(() => _recentLoadingMore = false);
+    }
   }
 
   Future<void> _loadMoreForYou() async {
@@ -1047,6 +1090,19 @@ class SearchScreenState extends State<SearchScreen> {
                 }, childCount: _recentListings.length),
               ),
             ),
+            if (_recentLoadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: kPrimary),
+                    ),
+                  ),
+                ),
+              ),
           ],
 
           // ── Boş durum ────────────────────────────────────────────
