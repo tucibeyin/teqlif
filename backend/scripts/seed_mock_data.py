@@ -24,24 +24,46 @@ from app.models.auction import Auction
 from app.models.bid import Bid
 from app.models.purchase import Purchase
 from app.models.like import ListingLike, StreamLike
+from app.models.analytics import AnalyticsEvent, UserInteraction
 
 fake = Faker('tr_TR')
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ─── MOCK DATA SETS ──────────────────────────────────────────────────────────
 CATEGORIES = {
-    "Elektronik": [
+    "elektronik": [
         {"brand": "Apple", "models": ["iPhone 13", "iPhone 14 Pro", "iPhone 15", "MacBook Air M1", "MacBook Pro M2"]},
         {"brand": "Samsung", "models": ["Galaxy S22", "Galaxy S23 Ultra", "Galaxy Z Fold 4"]},
         {"brand": "Sony", "models": ["PlayStation 5", "Alpha a7 III"]},
         {"brand": "Nintendo", "models": ["Switch OLED"]},
     ],
-    "Giyim": [
+    "vasita": [
+        {"brand": "Mercedes", "models": ["C200", "E250", "GLA"]},
+        {"brand": "BMW", "models": ["320i", "520d", "X5"]},
+        {"brand": "Audi", "models": ["A3", "A4", "Q5"]},
+    ],
+    "emlak": [
+        {"brand": "Satılık Daire", "models": ["3+1", "2+1", "1+1"]},
+        {"brand": "Kiralık Daire", "models": ["3+1", "2+1", "Studio"]},
+    ],
+    "giyim": [
         {"brand": "Nike", "models": ["Air Force 1", "Air Jordan 1", "Dunk Low"]},
         {"brand": "Adidas", "models": ["Yeezy Boost 350", "Stan Smith", "Superstar"]},
         {"brand": "Zara", "models": ["Deri Ceket", "Kaban"]},
     ],
-    "Saat": [
+    "spor": [
+        {"brand": "Decathlon", "models": ["Çadır", "Bisiklet", "Dambıl Seti"]},
+        {"brand": "Under Armour", "models": ["Koşu Ayakkabısı", "Spor Çantası"]},
+    ],
+    "kitap": [
+        {"brand": "Roman", "models": ["Bilim Kurgu", "Klasik", "Polisiye"]},
+        {"brand": "Plak", "models": ["Rock", "Caz", "Pop"]},
+    ],
+    "ev": [
+        {"brand": "IKEA", "models": ["Koltuk", "Masa", "Kitaplık"]},
+        {"brand": "Bosch", "models": ["Buzdolabı", "Çamaşır Makinesi", "Bulaşık Makinesi"]},
+    ],
+    "diger": [
         {"brand": "Rolex", "models": ["Submariner", "Datejust", "Daytona"]},
         {"brand": "Seiko", "models": ["5 Sports", "Prospex"]},
         {"brand": "Casio", "models": ["G-Shock", "Edifice"]},
@@ -287,9 +309,47 @@ async def seed_data():
         session.add_all(bids)
         session.add_all(purchases)
         
-        print("💾 6/6: Tüm veriler veritabanına işleniyor (Commit)...")
+        print("📊 6/7: Analitik verileri (Events & Interactions) oluşturuluyor...")
+        analytics_events = []
+        user_interactions = []
+        
+        for user in users:
+            # Her kullanıcı için 5-15 arası event ve etkileşim
+            num_events = random.randint(5, 15)
+            for _ in range(num_events):
+                event_date = random_date()
+                session_id = f"sess_{uuid.uuid4().hex[:8]}"
+                
+                # Analytics Event
+                event = AnalyticsEvent(
+                    session_id=session_id,
+                    user_id=user.id,
+                    event_type=random.choice(["page_view", "listing_click", "stream_join", "search"]),
+                    device_type=random.choice(["mobile", "desktop", "tablet"]),
+                    os=random.choice(["iOS", "Android", "Windows", "macOS"]),
+                    created_at=event_date
+                )
+                analytics_events.append(event)
+                
+                # User Interaction (implicit signal)
+                if listings:
+                    random_listing = random.choice(listings)
+                    interaction = UserInteraction(
+                        user_id=user.id,
+                        item_id=random_listing.id,
+                        item_type="listing",
+                        interaction_type=random.choice(["view", "hover", "scroll"]),
+                        duration_seconds=round(random.uniform(2.0, 120.0), 1),
+                        created_at=event_date
+                    )
+                    user_interactions.append(interaction)
+                    
+        session.add_all(analytics_events)
+        session.add_all(user_interactions)
+        
+        print("💾 7/7: Tüm veriler veritabanına işleniyor (Commit)...")
         await session.commit()
-        print("✅ Başarılı! Sistem on binlerce mock data ile dolduruldu.")
+        print("✅ Başarılı! Sistem analitik verileri dahil on binlerce mock data ile dolduruldu.")
 
 if __name__ == "__main__":
     asyncio.run(seed_data())
