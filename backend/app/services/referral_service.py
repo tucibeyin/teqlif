@@ -154,16 +154,33 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     if referrer.fcm_token:
         try:
             import asyncio
+            t_ref = _get_t(referrer.locale or "tr")
             asyncio.create_task(
                 send_push(
                     token=referrer.fcm_token,
-                    title=t.get("notifReferralTitle", "Davet Ödülü!"),
-                    body=t.get("notifReferralBody", "Bir arkadaşınız ({username}) kodunuzu kullandı ve doğrulamasını tamamladı! {bonus} TUCi kazandınız.").format(username=current_user.username, bonus=REFERRER_BONUS),
+                    title=t_ref.get("notifReferralTitle", "Davet Ödülü!"),
+                    body=t_ref.get("notifReferralBody", "Bir arkadaşınız ({username}) kodunuzu kullandı ve doğrulamasını tamamladı! {bonus} TUCi kazandınız.").format(username=current_user.username, bonus=REFERRER_BONUS),
                     notif_type="referral_bonus",
                 )
             )
         except Exception as e:
-            logger.error(f"[REFERRAL] Push notification failed for {referrer.id}: {e}")
+            logger.error(f"[REFERRAL] Push notification failed for referrer {referrer.id}: {e}")
+
+    # Davet edilene (yeni kullanıcıya) bildirim gönder
+    if current_user.fcm_token:
+        try:
+            import asyncio
+            t_cur = _get_t(current_user.locale or "tr")
+            asyncio.create_task(
+                send_push(
+                    token=current_user.fcm_token,
+                    title=t_cur.get("notifReferralTitle", "Davet Ödülü!"),
+                    body=t_cur.get("apiMsgReferralSuccess", "Doğrulamalar tamamlandı! {referrer_username} sizi davet etti. Hesabınıza {your_bonus} TUCi eklendi.").format(referrer_username=referrer.username, your_bonus=REFERRED_BONUS),
+                    notif_type="welcome_bonus",
+                )
+            )
+        except Exception as e:
+            logger.error(f"[REFERRAL] Push notification failed for referred user {current_user.id}: {e}")
 
     return {
         "ok": True,

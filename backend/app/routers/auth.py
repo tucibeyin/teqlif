@@ -1080,6 +1080,7 @@ def _phone_verify_html(title: str, body: str, color: str, success: bool) -> str:
 
 @router.post("/fcm-token")
 async def save_fcm_token(
+    request: Request,
     payload: dict,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -1087,5 +1088,11 @@ async def save_fcm_token(
     token = payload.get("token")
     if token:
         current_user.fcm_token = token
-        await db.commit()
+        
+    # Her ihtimale karşı güncel dil bilgisini de kaydedelim
+    lang = _detect_lang(request)
+    if current_user.locale != lang:
+        current_user.locale = lang
+
+    await db.commit()
     return {"ok": True}

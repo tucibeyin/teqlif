@@ -45,3 +45,4 @@ class User(Base):
     referral_code: Mapped[str | None] = mapped_column(String(12), unique=True, index=True, nullable=True)
     referral_code_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     pending_referred_by: Mapped[str | None] = mapped_column(String(12), nullable=True, default=None)
+    locale: Mapped[str] = mapped_column(String(10), default="tr", nullable=False, server_default="tr")
