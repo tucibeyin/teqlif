@@ -4,8 +4,10 @@ import sys
 import uuid
 from datetime import datetime, timezone, timedelta
 
-# Yol ayarları (backend dizininde çalıştırıldığı varsayımıyla)
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Yol ayarları ve .env yükleme
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, backend_dir)
+os.chdir(backend_dir)
 
 from app.database import SessionLocal
 from app.models.user import User
