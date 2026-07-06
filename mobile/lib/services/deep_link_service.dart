@@ -44,13 +44,24 @@ class DeepLinkService {
   }
 
   /// URI'den scheme/host bağımsız içerik anahtarı üretir.
-  /// Örnek: her iki URI de "yayin/529" döner:
-  ///   https://www.teqlif.com/yayin/529
-  ///   teqlif://yayin/529
   static String _contentKey(Uri uri) {
-    final segs = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+    final segs = _getNormalizedSegments(uri);
     if (segs.length >= 2) return '${segs[0]}/${segs[1]}';
+    if (segs.isNotEmpty) return segs[0];
     return uri.toString();
+  }
+
+  /// Custom scheme (teqlif://) ve HTTPS (https://) linkleri için path'leri standartlaştırır.
+  /// https://teqlif.com/invite -> ['invite']
+  /// teqlif://invite -> ['invite']
+  /// teqlif://ilan/55 -> ['ilan', '55']
+  static List<String> _getNormalizedSegments(Uri uri) {
+    if (uri.scheme == 'teqlif') {
+      final host = uri.host;
+      final paths = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+      return [if (host.isNotEmpty) host, ...paths];
+    }
+    return uri.pathSegments.where((s) => s.isNotEmpty).toList();
   }
 
   /// Cold-start linkini okur ve kaydeder. SplashScreen'den çağrılır.
@@ -70,10 +81,10 @@ class DeepLinkService {
   /// Canlı URI stream'i — MainScreen subscribe olur.
   static Stream<Uri> get uriStream => AppLinks().uriLinkStream;
 
-  /// https://teqlif.com/invite?code=TQLF8X2 linkinden kodu çıkarır.
+  /// https://teqlif.com/invite?code=TQLF8X2 veya teqlif://invite?code=TQLF8X2 linkinden kodu çıkarır.
   /// Davet linki değilse null döner.
   static String? extractInviteCode(Uri uri) {
-    final segs = uri.pathSegments;
+    final segs = _getNormalizedSegments(uri);
     if (segs.isEmpty || segs.first != 'invite') return null;
     return uri.queryParameters['code'];
   }

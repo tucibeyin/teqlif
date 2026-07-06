@@ -358,7 +358,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     final inviteCode = DeepLinkService.extractInviteCode(uri);
     if (inviteCode != null) return;
 
-    final segments = uri.pathSegments;
+    final segments = uri.scheme == 'teqlif' 
+        ? [if (uri.host.isNotEmpty) uri.host, ...uri.pathSegments.where((s) => s.isNotEmpty)]
+        : uri.pathSegments.where((s) => s.isNotEmpty).toList();
+
     if (segments.length < 2) return;
 
     final type = segments[0];
