@@ -681,14 +681,14 @@ async def price_estimate(
 
     # 5. IQR aykırı değer temizleme (>=10 veri noktasında) — Tukey Q1/Q3 ± 1.5×IQR
     if len(scored) >= 10:
-        prices_s = sorted(float(r.final_price) for _, r in scored)
+        prices_s = sorted(float(p) for _, _, p in scored)
         n_p = len(prices_s)
         q1 = prices_s[n_p // 4]
         q3 = prices_s[(3 * n_p) // 4]
         iqr = q3 - q1
         lo = q1 - 1.5 * iqr
         hi = q3 + 1.5 * iqr
-        scored = [(s, r) for s, r in scored if lo <= float(r.final_price) <= hi]
+        scored = [(s, r, p) for s, r, p in scored if lo <= float(p) <= hi]
 
     top = scored[:30]
     cnt = len(top)
@@ -696,15 +696,16 @@ async def price_estimate(
         return _no_data
 
     # 6. Agirlikli fiyat hesaplama
-    total_w = sum(s for s, _ in top)
-    w_final = sum(s * float(r.final_price) for s, r in top) / total_w
-    start_rows = [(s, r) for s, r in top if r.start_price and float(r.start_price) > 0]
+    total_w = sum(s for s, _, _ in top)
+    w_final = sum(s * float(p) for s, _, p in top) / total_w
+    start_rows = [(s, r, p) for s, r, p in top if r.start_price and float(r.start_price) > 0]
     if start_rows:
-        sw = sum(s for s, _ in start_rows)
-        w_start = sum(s * float(r.start_price) for s, r in start_rows) / sw
+        sw = sum(s for s, _, _ in start_rows)
+        # Adjust start price by the same inflation ratio (p / final_price)
+        w_start = sum(s * float(r.start_price) * (float(p) / float(r.final_price)) for s, r, p in start_rows) / sw
     else:
         w_start = w_final * 0.72
-    all_finals = sorted(float(r.final_price) for _, r in top)
+    all_finals = sorted(float(p) for _, _, p in top)
     n = len(all_finals)
     min_price = all_finals[max(0, n // 10)]
     max_price = all_finals[min(n - 1, max(0, n - n // 10 - 1))]
