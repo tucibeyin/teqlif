@@ -149,7 +149,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
+      child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           _DayFilter(days: _days, l: l, onChanged: (d) { setState(() => _days = d); _load(); }),

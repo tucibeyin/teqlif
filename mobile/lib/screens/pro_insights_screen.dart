@@ -98,7 +98,7 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
     final peakHours   = (_data?['peak_hours']   as List?)?.cast<Map<String, dynamic>>() ?? [];
     final tips        = (_data?['tips']         as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-    return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
+    return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
       children: [
         _SectionLabel(l.proSectionOverview),
