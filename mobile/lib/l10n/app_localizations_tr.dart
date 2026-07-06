@@ -3731,4 +3731,129 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get validPasswordConfirmEmpty => 'Şifre tekrarı boş olamaz';
+
+  @override
+  String get apiErrEmailFailed => 'E-posta gönderilemedi';
+
+  @override
+  String get apiErrEmailTaken => 'Bu e-posta adresi zaten kullanılıyor';
+
+  @override
+  String get apiErrUsernameTaken => 'Bu kullanıcı adı zaten alınmış';
+
+  @override
+  String get apiErrPhoneTaken => 'Bu telefon numarası zaten kayıtlı';
+
+  @override
+  String get apiMsgRegisterSuccess =>
+      'Kayıt başarılı. E-posta adresinize doğrulama kodu gönderdik.';
+
+  @override
+  String get apiErrCodeInvalid => 'Kod hatalı veya süresi dolmuş';
+
+  @override
+  String get apiErrUserNotFound => 'Kullanıcı bulunamadı';
+
+  @override
+  String get apiErrInvalidCredentials => 'E-posta veya şifre hatalı';
+
+  @override
+  String get apiErrAccountDisabled => 'Hesabınız devre dışı';
+
+  @override
+  String get apiErrInvalidRequest => 'Geçersiz istek';
+
+  @override
+  String get apiMsgCodeResent => 'Kod tekrar gönderildi';
+
+  @override
+  String get apiMsgResetEmailSent => 'Şifre sıfırlama e-postası gönderildi';
+
+  @override
+  String get apiErrEmailFailedLater =>
+      'E-posta gönderilemedi, lütfen daha sonra tekrar deneyin.';
+
+  @override
+  String get apiErrCodeInvalidOrExpired => 'Geçersiz veya süresi dolmuş kod';
+
+  @override
+  String get apiMsgPasswordReset => 'Şifreniz başarıyla sıfırlandı';
+
+  @override
+  String get apiErrNameShort => 'Ad soyad en az 2 karakter olmalı';
+
+  @override
+  String get apiErrUsernameFormat =>
+      'Kullanıcı adı 3-50 karakter, sadece küçük harf/rakam/alt çizgi';
+
+  @override
+  String get apiErrBioLong => 'Biyografi en fazla 60 karakter olabilir';
+
+  @override
+  String get apiErrLinkFormat => 'Link http:// veya https:// ile başlamalı';
+
+  @override
+  String get apiErrAuctionNotFound =>
+      'Bu açık artırma bulunamadı veya erişim izniniz yok';
+
+  @override
+  String get apiErrTokenRequired => 'refresh_token gerekli';
+
+  @override
+  String get apiErrTokenInvalid => 'Geçersiz veya süresi dolmuş refresh token';
+
+  @override
+  String get apiMsgLogout => 'Çıkış yapıldı';
+
+  @override
+  String get apiMsgVerifyEmailSent =>
+      'Doğrulama kodu e-posta adresinize gönderildi';
+
+  @override
+  String get apiErrCurrentPasswordInvalid => 'Mevcut şifreniz hatalı';
+
+  @override
+  String get apiErrVerifyCodeInvalid =>
+      'Doğrulama kodu hatalı veya süresi dolmuş';
+
+  @override
+  String get apiMsgPasswordChanged => 'Şifreniz başarıyla değiştirildi';
+
+  @override
+  String get apiErrEmailInvalid => 'Geçersiz e-posta adresi';
+
+  @override
+  String get apiErrEmailSame => 'Bu zaten mevcut e-posta adresiniz';
+
+  @override
+  String get apiErrEmailRetry => 'E-posta gönderilemedi, lütfen tekrar deneyin';
+
+  @override
+  String get apiMsgCodeSent => 'Doğrulama kodu gönderildi';
+
+  @override
+  String get apiErrVerifyCodeNotFound =>
+      'Doğrulama kodu bulunamadı veya süresi doldu';
+
+  @override
+  String get apiErrVerifyCodeWrong => 'Doğrulama kodu hatalı';
+
+  @override
+  String get apiErrEmailMismatch => 'E-posta adresi eşleşmiyor';
+
+  @override
+  String get apiErrEmailUsed =>
+      'Bu e-posta adresi başka bir hesapta kullanılıyor';
+
+  @override
+  String get apiMsgEmailUpdated => 'E-posta adresiniz başarıyla güncellendi';
+
+  @override
+  String get apiErrPhoneFormat => 'Geçersiz telefon numarası formatı';
+
+  @override
+  String get apiErrPhoneUsed => 'Bu telefon numarası başka bir hesapta kayıtlı';
+
+  @override
+  String get apiMsgVerifyEmailSent2 => 'Doğrulama e-postası gönderildi';
 }

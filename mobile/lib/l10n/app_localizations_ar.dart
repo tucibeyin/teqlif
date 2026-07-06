@@ -3701,4 +3701,130 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get validPasswordConfirmEmpty =>
       'لا يمكن أن يكون تأكيد كلمة المرور فارغًا';
+
+  @override
+  String get apiErrEmailFailed => 'فشل إرسال البريد الإلكتروني';
+
+  @override
+  String get apiErrEmailTaken => 'عنوان البريد الإلكتروني هذا مستخدم بالفعل';
+
+  @override
+  String get apiErrUsernameTaken => 'اسم المستخدم هذا مأخوذ بالفعل';
+
+  @override
+  String get apiErrPhoneTaken => 'رقم الهاتف هذا مسجل بالفعل';
+
+  @override
+  String get apiMsgRegisterSuccess =>
+      'تم التسجيل بنجاح. أرسلنا رمز تحقق إلى بريدك الإلكتروني.';
+
+  @override
+  String get apiErrCodeInvalid => 'الرمز غير صحيح أو منتهي الصلاحية';
+
+  @override
+  String get apiErrUserNotFound => 'المستخدم غير موجود';
+
+  @override
+  String get apiErrInvalidCredentials =>
+      'البريد الإلكتروني أو كلمة المرور غير صالحة';
+
+  @override
+  String get apiErrAccountDisabled => 'حسابك معطل';
+
+  @override
+  String get apiErrInvalidRequest => 'طلب غير صالح';
+
+  @override
+  String get apiMsgCodeResent => 'تم إرسال الرمز مرة أخرى';
+
+  @override
+  String get apiMsgResetEmailSent => 'تم إرسال بريد إعادة تعيين كلمة المرور';
+
+  @override
+  String get apiErrEmailFailedLater =>
+      'فشل إرسال البريد الإلكتروني، يرجى المحاولة مرة أخرى لاحقًا.';
+
+  @override
+  String get apiErrCodeInvalidOrExpired => 'رمز غير صالح أو منتهي الصلاحية';
+
+  @override
+  String get apiMsgPasswordReset =>
+      'تم إعادة تعيين كلمة المرور الخاصة بك بنجاح';
+
+  @override
+  String get apiErrNameShort => 'يجب أن يكون الاسم الكامل من حرفين على الأقل';
+
+  @override
+  String get apiErrUsernameFormat =>
+      'يجب أن يكون اسم المستخدم من 3-50 حرفًا، أحرف صغيرة/أرقام/شرطة سفلية فقط';
+
+  @override
+  String get apiErrBioLong => 'يمكن أن تكون السيرة الذاتية 60 حرفًا كحد أقصى';
+
+  @override
+  String get apiErrLinkFormat => 'يجب أن يبدأ الرابط بـ http:// أو https://';
+
+  @override
+  String get apiErrAuctionNotFound => 'المزاد غير موجود أو تم رفض الوصول';
+
+  @override
+  String get apiErrTokenRequired => 'refresh_token مطلوب';
+
+  @override
+  String get apiErrTokenInvalid => 'رمز التحديث غير صالح أو منتهي الصلاحية';
+
+  @override
+  String get apiMsgLogout => 'تم تسجيل الخروج بنجاح';
+
+  @override
+  String get apiMsgVerifyEmailSent =>
+      'تم إرسال رمز التحقق إلى عنوان بريدك الإلكتروني';
+
+  @override
+  String get apiErrCurrentPasswordInvalid => 'كلمة المرور الحالية غير صحيحة';
+
+  @override
+  String get apiErrVerifyCodeInvalid => 'رمز التحقق غير صحيح أو منتهي الصلاحية';
+
+  @override
+  String get apiMsgPasswordChanged => 'تم تغيير كلمة المرور بنجاح';
+
+  @override
+  String get apiErrEmailInvalid => 'عنوان بريد إلكتروني غير صالح';
+
+  @override
+  String get apiErrEmailSame => 'هذا هو بالفعل عنوان بريدك الإلكتروني الحالي';
+
+  @override
+  String get apiErrEmailRetry =>
+      'فشل إرسال البريد الإلكتروني، يرجى المحاولة مرة أخرى';
+
+  @override
+  String get apiMsgCodeSent => 'تم إرسال رمز التحقق';
+
+  @override
+  String get apiErrVerifyCodeNotFound =>
+      'رمز التحقق غير موجود أو منتهي الصلاحية';
+
+  @override
+  String get apiErrVerifyCodeWrong => 'رمز التحقق غير صحيح';
+
+  @override
+  String get apiErrEmailMismatch => 'عنوان البريد الإلكتروني غير متطابق';
+
+  @override
+  String get apiErrEmailUsed =>
+      'عنوان البريد الإلكتروني هذا مستخدم في حساب آخر';
+
+  @override
+  String get apiMsgEmailUpdated => 'تم تحديث عنوان بريدك الإلكتروني بنجاح';
+
+  @override
+  String get apiErrPhoneFormat => 'تنسيق رقم الهاتف غير صالح';
+
+  @override
+  String get apiErrPhoneUsed => 'رقم الهاتف هذا مسجل في حساب آخر';
+
+  @override
+  String get apiMsgVerifyEmailSent2 => 'تم إرسال بريد التحقق';
 }

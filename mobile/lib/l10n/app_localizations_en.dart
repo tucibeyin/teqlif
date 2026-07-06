@@ -3726,4 +3726,129 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get validPasswordConfirmEmpty =>
       'Password confirmation cannot be empty';
+
+  @override
+  String get apiErrEmailFailed => 'Failed to send email';
+
+  @override
+  String get apiErrEmailTaken => 'This email address is already in use';
+
+  @override
+  String get apiErrUsernameTaken => 'This username is already taken';
+
+  @override
+  String get apiErrPhoneTaken => 'This phone number is already registered';
+
+  @override
+  String get apiMsgRegisterSuccess =>
+      'Registration successful. We sent a verification code to your email.';
+
+  @override
+  String get apiErrCodeInvalid => 'Code is incorrect or expired';
+
+  @override
+  String get apiErrUserNotFound => 'User not found';
+
+  @override
+  String get apiErrInvalidCredentials => 'Invalid email or password';
+
+  @override
+  String get apiErrAccountDisabled => 'Your account is disabled';
+
+  @override
+  String get apiErrInvalidRequest => 'Invalid request';
+
+  @override
+  String get apiMsgCodeResent => 'Code sent again';
+
+  @override
+  String get apiMsgResetEmailSent => 'Password reset email sent';
+
+  @override
+  String get apiErrEmailFailedLater =>
+      'Failed to send email, please try again later.';
+
+  @override
+  String get apiErrCodeInvalidOrExpired => 'Invalid or expired code';
+
+  @override
+  String get apiMsgPasswordReset => 'Your password has been successfully reset';
+
+  @override
+  String get apiErrNameShort => 'Full name must be at least 2 characters';
+
+  @override
+  String get apiErrUsernameFormat =>
+      'Username must be 3-50 chars, only lowercase/numbers/underscore';
+
+  @override
+  String get apiErrBioLong => 'Bio can be max 60 characters';
+
+  @override
+  String get apiErrLinkFormat => 'Link must start with http:// or https://';
+
+  @override
+  String get apiErrAuctionNotFound => 'Auction not found or access denied';
+
+  @override
+  String get apiErrTokenRequired => 'refresh_token required';
+
+  @override
+  String get apiErrTokenInvalid => 'Invalid or expired refresh token';
+
+  @override
+  String get apiMsgLogout => 'Logged out successfully';
+
+  @override
+  String get apiMsgVerifyEmailSent =>
+      'Verification code sent to your email address';
+
+  @override
+  String get apiErrCurrentPasswordInvalid => 'Current password incorrect';
+
+  @override
+  String get apiErrVerifyCodeInvalid =>
+      'Verification code incorrect or expired';
+
+  @override
+  String get apiMsgPasswordChanged => 'Password successfully changed';
+
+  @override
+  String get apiErrEmailInvalid => 'Invalid email address';
+
+  @override
+  String get apiErrEmailSame => 'This is already your current email address';
+
+  @override
+  String get apiErrEmailRetry => 'Failed to send email, please try again';
+
+  @override
+  String get apiMsgCodeSent => 'Verification code sent';
+
+  @override
+  String get apiErrVerifyCodeNotFound =>
+      'Verification code not found or expired';
+
+  @override
+  String get apiErrVerifyCodeWrong => 'Verification code incorrect';
+
+  @override
+  String get apiErrEmailMismatch => 'Email address does not match';
+
+  @override
+  String get apiErrEmailUsed => 'This email address is used in another account';
+
+  @override
+  String get apiMsgEmailUpdated =>
+      'Your email address has been updated successfully';
+
+  @override
+  String get apiErrPhoneFormat => 'Invalid phone number format';
+
+  @override
+  String get apiErrPhoneUsed =>
+      'This phone number is registered in another account';
+
+  @override
+  String get apiMsgVerifyEmailSent2 => 'Verification email sent';
 }

@@ -31,7 +31,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final email = _emailCtrl.text.trim();
     
     try {
-      await AuthService.requestPasswordReset(email);
+      final lang = AppLocalizations.of(context)!.localeName;
+      await AuthService.requestPasswordReset(email, lang: lang);
       if (!mounted) return;
       
       Navigator.of(context).pushReplacement(

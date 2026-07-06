@@ -6815,6 +6815,240 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Şifre tekrarı boş olamaz'**
   String get validPasswordConfirmEmpty;
+
+  /// No description provided for @apiErrEmailFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta gönderilemedi'**
+  String get apiErrEmailFailed;
+
+  /// No description provided for @apiErrEmailTaken.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu e-posta adresi zaten kullanılıyor'**
+  String get apiErrEmailTaken;
+
+  /// No description provided for @apiErrUsernameTaken.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kullanıcı adı zaten alınmış'**
+  String get apiErrUsernameTaken;
+
+  /// No description provided for @apiErrPhoneTaken.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu telefon numarası zaten kayıtlı'**
+  String get apiErrPhoneTaken;
+
+  /// No description provided for @apiMsgRegisterSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kayıt başarılı. E-posta adresinize doğrulama kodu gönderdik.'**
+  String get apiMsgRegisterSuccess;
+
+  /// No description provided for @apiErrCodeInvalid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kod hatalı veya süresi dolmuş'**
+  String get apiErrCodeInvalid;
+
+  /// No description provided for @apiErrUserNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcı bulunamadı'**
+  String get apiErrUserNotFound;
+
+  /// No description provided for @apiErrInvalidCredentials.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta veya şifre hatalı'**
+  String get apiErrInvalidCredentials;
+
+  /// No description provided for @apiErrAccountDisabled.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabınız devre dışı'**
+  String get apiErrAccountDisabled;
+
+  /// No description provided for @apiErrInvalidRequest.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz istek'**
+  String get apiErrInvalidRequest;
+
+  /// No description provided for @apiMsgCodeResent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kod tekrar gönderildi'**
+  String get apiMsgCodeResent;
+
+  /// No description provided for @apiMsgResetEmailSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifre sıfırlama e-postası gönderildi'**
+  String get apiMsgResetEmailSent;
+
+  /// No description provided for @apiErrEmailFailedLater.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta gönderilemedi, lütfen daha sonra tekrar deneyin.'**
+  String get apiErrEmailFailedLater;
+
+  /// No description provided for @apiErrCodeInvalidOrExpired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz veya süresi dolmuş kod'**
+  String get apiErrCodeInvalidOrExpired;
+
+  /// No description provided for @apiMsgPasswordReset.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifreniz başarıyla sıfırlandı'**
+  String get apiMsgPasswordReset;
+
+  /// No description provided for @apiErrNameShort.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ad soyad en az 2 karakter olmalı'**
+  String get apiErrNameShort;
+
+  /// No description provided for @apiErrUsernameFormat.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcı adı 3-50 karakter, sadece küçük harf/rakam/alt çizgi'**
+  String get apiErrUsernameFormat;
+
+  /// No description provided for @apiErrBioLong.
+  ///
+  /// In tr, this message translates to:
+  /// **'Biyografi en fazla 60 karakter olabilir'**
+  String get apiErrBioLong;
+
+  /// No description provided for @apiErrLinkFormat.
+  ///
+  /// In tr, this message translates to:
+  /// **'Link http:// veya https:// ile başlamalı'**
+  String get apiErrLinkFormat;
+
+  /// No description provided for @apiErrAuctionNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu açık artırma bulunamadı veya erişim izniniz yok'**
+  String get apiErrAuctionNotFound;
+
+  /// No description provided for @apiErrTokenRequired.
+  ///
+  /// In tr, this message translates to:
+  /// **'refresh_token gerekli'**
+  String get apiErrTokenRequired;
+
+  /// No description provided for @apiErrTokenInvalid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz veya süresi dolmuş refresh token'**
+  String get apiErrTokenInvalid;
+
+  /// No description provided for @apiMsgLogout.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çıkış yapıldı'**
+  String get apiMsgLogout;
+
+  /// No description provided for @apiMsgVerifyEmailSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama kodu e-posta adresinize gönderildi'**
+  String get apiMsgVerifyEmailSent;
+
+  /// No description provided for @apiErrCurrentPasswordInvalid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mevcut şifreniz hatalı'**
+  String get apiErrCurrentPasswordInvalid;
+
+  /// No description provided for @apiErrVerifyCodeInvalid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama kodu hatalı veya süresi dolmuş'**
+  String get apiErrVerifyCodeInvalid;
+
+  /// No description provided for @apiMsgPasswordChanged.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifreniz başarıyla değiştirildi'**
+  String get apiMsgPasswordChanged;
+
+  /// No description provided for @apiErrEmailInvalid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz e-posta adresi'**
+  String get apiErrEmailInvalid;
+
+  /// No description provided for @apiErrEmailSame.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu zaten mevcut e-posta adresiniz'**
+  String get apiErrEmailSame;
+
+  /// No description provided for @apiErrEmailRetry.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta gönderilemedi, lütfen tekrar deneyin'**
+  String get apiErrEmailRetry;
+
+  /// No description provided for @apiMsgCodeSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama kodu gönderildi'**
+  String get apiMsgCodeSent;
+
+  /// No description provided for @apiErrVerifyCodeNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama kodu bulunamadı veya süresi doldu'**
+  String get apiErrVerifyCodeNotFound;
+
+  /// No description provided for @apiErrVerifyCodeWrong.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama kodu hatalı'**
+  String get apiErrVerifyCodeWrong;
+
+  /// No description provided for @apiErrEmailMismatch.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta adresi eşleşmiyor'**
+  String get apiErrEmailMismatch;
+
+  /// No description provided for @apiErrEmailUsed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu e-posta adresi başka bir hesapta kullanılıyor'**
+  String get apiErrEmailUsed;
+
+  /// No description provided for @apiMsgEmailUpdated.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta adresiniz başarıyla güncellendi'**
+  String get apiMsgEmailUpdated;
+
+  /// No description provided for @apiErrPhoneFormat.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz telefon numarası formatı'**
+  String get apiErrPhoneFormat;
+
+  /// No description provided for @apiErrPhoneUsed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu telefon numarası başka bir hesapta kayıtlı'**
+  String get apiErrPhoneUsed;
+
+  /// No description provided for @apiMsgVerifyEmailSent2.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama e-postası gönderildi'**
+  String get apiMsgVerifyEmailSent2;
 }
 
 class _AppLocalizationsDelegate

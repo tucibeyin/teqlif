@@ -17,6 +17,7 @@ from app.core.exceptions import NotFoundException, BadRequestException, Forbidde
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 from app.config import settings
+from app.utils.email import _get_t
 from app.services.referral_service import apply_referral
 
 logger = get_logger(__name__)
@@ -28,6 +29,16 @@ _VERIFY_CODE_RANGE = 900_000   # üretilecek kod aralığı (100000–999999)
 _USERNAME_RE = re.compile(r"^[a-z0-9_]{3,50}$")
 _PHONE_VERIFY_TOKEN_TTL = 1800  # 30 dakika
 _SUPPORTED_LANGS = {"tr", "en", "ar"}
+
+
+
+def _msg(request, data, key: str, default: str) -> str:
+    lang = getattr(data, 'lang', None) if data else None
+    if not lang and request:
+        lang = _detect_lang(request)
+    if not lang:
+        lang = "tr"
+    return _get_t(lang).get(key, default)
 
 
 def _detect_lang(request: Request) -> str:
@@ -62,7 +73,7 @@ async def _send_verification_email(
             )
             capture_exception(e2)
             if raise_on_failure:
-                raise ServiceException("E-posta gönderilemedi")
+                raise ServiceException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailFailed", "E-posta gönderilemedi"))
 
 
 async def _create_user_and_send_code(
@@ -71,16 +82,16 @@ async def _create_user_and_send_code(
     """Yeni kullanıcıyı oluşturur, doğrulama kodunu Redis'e kaydeder ve e-posta gönderir."""
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalar_one_or_none():
-        raise BadRequestException("Bu e-posta adresi zaten kullanılıyor")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailTaken", "Bu e-posta adresi zaten kullanılıyor"))
 
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalar_one_or_none():
-        raise BadRequestException("Bu kullanıcı adı zaten alınmış")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUsernameTaken", "Bu kullanıcı adı zaten alınmış"))
 
     if data.phone:
         result = await db.execute(select(User).where(User.phone == data.phone))
         if result.scalar_one_or_none():
-            raise ConflictException("Bu telefon numarası zaten kayıtlı")
+            raise ConflictException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrPhoneTaken", "Bu telefon numarası zaten kayıtlı"))
 
     user = User(
         email=data.email,
@@ -116,7 +127,7 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
     except Exception as exc:
         logger.error("[Register] Telegram bildirimi kuyruğa eklenemedi: %s", exc)
         
-    return {"message": "Kayıt başarılı. E-posta adresinize doğrulama kodu gönderdik."}
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgRegisterSuccess", "Kayıt başarılı. E-posta adresinize doğrulama kodu gönderdik.")}
 
 
 @router.post("/verify", response_model=TokenOut)
@@ -126,12 +137,12 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
     stored_code = await redis.get(f"verify:{data.email}")
 
     if not stored_code or stored_code != data.code:
-        raise BadRequestException("Kod hatalı veya süresi dolmuş")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrCodeInvalid", "Kod hatalı veya süresi dolmuş"))
 
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
     if not user:
-        raise NotFoundException("Kullanıcı bulunamadı")
+        raise NotFoundException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUserNotFound", "Kullanıcı bulunamadı"))
 
     user.email_verified = True
     await db.commit()
@@ -186,10 +197,10 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(data.password, user.hashed_password):
-        raise UnauthorizedException("E-posta veya şifre hatalı")
+        raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrInvalidCredentials", "E-posta veya şifre hatalı"))
 
     if not user.is_active:
-        raise ForbiddenException("Hesabınız devre dışı")
+        raise ForbiddenException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrAccountDisabled", "Hesabınız devre dışı"))
 
     if not user.email_verified:
         raise EmailNotVerifiedException(email=user.email)
@@ -220,14 +231,14 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
     if not user or user.email_verified:
-        raise BadRequestException("Geçersiz istek")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrInvalidRequest", "Geçersiz istek"))
 
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
-    lang = _detect_lang(request)
+    lang = data.lang if hasattr(data, 'lang') and data.lang else _detect_lang(request)
     await _send_verification_email(request, data.email, user.full_name, code, raise_on_failure=True, lang=lang)
-    return {"message": "Kod tekrar gönderildi"}
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgCodeResent", "Kod tekrar gönderildi")}
 
 
 @router.post("/forgot-password")
@@ -238,21 +249,21 @@ async def forgot_password(request: Request, data: ForgotPassword, db: AsyncSessi
     
     # We return 200 even if user doesn't exist to prevent email enumeration
     if not user:
-        return {"message": "Şifre sıfırlama e-postası gönderildi"}
+        return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgResetEmailSent", "Şifre sıfırlama e-postası gönderildi")}
         
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"reset_pwd:{data.email}", VERIFY_CODE_TTL, code)
     
-    lang = _detect_lang(request)
+    lang = data.lang if hasattr(data, 'lang') and data.lang else _detect_lang(request)
     try:
         await send_reset_password_email(data.email, user.full_name, code, lang)
     except Exception as e:
         logger.error(f"Reset password email failed for {data.email}: {e}")
         capture_exception(e)
-        raise ServiceException("E-posta gönderilemedi, lütfen daha sonra tekrar deneyin.")
+        raise ServiceException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailFailedLater", "E-posta gönderilemedi, lütfen daha sonra tekrar deneyin."))
         
-    return {"message": "Şifre sıfırlama e-postası gönderildi"}
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgResetEmailSent", "Şifre sıfırlama e-postası gönderildi")}
 
 
 @router.post("/reset-password")
@@ -263,19 +274,19 @@ async def reset_password(request: Request, data: ResetPassword, db: AsyncSession
     stored_code = await redis.get(key)
     
     if not stored_code or stored_code != data.code:
-        raise BadRequestException("Geçersiz veya süresi dolmuş kod")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrCodeInvalidOrExpired", "Geçersiz veya süresi dolmuş kod"))
         
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
     
     if not user:
-        raise BadRequestException("Geçersiz veya süresi dolmuş kod")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrCodeInvalidOrExpired", "Geçersiz veya süresi dolmuş kod"))
         
     user.hashed_password = hash_password(data.new_password)
     await db.commit()
     await redis.delete(key)
     
-    return {"message": "Şifreniz başarıyla sıfırlandı"}
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgPasswordReset", "Şifreniz başarıyla sıfırlandı")}
 
 
 @router.get("/check-username")
@@ -349,17 +360,17 @@ async def update_me(
     if data.full_name is not None:
         data.full_name = data.full_name.strip()
         if len(data.full_name) < 2:
-            raise BadRequestException("Ad soyad en az 2 karakter olmalı")
+            raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrNameShort", "Ad soyad en az 2 karakter olmalı"))
         current_user.full_name = data.full_name
 
     if data.username is not None:
         if not _USERNAME_RE.match(data.username):
-            raise BadRequestException("Kullanıcı adı 3-50 karakter, sadece küçük harf/rakam/alt çizgi")
+            raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUsernameFormat", "Kullanıcı adı 3-50 karakter, sadece küçük harf/rakam/alt çizgi"))
         result = await db.execute(
             select(User).where(User.username == data.username, User.id != current_user.id)
         )
         if result.scalar_one_or_none():
-            raise BadRequestException("Bu kullanıcı adı zaten alınmış")
+            raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUsernameTaken", "Bu kullanıcı adı zaten alınmış"))
         current_user.username = data.username
 
     if data.profile_image_url is not None:
@@ -371,13 +382,13 @@ async def update_me(
     if data.bio is not None:
         bio = data.bio.strip()
         if len(bio) > 60:
-            raise BadRequestException("Biyografi en fazla 60 karakter olabilir")
+            raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrBioLong", "Biyografi en fazla 60 karakter olabilir"))
         current_user.bio = bio or None
 
     if data.website_url is not None:
         url = data.website_url.strip()
         if url and not url.startswith(("http://", "https://")):
-            raise BadRequestException("Link http:// veya https:// ile başlamalı")
+            raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrLinkFormat", "Link http:// veya https:// ile başlamalı"))
         current_user.website_url = url or None
 
     await db.commit()
@@ -640,7 +651,7 @@ async def my_auction_context(
         }
 
     from app.core.exceptions import NotFoundException
-    raise NotFoundException("Bu açık artırma bulunamadı veya erişim izniniz yok")
+    raise NotFoundException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrAuctionNotFound", "Bu açık artırma bulunamadı veya erişim izniniz yok"))
 
 
 @router.post("/refresh")
@@ -655,17 +666,17 @@ async def refresh_token(
     # Cookie öncelikli (web), body fallback (mobile)
     token = cookie_refresh or payload.get("refresh_token", "")
     if not token:
-        raise BadRequestException("refresh_token gerekli")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrTokenRequired", "refresh_token gerekli"))
 
     redis = await get_redis()
     user_id_str = await redis.get(f"refresh:{token}")
     if not user_id_str:
-        raise UnauthorizedException("Geçersiz veya süresi dolmuş refresh token")
+        raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrTokenInvalid", "Geçersiz veya süresi dolmuş refresh token"))
 
     result = await db.execute(select(User).where(User.id == int(user_id_str)))
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
-        raise UnauthorizedException("Kullanıcı bulunamadı")
+        raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUserNotFound", "Kullanıcı bulunamadı"))
 
     # Eski token'ı sil (rotation), yeni token çifti üret
     await redis.delete(f"refresh:{token}")
@@ -681,7 +692,7 @@ async def refresh_token(
 async def logout(response: Response):
     """Cookie'leri temizler. Mobile token'ları frontend tarafından silinir."""
     clear_auth_cookies(response)
-    return {"message": "Çıkış yapıldı"}
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgLogout", "Çıkış yapıldı")}
 
 
 @router.post("/change-password/send-code")
@@ -696,8 +707,8 @@ async def change_password_send_code(
     except Exception as e:
         logger.error("Şifre değişim kodu e-postası gönderilemedi [user_id=%s]: %s", current_user.id, str(e), exc_info=True)
         capture_exception(e)
-        raise ServiceException("E-posta gönderilemedi")
-    return {"message": "Doğrulama kodu e-posta adresinize gönderildi"}
+        raise ServiceException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailFailed", "E-posta gönderilemedi"))
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgVerifyEmailSent", "Doğrulama kodu e-posta adresinize gönderildi")}
 
 
 @router.post("/change-password/confirm")
@@ -707,15 +718,15 @@ async def change_password_confirm(
     db: AsyncSession = Depends(get_db),
 ):
     if not verify_password(data.current_password, current_user.hashed_password):
-        raise BadRequestException("Mevcut şifreniz hatalı")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrCurrentPasswordInvalid", "Mevcut şifreniz hatalı"))
     redis = await get_redis()
     stored_code = await redis.get(f"chpwd:{current_user.id}")
     if not stored_code or stored_code != data.code:
-        raise BadRequestException("Doğrulama kodu hatalı veya süresi dolmuş")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrVerifyCodeInvalid", "Doğrulama kodu hatalı veya süresi dolmuş"))
     current_user.hashed_password = hash_password(data.new_password)
     await db.commit()
     await redis.delete(f"chpwd:{current_user.id}")
-    return {"message": "Şifreniz başarıyla değiştirildi"}
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgPasswordChanged", "Şifreniz başarıyla değiştirildi")}
 
 
 @router.get("/notification-prefs", response_model=NotificationPrefs)
@@ -761,16 +772,16 @@ async def request_email_change(
     try:
         validate_email(data.new_email)
     except Exception:
-        raise BadRequestException("Geçersiz e-posta adresi")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailInvalid", "Geçersiz e-posta adresi"))
 
     new_email = data.new_email.lower().strip()
 
     if new_email == current_user.email:
-        raise BadRequestException("Bu zaten mevcut e-posta adresiniz")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailSame", "Bu zaten mevcut e-posta adresiniz"))
 
     existing = await db.scalar(select(User).where(User.email == new_email))
     if existing:
-        raise BadRequestException("Bu e-posta adresi zaten kullanılıyor")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailTaken", "Bu e-posta adresi zaten kullanılıyor"))
 
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
@@ -784,9 +795,9 @@ async def request_email_change(
         await send_verification_code(new_email, current_user.full_name, code)
     except Exception as exc:
         logger.error("[EMAIL_CHANGE] Kod gönderilemedi | user_id=%s | %s", current_user.id, exc)
-        raise BadRequestException("E-posta gönderilemedi, lütfen tekrar deneyin")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailRetry", "E-posta gönderilemedi, lütfen tekrar deneyin"))
 
-    return {"message": "Doğrulama kodu gönderildi"}
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgCodeSent", "Doğrulama kodu gönderildi")}
 
 
 @router.post("/email-change/verify")
@@ -801,27 +812,27 @@ async def verify_email_change(
     redis = await get_redis()
     raw = await redis.get(f"email_change:{current_user.id}")
     if not raw:
-        raise BadRequestException("Doğrulama kodu bulunamadı veya süresi doldu")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrVerifyCodeNotFound", "Doğrulama kodu bulunamadı veya süresi doldu"))
 
     stored = _json.loads(raw)
     if stored["code"] != data.code.strip():
-        raise BadRequestException("Doğrulama kodu hatalı")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrVerifyCodeWrong", "Doğrulama kodu hatalı"))
     if stored["new_email"] != data.new_email.lower().strip():
-        raise BadRequestException("E-posta adresi eşleşmiyor")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailMismatch", "E-posta adresi eşleşmiyor"))
 
     # Çakışma son kontrolü
     existing = await db.scalar(
         select(User).where(User.email == stored["new_email"], User.id != current_user.id)
     )
     if existing:
-        raise BadRequestException("Bu e-posta adresi başka bir hesapta kullanılıyor")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrEmailUsed", "Bu e-posta adresi başka bir hesapta kullanılıyor"))
 
     current_user.email = stored["new_email"]
     await db.commit()
     await redis.delete(f"email_change:{current_user.id}")
 
     logger.info("[EMAIL_CHANGE] E-posta güncellendi | user_id=%s → %s", current_user.id, stored["new_email"])
-    return {"message": "E-posta adresiniz başarıyla güncellendi"}
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgEmailUpdated", "E-posta adresiniz başarıyla güncellendi")}
 
 
 class _PhoneVerifyRequest(BaseModel):
@@ -841,14 +852,14 @@ async def request_phone_verification(
 
     valid, err = SecureInputValidator.validate_phone(data.phone)
     if not valid:
-        raise BadRequestException("Geçersiz telefon numarası formatı")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrPhoneFormat", "Geçersiz telefon numarası formatı"))
 
     # Başka bir kullanıcıda kayıtlıysa reddet
     existing = await db.scalar(
         select(User).where(User.phone == data.phone, User.id != current_user.id)
     )
     if existing:
-        raise BadRequestException("Bu telefon numarası başka bir hesapta kayıtlı")
+        raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrPhoneUsed", "Bu telefon numarası başka bir hesapta kayıtlı"))
 
     # Telefonu kaydet (henüz doğrulanmamış)
     current_user.phone = data.phone
@@ -881,7 +892,7 @@ async def request_phone_verification(
         logger.error("[PHONE_VERIFY] E-posta gönderilemedi | user_id=%s | %s", current_user.id, exc)
 
     logger.info("[PHONE_VERIFY] Doğrulama e-postası gönderildi | user_id=%s phone=%s", current_user.id, data.phone)
-    return {"message": "Doğrulama e-postası gönderildi"}
+    return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgVerifyEmailSent2", "Doğrulama e-postası gönderildi")}
 
 
 @router.get("/phone-verify/confirm")

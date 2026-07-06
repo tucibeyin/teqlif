@@ -73,7 +73,8 @@ class _VerifyScreenState extends State<VerifyScreen> {
   Future<void> _resend() async {
     setState(() { _resending = true; _success = null; });
     try {
-      final msg = await AuthService.resendCode(widget.email);
+      final lang = AppLocalizations.of(context)!.localeName;
+      final msg = await AuthService.resendCode(widget.email, lang: lang);
       if (mounted) setState(() => _success = msg);
     } catch (e) {
       if (mounted) showErrorSnackbar(context, e);

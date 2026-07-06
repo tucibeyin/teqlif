@@ -3770,4 +3770,135 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get validPasswordConfirmEmpty =>
       'Подтверждение пароля не может быть пустым';
+
+  @override
+  String get apiErrEmailFailed => 'Не удалось отправить электронное письмо';
+
+  @override
+  String get apiErrEmailTaken =>
+      'Этот адрес электронной почты уже используется';
+
+  @override
+  String get apiErrUsernameTaken => 'Это имя пользователя уже занято';
+
+  @override
+  String get apiErrPhoneTaken => 'Этот номер телефона уже зарегистрирован';
+
+  @override
+  String get apiMsgRegisterSuccess =>
+      'Регистрация успешна. Мы отправили код подтверждения на вашу электронную почту.';
+
+  @override
+  String get apiErrCodeInvalid => 'Код неверен или просрочен';
+
+  @override
+  String get apiErrUserNotFound => 'Пользователь не найден';
+
+  @override
+  String get apiErrInvalidCredentials =>
+      'Неверный адрес электронной почты или пароль';
+
+  @override
+  String get apiErrAccountDisabled => 'Ваш аккаунт отключен';
+
+  @override
+  String get apiErrInvalidRequest => 'Неверный запрос';
+
+  @override
+  String get apiMsgCodeResent => 'Код отправлен снова';
+
+  @override
+  String get apiMsgResetEmailSent => 'Письмо для сброса пароля отправлено';
+
+  @override
+  String get apiErrEmailFailedLater =>
+      'Не удалось отправить электронное письмо, попробуйте позже.';
+
+  @override
+  String get apiErrCodeInvalidOrExpired => 'Неверный или просроченный код';
+
+  @override
+  String get apiMsgPasswordReset => 'Ваш пароль успешно сброшен';
+
+  @override
+  String get apiErrNameShort =>
+      'Полное имя должно содержать не менее 2 символов';
+
+  @override
+  String get apiErrUsernameFormat =>
+      'Имя пользователя должно быть от 3 до 50 символов, только строчные буквы/цифры/подчеркивание';
+
+  @override
+  String get apiErrBioLong => 'Биография может быть максимум 60 символов';
+
+  @override
+  String get apiErrLinkFormat =>
+      'Ссылка должна начинаться с http:// или https://';
+
+  @override
+  String get apiErrAuctionNotFound => 'Аукцион не найден или доступ запрещен';
+
+  @override
+  String get apiErrTokenRequired => 'требуется refresh_token';
+
+  @override
+  String get apiErrTokenInvalid => 'Неверный или просроченный токен обновления';
+
+  @override
+  String get apiMsgLogout => 'Успешный выход';
+
+  @override
+  String get apiMsgVerifyEmailSent =>
+      'Код подтверждения отправлен на ваш адрес электронной почты';
+
+  @override
+  String get apiErrCurrentPasswordInvalid => 'Текущий пароль неверен';
+
+  @override
+  String get apiErrVerifyCodeInvalid =>
+      'Код подтверждения неверен или просрочен';
+
+  @override
+  String get apiMsgPasswordChanged => 'Пароль успешно изменен';
+
+  @override
+  String get apiErrEmailInvalid => 'Неверный адрес электронной почты';
+
+  @override
+  String get apiErrEmailSame => 'Это уже ваш текущий адрес электронной почты';
+
+  @override
+  String get apiErrEmailRetry =>
+      'Не удалось отправить электронное письмо, попробуйте еще раз';
+
+  @override
+  String get apiMsgCodeSent => 'Код подтверждения отправлен';
+
+  @override
+  String get apiErrVerifyCodeNotFound =>
+      'Код подтверждения не найден или просрочен';
+
+  @override
+  String get apiErrVerifyCodeWrong => 'Код подтверждения неверен';
+
+  @override
+  String get apiErrEmailMismatch => 'Адрес электронной почты не совпадает';
+
+  @override
+  String get apiErrEmailUsed =>
+      'Этот адрес электронной почты используется в другом аккаунте';
+
+  @override
+  String get apiMsgEmailUpdated =>
+      'Ваш адрес электронной почты успешно обновлен';
+
+  @override
+  String get apiErrPhoneFormat => 'Неверный формат номера телефона';
+
+  @override
+  String get apiErrPhoneUsed =>
+      'Этот номер телефона зарегистрирован в другом аккаунте';
+
+  @override
+  String get apiMsgVerifyEmailSent2 => 'Письмо с подтверждением отправлено';
 }
