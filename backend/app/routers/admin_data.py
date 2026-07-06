@@ -57,8 +57,9 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
     total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
     active_users = (await db.execute(select(func.count(User.id)).where(User.is_active == True))).scalar() or 0  # noqa: E712
     banned_users = (await db.execute(select(func.count(User.id)).where(User.is_active == False))).scalar() or 0  # noqa: E712
+    tomorrow = today + timedelta(days=1)
     today_users = (await db.execute(
-        select(func.count(User.id)).where(cast(User.created_at, Date) == today)
+        select(func.count(User.id)).where(User.created_at >= today, User.created_at < tomorrow)
     )).scalar() or 0
 
     active_listings = (await db.execute(
@@ -79,7 +80,8 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
         select(func.coalesce(func.sum(TuciTransaction.amount), 0))
         .where(
             TuciTransaction.amount < 0,
-            cast(TuciTransaction.created_at, Date) == today,
+            TuciTransaction.created_at >= today,
+            TuciTransaction.created_at < tomorrow,
         )
     )).scalar() or 0
 
@@ -87,8 +89,9 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
     growth = []
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
+        day_end = day + timedelta(days=1)
         count = (await db.execute(
-            select(func.count(User.id)).where(cast(User.created_at, Date) == day)
+            select(func.count(User.id)).where(User.created_at >= day, User.created_at < day_end)
         )).scalar() or 0
         growth.append({"date": str(day), "count": count})
 
