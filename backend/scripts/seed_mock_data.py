@@ -256,8 +256,9 @@ async def seed_data():
         for auction in auctions:
             if auction.winner_id:
                 bid = Bid(
-                    auction_id=auction.id,
-                    user_id=auction.winner_id,
+                    stream_id=auction.stream_id,
+                    bidder_id=auction.winner_id,
+                    bidder_username=auction.winner_username,
                     amount=auction.final_price,
                     created_at=auction.ended_at - timedelta(seconds=random.randint(1, 30))
                 )
