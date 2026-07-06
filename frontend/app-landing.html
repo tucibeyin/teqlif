@@ -136,13 +136,6 @@
 
       btnStore.textContent = isIOS ? 'App Store\'dan İndir' : 'Play Store\'dan İndir';
 
-      // Sayfa yüklendiğinde otomatik olarak uygulamayı açmayı dene
-      if (appScheme && appScheme !== '') {
-        setTimeout(function() {
-          window.location.href = appScheme;
-        }, 300);
-      }
-
       // "Uygulamayı Aç" Butonu
       btnOpen.addEventListener('click', function (e) {
         e.preventDefault();
