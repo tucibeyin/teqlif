@@ -20,31 +20,68 @@ class LiveStreamHistoryScreen extends StatefulWidget {
 class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
   List<dynamic> _streams = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
   bool _hasError = false;
   int? _selectedStreamId;
+  String? _cursor;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _fetchHistory();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 50) {
+        if (!_isLoading && !_isLoadingMore && _hasMore) {
+          _fetchHistory(loadMore: true);
+        }
+      }
+    });
   }
 
-  Future<void> _fetchHistory() async {
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-    });
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchHistory({bool loadMore = false}) async {
+    if (!loadMore) {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+        _streams.clear();
+        _cursor = null;
+        _hasMore = true;
+      });
+    } else {
+      setState(() => _isLoadingMore = true);
+    }
+
     try {
       final token = await StorageService.getToken();
+      String url = '$kBaseUrl/streams/my-history?limit=20';
+      if (_cursor != null) url += '&cursor=$_cursor';
+
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/streams/my-history'),
+        Uri.parse(url),
         headers: {'Authorization': 'Bearer $token'},
       );
+
       if (resp.statusCode == 200) {
         if (mounted) {
+          final newStreams = jsonDecode(resp.body) as List;
           setState(() {
-            _streams = jsonDecode(resp.body) as List;
+            if (newStreams.isNotEmpty) {
+              _streams.addAll(newStreams);
+              _cursor = newStreams.last['started_at'] as String?;
+            }
+            if (newStreams.length < 20) {
+              _hasMore = false;
+            }
             _isLoading = false;
+            _isLoadingMore = false;
           });
         }
       } else {
@@ -53,8 +90,9 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _hasError = true;
+          if (!loadMore) _hasError = true;
           _isLoading = false;
+          _isLoadingMore = false;
         });
       }
     }
@@ -120,9 +158,10 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
           SizedBox(
             height: 100,
             child: ListView.builder(
+              controller: _scrollController,
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _streams.length + 1,
+              itemCount: _streams.length + 1 + (_hasMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == 0) {
                   final isSelected = _selectedStreamId == null;
@@ -169,6 +208,18 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                           ),
                         ],
                       ),
+                    ),
+                  );
+                }
+
+                if (index == _streams.length + 1) {
+                  return Container(
+                    width: 50,
+                    alignment: Alignment.center,
+                    child: const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   );
                 }

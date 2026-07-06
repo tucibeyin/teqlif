@@ -3263,4 +3263,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get proTabAudience => 'الجمهور';
+
+  @override
+  String get listingVideoComplete => 'Video Tamamlandı';
+
+  @override
+  String get audienceTotalViewers => 'Toplam İzleyici';
 }

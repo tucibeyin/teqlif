@@ -20,6 +20,7 @@ import 'smart_bid_picker.dart';
 import 'swipe_to_bid_button.dart';
 import 'phone_input_field.dart';
 import '../utils/bid_calculator.dart';
+import 'swipe_paginated_list.dart';
 
 class AuctionPanel extends ConsumerStatefulWidget {
   final int streamId;
@@ -1833,15 +1834,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
   final _itemCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
   final _binCtrl = TextEditingController();
-  List<dynamic> _listings = [];
-  bool _loadingListings = false;
   dynamic _selectedListing;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadListings();
-  }
 
   @override
   void dispose() {
@@ -1851,23 +1844,20 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
     super.dispose();
   }
 
-  Future<void> _loadListings() async {
-    setState(() => _loadingListings = true);
+  Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
+    final token = await StorageService.getToken();
+    if (token == null) return [];
+    final uri = widget.hostUserId != null
+        ? Uri.parse('$kBaseUrl/listings?user_id=${widget.hostUserId}&active=true&limit=20&offset=$offset')
+        : Uri.parse('$kBaseUrl/listings/my?active=true&limit=20&offset=$offset');
     try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-      // Moderatör/co-host → host'un ilanlarını yükle; gerçek host → kendi ilanları
-      final uri = widget.hostUserId != null
-          ? Uri.parse('$kBaseUrl/listings?user_id=${widget.hostUserId}&active=true')
-          : Uri.parse('$kBaseUrl/listings/my?active=true');
       final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
-      if (resp.statusCode == 200 && mounted) {
-        setState(() => _listings = jsonDecode(resp.body) as List);
+      if (resp.statusCode == 200) {
+        final list = jsonDecode(resp.body) as List;
+        return list.map((e) => Map<String, dynamic>.from(e)).toList();
       }
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _loadingListings = false);
-    }
+    } catch (_) {}
+    return [];
   }
 
   String _fmtPrice(dynamic price) {
@@ -1903,90 +1893,77 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
               const SizedBox(height: 10),
               _inputField(_binCtrl, l.auctionBuyNowPriceHint, isNumber: true),
             ] else ...[
-              if (_loadingListings)
-                const Column(
-                  children: [
-                    ShimmerListRow(),
-                    ShimmerListRow(),
-                    ShimmerListRow(),
-                  ],
-                )
-              else if (_listings.isEmpty)
-                Padding(
+              SwipePaginatedList<Map<String, dynamic>>(
+                fetchPage: _fetchPage,
+                itemHeight: 64, // 10 padding + 38 height + 10 padding + 6 margin
+                maxVisible: 4,
+                emptyWidget: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Text(l.auctionNoActiveListings,
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
-                )
-              else
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _listings.length,
-                    itemBuilder: (_, i) {
-                      final l = _listings[i];
-                      final isSelected = _selectedListing != null && _selectedListing['id'] == l['id'];
-                      return GestureDetector(
-                        onTap: () => setState(() => _selectedListing = l),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isSelected ? kPrimary.withValues(alpha: 0.15) : const Color(0xFF0F172A),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isSelected ? kPrimary : const Color(0xFF334155),
-                              width: isSelected ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Row(children: [
-                            // Küçük fotoğraf
-                            Builder(builder: (_) {
-                              final imgs = l['image_urls'] as List? ?? [];
-                              final rawImg = imgs.isNotEmpty ? imgs[0] as String : (l['image_url'] as String?);
-                              final url = rawImg != null ? imgUrl(rawImg) : null;
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: url != null && url.isNotEmpty
-                                    ? CachedNetworkImage(
-                                        memCacheWidth: 400, memCacheHeight: 400, imageUrl: url,
-                                        width: 38, height: 38,
-                                        fit: BoxFit.cover,
-                                        placeholder: (_, _) => const ShimmerBox(
-                                          width: 38, height: 38,
-                                        ),
-                                        errorWidget: (_, _, _) => _lpPlaceholder())
-                                    : _lpPlaceholder(),
-                              );
-                            }),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(l['title'] ?? '',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13)),
-                                  if (l['price'] != null)
-                                    Text(_fmtPrice(l['price']),
-                                        style: const TextStyle(
-                                            color: Color(0xFF4ADE80), fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                            if (isSelected)
-                              const Icon(Icons.check_circle, color: kPrimary, size: 18),
-                          ]),
-                        ),
-                      );
-                    },
-                  ),
                 ),
+                itemBuilder: (ctx, lItem) {
+                  final isSelected = _selectedListing != null && _selectedListing['id'] == lItem['id'];
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedListing = lItem),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? kPrimary.withValues(alpha: 0.15) : const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected ? kPrimary : const Color(0xFF334155),
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(children: [
+                        // Küçük fotoğraf
+                        Builder(builder: (_) {
+                          final imgs = lItem['image_urls'] as List? ?? [];
+                          final rawImg = imgs.isNotEmpty ? imgs[0] as String : (lItem['image_url'] as String?);
+                          final url = rawImg != null ? imgUrl(rawImg) : null;
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: url != null && url.isNotEmpty
+                                ? CachedNetworkImage(
+                                    memCacheWidth: 400, memCacheHeight: 400, imageUrl: url,
+                                    width: 38, height: 38,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, _) => const ShimmerBox(
+                                      width: 38, height: 38,
+                                    ),
+                                    errorWidget: (_, _, _) => _lpPlaceholder())
+                                : _lpPlaceholder(),
+                          );
+                        }),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(lItem['title'] ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13)),
+                              if (lItem['price'] != null)
+                                Text(_fmtPrice(lItem['price']),
+                                    style: const TextStyle(
+                                        color: Color(0xFF4ADE80), fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          const Icon(Icons.check_circle, color: kPrimary, size: 18),
+                      ]),
+                    ),
+                  );
+                },
+              ),
               if (_fromListing) ...[
                 const SizedBox(height: 10),
                 _inputField(_priceCtrl, l.auctionStartPrice, isNumber: true),

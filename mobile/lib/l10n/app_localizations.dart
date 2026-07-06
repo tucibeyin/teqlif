@@ -6015,6 +6015,18 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Kitle'**
   String get proTabAudience;
+
+  /// No description provided for @listingVideoComplete.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video Tamamlandı'**
+  String get listingVideoComplete;
+
+  /// No description provided for @audienceTotalViewers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam İzleyici'**
+  String get audienceTotalViewers;
 }
 
 class _AppLocalizationsDelegate

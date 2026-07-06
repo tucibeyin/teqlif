@@ -237,6 +237,8 @@ class ListingService:
         category: Optional[str] = None,
         location: Optional[str] = None,
         current_user_id: Optional[int] = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> list:
         q = (
             select(Listing, User)
@@ -252,8 +254,8 @@ class ListingService:
         if category:
             q = q.where(Listing.category == category)
         if location:
-            q = q.where(Listing.location == location)
-        q = q.order_by(User.is_premium.desc(), Listing.created_at.desc())
+            q = q.where(Listing.location.ilike(f"%{location}%"))
+        q = q.order_by(User.is_premium.desc(), Listing.created_at.desc()).limit(limit).offset(offset)
         result = await self.db.execute(q)
         rows = result.all()
 
@@ -296,16 +298,21 @@ class ListingService:
         ]
 
     # ── Kendi İlanlarım ──────────────────────────────────────────────────────
-    async def get_my_listings(self, current_user: User, active: Optional[bool] = None) -> list:
-        q = (
+    async def get_my_listings(self, current_user: User, active: Optional[bool] = None, q: Optional[str] = None, category: Optional[str] = None, limit: int = 50, offset: int = 0) -> list:
+        query = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(Listing.user_id == current_user.id, Listing.is_deleted == False)  # noqa: E712
         )
         if active is not None:
-            q = q.where(Listing.is_active == active)  # noqa: E712
-        q = q.order_by(Listing.created_at.desc())
-        result = await self.db.execute(q)
+            query = query.where(Listing.is_active == active)  # noqa: E712
+        if category:
+            query = query.where(Listing.category == category)
+        if q:
+            query = query.where(Listing.title.ilike(f"%{q}%"))
+        
+        query = query.order_by(Listing.created_at.desc()).limit(limit).offset(offset)
+        result = await self.db.execute(query)
         rows = result.all()
 
         listing_ids = [listing.id for listing, _ in rows]

@@ -199,7 +199,7 @@ class ProfileScreenState extends State<ProfileScreen> {
     _subs.add(
       // ── İlanlar (cache: user_listings_data) ──────────────────────────────
       ApiService.get<List<dynamic>>(
-        url: '$kBaseUrl/listings/my',
+        url: '$kBaseUrl/listings/my?limit=1000',
         cacheKey: StorageService.cacheUserListings,
         cacheTtl: const Duration(minutes: 5),
         bypassCache: bypassCache,
@@ -2229,30 +2229,69 @@ class _MyListingsScreen extends StatefulWidget {
 class _MyListingsScreenState extends State<_MyListingsScreen> {
   List<dynamic> _listings = [];
   bool _loading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _offset = 0;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _load();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 50) {
+        if (!_loading && !_isLoadingMore && _hasMore) {
+          _load(loadMore: true);
+        }
+      }
+    });
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({bool loadMore = false}) async {
+    if (!loadMore) {
+      setState(() {
+        _loading = true;
+        _listings.clear();
+        _offset = 0;
+        _hasMore = true;
+      });
+    } else {
+      setState(() => _isLoadingMore = true);
+    }
+
     try {
       final token = await StorageService.getToken();
       if (token == null) return;
       final activeParam = widget.active ? 'true' : 'false';
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/my?active=$activeParam'),
+        Uri.parse('$kBaseUrl/listings/my?active=$activeParam&limit=20&offset=$_offset'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200 && mounted) {
-        setState(() => _listings = jsonDecode(resp.body) as List);
+        final newItems = jsonDecode(resp.body) as List;
+        setState(() {
+          if (newItems.isNotEmpty) {
+            _listings.addAll(newItems);
+            _offset += newItems.length;
+          }
+          if (newItems.length < 20) {
+            _hasMore = false;
+          }
+        });
       }
     } catch (e) {
       LoggerService.instance.warning('MyListingsScreen', 'İlanlar yüklenemedi: $e');
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() {
+        _loading = false;
+        _isLoadingMore = false;
+      });
     }
   }
 
@@ -2427,12 +2466,19 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                 )
               : RefreshIndicator(
                   color: kPrimary,
-                  onRefresh: _load,
+                  onRefresh: () => _load(),
                   child: ListView.separated(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(12),
-                    itemCount: _listings.length,
+                    itemCount: _listings.length + (_hasMore ? 1 : 0),
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (ctx, i) {
+                      if (i == _listings.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        );
+                      }
                       final l = _listings[i];
                       final imgs = l['image_urls'] as List? ?? [];
                       final rawImg = imgs.isNotEmpty ? imgs[0] as String : l['image_url'] as String?;

@@ -1703,5 +1703,7 @@
   "proToolStreamHistoryDesc": "Analyze the sales and audience statistics of your past live streams in detail.",
   "proTabSales": "Performance",
   "proTabMarket": "Market",
-  "proTabAudience": "Audience"
+  "proTabAudience": "Audience",
+  "listingVideoComplete": "Video Complete",
+  "audienceTotalViewers": "Total Viewers"
 }

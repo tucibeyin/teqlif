@@ -3291,4 +3291,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get proTabAudience => 'Kitle';
+
+  @override
+  String get listingVideoComplete => 'Video Tamamlandı';
+
+  @override
+  String get audienceTotalViewers => 'Toplam İzleyici';
 }

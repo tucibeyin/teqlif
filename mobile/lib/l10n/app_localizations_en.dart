@@ -3287,4 +3287,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get proTabAudience => 'Audience';
+
+  @override
+  String get listingVideoComplete => 'Video Complete';
+
+  @override
+  String get audienceTotalViewers => 'Total Viewers';
 }

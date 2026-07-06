@@ -48,20 +48,26 @@ async def get_listings(
     user_id: Optional[int] = None,
     category: Optional[str] = None,
     location: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
     current_user_id: Optional[int] = Depends(_optional_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ListingService(db).get_listings(user_id, category, location, current_user_id)
+    return await ListingService(db).get_listings(user_id, category, location, current_user_id, limit, offset)
 
 
 @router.get("/my")
 @router.get("/my-listings")
 async def get_my_listings(
     active: Optional[bool] = None,
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ListingService(db).get_my_listings(current_user, active)
+    return await ListingService(db).get_my_listings(current_user, active, q, category, limit, offset)
 
 
 @router.get("/video-feed")

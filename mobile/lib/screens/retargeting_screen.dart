@@ -7,6 +7,7 @@ import '../config/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/swipe_paginated_list.dart';
 
 class RetargetingScreen extends StatefulWidget {
   final int initialIndex;
@@ -18,47 +19,24 @@ class RetargetingScreen extends StatefulWidget {
 }
 
 class _RetargetingScreenState extends State<RetargetingScreen> {
-  List<Map<String, dynamic>> _listings = [];
   Map<String, dynamic>? _selectedListing;
   Map<String, dynamic>? _audienceData;
-  bool _loadingListings = true;
   bool _loadingAudience = false;
   bool _sending = false;
   bool _sent = false;
   int _sentCount = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadListings();
-  }
-
-  Future<void> _loadListings() async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        if (mounted) setState(() => _loadingListings = false);
-        return;
-      }
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/my'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 200 && mounted) {
-        final all = (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
-        final active = all.where((l) => l['is_active'] == true || l['status'] == 'active').toList();
-        setState(() {
-          _listings = active;
-          _loadingListings = false;
-          if (_listings.isNotEmpty) {
-            _selectedListing = _listings.first;
-            _loadAudience();
-          }
-        });
-        return;
-      }
-    } catch (_) {}
-    if (mounted) setState(() => _loadingListings = false);
+  Future<List<Map<String, dynamic>>> _fetchListingsPage(int offset) async {
+    final token = await StorageService.getToken();
+    if (token == null) return [];
+    final resp = await http.get(
+      Uri.parse('$kBaseUrl/listings/my?limit=20&offset=$offset&active=true'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (resp.statusCode == 200) {
+      return (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
+    }
+    return [];
   }
 
   Future<void> _loadAudience() async {
@@ -259,24 +237,67 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     );
 
     // Mevcut Retargeting Sekmesi
-    final Widget retargetingTab = _loadingListings
-        ? const Center(child: CircularProgressIndicator())
-        : _listings.isEmpty
-            ? _emptyState()
-            : ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-                children: [
-                  _infoCard(),
-                  const SizedBox(height: 16),
-                  _ListingPicker(
-                    listings: _listings,
-                    selected: _selectedListing!,
-                    onChanged: (listing) {
-                      setState(() => _selectedListing = listing);
-                      _loadAudience();
-                    },
-                  ),
-                  const SizedBox(height: 20),
+    final Widget retargetingTab = ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+      children: [
+        _infoCard(),
+        const SizedBox(height: 16),
+        SwipePaginatedList<Map<String, dynamic>>(
+          fetchPage: _fetchListingsPage,
+          itemHeight: 62,
+          maxVisible: 5,
+          onFirstLoad: (firstPage) {
+            if (firstPage.isNotEmpty && _selectedListing == null) {
+              setState(() => _selectedListing = firstPage.first);
+              _loadAudience();
+            }
+          },
+          emptyWidget: _emptyState(),
+          itemBuilder: (ctx, lItem) {
+            final isSelected = _selectedListing != null && lItem['id'] == _selectedListing!['id'];
+            final price = lItem['price'];
+            return InkWell(
+              onTap: () {
+                setState(() => _selectedListing = lItem);
+                _loadAudience();
+              },
+              child: Container(
+                height: 62,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                color: isSelected ? const Color(0xFF6366F1).withValues(alpha: 0.08) : Colors.transparent,
+                child: Row(
+                  children: [
+                    Icon(
+                      isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      size: 18,
+                      color: isSelected ? const Color(0xFF6366F1) : AppColors.textSecondary(ctx),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        lItem['title'] as String? ?? '—',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: AppColors.textPrimary(ctx),
+                        ),
+                      ),
+                    ),
+                    if (price != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '${NumberFormat('#,##0', 'tr_TR').format((price as num).toDouble())} ₺',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(ctx)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 20),
                   if (_loadingAudience)
                     const _AudienceSkeleton()
                   else if (_audienceData != null)
@@ -748,81 +769,6 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── İlan Seçici ───────────────────────────────────────────────────────────────
-
-class _ListingPicker extends StatelessWidget {
-  final List<Map<String, dynamic>> listings;
-  final Map<String, dynamic> selected;
-  final ValueChanged<Map<String, dynamic>> onChanged;
-
-  const _ListingPicker({required this.listings, required this.selected, required this.onChanged});
-
-  static const double _itemH = 62;
-  static const int _maxVisible = 5;
-
-  @override
-  Widget build(BuildContext context) {
-    final visibleCount = listings.length.clamp(1, _maxVisible);
-    return Container(
-      height: visibleCount * _itemH,
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: ListView.separated(
-          physics: const ClampingScrollPhysics(),
-          itemCount: listings.length,
-          separatorBuilder: (ctx2, i2) => Divider(height: 1, thickness: 1, color: AppColors.border(ctx2)),
-          itemBuilder: (ctx, i) {
-            final l = listings[i];
-            final isSelected = l['id'] == selected['id'];
-            final price = l['price'];
-            return InkWell(
-              onTap: () => onChanged(l),
-              child: Container(
-                height: _itemH,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                color: isSelected ? const Color(0xFF6366F1).withValues(alpha: 0.08) : Colors.transparent,
-                child: Row(
-                  children: [
-                    Icon(
-                      isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                      size: 18,
-                      color: isSelected ? const Color(0xFF6366F1) : AppColors.textSecondary(ctx),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        l['title'] as String? ?? '—',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                          color: AppColors.textPrimary(ctx),
-                        ),
-                      ),
-                    ),
-                    if (price != null) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        '${NumberFormat('#,##0', 'tr_TR').format((price as num).toDouble())} ₺',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(ctx)),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
       ),
     );
   }
