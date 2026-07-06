@@ -1826,5 +1826,66 @@
   "shareWhatsAppSubtitle": "Send directly to WhatsApp",
   "shareCopyLabel": "Copy Link",
   "shareOtherLabel": "Other...",
-  "shareOtherSubtitle": "Show all applications"
+  "shareOtherSubtitle": "Show all applications",
+  "emailWelcomeSub": "Welcome to Teqlif!",
+  "emailPhoneVerifySub": "teqlif - Verify Your Phone Number",
+  "emailVerifySub": "teqlif - Email Verification Code",
+  "emailResetSub": "teqlif - Password Reset Code",
+  "emailPhoneVerifyTitle": "Phone Number Verification",
+  "emailHello": "Hello",
+  "emailPhoneAdded": "The number <strong style='font-size:18px;letter-spacing:1px'>{phone}</strong> was added to your account. Is this your number?",
+  "emailYesMine": "✓ Yes, it's mine",
+  "emailNoNotMine": "✗ No, it's not",
+  "emailLinkValid30m": "This link is valid for <strong>30 minutes</strong>. You can ignore this if you didn't request it.",
+  "emailSupport": "For questions:",
+  "emailVerifyBody": "Use the following code to verify your teqlif account:",
+  "emailCodeValid10m": "This code is valid for <strong>10 minutes</strong>.",
+  "emailPhoneNote": "📱 You entered a phone number during registration. You can verify your phone from the <strong style='color:#f1f5f9'>Profile → My Info</strong> screen after logging in.",
+  "emailResetBody": "A request was made to reset your account password. Use the following code to complete the process:",
+  "emailIgnoreIfNotYou": "If you didn't make this request, you can safely ignore this email.",
+  "@emailPhoneAdded": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "emailWelcomeHeroTitle": "Welcome, {first_name}! 🎉",
+  "emailWelcomeHeroSub": "You've just stepped into the world of live auctions.<br>Amazing deals are waiting for you.",
+  "emailWelcomeIntro": "Hello <strong style=\"color:#f1f5f9\">{full_name}</strong>,",
+  "emailWelcomeIntroBody": "We're thrilled to have you on teqlif. You can now join live auction streams, follow your favourite hosts, and bid on unique items.",
+  "emailWelcomeF1Title": "Live Streams",
+  "emailWelcomeF1Sub": "Discover hosts and join real-time auctions",
+  "emailWelcomeF2Title": "Instant Bids",
+  "emailWelcomeF2Sub": "Place a bid in seconds and win the competition",
+  "emailWelcomeF3Title": "Favourites & Follow",
+  "emailWelcomeF3Sub": "Follow the hosts you love and get notified",
+  "emailWelcomePhoneTitle": "Phone Verification",
+  "emailWelcomePhoneNoBody": "To place high-value bids securely, we recommend verifying your phone number. You can add it anytime from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> in the app.",
+  "emailWelcomePhoneYesBody": "You added a phone number during sign-up. Complete verification from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> to bid safely.",
+  "emailWelcomeFooter": "We're always here if you need us.<br>Contact us: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">The teqlif team</strong>",
+  "emailWelcomeCopyright": "© 2025 teqlif · You can update your notification preferences in account settings.",
+  "emailResetGreeting": "Hello <strong>{full_name}</strong>,",
+  "emailResetFooter": "Questions? Contact us: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>",
+  "@emailWelcomeHeroTitle": {
+    "placeholders": {
+      "first_name": {
+        "type": "String"
+      }
+    }
+  },
+  "@emailWelcomeIntro": {
+    "placeholders": {
+      "full_name": {
+        "type": "String"
+      }
+    }
+  },
+  "@emailResetGreeting": {
+    "placeholders": {
+      "full_name": {
+        "type": "String"
+      }
+    }
+  }
 }

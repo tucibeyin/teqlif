@@ -3580,4 +3580,60 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get shareOtherSubtitle => 'Tüm uygulamaları göster';
+
+  @override
+  String get emailWelcomeSub => 'Teqlif\'e Hoş Geldin!';
+
+  @override
+  String get emailPhoneVerifySub => 'teqlif - Telefon Numaranızı Onaylayın';
+
+  @override
+  String get emailVerifySub => 'teqlif - E-posta Doğrulama Kodu';
+
+  @override
+  String get emailResetSub => 'teqlif - Şifre Sıfırlama Kodu';
+
+  @override
+  String get emailPhoneVerifyTitle => 'Telefon Numarası Doğrulama';
+
+  @override
+  String get emailHello => 'Merhaba';
+
+  @override
+  String emailPhoneAdded(String phone) {
+    return 'Hesabınıza <strong style=\'font-size:18px;letter-spacing:1px\'>$phone</strong> numarası eklendi. Bu numara size ait mi?';
+  }
+
+  @override
+  String get emailYesMine => '✓ Evet, benimdir';
+
+  @override
+  String get emailNoNotMine => '✗ Hayır, değil';
+
+  @override
+  String get emailLinkValid30m =>
+      'Bu bağlantı <strong>30 dakika</strong> geçerlidir. Bu isteği siz yapmadıysanız yok sayabilirsiniz.';
+
+  @override
+  String get emailSupport => 'Sorularınız için:';
+
+  @override
+  String get emailVerifyBody =>
+      'teqlif hesabınızı doğrulamak için aşağıdaki kodu kullanın:';
+
+  @override
+  String get emailCodeValid10m =>
+      'Bu kod <strong>10 dakika</strong> geçerlidir.';
+
+  @override
+  String get emailPhoneNote =>
+      '📱 Kayıt sırasında telefon numarası girdiniz. Hesabınıza giriş yaptıktan sonra <strong style=\'color:#f1f5f9\'>Profil → Bilgilerim</strong> ekranından telefonunuzu doğrulayabilirsiniz.';
+
+  @override
+  String get emailResetBody =>
+      'Hesabınızın şifresini sıfırlamak için bir istekte bulunuldu. İşlemi tamamlamak için aşağıdaki kodu kullanın:';
+
+  @override
+  String get emailIgnoreIfNotYou =>
+      'Bu isteği siz yapmadıysanız, e-postayı güvenle görmezden gelebilirsiniz.';
 }

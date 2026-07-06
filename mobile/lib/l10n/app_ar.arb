@@ -1805,5 +1805,66 @@
   "shareWhatsAppSubtitle": "أرسل مباشرة إلى واتساب",
   "shareCopyLabel": "نسخ الرابط",
   "shareOtherLabel": "أخرى...",
-  "shareOtherSubtitle": "عرض جميع التطبيقات"
+  "shareOtherSubtitle": "عرض جميع التطبيقات",
+  "emailWelcomeSub": "مرحبًا بك في Teqlif!",
+  "emailPhoneVerifySub": "teqlif - تحقق من رقم هاتفك",
+  "emailVerifySub": "teqlif - رمز التحقق من البريد الإلكتروني",
+  "emailResetSub": "teqlif - رمز إعادة تعيين كلمة المرور",
+  "emailPhoneVerifyTitle": "التحقق من رقم الهاتف",
+  "emailHello": "مرحبًا",
+  "emailPhoneAdded": "تمت إضافة الرقم <strong style='font-size:18px;letter-spacing:1px'>{phone}</strong> إلى حسابك. هل هذا رقمك؟",
+  "emailYesMine": "✓ نعم، إنه لي",
+  "emailNoNotMine": "✗ لا، ليس كذلك",
+  "emailLinkValid30m": "هذا الرابط صالح لمدة <strong>30 دقيقة</strong>. يمكنك تجاهل هذا إذا لم تطلبه.",
+  "emailSupport": "للأسئلة:",
+  "emailVerifyBody": "استخدم الرمز التالي للتحقق من حساب teqlif الخاص بك:",
+  "emailCodeValid10m": "هذا الرمز صالح لمدة <strong>10 دقائق</strong>.",
+  "emailPhoneNote": "📱 لقد أدخلت رقم هاتف أثناء التسجيل. يمكنك التحقق من هاتفك من شاشة <strong style='color:#f1f5f9'>الملف الشخصي ← معلوماتي</strong> بعد تسجيل الدخول.",
+  "emailResetBody": "تم تقديم طلب لإعادة تعيين كلمة مرور حسابك. استخدم الرمز التالي لإكمال العملية:",
+  "emailIgnoreIfNotYou": "إذا لم تقم بهذا الطلب، يمكنك تجاهل هذا البريد الإلكتروني بأمان.",
+  "@emailPhoneAdded": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "emailWelcomeHeroTitle": "أهلاً وسهلاً، {first_name}! 🎉",
+  "emailWelcomeHeroSub": "لقد دخلت عالم المزادات الحية.<br>صفقات رائعة في انتظارك.",
+  "emailWelcomeIntro": "مرحباً <strong style=\"color:#f1f5f9\">{full_name}</strong>،",
+  "emailWelcomeIntroBody": "يسعدنا انضمامك إلى teqlif. يمكنك الآن المشاركة في مزادات البث المباشر ومتابعة مقدمي البث المفضلين لديك وتقديم عروض على منتجات فريدة.",
+  "emailWelcomeF1Title": "البث المباشر",
+  "emailWelcomeF1Sub": "اكتشف المضيفين وانضم إلى المزادات اللحظية",
+  "emailWelcomeF2Title": "عروض فورية",
+  "emailWelcomeF2Sub": "قدّم عرضك في ثوانٍ واربح المنافسة",
+  "emailWelcomeF3Title": "المفضلة والمتابعة",
+  "emailWelcomeF3Sub": "تابع المضيفين الذين تحبهم واحصل على الإشعارات",
+  "emailWelcomePhoneTitle": "التحقق من الهاتف",
+  "emailWelcomePhoneNoBody": "لإجراء مزايدات عالية القيمة بأمان، نوصيك بالتحقق من رقم هاتفك. يمكنك إضافته من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> في التطبيق.",
+  "emailWelcomePhoneYesBody": "أضفت رقم هاتفك أثناء التسجيل. أكمل التحقق من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> لتتمكن من المزايدة بأمان.",
+  "emailWelcomeFooter": "نحن هنا دائماً إذا احتجت إلى مساعدة.<br>تواصل معنا: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">فريق teqlif</strong>",
+  "emailWelcomeCopyright": "© 2025 teqlif · يمكنك تحديث تفضيلات الإشعارات من إعدادات الحساب.",
+  "emailResetGreeting": "مرحباً <strong>{full_name}</strong>،",
+  "emailResetFooter": "للاستفسارات: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>",
+  "@emailWelcomeHeroTitle": {
+    "placeholders": {
+      "first_name": {
+        "type": "String"
+      }
+    }
+  },
+  "@emailWelcomeIntro": {
+    "placeholders": {
+      "full_name": {
+        "type": "String"
+      }
+    }
+  },
+  "@emailResetGreeting": {
+    "placeholders": {
+      "full_name": {
+        "type": "String"
+      }
+    }
+  }
 }

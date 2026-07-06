@@ -6569,6 +6569,102 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Tüm uygulamaları göster'**
   String get shareOtherSubtitle;
+
+  /// No description provided for @emailWelcomeSub.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teqlif\'e Hoş Geldin!'**
+  String get emailWelcomeSub;
+
+  /// No description provided for @emailPhoneVerifySub.
+  ///
+  /// In tr, this message translates to:
+  /// **'teqlif - Telefon Numaranızı Onaylayın'**
+  String get emailPhoneVerifySub;
+
+  /// No description provided for @emailVerifySub.
+  ///
+  /// In tr, this message translates to:
+  /// **'teqlif - E-posta Doğrulama Kodu'**
+  String get emailVerifySub;
+
+  /// No description provided for @emailResetSub.
+  ///
+  /// In tr, this message translates to:
+  /// **'teqlif - Şifre Sıfırlama Kodu'**
+  String get emailResetSub;
+
+  /// No description provided for @emailPhoneVerifyTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefon Numarası Doğrulama'**
+  String get emailPhoneVerifyTitle;
+
+  /// No description provided for @emailHello.
+  ///
+  /// In tr, this message translates to:
+  /// **'Merhaba'**
+  String get emailHello;
+
+  /// No description provided for @emailPhoneAdded.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabınıza <strong style=\'font-size:18px;letter-spacing:1px\'>{phone}</strong> numarası eklendi. Bu numara size ait mi?'**
+  String emailPhoneAdded(String phone);
+
+  /// No description provided for @emailYesMine.
+  ///
+  /// In tr, this message translates to:
+  /// **'✓ Evet, benimdir'**
+  String get emailYesMine;
+
+  /// No description provided for @emailNoNotMine.
+  ///
+  /// In tr, this message translates to:
+  /// **'✗ Hayır, değil'**
+  String get emailNoNotMine;
+
+  /// No description provided for @emailLinkValid30m.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu bağlantı <strong>30 dakika</strong> geçerlidir. Bu isteği siz yapmadıysanız yok sayabilirsiniz.'**
+  String get emailLinkValid30m;
+
+  /// No description provided for @emailSupport.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sorularınız için:'**
+  String get emailSupport;
+
+  /// No description provided for @emailVerifyBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'teqlif hesabınızı doğrulamak için aşağıdaki kodu kullanın:'**
+  String get emailVerifyBody;
+
+  /// No description provided for @emailCodeValid10m.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kod <strong>10 dakika</strong> geçerlidir.'**
+  String get emailCodeValid10m;
+
+  /// No description provided for @emailPhoneNote.
+  ///
+  /// In tr, this message translates to:
+  /// **'📱 Kayıt sırasında telefon numarası girdiniz. Hesabınıza giriş yaptıktan sonra <strong style=\'color:#f1f5f9\'>Profil → Bilgilerim</strong> ekranından telefonunuzu doğrulayabilirsiniz.'**
+  String get emailPhoneNote;
+
+  /// No description provided for @emailResetBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabınızın şifresini sıfırlamak için bir istekte bulunuldu. İşlemi tamamlamak için aşağıdaki kodu kullanın:'**
+  String get emailResetBody;
+
+  /// No description provided for @emailIgnoreIfNotYou.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu isteği siz yapmadıysanız, e-postayı güvenle görmezden gelebilirsiniz.'**
+  String get emailIgnoreIfNotYou;
 }
 
 class _AppLocalizationsDelegate

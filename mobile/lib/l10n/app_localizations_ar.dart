@@ -3551,4 +3551,60 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shareOtherSubtitle => 'عرض جميع التطبيقات';
+
+  @override
+  String get emailWelcomeSub => 'مرحبًا بك في Teqlif!';
+
+  @override
+  String get emailPhoneVerifySub => 'teqlif - تحقق من رقم هاتفك';
+
+  @override
+  String get emailVerifySub => 'teqlif - رمز التحقق من البريد الإلكتروني';
+
+  @override
+  String get emailResetSub => 'teqlif - رمز إعادة تعيين كلمة المرور';
+
+  @override
+  String get emailPhoneVerifyTitle => 'التحقق من رقم الهاتف';
+
+  @override
+  String get emailHello => 'مرحبًا';
+
+  @override
+  String emailPhoneAdded(String phone) {
+    return 'تمت إضافة الرقم <strong style=\'font-size:18px;letter-spacing:1px\'>$phone</strong> إلى حسابك. هل هذا رقمك؟';
+  }
+
+  @override
+  String get emailYesMine => '✓ نعم، إنه لي';
+
+  @override
+  String get emailNoNotMine => '✗ لا، ليس كذلك';
+
+  @override
+  String get emailLinkValid30m =>
+      'هذا الرابط صالح لمدة <strong>30 دقيقة</strong>. يمكنك تجاهل هذا إذا لم تطلبه.';
+
+  @override
+  String get emailSupport => 'للأسئلة:';
+
+  @override
+  String get emailVerifyBody =>
+      'استخدم الرمز التالي للتحقق من حساب teqlif الخاص بك:';
+
+  @override
+  String get emailCodeValid10m =>
+      'هذا الرمز صالح لمدة <strong>10 دقائق</strong>.';
+
+  @override
+  String get emailPhoneNote =>
+      '📱 لقد أدخلت رقم هاتف أثناء التسجيل. يمكنك التحقق من هاتفك من شاشة <strong style=\'color:#f1f5f9\'>الملف الشخصي ← معلوماتي</strong> بعد تسجيل الدخول.';
+
+  @override
+  String get emailResetBody =>
+      'تم تقديم طلب لإعادة تعيين كلمة مرور حسابك. استخدم الرمز التالي لإكمال العملية:';
+
+  @override
+  String get emailIgnoreIfNotYou =>
+      'إذا لم تقم بهذا الطلب، يمكنك تجاهل هذا البريد الإلكتروني بأمان.';
 }

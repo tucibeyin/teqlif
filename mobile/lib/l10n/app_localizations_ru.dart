@@ -3619,4 +3619,60 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get shareOtherSubtitle => 'Показать все приложения';
+
+  @override
+  String get emailWelcomeSub => 'Добро пожаловать в Teqlif!';
+
+  @override
+  String get emailPhoneVerifySub => 'teqlif - Подтвердите свой номер телефона';
+
+  @override
+  String get emailVerifySub => 'teqlif - Код подтверждения электронной почты';
+
+  @override
+  String get emailResetSub => 'teqlif - Код сброса пароля';
+
+  @override
+  String get emailPhoneVerifyTitle => 'Подтверждение номера телефона';
+
+  @override
+  String get emailHello => 'Здравствуйте';
+
+  @override
+  String emailPhoneAdded(String phone) {
+    return 'Номер <strong style=\'font-size:18px;letter-spacing:1px\'>$phone</strong> был добавлен в ваш аккаунт. Это ваш номер?';
+  }
+
+  @override
+  String get emailYesMine => '✓ Да, это мой';
+
+  @override
+  String get emailNoNotMine => '✗ Нет, не мой';
+
+  @override
+  String get emailLinkValid30m =>
+      'Эта ссылка действительна <strong>30 минут</strong>. Вы можете проигнорировать это, если не запрашивали.';
+
+  @override
+  String get emailSupport => 'По вопросам:';
+
+  @override
+  String get emailVerifyBody =>
+      'Используйте следующий код для подтверждения вашего аккаунта teqlif:';
+
+  @override
+  String get emailCodeValid10m =>
+      'Этот код действителен <strong>10 минут</strong>.';
+
+  @override
+  String get emailPhoneNote =>
+      '📱 Вы указали номер телефона при регистрации. Вы можете подтвердить свой телефон на экране <strong style=\'color:#f1f5f9\'>Профиль → Моя информация</strong> после входа.';
+
+  @override
+  String get emailResetBody =>
+      'Был сделан запрос на сброс пароля вашего аккаунта. Используйте следующий код для завершения процесса:';
+
+  @override
+  String get emailIgnoreIfNotYou =>
+      'Если вы не делали этот запрос, вы можете смело игнорировать это письмо.';
 }

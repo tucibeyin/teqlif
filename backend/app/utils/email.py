@@ -1,62 +1,34 @@
 import httpx
+import json
+import os
+
+_ARB_CACHE = {}
+
+def _get_t(lang: str) -> dict:
+    if lang not in _ARB_CACHE:
+        try:
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            arb_path = os.path.join(base_dir, "mobile", "lib", "l10n", f"app_{lang}.arb")
+            with open(arb_path, 'r', encoding='utf-8') as f:
+                _ARB_CACHE[lang] = json.load(f)
+        except Exception as e:
+            # Fallback to TR if not found
+            if lang != "tr":
+                return _get_t("tr")
+            else:
+                return {} # emergency empty dict
+    return _ARB_CACHE[lang]
+
+
 from app.config import settings
 
 
-_WELCOME_COPY = {
-    "tr": {
-        "subject": "teqlif'e Hoş Geldin, {first_name}! 🎉",
-        "hero_title": "Hoş geldin, {first_name}! 🎉",
-        "hero_sub": "Canlı açık artırma dünyasına adım attın.<br>Harika fırsatlar seni bekliyor.",
-        "intro": "Merhaba <strong style=\"color:#f1f5f9\">{full_name}</strong>,",
-        "intro_body": "teqlif'e katıldığın için çok mutluyuz. Artık canlı yayınlarda açık artırmalara katılabilir, favori yayıncıları takip edebilir ve eşsiz ürünlere teklif verebilirsin.",
-        "f1_title": "Canlı Yayınlar", "f1_sub": "Yayıncıları keşfet, gerçek zamanlı artırmalara katıl",
-        "f2_title": "Anlık Teklifler", "f2_sub": "Saniyeler içinde teklif ver, yarışmayı kazan",
-        "f3_title": "Favoriler & Takip", "f3_sub": "Beğendiğin yayıncıları takip et, bildirimleri al",
-        "phone_title": "Telefon Doğrulaması",
-        "phone_no_body": "Yüksek tutarlı tekliflerde güvenli işlem yapabilmek için telefon numaranızı doğrulamanızı öneririz. Uygulamada <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından kolayca ekleyebilirsiniz.",
-        "phone_yes_body": "Telefon numaranızı kayıt sırasında eklediniz. Güvenli teklif verebilmek için <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından doğrulamayı tamamlayın.",
-        "footer": "Sorularınız için her zaman buradayız.<br>Bize ulaşın: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">teqlif ekibi</strong>",
-        "copyright": "© 2025 teqlif · Bu e-postayı almak istemiyorsanız hesap ayarlarınızdan bildirim tercihlerinizi güncelleyebilirsiniz.",
-    },
-    "en": {
-        "subject": "Welcome to teqlif, {first_name}! 🎉",
-        "hero_title": "Welcome, {first_name}! 🎉",
-        "hero_sub": "You've just stepped into the world of live auctions.<br>Amazing deals are waiting for you.",
-        "intro": "Hello <strong style=\"color:#f1f5f9\">{full_name}</strong>,",
-        "intro_body": "We're thrilled to have you on teqlif. You can now join live auction streams, follow your favourite hosts, and bid on unique items.",
-        "f1_title": "Live Streams", "f1_sub": "Discover hosts and join real-time auctions",
-        "f2_title": "Instant Bids", "f2_sub": "Place a bid in seconds and win the competition",
-        "f3_title": "Favourites & Follow", "f3_sub": "Follow the hosts you love and get notified",
-        "phone_title": "Phone Verification",
-        "phone_no_body": "To place high-value bids securely, we recommend verifying your phone number. You can add it anytime from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> in the app.",
-        "phone_yes_body": "You added a phone number during sign-up. Complete verification from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> to bid safely.",
-        "footer": "We're always here if you need us.<br>Contact us: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">The teqlif team</strong>",
-        "copyright": "© 2025 teqlif · You can update your notification preferences in account settings.",
-    },
-    "ar": {
-        "subject": "مرحباً بك في teqlif، {first_name}! 🎉",
-        "hero_title": "أهلاً وسهلاً، {first_name}! 🎉",
-        "hero_sub": "لقد دخلت عالم المزادات الحية.<br>صفقات رائعة في انتظارك.",
-        "intro": "مرحباً <strong style=\"color:#f1f5f9\">{full_name}</strong>،",
-        "intro_body": "يسعدنا انضمامك إلى teqlif. يمكنك الآن المشاركة في مزادات البث المباشر ومتابعة مقدمي البث المفضلين لديك وتقديم عروض على منتجات فريدة.",
-        "f1_title": "البث المباشر", "f1_sub": "اكتشف المضيفين وانضم إلى المزادات اللحظية",
-        "f2_title": "عروض فورية", "f2_sub": "قدّم عرضك في ثوانٍ واربح المنافسة",
-        "f3_title": "المفضلة والمتابعة", "f3_sub": "تابع المضيفين الذين تحبهم واحصل على الإشعارات",
-        "phone_title": "التحقق من الهاتف",
-        "phone_no_body": "لإجراء مزايدات عالية القيمة بأمان، نوصيك بالتحقق من رقم هاتفك. يمكنك إضافته من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> في التطبيق.",
-        "phone_yes_body": "أضفت رقم هاتفك أثناء التسجيل. أكمل التحقق من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> لتتمكن من المزايدة بأمان.",
-        "footer": "نحن هنا دائماً إذا احتجت إلى مساعدة.<br>تواصل معنا: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">فريق teqlif</strong>",
-        "copyright": "© 2025 teqlif · يمكنك تحديث تفضيلات الإشعارات من إعدادات الحساب.",
-    },
-}
-
-
 async def send_welcome_email(email: str, full_name: str, has_phone: bool = False, lang: str = "tr") -> None:
-    c = _WELCOME_COPY.get(lang, _WELCOME_COPY["tr"])
+    t = _get_t(lang)
     first_name = full_name.split()[0] if full_name else full_name
     dir_attr = ' dir="rtl"' if lang == "ar" else ""
 
-    phone_body = c["phone_yes_body"] if has_phone else c["phone_no_body"]
+    phone_body = t.get("emailWelcomePhoneYesBody", "") if has_phone else t.get("emailWelcomePhoneNoBody", "")
     border_side = "border-right" if lang == "ar" else "border-left"
 
     phone_section = f"""
@@ -71,7 +43,7 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
                       <td style="vertical-align:top;padding-right:14px;font-size:22px;line-height:1">📱</td>
                       <td>
                         <p style="margin:0 0 6px;color:#06b6d4;font-size:14px;font-weight:700;letter-spacing:0.3px">
-                          {c["phone_title"]}
+                          {t.get("emailWelcomePhoneTitle", "")}
                         </p>
                         <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.6">
                           {phone_body}
@@ -113,7 +85,7 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{c["subject"].format(first_name=first_name)}</title>
+  <title>{t.get("emailWelcomeSub", "").format(first_name=first_name)}</title>
 </head>
 <body style="margin:0;padding:0;background:#060f1e;font-family:'Helvetica Neue',Arial,sans-serif">
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#060f1e;padding:40px 16px">
@@ -132,10 +104,10 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
               </p>
               <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#f1f5f9;
                           line-height:1.2;letter-spacing:-0.3px">
-                {c["hero_title"].format(first_name=first_name)}
+                {t.get("emailWelcomeHeroTitle", "").format(first_name=first_name)}
               </h1>
               <p style="margin:0;font-size:15px;color:#94a3b8;line-height:1.5">
-                {c["hero_sub"]}
+                {t.get("emailWelcomeHeroSub", "")}
               </p>
             </td>
           </tr>
@@ -149,10 +121,10 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
           <tr>
             <td style="padding:36px 40px 28px">
               <p style="margin:0 0 16px;font-size:15px;color:#cbd5e1;line-height:1.7">
-                {c["intro"].format(full_name=full_name)}
+                {t.get("emailWelcomeIntro", "").format(full_name=full_name)}
               </p>
               <p style="margin:0;font-size:15px;color:#94a3b8;line-height:1.7">
-                {c["intro_body"]}
+                {t.get("emailWelcomeIntroBody", "")}
               </p>
             </td>
           </tr>
@@ -161,9 +133,9 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
           <tr>
             <td style="padding:0 40px 32px">
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                {feature_row("🎬", c["f1_title"], c["f1_sub"])}
-                {feature_row("🔨", c["f2_title"], c["f2_sub"])}
-                {feature_row("⭐", c["f3_title"], c["f3_sub"], bottom_pad="0")}
+                {feature_row("🎬", t.get("emailWelcomeF1Title", ""), t.get("emailWelcomeF1Sub", ""))}
+                {feature_row("🔨", t.get("emailWelcomeF2Title", ""), t.get("emailWelcomeF2Sub", ""))}
+                {feature_row("⭐", t.get("emailWelcomeF3Title", ""), t.get("emailWelcomeF3Sub", ""), bottom_pad="0")}
               </table>
             </td>
           </tr>
@@ -175,7 +147,7 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
           <tr>
             <td style="padding:0 40px 40px">
               <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;text-align:center">
-                {c["footer"]}
+                {t.get("emailWelcomeFooter", "")}
               </p>
             </td>
           </tr>
@@ -184,7 +156,7 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
           <tr>
             <td style="background:#060f1e;padding:20px 40px;text-align:center;border-top:1px solid #1e293b">
               <p style="margin:0;font-size:11px;color:#334155;letter-spacing:0.3px">
-                {c["copyright"]}
+                {t.get("emailWelcomeCopyright", "")}
               </p>
             </td>
           </tr>
@@ -199,7 +171,7 @@ async def send_welcome_email(email: str, full_name: str, has_phone: bool = False
     payload = {
         "sender": {"name": settings.brevo_sender_name, "email": settings.brevo_sender_email},
         "to": [{"email": email, "name": full_name}],
-        "subject": c["subject"].format(first_name=first_name),
+        "subject": t.get("emailWelcomeSub", "").format(first_name=first_name),
         "htmlContent": html,
     }
     async with httpx.AsyncClient() as client:
@@ -218,29 +190,31 @@ async def send_phone_verification_email(
     phone: str,
     yes_url: str,
     no_url: str,
+    lang: str = "tr",
 ) -> None:
+    t = _get_t(lang)
     payload = {
         "sender": {
             "name": settings.brevo_sender_name,
             "email": settings.brevo_sender_email,
         },
         "to": [{"email": email, "name": full_name}],
-        "subject": "teqlif - Telefon Numaranızı Onaylayın",
+        "subject": t.get('emailPhoneVerifySub', ''),
         "htmlContent": f"""
 <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;border-radius:16px;padding:32px">
-  <h2 style="color:#0d9488;margin-top:0">Telefon Numarası Doğrulama</h2>
-  <p>Merhaba <strong>{full_name}</strong>,</p>
-  <p>Hesabınıza <strong style="font-size:18px;letter-spacing:1px">{phone}</strong> numarası eklendi. Bu numara size ait mi?</p>
+  <h2 style="color:#0d9488;margin-top:0">{t.get('emailPhoneVerifyTitle', '')}</h2>
+  <p>{t.get('emailHello', '')} <strong>{full_name}</strong>,</p>
+  <p>{t.get('emailPhoneAdded', '').format(phone=phone)}</p>
   <div style="margin:32px 0;display:flex;gap:12px">
     <a href="{yes_url}" style="display:inline-block;background:#0d9488;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;margin-right:12px">
-      ✓ Evet, benimdir
+      {t.get('emailYesMine', '')}
     </a>
     <a href="{no_url}" style="display:inline-block;background:#ef4444;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px">
-      ✗ Hayır, değil
+      {t.get('emailNoNotMine', '')}
     </a>
   </div>
-  <p style="color:#64748b;font-size:12px">Bu bağlantı <strong>30 dakika</strong> geçerlidir. Bu isteği siz yapmadıysanız yok sayabilirsiniz.</p>
-  <p style="color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #1e293b;padding-top:16px">Sorularınız için: <a href="mailto:destek@teqlif.com" style="color:#06b6d4;text-decoration:none">destek@teqlif.com</a></p>
+  <p style="color:#64748b;font-size:12px">{t.get('emailLinkValid30m', '')}</p>
+  <p style="color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #1e293b;padding-top:16px">{t.get('emailSupport', '')} <a href="mailto:destek@teqlif.com" style="color:#06b6d4;text-decoration:none">destek@teqlif.com</a></p>
 </div>
 """,
     }
@@ -257,12 +231,12 @@ async def send_phone_verification_email(
         response.raise_for_status()
 
 
-async def send_verification_code(email: str, full_name: str, code: str, *, has_phone: bool = False) -> None:
+async def send_verification_code(email: str, full_name: str, code: str, *, has_phone: bool = False, lang: str = "tr") -> None:
+    t = _get_t(lang)
     phone_note = (
-        "<p style='margin-top:20px;padding:12px 16px;background:#1e293b;border-left:3px solid #0d9488;"
-        "border-radius:4px;color:#94a3b8;font-size:13px'>"
-        "📱 Kayıt sırasında telefon numarası girdiniz. Hesabınıza giriş yaptıktan sonra "
-        "<strong style='color:#f1f5f9'>Profil → Bilgilerim</strong> ekranından telefonunuzu doğrulayabilirsiniz.</p>"
+        f"<p style='margin-top:20px;padding:12px 16px;background:#1e293b;border-left:3px solid #0d9488;"
+        f"border-radius:4px;color:#94a3b8;font-size:13px'>"
+        f"{t.get('emailPhoneNote', '')}</p>"
     ) if has_phone else ""
 
     payload = {
@@ -271,15 +245,15 @@ async def send_verification_code(email: str, full_name: str, code: str, *, has_p
             "email": settings.brevo_sender_email,
         },
         "to": [{"email": email, "name": full_name}],
-        "subject": "teqlif - E-posta Doğrulama Kodu",
+        "subject": t.get('emailVerifySub', ''),
         "htmlContent": (
-            f"<p>Merhaba <strong>{full_name}</strong>,</p>"
-            f"<p>teqlif hesabınızı doğrulamak için aşağıdaki kodu kullanın:</p>"
+            f"<p>{t.get('emailHello', '')} <strong>{full_name}</strong>,</p>"
+            f"<p>{t.get('emailVerifyBody', '')}</p>"
             f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
-            f"<p>Bu kod <strong>10 dakika</strong> geçerlidir.</p>"
+            f"<p>{t.get('emailCodeValid10m', '')}</p>"
             f"{phone_note}"
             f"<p>Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>"
-            f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>Sorularınız için: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a></p>"
+            f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>{t.get('emailSupport', '')} <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a></p>"
         ),
     }
 
@@ -296,36 +270,8 @@ async def send_verification_code(email: str, full_name: str, code: str, *, has_p
         response.raise_for_status()
 
 
-_RESET_PWD_COPY = {
-    "tr": {
-        "subject": "teqlif - Şifre Sıfırlama Kodu",
-        "greeting": "Merhaba <strong>{full_name}</strong>,",
-        "body": "teqlif hesabınızın şifresini sıfırlamak için aşağıdaki kodu kullanın:",
-        "validity": "Bu kod <strong>10 dakika</strong> geçerlidir.",
-        "ignore": "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilir ve şifrenizi güvende tutabilirsiniz.",
-        "footer": "Sorularınız için: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>"
-    },
-    "en": {
-        "subject": "teqlif - Password Reset Code",
-        "greeting": "Hello <strong>{full_name}</strong>,",
-        "body": "Use the code below to reset the password for your teqlif account:",
-        "validity": "This code is valid for <strong>10 minutes</strong>.",
-        "ignore": "If you did not request this, you can safely ignore this email.",
-        "footer": "Questions? Contact us: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>"
-    },
-    "ar": {
-        "subject": "teqlif - رمز إعادة تعيين كلمة المرور",
-        "greeting": "مرحباً <strong>{full_name}</strong>،",
-        "body": "استخدم الرمز أدناه لإعادة تعيين كلمة مرور حساب teqlif الخاص بك:",
-        "validity": "هذا الرمز صالح لمدة <strong>10 دقائق</strong>.",
-        "ignore": "إذا لم تطلب ذلك، يمكنك تجاهل هذه الرسالة الإلكترونية بأمان.",
-        "footer": "للاستفسارات: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>"
-    }
-}
-
-
 async def send_reset_password_email(email: str, full_name: str, code: str, lang: str = "tr") -> None:
-    c = _RESET_PWD_COPY.get(lang, _RESET_PWD_COPY["tr"])
+    t = _get_t(lang)
     dir_attr = " dir='rtl'" if lang == "ar" else ""
     
     payload = {
@@ -334,15 +280,15 @@ async def send_reset_password_email(email: str, full_name: str, code: str, lang:
             "email": settings.brevo_sender_email,
         },
         "to": [{"email": email, "name": full_name}],
-        "subject": c["subject"],
+        "subject": t.get("emailWelcomeSub", ""),
         "htmlContent": (
             f"<div{dir_attr}>"
-            f"<p>{c['greeting'].format(full_name=full_name)}</p>"
-            f"<p>{c['body']}</p>"
+            f"<p>{t.get("emailResetGreeting", "").format(full_name=full_name)}</p>"
+            f"<p>{t.get("emailResetBody", "")}</p>"
             f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
-            f"<p>{c['validity']}</p>"
-            f"<p>{c['ignore']}</p>"
-            f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>{c['footer']}</p>"
+            f"<p>{t.get("emailCodeValid10m", "")}</p>"
+            f"<p>{t.get("emailIgnoreIfNotYou", "")}</p>"
+            f"<p style='color:#475569;font-size:12px;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:16px'>{t.get("emailResetFooter", "")}</p>"
             f"</div>"
         ),
     }

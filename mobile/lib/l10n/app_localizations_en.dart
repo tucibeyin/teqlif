@@ -3576,4 +3576,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareOtherSubtitle => 'Show all applications';
+
+  @override
+  String get emailWelcomeSub => 'Welcome to Teqlif!';
+
+  @override
+  String get emailPhoneVerifySub => 'teqlif - Verify Your Phone Number';
+
+  @override
+  String get emailVerifySub => 'teqlif - Email Verification Code';
+
+  @override
+  String get emailResetSub => 'teqlif - Password Reset Code';
+
+  @override
+  String get emailPhoneVerifyTitle => 'Phone Number Verification';
+
+  @override
+  String get emailHello => 'Hello';
+
+  @override
+  String emailPhoneAdded(String phone) {
+    return 'The number <strong style=\'font-size:18px;letter-spacing:1px\'>$phone</strong> was added to your account. Is this your number?';
+  }
+
+  @override
+  String get emailYesMine => '✓ Yes, it\'s mine';
+
+  @override
+  String get emailNoNotMine => '✗ No, it\'s not';
+
+  @override
+  String get emailLinkValid30m =>
+      'This link is valid for <strong>30 minutes</strong>. You can ignore this if you didn\'t request it.';
+
+  @override
+  String get emailSupport => 'For questions:';
+
+  @override
+  String get emailVerifyBody =>
+      'Use the following code to verify your teqlif account:';
+
+  @override
+  String get emailCodeValid10m =>
+      'This code is valid for <strong>10 minutes</strong>.';
+
+  @override
+  String get emailPhoneNote =>
+      '📱 You entered a phone number during registration. You can verify your phone from the <strong style=\'color:#f1f5f9\'>Profile → My Info</strong> screen after logging in.';
+
+  @override
+  String get emailResetBody =>
+      'A request was made to reset your account password. Use the following code to complete the process:';
+
+  @override
+  String get emailIgnoreIfNotYou =>
+      'If you didn\'t make this request, you can safely ignore this email.';
 }

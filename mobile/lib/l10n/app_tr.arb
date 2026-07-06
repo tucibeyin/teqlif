@@ -1825,5 +1825,66 @@
   "shareWhatsAppSubtitle": "Doğrudan WhatsApp'a gönder",
   "shareCopyLabel": "Link Kopyala",
   "shareOtherLabel": "Diğer...",
-  "shareOtherSubtitle": "Tüm uygulamaları göster"
+  "shareOtherSubtitle": "Tüm uygulamaları göster",
+  "emailWelcomeSub": "Teqlif'e Hoş Geldin!",
+  "emailPhoneVerifySub": "teqlif - Telefon Numaranızı Onaylayın",
+  "emailVerifySub": "teqlif - E-posta Doğrulama Kodu",
+  "emailResetSub": "teqlif - Şifre Sıfırlama Kodu",
+  "emailPhoneVerifyTitle": "Telefon Numarası Doğrulama",
+  "emailHello": "Merhaba",
+  "emailPhoneAdded": "Hesabınıza <strong style='font-size:18px;letter-spacing:1px'>{phone}</strong> numarası eklendi. Bu numara size ait mi?",
+  "emailYesMine": "✓ Evet, benimdir",
+  "emailNoNotMine": "✗ Hayır, değil",
+  "emailLinkValid30m": "Bu bağlantı <strong>30 dakika</strong> geçerlidir. Bu isteği siz yapmadıysanız yok sayabilirsiniz.",
+  "emailSupport": "Sorularınız için:",
+  "emailVerifyBody": "teqlif hesabınızı doğrulamak için aşağıdaki kodu kullanın:",
+  "emailCodeValid10m": "Bu kod <strong>10 dakika</strong> geçerlidir.",
+  "emailPhoneNote": "📱 Kayıt sırasında telefon numarası girdiniz. Hesabınıza giriş yaptıktan sonra <strong style='color:#f1f5f9'>Profil → Bilgilerim</strong> ekranından telefonunuzu doğrulayabilirsiniz.",
+  "emailResetBody": "Hesabınızın şifresini sıfırlamak için bir istekte bulunuldu. İşlemi tamamlamak için aşağıdaki kodu kullanın:",
+  "emailIgnoreIfNotYou": "Bu isteği siz yapmadıysanız, e-postayı güvenle görmezden gelebilirsiniz.",
+  "@emailPhoneAdded": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "emailWelcomeHeroTitle": "Hoş geldin, {first_name}! 🎉",
+  "emailWelcomeHeroSub": "Canlı açık artırma dünyasına adım attın.<br>Harika fırsatlar seni bekliyor.",
+  "emailWelcomeIntro": "Merhaba <strong style=\"color:#f1f5f9\">{full_name}</strong>,",
+  "emailWelcomeIntroBody": "teqlif'e katıldığın için çok mutluyuz. Artık canlı yayınlarda açık artırmalara katılabilir, favori yayıncıları takip edebilir ve eşsiz ürünlere teklif verebilirsin.",
+  "emailWelcomeF1Title": "Canlı Yayınlar",
+  "emailWelcomeF1Sub": "Yayıncıları keşfet, gerçek zamanlı artırmalara katıl",
+  "emailWelcomeF2Title": "Anlık Teklifler",
+  "emailWelcomeF2Sub": "Saniyeler içinde teklif ver, yarışmayı kazan",
+  "emailWelcomeF3Title": "Favoriler & Takip",
+  "emailWelcomeF3Sub": "Beğendiğin yayıncıları takip et, bildirimleri al",
+  "emailWelcomePhoneTitle": "Telefon Doğrulaması",
+  "emailWelcomePhoneNoBody": "Yüksek tutarlı tekliflerde güvenli işlem yapabilmek için telefon numaranızı doğrulamanızı öneririz. Uygulamada <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından kolayca ekleyebilirsiniz.",
+  "emailWelcomePhoneYesBody": "Telefon numaranızı kayıt sırasında eklediniz. Güvenli teklif verebilmek için <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından doğrulamayı tamamlayın.",
+  "emailWelcomeFooter": "Sorularınız için her zaman buradayız.<br>Bize ulaşın: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">teqlif ekibi</strong>",
+  "emailWelcomeCopyright": "© 2025 teqlif · Bu e-postayı almak istemiyorsanız hesap ayarlarınızdan bildirim tercihlerinizi güncelleyebilirsiniz.",
+  "emailResetGreeting": "Merhaba <strong>{full_name}</strong>,",
+  "emailResetFooter": "Sorularınız için: <a href='mailto:destek@teqlif.com' style='color:#0d9488;text-decoration:none'>destek@teqlif.com</a>",
+  "@emailWelcomeHeroTitle": {
+    "placeholders": {
+      "first_name": {
+        "type": "String"
+      }
+    }
+  },
+  "@emailWelcomeIntro": {
+    "placeholders": {
+      "full_name": {
+        "type": "String"
+      }
+    }
+  },
+  "@emailResetGreeting": {
+    "placeholders": {
+      "full_name": {
+        "type": "String"
+      }
+    }
+  }
 }
