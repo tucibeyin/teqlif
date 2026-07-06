@@ -68,6 +68,14 @@
       transition: background .15s;
     }
     .btn-open:active { background: #0891b2; }
+    .btn-store {
+      display: block; width: 100%; padding: 14px;
+      background: #3b82f6; color: #fff; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer; text-align: center;
+      text-decoration: none; margin-bottom: 10px;
+      transition: background .15s;
+    }
+    .btn-store:active { background: #2563eb; }
     .btn-web {
       display: block; width: 100%; padding: 13px;
       background: transparent; color: #64748b; border: 1.5px solid #334155; border-radius: 12px;
@@ -95,7 +103,8 @@
       </div>
       <div class="title">{{ og_title }}</div>
       <div class="desc">{{ og_description }}</div>
-      <a class="btn-open" href="#" data-scheme="{{ app_scheme }}" id="btnOpen">Uygulamada Aç / İndir</a>
+      <a class="btn-open" href="#" data-scheme="{{ app_scheme }}" id="btnOpen">Uygulamayı Aç</a>
+      <a class="btn-store" href="#" id="btnStore">App Store'dan İndir</a>
       <p class="instruction-text">
         <small>💡 <b>Not:</b> Uygulamayı ilk kez yüklüyorsanız, yükleme tamamlandıktan sonra davet kodunuzun geçerli olması için <b>bu linke tekrar tıklayın</b>.</small>
       </p>
@@ -104,6 +113,6 @@
     </div>
   </div>
 
-  <script src="/static/js/app-landing.js?v=4"></script>
+  <script src="/static/js/app-landing.js?v=5"></script>
 </body>
 </html>

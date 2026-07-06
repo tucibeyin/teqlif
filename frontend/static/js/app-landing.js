@@ -9,6 +9,7 @@
 
   var storeUrl  = isIOS ? IOS_STORE : ANDROID_STORE;
   var btnOpen   = document.getElementById('btnOpen');
+  var btnStore  = document.getElementById('btnStore');
   var btnWeb    = document.getElementById('btnWeb');
   var appScheme = btnOpen ? btnOpen.getAttribute('data-scheme') : null;
 
@@ -17,28 +18,26 @@
     return;
   }
 
-  btnOpen.textContent = isIOS ? 'Uygulamada Aç / App Store' : 'Uygulamada Aç / Play Store';
+  btnStore.textContent = isIOS ? 'App Store\'dan İndir' : 'Play Store\'dan İndir';
 
-  // Sayfa yüklendiğinde otomatik olarak uygulamayı açmayı dene (bazı tarayıcılar engeller ama denemeye değer)
+  // Sayfa yüklendiğinde otomatik olarak uygulamayı açmayı dene
   if (appScheme && appScheme !== '') {
     setTimeout(function() {
       window.location.href = appScheme;
     }, 300);
   }
 
+  // "Uygulamayı Aç" Butonu
   btnOpen.addEventListener('click', function (e) {
     e.preventDefault();
     if (appScheme && appScheme !== '') {
-      // Önce uygulamayı açmayı dene
       window.location.href = appScheme;
-      // Uygulama yoksa ve kullanıcı hala bu sayfadaysa store'a at
-      setTimeout(function() {
-        if (!document.hidden) {
-          window.location.href = storeUrl;
-        }
-      }, 2500);
-    } else {
-      window.location.href = storeUrl;
     }
+  });
+
+  // "Mağazadan İndir" Butonu
+  btnStore.addEventListener('click', function (e) {
+    e.preventDefault();
+    window.location.href = storeUrl;
   });
 })();
