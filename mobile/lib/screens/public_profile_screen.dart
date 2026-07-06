@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -249,7 +250,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           Builder(
             builder: (btnCtx) => IconButton(
               icon: const Icon(Icons.share_outlined),
-              tooltip: 'Profili Paylaş',
+              tooltip: l.btnShareProfile,
               onPressed: () {
                 final box = btnCtx.findRenderObject() as RenderBox?;
                 final origin = box == null
@@ -580,7 +581,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Text(
-                  'Henüz ilan yok',
+                  l.lblNoListingsYet,
                   style: TextStyle(
                       color: AppColors.textTertiary(context), fontSize: 14),
                 ),
@@ -1135,11 +1136,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
   String _formatDate(String iso) {
     try {
       final d = DateTime.parse(iso).toLocal();
-      const months = [
-        'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
-        'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'
-      ];
-      return '${d.day} ${months[d.month - 1]} ${d.year}';
+      return DateFormat.yMMMd(AppLocalizations.of(context)!.localeName).format(d);
     } catch (_) {
       return '';
     }

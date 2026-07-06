@@ -1430,8 +1430,8 @@ class _BidsOverlay extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 child: Row(
                   children: [
-                    const Text(
-                      'TEKLİFLER',
+                    Text(
+                      AppLocalizations.of(context)?.lblBidsUpper ?? 'TEKLİFLER',
                       style: TextStyle(
                         color: Color(0xFF64748B),
                         fontSize: 9,
@@ -1597,7 +1597,7 @@ class _BidsToggleTab extends StatelessWidget {
                 bottom: BorderSide(color: borderColor),
               ),
             ),
-            child: isOpen ? _openChild() : _closedChild(),
+            child: isOpen ? _openChild() : _closedChild(context),
           ),
         ),
       ),
@@ -1616,7 +1616,7 @@ class _BidsToggleTab extends StatelessWidget {
   }
 
   // Kapalıyken: sayı + dikey metin + ‹ (listeyi aç)
-  Widget _closedChild() {
+  Widget _closedChild(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1642,8 +1642,8 @@ class _BidsToggleTab extends StatelessWidget {
         // Dikey "TEKLİFLER" yazısı — koyu
         RotatedBox(
           quarterTurns: 3,
-          child: const Text(
-            'TEKLİFLER',
+          child: Text(
+            AppLocalizations.of(context)?.lblBidsUpper ?? 'TEKLİFLER',
             style: TextStyle(
               color: Color(0xFF475569),
               fontSize: 7.5,

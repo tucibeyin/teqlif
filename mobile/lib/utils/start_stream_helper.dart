@@ -243,7 +243,7 @@ Future<void> showStartStreamDialog(
               Navigator.pop(ctx, (t, selectedCategory!, false, 0));
             },
             child: Text(
-              audienceSize > 0 ? 'Normal Başlat' : l.liveStartBtn,
+              audienceSize > 0 ? l.btnStartNormal : l.liveStartBtn,
               style: const TextStyle(color: Colors.white),
             ),
           ),

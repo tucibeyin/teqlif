@@ -1899,8 +1899,8 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
                 color: const Color(0xFFB8860B),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text(
-                'İLAN',
+              child: Text(
+                AppLocalizations.of(context)?.lblListingUpper ?? 'İLAN',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 11,
@@ -1998,19 +1998,19 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'İlana Git',
-                            style: TextStyle(
+                            AppLocalizations.of(context)?.btnGoToListing ?? 'İlana Git',
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
                               fontSize: 15,
                             ),
                           ),
-                          SizedBox(width: 6),
-                          Icon(Icons.arrow_forward_rounded,
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward_rounded,
                               color: Colors.white, size: 18),
                         ],
                       ),

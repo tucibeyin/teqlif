@@ -7049,6 +7049,198 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Doğrulama e-postası gönderildi'**
   String get apiMsgVerifyEmailSent2;
+
+  /// No description provided for @errSomethingWentWrong.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bir hata oluştu'**
+  String get errSomethingWentWrong;
+
+  /// No description provided for @errAuthFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yetkilendirme hatası'**
+  String get errAuthFailed;
+
+  /// No description provided for @errStoryLoadFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hikaye yüklenemedi'**
+  String get errStoryLoadFailed;
+
+  /// No description provided for @errThumbnailLoadFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Thumbnail yüklenemedi'**
+  String get errThumbnailLoadFailed;
+
+  /// No description provided for @btnAddListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan Ekle'**
+  String get btnAddListing;
+
+  /// No description provided for @lblTuciWallet.
+  ///
+  /// In tr, this message translates to:
+  /// **'TUCi Cüzdan'**
+  String get lblTuciWallet;
+
+  /// No description provided for @btnGoPro.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pro\'ya Geç'**
+  String get btnGoPro;
+
+  /// No description provided for @lblProNotificationSettings.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pro Bildirim Ayarları'**
+  String get lblProNotificationSettings;
+
+  /// No description provided for @lblStatusOff.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kapalı'**
+  String get lblStatusOff;
+
+  /// No description provided for @lblLoading.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yükleniyor...'**
+  String get lblLoading;
+
+  /// No description provided for @lblVideoReady.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video hazır'**
+  String get lblVideoReady;
+
+  /// No description provided for @lblListingUpper.
+  ///
+  /// In tr, this message translates to:
+  /// **'İLAN'**
+  String get lblListingUpper;
+
+  /// No description provided for @btnGoToListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlana Git'**
+  String get btnGoToListing;
+
+  /// No description provided for @lblBidsUpper.
+  ///
+  /// In tr, this message translates to:
+  /// **'TEKLİFLER'**
+  String get lblBidsUpper;
+
+  /// No description provided for @btnShareProfile.
+  ///
+  /// In tr, this message translates to:
+  /// **'Profili Paylaş'**
+  String get btnShareProfile;
+
+  /// No description provided for @lblNoListingsYet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz ilan yok'**
+  String get lblNoListingsYet;
+
+  /// No description provided for @timeJustNow.
+  ///
+  /// In tr, this message translates to:
+  /// **'Az önce'**
+  String get timeJustNow;
+
+  /// No description provided for @timeNow.
+  ///
+  /// In tr, this message translates to:
+  /// **'şimdi'**
+  String get timeNow;
+
+  /// No description provided for @radarExpensive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pahalı'**
+  String get radarExpensive;
+
+  /// No description provided for @radarAffordable.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygun fiyatlı'**
+  String get radarAffordable;
+
+  /// No description provided for @radarExpensivePrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pahalı fiyatlı'**
+  String get radarExpensivePrice;
+
+  /// No description provided for @radarExpensiveThanCompetitor.
+  ///
+  /// In tr, this message translates to:
+  /// **'rakipten pahalı'**
+  String get radarExpensiveThanCompetitor;
+
+  /// No description provided for @radarCloseCompetitors.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yakın Rakipler'**
+  String get radarCloseCompetitors;
+
+  /// No description provided for @radarIn90Days.
+  ///
+  /// In tr, this message translates to:
+  /// **'90 günde'**
+  String get radarIn90Days;
+
+  /// No description provided for @radarRightNow.
+  ///
+  /// In tr, this message translates to:
+  /// **'şu an'**
+  String get radarRightNow;
+
+  /// No description provided for @btnStartNormal.
+  ///
+  /// In tr, this message translates to:
+  /// **'Normal Başlat'**
+  String get btnStartNormal;
+
+  /// No description provided for @lblOther.
+  ///
+  /// In tr, this message translates to:
+  /// **'diğer'**
+  String get lblOther;
+
+  /// No description provided for @btnViewNotificationReport.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bildirim Raporunu Gör'**
+  String get btnViewNotificationReport;
+
+  /// No description provided for @btnSendMassNotification.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplu Kitle Bildirimi Gönder'**
+  String get btnSendMassNotification;
+
+  /// No description provided for @btnShare.
+  ///
+  /// In tr, this message translates to:
+  /// **'Paylaş'**
+  String get btnShare;
+
+  /// No description provided for @shareListingText.
+  ///
+  /// In tr, this message translates to:
+  /// **'{title} — teqlif\'te incele'**
+  String shareListingText(Object title);
+
+  /// No description provided for @shareLiveText.
+  ///
+  /// In tr, this message translates to:
+  /// **'{title} — teqlif\'te canlı izle'**
+  String shareLiveText(Object title);
 }
 
 class _AppLocalizationsDelegate

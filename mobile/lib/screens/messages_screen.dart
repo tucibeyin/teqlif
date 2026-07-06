@@ -248,7 +248,7 @@ class _MessagesTabState extends State<_MessagesTab> {
     try {
       final dt = DateTime.parse(isoStr).toLocal();
       final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) return 'şimdi';
+      if (diff.inMinutes < 1) return AppLocalizations.of(context)!.timeNow;
       if (diff.inMinutes < 60) return '${diff.inMinutes}d önce';
       if (diff.inHours < 24) return '${diff.inHours}s önce';
       return '${diff.inDays}g önce';
@@ -468,7 +468,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     try {
       final dt = DateTime.parse(isoStr).toLocal();
       final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) return 'şimdi';
+      if (diff.inMinutes < 1) return AppLocalizations.of(context)!.timeNow;
       if (diff.inMinutes < 60) return '${diff.inMinutes}d önce';
       if (diff.inHours < 24) return '${diff.inHours}s önce';
       return '${diff.inDays}g önce';

@@ -840,7 +840,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            _videoUploading ? 'Yükleniyor...' : 'Video hazır',
+                            _videoUploading ? l.lblLoading : l.lblVideoReady,
                             style: const TextStyle(fontSize: 13),
                           ),
                         ),

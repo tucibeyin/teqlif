@@ -3901,4 +3901,104 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get apiMsgVerifyEmailSent2 => 'Письмо с подтверждением отправлено';
+
+  @override
+  String get errSomethingWentWrong => 'Что-то пошло не так';
+
+  @override
+  String get errAuthFailed => 'Ошибка авторизации';
+
+  @override
+  String get errStoryLoadFailed => 'Не удалось загрузить историю';
+
+  @override
+  String get errThumbnailLoadFailed => 'Не удалось загрузить миниатюру';
+
+  @override
+  String get btnAddListing => 'Добавить объявление';
+
+  @override
+  String get lblTuciWallet => 'Кошелек TUCi';
+
+  @override
+  String get btnGoPro => 'Получить Pro';
+
+  @override
+  String get lblProNotificationSettings => 'Настройки уведомлений Pro';
+
+  @override
+  String get lblStatusOff => 'Выкл';
+
+  @override
+  String get lblLoading => 'Загрузка...';
+
+  @override
+  String get lblVideoReady => 'Видео готово';
+
+  @override
+  String get lblListingUpper => 'ОБЪЯВЛЕНИЕ';
+
+  @override
+  String get btnGoToListing => 'Перейти к объявлению';
+
+  @override
+  String get lblBidsUpper => 'СТАВКИ';
+
+  @override
+  String get btnShareProfile => 'Поделиться профилем';
+
+  @override
+  String get lblNoListingsYet => 'Пока нет объявлений';
+
+  @override
+  String get timeJustNow => 'Только что';
+
+  @override
+  String get timeNow => 'сейчас';
+
+  @override
+  String get radarExpensive => 'Дорого';
+
+  @override
+  String get radarAffordable => 'Доступно';
+
+  @override
+  String get radarExpensivePrice => 'Дорогая цена';
+
+  @override
+  String get radarExpensiveThanCompetitor => 'дороже, чем у конкурента';
+
+  @override
+  String get radarCloseCompetitors => 'Ближайшие конкуренты';
+
+  @override
+  String get radarIn90Days => 'за 90 дней';
+
+  @override
+  String get radarRightNow => 'прямо сейчас';
+
+  @override
+  String get btnStartNormal => 'Начать нормально';
+
+  @override
+  String get lblOther => 'другое';
+
+  @override
+  String get btnViewNotificationReport => 'Просмотр отчета об уведомлениях';
+
+  @override
+  String get btnSendMassNotification => 'Отправить массовое уведомление';
+
+  @override
+  String get btnShare => 'Поделиться';
+
+  @override
+  String shareListingText(Object title) {
+    return '$title — посмотрите на teqlif';
+  }
+
+  @override
+  String shareLiveText(Object title) {
+    return '$title — смотрите в прямом эфире на teqlif';
+  }
 }

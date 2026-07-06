@@ -1371,7 +1371,7 @@ class _ViewersSheetState extends State<_ViewersSheet> {
 
   String _formatTime(BuildContext context, DateTime dt) {
     final diff = DateTime.now().difference(dt.toLocal());
-    if (diff.inMinutes < 1) return 'Az önce';
+    if (diff.inMinutes < 1) return AppLocalizations.of(context)?.timeJustNow ?? 'Az önce';
     if (diff.inHours < 1) return '${diff.inMinutes}d önce';
     if (diff.inDays < 1) return '${diff.inHours}s önce';
     return '${diff.inDays}g önce';

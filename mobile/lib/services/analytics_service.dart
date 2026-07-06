@@ -624,7 +624,7 @@ class AnalyticsService {
 
   static Future<Map<String, dynamic>> getMassNotificationReport() async {
     final token = await StorageService.getToken();
-    if (token == null) throw Exception('Yetkilendirme hatası');
+    if (token == null) throw Exception('Yetkilendirme hatası' /* AppLocalizations handled in UI */);
 
     final response = await http.get(
       Uri.parse('$kBaseUrl/leads/mass-notification-report'),

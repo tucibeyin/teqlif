@@ -3851,4 +3851,104 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get apiMsgVerifyEmailSent2 => 'Verification email sent';
+
+  @override
+  String get errSomethingWentWrong => 'Something went wrong';
+
+  @override
+  String get errAuthFailed => 'Authorization error';
+
+  @override
+  String get errStoryLoadFailed => 'Failed to load story';
+
+  @override
+  String get errThumbnailLoadFailed => 'Failed to load thumbnail';
+
+  @override
+  String get btnAddListing => 'Add Listing';
+
+  @override
+  String get lblTuciWallet => 'TUCi Wallet';
+
+  @override
+  String get btnGoPro => 'Get Pro';
+
+  @override
+  String get lblProNotificationSettings => 'Pro Notification Settings';
+
+  @override
+  String get lblStatusOff => 'Off';
+
+  @override
+  String get lblLoading => 'Loading...';
+
+  @override
+  String get lblVideoReady => 'Video ready';
+
+  @override
+  String get lblListingUpper => 'LISTING';
+
+  @override
+  String get btnGoToListing => 'Go to Listing';
+
+  @override
+  String get lblBidsUpper => 'BIDS';
+
+  @override
+  String get btnShareProfile => 'Share Profile';
+
+  @override
+  String get lblNoListingsYet => 'No listings yet';
+
+  @override
+  String get timeJustNow => 'Just now';
+
+  @override
+  String get timeNow => 'now';
+
+  @override
+  String get radarExpensive => 'Expensive';
+
+  @override
+  String get radarAffordable => 'Affordable';
+
+  @override
+  String get radarExpensivePrice => 'Expensive price';
+
+  @override
+  String get radarExpensiveThanCompetitor => 'more expensive than competitor';
+
+  @override
+  String get radarCloseCompetitors => 'Close Competitors';
+
+  @override
+  String get radarIn90Days => 'in 90 days';
+
+  @override
+  String get radarRightNow => 'right now';
+
+  @override
+  String get btnStartNormal => 'Start Normal';
+
+  @override
+  String get lblOther => 'other';
+
+  @override
+  String get btnViewNotificationReport => 'View Notification Report';
+
+  @override
+  String get btnSendMassNotification => 'Send Mass Notification';
+
+  @override
+  String get btnShare => 'Share';
+
+  @override
+  String shareListingText(Object title) {
+    return '$title — check it out on teqlif';
+  }
+
+  @override
+  String shareLiveText(Object title) {
+    return '$title — watch live on teqlif';
+  }
 }

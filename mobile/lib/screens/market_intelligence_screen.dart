@@ -215,7 +215,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
             Wrap(
               spacing: 8, runSpacing: 8,
               children: catSearch.map((c) {
-                final cat = c['category'] as String? ?? 'diğer';
+                final cat = c['category'] as String? ?? l.lblOther;
                 final cnt = c['count'] as int? ?? 0;
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),

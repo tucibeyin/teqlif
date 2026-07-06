@@ -249,7 +249,7 @@ class _RadarSection extends StatelessWidget {
       case 'pahalı':
         signalColor = const Color(0xFFEF4444);
         signalIcon = Icons.trending_up;
-        signalLabel = 'Pahalı';
+        signalLabel = l.radarExpensive;
         break;
       case 'ucuz':
         signalColor = const Color(0xFF06B6D4);
@@ -372,7 +372,7 @@ class _RadarSection extends StatelessWidget {
                 child: _StatChip(
                   label: AppLocalizations.of(context)!.competitorRadarPercentile,
                   value: '%$pctRank',
-                  sub: 'rakipten pahalı',
+                  sub: l.radarExpensiveThanCompetitor,
                 ),
               ),
               const SizedBox(width: 8),
@@ -399,7 +399,7 @@ class _RadarSection extends StatelessWidget {
           if (competitors.isNotEmpty) ...[
             const SizedBox(height: 14),
             Text(
-              'Yakın Rakipler',
+              l.radarCloseCompetitors,
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 8),
@@ -528,7 +528,7 @@ class _VelocitySection extends StatelessWidget {
                   child: _StatChip(
                     label: AppLocalizations.of(context)!.competitorRadarSold,
                     value: '$totalSold',
-                    sub: '90 günde',
+                    sub: AppLocalizations.of(context)!.radarIn90Days,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -536,7 +536,7 @@ class _VelocitySection extends StatelessWidget {
                   child: _StatChip(
                     label: AppLocalizations.of(context)!.competitorRadarActive,
                     value: '$activeCount',
-                    sub: 'şu an',
+                    sub: AppLocalizations.of(context)!.radarRightNow,
                   ),
                 ),
                 if (avgSoldPrice != null) ...[
@@ -618,7 +618,7 @@ class _VelocitySection extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        bucket == 'ucuz' ? 'Uygun fiyatlı' : 'Pahalı fiyatlı',
+                        bucket == 'ucuz' ? AppLocalizations.of(context)!.radarAffordable : AppLocalizations.of(context)!.radarExpensivePrice,
                         style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)),
                       ),
                       const Spacer(),

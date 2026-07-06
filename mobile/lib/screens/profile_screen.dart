@@ -320,9 +320,9 @@ class ProfileScreenState extends State<ProfileScreen> {
                     child: Icon(Icons.sell_outlined, color: kPrimary, size: 18),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'İlan Ekle',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  Text(
+                    AppLocalizations.of(context)!.btnAddListing,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                 ],
               ),
@@ -2964,9 +2964,9 @@ class _TuciWalletCardState extends State<_TuciWalletCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'TUCi Cüzdan',
-                    style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                  Text(
+                    AppLocalizations.of(context)!.lblTuciWallet,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 2),
                   widget.balance == null

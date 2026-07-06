@@ -211,9 +211,9 @@ class _NotificationSettingsScreenState
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Pro\'ya Geç',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                child: Text(
+                  AppLocalizations.of(context)!.btnGoPro,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
               ),
             ),
@@ -313,6 +313,7 @@ class _ProSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -322,7 +323,7 @@ class _ProSection extends StatelessWidget {
           Row(
             children: [
               Text(
-                'Pro Bildirim Ayarları',
+                l.lblProNotificationSettings,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -409,7 +410,7 @@ class _ProSection extends StatelessWidget {
                             ),
                           ),
                           child: Text(
-                            v == 0 ? 'Kapalı' : '₺$v',
+                            v == 0 ? AppLocalizations.of(context)!.lblStatusOff : '₺$v',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,

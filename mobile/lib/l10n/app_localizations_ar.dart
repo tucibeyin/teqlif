@@ -3827,4 +3827,104 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get apiMsgVerifyEmailSent2 => 'تم إرسال بريد التحقق';
+
+  @override
+  String get errSomethingWentWrong => 'حدث خطأ ما';
+
+  @override
+  String get errAuthFailed => 'خطأ في التفويض';
+
+  @override
+  String get errStoryLoadFailed => 'فشل تحميل القصة';
+
+  @override
+  String get errThumbnailLoadFailed => 'فشل تحميل الصورة المصغرة';
+
+  @override
+  String get btnAddListing => 'إضافة إعلان';
+
+  @override
+  String get lblTuciWallet => 'محفظة TUCi';
+
+  @override
+  String get btnGoPro => 'احصل على Pro';
+
+  @override
+  String get lblProNotificationSettings => 'إعدادات إشعارات Pro';
+
+  @override
+  String get lblStatusOff => 'إيقاف';
+
+  @override
+  String get lblLoading => 'جاري التحميل...';
+
+  @override
+  String get lblVideoReady => 'الفيديو جاهز';
+
+  @override
+  String get lblListingUpper => 'إعلان';
+
+  @override
+  String get btnGoToListing => 'الذهاب إلى الإعلان';
+
+  @override
+  String get lblBidsUpper => 'عروض';
+
+  @override
+  String get btnShareProfile => 'مشاركة الملف الشخصي';
+
+  @override
+  String get lblNoListingsYet => 'لا توجد إعلانات بعد';
+
+  @override
+  String get timeJustNow => 'الآن فقط';
+
+  @override
+  String get timeNow => 'الآن';
+
+  @override
+  String get radarExpensive => 'غال';
+
+  @override
+  String get radarAffordable => 'بأسعار معقولة';
+
+  @override
+  String get radarExpensivePrice => 'سعر باهظ';
+
+  @override
+  String get radarExpensiveThanCompetitor => 'أغلى من المنافس';
+
+  @override
+  String get radarCloseCompetitors => 'المنافسون المقربون';
+
+  @override
+  String get radarIn90Days => 'في 90 يومًا';
+
+  @override
+  String get radarRightNow => 'في الوقت الحالي';
+
+  @override
+  String get btnStartNormal => 'بدء عادي';
+
+  @override
+  String get lblOther => 'أخرى';
+
+  @override
+  String get btnViewNotificationReport => 'عرض تقرير الإشعارات';
+
+  @override
+  String get btnSendMassNotification => 'إرسال إشعار جماعي';
+
+  @override
+  String get btnShare => 'مشاركة';
+
+  @override
+  String shareListingText(Object title) {
+    return '$title — تحقق منه على teqlif';
+  }
+
+  @override
+  String shareLiveText(Object title) {
+    return '$title — شاهد مباشرة على teqlif';
+  }
 }

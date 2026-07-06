@@ -535,7 +535,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return 'Az önce';
+    if (diff.inSeconds < 60) return AppLocalizations.of(context)!.timeJustNow;
     if (diff.inMinutes < 60) return '${diff.inMinutes} dk önce';
     if (diff.inHours < 24) return '${diff.inHours} sa önce';
     return '${diff.inDays} gün önce';
@@ -639,7 +639,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       if (resp.statusCode == 200) {
         nav.pop(true);
       } else {
-        final detail = jsonDecode(resp.body)['detail'] ?? 'Bir hata oluştu';
+        final detail = jsonDecode(resp.body)['detail'] ?? AppLocalizations.of(context)?.errSomethingWentWrong ?? 'Error';
         messenger.showSnackBar(SnackBar(content: Text(detail)));
       }
     } catch (_) {
@@ -657,7 +657,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       MaterialPageRoute(
         builder: (_) => AdReportScreen(
           campaignId: campaignId,
-          listingTitle: widget.listing['title'] as String? ?? 'İlan',
+          listingTitle: widget.listing['title'] as String? ?? AppLocalizations.of(context)!.lblListingUpper,
         ),
       ),
     );
@@ -1035,7 +1035,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           SnackBar(content: Text(l.listingReportSuccess)),
         );
       } else {
-        final detail = jsonDecode(resp.body)['detail'] ?? 'Bir hata oluştu';
+        final detail = jsonDecode(resp.body)['detail'] ?? AppLocalizations.of(context)?.errSomethingWentWrong ?? 'Error';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
       }
     } catch (_) {
@@ -1072,7 +1072,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             builder: (btnCtx) => IconButton(
               key: const Key('listing_detail_btn_paylasım'),
               icon: const Icon(Icons.share_outlined),
-              tooltip: 'Paylaş',
+              tooltip: l.btnShare,
               onPressed: () {
                 final id = listing['id'];
                 final box = btnCtx.findRenderObject() as RenderBox?;
@@ -1083,7 +1083,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 ShareService.show(
                   btnCtx,
                   url: 'https://www.teqlif.com/ilan/$id',
-                  text: '${listing['title'] ?? 'İlan'} — teqlif\'te incele',
+                  text: l.shareListingText(listing['title'] ?? ''),
                   imageUrl: imageUrl,
                   origin: origin,
                 );
@@ -1561,7 +1561,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           icon: _massNotificationSending 
                               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                               : const Text('📢', style: TextStyle(fontSize: 16)),
-                          label: Text(_massNotificationSent ? 'Bildirim Raporunu Gör' : 'Toplu Kitle Bildirimi Gönder'),
+                          label: Text(_massNotificationSent ? l.btnViewNotificationReport : l.btnSendMassNotification),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF14B8A6),
                             foregroundColor: Colors.white,

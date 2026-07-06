@@ -3856,4 +3856,104 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get apiMsgVerifyEmailSent2 => 'Doğrulama e-postası gönderildi';
+
+  @override
+  String get errSomethingWentWrong => 'Bir hata oluştu';
+
+  @override
+  String get errAuthFailed => 'Yetkilendirme hatası';
+
+  @override
+  String get errStoryLoadFailed => 'Hikaye yüklenemedi';
+
+  @override
+  String get errThumbnailLoadFailed => 'Thumbnail yüklenemedi';
+
+  @override
+  String get btnAddListing => 'İlan Ekle';
+
+  @override
+  String get lblTuciWallet => 'TUCi Cüzdan';
+
+  @override
+  String get btnGoPro => 'Pro\'ya Geç';
+
+  @override
+  String get lblProNotificationSettings => 'Pro Bildirim Ayarları';
+
+  @override
+  String get lblStatusOff => 'Kapalı';
+
+  @override
+  String get lblLoading => 'Yükleniyor...';
+
+  @override
+  String get lblVideoReady => 'Video hazır';
+
+  @override
+  String get lblListingUpper => 'İLAN';
+
+  @override
+  String get btnGoToListing => 'İlana Git';
+
+  @override
+  String get lblBidsUpper => 'TEKLİFLER';
+
+  @override
+  String get btnShareProfile => 'Profili Paylaş';
+
+  @override
+  String get lblNoListingsYet => 'Henüz ilan yok';
+
+  @override
+  String get timeJustNow => 'Az önce';
+
+  @override
+  String get timeNow => 'şimdi';
+
+  @override
+  String get radarExpensive => 'Pahalı';
+
+  @override
+  String get radarAffordable => 'Uygun fiyatlı';
+
+  @override
+  String get radarExpensivePrice => 'Pahalı fiyatlı';
+
+  @override
+  String get radarExpensiveThanCompetitor => 'rakipten pahalı';
+
+  @override
+  String get radarCloseCompetitors => 'Yakın Rakipler';
+
+  @override
+  String get radarIn90Days => '90 günde';
+
+  @override
+  String get radarRightNow => 'şu an';
+
+  @override
+  String get btnStartNormal => 'Normal Başlat';
+
+  @override
+  String get lblOther => 'diğer';
+
+  @override
+  String get btnViewNotificationReport => 'Bildirim Raporunu Gör';
+
+  @override
+  String get btnSendMassNotification => 'Toplu Kitle Bildirimi Gönder';
+
+  @override
+  String get btnShare => 'Paylaş';
+
+  @override
+  String shareListingText(Object title) {
+    return '$title — teqlif\'te incele';
+  }
+
+  @override
+  String shareLiveText(Object title) {
+    return '$title — teqlif\'te canlı izle';
+  }
 }

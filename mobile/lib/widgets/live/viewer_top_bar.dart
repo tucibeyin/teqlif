@@ -124,7 +124,7 @@ class ViewerTopBar extends StatelessWidget {
                       ShareService.show(
                         btnCtx,
                         url: 'https://www.teqlif.com/yayin/$streamId',
-                        text: '$title — teqlif\'te canlı izle',
+                        text: AppLocalizations.of(context)!.shareLiveText(title),
                         imageUrl: thumbnailUrl,
                         origin: origin,
                       );
