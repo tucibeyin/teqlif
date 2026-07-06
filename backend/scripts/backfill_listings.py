@@ -1,9 +1,14 @@
 import asyncio
 import sys
 import os
+from dotenv import load_dotenv
 
 # Add backend directory to sys.path to resolve 'app' module
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(backend_dir)
+
+# Explicitly load .env from the backend directory
+load_dotenv(os.path.join(backend_dir, ".env"))
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
