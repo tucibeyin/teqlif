@@ -85,12 +85,16 @@ async def apply_referral_code(
     return await apply_referral(db, current_user, body.referral_code)
 
 
+from app.services.referral_service import ensure_valid_referral_code
+
 @router.get("/my-referral")
 async def my_referral(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Kullanıcının kendi davet kodunu ve istatistiklerini döner."""
+    """Kullanıcının kendi davet kodunu, son kullanma tarihini ve istatistiklerini döner."""
+    ref_data = await ensure_valid_referral_code(db, current_user)
+    
     total_invited = await db.scalar(
         select(func.count()).where(Referral.referrer_id == current_user.id)
     )
@@ -98,8 +102,8 @@ async def my_referral(
         select(Referral).where(Referral.referred_id == current_user.id)
     )
     return {
-        "referral_code": current_user.referral_code,
-        "referral_link": f"https://teqlif.com/davet/{current_user.referral_code}",
+        "referral_code": ref_data["code"],
+        "expires_at": ref_data["expires_at"],
         "total_invited": total_invited or 0,
         "referrer_bonus_per_invite": 50,
         "referred_bonus": 10,

@@ -26,18 +26,39 @@ REFERRER_BONUS = 50   # davet eden
 REFERRED_BONUS = 10   # davet edilen
 
 
+from datetime import datetime, timedelta, timezone
+
 def generate_referral_code() -> str:
     return "".join(random.choices(_SAFE_CHARS, k=_CODE_LEN))
 
 
-async def get_unique_referral_code(db: AsyncSession) -> str:
-    """Çakışma olmayan benzersiz bir kod döner (max 10 deneme)."""
+async def ensure_valid_referral_code(db: AsyncSession, user: User) -> dict:
+    """
+    Kullanıcının geçerli bir davet kodu var mı kontrol eder.
+    Yoksa veya süresi dolmuşsa yeni bir tane üretir (3 gün geçerli).
+    """
+    now = datetime.now(timezone.utc)
+    if user.referral_code and user.referral_code_expires_at and user.referral_code_expires_at > now:
+        return {
+            "code": user.referral_code,
+            "expires_at": user.referral_code_expires_at.isoformat()
+        }
+
+    # Yeni kod üret
     for _ in range(10):
         code = generate_referral_code()
         existing = await db.scalar(select(User).where(User.referral_code == code))
         if not existing:
-            return code
-    # 10 denemede oluşmazsa — pratikte imkansız, yine de güvenli fallback
+            # Kullanıcıya ata ve süresini 3 gün sonrası yap
+            user.referral_code = code
+            user.referral_code_expires_at = now + timedelta(days=3)
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            return {
+                "code": user.referral_code,
+                "expires_at": user.referral_code_expires_at.isoformat()
+            }
     raise RuntimeError("Benzersiz referral kodu üretilemedi")
 
 
@@ -45,7 +66,7 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     """
     Davet kodunu uygular:
       1. Kullanıcı daha önce kod kullanmamışsa devam et.
-      2. Kodu bulan referrer'ı bul.
+      2. Kodu bulan referrer'ı bul ve süresinin dolmadığından emin ol.
       3. referrals tablosuna kayıt ekle.
       4. Referrer'a +50 TUCi, referred'a +10 TUCi yatır.
     """
@@ -66,6 +87,10 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
     referrer = await db.scalar(select(User).where(User.referral_code == code))
     if not referrer:
         raise NotFoundException("Geçersiz davet kodu. Lütfen kontrol edip tekrar deneyin.")
+
+    now = datetime.now(timezone.utc)
+    if not referrer.referral_code_expires_at or referrer.referral_code_expires_at < now:
+        raise BadRequestException("Bu davet kodunun süresi dolmuş (3 günlük geçerlilik süresi bitmiş).")
 
     # Kayıt ekle
     referral = Referral(

@@ -1154,6 +1154,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     if (token == null || !mounted) return;
     setState(() => _shareLoading = true);
     String? code;
+    String? expiresAt;
     try {
       final resp = await http.get(
         Uri.parse('$kBaseUrl/users/my-referral'),
@@ -1162,6 +1163,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         code = data['referral_code'] as String?;
+        expiresAt = data['expires_at'] as String?;
       }
     } catch (_) {}
     if (!mounted) return;
@@ -1172,6 +1174,35 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       );
       return;
     }
+
+    // Kalan süreyi hesapla
+    String expiryText = '3 gün';
+    if (expiresAt != null) {
+      try {
+        final expiry = DateTime.parse(expiresAt);
+        final diff = expiry.difference(DateTime.now().toUtc());
+        if (diff.inHours >= 24) {
+          expiryText = '${diff.inDays} gün';
+        } else if (diff.inHours > 0) {
+          expiryText = '${diff.inHours} saat';
+        } else {
+          expiryText = 'kısa süre';
+        }
+      } catch (_) {}
+    }
+
+    const iosLink = 'https://apps.apple.com/app/teqlif';
+    const androidLink = 'https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile';
+
+    final shareText =
+        'Teqlif\'e katıl! Canlı mezat ve ikinci el alışverişin adresi 🎁\n\n'
+        'Kayıt olurken şu davet kodunu gir ve anında bonus TUCi kazan:\n\n'
+        '🔑 Kod: $code\n'
+        '⏳ Son kullanım: $expiryText içinde\n\n'
+        '📱 iOS App Store: $iosLink\n'
+        '🤖 Google Play: $androidLink\n'
+        '🌐 Web: https://teqlif.com';
+
     // iOS 26+ sharePositionOrigin zorunlu — tile'ın ekran konumunu kullan
     final box = _shareTileKey.currentContext?.findRenderObject() as RenderBox?;
     final origin = box != null
@@ -1183,8 +1214,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           );
     await ShareService.show(
       context,
-      url: 'https://teqlif.com/invite?code=$code',
-      text: 'Teqlif\'e katıl, ikimizde TUCi kazanalım! 🎁',
+      text: shareText,
       origin: origin,
     );
   }

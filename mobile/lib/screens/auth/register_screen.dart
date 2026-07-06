@@ -43,14 +43,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void initState() {
     super.initState();
     _usernameCtrl.addListener(_onUsernameChanged);
-    _loadPendingReferralCode();
-  }
-
-  Future<void> _loadPendingReferralCode() async {
-    final code = await StorageService.getPendingReferralCode();
-    if (code != null && mounted) {
-      _referralCtrl.text = code;
-    }
   }
 
   @override
@@ -142,7 +134,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         phone: _phoneE164,
         referredBy: referralCode.isEmpty ? null : referralCode,
       );
-      await StorageService.clearPendingReferralCode();
       if (mounted) {
         Navigator.of(context).push(
           MaterialPageRoute(

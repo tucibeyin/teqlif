@@ -350,15 +350,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void _handleDeepLink(Uri uri) {
     if (!mounted) return;
 
-    // Aynı URI kısa sürede tekrar geldiyse (WhatsApp IAB + Universal Link
-    // çakışması gibi durumlarda) ikinci işlemi yoksay.
+    // Aynı URI kısa sürede tekrar geldiyse ikinci işlemi yoksay.
     if (!DeepLinkService.shouldHandle(uri)) return;
 
-    // /invite?code=TQLF8X2 → yalnızca yeni kayıtlara geçerli, mevcut kullanıcıya uygulanmaz
-    final inviteCode = DeepLinkService.extractInviteCode(uri);
-    if (inviteCode != null) return;
-
-    final segments = uri.scheme == 'teqlif' 
+    final segments = uri.scheme == 'teqlif'
         ? [if (uri.host.isNotEmpty) uri.host, ...uri.pathSegments.where((s) => s.isNotEmpty)]
         : uri.pathSegments.where((s) => s.isNotEmpty).toList();
 
