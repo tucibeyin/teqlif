@@ -24,7 +24,7 @@ from app.models.market_index import ExchangeRates
 from app.services.ner_service import extract_ner
 
 AI_PRICE_ESTIMATE_COST = 5   # TUCi (standart kullanıcılar ve PRO limit aşınca)
-AI_PRICE_LIMIT_PRO    = 20  # PRO kullanıcılar ayda 20 ücretsiz sorgu
+AI_PRICE_LIMIT_PRO    = 6  # PRO kullanıcılar ayda 6 ücretsiz sorgu
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
