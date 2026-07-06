@@ -75,6 +75,10 @@
       text-decoration: none;
     }
     .status { font-size: 12px; color: #475569; text-align: center; margin-top: 12px; min-height: 18px; }
+    .instruction-text {
+      font-size: 13px; color: #cbd5e1; text-align: center; margin-bottom: 16px; line-height: 1.4;
+      background: rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -92,6 +96,9 @@
       <div class="title">{{ og_title }}</div>
       <div class="desc">{{ og_description }}</div>
       <a class="btn-open" href="#" data-scheme="{{ app_scheme }}" id="btnOpen">Uygulamada Aç / İndir</a>
+      <p class="instruction-text">
+        <small>💡 <b>Not:</b> Uygulamayı ilk kez yüklüyorsanız, yükleme tamamlandıktan sonra davet kodunuzun geçerli olması için <b>bu linke tekrar tıklayın</b>.</small>
+      </p>
       <a class="btn-web" href="{{ web_url }}" id="btnWeb">Web'de Devam Et</a>
       <div class="status" id="status"></div>
     </div>
