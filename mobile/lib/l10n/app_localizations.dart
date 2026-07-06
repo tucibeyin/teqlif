@@ -2962,24 +2962,6 @@ abstract class AppLocalizations {
   /// **'Pro Araçları'**
   String get proHubTitle;
 
-  /// No description provided for @proHubTabSales.
-  ///
-  /// In tr, this message translates to:
-  /// **'Satış & Perf.'**
-  String get proHubTabSales;
-
-  /// No description provided for @proHubTabMarket.
-  ///
-  /// In tr, this message translates to:
-  /// **'Piyasa & Rekabet'**
-  String get proHubTabMarket;
-
-  /// No description provided for @proHubTabAudience.
-  ///
-  /// In tr, this message translates to:
-  /// **'Yayın & Kitle'**
-  String get proHubTabAudience;
-
   /// No description provided for @proToolSalesTitle.
   ///
   /// In tr, this message translates to:
