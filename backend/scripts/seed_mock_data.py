@@ -277,8 +277,9 @@ async def seed_data():
                     purchase = Purchase(
                         listing_id=target_listing.id,
                         buyer_id=auction.winner_id,
-                        seller_id=target_listing.user_id,
+                        auction_id=auction.id,
                         price=auction.final_price,
+                        purchase_type="AUCTION",
                         created_at=auction.ended_at
                     )
                     purchases.append(purchase)
