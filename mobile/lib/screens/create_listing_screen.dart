@@ -833,27 +833,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     validator: (v) => v == null ? l.fieldCategoryHint : null,
                   ),
                   const SizedBox(height: 14),
-                  TextFormField(
-                    key: const Key('create_listing_input_fiyat'),
-                    controller: _priceCtrl,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [_ThousandSeparatorFormatter()],
-                    decoration: InputDecoration(
-                      labelText: l.fieldPrice,
-                      hintText: l.fieldPriceHint,
-                      prefixText: '₺ ',
-                    ),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? l.fieldPriceHint : null,
-                  ),
-                  const SizedBox(height: 10),
-                  _AiPriceButton(
-                    loading: _aiLoading,
-                    isPro: _isPro,
-                    creditsRemaining: _aiCreditsRemaining,
-                    onTap: _fetchAiPriceEstimate,
-                  ),
-                  const SizedBox(height: 14),
+
                   DropdownButtonFormField<String>(
                     key: const Key('create_listing_select_konum'),
                     // ignore: deprecated_member_use
@@ -884,6 +864,31 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     ),
                     validator: (v) =>
                         v == null || v.isEmpty ? l.fieldDescriptionHint : null,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _SectionCard(
+                children: [
+                  TextFormField(
+                    key: const Key('create_listing_input_fiyat'),
+                    controller: _priceCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [_ThousandSeparatorFormatter()],
+                    decoration: InputDecoration(
+                      labelText: l.fieldPrice,
+                      hintText: l.fieldPriceHint,
+                      prefixText: '₺ ',
+                    ),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? l.fieldPriceHint : null,
+                  ),
+                  const SizedBox(height: 10),
+                  _AiPriceButton(
+                    loading: _aiLoading,
+                    isPro: _isPro,
+                    creditsRemaining: _aiCreditsRemaining,
+                    onTap: _fetchAiPriceEstimate,
                   ),
                 ],
               ),
