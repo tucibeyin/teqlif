@@ -38,3 +38,4 @@ imagehash>=4.3.1
 snowballstemmer>=2.2.0
 nudenet>=3.4.2
 faiss-cpu>=1.7.4
+orjson>=3.9.0

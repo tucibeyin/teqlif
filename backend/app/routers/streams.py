@@ -48,7 +48,7 @@ async def get_my_stream_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     limit: int = 20,
-    offset: int = 0
+    cursor: str | None = None
 ):
     """Kullanıcının geçmiş yayınlarını listeler (ended_at is not null)"""
     from app.models.auction import Auction
@@ -59,8 +59,14 @@ async def get_my_stream_history(
         select(LiveStream)
         .where(LiveStream.host_id == current_user.id)
         .where(LiveStream.ended_at.is_not(None))
-        .order_by(LiveStream.started_at.desc())
-        .offset(offset)
+    )
+    if cursor:
+        from datetime import datetime
+        cursor_dt = datetime.fromisoformat(cursor)
+        query = query.where(LiveStream.started_at < cursor_dt)
+
+    query = (
+        query.order_by(LiveStream.started_at.desc())
         .limit(limit)
     )
     result = await db.execute(query)

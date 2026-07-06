@@ -1095,7 +1095,7 @@ class _ChatAvatar extends StatelessWidget {
 
     return ClipOval(
       child: CachedNetworkImage(
-        imageUrl: _resolveImageUrl(imageUrl!),
+        memCacheWidth: 400, memCacheHeight: 400, imageUrl: _resolveImageUrl(imageUrl!),
         width: _size,
         height: _size,
         fit: BoxFit.cover,

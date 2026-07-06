@@ -51,7 +51,7 @@ class SellerAvatarCard extends StatelessWidget {
                     child: ClipOval(
                       child: avatarUrl != null
                           ? CachedNetworkImage(
-                              imageUrl: avatarUrl,
+                              memCacheWidth: 400, memCacheHeight: 400, imageUrl: avatarUrl,
                               fit: BoxFit.cover,
                               placeholder: (context, url) => _buildPlaceholder(context, initial),
                               errorWidget: (context, url, error) => _buildPlaceholder(context, initial),

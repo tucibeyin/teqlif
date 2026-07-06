@@ -206,7 +206,7 @@ class StreamService {
     if (resp.statusCode >= 400) {
       throw AppException('İzleyiciler alınamadı', statusCode: resp.statusCode);
     }
-    final body = jsonDecode(resp.body) as Map<String, dynamic>;
+    final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     return List<String>.from(body['viewers'] as List);
   }
 
@@ -294,7 +294,7 @@ class StreamService {
       Uri.parse('$kBaseUrl/streams/$streamId/audience-insights'),
       headers: {'Authorization': 'Bearer $token'},
     );
-    if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     _throwHttpError(resp.statusCode, resp.body, fallback: 'Bütçe analizi alınamadı');
   }
 
@@ -308,7 +308,7 @@ class StreamService {
           .timeout(const Duration(seconds: 4));
       if (resp.statusCode == 200) {
         return SwipeLiveConfig.fromJson(
-            jsonDecode(resp.body) as Map<String, dynamic>);
+            await compute(jsonDecode, resp.body) as Map<String, dynamic>);
       }
     } catch (_) {}
     return null;

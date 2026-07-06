@@ -529,7 +529,7 @@ class _StoryGroupItem extends StatelessWidget {
                     child: ClipOval(
                       child: resolvedUrl != null && resolvedUrl.isNotEmpty
                           ? CachedNetworkImage(
-                              imageUrl: resolvedUrl,
+                              memCacheWidth: 400, memCacheHeight: 400, imageUrl: resolvedUrl,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,

@@ -252,7 +252,7 @@ class _HostBanner extends StatelessWidget {
             child: ClipOval(
               child: thumbnailUrl != null
                   ? CachedNetworkImage(
-                      imageUrl: imgUrl(thumbnailUrl!),
+                      memCacheWidth: 400, memCacheHeight: 400, imageUrl: imgUrl(thumbnailUrl!),
                       fit: BoxFit.cover,
                       errorWidget: (_, _, _) => _fallback(),
                     )
@@ -327,7 +327,7 @@ class _RaidTargetCard extends StatelessWidget {
                     const BorderRadius.vertical(top: Radius.circular(13)),
                 child: thumbUrl != null
                     ? CachedNetworkImage(
-                        imageUrl: imgUrl(thumbUrl),
+                        memCacheWidth: 400, memCacheHeight: 400, imageUrl: imgUrl(thumbUrl),
                         fit: BoxFit.cover,
                         placeholder: (_, _) => const ShimmerBox(
                           width: double.infinity,

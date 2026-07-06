@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -82,7 +83,7 @@ class AnalyticsService {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}
     return null;
@@ -116,11 +117,11 @@ class AnalyticsService {
         }),
       );
       if (resp.statusCode == 202) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
       // Yetersiz bütçe veya başka hata — mesajı döndür
       try {
-        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
         return {'error': body['detail'] ?? 'Duyuru gönderilemedi.'};
       } catch (_) {}
       return {'error': 'Duyuru gönderilemedi.'};
@@ -154,10 +155,10 @@ class AnalyticsService {
         }),
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
       if (resp.statusCode == 402) {
-        final detail = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? '';
+        final detail = (await compute(jsonDecode, resp.body) as Map<String, dynamic>)['detail'] as String? ?? '';
         throw AiInsufficientTuciException(detail);
       }
     } on AiInsufficientTuciException {
@@ -176,7 +177,7 @@ class AnalyticsService {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}
     return null;
@@ -192,7 +193,7 @@ class AnalyticsService {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}
     return null;
@@ -211,7 +212,7 @@ class AnalyticsService {
         },
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}
     return null;
@@ -226,7 +227,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/leads/blast-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -239,7 +240,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/ads/boost-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -252,7 +253,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/analytics/ai-price-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -265,7 +266,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/analytics/reactivation-credits'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -279,7 +280,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/analytics/my-feed-stats?days=$days'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -297,7 +298,7 @@ class AnalyticsService {
         },
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}
     return null;
@@ -376,7 +377,7 @@ class AnalyticsService {
         },
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
       return null;
     } catch (_) {
@@ -424,7 +425,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/analytics/video-roi?days=$days'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -437,7 +438,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/analytics/gallery-stats?days=$days'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -450,7 +451,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/analytics/video-performance?days=$days'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -463,7 +464,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/analytics/demand-radar?days=$days'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -504,7 +505,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/analytics/competitor-radar/$listingId'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -517,7 +518,7 @@ class AnalyticsService {
       var url = '$kBaseUrl/analytics/category-velocity?category=${Uri.encodeComponent(category)}';
       if (listingId != null) url += '&listing_id=$listingId';
       final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'});
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -531,7 +532,7 @@ class AnalyticsService {
         Uri.parse('$kBaseUrl/leads/retargeting-audience/$listingId'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       if (resp.statusCode == 403) return {'error': 'pro_required'};
     } catch (_) {}
     return null;
@@ -561,10 +562,10 @@ class AnalyticsService {
         }),
       );
       if (resp.statusCode == 200 || resp.statusCode == 202) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
       try {
-        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
         return {'error': body['detail'] ?? 'Blast gönderilemedi.'};
       } catch (_) {}
       return {'error': 'Blast gönderilemedi.'};
@@ -583,7 +584,7 @@ class AnalyticsService {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
     } catch (_) {}
     return null;
@@ -610,10 +611,10 @@ class AnalyticsService {
         }),
       );
       if (resp.statusCode == 200 || resp.statusCode == 202) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
       try {
-        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
         return {'error': body['detail'] ?? 'Bildirim gönderilemedi.'};
       } catch (_) {}
       return {'error': 'Bildirim gönderilemedi.'};

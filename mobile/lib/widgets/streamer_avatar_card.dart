@@ -53,7 +53,7 @@ class StreamerAvatarCard extends StatelessWidget {
                       child: ClipOval(
                         child: imageUrl != null && imageUrl.isNotEmpty
                             ? CachedNetworkImage(
-                                imageUrl: imageUrl,
+                                memCacheWidth: 400, memCacheHeight: 400, imageUrl: imageUrl,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                                 height: double.infinity,

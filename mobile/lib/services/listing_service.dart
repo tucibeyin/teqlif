@@ -55,7 +55,7 @@ class ListingService {
         Uri.parse('$kBaseUrl/listings/$listingId/reactivation-cost'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
@@ -67,7 +67,7 @@ class ListingService {
         headers: await _headers(auth: true),
       );
       if (resp.statusCode == 200) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
       return null;
     } catch (_) {
@@ -83,7 +83,7 @@ class ListingService {
         headers: await _headers(auth: true),
       );
       if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as List;
+        final data = await compute(jsonDecode, resp.body) as List;
         return data
             .cast<Map<String, dynamic>>()
             .map(ListingOffer.fromJson)
@@ -107,11 +107,11 @@ class ListingService {
         headers: await _headers(auth: true),
       );
       if (resp.statusCode == 200) {
-        final result = jsonDecode(resp.body) as Map<String, dynamic>;
+        final result = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
         _likeCache[listingId] = result['is_liked'] as bool? ?? false;
         return result;
       }
-      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       final errMap = body['error'] as Map?;
       throw AppException(
         errMap?['message'] as String? ?? 'Beğeni gönderilemedi.',
@@ -136,10 +136,10 @@ class ListingService {
       );
       if (resp.statusCode == 200) {
         return ListingOffer.fromJson(
-          jsonDecode(resp.body) as Map<String, dynamic>,
+          await compute(jsonDecode, resp.body) as Map<String, dynamic>,
         );
       }
-      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       final errMap = body['error'] as Map?;
       throw AppException(
         errMap?['message'] as String? ?? 'Teklif gönderilemedi.',
