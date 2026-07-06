@@ -9,7 +9,7 @@ backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, backend_dir)
 os.chdir(backend_dir)
 
-from app.database import SessionLocal
+from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.referral import Referral
 from app.models.tuci_transaction import TuciTransaction
@@ -19,7 +19,7 @@ from app.services.referral_service import apply_referral, REFERRER_BONUS, REFERR
 async def run_test():
     print("--- Referans Sistemi Testi Başlıyor ---")
     
-    async with SessionLocal() as db:
+    async with AsyncSessionLocal() as db:
         try:
             # 1. Test kullanıcılarını oluştur
             referrer_username = f"test_ref_{uuid.uuid4().hex[:6]}"
