@@ -9,6 +9,7 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
 import 'messages_screen.dart';
+import '../../widgets/async_button.dart';
 
 class PurchaseDetailScreen extends StatelessWidget {
   final Map<String, dynamic> purchase;
@@ -179,34 +180,37 @@ class PurchaseDetailScreen extends StatelessWidget {
 
             // İlanı Görüntüle
             if (listingId != null)
-              OutlinedButton.icon(
-                icon: Icon(Icons.article, color: AppColors.textSecondary(context)),
-                label: Text(l.purchaseViewListing, style: TextStyle(color: AppColors.textPrimary(context))),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: AppColors.border(context)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              SizedBox(
+                width: double.infinity,
+                child: AsyncOutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.border(context)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () async {
+                    final listing = await ListingService.getListingById(listingId);
+                    if (!context.mounted) return;
+                    if (listing != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing)),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l.purchaseListingNotFound)),
+                      );
+                    }
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.article, color: AppColors.textSecondary(context)),
+                      const SizedBox(width: 8),
+                      Text(l.purchaseViewListing, style: TextStyle(color: AppColors.textPrimary(context))),
+                    ],
+                  ),
                 ),
-                onPressed: () async {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (_) => const Center(child: CircularProgressIndicator()),
-                  );
-                  final listing = await ListingService.getListingById(listingId);
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                  if (listing != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing)),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l.purchaseListingNotFound)),
-                    );
-                  }
-                },
               ),
 
             const SizedBox(height: 24),

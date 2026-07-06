@@ -25,6 +25,7 @@ import '../services/upload_service.dart';
 import '../utils/error_helper.dart';
 import '../utils/start_stream_helper.dart';
 import '../widgets/shimmer_loading.dart';
+import '../widgets/async_button.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'create_listing_screen.dart';
@@ -1461,7 +1462,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               onPressed: () => Navigator.pop(ctx),
               child: Text(l.btnCancel, style: const TextStyle(color: Color(0xFF6B7280))),
             ),
-            ElevatedButton(
+            AsyncElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

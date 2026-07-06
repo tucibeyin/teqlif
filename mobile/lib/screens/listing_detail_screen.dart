@@ -990,7 +990,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: AsyncElevatedButton(
                   key: const Key('listing_detail_report_btn_gonder'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kPrimary,
