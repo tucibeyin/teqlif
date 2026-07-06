@@ -152,6 +152,11 @@ async def lifespan(app: FastAPI):
         )
     await _seed_categories()
     await _seed_cities()
+    try:
+        from app.services.tcmb_service import run_tcmb_job_once
+        await run_tcmb_job_once()
+    except Exception as e:
+        logger.warning(f"TCMB startup failed: {e}")
     await init_clickhouse()
     flush_task = start_flush_loop()
     # FastAPI Cache — Redis backend (decode_responses=False: JsonCoder bytes bekler)

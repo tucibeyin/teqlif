@@ -20,6 +20,8 @@ from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch, SearchEv
 from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
 from app.database_clickhouse import get_clickhouse_client
+from app.models.market_index import ExchangeRates
+from app.services.ner_service import extract_ner
 
 AI_PRICE_ESTIMATE_COST = 5   # TUCi (standart kullanıcılar ve PRO limit aşınca)
 AI_PRICE_LIMIT_PRO    = 20  # PRO kullanıcılar ayda 20 ücretsiz sorgu
@@ -568,7 +570,18 @@ async def price_estimate(
     # 2. Opsiyonel: yüklenmiş görselin pHash'i (Ağ gecikmesi önlendi)
     body_phash: str | None = body.image_phash
 
-    # 3. pgvector aday havuzu — sadece aynı kategori, HNSW indeksli ve önceden satılmış (last_sold_price) ilanlar
+    # 3. NER Extraction
+    ner_data = extract_ner(body.title, body.description, body.category)
+    t_brand = ner_data.get("brand") or ""
+    t_model = ner_data.get("model_name") or ""
+    t_condition = ner_data.get("condition") or ""
+
+    # 4. Fetch today's rate for inflation adjustment
+    from datetime import date
+    today_rate_res = await db.execute(select(ExchangeRates.usd_try).where(ExchangeRates.date == date.today()))
+    today_usd = today_rate_res.scalar_one_or_none() or 33.0
+
+    # 5. pgvector aday havuzu
     candidates_q = sql_text("""
         SELECT
             l.category,
@@ -577,8 +590,13 @@ async def price_estimate(
             l.created_at,
             l.last_start_price AS start_price,
             l.last_sold_price AS final_price,
-            (l.embedding <=> CAST(:emb AS vector)) AS dist
+            (l.embedding <=> CAST(:emb AS vector)) AS dist,
+            er.usd_try AS historical_usd,
+            l.brand,
+            l.model_name,
+            l.condition
         FROM listings l
+        LEFT JOIN exchange_rates er ON er.date = DATE(l.created_at)
         WHERE l.embedding IS NOT NULL
           AND l.last_sold_price IS NOT NULL
           AND l.last_sold_price > 0
@@ -617,8 +635,11 @@ async def price_estimate(
     body_category = body.category.strip().lower()
     body_city = body.city.strip().lower()
 
-    scored: list[tuple[float, Any]] = []
+    scored: list[tuple[float, Any, float]] = []
     for row in rows:
+        hist_usd = float(row.historical_usd) if row.historical_usd else today_usd
+        adj_final_price = float(row.final_price) * (today_usd / hist_usd)
+        
         sem_sim = max(0.0, 1.0 - float(row.dist))
         cat_mult = 2.0 if (body_category and (row.category or "").lower() == body_category) else 1.0
         city_mult = 1.0
@@ -640,8 +661,21 @@ async def price_estimate(
                 phash_mult = 1.5 if hamming <= 8 else (1.2 if hamming <= 16 else 1.0)
             except Exception:
                 pass
-        composite = sem_sim * cat_mult * city_mult * recency * phash_mult
-        scored.append((composite, row))
+                
+        # NER Score (Soft Filter)
+        ner_mult = 1.0
+        if t_brand and row.brand:
+            if t_brand == row.brand: ner_mult *= 1.5
+            else: ner_mult *= 0.3
+        if t_model and row.model_name:
+            if t_model == row.model_name: ner_mult *= 2.0
+            else: ner_mult *= 0.2
+        if t_condition and row.condition:
+            if t_condition == row.condition: ner_mult *= 1.5
+            else: ner_mult *= 0.4
+            
+        composite = sem_sim * cat_mult * city_mult * recency * phash_mult * ner_mult
+        scored.append((composite, row, adj_final_price))
 
     scored.sort(key=lambda x: x[0], reverse=True)
 
@@ -675,8 +709,27 @@ async def price_estimate(
     min_price = all_finals[max(0, n // 10)]
     max_price = all_finals[min(n - 1, max(0, n - n // 10 - 1))]
 
-    # 7. Guven seviyesi: kategori eslesme sayisina gore
-    cat_matched = sum(1 for _, r in top if (r.category or "").lower() == body_category)
+    # 7. Bimodal Dağılım Tespiti (KDE)
+    import numpy as np
+    from scipy.stats import gaussian_kde
+    alert_msg = None
+    prices_for_kde = [float(p) for _, _, p in top]
+    if len(prices_for_kde) >= 10:
+        try:
+            kde = gaussian_kde(prices_for_kde)
+            x_grid = np.linspace(min(prices_for_kde), max(prices_for_kde), 100)
+            y_kde = kde(x_grid)
+            peaks = []
+            for i in range(1, 99):
+                if y_kde[i] > y_kde[i-1] and y_kde[i] > y_kde[i+1]:
+                    peaks.append(x_grid[i])
+            if len(peaks) > 1 and (peaks[-1] - peaks[0]) > (min(prices_for_kde) * 0.3):
+                alert_msg = "Bu ürün grubunda iki farklı piyasa fiyatı (Bimodal) tespit edildi. Ürününüzün varyasyonuna veya garantisine göre fiyat farklılaşabilir."
+        except Exception as e:
+            logger.warning(f"KDE analysis failed: {e}")
+
+    # 8. Guven seviyesi: kategori eslesme sayisina gore
+    cat_matched = sum(1 for _, r, _ in top if (r.category or "").lower() == body_category)
     if cat_matched >= 10 or (cat_matched >= 5 and body_category):
         confidence = "high"
     elif cat_matched >= 3 or cnt >= 10:
@@ -689,28 +742,25 @@ async def price_estimate(
     min_close = round(min_price, 0)
     max_close = round(max_price, 0)
 
-    # 8. Zengin tavsiye metni
+    # 9. Time to Sell & Likidite
+    fast_sell = round(estimated_close * 0.85, 0)
+    market_sell = estimated_close
+    slow_sell = round(estimated_close * 1.15, 0)
+
     close_fmt = f"{int(estimated_close):,}".replace(",", ".")
     start_fmt = f"{int(suggested_start):,}".replace(",", ".")
     signals = []
     if cat_matched > 0:
         signals.append(f"{cat_matched} aynı kategori")
-    if body_city and any(body_city in (r.location or "").lower() for _, r in top):
+    if body_city and any(body_city in (r.location or "").lower() for _, r, _ in top):
         signals.append("şehir bazlı")
     signal_str = f" ({', '.join(signals)})" if signals else ""
-    advice = (
-        f"{cnt} benzer ürün satış verisi analiz edildi{signal_str}. "
-        f"Önerilen başlangıç: {start_fmt} ₺ — beklenen kapanış: {close_fmt} ₺."
-    )
-    if estimated_close > suggested_start * 1.30:
-        advice += " Teklif rekabeti yüksek — düşük başlangıç daha fazla katılımcı çeker."
-    elif estimated_close < suggested_start * 0.85:
-        advice += " Başlangıç fiyatını biraz daha düşük tutmak satış hızını artırabilir."
-    if n >= 5 and (max_price - min_price) > estimated_close * 0.5:
-        advice += (
-            f" Fiyat bandı geniş ({int(min_price):,}–{int(max_price):,} ₺) — "
-            "açıklama ve fotoğraf kalitesi nihai fiyatı önemli ölçüde etkiler."
-        )
+    
+    advice = f"{cnt} benzer ürün satış verisi analiz edildi{signal_str}. "
+    if alert_msg:
+        advice += alert_msg
+    else:
+        advice += f"Ortalama piyasa kapanışı: {close_fmt} ₺."
 
     # ── TUCi düş + sayaç güncelle (Atomik) ────────────────────────────────────
     tuci_spent = 0
@@ -747,11 +797,15 @@ async def price_estimate(
         "found_similar": cnt,
         "suggested_start_price": suggested_start,
         "estimated_close_price": estimated_close,
+        "fast_sell_price": fast_sell,
+        "market_sell_price": market_sell,
+        "slow_sell_price": slow_sell,
         "min_close_price": min_close,
         "max_close_price": max_close,
         "confidence": confidence,
         "category_match_count": cat_matched,
         "advice": advice,
+        "alert": alert_msg,
         "tuci_spent": tuci_spent,
     }
 

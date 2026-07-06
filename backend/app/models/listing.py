@@ -20,6 +20,9 @@ class Listing(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    brand: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    model_name: Mapped[Optional[str]] = mapped_column(String(150), nullable=True, index=True)
+    condition: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
     location: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     image_urls: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of URLs
