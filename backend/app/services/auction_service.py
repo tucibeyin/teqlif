@@ -518,6 +518,17 @@ class AuctionService:
             proof_image_url=proof_image_url,
         )
         self.db.add(auction)
+        
+        # Update Listing with last sold price
+        if lid_str and data.get("current_bidder_id"):
+            from sqlalchemy import update
+            from app.models.listing import Listing
+            await self.db.execute(
+                update(Listing).where(Listing.id == int(lid_str)).values(
+                    last_sold_price=final_price,
+                    last_start_price=float(data.get("start_price", 0))
+                )
+            )
         try:
             await self.db.commit()
         except Exception as exc:

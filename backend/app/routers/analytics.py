@@ -407,7 +407,7 @@ async def _get_ai_used(user_id: int, premium_since: _datetime | None = None) -> 
     except Exception:
         return 0
 
-async def _increment_ai(user_id: int, premium_since: _datetime | None = None) -> None:
+async def _increment_ai_atomic(user_id: int, premium_since: _datetime | None = None) -> int:
     try:
         redis = await get_redis()
         key   = _ai_redis_key(user_id, premium_since)
@@ -422,8 +422,9 @@ async def _increment_ai(user_id: int, premium_since: _datetime | None = None) ->
                 end_dt   = _datetime(now.year, now.month, last_day, 23, 59, 59)
             ttl_secs = int((end_dt - now).total_seconds()) + 1
             await redis.expire(key, ttl_secs)
+        return count
     except Exception:
-        pass
+        return 0
 
 
 @router.get("/ai-price-credits")
@@ -506,6 +507,7 @@ class PriceEstimateRequest(BaseModel):
     category: str = Field(default="")
     city: str = Field(default="")
     image_url: str = Field(default="")
+    image_phash: str | None = Field(default=None)
     exclude_listing_id: int = Field(default=0)
 
 
@@ -522,8 +524,10 @@ async def price_estimate(
     """
     from datetime import datetime as _dt2, timezone as _tz2
 
-    # ── Limit / bakiye kontrolü ───────────────────────────────────────────────
+    # ── Limit / bakiye kontrolü (Sadece bakiye yeterliliği test edilir) ──
+    # Not: Limit düşümü işlemin sonunda atomik olarak yapılacak.
     if current_user.is_premium:
+        # Ön kontrol (atomik değil ama sadece bilgilendirme amaçlı)
         ai_used = await _get_ai_used(current_user.id, current_user.premium_since)
         if ai_used >= AI_PRICE_LIMIT_PRO and current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
             raise HTTPException(
@@ -540,51 +544,47 @@ async def price_estimate(
 
     from app.services.ml_service import generate_embedding
 
-    # 1. Embedding: kategori etiketi + başlık + açıklama
+    # 1. Embedding: kategori etiketi + başlık + açıklama (Redis Caching)
+    import hashlib
     cat_label = _PRICE_CAT_LABELS.get(body.category.strip(), body.category.strip())
     combined = " ".join(filter(None, [
         cat_label,
         body.title.strip(),
         body.description.strip()[:500],
     ]))
-    loop = asyncio.get_event_loop()
-    embedding: list[float] = await loop.run_in_executor(None, generate_embedding, combined)
-    emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
+    combined_hash = hashlib.md5(combined.encode("utf-8")).hexdigest()
+    emb_cache_key = f"cache:embedding:{combined_hash}"
+    
+    redis = await get_redis()
+    cached_emb = await redis.get(emb_cache_key)
+    if cached_emb:
+        emb_str = cached_emb.decode("utf-8") if isinstance(cached_emb, bytes) else cached_emb
+    else:
+        loop = asyncio.get_event_loop()
+        embedding: list[float] = await loop.run_in_executor(None, generate_embedding, combined)
+        emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
+        await redis.setex(emb_cache_key, 7 * 24 * 3600, emb_str)  # 7 gün cache
 
-    # 2. Opsiyonel: yüklenmiş görselin pHash'i
-    body_phash: str | None = None
-    if body.image_url:
-        try:
-            from app.services.image_mod_service import compute_phash
-            body_phash = await compute_phash(body.image_url)
-        except Exception:
-            pass
+    # 2. Opsiyonel: yüklenmiş görselin pHash'i (Ağ gecikmesi önlendi)
+    body_phash: str | None = body.image_phash
 
-    # 3. pgvector aday havuzu — sadece aynı kategori, her listing için tek açık artırma
+    # 3. pgvector aday havuzu — sadece aynı kategori, HNSW indeksli ve önceden satılmış (last_sold_price) ilanlar
     candidates_q = sql_text("""
         SELECT
             l.category,
             l.location,
             l.image_phash,
             l.created_at,
-            a.start_price,
-            a.final_price,
+            l.last_start_price AS start_price,
+            l.last_sold_price AS final_price,
             (l.embedding <=> CAST(:emb AS vector)) AS dist
         FROM listings l
-        JOIN LATERAL (
-            SELECT start_price, final_price
-            FROM auctions
-            WHERE listing_id = l.id
-              AND winner_username IS NOT NULL
-              AND final_price > 0
-            ORDER BY final_price DESC
-            LIMIT 1
-        ) a ON TRUE
         WHERE l.embedding IS NOT NULL
+          AND l.last_sold_price IS NOT NULL
+          AND l.last_sold_price > 0
           AND (:excl = 0 OR l.id != :excl)
           AND (:cat = '' OR l.category = :cat)
-          AND (l.embedding <=> CAST(:emb AS vector)) < 0.55
-        ORDER BY dist
+        ORDER BY l.embedding <=> CAST(:emb AS vector)
         LIMIT 150
     """)
     result = await db.execute(candidates_q, {
@@ -712,12 +712,12 @@ async def price_estimate(
             "açıklama ve fotoğraf kalitesi nihai fiyatı önemli ölçüde etkiler."
         )
 
-    # ── TUCi düş + sayaç güncelle ─────────────────────────────────────────────
+    # ── TUCi düş + sayaç güncelle (Atomik) ────────────────────────────────────
     tuci_spent = 0
     if current_user.is_premium:
-        ai_used = await _get_ai_used(current_user.id, current_user.premium_since)
-        if ai_used < AI_PRICE_LIMIT_PRO:
-            await _increment_ai(current_user.id, current_user.premium_since)
+        ai_used_new = await _increment_ai_atomic(current_user.id, current_user.premium_since)
+        if ai_used_new <= AI_PRICE_LIMIT_PRO:
+            pass  # Limit içi, TUCi düşme
         else:
             await db.execute(
                 sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),

@@ -11,6 +11,7 @@ class Listing(Base):
     __tablename__ = "listings"
     __table_args__ = (
         Index('ix_listings_search_vector', 'search_vector', postgresql_using='gin'),
+        Index('ix_listings_embedding_hnsw', 'embedding', postgresql_using='hnsw', postgresql_with={'m': 16, 'ef_construction': 64}, postgresql_ops={'embedding': 'vector_cosine_ops'}),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -25,6 +26,8 @@ class Listing(Base):
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     video_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     buy_it_now_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    last_sold_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, index=True)
+    last_start_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

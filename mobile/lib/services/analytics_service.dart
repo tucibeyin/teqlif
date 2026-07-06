@@ -136,7 +136,6 @@ class AnalyticsService {
     required String description,
     required String category,
     String city = '',
-    String imageUrl = '',
   }) async {
     try {
       final token = await StorageService.getToken();
@@ -152,7 +151,6 @@ class AnalyticsService {
           'description': description,
           'category': category,
           'city': city,
-          'image_url': imageUrl,
         }),
       );
       if (resp.statusCode == 200) {
