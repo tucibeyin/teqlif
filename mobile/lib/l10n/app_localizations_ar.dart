@@ -2722,7 +2722,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String profileInviteShareText(String code, String expiry) {
-    return 'انضم إلى Teqlif! مزادات حية وتسوّق مستعمل 🎁\n\nاستخدم رمز الدعوة هذا عند التسجيل لتحصل على TUCi إضافية فوراً:\n\n🔑 الرمز: $code\n⏳ صالح لمدة: $expiry\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 الموقع: https://teqlif.com';
+    return 'انضم إلى Teqlif! عنوان المزادات الحية والتسوق المستعمل 🎁\n\nأدخل رمز الدعوة هذا عند التسجيل واكسب مكافأة TUCi فوراً:\n\n🔑 الرمز: $code\n⏳ تنتهي الصلاحية في: $expiry\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com';
   }
 
   @override

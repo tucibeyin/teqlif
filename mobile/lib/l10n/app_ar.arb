@@ -1111,6 +1111,7 @@
       }
     }
   },
+  "profileInviteShareText": "انضم إلى Teqlif! عنوان المزادات الحية والتسوق المستعمل 🎁\n\nأدخل رمز الدعوة هذا عند التسجيل واكسب مكافأة TUCi فوراً:\n\n🔑 الرمز: {code}\n⏳ تنتهي الصلاحية في: {expiry}\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com",
   "boostDialogTitle": "تمييز الإعلان",
   "boostDialogPlanLabel": "خطة الحملة:",
   "boostDialogTotalBudget": "إجمالي الميزانية",
@@ -1457,7 +1458,6 @@
   "profileInviteCodeError": "تعذّر استرداد رمز الدعوة، حاول مرة أخرى.",
   "profileInviteTitle": "ادعُ أصدقاءك، اكسب TUCi!",
   "profileInviteSubtitle": "+50 TUCi لكل دعوة، صديقك يحصل على +10 TUCi",
-  "profileInviteShareText": "انضم إلى Teqlif! مزادات حية وتسوّق مستعمل 🎁\n\nاستخدم رمز الدعوة هذا عند التسجيل لتحصل على TUCi إضافية فوراً:\n\n🔑 الرمز: {code}\n⏳ صالح لمدة: {expiry}\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 الموقع: https://teqlif.com",
   "@profileInviteShareText": {
     "placeholders": {
       "code": {

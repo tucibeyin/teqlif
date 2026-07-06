@@ -2743,7 +2743,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String profileInviteShareText(String code, String expiry) {
-    return 'Join Teqlif! Live auctions & second-hand shopping 🎁\n\nUse this invite code when signing up to earn bonus TUCi instantly:\n\n🔑 Code: $code\n⏳ Expires in: $expiry\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Website: https://teqlif.com';
+    return 'Join Teqlif! The home of live auctions and second-hand shopping 🎁\n\nEnter this invite code when signing up and instantly earn bonus TUCi:\n\n🔑 Code: $code\n⏳ Expires in: $expiry\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com';
   }
 
   @override

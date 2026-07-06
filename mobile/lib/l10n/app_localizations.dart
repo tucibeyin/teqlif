@@ -5083,7 +5083,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileInviteShareText.
   ///
   /// In tr, this message translates to:
-  /// **'Teqlif\'e katıl! Canlı mezat ve ikinci el alışverişin adresi 🎁\n\nKayıt olurken şu davet kodunu gir ve anında bonus TUCi kazan:\n\n🔑 Kod: {code}\n⏳ Son kullanım: {expiry} içinde\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: https://teqlif.com'**
+  /// **'Teqlif\'e katıl! Canlı mezat ve ikinci el alışverişin adresi 🎁\n\nKayıt olurken şu davet kodunu gir ve anında bonus TUCi kazan:\n\n🔑 Kod: {code}\n⏳ Son kullanım: {expiry} içinde\n\n📱 iOS App Store: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: teqlif.com'**
   String profileInviteShareText(String code, String expiry);
 
   /// No description provided for @profileInviteExpiryDays.
@@ -5119,7 +5119,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileInviteShareBtn.
   ///
   /// In tr, this message translates to:
-  /// **'Davet Linkini Paylaş'**
+  /// **'Daveti Paylaş'**
   String get profileInviteShareBtn;
 
   /// No description provided for @profilePickGallery.
