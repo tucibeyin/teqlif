@@ -1232,30 +1232,37 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 height: 6,
                 margin: const EdgeInsets.only(bottom: 24),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.3),
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
-              Icon(Icons.card_giftcard_rounded, size: 48, color: Theme.of(context).primaryColor),
+              Icon(Icons.card_giftcard_rounded, size: 48, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 16),
               Text(
                 l.profileInviteTitle,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 20, 
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
                 l.profileInviteSubtitle,
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 14, 
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1266,7 +1273,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 2,
-                        color: Theme.of(context).primaryColor,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -1281,10 +1288,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor,
+                          color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.copy_rounded, color: Colors.white, size: 20),
+                        child: Icon(Icons.copy_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                       ),
                     ),
                   ],
@@ -1311,8 +1318,8 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   icon: const Icon(Icons.share_rounded),
                   label: Text(l.profileInviteShareBtn, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 ),
