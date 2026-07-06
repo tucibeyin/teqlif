@@ -3636,4 +3636,99 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get emailIgnoreIfNotYou =>
       'Bu isteği siz yapmadıysanız, e-postayı güvenle görmezden gelebilirsiniz.';
+
+  @override
+  String emailWelcomeHeroTitle(String first_name) {
+    return 'Hoş geldin, $first_name! 🎉';
+  }
+
+  @override
+  String get emailWelcomeHeroSub =>
+      'Canlı açık artırma dünyasına adım attın.<br>Harika fırsatlar seni bekliyor.';
+
+  @override
+  String emailWelcomeIntro(String full_name) {
+    return 'Merhaba <strong style=\"color:#f1f5f9\">$full_name</strong>,';
+  }
+
+  @override
+  String get emailWelcomeIntroBody =>
+      'teqlif\'e katıldığın için çok mutluyuz. Artık canlı yayınlarda açık artırmalara katılabilir, favori yayıncıları takip edebilir ve eşsiz ürünlere teklif verebilirsin.';
+
+  @override
+  String get emailWelcomeF1Title => 'Canlı Yayınlar';
+
+  @override
+  String get emailWelcomeF1Sub =>
+      'Yayıncıları keşfet, gerçek zamanlı artırmalara katıl';
+
+  @override
+  String get emailWelcomeF2Title => 'Anlık Teklifler';
+
+  @override
+  String get emailWelcomeF2Sub =>
+      'Saniyeler içinde teklif ver, yarışmayı kazan';
+
+  @override
+  String get emailWelcomeF3Title => 'Favoriler & Takip';
+
+  @override
+  String get emailWelcomeF3Sub =>
+      'Beğendiğin yayıncıları takip et, bildirimleri al';
+
+  @override
+  String get emailWelcomePhoneTitle => 'Telefon Doğrulaması';
+
+  @override
+  String get emailWelcomePhoneNoBody =>
+      'Yüksek tutarlı tekliflerde güvenli işlem yapabilmek için telefon numaranızı doğrulamanızı öneririz. Uygulamada <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından kolayca ekleyebilirsiniz.';
+
+  @override
+  String get emailWelcomePhoneYesBody =>
+      'Telefon numaranızı kayıt sırasında eklediniz. Güvenli teklif verebilmek için <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından doğrulamayı tamamlayın.';
+
+  @override
+  String get emailWelcomeFooter =>
+      'Sorularınız için her zaman buradayız.<br>Bize ulaşın: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">teqlif ekibi</strong>';
+
+  @override
+  String get emailWelcomeCopyright =>
+      '© 2025 teqlif · Bu e-postayı almak istemiyorsanız hesap ayarlarınızdan bildirim tercihlerinizi güncelleyebilirsiniz.';
+
+  @override
+  String emailResetGreeting(String full_name) {
+    return 'Merhaba <strong>$full_name</strong>,';
+  }
+
+  @override
+  String get emailResetFooter =>
+      'Sorularınız için: <a href=\'mailto:destek@teqlif.com\' style=\'color:#0d9488;text-decoration:none\'>destek@teqlif.com</a>';
+
+  @override
+  String get fieldVerifyCode => 'Doğrulama Kodu';
+
+  @override
+  String authVerifyCodeSentMsg(String email) {
+    return 'Yeni doğrulama kodu $email adresine gönderildi.';
+  }
+
+  @override
+  String authVerifyCodeSentDesc(String email) {
+    return '$email adresine 6 haneli doğrulama kodu gönderdik.';
+  }
+
+  @override
+  String get authEnterCodeTitle => 'Kodunu gir';
+
+  @override
+  String get authVerifyCodeResent => 'Yeni doğrulama kodu gönderildi.';
+
+  @override
+  String get authResendCode => 'Kodu tekrar gönder';
+
+  @override
+  String get validPasswordEmpty => 'Şifre boş olamaz';
+
+  @override
+  String get validPasswordConfirmEmpty => 'Şifre tekrarı boş olamaz';
 }

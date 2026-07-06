@@ -107,7 +107,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '${widget.email} adresine gelen kodu girin.',
+                    l.authVerifyCodeSentDesc(widget.email),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -126,14 +126,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       fontSize: 18,
                     ),
                     textAlign: TextAlign.center,
-                    decoration: const InputDecoration(
-                      labelText: 'Doğrulama Kodu',
+                    decoration: InputDecoration(
+                      labelText: l.fieldVerifyCode,
                       hintText: '123456',
-                      prefixIcon: Icon(Icons.numbers),
+                      prefixIcon: const Icon(Icons.numbers),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Kod boş olamaz';
-                      if (v.length != 6) return 'Kod 6 haneli olmalıdır';
+                      if (v == null || v.length != 6) return l.validVerificationCode;
                       return null;
                     },
                   ),
@@ -152,8 +151,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Şifre boş olamaz';
-                      if (v.length < 8) return 'Şifre en az 8 karakter olmalı';
+                      if (v == null || v.isEmpty) return l.validPasswordEmpty;
+                      if (v.length < 8) return l.validPasswordMin;
                       return null;
                     },
                   ),
@@ -173,8 +172,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Şifre tekrarı boş olamaz';
-                      if (v != _passCtrl.text) return 'Şifreler eşleşmiyor';
+                      if (v == null || v.isEmpty) return l.validPasswordConfirmEmpty;
+                      if (v != _passCtrl.text) return l.validPasswordMismatch;
                       return null;
                     },
                   ),

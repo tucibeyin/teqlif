@@ -1866,5 +1866,27 @@
         "type": "String"
       }
     }
-  }
+  },
+  "fieldVerifyCode": "رمز التحقق",
+  "authVerifyCodeSentMsg": "تم إرسال رمز تحقق جديد إلى {email}.",
+  "authVerifyCodeSentDesc": "لقد أرسلنا رمز تحقق مكون من 6 أرقام إلى {email}.",
+  "authEnterCodeTitle": "أدخل رمزك",
+  "authVerifyCodeResent": "تم إرسال رمز تحقق جديد.",
+  "@authVerifyCodeSentMsg": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "@authVerifyCodeSentDesc": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authResendCode": "إعادة إرسال الرمز",
+  "validPasswordEmpty": "لا يمكن أن تكون كلمة المرور فارغة",
+  "validPasswordConfirmEmpty": "لا يمكن أن يكون تأكيد كلمة المرور فارغًا"
 }

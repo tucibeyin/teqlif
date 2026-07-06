@@ -1887,5 +1887,27 @@
         "type": "String"
       }
     }
-  }
+  },
+  "fieldVerifyCode": "Код подтверждения",
+  "authVerifyCodeSentMsg": "Новый код подтверждения был отправлен на {email}.",
+  "authVerifyCodeSentDesc": "Мы отправили 6-значный код подтверждения на {email}.",
+  "authEnterCodeTitle": "Введите ваш код",
+  "authVerifyCodeResent": "Новый код подтверждения отправлен.",
+  "@authVerifyCodeSentMsg": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "@authVerifyCodeSentDesc": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authResendCode": "Отправить код повторно",
+  "validPasswordEmpty": "Пароль не может быть пустым",
+  "validPasswordConfirmEmpty": "Подтверждение пароля не может быть пустым"
 }

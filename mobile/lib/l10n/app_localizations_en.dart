@@ -3632,4 +3632,98 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get emailIgnoreIfNotYou =>
       'If you didn\'t make this request, you can safely ignore this email.';
+
+  @override
+  String emailWelcomeHeroTitle(String first_name) {
+    return 'Welcome, $first_name! 🎉';
+  }
+
+  @override
+  String get emailWelcomeHeroSub =>
+      'You\'ve just stepped into the world of live auctions.<br>Amazing deals are waiting for you.';
+
+  @override
+  String emailWelcomeIntro(String full_name) {
+    return 'Hello <strong style=\"color:#f1f5f9\">$full_name</strong>,';
+  }
+
+  @override
+  String get emailWelcomeIntroBody =>
+      'We\'re thrilled to have you on teqlif. You can now join live auction streams, follow your favourite hosts, and bid on unique items.';
+
+  @override
+  String get emailWelcomeF1Title => 'Live Streams';
+
+  @override
+  String get emailWelcomeF1Sub => 'Discover hosts and join real-time auctions';
+
+  @override
+  String get emailWelcomeF2Title => 'Instant Bids';
+
+  @override
+  String get emailWelcomeF2Sub =>
+      'Place a bid in seconds and win the competition';
+
+  @override
+  String get emailWelcomeF3Title => 'Favourites & Follow';
+
+  @override
+  String get emailWelcomeF3Sub => 'Follow the hosts you love and get notified';
+
+  @override
+  String get emailWelcomePhoneTitle => 'Phone Verification';
+
+  @override
+  String get emailWelcomePhoneNoBody =>
+      'To place high-value bids securely, we recommend verifying your phone number. You can add it anytime from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> in the app.';
+
+  @override
+  String get emailWelcomePhoneYesBody =>
+      'You added a phone number during sign-up. Complete verification from <strong style=\"color:#e2e8f0\">Profile → My Information</strong> to bid safely.';
+
+  @override
+  String get emailWelcomeFooter =>
+      'We\'re always here if you need us.<br>Contact us: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">The teqlif team</strong>';
+
+  @override
+  String get emailWelcomeCopyright =>
+      '© 2025 teqlif · You can update your notification preferences in account settings.';
+
+  @override
+  String emailResetGreeting(String full_name) {
+    return 'Hello <strong>$full_name</strong>,';
+  }
+
+  @override
+  String get emailResetFooter =>
+      'Questions? Contact us: <a href=\'mailto:destek@teqlif.com\' style=\'color:#0d9488;text-decoration:none\'>destek@teqlif.com</a>';
+
+  @override
+  String get fieldVerifyCode => 'Verification Code';
+
+  @override
+  String authVerifyCodeSentMsg(String email) {
+    return 'A new verification code has been sent to $email.';
+  }
+
+  @override
+  String authVerifyCodeSentDesc(String email) {
+    return 'We have sent a 6-digit verification code to $email.';
+  }
+
+  @override
+  String get authEnterCodeTitle => 'Enter your code';
+
+  @override
+  String get authVerifyCodeResent => 'New verification code sent.';
+
+  @override
+  String get authResendCode => 'Resend code';
+
+  @override
+  String get validPasswordEmpty => 'Password cannot be empty';
+
+  @override
+  String get validPasswordConfirmEmpty =>
+      'Password confirmation cannot be empty';
 }

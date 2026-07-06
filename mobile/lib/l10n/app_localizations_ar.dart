@@ -3607,4 +3607,98 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get emailIgnoreIfNotYou =>
       'إذا لم تقم بهذا الطلب، يمكنك تجاهل هذا البريد الإلكتروني بأمان.';
+
+  @override
+  String emailWelcomeHeroTitle(String first_name) {
+    return 'أهلاً وسهلاً، $first_name! 🎉';
+  }
+
+  @override
+  String get emailWelcomeHeroSub =>
+      'لقد دخلت عالم المزادات الحية.<br>صفقات رائعة في انتظارك.';
+
+  @override
+  String emailWelcomeIntro(String full_name) {
+    return 'مرحباً <strong style=\"color:#f1f5f9\">$full_name</strong>،';
+  }
+
+  @override
+  String get emailWelcomeIntroBody =>
+      'يسعدنا انضمامك إلى teqlif. يمكنك الآن المشاركة في مزادات البث المباشر ومتابعة مقدمي البث المفضلين لديك وتقديم عروض على منتجات فريدة.';
+
+  @override
+  String get emailWelcomeF1Title => 'البث المباشر';
+
+  @override
+  String get emailWelcomeF1Sub => 'اكتشف المضيفين وانضم إلى المزادات اللحظية';
+
+  @override
+  String get emailWelcomeF2Title => 'عروض فورية';
+
+  @override
+  String get emailWelcomeF2Sub => 'قدّم عرضك في ثوانٍ واربح المنافسة';
+
+  @override
+  String get emailWelcomeF3Title => 'المفضلة والمتابعة';
+
+  @override
+  String get emailWelcomeF3Sub =>
+      'تابع المضيفين الذين تحبهم واحصل على الإشعارات';
+
+  @override
+  String get emailWelcomePhoneTitle => 'التحقق من الهاتف';
+
+  @override
+  String get emailWelcomePhoneNoBody =>
+      'لإجراء مزايدات عالية القيمة بأمان، نوصيك بالتحقق من رقم هاتفك. يمكنك إضافته من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> في التطبيق.';
+
+  @override
+  String get emailWelcomePhoneYesBody =>
+      'أضفت رقم هاتفك أثناء التسجيل. أكمل التحقق من <strong style=\"color:#e2e8f0\">الملف الشخصي ← معلوماتي</strong> لتتمكن من المزايدة بأمان.';
+
+  @override
+  String get emailWelcomeFooter =>
+      'نحن هنا دائماً إذا احتجت إلى مساعدة.<br>تواصل معنا: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">فريق teqlif</strong>';
+
+  @override
+  String get emailWelcomeCopyright =>
+      '© 2025 teqlif · يمكنك تحديث تفضيلات الإشعارات من إعدادات الحساب.';
+
+  @override
+  String emailResetGreeting(String full_name) {
+    return 'مرحباً <strong>$full_name</strong>،';
+  }
+
+  @override
+  String get emailResetFooter =>
+      'للاستفسارات: <a href=\'mailto:destek@teqlif.com\' style=\'color:#0d9488;text-decoration:none\'>destek@teqlif.com</a>';
+
+  @override
+  String get fieldVerifyCode => 'رمز التحقق';
+
+  @override
+  String authVerifyCodeSentMsg(String email) {
+    return 'تم إرسال رمز تحقق جديد إلى $email.';
+  }
+
+  @override
+  String authVerifyCodeSentDesc(String email) {
+    return 'لقد أرسلنا رمز تحقق مكون من 6 أرقام إلى $email.';
+  }
+
+  @override
+  String get authEnterCodeTitle => 'أدخل رمزك';
+
+  @override
+  String get authVerifyCodeResent => 'تم إرسال رمز تحقق جديد.';
+
+  @override
+  String get authResendCode => 'إعادة إرسال الرمز';
+
+  @override
+  String get validPasswordEmpty => 'لا يمكن أن تكون كلمة المرور فارغة';
+
+  @override
+  String get validPasswordConfirmEmpty =>
+      'لا يمكن أن يكون تأكيد كلمة المرور فارغًا';
 }

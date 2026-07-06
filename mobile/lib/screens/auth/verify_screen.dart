@@ -26,7 +26,16 @@ class _VerifyScreenState extends State<VerifyScreen> {
   @override
   void initState() {
     super.initState();
-    _success = widget.resent ? 'Yeni doğrulama kodu ${widget.email} adresine gönderildi.' : null;
+    _success = null;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.resent && _success == null) {
+      final l = AppLocalizations.of(context)!;
+      _success = l.authVerifyCodeSentMsg(widget.email);
+    }
   }
 
   @override
@@ -37,7 +46,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
   Future<void> _verify() async {
     if (_codeCtrl.text.length != 6) {
-      showErrorSnackbar(context, Exception('6 haneli kodu giriniz'));
+      showErrorSnackbar(context, Exception(AppLocalizations.of(context)!.validVerificationCode));
       return;
     }
     setState(() { _loading = true; _success = null; });
@@ -85,13 +94,13 @@ class _VerifyScreenState extends State<VerifyScreen> {
           children: [
             const Icon(Icons.mark_email_read_outlined, size: 48, color: kPrimary),
             const SizedBox(height: 16),
-            const Text(
-              'Kodunu gir',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            Text(
+              l.authEnterCodeTitle,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
-              '${widget.email} adresine 6 haneli doğrulama kodu gönderdik.',
+              l.authVerifyCodeSentDesc(widget.email),
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 28),
@@ -159,9 +168,9 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   : TextButton(
                       key: const Key('verify_btn_kodu_tekrar_gonder'),
                       onPressed: _resend,
-                      child: const Text(
-                        'Kodu tekrar gönder',
-                        style: TextStyle(color: kPrimary),
+                      child: Text(
+                        l.authResendCode,
+                        style: const TextStyle(color: kPrimary),
                       ),
                     ),
             ),

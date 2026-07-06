@@ -6665,6 +6665,156 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bu isteği siz yapmadıysanız, e-postayı güvenle görmezden gelebilirsiniz.'**
   String get emailIgnoreIfNotYou;
+
+  /// No description provided for @emailWelcomeHeroTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hoş geldin, {first_name}! 🎉'**
+  String emailWelcomeHeroTitle(String first_name);
+
+  /// No description provided for @emailWelcomeHeroSub.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı açık artırma dünyasına adım attın.<br>Harika fırsatlar seni bekliyor.'**
+  String get emailWelcomeHeroSub;
+
+  /// No description provided for @emailWelcomeIntro.
+  ///
+  /// In tr, this message translates to:
+  /// **'Merhaba <strong style=\"color:#f1f5f9\">{full_name}</strong>,'**
+  String emailWelcomeIntro(String full_name);
+
+  /// No description provided for @emailWelcomeIntroBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'teqlif\'e katıldığın için çok mutluyuz. Artık canlı yayınlarda açık artırmalara katılabilir, favori yayıncıları takip edebilir ve eşsiz ürünlere teklif verebilirsin.'**
+  String get emailWelcomeIntroBody;
+
+  /// No description provided for @emailWelcomeF1Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı Yayınlar'**
+  String get emailWelcomeF1Title;
+
+  /// No description provided for @emailWelcomeF1Sub.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayıncıları keşfet, gerçek zamanlı artırmalara katıl'**
+  String get emailWelcomeF1Sub;
+
+  /// No description provided for @emailWelcomeF2Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Anlık Teklifler'**
+  String get emailWelcomeF2Title;
+
+  /// No description provided for @emailWelcomeF2Sub.
+  ///
+  /// In tr, this message translates to:
+  /// **'Saniyeler içinde teklif ver, yarışmayı kazan'**
+  String get emailWelcomeF2Sub;
+
+  /// No description provided for @emailWelcomeF3Title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Favoriler & Takip'**
+  String get emailWelcomeF3Title;
+
+  /// No description provided for @emailWelcomeF3Sub.
+  ///
+  /// In tr, this message translates to:
+  /// **'Beğendiğin yayıncıları takip et, bildirimleri al'**
+  String get emailWelcomeF3Sub;
+
+  /// No description provided for @emailWelcomePhoneTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefon Doğrulaması'**
+  String get emailWelcomePhoneTitle;
+
+  /// No description provided for @emailWelcomePhoneNoBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yüksek tutarlı tekliflerde güvenli işlem yapabilmek için telefon numaranızı doğrulamanızı öneririz. Uygulamada <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından kolayca ekleyebilirsiniz.'**
+  String get emailWelcomePhoneNoBody;
+
+  /// No description provided for @emailWelcomePhoneYesBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefon numaranızı kayıt sırasında eklediniz. Güvenli teklif verebilmek için <strong style=\"color:#e2e8f0\">Profil → Bilgilerim</strong> ekranından doğrulamayı tamamlayın.'**
+  String get emailWelcomePhoneYesBody;
+
+  /// No description provided for @emailWelcomeFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sorularınız için her zaman buradayız.<br>Bize ulaşın: <a href=\"mailto:destek@teqlif.com\" style=\"color:#06b6d4;text-decoration:none\">destek@teqlif.com</a><br><strong style=\"color:#64748b\">teqlif ekibi</strong>'**
+  String get emailWelcomeFooter;
+
+  /// No description provided for @emailWelcomeCopyright.
+  ///
+  /// In tr, this message translates to:
+  /// **'© 2025 teqlif · Bu e-postayı almak istemiyorsanız hesap ayarlarınızdan bildirim tercihlerinizi güncelleyebilirsiniz.'**
+  String get emailWelcomeCopyright;
+
+  /// No description provided for @emailResetGreeting.
+  ///
+  /// In tr, this message translates to:
+  /// **'Merhaba <strong>{full_name}</strong>,'**
+  String emailResetGreeting(String full_name);
+
+  /// No description provided for @emailResetFooter.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sorularınız için: <a href=\'mailto:destek@teqlif.com\' style=\'color:#0d9488;text-decoration:none\'>destek@teqlif.com</a>'**
+  String get emailResetFooter;
+
+  /// No description provided for @fieldVerifyCode.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama Kodu'**
+  String get fieldVerifyCode;
+
+  /// No description provided for @authVerifyCodeSentMsg.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni doğrulama kodu {email} adresine gönderildi.'**
+  String authVerifyCodeSentMsg(String email);
+
+  /// No description provided for @authVerifyCodeSentDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'{email} adresine 6 haneli doğrulama kodu gönderdik.'**
+  String authVerifyCodeSentDesc(String email);
+
+  /// No description provided for @authEnterCodeTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kodunu gir'**
+  String get authEnterCodeTitle;
+
+  /// No description provided for @authVerifyCodeResent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni doğrulama kodu gönderildi.'**
+  String get authVerifyCodeResent;
+
+  /// No description provided for @authResendCode.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kodu tekrar gönder'**
+  String get authResendCode;
+
+  /// No description provided for @validPasswordEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifre boş olamaz'**
+  String get validPasswordEmpty;
+
+  /// No description provided for @validPasswordConfirmEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifre tekrarı boş olamaz'**
+  String get validPasswordConfirmEmpty;
 }
 
 class _AppLocalizationsDelegate

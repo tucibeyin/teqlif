@@ -1887,5 +1887,27 @@
         "type": "String"
       }
     }
-  }
+  },
+  "fieldVerifyCode": "Verification Code",
+  "authVerifyCodeSentMsg": "A new verification code has been sent to {email}.",
+  "authVerifyCodeSentDesc": "We have sent a 6-digit verification code to {email}.",
+  "authEnterCodeTitle": "Enter your code",
+  "authVerifyCodeResent": "New verification code sent.",
+  "@authVerifyCodeSentMsg": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "@authVerifyCodeSentDesc": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authResendCode": "Resend code",
+  "validPasswordEmpty": "Password cannot be empty",
+  "validPasswordConfirmEmpty": "Password confirmation cannot be empty"
 }

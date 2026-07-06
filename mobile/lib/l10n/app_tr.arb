@@ -1886,5 +1886,27 @@
         "type": "String"
       }
     }
-  }
+  },
+  "fieldVerifyCode": "Doğrulama Kodu",
+  "authVerifyCodeSentMsg": "Yeni doğrulama kodu {email} adresine gönderildi.",
+  "authVerifyCodeSentDesc": "{email} adresine 6 haneli doğrulama kodu gönderdik.",
+  "authEnterCodeTitle": "Kodunu gir",
+  "authVerifyCodeResent": "Yeni doğrulama kodu gönderildi.",
+  "@authVerifyCodeSentMsg": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "@authVerifyCodeSentDesc": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authResendCode": "Kodu tekrar gönder",
+  "validPasswordEmpty": "Şifre boş olamaz",
+  "validPasswordConfirmEmpty": "Şifre tekrarı boş olamaz"
 }
