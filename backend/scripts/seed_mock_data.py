@@ -58,6 +58,12 @@ async def seed_data():
     print("🚀 Mock Data Seeding Başlıyor...")
     
     async with AsyncSessionLocal() as session:
+        # 0. CUSTOM USER
+        print("💡 Test için kendi kullanıcı adınızı ve şifrenizi belirleyin:")
+        custom_username = input("Username: ").strip() or "testuser"
+        custom_password = input("Password: ").strip() or "Teqlif123!"
+        custom_pw_hash = pwd_context.hash(custom_password)
+        
         # 1. USERS
         print("👤 1/6: Kullanıcılar oluşturuluyor (100 adet)...")
         users = []
@@ -65,18 +71,30 @@ async def seed_data():
         
         for i in range(100):
             is_pro = random.random() < 0.25 # 25% pro
-            user = User(
-                username=fake.user_name() + str(random.randint(10, 99)),
-                email=fake.email(),
-                hashed_password=default_pw,
-                full_name=fake.name(),
-                phone=fake.phone_number(),
-                bio=fake.sentence() if random.random() > 0.5 else None,
-                profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
-                is_premium=is_pro,
-                total_sales_value=0.0,
-                successful_sales_count=0
-            )
+            
+            # İlk kullanıcı özel kullanıcı olsun
+            if i == 0:
+                user = User(
+                    username=custom_username,
+                    email=f"{custom_username}@example.com",
+                    hashed_password=custom_pw_hash,
+                    full_name="Test Kullanıcısı",
+                    phone="555" + str(random.randint(1000000, 9999999)),
+                    bio="Geliştirici test hesabı",
+                    profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
+                    is_premium=True
+                )
+            else:
+                user = User(
+                    username=fake.user_name() + str(random.randint(10, 9999)),
+                    email=fake.email(),
+                    hashed_password=default_pw,
+                    full_name=fake.name(),
+                    phone=fake.phone_number()[:20],
+                    bio=fake.sentence()[:150] if random.random() > 0.5 else None,
+                    profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
+                    is_premium=is_pro
+                )
             users.append(user)
         session.add_all(users)
         await session.flush() # flush to get user IDs
@@ -243,11 +261,6 @@ async def seed_data():
                         created_at=auction.ended_at
                     )
                     purchases.append(purchase)
-                    
-                    # Satıcı istatistiğini güncelle
-                    seller = next(u for u in users if u.id == target_listing.user_id)
-                    seller.total_sales_value += auction.final_price
-                    seller.successful_sales_count += 1
         
         session.add_all(bids)
         session.add_all(purchases)
