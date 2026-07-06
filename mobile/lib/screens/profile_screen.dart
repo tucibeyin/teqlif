@@ -1280,9 +1280,43 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     InkWell(
                       onTap: () {
                         Clipboard.setData(ClipboardData(text: code!));
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text(l.profileInviteCodeCopied), duration: const Duration(seconds: 2)),
+                        
+                        // Show overlay toast instead of snackbar so it appears in front of the modal
+                        final overlay = Overlay.of(ctx);
+                        late OverlayEntry entry;
+                        entry = OverlayEntry(
+                          builder: (context) => Positioned(
+                            bottom: MediaQuery.of(context).viewInsets.bottom + 120,
+                            left: 32,
+                            right: 32,
+                            child: Material(
+                              color: Colors.transparent,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.inverseSurface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.2),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 5),
+                                    )
+                                  ]
+                                ),
+                                child: Text(
+                                  l.profileInviteCodeCopied,
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onInverseSurface, fontSize: 15, fontWeight: FontWeight.w600),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ),
                         );
+                        overlay.insert(entry);
+                        Future.delayed(const Duration(seconds: 2), () {
+                          if (entry.mounted) entry.remove();
+                        });
                       },
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
