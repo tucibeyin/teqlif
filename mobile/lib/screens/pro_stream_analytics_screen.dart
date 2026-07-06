@@ -31,7 +31,8 @@ Future<List<dynamic>> _fetchConversionBreakdown() async {
 // ── En İyi Yayın Saati ────────────────────────────────────────────────────
 
 class BestStreamTimeScreen extends StatefulWidget {
-  const BestStreamTimeScreen({super.key});
+  final bool isEmbedded;
+  const BestStreamTimeScreen({super.key, this.isEmbedded = false});
 
   @override
   State<BestStreamTimeScreen> createState() => _BestStreamTimeScreenState();
@@ -63,15 +64,7 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Scaffold(
-      backgroundColor: AppColors.bg(context),
-      appBar: AppBar(
-        title: Text(l.proToolBestTimeTitle),
-        backgroundColor: AppColors.bg(context),
-        elevation: 0,
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
-      ),
-      body: _loading
+    final content = _loading
           ? const Center(child: CircularProgressIndicator())
           : _hasError
               ? Center(
@@ -86,7 +79,21 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
                     ],
                   ),
                 )
-              : _buildContent(context),
+              : _buildContent(context);
+
+    if (widget.isEmbedded) {
+      return content;
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.bg(context),
+      appBar: AppBar(
+        title: Text(l.proToolBestTimeTitle),
+        backgroundColor: AppColors.bg(context),
+        elevation: 0,
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
+      ),
+      body: content,
     );
   }
 
@@ -95,7 +102,7 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
     final slots = (_data!['slots'] as List? ?? []);
     final recommendation = _data!['recommendation'] as String? ?? '';
 
-    return ListView(
+    return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
       padding: const EdgeInsets.all(16),
       children: [
         if (recommendation.isNotEmpty)
@@ -226,7 +233,8 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
 // ── Dönüşüm Analizi ────────────────────────────────────────────────────────
 
 class ConversionBreakdownScreen extends StatefulWidget {
-  const ConversionBreakdownScreen({super.key});
+  final bool isEmbedded;
+  const ConversionBreakdownScreen({super.key, this.isEmbedded = false});
 
   @override
   State<ConversionBreakdownScreen> createState() => _ConversionBreakdownScreenState();
@@ -258,15 +266,7 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Scaffold(
-      backgroundColor: AppColors.bg(context),
-      appBar: AppBar(
-        title: Text(l.proToolConversionTitle),
-        backgroundColor: AppColors.bg(context),
-        elevation: 0,
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
-      ),
-      body: _loading
+    final content = _loading
           ? const Center(child: CircularProgressIndicator())
           : _hasError
               ? Center(
@@ -281,7 +281,21 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
                     ],
                   ),
                 )
-              : _buildContent(context, l),
+              : _buildContent(context, l);
+
+    if (widget.isEmbedded) {
+      return content;
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.bg(context),
+      appBar: AppBar(
+        title: Text(l.proToolConversionTitle),
+        backgroundColor: AppColors.bg(context),
+        elevation: 0,
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
+      ),
+      body: content,
     );
   }
 
@@ -304,7 +318,7 @@ class _ConversionBreakdownScreenState extends State<ConversionBreakdownScreen> {
     final visible = _showAll ? _data : _data.take(_kMax).toList();
     final maxConv = (_data.map((r) => (r['conversion_rate'] as num? ?? 0).toDouble()).reduce((a, b) => a > b ? a : b)).toDouble();
 
-    return ListView(
+    return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
       padding: const EdgeInsets.all(16),
       children: [
         Text(l.conversionSectionHeader,

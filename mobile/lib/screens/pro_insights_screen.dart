@@ -6,7 +6,8 @@ import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 
 class ProInsightsScreen extends StatefulWidget {
-  const ProInsightsScreen({super.key});
+  final bool isEmbedded;
+  const ProInsightsScreen({super.key, this.isEmbedded = false});
 
   @override
   State<ProInsightsScreen> createState() => _ProInsightsScreenState();
@@ -46,6 +47,16 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final bodyContent = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : _hasError
+            ? _buildError(l)
+            : RefreshIndicator(onRefresh: _load, child: _buildBody(l));
+
+    if (widget.isEmbedded) {
+      return bodyContent;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -59,11 +70,7 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _hasError
-              ? _buildError(l)
-              : RefreshIndicator(onRefresh: _load, child: _buildBody(l)),
+      body: bodyContent,
     );
   }
 
@@ -91,7 +98,7 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
     final peakHours   = (_data?['peak_hours']   as List?)?.cast<Map<String, dynamic>>() ?? [];
     final tips        = (_data?['tips']         as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-    return ListView(
+    return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
       children: [
         _SectionLabel(l.proSectionOverview),

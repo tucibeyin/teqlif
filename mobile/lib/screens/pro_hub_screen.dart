@@ -74,16 +74,19 @@ class _ProHubScreenState extends State<ProHubScreen> {
   }
 
   Future<void> _loadCredits() async {
-    final blastData        = await AnalyticsService.getBlastCredits();
-    final boostData        = await AnalyticsService.getBoostCredits();
-    final aiData           = await AnalyticsService.getAiPriceCredits();
-    final reactivationData = await AnalyticsService.getReactivationCredits();
+    final results = await Future.wait([
+      AnalyticsService.getBlastCredits(),
+      AnalyticsService.getBoostCredits(),
+      AnalyticsService.getAiPriceCredits(),
+      AnalyticsService.getReactivationCredits(),
+    ]);
+
     if (mounted) {
       setState(() {
-        _credits             = blastData;
-        _boostCredits        = boostData;
-        _aiCredits           = aiData;
-        _reactivationCredits = reactivationData;
+        _credits             = results[0];
+        _boostCredits        = results[1];
+        _aiCredits           = results[2];
+        _reactivationCredits = results[3];
       });
     }
   }

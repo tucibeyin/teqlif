@@ -3269,4 +3269,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get proToolStreamHistoryDesc =>
       'Analyze the sales and audience statistics of your past live streams in detail.';
+
+  @override
+  String get proTabSales => 'Performance';
+
+  @override
+  String get proTabMarket => 'Market';
+
+  @override
+  String get proTabAudience => 'Audience';
 }

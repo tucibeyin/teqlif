@@ -9,7 +9,8 @@ import '../services/storage_service.dart';
 import 'live_stream_analytics_screen.dart';
 
 class LiveStreamHistoryScreen extends StatefulWidget {
-  const LiveStreamHistoryScreen({super.key});
+  final bool isEmbedded;
+  const LiveStreamHistoryScreen({super.key, this.isEmbedded = false});
 
   @override
   State<LiveStreamHistoryScreen> createState() => _LiveStreamHistoryScreenState();
@@ -60,44 +61,34 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Scaffold(
-      backgroundColor: AppColors.bg(context),
-      appBar: AppBar(
-        title: Text(l.proToolStreamHistoryTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
-        backgroundColor: AppColors.bg(context),
-        elevation: 0,
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchHistory)
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _hasError
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, size: 48, color: AppColors.textSecondary(context)),
-                      const SizedBox(height: 16),
-                      Text(l.proLoadError, style: TextStyle(color: AppColors.textSecondary(context))),
-                      const SizedBox(height: 16),
-                      FilledButton(onPressed: _fetchHistory, child: Text(l.btnRetry)),
-                    ],
-                  ),
-                )
-              : _streams.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.history_toggle_off, size: 64, color: AppColors.textSecondary(context).withOpacity(0.5)),
-                          const SizedBox(height: 16),
-                          Text(l.proToolStreamHistoryEmpty, style: TextStyle(color: AppColors.textSecondary(context))),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
+    final bodyContent = _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : _hasError
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 48, color: AppColors.textSecondary(context)),
+                    const SizedBox(height: 16),
+                    Text(l.proLoadError, style: TextStyle(color: AppColors.textSecondary(context))),
+                    const SizedBox(height: 16),
+                    FilledButton(onPressed: _fetchHistory, child: Text(l.btnRetry)),
+                  ],
+                ),
+              )
+            : _streams.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.history_toggle_off, size: 64, color: AppColors.textSecondary(context).withValues(alpha: 0.5)),
+                        const SizedBox(height: 16),
+                        Text(l.proToolStreamHistoryEmpty, style: TextStyle(color: AppColors.textSecondary(context))),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
                       itemCount: _streams.length,
                       itemBuilder: (context, index) {
                         final s = _streams[index];
@@ -185,7 +176,23 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                           ),
                         );
                       },
-                    ),
+                    );
+
+    if (widget.isEmbedded) {
+      return bodyContent;
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.bg(context),
+      appBar: AppBar(
+        title: Text(l.proToolStreamHistoryTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+        backgroundColor: AppColors.bg(context),
+        elevation: 0,
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchHistory)
+        ],
+      ),
+      body: bodyContent,
     );
   }
 }

@@ -7,7 +7,8 @@ import '../services/analytics_service.dart';
 
 class MarketIntelligenceScreen extends StatefulWidget {
   final bool isPremium;
-  const MarketIntelligenceScreen({super.key, required this.isPremium});
+  final bool isEmbedded;
+  const MarketIntelligenceScreen({super.key, required this.isPremium, this.isEmbedded = false});
 
   @override
   State<MarketIntelligenceScreen> createState() => _MarketIntelligenceScreenState();
@@ -60,6 +61,21 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final bodyContent = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : _hasError
+            ? _buildError(l)
+            : Stack(
+                children: [
+                  _buildContent(l),
+                  if (!widget.isPremium) _buildPaywall(context, l),
+                ],
+              );
+
+    if (widget.isEmbedded) {
+      return bodyContent;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -67,16 +83,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _hasError
-              ? _buildError(l)
-              : Stack(
-                  children: [
-                    _buildContent(l),
-                    if (!widget.isPremium) _buildPaywall(context, l),
-                  ],
-                ),
+      body: bodyContent,
     );
   }
 
@@ -107,7 +114,7 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView(
+      child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           if (growth != null)

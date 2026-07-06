@@ -7,7 +7,8 @@ import '../services/analytics_service.dart';
 
 class ListingAnalyticsScreen extends StatefulWidget {
   final bool isPremium;
-  const ListingAnalyticsScreen({super.key, required this.isPremium});
+  final bool isEmbedded;
+  const ListingAnalyticsScreen({super.key, required this.isPremium, this.isEmbedded = false});
 
   @override
   State<ListingAnalyticsScreen> createState() => _ListingAnalyticsScreenState();
@@ -99,6 +100,21 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final bodyContent = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : (_hasError && widget.isPremium)
+            ? _buildError(l)
+            : Stack(
+                children: [
+                  _buildContent(l),
+                  if (!widget.isPremium) _buildPaywall(context, l),
+                ],
+              );
+
+    if (widget.isEmbedded) {
+      return bodyContent;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -106,16 +122,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
         backgroundColor: AppColors.bg(context),
         elevation: 0,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : (_hasError && widget.isPremium)
-              ? _buildError(l)
-              : Stack(
-                  children: [
-                    _buildContent(l),
-                    if (!widget.isPremium) _buildPaywall(context, l),
-                  ],
-                ),
+      body: bodyContent,
     );
   }
 
@@ -142,7 +149,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView(
+      child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           _DayFilter(days: _days, l: l, onChanged: (d) { setState(() => _days = d); _load(); }),

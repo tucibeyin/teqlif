@@ -10,7 +10,8 @@ import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
 
 class CompetitorRadarScreen extends StatefulWidget {
-  const CompetitorRadarScreen({super.key});
+  final bool isEmbedded;
+  const CompetitorRadarScreen({super.key, this.isEmbedded = false});
 
   @override
   State<CompetitorRadarScreen> createState() => _CompetitorRadarScreenState();
@@ -84,27 +85,13 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return Scaffold(
-      backgroundColor: AppColors.bg(context),
-      appBar: AppBar(
-        title: Text(l.radarScreenTitle),
-        backgroundColor: AppColors.bg(context),
-        elevation: 0,
-        actions: [
-          if (_selectedListing != null && !_loadingData)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _loadData,
-            ),
-        ],
-      ),
-      body: _loadingListings
-          ? const Center(child: CircularProgressIndicator())
-          : _listings.isEmpty
-              ? _emptyState()
-              : RefreshIndicator(
+    final bodyContent = _loadingListings
+        ? const Center(child: CircularProgressIndicator())
+        : _listings.isEmpty
+            ? _emptyState()
+            : RefreshIndicator(
                   onRefresh: _loadData,
-                  child: ListView(
+                  child: ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                     children: [
                       _ListingPicker(
@@ -141,7 +128,26 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
                       ],
                     ],
                   ),
-                ),
+                );
+    if (widget.isEmbedded) {
+      return bodyContent;
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.bg(context),
+      appBar: AppBar(
+        title: Text(l.radarScreenTitle),
+        backgroundColor: AppColors.bg(context),
+        elevation: 0,
+        actions: [
+          if (_selectedListing != null && !_loadingData)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadData,
+            ),
+        ],
+      ),
+      body: bodyContent,
     );
   }
 

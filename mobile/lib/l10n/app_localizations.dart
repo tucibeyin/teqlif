@@ -5979,6 +5979,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Geçmiş canlı yayınlarınızın satış ve izleyici istatistiklerini detaylı inceleyin.'**
   String get proToolStreamHistoryDesc;
+
+  /// No description provided for @proTabSales.
+  ///
+  /// In tr, this message translates to:
+  /// **'Performans'**
+  String get proTabSales;
+
+  /// No description provided for @proTabMarket.
+  ///
+  /// In tr, this message translates to:
+  /// **'Piyasa'**
+  String get proTabMarket;
+
+  /// No description provided for @proTabAudience.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kitle'**
+  String get proTabAudience;
 }
 
 class _AppLocalizationsDelegate

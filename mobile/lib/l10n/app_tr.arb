@@ -1696,5 +1696,8 @@
       }
     }
   },
-  "proToolStreamHistoryDesc": "Geçmiş canlı yayınlarınızın satış ve izleyici istatistiklerini detaylı inceleyin."
+  "proToolStreamHistoryDesc": "Geçmiş canlı yayınlarınızın satış ve izleyici istatistiklerini detaylı inceleyin.",
+  "proTabSales": "Performans",
+  "proTabMarket": "Piyasa",
+  "proTabAudience": "Kitle"
 }

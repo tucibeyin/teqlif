@@ -3273,4 +3273,13 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get proToolStreamHistoryDesc =>
       'Geçmiş canlı yayınlarınızın satış ve izleyici istatistiklerini detaylı inceleyin.';
+
+  @override
+  String get proTabSales => 'Performans';
+
+  @override
+  String get proTabMarket => 'Piyasa';
+
+  @override
+  String get proTabAudience => 'Kitle';
 }

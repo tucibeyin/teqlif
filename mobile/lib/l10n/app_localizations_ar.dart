@@ -3245,4 +3245,13 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get proToolStreamHistoryDesc =>
       'قم بتحليل إحصائيات المبيعات والجمهور لبثوثك المباشرة السابقة بالتفصيل.';
+
+  @override
+  String get proTabSales => 'الأداء';
+
+  @override
+  String get proTabMarket => 'السوق';
+
+  @override
+  String get proTabAudience => 'الجمهور';
 }

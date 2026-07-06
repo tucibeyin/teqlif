@@ -10,7 +10,8 @@ import '../services/storage_service.dart';
 
 class RetargetingScreen extends StatefulWidget {
   final int initialIndex;
-  const RetargetingScreen({super.key, this.initialIndex = 0});
+  final bool isEmbedded;
+  const RetargetingScreen({super.key, this.initialIndex = 0, this.isEmbedded = false});
 
   @override
   State<RetargetingScreen> createState() => _RetargetingScreenState();
@@ -222,7 +223,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         final costPerClick = clicks > 0 ? (spent / clicks).round() : 0;
         final clickRate = sent > 0 ? ((clicks / sent) * 100).toStringAsFixed(1) : '0.0';
 
-        return ListView(
+        return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
           padding: const EdgeInsets.all(16),
           children: [
             Text(
@@ -262,7 +263,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         ? const Center(child: CircularProgressIndicator())
         : _listings.isEmpty
             ? _emptyState()
-            : ListView(
+            : ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : null,
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
                 children: [
                   _infoCard(),
@@ -283,6 +284,34 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                 ],
               );
 
+    if (widget.isEmbedded) {
+      return DefaultTabController(
+        length: 2,
+        initialIndex: widget.initialIndex,
+        child: Column(
+          children: [
+            const TabBar(
+              indicatorColor: Color(0xFF14B8A6),
+              labelColor: Color(0xFF14B8A6),
+              unselectedLabelColor: Colors.grey,
+              tabs: [
+                Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
+                Tab(icon: Icon(Icons.auto_graph), text: 'Raporlar'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  retargetingTab,
+                  reportTab,
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: 2,
       initialIndex: widget.initialIndex,
@@ -298,7 +327,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             unselectedLabelColor: Colors.grey,
             tabs: [
               Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
-              Tab(icon: Icon(Icons.analytics), text: 'Toplu Bildirim Raporu'),
+              Tab(icon: Icon(Icons.auto_graph), text: 'Raporlar'),
             ],
           ),
         ),
