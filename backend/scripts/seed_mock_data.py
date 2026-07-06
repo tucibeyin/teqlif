@@ -64,28 +64,38 @@ async def seed_data():
         custom_password = input("Password: ").strip() or "Teqlif123!"
         custom_pw_hash = pwd_context.hash(custom_password)
         
+        from sqlalchemy import select
+        existing_user_stmt = select(User).where(User.username == custom_username)
+        existing_user_result = await session.execute(existing_user_stmt)
+        existing_user = existing_user_result.scalars().first()
+        
         # 1. USERS
         print("👤 1/6: Kullanıcılar oluşturuluyor (100 adet)...")
         users = []
+        new_users_to_add = []
         default_pw = pwd_context.hash("Teqlif123!")
         
-        for i in range(100):
+        if existing_user:
+            print(f"✅ '{custom_username}' zaten var, mevcut hesap kullanılacak.")
+            users.append(existing_user)
+        else:
+            custom_user = User(
+                username=custom_username,
+                email=f"{custom_username}{random.randint(100, 999)}@example.com",
+                hashed_password=custom_pw_hash,
+                full_name="Test Kullanıcısı",
+                phone="555" + str(random.randint(1000000, 9999999)),
+                bio="Geliştirici test hesabı",
+                profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
+                is_premium=True
+            )
+            new_users_to_add.append(custom_user)
+            users.append(custom_user)
+            
+        for i in range(1, 100):
             is_pro = random.random() < 0.25 # 25% pro
             
-            # İlk kullanıcı özel kullanıcı olsun
-            if i == 0:
-                user = User(
-                    username=custom_username,
-                    email=f"{custom_username}@example.com",
-                    hashed_password=custom_pw_hash,
-                    full_name="Test Kullanıcısı",
-                    phone="555" + str(random.randint(1000000, 9999999)),
-                    bio="Geliştirici test hesabı",
-                    profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
-                    is_premium=True
-                )
-            else:
-                user = User(
+            user = User(
                     username=fake.user_name() + str(random.randint(10, 9999)),
                     email=fake.email(),
                     hashed_password=default_pw,
@@ -95,9 +105,16 @@ async def seed_data():
                     profile_image_url=f"https://i.pravatar.cc/150?u={random.randint(1, 1000)}",
                     is_premium=is_pro
                 )
+            new_users_to_add.append(user)
             users.append(user)
-        session.add_all(users)
-        await session.flush() # flush to get user IDs
+            
+        if new_users_to_add:
+            session.add_all(new_users_to_add)
+            try:
+                await session.flush() # flush to get user IDs
+            except Exception as e:
+                print(f"Kullanıcı oluşturulurken hata (Büyük ihtimalle email çakışması, tekrar deneyin): {e}")
+                return
         
         # 2. LISTINGS
         print("📦 2/6: İlanlar oluşturuluyor (~2000 adet)...")
