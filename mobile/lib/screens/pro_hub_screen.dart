@@ -95,160 +95,130 @@ class _ProHubScreenState extends State<ProHubScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final isPremium = _isPremium;
-    return Scaffold(
-      backgroundColor: AppColors.bg(context),
-      appBar: AppBar(
-        title: Text(l.proHubTitle),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
         backgroundColor: AppColors.bg(context),
-        elevation: 0,
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadCredits,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          // ── Durum Kartı ────────────────────────────────────────────────────
-          if (isPremium) _ProStatusCard(renewalDate: _credits?['renewal_date'] as String?, planType: _planType) else _UpgradeBanner(),
-          const SizedBox(height: 24),
-          _CreditsSummaryCard(
-            blastCredits: _credits,
-            boostCredits: _boostCredits,
-            aiCredits: _aiCredits,
-            reactivationCredits: _reactivationCredits,
-            isPremium: isPremium,
-          ),
-          const SizedBox(height: 24),
-          // ── Araçlar Başlığı ────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 12),
-            child: Text(
-              l.proHubTitle,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary(context),
-                letterSpacing: 0.6,
-              ),
-            ),
-          ),
-
-          // ── 3 Araç Kartı ──────────────────────────────────────────────────
-          _ToolCard(
-            icon: Icons.auto_graph_outlined,
-            iconColor: const Color(0xFF6366F1),
-            title: l.proToolSalesTitle,
-            description: l.proToolSalesDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProInsightsScreen()))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.bar_chart_outlined,
-            iconColor: const Color(0xFF10B981),
-            title: l.proToolListingsTitle,
-            description: l.proToolListingsDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ListingAnalyticsScreen(isPremium: isPremium)))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.insights_outlined,
-            iconColor: const Color(0xFFF59E0B),
-            title: l.proToolMarketTitle,
-            description: l.proToolMarketDesc,
-            isPremium: isPremium,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => MarketIntelligenceScreen(isPremium: isPremium)),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.schedule_outlined,
-            iconColor: const Color(0xFF8B5CF6),
-            title: l.proToolBestTimeTitle,
-            description: l.proToolBestTimeDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BestStreamTimeScreen()))
-                : () => _showUpgrade(context),
-          ),
-
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.pie_chart_outline,
-            iconColor: const Color(0xFFEC4899),
-            title: l.proToolConversionTitle,
-            description: l.proToolConversionDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversionBreakdownScreen()))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.radar,
-            iconColor: const Color(0xFF6366F1),
-            title: l.proToolCompetitorRadarTitle,
-            description: l.proToolCompetitorRadarDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CompetitorRadarScreen()))
-                : () => _showUpgrade(context),
-          ),
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.mark_email_unread_outlined,
-            iconColor: const Color(0xFF0EA5E9),
-            title: l.proToolRetargetingTitle,
-            description: l.proToolRetargetingDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RetargetingScreen(initialIndex: 0)))
-                : () => _showUpgrade(context),
-          ),
-
-
-          const SizedBox(height: 10),
-          _ToolCard(
-            icon: Icons.stream_outlined,
-            iconColor: const Color(0xFF14B8A6),
-            title: l.proToolStreamAnalyticsTitle,
-            description: l.proToolStreamAnalyticsDesc,
-            isPremium: isPremium,
-            onTap: isPremium
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveStreamHistoryScreen()))
-                : () => _showUpgrade(context),
-          ),
-
-
-
-          if (!isPremium) ...[
-            const SizedBox(height: 28),
-            Padding(
-              padding: const EdgeInsets.only(left: 2, bottom: 12),
-              child: Text(
-                l.proBenefitsTitle,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary(context),
-                  letterSpacing: 0.6,
+        appBar: AppBar(
+          title: Text(l.proHubTitle),
+          backgroundColor: AppColors.bg(context),
+          elevation: 0,
+        ),
+        body: RefreshIndicator(
+          onRefresh: _loadCredits,
+          child: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: Column(
+                      children: [
+                        if (isPremium) _ProStatusCard(renewalDate: _credits?['renewal_date'] as String?, planType: _planType) else _UpgradeBanner(),
+                        const SizedBox(height: 24),
+                        _CreditsSummaryCard(
+                          blastCredits: _credits,
+                          boostCredits: _boostCredits,
+                          aiCredits: _aiCredits,
+                          reactivationCredits: _reactivationCredits,
+                          isPremium: isPremium,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SliverAppBarDelegate(
+                    TabBar(
+                      isScrollable: true,
+                      indicatorColor: Theme.of(context).primaryColor,
+                      labelColor: AppColors.textPrimary(context),
+                      unselectedLabelColor: AppColors.textSecondary(context),
+                      tabs: [
+                        Tab(text: l.proHubTabSales),
+                        Tab(text: l.proHubTabMarket),
+                        Tab(text: l.proHubTabAudience),
+                      ],
+                    ),
+                    AppColors.bg(context),
+                  ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              children: [
+                // Tab 1: Sales & Perf
+                isPremium ? ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    const ProInsightsScreen(isEmbedded: true),
+                    ListingAnalyticsScreen(isPremium: isPremium, isEmbedded: true),
+                    const ConversionBreakdownScreen(isEmbedded: true),
+                  ],
+                ) : _buildNonPremiumBenefits(l, context),
+                
+                // Tab 2: Market & Rivals
+                isPremium ? ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    MarketIntelligenceScreen(isPremium: isPremium, isEmbedded: true),
+                    const CompetitorRadarScreen(isEmbedded: true),
+                  ],
+                ) : _buildNonPremiumBenefits(l, context),
+                
+                // Tab 3: Stream & Audience
+                isPremium ? ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    const BestStreamTimeScreen(isEmbedded: true),
+                    const LiveStreamHistoryScreen(isEmbedded: true),
+                    const RetargetingScreen(initialIndex: 0, isEmbedded: true),
+                  ],
+                ) : _buildNonPremiumBenefits(l, context),
+              ],
             ),
-            _BenefitRow(icon: Icons.insights_outlined,      text: l.proBenefit1),
-            _BenefitRow(icon: Icons.bar_chart_outlined,     text: l.proBenefit2),
-            _BenefitRow(icon: Icons.schedule_outlined,      text: l.proBenefit3),
-            _BenefitRow(icon: Icons.search_outlined,        text: l.proBenefit4),
-          ],
-        ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNonPremiumBenefits(AppLocalizations l, BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const SizedBox(height: 8),
+        Center(
+          child: ElevatedButton.icon(
+            onPressed: () => _showUpgrade(context),
+            icon: const Icon(Icons.workspace_premium),
+            label: Text(l.proUpgradeBtn),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 12),
+          child: Text(
+            l.proBenefitsTitle,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary(context),
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+        _BenefitRow(icon: Icons.insights_outlined,      text: l.proBenefit1),
+        _BenefitRow(icon: Icons.bar_chart_outlined,     text: l.proBenefit2),
+        _BenefitRow(icon: Icons.schedule_outlined,      text: l.proBenefit3),
+        _BenefitRow(icon: Icons.search_outlined,        text: l.proBenefit4),
+      ],
     );
   }
 
@@ -258,6 +228,31 @@ class _ProHubScreenState extends State<ProHubScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => const _UpgradeSheet(),
     );
+  }
+}
+
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar _tabBar;
+  final Color _bgColor;
+
+  _SliverAppBarDelegate(this._tabBar, this._bgColor);
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: _bgColor,
+      child: _tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
+    return false;
   }
 }
 
@@ -418,7 +413,7 @@ class _UpgradeBanner extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
-                color: const Color(0xFF06B6D4),
+                color: Theme.of(context).primaryColor,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -433,86 +428,6 @@ class _UpgradeBanner extends StatelessWidget {
   }
 }
 
-// ── Araç Kartı ─────────────────────────────────────────────────────────────────
-
-class _ToolCard extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String description;
-  final bool isPremium;
-  final VoidCallback onTap;
-
-  const _ToolCard({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.description,
-    required this.isPremium,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.card(context),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border(context)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary(context),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    description,
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (!isPremium)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFB800),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(AppLocalizations.of(context)!.pro, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
-              )
-            else
-              Icon(Icons.chevron_right, color: AppColors.textSecondary(context), size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ── Benefit Row ────────────────────────────────────────────────────────────────
 

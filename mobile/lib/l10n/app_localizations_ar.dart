@@ -1507,6 +1507,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proHubTitle => 'أدوات Pro';
 
   @override
+  String get proHubTabSales => 'المبيعات والأداء';
+
+  @override
+  String get proHubTabMarket => 'السوق والمنافسة';
+
+  @override
+  String get proHubTabAudience => 'البث والجمهور';
+
+  @override
   String get proToolSalesTitle => 'تقرير المبيعات والجمهور';
 
   @override
