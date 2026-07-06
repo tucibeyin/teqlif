@@ -1460,20 +1460,28 @@
   "profileInviteShareText": "انضم إلى Teqlif! مزادات حية وتسوّق مستعمل 🎁\n\nاستخدم رمز الدعوة هذا عند التسجيل لتحصل على TUCi إضافية فوراً:\n\n🔑 الرمز: {code}\n⏳ صالح لمدة: {expiry}\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 الموقع: https://teqlif.com",
   "@profileInviteShareText": {
     "placeholders": {
-      "code": {"type": "String"},
-      "expiry": {"type": "String"}
+      "code": {
+        "type": "String"
+      },
+      "expiry": {
+        "type": "String"
+      }
     }
   },
   "profileInviteExpiryDays": "{days} أيام",
   "@profileInviteExpiryDays": {
     "placeholders": {
-      "days": {"type": "int"}
+      "days": {
+        "type": "int"
+      }
     }
   },
   "profileInviteExpiryHours": "{hours} ساعات",
   "@profileInviteExpiryHours": {
     "placeholders": {
-      "hours": {"type": "int"}
+      "hours": {
+        "type": "int"
+      }
     }
   },
   "profileInviteExpirySoon": "وقت قصير",
@@ -1481,7 +1489,9 @@
   "profileInviteModalExpiry": "⏳ صالح لمدة: {expiry}",
   "@profileInviteModalExpiry": {
     "placeholders": {
-      "expiry": {"type": "String"}
+      "expiry": {
+        "type": "String"
+      }
     }
   },
   "profileInviteShareBtn": "مشاركة رابط الدعوة",
@@ -1722,5 +1732,68 @@
   "clearFilters": "مسح",
   "applyFilters": "تطبيق",
   "selectCity": "اختر مدينة",
-  "allCategories": "جميع الفئات"
+  "allCategories": "جميع الفئات",
+  "hintExampleEmail": "example@email.com",
+  "competitorRadarTitle": "رادار أسعار المنافسين",
+  "competitorRadarYourPrice": "سعرك",
+  "competitorRadarAvg": "متوسط المنافسين",
+  "competitorRadarSuggested": "مقترح",
+  "competitorRadarPercentile": "النسبة المئوية",
+  "competitorRadarDifference": "الفرق",
+  "competitorRadarCompetitor": "منافس",
+  "competitorRadarSalesSpeed": "سرعة المبيعات",
+  "competitorRadarSold": "مباع",
+  "competitorRadarActive": "منافس نشط",
+  "competitorRadarSalePrice": "سعر البيع",
+  "listingSuggestedStart": "البداية المقترحة",
+  "listingExpectedClose": "الإغلاق المتوقع",
+  "listingLowest": "الأدنى",
+  "listingAverage": "متوسط",
+  "listingHighest": "الأعلى",
+  "audienceCalcError": "حدث خطأ أثناء حساب الجمهور.",
+  "audienceNoPotentialFound": "لم يتم العثور على مشترين محتملين جدد لهذه القائمة في الوقت الحالي.",
+  "audienceMassSendSuccess": "تم إرسال إشعار الجمهور الجماعي بنجاح! 🚀",
+  "audienceMassSendError": "حدث خطأ أثناء الإرسال.",
+  "audienceSendToX": "إرسال إلى عدد معين من الأشخاص",
+  "audiencePersonCountHint": "عدد الأشخاص",
+  "audienceNotificationWillGoTo": "سيتم إرسال الإشعار إلى:",
+  "audienceMonthlyFreeRights": "الحقوق المجانية الشهرية:",
+  "audienceTotalCost": "التكلفة الإجمالية:",
+  "audienceInsufficientTuci": "⚠️ رصيد TUCi غير كافٍ، يرجى إعادة الشحن.",
+  "hostInvitedToStage": "تمت دعوته إلى المسرح",
+  "hostModeration": "إشراف",
+  "hostMute": "كتم",
+  "hostUnmute": "إلغاء الكتم",
+  "hostMakeModerator": "تعيين كمشرف",
+  "hostMadeModeratorMsg": "أصبح مشرفاً!",
+  "hostRemoveModerator": "إزالة كمشرف",
+  "hostInviteToStage": "دعوة إلى المسرح",
+  "hostRemoveFromStage": "إزالة من المسرح",
+  "hostKickFromStream": "طرد من البث",
+  "hostShowToAllViewersHint": "سيتم عرضه لجميع المشاهدين...",
+  "swipeMutedInStream": "لقد تم كتم صوتك في هذا البث",
+  "swipeMadeModeratorBy": "جعلك مشرفاً! يمكنك الآن إدارة المشاهدين.",
+  "swipeRemovedFromStage": "تمت إزالتك من المسرح",
+  "swipeGiftSent": "أرسلت! 🎉",
+  "notificationStart": "البداية",
+  "notificationEnd": "النهاية",
+  "proHubGotIt": "فهمت",
+  "profileSearchListingHint": "ابحث عن عنوان الإعلان...",
+  "profileFilterAll": "الكل",
+  "profileInviteAndEarn": "ادعُ واكسب",
+  "publicProfileFollowers": "متابعون",
+  "publicProfileFollowing": "يتابع",
+  "publicProfileEditProfile": "تعديل الملف الشخصي",
+  "saleDetailGoToBuyer": "انتقل إلى ملف المشتري",
+  "searchAiHint": "ابحث بالذكاء الاصطناعي (مثل: ساعة كلاسيكية)",
+  "searchFilterUsers": "مستخدمون",
+  "searchFilterListings": "إعلانات",
+  "searchFilterStreams": "بث مباشر",
+  "auctionSendVerificationEmail": "إرسال بريد التحقق",
+  "storyTrayRecordVideo": "تسجيل فيديو",
+  "storyTrayGalleryVideo": "فيديو من المعرض",
+  "storyTrayTakePhoto": "التقاط صورة",
+  "storyTrayGalleryPhoto": "صورة من المعرض",
+  "phoneInputHint": "رقم الهاتف",
+  "swipeListNoData": "لم يتم العثور على بيانات."
 }

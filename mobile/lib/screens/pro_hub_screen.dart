@@ -759,7 +759,7 @@ class _CreditsSummaryCard extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Anladım', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                  child: Text(AppLocalizations.of(context)!.proHubGotIt, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
               ),
             ],

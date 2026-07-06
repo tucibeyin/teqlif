@@ -6129,6 +6129,384 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Tüm Kategoriler'**
   String get allCategories;
+
+  /// No description provided for @hintExampleEmail.
+  ///
+  /// In tr, this message translates to:
+  /// **'ornek@email.com'**
+  String get hintExampleEmail;
+
+  /// No description provided for @competitorRadarTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rakip Fiyat Radarı'**
+  String get competitorRadarTitle;
+
+  /// No description provided for @competitorRadarYourPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Senin fiyatın'**
+  String get competitorRadarYourPrice;
+
+  /// No description provided for @competitorRadarAvg.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rakip ort.'**
+  String get competitorRadarAvg;
+
+  /// No description provided for @competitorRadarSuggested.
+  ///
+  /// In tr, this message translates to:
+  /// **'Önerilen'**
+  String get competitorRadarSuggested;
+
+  /// No description provided for @competitorRadarPercentile.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yüzdelik'**
+  String get competitorRadarPercentile;
+
+  /// No description provided for @competitorRadarDifference.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fark'**
+  String get competitorRadarDifference;
+
+  /// No description provided for @competitorRadarCompetitor.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rakip'**
+  String get competitorRadarCompetitor;
+
+  /// No description provided for @competitorRadarSalesSpeed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış Hızı'**
+  String get competitorRadarSalesSpeed;
+
+  /// No description provided for @competitorRadarSold.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satılan'**
+  String get competitorRadarSold;
+
+  /// No description provided for @competitorRadarActive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif Rakip'**
+  String get competitorRadarActive;
+
+  /// No description provided for @competitorRadarSalePrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış Fiyatı'**
+  String get competitorRadarSalePrice;
+
+  /// No description provided for @listingSuggestedStart.
+  ///
+  /// In tr, this message translates to:
+  /// **'Önerilen Başlangıç'**
+  String get listingSuggestedStart;
+
+  /// No description provided for @listingExpectedClose.
+  ///
+  /// In tr, this message translates to:
+  /// **'Beklenen Kapanış'**
+  String get listingExpectedClose;
+
+  /// No description provided for @listingLowest.
+  ///
+  /// In tr, this message translates to:
+  /// **'En Düşük'**
+  String get listingLowest;
+
+  /// No description provided for @listingAverage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama'**
+  String get listingAverage;
+
+  /// No description provided for @listingHighest.
+  ///
+  /// In tr, this message translates to:
+  /// **'En Yüksek'**
+  String get listingHighest;
+
+  /// No description provided for @audienceCalcError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kitle hesaplanırken bir hata oluştu.'**
+  String get audienceCalcError;
+
+  /// No description provided for @audienceNoPotentialFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şu an bu ilanla ilgilenebilecek yeni potansiyel alıcı bulunamadı.'**
+  String get audienceNoPotentialFound;
+
+  /// No description provided for @audienceMassSendSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplu Kitle Bildirimi başarıyla gönderildi! 🚀'**
+  String get audienceMassSendSuccess;
+
+  /// No description provided for @audienceMassSendError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönderim sırasında hata oluştu.'**
+  String get audienceMassSendError;
+
+  /// No description provided for @audienceSendToX.
+  ///
+  /// In tr, this message translates to:
+  /// **'Belirli bir kişi sayısına gönder'**
+  String get audienceSendToX;
+
+  /// No description provided for @audiencePersonCountHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kişi sayısı'**
+  String get audiencePersonCountHint;
+
+  /// No description provided for @audienceNotificationWillGoTo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bildirim Gidecek:'**
+  String get audienceNotificationWillGoTo;
+
+  /// No description provided for @audienceMonthlyFreeRights.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aylık Ücretsiz Hak:'**
+  String get audienceMonthlyFreeRights;
+
+  /// No description provided for @audienceTotalCost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam Maliyet:'**
+  String get audienceTotalCost;
+
+  /// No description provided for @audienceInsufficientTuci.
+  ///
+  /// In tr, this message translates to:
+  /// **'⚠️ Yetersiz TUCi bakiyesi, lütfen yükleme yapın.'**
+  String get audienceInsufficientTuci;
+
+  /// No description provided for @hostInvitedToStage.
+  ///
+  /// In tr, this message translates to:
+  /// **'sahneye davet edildi'**
+  String get hostInvitedToStage;
+
+  /// No description provided for @hostModeration.
+  ///
+  /// In tr, this message translates to:
+  /// **'Moderasyon'**
+  String get hostModeration;
+
+  /// No description provided for @hostMute.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sustur'**
+  String get hostMute;
+
+  /// No description provided for @hostUnmute.
+  ///
+  /// In tr, this message translates to:
+  /// **'Susturmayı Kaldır'**
+  String get hostUnmute;
+
+  /// No description provided for @hostMakeModerator.
+  ///
+  /// In tr, this message translates to:
+  /// **'Moderatör Yap'**
+  String get hostMakeModerator;
+
+  /// No description provided for @hostMadeModeratorMsg.
+  ///
+  /// In tr, this message translates to:
+  /// **'moderatör yapıldı!'**
+  String get hostMadeModeratorMsg;
+
+  /// No description provided for @hostRemoveModerator.
+  ///
+  /// In tr, this message translates to:
+  /// **'Moderatörlüğü Kaldır'**
+  String get hostRemoveModerator;
+
+  /// No description provided for @hostInviteToStage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sahneye Davet Et'**
+  String get hostInviteToStage;
+
+  /// No description provided for @hostRemoveFromStage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sahneden Al'**
+  String get hostRemoveFromStage;
+
+  /// No description provided for @hostKickFromStream.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayından At'**
+  String get hostKickFromStream;
+
+  /// No description provided for @hostShowToAllViewersHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm izleyicilere gösterilecek...'**
+  String get hostShowToAllViewersHint;
+
+  /// No description provided for @swipeMutedInStream.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu yayında susturuldunuz'**
+  String get swipeMutedInStream;
+
+  /// No description provided for @swipeMadeModeratorBy.
+  ///
+  /// In tr, this message translates to:
+  /// **'sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.'**
+  String get swipeMadeModeratorBy;
+
+  /// No description provided for @swipeRemovedFromStage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sahneden kaldırıldınız'**
+  String get swipeRemovedFromStage;
+
+  /// No description provided for @swipeGiftSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'gönderildi! 🎉'**
+  String get swipeGiftSent;
+
+  /// No description provided for @notificationStart.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç'**
+  String get notificationStart;
+
+  /// No description provided for @notificationEnd.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bitiş'**
+  String get notificationEnd;
+
+  /// No description provided for @proHubGotIt.
+  ///
+  /// In tr, this message translates to:
+  /// **'Anladım'**
+  String get proHubGotIt;
+
+  /// No description provided for @profileSearchListingHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan başlığı ara...'**
+  String get profileSearchListingHint;
+
+  /// No description provided for @profileFilterAll.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tümü'**
+  String get profileFilterAll;
+
+  /// No description provided for @profileInviteAndEarn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet Et & Kazan'**
+  String get profileInviteAndEarn;
+
+  /// No description provided for @publicProfileFollowers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Takipçiler'**
+  String get publicProfileFollowers;
+
+  /// No description provided for @publicProfileFollowing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Takip Edilenler'**
+  String get publicProfileFollowing;
+
+  /// No description provided for @publicProfileEditProfile.
+  ///
+  /// In tr, this message translates to:
+  /// **'Profili Düzenle'**
+  String get publicProfileEditProfile;
+
+  /// No description provided for @saleDetailGoToBuyer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcı Profiline Git'**
+  String get saleDetailGoToBuyer;
+
+  /// No description provided for @searchAiHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay zeka ile arayın (Örn: Vintage bir saat)'**
+  String get searchAiHint;
+
+  /// No description provided for @searchFilterUsers.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcılar'**
+  String get searchFilterUsers;
+
+  /// No description provided for @searchFilterListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanlar'**
+  String get searchFilterListings;
+
+  /// No description provided for @searchFilterStreams.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı Yayınlar'**
+  String get searchFilterStreams;
+
+  /// No description provided for @auctionSendVerificationEmail.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulama E-postası Gönder'**
+  String get auctionSendVerificationEmail;
+
+  /// No description provided for @storyTrayRecordVideo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video Çek'**
+  String get storyTrayRecordVideo;
+
+  /// No description provided for @storyTrayGalleryVideo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Galeriden Video'**
+  String get storyTrayGalleryVideo;
+
+  /// No description provided for @storyTrayTakePhoto.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fotoğraf Çek'**
+  String get storyTrayTakePhoto;
+
+  /// No description provided for @storyTrayGalleryPhoto.
+  ///
+  /// In tr, this message translates to:
+  /// **'Galeriden Fotoğraf'**
+  String get storyTrayGalleryPhoto;
+
+  /// No description provided for @phoneInputHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefon numarası'**
+  String get phoneInputHint;
+
+  /// No description provided for @swipeListNoData.
+  ///
+  /// In tr, this message translates to:
+  /// **'Veri bulunamadı.'**
+  String get swipeListNoData;
 }
 
 class _AppLocalizationsDelegate

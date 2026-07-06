@@ -483,7 +483,7 @@ class _ProSection extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _TimePicker(
-                            label: 'Başlangıç',
+                            label: AppLocalizations.of(context)!.notificationStart,
                             time: quietFrom,
                             onTap: onPickFrom,
                           ),
@@ -491,7 +491,7 @@ class _ProSection extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _TimePicker(
-                            label: 'Bitiş',
+                            label: AppLocalizations.of(context)!.notificationEnd,
                             time: quietTo,
                             onTap: onPickTo,
                           ),

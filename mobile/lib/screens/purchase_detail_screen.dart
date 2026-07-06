@@ -109,7 +109,7 @@ class PurchaseDetailScreen extends StatelessWidget {
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15),
                   ),
                   const Divider(height: 24),
-                  _infoRow(context, 'Satış Fiyatı', fmtPrice(finalPrice), valueColor: const Color(0xFF4ADE80)),
+                  _infoRow(context, AppLocalizations.of(context)!.competitorRadarSalePrice, fmtPrice(finalPrice), valueColor: const Color(0xFF4ADE80)),
                   if (startPrice != null)
                     _infoRow(context, 'Başlangıç Fiyatı', fmtPrice(startPrice)),
                   _infoRow(
@@ -123,9 +123,9 @@ class PurchaseDetailScreen extends StatelessWidget {
                   if (!isBuyItNow && bidCount != null)
                     _infoRow(context, 'Teklif Sayısı', '$bidCount'),
                   if (startedAt != null)
-                    _infoRow(context, 'Başlangıç', _formatDate(startedAt)),
+                    _infoRow(context, AppLocalizations.of(context)!.notificationStart, _formatDate(startedAt)),
                   if (endedAt != null)
-                    _infoRow(context, 'Bitiş', _formatDate(endedAt)),
+                    _infoRow(context, AppLocalizations.of(context)!.notificationEnd, _formatDate(endedAt)),
                 ],
               ),
             ),

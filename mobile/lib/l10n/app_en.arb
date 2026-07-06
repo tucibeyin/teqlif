@@ -1461,20 +1461,28 @@
   "profileInviteShareText": "Join Teqlif! Live auctions & second-hand shopping 🎁\n\nUse this invite code when signing up to earn bonus TUCi instantly:\n\n🔑 Code: {code}\n⏳ Expires in: {expiry}\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Website: https://teqlif.com",
   "@profileInviteShareText": {
     "placeholders": {
-      "code": {"type": "String"},
-      "expiry": {"type": "String"}
+      "code": {
+        "type": "String"
+      },
+      "expiry": {
+        "type": "String"
+      }
     }
   },
   "profileInviteExpiryDays": "{days} days",
   "@profileInviteExpiryDays": {
     "placeholders": {
-      "days": {"type": "int"}
+      "days": {
+        "type": "int"
+      }
     }
   },
   "profileInviteExpiryHours": "{hours} hours",
   "@profileInviteExpiryHours": {
     "placeholders": {
-      "hours": {"type": "int"}
+      "hours": {
+        "type": "int"
+      }
     }
   },
   "profileInviteExpirySoon": "a short time",
@@ -1482,7 +1490,9 @@
   "profileInviteModalExpiry": "⏳ Expires in: {expiry}",
   "@profileInviteModalExpiry": {
     "placeholders": {
-      "expiry": {"type": "String"}
+      "expiry": {
+        "type": "String"
+      }
     }
   },
   "profileInviteShareBtn": "Share Invite Link",
@@ -1743,5 +1753,68 @@
   "clearFilters": "Clear",
   "applyFilters": "Apply",
   "selectCity": "Select City",
-  "allCategories": "All Categories"
+  "allCategories": "All Categories",
+  "hintExampleEmail": "example@email.com",
+  "competitorRadarTitle": "Competitor Price Radar",
+  "competitorRadarYourPrice": "Your price",
+  "competitorRadarAvg": "Competitor avg.",
+  "competitorRadarSuggested": "Suggested",
+  "competitorRadarPercentile": "Percentile",
+  "competitorRadarDifference": "Difference",
+  "competitorRadarCompetitor": "Competitor",
+  "competitorRadarSalesSpeed": "Sales Speed",
+  "competitorRadarSold": "Sold",
+  "competitorRadarActive": "Active Competitor",
+  "competitorRadarSalePrice": "Sale Price",
+  "listingSuggestedStart": "Suggested Start",
+  "listingExpectedClose": "Expected Close",
+  "listingLowest": "Lowest",
+  "listingAverage": "Average",
+  "listingHighest": "Highest",
+  "audienceCalcError": "An error occurred while calculating the audience.",
+  "audienceNoPotentialFound": "No new potential buyers found for this listing at the moment.",
+  "audienceMassSendSuccess": "Mass Audience Notification sent successfully! 🚀",
+  "audienceMassSendError": "An error occurred during sending.",
+  "audienceSendToX": "Send to a specific number of people",
+  "audiencePersonCountHint": "Number of people",
+  "audienceNotificationWillGoTo": "Notification will go to:",
+  "audienceMonthlyFreeRights": "Monthly Free Rights:",
+  "audienceTotalCost": "Total Cost:",
+  "audienceInsufficientTuci": "⚠️ Insufficient TUCi balance, please top up.",
+  "hostInvitedToStage": "was invited to the stage",
+  "hostModeration": "Moderation",
+  "hostMute": "Mute",
+  "hostUnmute": "Unmute",
+  "hostMakeModerator": "Make Moderator",
+  "hostMadeModeratorMsg": "was made a moderator!",
+  "hostRemoveModerator": "Remove Moderator",
+  "hostInviteToStage": "Invite to Stage",
+  "hostRemoveFromStage": "Remove from Stage",
+  "hostKickFromStream": "Kick from Stream",
+  "hostShowToAllViewersHint": "Will be shown to all viewers...",
+  "swipeMutedInStream": "You have been muted in this stream",
+  "swipeMadeModeratorBy": "made you a moderator! You can now manage viewers.",
+  "swipeRemovedFromStage": "You were removed from the stage",
+  "swipeGiftSent": "sent! 🎉",
+  "notificationStart": "Start",
+  "notificationEnd": "End",
+  "proHubGotIt": "Got it",
+  "profileSearchListingHint": "Search listing title...",
+  "profileFilterAll": "All",
+  "profileInviteAndEarn": "Invite & Earn",
+  "publicProfileFollowers": "Followers",
+  "publicProfileFollowing": "Following",
+  "publicProfileEditProfile": "Edit Profile",
+  "saleDetailGoToBuyer": "Go to Buyer Profile",
+  "searchAiHint": "Search with AI (e.g. A vintage watch)",
+  "searchFilterUsers": "Users",
+  "searchFilterListings": "Listings",
+  "searchFilterStreams": "Live Streams",
+  "auctionSendVerificationEmail": "Send Verification Email",
+  "storyTrayRecordVideo": "Record Video",
+  "storyTrayGalleryVideo": "Gallery Video",
+  "storyTrayTakePhoto": "Take Photo",
+  "storyTrayGalleryPhoto": "Gallery Photo",
+  "phoneInputHint": "Phone number",
+  "swipeListNoData": "No data found."
 }

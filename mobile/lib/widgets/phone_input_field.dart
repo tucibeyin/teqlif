@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl_phone_field/phone_number.dart';
 import '../config/app_colors.dart';
@@ -81,7 +82,7 @@ class _PhoneInputFieldState extends State<PhoneInputField> {
       autofocus: false,
       invalidNumberMessage: null, // kendi hata mesajımızı kullanacağız
       decoration: InputDecoration(
-        hintText: 'Telefon numarası',
+        hintText: AppLocalizations.of(context)!.phoneInputHint,
         hintStyle: TextStyle(color: hintColor, fontSize: 14),
         filled: true,
         fillColor: fillColor,

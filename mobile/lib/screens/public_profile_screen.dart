@@ -383,7 +383,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               builder: (_) => FollowListScreen(
                                 userId: userId,
                                 type: FollowListType.followers,
-                                title: 'Takipçiler',
+                                title: l.publicProfileFollowers,
                               ),
                             ),
                           ),
@@ -400,7 +400,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               builder: (_) => FollowListScreen(
                                 userId: userId,
                                 type: FollowListType.following,
-                                title: 'Takip Edilenler',
+                                title: l.publicProfileFollowing,
                               ),
                             ),
                           ),
@@ -416,7 +416,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 if (_isOwnProfile) ...[
                   _actionButton(
                     key: const Key('pub_profile_btn_profil_duzenle'),
-                    label: 'Profili Düzenle',
+                    label: l.publicProfileEditProfile,
                     icon: Icons.edit_outlined,
                     primary: false,
                     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(

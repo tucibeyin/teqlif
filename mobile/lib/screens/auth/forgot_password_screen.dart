@@ -102,9 +102,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _submit(),
                     style: TextStyle(color: AppColors.textPrimary(context)),
-                    decoration: const InputDecoration(
-                      labelText: 'E-posta',
-                      hintText: 'ornek@email.com',
+                    decoration: InputDecoration(hintText: AppLocalizations.of(context)!.hintExampleEmail,
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (v) {

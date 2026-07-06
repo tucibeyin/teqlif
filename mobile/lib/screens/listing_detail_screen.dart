@@ -672,14 +672,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     final est = await AnalyticsService.estimateAudienceForListing(listingId);
     if (est == null || !mounted) {
       setState(() => _massNotificationSending = false);
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Kitle hesaplanırken bir hata oluştu.')));
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceCalcError)));
       return;
     }
 
     final maxAudience = est['audience_size'] as int? ?? 0;
     if (maxAudience == 0) {
       setState(() => _massNotificationSending = false);
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Şu an bu ilanla ilgilenebilecek yeni potansiyel alıcı bulunamadı.')));
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceNoPotentialFound)));
       return;
     }
 
@@ -714,12 +714,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(apiResult['error'])));
     } else if (apiResult != null) {
       setState(() => _massNotificationSent = true);
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-        content: Text('Toplu Kitle Bildirimi başarıyla gönderildi! 🚀'),
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceMassSendSuccess),
         backgroundColor: Color(0xFF14B8A6),
       ));
     } else {
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Gönderim sırasında hata oluştu.')));
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceMassSendError)));
     }
   }
 
@@ -2185,7 +2184,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                 ),
               ),
               const SizedBox(width: 8),
-              const Expanded(child: Text('Belirli bir kişi sayısına gönder', style: TextStyle(color: Color(0xFFCBD5E1)))),
+              Expanded(child: Text(AppLocalizations.of(context)!.audienceSendToX, style: const TextStyle(color: Color(0xFFCBD5E1)))),
             ],
           ),
           if (_useCustomCount)
@@ -2196,7 +2195,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                 keyboardType: TextInputType.number,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'Kişi sayısı',
+                  hintText: AppLocalizations.of(context)!.audiencePersonCountHint,
                   hintStyle: const TextStyle(color: Color(0xFF64748B)),
                   filled: true,
                   fillColor: const Color(0xFF0F172A),
@@ -2220,7 +2219,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Bildirim Gidecek:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                    Text(AppLocalizations.of(context)!.audienceNotificationWillGoTo, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
                     Text('$actualCount Kişi', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),
@@ -2228,7 +2227,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Aylık Ücretsiz Hak:', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                    Text(AppLocalizations.of(context)!.audienceMonthlyFreeRights, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
                     Text('-$freeUsed Kişi', style: const TextStyle(color: Color(0xFF2DD4BF), fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),
@@ -2239,7 +2238,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Toplam Maliyet:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(AppLocalizations.of(context)!.audienceTotalCost, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     Text('$tuciCost TUCi', style: TextStyle(color: hasEnoughBalance ? const Color(0xFF2DD4BF) : const Color(0xFFEF4444), fontWeight: FontWeight.w800)),
                   ],
                 ),
@@ -2247,9 +2246,9 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
             ),
           ),
           if (!hasEnoughBalance)
-            const Padding(
-              padding: EdgeInsets.only(top: 8.0),
-              child: Text('⚠️ Yetersiz TUCi bakiyesi, lütfen yükleme yapın.', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.bold)),
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(AppLocalizations.of(context)!.audienceInsufficientTuci, style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.bold)),
             ),
         ],
       ),

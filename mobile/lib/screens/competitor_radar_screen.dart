@@ -215,7 +215,7 @@ class _RadarSection extends StatelessWidget {
       return _SectionCard(
         icon: Icons.radar,
         iconColor: const Color(0xFF6366F1),
-        title: 'Rakip Fiyat Radarı',
+        title: AppLocalizations.of(context)!.competitorRadarTitle,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Center(
@@ -265,7 +265,7 @@ class _RadarSection extends StatelessWidget {
     return _SectionCard(
       icon: Icons.radar,
       iconColor: const Color(0xFF6366F1),
-      title: 'Rakip Fiyat Radarı',
+      title: AppLocalizations.of(context)!.competitorRadarTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -305,11 +305,11 @@ class _RadarSection extends StatelessWidget {
           // Fiyat metrikleri
           Row(
             children: [
-              _PriceMetric(label: 'Senin fiyatın', value: myPrice, color: signalColor),
+              _PriceMetric(label: AppLocalizations.of(context)!.competitorRadarYourPrice, value: myPrice, color: signalColor),
               const SizedBox(width: 10),
-              _PriceMetric(label: 'Rakip ort.', value: avgPrice, color: AppColors.textPrimary(context)),
+              _PriceMetric(label: AppLocalizations.of(context)!.competitorRadarAvg, value: avgPrice, color: AppColors.textPrimary(context)),
               const SizedBox(width: 10),
-              _PriceMetric(label: 'Önerilen', value: suggestedPrice, color: const Color(0xFF22C55E)),
+              _PriceMetric(label: AppLocalizations.of(context)!.competitorRadarSuggested, value: suggestedPrice, color: const Color(0xFF22C55E)),
             ],
           ),
           if (signal != 'uygun' && suggestedPrice > 0) ...[
@@ -370,7 +370,7 @@ class _RadarSection extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatChip(
-                  label: 'Yüzdelik',
+                  label: AppLocalizations.of(context)!.competitorRadarPercentile,
                   value: '%$pctRank',
                   sub: 'rakipten pahalı',
                 ),
@@ -378,7 +378,7 @@ class _RadarSection extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _StatChip(
-                  label: 'Fark',
+                  label: AppLocalizations.of(context)!.competitorRadarDifference,
                   value: '${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%',
                   sub: 'ort. fiyattan',
                   valueColor: diffPct > 0 ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
@@ -387,7 +387,7 @@ class _RadarSection extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _StatChip(
-                  label: 'Rakip',
+                  label: AppLocalizations.of(context)!.competitorRadarCompetitor,
                   value: '$competitorCount',
                   sub: 'aktif ilan',
                 ),
@@ -476,7 +476,7 @@ class _VelocitySection extends StatelessWidget {
     return _SectionCard(
       icon: Icons.speed_outlined,
       iconColor: const Color(0xFF10B981),
-      title: 'Satış Hızı — $category',
+      title: AppLocalizations.of(context)!.competitorRadarSalesSpeed,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -526,7 +526,7 @@ class _VelocitySection extends StatelessWidget {
               children: [
                 Expanded(
                   child: _StatChip(
-                    label: 'Satılan',
+                    label: AppLocalizations.of(context)!.competitorRadarSold,
                     value: '$totalSold',
                     sub: '90 günde',
                   ),
@@ -534,7 +534,7 @@ class _VelocitySection extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _StatChip(
-                    label: 'Aktif Rakip',
+                    label: AppLocalizations.of(context)!.competitorRadarActive,
                     value: '$activeCount',
                     sub: 'şu an',
                   ),
@@ -543,7 +543,7 @@ class _VelocitySection extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _StatChip(
-                      label: 'Satış Fiyatı',
+                      label: AppLocalizations.of(context)!.competitorRadarSalePrice,
                       value: '${_fmtPrice(avgSoldPrice)} ₺',
                       sub: 'ortalama',
                     ),

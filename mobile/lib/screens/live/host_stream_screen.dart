@@ -579,7 +579,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎬 @$username sahneye davet edildi'),
+            content: Text(AppLocalizations.of(context)!.hostInvitedToStage),
             backgroundColor: const Color(0xFF6366F1),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
@@ -1752,7 +1752,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           // Başlık
           Row(
             children: [
-              const Text('🛡 Moderasyon',
+              Text(AppLocalizations.of(context)!.hostModeration,
                   style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
               const Spacer(),
               Text('@${widget.username}',
@@ -1767,7 +1767,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           if (!_isMuted)
             _ModBtn(
               icon: '🔇',
-              label: 'Sustur',
+              label: AppLocalizations.of(context)!.hostMute,
               color: const Color(0xFFD97706),
               loading: _loading,
               onTap: () => _act(
@@ -1779,7 +1779,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           else
             _ModBtn(
               icon: '🔊',
-              label: 'Susturmayı Kaldır',
+              label: AppLocalizations.of(context)!.hostUnmute,
               color: const Color(0xFF16A34A),
               loading: _loading,
               onTap: () => _act(
@@ -1794,7 +1794,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           if (!widget.isMod)
             _ModBtn(
               icon: '⭐',
-              label: 'Moderatör Yap',
+              label: AppLocalizations.of(context)!.hostMakeModerator,
               color: const Color(0xFFF59E0B),
               loading: _loading,
               onTap: () => _act(
@@ -1804,7 +1804,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
                   widget.onPromoted();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('⭐ @${widget.username} moderatör yapıldı!'),
+                      content: Text(AppLocalizations.of(context)!.hostMadeModeratorMsg),
                       backgroundColor: const Color(0xFF16A34A),
                       behavior: SnackBarBehavior.floating,
                       duration: const Duration(seconds: 3),
@@ -1816,7 +1816,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           else
             _ModBtn(
               icon: '✖',
-              label: 'Moderatörlüğü Kaldır',
+              label: AppLocalizations.of(context)!.hostRemoveModerator,
               color: const Color(0xFF475569),
               loading: _loading,
               onTap: () => _act(
@@ -1841,7 +1841,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           if (widget.currentCoHostUsername == null && widget.onInviteCoHost != null) ...[
             _ModBtn(
               icon: '🎬',
-              label: 'Sahneye Davet Et',
+              label: AppLocalizations.of(context)!.hostInviteToStage,
               color: const Color(0xFF6366F1),
               loading: _loading,
               onTap: () {
@@ -1853,7 +1853,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           ] else if (widget.currentCoHostUsername == widget.username && widget.onRemoveCoHost != null) ...[
             _ModBtn(
               icon: '📵',
-              label: 'Sahneden Al',
+              label: AppLocalizations.of(context)!.hostRemoveFromStage,
               color: const Color(0xFFEF4444),
               loading: _loading,
               onTap: () {
@@ -1867,7 +1867,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
           // Yayından At
           _ModBtn(
             icon: '🚫',
-            label: 'Yayından At',
+            label: AppLocalizations.of(context)!.hostKickFromStream,
             color: const Color(0xFFEF4444),
             loading: _loading,
             onTap: () => _act(
@@ -2007,7 +2007,7 @@ class _PinInputSheetState extends State<_PinInputSheet> {
                 maxLength: 120,
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: 'Tüm izleyicilere gösterilecek...',
+                  hintText: AppLocalizations.of(context)!.hostShowToAllViewersHint,
                   hintStyle:
                       const TextStyle(color: Color(0xFF64748B), fontSize: 12),
                   filled: true,

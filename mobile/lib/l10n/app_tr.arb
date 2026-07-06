@@ -1460,20 +1460,28 @@
   "profileInviteShareText": "Teqlif'e katıl! Canlı mezat ve ikinci el alışverişin adresi 🎁\n\nKayıt olurken şu davet kodunu gir ve anında bonus TUCi kazan:\n\n🔑 Kod: {code}\n⏳ Son kullanım: {expiry} içinde\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: https://teqlif.com",
   "@profileInviteShareText": {
     "placeholders": {
-      "code": {"type": "String"},
-      "expiry": {"type": "String"}
+      "code": {
+        "type": "String"
+      },
+      "expiry": {
+        "type": "String"
+      }
     }
   },
   "profileInviteExpiryDays": "{days} gün",
   "@profileInviteExpiryDays": {
     "placeholders": {
-      "days": {"type": "int"}
+      "days": {
+        "type": "int"
+      }
     }
   },
   "profileInviteExpiryHours": "{hours} saat",
   "@profileInviteExpiryHours": {
     "placeholders": {
-      "hours": {"type": "int"}
+      "hours": {
+        "type": "int"
+      }
     }
   },
   "profileInviteExpirySoon": "kısa süre",
@@ -1481,7 +1489,9 @@
   "profileInviteModalExpiry": "⏳ Son kullanım: {expiry} içinde",
   "@profileInviteModalExpiry": {
     "placeholders": {
-      "expiry": {"type": "String"}
+      "expiry": {
+        "type": "String"
+      }
     }
   },
   "profileInviteShareBtn": "Davet Linkini Paylaş",
@@ -1742,5 +1752,68 @@
   "clearFilters": "Temizle",
   "applyFilters": "Uygula",
   "selectCity": "Şehir Seçin",
-  "allCategories": "Tüm Kategoriler"
+  "allCategories": "Tüm Kategoriler",
+  "hintExampleEmail": "ornek@email.com",
+  "competitorRadarTitle": "Rakip Fiyat Radarı",
+  "competitorRadarYourPrice": "Senin fiyatın",
+  "competitorRadarAvg": "Rakip ort.",
+  "competitorRadarSuggested": "Önerilen",
+  "competitorRadarPercentile": "Yüzdelik",
+  "competitorRadarDifference": "Fark",
+  "competitorRadarCompetitor": "Rakip",
+  "competitorRadarSalesSpeed": "Satış Hızı",
+  "competitorRadarSold": "Satılan",
+  "competitorRadarActive": "Aktif Rakip",
+  "competitorRadarSalePrice": "Satış Fiyatı",
+  "listingSuggestedStart": "Önerilen Başlangıç",
+  "listingExpectedClose": "Beklenen Kapanış",
+  "listingLowest": "En Düşük",
+  "listingAverage": "Ortalama",
+  "listingHighest": "En Yüksek",
+  "audienceCalcError": "Kitle hesaplanırken bir hata oluştu.",
+  "audienceNoPotentialFound": "Şu an bu ilanla ilgilenebilecek yeni potansiyel alıcı bulunamadı.",
+  "audienceMassSendSuccess": "Toplu Kitle Bildirimi başarıyla gönderildi! 🚀",
+  "audienceMassSendError": "Gönderim sırasında hata oluştu.",
+  "audienceSendToX": "Belirli bir kişi sayısına gönder",
+  "audiencePersonCountHint": "Kişi sayısı",
+  "audienceNotificationWillGoTo": "Bildirim Gidecek:",
+  "audienceMonthlyFreeRights": "Aylık Ücretsiz Hak:",
+  "audienceTotalCost": "Toplam Maliyet:",
+  "audienceInsufficientTuci": "⚠️ Yetersiz TUCi bakiyesi, lütfen yükleme yapın.",
+  "hostInvitedToStage": "sahneye davet edildi",
+  "hostModeration": "Moderasyon",
+  "hostMute": "Sustur",
+  "hostUnmute": "Susturmayı Kaldır",
+  "hostMakeModerator": "Moderatör Yap",
+  "hostMadeModeratorMsg": "moderatör yapıldı!",
+  "hostRemoveModerator": "Moderatörlüğü Kaldır",
+  "hostInviteToStage": "Sahneye Davet Et",
+  "hostRemoveFromStage": "Sahneden Al",
+  "hostKickFromStream": "Yayından At",
+  "hostShowToAllViewersHint": "Tüm izleyicilere gösterilecek...",
+  "swipeMutedInStream": "Bu yayında susturuldunuz",
+  "swipeMadeModeratorBy": "sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.",
+  "swipeRemovedFromStage": "Sahneden kaldırıldınız",
+  "swipeGiftSent": "gönderildi! 🎉",
+  "notificationStart": "Başlangıç",
+  "notificationEnd": "Bitiş",
+  "proHubGotIt": "Anladım",
+  "profileSearchListingHint": "İlan başlığı ara...",
+  "profileFilterAll": "Tümü",
+  "profileInviteAndEarn": "Davet Et & Kazan",
+  "publicProfileFollowers": "Takipçiler",
+  "publicProfileFollowing": "Takip Edilenler",
+  "publicProfileEditProfile": "Profili Düzenle",
+  "saleDetailGoToBuyer": "Alıcı Profiline Git",
+  "searchAiHint": "Yapay zeka ile arayın (Örn: Vintage bir saat)",
+  "searchFilterUsers": "Kullanıcılar",
+  "searchFilterListings": "İlanlar",
+  "searchFilterStreams": "Canlı Yayınlar",
+  "auctionSendVerificationEmail": "Doğrulama E-postası Gönder",
+  "storyTrayRecordVideo": "Video Çek",
+  "storyTrayGalleryVideo": "Galeriden Video",
+  "storyTrayTakePhoto": "Fotoğraf Çek",
+  "storyTrayGalleryPhoto": "Galeriden Fotoğraf",
+  "phoneInputHint": "Telefon numarası",
+  "swipeListNoData": "Veri bulunamadı."
 }

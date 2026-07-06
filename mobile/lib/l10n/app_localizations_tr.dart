@@ -3357,4 +3357,197 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get allCategories => 'Tüm Kategoriler';
+
+  @override
+  String get hintExampleEmail => 'ornek@email.com';
+
+  @override
+  String get competitorRadarTitle => 'Rakip Fiyat Radarı';
+
+  @override
+  String get competitorRadarYourPrice => 'Senin fiyatın';
+
+  @override
+  String get competitorRadarAvg => 'Rakip ort.';
+
+  @override
+  String get competitorRadarSuggested => 'Önerilen';
+
+  @override
+  String get competitorRadarPercentile => 'Yüzdelik';
+
+  @override
+  String get competitorRadarDifference => 'Fark';
+
+  @override
+  String get competitorRadarCompetitor => 'Rakip';
+
+  @override
+  String get competitorRadarSalesSpeed => 'Satış Hızı';
+
+  @override
+  String get competitorRadarSold => 'Satılan';
+
+  @override
+  String get competitorRadarActive => 'Aktif Rakip';
+
+  @override
+  String get competitorRadarSalePrice => 'Satış Fiyatı';
+
+  @override
+  String get listingSuggestedStart => 'Önerilen Başlangıç';
+
+  @override
+  String get listingExpectedClose => 'Beklenen Kapanış';
+
+  @override
+  String get listingLowest => 'En Düşük';
+
+  @override
+  String get listingAverage => 'Ortalama';
+
+  @override
+  String get listingHighest => 'En Yüksek';
+
+  @override
+  String get audienceCalcError => 'Kitle hesaplanırken bir hata oluştu.';
+
+  @override
+  String get audienceNoPotentialFound =>
+      'Şu an bu ilanla ilgilenebilecek yeni potansiyel alıcı bulunamadı.';
+
+  @override
+  String get audienceMassSendSuccess =>
+      'Toplu Kitle Bildirimi başarıyla gönderildi! 🚀';
+
+  @override
+  String get audienceMassSendError => 'Gönderim sırasında hata oluştu.';
+
+  @override
+  String get audienceSendToX => 'Belirli bir kişi sayısına gönder';
+
+  @override
+  String get audiencePersonCountHint => 'Kişi sayısı';
+
+  @override
+  String get audienceNotificationWillGoTo => 'Bildirim Gidecek:';
+
+  @override
+  String get audienceMonthlyFreeRights => 'Aylık Ücretsiz Hak:';
+
+  @override
+  String get audienceTotalCost => 'Toplam Maliyet:';
+
+  @override
+  String get audienceInsufficientTuci =>
+      '⚠️ Yetersiz TUCi bakiyesi, lütfen yükleme yapın.';
+
+  @override
+  String get hostInvitedToStage => 'sahneye davet edildi';
+
+  @override
+  String get hostModeration => 'Moderasyon';
+
+  @override
+  String get hostMute => 'Sustur';
+
+  @override
+  String get hostUnmute => 'Susturmayı Kaldır';
+
+  @override
+  String get hostMakeModerator => 'Moderatör Yap';
+
+  @override
+  String get hostMadeModeratorMsg => 'moderatör yapıldı!';
+
+  @override
+  String get hostRemoveModerator => 'Moderatörlüğü Kaldır';
+
+  @override
+  String get hostInviteToStage => 'Sahneye Davet Et';
+
+  @override
+  String get hostRemoveFromStage => 'Sahneden Al';
+
+  @override
+  String get hostKickFromStream => 'Yayından At';
+
+  @override
+  String get hostShowToAllViewersHint => 'Tüm izleyicilere gösterilecek...';
+
+  @override
+  String get swipeMutedInStream => 'Bu yayında susturuldunuz';
+
+  @override
+  String get swipeMadeModeratorBy =>
+      'sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.';
+
+  @override
+  String get swipeRemovedFromStage => 'Sahneden kaldırıldınız';
+
+  @override
+  String get swipeGiftSent => 'gönderildi! 🎉';
+
+  @override
+  String get notificationStart => 'Başlangıç';
+
+  @override
+  String get notificationEnd => 'Bitiş';
+
+  @override
+  String get proHubGotIt => 'Anladım';
+
+  @override
+  String get profileSearchListingHint => 'İlan başlığı ara...';
+
+  @override
+  String get profileFilterAll => 'Tümü';
+
+  @override
+  String get profileInviteAndEarn => 'Davet Et & Kazan';
+
+  @override
+  String get publicProfileFollowers => 'Takipçiler';
+
+  @override
+  String get publicProfileFollowing => 'Takip Edilenler';
+
+  @override
+  String get publicProfileEditProfile => 'Profili Düzenle';
+
+  @override
+  String get saleDetailGoToBuyer => 'Alıcı Profiline Git';
+
+  @override
+  String get searchAiHint => 'Yapay zeka ile arayın (Örn: Vintage bir saat)';
+
+  @override
+  String get searchFilterUsers => 'Kullanıcılar';
+
+  @override
+  String get searchFilterListings => 'İlanlar';
+
+  @override
+  String get searchFilterStreams => 'Canlı Yayınlar';
+
+  @override
+  String get auctionSendVerificationEmail => 'Doğrulama E-postası Gönder';
+
+  @override
+  String get storyTrayRecordVideo => 'Video Çek';
+
+  @override
+  String get storyTrayGalleryVideo => 'Galeriden Video';
+
+  @override
+  String get storyTrayTakePhoto => 'Fotoğraf Çek';
+
+  @override
+  String get storyTrayGalleryPhoto => 'Galeriden Fotoğraf';
+
+  @override
+  String get phoneInputHint => 'Telefon numarası';
+
+  @override
+  String get swipeListNoData => 'Veri bulunamadı.';
 }

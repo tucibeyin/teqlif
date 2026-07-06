@@ -840,7 +840,7 @@ class _ListingFilterState extends State<ListingFilter> {
                   onChanged: widget.onSearchChanged,
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
-                    hintText: 'İlan başlığı ara...',
+                    hintText: AppLocalizations.of(context)!.profileSearchListingHint,
                     hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary(context)),
                     prefixIcon: const Icon(Icons.search, size: 20),
                     suffixIcon: widget.searchQuery.isNotEmpty
@@ -876,7 +876,7 @@ class _ListingFilterState extends State<ListingFilter> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
                       _CategoryChip(
-                        label: 'Tümü',
+                        label: AppLocalizations.of(context)!.profileFilterAll,
                         selected: widget.selectedCategory == null,
                         onTap: () => widget.onCategorySelected(null),
                       ),
@@ -1697,7 +1697,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: 'Davet Et & Kazan',
+            title: l.profileInviteAndEarn,
             items: [
               ListTile(
                 key: _shareTileKey,

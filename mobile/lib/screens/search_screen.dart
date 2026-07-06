@@ -464,7 +464,7 @@ class SearchScreenState extends State<SearchScreen> {
                 key: const Key('search_input_arama'),
                 controller: _controller,
                 decoration: InputDecoration(
-                  hintText: 'Yapay zeka ile arayın (Örn: Vintage bir saat)',
+                  hintText: l.searchAiHint,
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _hasQuery
                       ? Row(
@@ -604,7 +604,7 @@ class SearchScreenState extends State<SearchScreen> {
           SliverToBoxAdapter(
             child: _SectionHeader(
               icon: Icons.person_outline_rounded,
-              label: 'Kullanıcılar',
+              label: l.searchFilterUsers,
             ),
           ),
           SliverList(
@@ -696,7 +696,7 @@ class SearchScreenState extends State<SearchScreen> {
               icon: _isSemanticSearch
                   ? Icons.auto_awesome_rounded
                   : Icons.grid_view_rounded,
-              label: 'İlanlar',
+              label: l.searchFilterListings,
               iconColor: _isSemanticSearch ? kPrimary : null,
             ),
           ),
@@ -736,7 +736,7 @@ class SearchScreenState extends State<SearchScreen> {
           SliverToBoxAdapter(
             child: _SectionHeader(
               icon: Icons.fiber_manual_record,
-              label: 'Canlı Yayınlar',
+              label: l.searchFilterStreams,
               iconColor: Colors.red,
             ),
           ),

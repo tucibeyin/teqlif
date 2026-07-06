@@ -253,7 +253,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   Expanded(
                     child: _PriceMetricCard(
                       icon: '🎯',
-                      label: 'Önerilen Başlangıç',
+                      label: AppLocalizations.of(context)!.listingSuggestedStart,
                       value: fmt(suggested),
                       accent: const Color(0xFF6366F1),
                     ),
@@ -262,7 +262,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   Expanded(
                     child: _PriceMetricCard(
                       icon: '🏆',
-                      label: 'Beklenen Kapanış',
+                      label: AppLocalizations.of(context)!.listingExpectedClose,
                       value: fmt(estimated),
                       accent: const Color(0xFF22C55E),
                     ),
@@ -280,11 +280,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _MiniStat(label: 'En Düşük', value: fmt(minClose), color: const Color(0xFFEF4444)),
+                      _MiniStat(label: AppLocalizations.of(context)!.listingLowest, value: fmt(minClose), color: const Color(0xFFEF4444)),
                       Container(width: 1, height: 32, color: const Color(0xFF334155)),
-                      _MiniStat(label: 'Ortalama', value: fmt(estimated), color: const Color(0xFF94A3B8)),
+                      _MiniStat(label: AppLocalizations.of(context)!.listingAverage, value: fmt(estimated), color: const Color(0xFF94A3B8)),
                       Container(width: 1, height: 32, color: const Color(0xFF334155)),
-                      _MiniStat(label: 'En Yüksek', value: fmt(maxClose), color: const Color(0xFF22C55E)),
+                      _MiniStat(label: AppLocalizations.of(context)!.listingHighest, value: fmt(maxClose), color: const Color(0xFF22C55E)),
                     ],
                   ),
                 ),

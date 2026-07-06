@@ -657,22 +657,22 @@ class _MediaSourceSheet extends StatelessWidget {
           const SizedBox(height: 16),
           _SourceTile(
             icon: Icons.videocam_outlined,
-            label: 'Video Çek',
+            label: AppLocalizations.of(context)!.storyTrayRecordVideo,
             onTap: () => Navigator.pop(context, _MediaSource.videoCamera),
           ),
           _SourceTile(
             icon: Icons.video_library_outlined,
-            label: 'Galeriden Video',
+            label: AppLocalizations.of(context)!.storyTrayGalleryVideo,
             onTap: () => Navigator.pop(context, _MediaSource.videoGallery),
           ),
           _SourceTile(
             icon: Icons.camera_alt_outlined,
-            label: 'Fotoğraf Çek',
+            label: AppLocalizations.of(context)!.storyTrayTakePhoto,
             onTap: () => Navigator.pop(context, _MediaSource.photoCamera),
           ),
           _SourceTile(
             icon: Icons.photo_library_outlined,
-            label: 'Galeriden Fotoğraf',
+            label: AppLocalizations.of(context)!.storyTrayGalleryPhoto,
             onTap: () => Navigator.pop(context, _MediaSource.photoGallery),
           ),
         ],

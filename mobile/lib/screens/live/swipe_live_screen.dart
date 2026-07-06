@@ -849,8 +849,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     setState(() => _selfMuted = true);
     if (!widget.isActive) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('🔇 Bu yayında susturuldunuz'),
+      SnackBar(content: Text(AppLocalizations.of(context)!.swipeMutedInStream),
         backgroundColor: Color(0xFFD97706),
         duration: Duration(seconds: 4),
       ),
@@ -892,7 +891,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     if (!widget.isActive) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('⭐ @$promotedBy sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.'),
+        content: Text(AppLocalizations.of(context)!.swipeMadeModeratorBy),
         backgroundColor: const Color(0xFF16A34A),
         duration: const Duration(seconds: 5),
       ),
@@ -963,8 +962,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       _localVideoTrack = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('📵 Sahneden kaldırıldınız'),
+      SnackBar(content: Text(AppLocalizations.of(context)!.swipeRemovedFromStage),
         backgroundColor: Color(0xFF475569),
         duration: Duration(seconds: 3),
       ),
@@ -1484,7 +1482,7 @@ class _GiftSheetState extends State<_GiftSheet> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$giftName gönderildi! 🎉'),
+          content: Text(AppLocalizations.of(context)!.swipeGiftSent),
           backgroundColor: const Color(0xFF6D28D9),
           duration: const Duration(seconds: 2),
         ),

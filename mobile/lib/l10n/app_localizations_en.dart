@@ -3352,4 +3352,198 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allCategories => 'All Categories';
+
+  @override
+  String get hintExampleEmail => 'example@email.com';
+
+  @override
+  String get competitorRadarTitle => 'Competitor Price Radar';
+
+  @override
+  String get competitorRadarYourPrice => 'Your price';
+
+  @override
+  String get competitorRadarAvg => 'Competitor avg.';
+
+  @override
+  String get competitorRadarSuggested => 'Suggested';
+
+  @override
+  String get competitorRadarPercentile => 'Percentile';
+
+  @override
+  String get competitorRadarDifference => 'Difference';
+
+  @override
+  String get competitorRadarCompetitor => 'Competitor';
+
+  @override
+  String get competitorRadarSalesSpeed => 'Sales Speed';
+
+  @override
+  String get competitorRadarSold => 'Sold';
+
+  @override
+  String get competitorRadarActive => 'Active Competitor';
+
+  @override
+  String get competitorRadarSalePrice => 'Sale Price';
+
+  @override
+  String get listingSuggestedStart => 'Suggested Start';
+
+  @override
+  String get listingExpectedClose => 'Expected Close';
+
+  @override
+  String get listingLowest => 'Lowest';
+
+  @override
+  String get listingAverage => 'Average';
+
+  @override
+  String get listingHighest => 'Highest';
+
+  @override
+  String get audienceCalcError =>
+      'An error occurred while calculating the audience.';
+
+  @override
+  String get audienceNoPotentialFound =>
+      'No new potential buyers found for this listing at the moment.';
+
+  @override
+  String get audienceMassSendSuccess =>
+      'Mass Audience Notification sent successfully! 🚀';
+
+  @override
+  String get audienceMassSendError => 'An error occurred during sending.';
+
+  @override
+  String get audienceSendToX => 'Send to a specific number of people';
+
+  @override
+  String get audiencePersonCountHint => 'Number of people';
+
+  @override
+  String get audienceNotificationWillGoTo => 'Notification will go to:';
+
+  @override
+  String get audienceMonthlyFreeRights => 'Monthly Free Rights:';
+
+  @override
+  String get audienceTotalCost => 'Total Cost:';
+
+  @override
+  String get audienceInsufficientTuci =>
+      '⚠️ Insufficient TUCi balance, please top up.';
+
+  @override
+  String get hostInvitedToStage => 'was invited to the stage';
+
+  @override
+  String get hostModeration => 'Moderation';
+
+  @override
+  String get hostMute => 'Mute';
+
+  @override
+  String get hostUnmute => 'Unmute';
+
+  @override
+  String get hostMakeModerator => 'Make Moderator';
+
+  @override
+  String get hostMadeModeratorMsg => 'was made a moderator!';
+
+  @override
+  String get hostRemoveModerator => 'Remove Moderator';
+
+  @override
+  String get hostInviteToStage => 'Invite to Stage';
+
+  @override
+  String get hostRemoveFromStage => 'Remove from Stage';
+
+  @override
+  String get hostKickFromStream => 'Kick from Stream';
+
+  @override
+  String get hostShowToAllViewersHint => 'Will be shown to all viewers...';
+
+  @override
+  String get swipeMutedInStream => 'You have been muted in this stream';
+
+  @override
+  String get swipeMadeModeratorBy =>
+      'made you a moderator! You can now manage viewers.';
+
+  @override
+  String get swipeRemovedFromStage => 'You were removed from the stage';
+
+  @override
+  String get swipeGiftSent => 'sent! 🎉';
+
+  @override
+  String get notificationStart => 'Start';
+
+  @override
+  String get notificationEnd => 'End';
+
+  @override
+  String get proHubGotIt => 'Got it';
+
+  @override
+  String get profileSearchListingHint => 'Search listing title...';
+
+  @override
+  String get profileFilterAll => 'All';
+
+  @override
+  String get profileInviteAndEarn => 'Invite & Earn';
+
+  @override
+  String get publicProfileFollowers => 'Followers';
+
+  @override
+  String get publicProfileFollowing => 'Following';
+
+  @override
+  String get publicProfileEditProfile => 'Edit Profile';
+
+  @override
+  String get saleDetailGoToBuyer => 'Go to Buyer Profile';
+
+  @override
+  String get searchAiHint => 'Search with AI (e.g. A vintage watch)';
+
+  @override
+  String get searchFilterUsers => 'Users';
+
+  @override
+  String get searchFilterListings => 'Listings';
+
+  @override
+  String get searchFilterStreams => 'Live Streams';
+
+  @override
+  String get auctionSendVerificationEmail => 'Send Verification Email';
+
+  @override
+  String get storyTrayRecordVideo => 'Record Video';
+
+  @override
+  String get storyTrayGalleryVideo => 'Gallery Video';
+
+  @override
+  String get storyTrayTakePhoto => 'Take Photo';
+
+  @override
+  String get storyTrayGalleryPhoto => 'Gallery Photo';
+
+  @override
+  String get phoneInputHint => 'Phone number';
+
+  @override
+  String get swipeListNoData => 'No data found.';
 }

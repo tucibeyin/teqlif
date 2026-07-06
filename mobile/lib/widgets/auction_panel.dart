@@ -2247,7 +2247,7 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
                         height: 20, width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                       )
-                    : const Text('Doğrulama E-postası Gönder',
+                    : Text(AppLocalizations.of(context)!.auctionSendVerificationEmail,
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               ),
             ),

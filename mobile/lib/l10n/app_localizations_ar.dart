@@ -3329,4 +3329,196 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get allCategories => 'جميع الفئات';
+
+  @override
+  String get hintExampleEmail => 'example@email.com';
+
+  @override
+  String get competitorRadarTitle => 'رادار أسعار المنافسين';
+
+  @override
+  String get competitorRadarYourPrice => 'سعرك';
+
+  @override
+  String get competitorRadarAvg => 'متوسط المنافسين';
+
+  @override
+  String get competitorRadarSuggested => 'مقترح';
+
+  @override
+  String get competitorRadarPercentile => 'النسبة المئوية';
+
+  @override
+  String get competitorRadarDifference => 'الفرق';
+
+  @override
+  String get competitorRadarCompetitor => 'منافس';
+
+  @override
+  String get competitorRadarSalesSpeed => 'سرعة المبيعات';
+
+  @override
+  String get competitorRadarSold => 'مباع';
+
+  @override
+  String get competitorRadarActive => 'منافس نشط';
+
+  @override
+  String get competitorRadarSalePrice => 'سعر البيع';
+
+  @override
+  String get listingSuggestedStart => 'البداية المقترحة';
+
+  @override
+  String get listingExpectedClose => 'الإغلاق المتوقع';
+
+  @override
+  String get listingLowest => 'الأدنى';
+
+  @override
+  String get listingAverage => 'متوسط';
+
+  @override
+  String get listingHighest => 'الأعلى';
+
+  @override
+  String get audienceCalcError => 'حدث خطأ أثناء حساب الجمهور.';
+
+  @override
+  String get audienceNoPotentialFound =>
+      'لم يتم العثور على مشترين محتملين جدد لهذه القائمة في الوقت الحالي.';
+
+  @override
+  String get audienceMassSendSuccess =>
+      'تم إرسال إشعار الجمهور الجماعي بنجاح! 🚀';
+
+  @override
+  String get audienceMassSendError => 'حدث خطأ أثناء الإرسال.';
+
+  @override
+  String get audienceSendToX => 'إرسال إلى عدد معين من الأشخاص';
+
+  @override
+  String get audiencePersonCountHint => 'عدد الأشخاص';
+
+  @override
+  String get audienceNotificationWillGoTo => 'سيتم إرسال الإشعار إلى:';
+
+  @override
+  String get audienceMonthlyFreeRights => 'الحقوق المجانية الشهرية:';
+
+  @override
+  String get audienceTotalCost => 'التكلفة الإجمالية:';
+
+  @override
+  String get audienceInsufficientTuci =>
+      '⚠️ رصيد TUCi غير كافٍ، يرجى إعادة الشحن.';
+
+  @override
+  String get hostInvitedToStage => 'تمت دعوته إلى المسرح';
+
+  @override
+  String get hostModeration => 'إشراف';
+
+  @override
+  String get hostMute => 'كتم';
+
+  @override
+  String get hostUnmute => 'إلغاء الكتم';
+
+  @override
+  String get hostMakeModerator => 'تعيين كمشرف';
+
+  @override
+  String get hostMadeModeratorMsg => 'أصبح مشرفاً!';
+
+  @override
+  String get hostRemoveModerator => 'إزالة كمشرف';
+
+  @override
+  String get hostInviteToStage => 'دعوة إلى المسرح';
+
+  @override
+  String get hostRemoveFromStage => 'إزالة من المسرح';
+
+  @override
+  String get hostKickFromStream => 'طرد من البث';
+
+  @override
+  String get hostShowToAllViewersHint => 'سيتم عرضه لجميع المشاهدين...';
+
+  @override
+  String get swipeMutedInStream => 'لقد تم كتم صوتك في هذا البث';
+
+  @override
+  String get swipeMadeModeratorBy => 'جعلك مشرفاً! يمكنك الآن إدارة المشاهدين.';
+
+  @override
+  String get swipeRemovedFromStage => 'تمت إزالتك من المسرح';
+
+  @override
+  String get swipeGiftSent => 'أرسلت! 🎉';
+
+  @override
+  String get notificationStart => 'البداية';
+
+  @override
+  String get notificationEnd => 'النهاية';
+
+  @override
+  String get proHubGotIt => 'فهمت';
+
+  @override
+  String get profileSearchListingHint => 'ابحث عن عنوان الإعلان...';
+
+  @override
+  String get profileFilterAll => 'الكل';
+
+  @override
+  String get profileInviteAndEarn => 'ادعُ واكسب';
+
+  @override
+  String get publicProfileFollowers => 'متابعون';
+
+  @override
+  String get publicProfileFollowing => 'يتابع';
+
+  @override
+  String get publicProfileEditProfile => 'تعديل الملف الشخصي';
+
+  @override
+  String get saleDetailGoToBuyer => 'انتقل إلى ملف المشتري';
+
+  @override
+  String get searchAiHint => 'ابحث بالذكاء الاصطناعي (مثل: ساعة كلاسيكية)';
+
+  @override
+  String get searchFilterUsers => 'مستخدمون';
+
+  @override
+  String get searchFilterListings => 'إعلانات';
+
+  @override
+  String get searchFilterStreams => 'بث مباشر';
+
+  @override
+  String get auctionSendVerificationEmail => 'إرسال بريد التحقق';
+
+  @override
+  String get storyTrayRecordVideo => 'تسجيل فيديو';
+
+  @override
+  String get storyTrayGalleryVideo => 'فيديو من المعرض';
+
+  @override
+  String get storyTrayTakePhoto => 'التقاط صورة';
+
+  @override
+  String get storyTrayGalleryPhoto => 'صورة من المعرض';
+
+  @override
+  String get phoneInputHint => 'رقم الهاتف';
+
+  @override
+  String get swipeListNoData => 'لم يتم العثور على بيانات.';
 }
