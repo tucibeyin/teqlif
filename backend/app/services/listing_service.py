@@ -258,13 +258,15 @@ class ListingService:
             q_stmt = q_stmt.where(Listing.location.ilike(f"%{location}%"))
         
         if q:
-            # Using pg_trgm for advanced similarity search
+            # Using basic substring search (ilike) alongside pg_trgm for typo-tolerance
+            search_term = f"%{q}%"
             q_stmt = q_stmt.where(
                 or_(
-                    Listing.title.op('%%')(q),
-                    Listing.description.op('%%')(q),
-                    func.similarity(Listing.title, q) > 0.2,
-                    func.similarity(Listing.description, q) > 0.2
+                    Listing.title.ilike(search_term),
+                    Listing.description.ilike(search_term),
+                    Listing.title.op('%')(q),
+                    func.similarity(Listing.title, q) > 0.15,
+                    func.similarity(Listing.description, q) > 0.15
                 )
             )
             # Order by similarity if query is provided, and then by other heuristics
