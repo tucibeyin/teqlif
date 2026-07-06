@@ -1,0 +1,1830 @@
+{
+  "@@locale": "ru",
+  "@homeResultsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@pubProfileListingsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@ratingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@ratingStarCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@createListingPhotoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "@createListingPhotoUploadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveViewersTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@liveModDemotedSelf": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@liveModPromotedSelf": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@modMutedMsg": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@modPromotedMsg": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@modDemotedMsg": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@modKickedMsg": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@modPromotedSnack": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@modDemotedSnack": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@chatHistoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@auctionInProgressDesc": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@auctionBoughtBy": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@auctionBuyNowSoldOther": {
+    "placeholders": {
+      "buyer": {
+        "type": "String"
+      }
+    }
+  },
+  "@auctionHighestBidder": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@auctionBidCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@auctionBuyNowCompleted": {
+    "placeholders": {
+      "buyer": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@reportHesitation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@proRenewalDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@proCreditsUsedFormat": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "@proCreditsLimitFormat": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "@blastSubtitlePaid": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "@blastBtnFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@blastBtnPaid": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "@blastConfirmBodyFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@blastConfirmBodyPaid": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "@proStreamAvgDuration": {
+    "placeholders": {
+      "dur": {
+        "type": "String"
+      }
+    }
+  },
+  "@proShowAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@proStreamRowStats": {
+    "placeholders": {
+      "viewers": {
+        "type": "int"
+      },
+      "bids": {
+        "type": "int"
+      },
+      "dur": {
+        "type": "int"
+      }
+    }
+  },
+  "@hotLeadViewed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@hotLeadHesitated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listingCtrExplain": {
+    "placeholders": {
+      "ctr": {
+        "type": "String"
+      }
+    }
+  },
+  "@marketDayFilter": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "@marketGrowthPos": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "@marketGrowthNeg": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "@listingDayFilterN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@listingVideoBeatsPhoto": {
+    "placeholders": {
+      "x": {
+        "type": "String"
+      }
+    }
+  },
+  "@listingPhotoBeatsVideo": {
+    "placeholders": {
+      "x": {
+        "type": "String"
+      }
+    }
+  },
+  "@listingWatchedPct": {
+    "placeholders": {
+      "pct": {
+        "type": "String"
+      }
+    }
+  },
+  "@listingGalleryDeep": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "@listingReach": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchAlertBody": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "@audienceInsightsViewers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@bestTimeSlotStats": {
+    "placeholders": {
+      "wins": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@conversionCategoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@conversionCategorySales": {
+    "placeholders": {
+      "won": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@conversionAvgPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@accountInfoEmailCurrent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "@accountInfoPhoneCurrent": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "@boostLimitExhausted": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "@boostDialogCredits": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "@boostDialogPaidBadge": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "@adReportMetricClickRateHint": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
+  "@adReportMetricActiveDaysValue": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "@adReportInsightGreat": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      }
+    }
+  },
+  "@adReportInsightGood": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
+  "@adReportInsightLow": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
+  "@adReportInsightVeryLow": {
+    "placeholders": {
+      "clicks": {
+        "type": "int"
+      },
+      "impressions": {
+        "type": "int"
+      }
+    }
+  },
+  "@radarSuggestedCopied": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@radarCopyBtn": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@retargetingBlastSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingDialogBodyFree": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "credits": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingDialogBodyPaid": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingDialogBodyKarma": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "free": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingDialogBodyInsufficient": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingCreditsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingFreeSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingPaidSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingSendBtnLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingCreditsBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@retargetingCostBadge": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "@priceMinLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@priceMaxLabel": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@hostInviteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@hostModRemoved": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "@genericErrorDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@profileInviteShareText": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "expiry": {
+        "type": "String"
+      }
+    }
+  },
+  "@profileInviteExpiryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "@profileInviteExpiryHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "@profileInviteModalExpiry": {
+    "placeholders": {
+      "expiry": {
+        "type": "String"
+      }
+    }
+  },
+  "@tuciSpent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@videoTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
+  "@createPickCamera": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
+  "@videoLabel": {
+    "placeholders": {
+      "sec": {
+        "type": "int"
+      }
+    }
+  },
+  "@proSearchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listingDeactivateCostHint": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "@listingReactivateFreeCredit": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "@listingReactivatePaidPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "@listingReactivatePaidNormal": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      },
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "@listingBlastDialogBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@listingBlastCost": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "@analyticsDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "appName": "теклиф",
+  "pro": "ПРО",
+  "navLive": "В прямом эфире",
+  "navListings": "Объявления",
+  "navSearch": "Поиск",
+  "navMessages": "Сообщения",
+  "navProfile": "Профиль",
+  "navSettings": "Настройки",
+  "loginWelcome": "С возвращением",
+  "loginSubtitle": "Войдите в свою учетную запись",
+  "loginNoAccount": "У вас нет учетной записи?",
+  "loginRegisterLink": "Зарегистрируйтесь",
+  "loginFaceId": "🔒 Войдите с помощью Face ID",
+  "loginFaceIdDesc": "Вы можете быстро войти в систему с помощью Face ID при следующем входе в систему, не вводя пароль.",
+  "registerTitle": "Зарегистрироваться",
+  "registerSubtitle": "Создать учетную запись",
+  "registerJoin": "Присоединяйтесь к Теклифу",
+  "registerHaveAccount": "У вас уже есть аккаунт?",
+  "registerLoginLink": "Войти",
+  "fieldEmail": "Электронная почта",
+  "fieldEmailHint": "Введите адрес электронной почты",
+  "fieldLoginIdentifier": "Электронная почта или имя пользователя",
+  "fieldLoginIdentifierHint": "Пожалуйста, введите свой адрес электронной почты или имя пользователя",
+  "fieldPassword": "Пароль",
+  "fieldPasswordConfirm": "Подтвердите пароль",
+  "fieldPasswordConfirmHint": "Введите свой пароль для подтверждения",
+  "validPasswordMismatch": "Пароли не совпадают",
+  "fieldPasswordHint": "Введите свой пароль",
+  "fieldFullName": "Полное имя",
+  "fieldFullNameHint": "Введите свое полное имя",
+  "fieldUsername": "Имя пользователя",
+  "fieldUsernameHint": "Введите свое имя пользователя",
+  "fieldUsernameSubtitle": "Разрешены строчные буквы, цифры и _",
+  "fieldCurrentPassword": "Текущий пароль",
+  "fieldNewPassword": "Новый пароль",
+  "fieldNewPasswordConfirm": "Новый пароль (подтвердить)",
+  "fieldEmailCode": "Код подтверждения электронной почты",
+  "fieldListingTitle": "Название листинга",
+  "fieldListingTitleHint": "Введите заголовок",
+  "fieldCategory": "Категория",
+  "fieldCategoryHint": "Выберите категорию",
+  "fieldPrice": "Цена",
+  "fieldPriceHint": "Введите цену",
+  "fieldLocation": "Местоположение (необязательно)",
+  "fieldLocationHint": "Выберите город",
+  "fieldDescription": "Описание",
+  "fieldDescriptionHint": "Введите описание",
+  "fieldCity": "Город",
+  "fieldPhone": "Номер телефона (необязательно)",
+  "fieldPhoneHint": "0### ### ## ##",
+  "btnLogin": "Войти",
+  "btnNotNow": "Не сейчас",
+  "btnEnable": "Включить",
+  "btnSave": "Сохранить",
+  "btnCancel": "Отменить",
+  "btnDelete": "Удалить",
+  "btnDismiss": "Уволить",
+  "btnRetry": "Попробуйте еще раз",
+  "btnLogout": "Выйти",
+  "btnEditProfile": "Редактировать профиль",
+  "btnCreateListing": "Листинг публикаций",
+  "btnPublishListing": "Опубликовать листинг",
+  "btnSendCode": "Отправить код",
+  "btnChangePassword": "Изменить мой пароль",
+  "btnDeleteAccount": "Удалить учетную запись",
+  "btnAdd": "Добавить",
+  "btnAddPhoto": "Добавить фото",
+  "btnPickGallery": "Выбрать из галереи",
+  "btnPickCamera": "Сфотографироваться",
+  "btnCamera": "Камера",
+  "btnClearFilters": "Очистить фильтры",
+  "btnDeactivate": "Деактивировать",
+  "btnActivate": "Активировать",
+  "btnAddFavorite": "Добавить в избранное",
+  "btnRemoveFavorite": "Удалить из избранного",
+  "homeRecentListings": "Последние объявления",
+  "searchHint": "Ищем...",
+  "citySelectTitle": "Выберите город",
+  "cityAll": "Все города",
+  "catElectronics": "Электроника",
+  "catVehicles": "Транспортные средства",
+  "catRealEstate": "Недвижимость",
+  "catClothing": "Одежда",
+  "catSports": "Спорт",
+  "catBooks": "Книги",
+  "catHomeLife": "Дом и жизнь",
+  "catOther": "Другое",
+  "profileUsername": "Пользователь",
+  "profileListingCount": "Листинг",
+  "profileFollowers": "Последователи",
+  "profileFollowing": "Следуя",
+  "profileFollowersList": "Последователи",
+  "profileFollowingList": "Следуя",
+  "profileFirstListing": "Опубликуйте свое первое объявление!",
+  "profileMyListings": "Мои объявления",
+  "profileActiveListings": "Мои активные объявления",
+  "profilePassiveListings": "Мои неактивные объявления",
+  "profileFavorites": "Мои избранные",
+  "profileAccountSection": "Аккаунт",
+  "profileNotificationSettings": "Настройки уведомлений",
+  "profileBlockedUsers": "Заблокированные пользователи",
+  "profileFaceId": "Войти с помощью Face ID",
+  "profileDarkMode": "Темный режим",
+  "profileSupportSection": "Поддержка",
+  "profileSupportCenter": "Центр поддержки",
+  "profileTerms": "Условия обслуживания и лицензионное соглашение",
+  "profilePrivacy": "Политика конфиденциальности",
+  "profileChangePassword": "Изменить пароль",
+  "profileDeleteAccount": "Удалить учетную запись навсегда",
+  "profileDeleteAccountDesc": "Это действие невозможно отменить. Все ваши данные будут безвозвратно удалены в течение 30 дней.",
+  "sectionPhotos": "Фотографии",
+  "photoCover": "Обложка",
+  "listingMaxPhotos": "Вы можете добавить до 10 фотографий",
+  "statusOn": "На",
+  "statusOff": "Выкл.",
+  "notifSettingsTitle": "Настройки уведомлений",
+  "notifMessagesTitle": "Сообщения",
+  "notifMessagesDesc": "Когда приходит новое прямое сообщение",
+  "notifNewFollowerTitle": "Новый последователь",
+  "notifNewFollowerDesc": "Когда кто-то следует за тобой",
+  "notifAuctionWonTitle": "Аукцион выигран",
+  "notifAuctionWonDesc": "Когда ваша ставка будет принята",
+  "notifLiveStreamTitle": "Прямая трансляция",
+  "notifLiveStreamDesc": "Когда кто-то, на кого вы подписаны, выходит в эфир",
+  "notifNewListingTitle": "Новое объявление",
+  "notifNewListingDesc": "Когда кто-то, на кого вы подписаны, добавляет объявление",
+  "notifNewBidTitle": "Новая ставка",
+  "notifNewBidDesc": "Когда на ваше объявление будет сделана ставка",
+  "notifBidOutbidTitle": "Ставка перебита",
+  "notifBidOutbidDesc": "Когда ваша ставка перебита на аукционе",
+  "validFullNameMin": "Полное имя должно быть не менее 2 символов",
+  "validFullNameMax": "Полное имя должно содержать не более 100 символов",
+  "validUsernameMin": "Должно быть не менее 3 символов",
+  "validUsernameMax": "Должно быть не более 50 символов",
+  "validUsernameChars": "Разрешены только строчные буквы, цифры и _",
+  "validUsernameTaken": "Это имя пользователя уже занято",
+  "validUsernameInvalid": "Неверное имя пользователя. Разрешены только строчные буквы, цифры и _.",
+  "validEmailMax": "Электронная почта должна содержать не более 255 символов",
+  "validEmailInvalid": "Введите действительный адрес электронной почты",
+  "validPasswordMin": "Должно быть не менее 8 символов",
+  "validNewPasswordMin": "Новый пароль должен содержать не менее 8 символов.",
+  "validPasswordsMatch": "Новые пароли не совпадают.",
+  "validVerificationCode": "Введите код подтверждения.",
+  "validAllFields": "Пожалуйста, заполните все поля.",
+  "validTermsRequired": "Вы должны принять Условия обслуживания.",
+  "usernameChecking": "Проверка имени пользователя...",
+  "usernameCheckingWait": "Проверяем имя пользователя, подождите...",
+  "emptyListings": "Объявлений пока нет",
+  "emptyFilteredListings": "По этому фильтру объявлений не найдено",
+  "emptyActiveListings": "Нет активных объявлений",
+  "emptyPassiveListings": "Нет неактивных объявлений",
+  "emptyFavorites": "Избранных объявлений пока нет",
+  "errorConnection": "Ошибка подключения",
+  "errorListingsLoad": "Не удалось загрузить объявления",
+  "errorVideoProcessing": "Не удалось обработать видео. Пожалуйста, попробуйте еще раз.",
+  "giftInsufficientBalance": "Недостаточный баланс. Купите TUCi, чтобы отправить подарок.",
+  "giftLoadBalanceButton": "Баланс нагрузки",
+  "purchaseLoadError": "При загрузке покупок произошла ошибка. Пожалуйста, проверьте подключение к Интернету и повторите попытку.",
+  "purchaseEmptyState": "У вас пока нет покупок.",
+  "purchaseUnknownItem": "Неизвестный предмет",
+  "purchaseUnknownSeller": "Неизвестный продавец",
+  "purchaseListingNotFound": "Объявление не найдено.",
+  "saleLoadError": "При загрузке продаж произошла ошибка. Пожалуйста, проверьте подключение к Интернету и повторите попытку.",
+  "saleEmptyState": "У вас пока нет продаж.",
+  "saleUnknownBuyer": "Неизвестный покупатель",
+  "errorCaptchaFailed": "Проверка безопасности не удалась. Пожалуйста, попробуйте еще раз.",
+  "errorTooFast": "Вы действуете слишком быстро. Пожалуйста, подождите немного.",
+  "errorContentPolicy": "Заголовок или описание вашего объявления содержит контент, который нарушает правила нашего сообщества.",
+  "similarListings": "Объявления, которые могут вам понравиться",
+  "suggestedSellers": "Рекомендуемые продавцы",
+  "msgPasswordChanged": "Ваш пароль был успешно изменен.",
+  "msgListingPublished": "Объявление опубликовано!",
+  "dialogDeleteListingTitle": "Удалить объявление",
+  "dialogDeleteListingDesc": "Вы уверены, что хотите навсегда удалить это объявление?",
+  "dialogFaceIdActivateTitle": "Подтвердите, чтобы включить Face ID",
+  "settingsLanguage": "Язык",
+  "homeAppBarTitle": "Объявления",
+  "homeSearchingHeader": "Ищем...",
+  "homeResultsCount": "Найдено объявлений {count}",
+  "searchUserHint": "Поиск пользователей...",
+  "searchNoUser": "Пользователей не найдено",
+  "searchLiveStreams": "Прямые трансляции",
+  "searchNoContent": "Содержимого пока нет",
+  "msgTabMessages": "Сообщения",
+  "msgTabNotifications": "Уведомления",
+  "msgNoMessages": "Сообщений пока нет",
+  "msgNoMessagesDesc": "Когда вы проявляете интерес к объявлению,\nоно появится здесь",
+  "msgSendFailed": "Не удалось отправить сообщение",
+  "msgWriteHint": "Напишите сообщение...",
+  "msgNoChat": "Сообщений пока нет.\nОтправьте первое сообщение!",
+  "msgGoToListing": "📌 Перейти к объявлению",
+  "notifNone": "Нет уведомлений",
+  "notifNoneDesc": "Здесь будут появляться новые уведомления",
+  "notificationsTitle": "Уведомления",
+  "notificationsMarkAllRead": "Отметить все прочитанными",
+  "blockedUsersTitle": "Заблокированные пользователи",
+  "blockedNone": "Нет заблокированных пользователей",
+  "blockedUnblock": "Разблокировать",
+  "blockedActionFailed": "Действие не может быть завершено",
+  "followNoFollowers": "Пока нет подписчиков",
+  "followNoFollowing": "Пока нет подписчиков",
+  "followBtnFollowing": "Следуя",
+  "followBtnFollow": "Следуйте",
+  "pubProfileUserNotFound": "Пользователь не найден",
+  "pubProfileListingsCount": "Объявления ({count})",
+  "pubProfileStatListings": "Объявления",
+  "pubProfileStatFollowers": "Последователи",
+  "pubProfileStatFollowing": "Следуя",
+  "pubProfileEditComingSoon": "Редактирование профиля скоро появится",
+  "pubProfileFollowingLabel": "Следуя",
+  "pubProfileFollowLabel": "Следуйте",
+  "pubProfileSendMessage": "Отправить сообщение",
+  "pubProfileUpdateRating": "Обновить рейтинг",
+  "pubProfileGiveRating": "Дайте рейтинг",
+  "pubProfileBlock": "Блокировать",
+  "pubProfileUnblock": "Разблокировать",
+  "pubProfileActionFailed": "Действие не может быть завершено",
+  "pubProfileNoReview": "Отзывов пока нет",
+  "ratingVeryBad": "Очень Плохо",
+  "ratingBad": "Плохо",
+  "ratingMedium": "Среднее",
+  "ratingGood": "Хорошо",
+  "ratingExcellent": "Отлично",
+  "ratingSelectStar": "Выберите звезду",
+  "ratingCommentHint": "Почему этот рейтинг? (необязательно)",
+  "ratingSaveFailed": "Не удалось сохранить рейтинг",
+  "ratingReviews": "Отзывы",
+  "ratingCount": "{count} отзывов",
+  "ratingStarCount": "(рейтинги {count})",
+  "createListingPhotoCount": "Фотографии ({count}/{max})",
+  "createListingSelectOption": "-- Выбрать --",
+  "createListingPhotoUploadFailed": "Не удалось загрузить фотографию: {error}",
+  "createListingConnError": "Ошибка подключения. Пожалуйста, попробуйте еще раз.",
+  "notifSettingsMessagesTitle": "Сообщения",
+  "notifSettingsMessagesDesc": "Когда приходит новое прямое сообщение",
+  "notifSettingsFollowsTitle": "Новый последователь",
+  "notifSettingsFollowsDesc": "Когда кто-то следует за тобой",
+  "notifSettingsAuctionWonTitle": "Аукцион выигран",
+  "notifSettingsAuctionWonDesc": "Когда ваша ставка будет принята",
+  "notifSettingsStreamStartedTitle": "Прямая трансляция",
+  "notifSettingsStreamStartedDesc": "Когда кто-то, на кого вы подписаны, выходит в эфир",
+  "notifSettingsNewListingTitle": "Новое объявление",
+  "notifSettingsNewListingDesc": "Когда кто-то, на кого вы подписаны, добавляет объявление",
+  "notifSettingsNewBidTitle": "Новая ставка",
+  "notifSettingsNewBidDesc": "Когда на ваше объявление будет сделана ставка",
+  "notifSettingsOutbidTitle": "Ставка перебита",
+  "notifSettingsOutbidDesc": "Когда ваша ставка перебита на аукционе",
+  "btnOk": "ОК",
+  "btnGoBack": "Вернуться",
+  "errorGeneric": "Произошла ошибка",
+  "listingPriceNotSet": "Цена не установлена ​​",
+  "listingMsgLoginRequired": "Чтобы отправить сообщение, вам необходимо войти в систему",
+  "listingMsgOwnListing": "Вы не можете отправить сообщение о своем объявлении",
+  "listingActivated": "Листинг активирован",
+  "listingDeactivated": "Объявление деактивировано",
+  "listingDeleteConfirmContent": "Вы уверены, что хотите удалить это объявление? Это действие невозможно отменить.",
+  "listingDeleteConfirmYes": "Да, удалить",
+  "listingInfo": "Детали листинга",
+  "listingLocationLabel": "Местоположение",
+  "listingSendMessage": "Продавец сообщений",
+  "listingReportTooltip": "Отчет",
+  "listingDeleteTooltip": "Удалить объявление",
+  "listingReportTitle": "🚩 Список отчетов",
+  "listingReportSelectHint": "Выберите причину",
+  "listingReportMisleading": "Вводящий в заблуждение список",
+  "listingReportIllegal": "Незаконный продукт",
+  "listingReportSpam": "Спам/дубликаты объявлений",
+  "listingReportInappropriate": "Неприемлемый контент",
+  "listingReportFraud": "Подозрение на мошенничество",
+  "listingReportNoteHint": "Дополнительные примечания (необязательно)",
+  "listingReportSubmitBtn": "Отправить отчет",
+  "listingReportSelectRequired": "Пожалуйста, выберите причину",
+  "listingReportSuccess": "Ваш отчет получен. Спасибо.",
+  "listingDescriptionLabel": "Описание",
+  "liveStreamsTitle": "Прямые трансляции",
+  "liveStartStream": "В прямом эфире",
+  "liveAllCategory": "Все",
+  "liveNoStreams": "Сейчас нет активных трансляций",
+  "liveBeFirst": "Будьте первым, кто выйдет в эфир!",
+  "livePullToRefresh": "Потяните вниз, чтобы обновить",
+  "liveStreamsLoadError": "Не удалось загрузить потоки",
+  "liveStartStreamDialogTitle": "Начать трансляцию",
+  "liveStreamTitleHint": "Название потока",
+  "liveStreamTitleLabel": "Название *",
+  "liveCategoryLabel": "Категория *",
+  "liveCategoryHint": "Выберите категорию",
+  "liveStartBtn": "Начать",
+  "liveStreamTitleRequired": "Требуется название потока",
+  "liveStreamTitleMin": "Название потока должно быть длиннее 3 символов.",
+  "liveCategoryRequired": "Требуется выбор категории",
+  "liveLoginRequired": "Чтобы начать трансляцию, вам необходимо войти в систему",
+  "liveBadgeLabel": "ЖИВОЙ",
+  "liveEndedBadge": "ЗАВЕРШЕНО",
+  "liveConnecting": "Начало трансляции...",
+  "liveConnectingViewer": "Подключение к потоку...",
+  "livePermissionRequired": "Требуется разрешение на использование камеры и микрофона",
+  "liveViewersTitle": "👁 Зрители ({count})",
+  "liveNoViewers": "Зрителей пока нет",
+  "liveEndStreamTitle": "Завершить поток",
+  "liveEndStreamConfirm": "Вы уверены, что хотите завершить трансляцию?",
+  "liveEndStreamBtn": "Конец",
+  "liveGoBack": "Вернуться",
+  "liveEnded": "Трансляция завершена",
+  "liveStreamEndedTitle": "Трансляция завершена",
+  "liveStreamEndedDesc": "Трансляция была прекращена телекомпанией.",
+  "liveStreamEndedOverlay": "Трансляция завершена",
+  "liveDiscoverStreams": "Проведите пальцем по экрану, чтобы увидеть больше трансляций",
+  "liveLeaveBtn": "Уйти",
+  "liveNextStream": "Следующий поток",
+  "liveCameraClosed": "Камера выключена",
+  "liveWaitingVideo": "Жду видео...",
+  "liveModDemotedSelf": "Ваша роль модератора была удалена пользователем @{username}.",
+  "liveModPromotedSelf": "⭐ @{username} сделал тебя модератором! Теперь вы можете управлять зрителями.",
+  "modTitle": "🛡 Модерация",
+  "modMute": "Отключить звук",
+  "modUnmute": "Включить звук",
+  "modPromote": "Сделать модератором",
+  "modDemote": "Удалить модератора",
+  "modKick": "Выкинуть из потока",
+  "modMutedMsg": "Звук @{username} отключен",
+  "modUnmutedMsg": "Отключение звука удалено",
+  "modPromotedMsg": "@{username} стал модератором",
+  "modDemotedMsg": "@{username} удален с поста модератора",
+  "modKickedMsg": "@{username} выгнали из потока",
+  "modPromotedSnack": "⭐ @{username} теперь модератор!",
+  "modDemotedSnack": "✖ @{username} удален с поста модератора",
+  "chatMessageHint": "Напишите сообщение...",
+  "chatMutedHint": "🔇 У вас отключен звук",
+  "chatHistoryTitle": "История чата",
+  "chatHistoryCount": "Последние сообщения {count}",
+  "auctionTitle": "Аукцион",
+  "auctionBidsHeader": "СТАВКИ",
+  "auctionAcceptBidTitle": "✅ Принять ставку",
+  "auctionItem": "Предмет",
+  "auctionWinnerPrice": "Выигрышная цена",
+  "auctionBidder": "Участник торгов",
+  "auctionAcceptConfirm": "После принятия аукцион закрывается, и сводка автоматически отправляется в чат.",
+  "auctionCancelBtn": "Отменить",
+  "auctionContinueBtn": "Продолжить",
+  "auctionAccepted": "Ставка принята! Резюме отправлено в чат.",
+  "buyItNowAccepted": "Запрос «Купить сейчас» одобрен!",
+  "errorPhotoUpload": "Не удалось загрузить фотографию. Пожалуйста, попробуйте еще раз.",
+  "errorInsufficientBalance": "Недостаточный баланс. Пожалуйста, пополните свой баланс.",
+  "errorPhotoCapture": "Не удалось сделать фото.",
+  "auctionEndTitle": "Завершить аукцион",
+  "auctionEndDesc": "Результат будет сохранен и аукцион закроется.",
+  "auctionEndBtn": "Конец",
+  "auctionStatusActive": "АКТИВНЫЙ",
+  "auctionStatusPending": "В ОЖИДАНИИ ⚡",
+  "auctionStatusPaused": "ПРИОСТАНОВЛЕНО",
+  "auctionStatusSold": "ПРОДАНО 🛒",
+  "auctionStatusEnded": "ЗАВЕРШЕНО",
+  "auctionStatusIdle": "АУКЦИОН",
+  "auctionBuyNowRequestSent": "Запрос отправлен продавцу, ожидает одобрения...",
+  "auctionBuyNowOtherUser": "⏳ Другой пользователь обрабатывает заявку «Купить сейчас».",
+  "auctionBuyNowAcceptInline": "Утвердить",
+  "auctionBuyNowRejectInline": "Отклонить",
+  "auctionStartBtn": "▶ Старт",
+  "auctionBidBtn": "Разместить ставку",
+  "auctionMutedBtn": "🔇 У вас отключен звук",
+  "auctionBuyNowTitle": "⚡ Купить сейчас",
+  "auctionBuyNowPrice": "Купить сейчас Цена",
+  "auctionBuyNowConfirm": "Хотите купить этот товар по этой цене? Аукцион завершится.",
+  "auctionBuyNowRequest": "⚡ Запрос на покупку сейчас",
+  "auctionBuyNowRequester": "Запрошено",
+  "auctionBuyNowRequestConfirm": "Вы хотите одобрить запрос этого человека на покупку сейчас?",
+  "auctionBuyNowReject": "Отклонить",
+  "auctionBuyNowApprove": "Утвердить",
+  "auctionWaitingHost": "Ожидание ответа хоста",
+  "auctionWaitingHostDesc": "Покупка будет завершена после одобрения хозяина.",
+  "auctionApprovalWaiting": "⚡ Ожидание одобрения",
+  "auctionApprovalWaitingDesc": "Ваш запрос на покупку сейчас отправлен хосту.",
+  "auctionInProgress": "⏳ Транзакция в процессе",
+  "auctionInProgressDesc": "Транзакция «Купить сейчас» с @{username} в процессе.",
+  "auctionInProgressNoBid": "Вы не можете делать ставки, пока проблема не будет решена.",
+  "auctionSold": "🛒ПРОДАНО!",
+  "auctionBoughtBy": "Купил сейчас @{username}",
+  "auctionBuyNowCongrats": "🎉Поздравляем! Покупка завершена.",
+  "auctionBuyNowSoldOther": "🛒 Товар продается через «Купить сейчас»! Купил @{buyer}.",
+  "auctionBinRejected": "Ваш запрос на покупку сейчас был отклонен. Аукцион продолжается.",
+  "auctionBinRejectedOther": "Сделка «Купить сейчас» завершена. Аукцион продолжается.",
+  "auctionBuyNowBtn": "⚡ Купить сейчас —",
+  "auctionBuyNowBuyBtn": "Купить",
+  "auctionAcceptBtn": "✅ Принять",
+  "auctionValidAmount": "Введите действительную сумму",
+  "auctionCustomAmountHint": "Пользовательская сумма (₺)",
+  "auctionFirstBid": "Будьте первым, кто сделает ставку!",
+  "auctionHighestBidder": "@{username} предлагает самую высокую цену",
+  "auctionBidCount": "{count} ставки",
+  "auctionManualEntry": "Ввести вручную",
+  "auctionFromListings": "Из моих объявлений",
+  "auctionNoActiveListings": "Нет активных объявлений.",
+  "auctionStartTitle": "Начать аукцион",
+  "auctionItemName": "Название предмета",
+  "auctionStartPrice": "Начальная цена (₺)",
+  "auctionBuyNowPriceHint": "Цена «Купить сейчас» (₺, опционально)",
+  "auctionBuyNowCompleted": "🛒 Купить сейчас завершено! @{buyer} — ₺{price}",
+  "offerHistory": "История предложений",
+  "offerAmountHint": "Сумма предложения (₺)",
+  "offerBtn": "Сделать предложение",
+  "offerSuccess": "Ваше предложение размещено!",
+  "offerError": "Не удалось отправить предложение.",
+  "offerInvalidAmount": "Пожалуйста, введите действительную сумму.",
+  "offerEmpty": "Пока предложений нет.",
+  "offerLoginRequired": "Войдите, чтобы сделать предложение.",
+  "storyTrayTitle": "Следуя",
+  "storyTrayEmpty": "Никто из тех, на кого вы подписаны, сейчас не жив.",
+  "storyTrayError": "Не удалось загрузить",
+  "storyMyStory": "Ваша история",
+  "storyProcessing": "Обработка видео...",
+  "storyTooLong": "Видео слишком длинное (максимум 15 секунд)",
+  "storyUploadFailed": "Не удалось загрузить историю",
+  "storyUploadSuccess": "Ваша история была опубликована!",
+  "storyLiveNow": "Живи сейчас!",
+  "storyJoinLive": "Присоединяйтесь к прямому эфиру",
+  "storyJoinLiveFailed": "Не удалось присоединиться к прямой трансляции",
+  "storyWhoViewed": "Кто смотрел?",
+  "storyViewersLoadFailed": "Не удалось загрузить просмотрщиков",
+  "storyNoViewersYet": "Это еще никто не просматривал",
+  "storyDelete": "Удалить историю",
+  "storyDeleteConfirm": "Вы уверены, что хотите удалить эту историю?",
+  "storyDeleteFailed": "Не удалось удалить историю",
+  "offlineBannerMessage": "Нет подключения к Интернету, вы находитесь в автономном режиме.",
+  "editProfileBio": "Обо мне",
+  "editProfileBioHint": "Напишите краткую биографию о себе…",
+  "editProfileBioHelper": "Макс. 60 символов",
+  "editProfileLink": "Ссылка",
+  "editProfileLinkHint": "https://...",
+  "editProfileLinkHelper": "Должно начинаться с https://",
+  "editProfileLinkError": "Ссылка должна начинаться с http:// или https://",
+  "settingsProTools": "📈 Профессиональные инструменты",
+  "settingsProActive": "АКТИВНЫЙ",
+  "walletTitle": "Мой кошелек TUCi",
+  "walletBalance": "Текущий баланс",
+  "walletRecentTxns": "Недавние транзакции",
+  "walletSpendingSummary": "Сводка расходов",
+  "walletTxnHistory": "История транзакций",
+  "walletNoTxns": "Транзакций пока нет.",
+  "walletTxnAirdrop": "Приветственный подарок",
+  "walletTxnReceiveGift": "Подарок получен",
+  "walletTxnSpendLeadGen": "Массовое уведомление",
+  "walletTxnSpendAdCampaign": "Рекламная кампания",
+  "walletTxnSpendAi": "Цены на ИИ",
+  "walletTxnWebTopup": "Пополнение счета через Интернет",
+  "walletComingSoonLabel": "Покупка TUCi скоро состоится!",
+  "walletComingSoonDesc": "Наша платежная инфраструктура находится в стадии подготовки. В настоящее время все пользователи начинают с баланса в 100 TUCi.",
+  "walletBuyBtn": "Скоро состоится покупка TUCi",
+  "reportLoading": "Подготовка анализа потока…",
+  "reportLoadFailed": "Не удалось загрузить отчет.",
+  "reportRetry": "Попробуйте еще раз",
+  "reportGoHome": "Перейти на главную",
+  "reportBadge": "АНАЛИЗ ПОТОКА",
+  "reportStreamEndedDesc": "Стрим закончился. Анализ вашей аудитории приведен ниже.",
+  "reportMetricPeakViewers": "Пик\nЗрители",
+  "reportMetricEngagedViewers": "помолвлен\nЗрители",
+  "reportMetricAvgBudget": "Средний\nБюджет аудитории",
+  "reportMetricDuration": "поток\nПродолжительность",
+  "reportSectionSwipeFeed": "ДОСТИГНУТЬ ПОДАЧИ",
+  "reportMetricSwipeImpressions": "Проведите по ленте\nВпечатления",
+  "reportMetricSwipeReach": "Проведите по ленте\nУникальный охват",
+  "reportSectionAuction": "ОБЗОР АУКЦИОНА",
+  "reportMetricTotalAuctions": "Итого\nАукционы",
+  "reportMetricSoldItems": "Продано\nПредметы",
+  "reportMetricTotalBids": "Итого\nСтавки",
+  "reportMetricRevenue": "Итого\nДоход",
+  "reportItemSold": "✅ Продано",
+  "reportItemBuyNow": "⚡ Купить сейчас",
+  "reportItemNotSold": "❌ Не продано",
+  "reportChipStart": "Начать",
+  "reportChipSale": "Продажа",
+  "reportChipBids": "Ставки",
+  "reportHesitation": "{count} нерешительная ставка(и) — эти зрители были близки к цене, но не совершили конверсию.",
+  "reportSmartInsight": "Умное понимание",
+  "reportDurationMin": "мин",
+  "reportDurationHour": "ч",
+  "reportDurationLess": "< 1 мин",
+  "proLoadFailed": "Не удалось загрузить данные.",
+  "proUpgradeTitle": "Профессиональная функция",
+  "proUpgradeBtn": "👑 Станьте профессионалом",
+  "proHubTitle": "Профессиональные инструменты",
+  "proHubTabSales": "Продажи и производительность",
+  "proHubTabMarket": "Рынок и конкуренты",
+  "proHubTabAudience": "Трансляция и аудитория",
+  "proToolSalesTitle": "Отчет о продажах и аудитории",
+  "proToolSalesDesc": "Доход, коэффициенты конверсии и горячие листинги",
+  "proToolListingsTitle": "Аналитика листинга",
+  "proToolListingsDesc": "Сколько людей посетило каждое объявление и нажало на него",
+  "proToolMarketTitle": "Аналитика рынка",
+  "proToolMarketDesc": "Что ищут покупатели и когда они делают покупки",
+  "proBenefitsTitle": "Что вы получаете с Pro",
+  "proBenefit1": "Посмотрите, куда идут ваши продажи и доходы",
+  "proBenefit2": "Сколько человек просмотрели и нажали каждое объявление",
+  "proBenefit3": "Узнайте самые активные часы для покупателей",
+  "proBenefit4": "Что ищут люди — заполните пробел, продайте",
+  "proStatusTitle": "👑 ПРОФЕССИОНАЛЬНЫЙ пользователь",
+  "planMonthly": "Ежемесячно",
+  "planYearly": "Ежегодно",
+  "planLifetime": "Срок службы",
+  "proStatusDesc": "Все инструменты аналитики активны",
+  "proRenewalDate": "Обновления: {date}",
+  "proUnlockTitle": "Разблокировать Pro Tools",
+  "proUnlockDesc": "Продавайте, используя данные, а не догадки",
+  "proUnlockBtn": "Станьте профессионалом",
+  "proUpgradeSheetDesc": "Чтобы использовать этот инструмент, вам необходимо перейти на Pro.",
+  "proCreditsSummaryTitle": "Оставшиеся кредиты",
+  "proCreditsBlastName": "Уведомление массовой аудитории",
+  "proCreditsBoostName": "Рекламируемый листинг",
+  "proCreditsAiName": "Советник по ценообразованию с использованием ИИ",
+  "proCreditsReactivationName": "Реактивация",
+  "proCreditsBlastDesc": "Уведомляет потенциальных покупателей о вашем объявлении с помощью push-уведомлений, увеличивая скорость продаж.",
+  "proCreditsBoostDesc": "Перемещает ваше объявление в начало результатов поиска, чтобы получить больше просмотров.",
+  "proCreditsAiDesc": "Анализирует рынок с помощью искусственного интеллекта, чтобы рекомендовать наиболее точную цену для вашего объявления.",
+  "proCreditsReactivationDesc": "Позволяет бесплатно повторно публиковать просроченные или приостановленные списки.",
+  "proCreditsUsedFormat": "{used} использовано, осталось {remaining}",
+  "proCreditsLimitFormat": "{remaining} / {limit}",
+  "blastConfirmCostFreeLabel": "Стоимость",
+  "blastConfirmCostPaidLabel": "Стоимость TUCi",
+  "blastSubtitleFree": "Push-уведомление о начале трансляции • Бесплатно",
+  "blastSubtitlePaid": "Push-уведомление о начале трансляции • {cost} TUCi",
+  "blastConfirmCostFree": "Вычитается из вашей бесплатной квоты",
+  "blastBtnFree": "{count} Готовые покупатели — отправить уведомление (бесплатно)",
+  "blastBtnPaid": "{count} Готовые покупатели — отправить уведомление ({cost} TUCi)",
+  "blastConfirmBodyFree": "{count} готовые покупатели будут уведомлены.\n\nДля этого будет использовано одно из ваших бесплатных уведомлений о трансляции.",
+  "blastConfirmBodyPaid": "{count} готовые покупатели будут уведомлены.\n\nОбщая стоимость: {cost} TUCI",
+  "proAnalyticsTitle": "Профессиональная аналитика",
+  "proSectionOverview": "Моя сводка продаж",
+  "proSectionFunnel": "Сколько человек сделали ставку?",
+  "proSectionTips": "🤖 Умные предложения",
+  "proSectionHotLeads": "Не пропустите распродажу",
+  "proHotLeadsDesc": "Эти покупатели проверили ваше объявление, но не сделали ставку — снизьте или повысьте цену",
+  "proSectionPriceIntel": "Где стоит ваша цена?",
+  "proPriceIntelDesc": "Найдите подходящую цену, сравнив с похожими объявлениями",
+  "proSectionStreamPerf": "Как поживают мои стримы?",
+  "proSectionPeakHours": "Когда платформа наиболее активна?",
+  "proPeakHoursDesc": "Выходите в эфир в это время, чтобы привлечь больше зрителей",
+  "proKpiRevenue30d": "Доход за последние 30 дней",
+  "proKpiLast30d": "последние 30 дней",
+  "proKpiSales": "Общий объем продаж",
+  "proKpiBids": "Полученные предложения",
+  "proKpiActiveListings": "Активные объявления",
+  "proKpiItemUnit": "предметы",
+  "proKpiBidUnit": "ставки",
+  "proKpiListingUnit": "объявления",
+  "proKpiTotalUnit": "всего",
+  "proFunnelViews": "Всего просмотров",
+  "proFunnelHesitation": "Полные колебания",
+  "proFunnelBid": "Всего ставок",
+  "proFunnelSale": "Общий объем продаж",
+  "proFunnelViewToBid": "Сколько зрителей сделало ставку",
+  "proFunnelBidToSale": "Из заявок, сколько стали продажами",
+  "priceSignalExpensive": "⬆ Дорого",
+  "priceSignalCheap": "⬇ Дешево",
+  "priceSignalFair": "✓ Ярмарка",
+  "priceYours": "Ваша цена",
+  "priceMarketAvg": "Среднее по рынку",
+  "priceDiff": "Разница",
+  "proNoStreams": "Прямых трансляций пока нет.",
+  "proStreamTotal": "Всего потоков",
+  "proStreamThisMonth": "В этом месяце",
+  "proStreamAvgViewers": "Среднее Зрители",
+  "proStreamPeak": "Высший",
+  "proStreamAvgDuration": "Среднее продолжительность потока: {dur} мин",
+  "proEngagements": "англ.",
+  "proShowAll": "См. {count} подробнее",
+  "proShowLess": "Показать меньше",
+  "proStreamRowStats": "{viewers} зрителей · {bids} ставок · {dur} мин",
+  "proLoadError": "Не удалось загрузить данные. Пожалуйста, попробуйте еще раз.",
+  "hotLeadViewed": "Просмотрено {count} раз",
+  "hotLeadHesitated": "{count} люди колебались",
+  "listingCtrExplain": "{ctr} кликов на 100 просмотров",
+  "marketSearchTitle": "Люди ищут",
+  "marketDayFilter": "{days} дней",
+  "marketNoSearchData": "Данных о поиске пока нет. Будет появляться при поиске пользователей.",
+  "marketCategoryTitle": "В каких категориях они ищут",
+  "marketPeakHoursTitle": "В эти часы пик покупок",
+  "marketPeakHoursDesc": "Размещайте свои объявления в эти часы, чтобы охватить больше людей.",
+  "marketNoActivityData": "Пока недостаточно данных о деятельности.",
+  "marketTrendingTitle": "Эти категории в тренде",
+  "marketTrendingDesc": "Размещение в этих категориях может увеличить ваши шансы на продажу.",
+  "marketGrowthPos": "Общий рост платформы: +{pct}%",
+  "marketGrowthNeg": "Общий спад платформы: {pct}%",
+  "marketGrowthSub": "Среднее сумма покупки по сравнению с предыдущими 30 днями",
+  "marketPaywallDesc": "Узнайте, что ищут покупатели, когда они совершают покупки и какие категории в тренде.",
+  "listingPerfTitle": "PRO-эффективность ваших объявлений",
+  "listingNoDataTitle": "Данных пока нет",
+  "listingNoDataDesc": "Данные появятся, как только ваши объявления появятся в ленте.",
+  "listingDayFilterN": "Последние {n} дней",
+  "listingTotalViews": "Всего просмотров",
+  "listingAvgCtr": "Среднее Нажмите Оценить",
+  "listingVideoBeatsPhoto": "🎬 Видеоролики получают на {x}× больше кликов, чем фотолистинги.",
+  "listingPhotoBeatsVideo": "📸 Фотографии получают на {x}× больше кликов, чем видео.",
+  "listingMediaEqual": "Списки видео и фотографий привлекают одинаковое внимание.",
+  "listingVideoLabel": "Видео",
+  "listingPhotoLabel": "Фото",
+  "listingWatchRateLabel": "Скорость просмотра",
+  "listingWatchedPct": "{pct}% посмотрело",
+  "listingGalleryLabel": "Интерес к галерее",
+  "listingGalleryDeep": "Прокрутил до фото {n}",
+  "listingGalleryShallow": "Просмотрел только первое фото",
+  "metricViewed": "впечатления",
+  "metricClicked": "нажал",
+  "listingReach": "{count} человек это видели",
+  "listingPaywallDesc": "Отслеживайте, сколько людей просмотрело каждое объявление, сколько кликов нажали на него и какой интерес оно вызвало.",
+  "onboardingTitle": "Чем ты увлекаешься?",
+  "onboardingSubtitle": "Позвольте нам показать вам персонализированные списки и потоки",
+  "onboardingMinHint": "Выберите хотя бы 3 категории",
+  "onboardingContinue": "Продолжить",
+  "onboardingSkip": "Пропустить пока",
+  "onboardingBannerTitle": "Позвольте нам персонализировать вашу ленту",
+  "onboardingBannerSubtitle": "Выберите свои интересы и просмотрите списки, созданные для вас.",
+  "onboardingBannerCta": "Выбрать",
+  "updateRequiredTitle": "Требуется обновление",
+  "updateRequiredDesc": "Пожалуйста, обновите приложение до последней версии для лучшего опыта.",
+  "updateRequiredBtn": "Обновить сейчас",
+  "chatRateLimited": "Помедленнее немного 🐢",
+  "fraudInvalidBid": "Неверное действие",
+  "fraudShieldTitle": "Требуется проверка безопасности",
+  "fraudShieldDesc": "Чтобы сделать такую ​​высокую ставку, нам необходимо убедиться, что ваша учетная запись принадлежит реальному человеку. Это займет всего 1 минуту.",
+  "fraudShieldVerifyBtn": "Подтвердить мой телефон",
+  "fraudShieldDismiss": "Не сейчас",
+  "tabListings": "Объявления",
+  "tabPurchases": "Покупки",
+  "purchasesEmpty": "Покупок пока нет",
+  "purchasesEmptyHint": "Присоединяйтесь к живым аукционам, чтобы покупать предметы",
+  "badgeTrustedSeller": "✅ Доверенные",
+  "badgeActiveSeller": "⭐ Активный",
+  "badgeTrending": "🔥 В тренде",
+  "searchAlertTitle": "Оповещение о поиске",
+  "searchAlertBody": "Получайте уведомления, когда новое объявление соответствует «{query}».",
+  "searchAlertCreate": "Создать оповещение",
+  "searchAlertCreated": "Оповещение о поиске создано ✓",
+  "searchAlertFailed": "Не удалось создать оповещение. Повторите попытку",
+  "searchAlertTooltip": "Создать оповещение о поиске",
+  "audienceInsightsTitle": "Анализ бюджета аудитории",
+  "audienceInsightsViewers": "{count} зрителей",
+  "audienceAvgBudget": "Средний бюджет",
+  "audienceProViewers": "Профессиональные зрители",
+  "audienceHighBudget": "Высокий бюджет (1000₺+)",
+  "audienceMedBudget": "Средний бюджет (250-999₺)",
+  "audienceLowBudget": "Малобюджетный (<250₺)",
+  "proToolCompetitorRadarTitle": "Радар цен конкурентов",
+  "proToolCompetitorRadarDesc": "Посмотрите, какая у вас цена по сравнению с ценами конкурентов и какой доход вы теряете.",
+  "proToolRetargetingTitle": "Центр уведомлений",
+  "proToolRetargetingDesc": "Отправляйте push-уведомления потенциальным покупателям о ваших объявлениях и прямых трансляциях, а также анализируйте отчеты.",
+  "proToolBestTimeTitle": "Лучшее время трансляции",
+  "proToolBestTimeDesc": "Посмотрите дни и часы с самым высоким коэффициентом конверсии на основе ваших прошлых трансляций.",
+  "proToolConversionTitle": "Анализ конверсий",
+  "proToolConversionDesc": "Просмотрите свои показатели выигрышей на аукционах и средние цены продажи по категориям.",
+  "bestTimeNoData": "Еще недостаточно потоковых данных",
+  "bestTimeNoDataHint": "Анализ будет готов как минимум после 1 потока",
+  "bestTimeSlotsHeader": "Лучшие временные слоты",
+  "bestTimeSlotStats": "{wins} продаж / {count} потоков",
+  "conversionNoData": "Данных о продажах пока нет",
+  "conversionNoDataHint": "После проведения живых аукционов здесь появятся ваши продажи по категориям",
+  "conversionSectionHeader": "Какая категория продается лучше всего? (Последние 90 дней)",
+  "conversionCategoryCount": "Всего {count} категорий",
+  "conversionCategorySales": "{won}/{total} продаж",
+  "conversionAvgPrice": "Среднее {price} ₺",
+  "accountInfoTitle": "Моя информация",
+  "accountInfoBasicSection": "Основная информация",
+  "accountInfoSecuritySection": "Безопасность учетной записи",
+  "accountInfoFullName": "Полное имя",
+  "accountInfoUsername": "Имя пользователя",
+  "accountInfoBio": "Био",
+  "accountInfoWebsite": "Веб-сайт",
+  "accountInfoEmail": "Электронная почта",
+  "accountInfoPhone": "Телефон",
+  "accountInfoPhoneEmpty": "Не добавлено",
+  "accountInfoVerified": "Проверено",
+  "accountInfoUnverified": "Непроверенный",
+  "accountInfoSave": "Сохранить",
+  "accountInfoUsernameTaken": "Это имя пользователя занято",
+  "accountInfoSaved": "Информация обновлена ​​",
+  "accountInfoEmailChangeTitle": "Изменить адрес электронной почты",
+  "accountInfoEmailCurrent": "Текущий: {email}",
+  "accountInfoNewEmail": "Новый адрес электронной почты",
+  "accountInfoVerifyCode": "Код подтверждения",
+  "accountInfoSendCode": "Отправить код",
+  "accountInfoVerifyCodeBtn": "Проверить код",
+  "accountInfoCodeSent": "Код подтверждения отправлен",
+  "accountInfoEmailUpdated": "Ваш адрес электронной почты обновлен",
+  "accountInfoDifferentEmail": "Используйте другой адрес электронной почты",
+  "accountInfoPhoneAddTitle": "Добавить телефон",
+  "accountInfoPhoneChangeTitle": "Сменить телефон",
+  "accountInfoPhoneCurrent": "Текущий: {phone}",
+  "accountInfoPhoneSendVerify": "Отправить письмо с подтверждением",
+  "accountInfoEmailSent": "Письмо отправлено",
+  "accountInfoEmailSentDesc": "Мы отправили ссылку для подтверждения на ваш зарегистрированный адрес электронной почты. Нажмите на ссылку, чтобы подтвердить свой номер телефона.",
+  "accountInfoCancel": "Отменить",
+  "accountInfoOk": "ОК",
+  "accountInfoConnectError": "Не удалось подключиться к серверу",
+  "accountInfoMenuLabel": "Моя информация",
+  "phoneInfoTitle": "Почему номер телефона?",
+  "phoneInfoBody": "Ваш номер телефона поможет нам защитить вашу учетную запись для ставок на большую сумму. Нам необходимо подтвердить его, чтобы предотвратить поддельные ставки и связаться с вами, когда вы выиграете. Ваш номер никогда не передается третьим лицам.",
+  "phoneInfoGotIt": "Понял",
+  "boostOnlyPro": "⭐ Продвижение объявления доступно только для участников Pro.",
+  "boostLimitExhausted": "В этом месяце вы использовали все баллы повышения {limit}. Обнуляется в начале следующего месяца.",
+  "boostDialogTitle": "Продвигать листинг",
+  "boostDialogPlanLabel": "План кампании:",
+  "boostDialogTotalBudget": "Общий бюджет",
+  "boostDialogTotalBudgetValue": "50 ТУСи",
+  "boostDialogCpc": "Цена за клик",
+  "boostDialogCpcValue": "1 ТУЦи",
+  "boostDialogEstClicks": "Расчетное количество кликов",
+  "boostDialogEstClicksValue": "~50 кликов",
+  "boostDialogFeedHint": "Ваше объявление будет размещено в ленте «Для вас».",
+  "boostDialogCredits": "⭐ Оставшиеся бусты: {remaining} / {limit}",
+  "boostDialogStart": "Начать",
+  "boostDialogPaidTitle": "Платное продвижение",
+  "boostDialogPaidBadge": "Вы использовали все бесплатные бонусы {limit} в этом месяце",
+  "boostDialogPaidDesc": "Ваше объявление по-прежнему будет отображаться в ленте «Для вас».",
+  "boostDialogPaidCost": "Стоимость",
+  "boostDialogPaidCostValue": "50 ТУСи",
+  "boostDialogPaidBalance": "Ваш текущий баланс",
+  "boostDialogPaidConfirm": "Заплатите 50 TUCi и начните",
+  "boostSuccessFree": "🔥 Ваше объявление теперь размещается бесплатно!",
+  "boostSuccessPaid": "🔥 Ваше объявление теперь опубликовано! (израсходовано 50 TUCi)",
+  "boostSuccess": "🔥 Ваше объявление теперь опубликовано!",
+  "boostErrorDefault": "Не удалось начать кампанию.",
+  "boostErrorConnection": "Ошибка подключения. Пожалуйста, попробуйте еще раз.",
+  "boostErrorInsufficientTuci": "Недостаточный баланс TUCi. Для платного буста необходимо 50 TUCi.",
+  "boostBtnStart": "Продвигать листинг",
+  "boostBtnReport": "Просмотр эффективности рекламы",
+  "adReportTitle": "РЕКЛАМНЫЙ ОТЧЕТ",
+  "adReportSubtitle": "Эффективность вашей кампании в реальном времени",
+  "adReportLoading": "Подготовка анализа рекламы…",
+  "adReportLoadError": "Не удалось загрузить отчет.",
+  "adReportStatusActive": "Активный",
+  "adReportStatusCompleted": "Завершено",
+  "adReportStatusPaused": "Приостановлено",
+  "adReportStatusCancelled": "Отменено",
+  "adReportMetricImpressions": "Просмотры",
+  "adReportMetricClicks": "Клики",
+  "adReportMetricClickRate": "Кликов за\n100 просмотров",
+  "adReportMetricClickRateHint": "{clicks} кликов / {impressions} просмотров",
+  "adReportMetricActiveDays": "Активный\nПродолжительность",
+  "adReportMetricActiveDaysLessThan1": "<1 день",
+  "adReportMetricActiveDaysValue": "{days} дней",
+  "adReportSmartAnalysis": "Умный анализ",
+  "adReportInsightNoImpressions": "Ваше объявление еще никто не видел. Это обновится, как только объявление появится в ленте.",
+  "adReportInsightGreat": "Большой! Примерно {clicks} из каждых 100 человек, увидевших ваше объявление, нажали на него — это отличный показатель вовлеченности. Ваше название и фотография привлекают покупателей.",
+  "adReportInsightGood": "Идет хорошо. {impressions} человек увидели ваше объявление, а {clicks} проверил его. Улучшение фотографий или названий может привлечь еще больше интереса.",
+  "adReportInsightLow": "{impressions} человек увидели ваше объявление, но кликнули только {clicks}. Ваша фотография на обложке или цена могут быть недостаточно привлекательными для покупателей.",
+  "adReportInsightVeryLow": "Ваше объявление увидели {impressions} человек, и оно получило {clicks} кликов. Рекомендуем просмотреть название, фотографии и цены.",
+  "notInterested": "Не интересно",
+  "notInterestedConfirmed": "Вы больше не увидите это объявление.",
+  "proMetricAvgDwell": "Среднее Просмотр времени",
+  "proMetricSearchVisibility": "Видимость поиска",
+  "proMetricBestHour": "Лучший час публикаций",
+  "proMetricReturnViewers": "Вернуться зрителей",
+  "adMetricDailyTrend": "Ежедневный тренд CTR",
+  "adMetricBestHour": "Лучший час",
+  "adMetricCategoryAvgCtr": "Интерес к подобным объявлениям",
+  "adMetricBurnRate": "Оставшееся время",
+  "softUpdateTitle": "Доступна новая версия",
+  "softUpdateMessage": "Доступна новая версия приложения. Пожалуйста, обновите для лучшего опыта.",
+  "softUpdateUpdateNow": "Обновить сейчас",
+  "softUpdateLater": "Позже",
+  "forgotPassword": "Забыли пароль?",
+  "resetPasswordDescription": "Пожалуйста, введите адрес электронной почты, зарегистрированный в вашей учетной записи.",
+  "sendResetCode": "Отправить код",
+  "enterResetCode": "Введите 6-значный код, отправленный на вашу электронную почту",
+  "newPassword": "Новый пароль",
+  "newPasswordConfirm": "Подтвердите новый пароль",
+  "passwordResetSuccess": "Ваш пароль был успешно сброшен. Теперь вы можете войти.",
+  "settingsMyPurchases": "Мои покупки",
+  "purchaseDetailTitle": "Детали покупки",
+  "purchaseSeller": "Продавец",
+  "purchaseProofImage": "Изображение, подтверждающее продажу",
+  "purchaseViewListing": "Посмотреть объявление",
+  "purchaseViewSeller": "Перейти в профиль продавца",
+  "settingsMySales": "Мои продажи",
+  "saleDetailTitle": "Детали продажи",
+  "saleBuyerLabel": "Покупатель",
+  "saleMessageBuyer": "Сообщение покупателю",
+  "hostAcceptSaleDialogTitle": "Подтверждение продажи",
+  "hostAcceptSaleDialogBody": "Пожалуйста, покажите товар на камеру и сделайте подтверждающее фото.",
+  "hostAcceptSaleBtnCapture": "Захват и подтверждение",
+  "hostAcceptSaleBtnSkip": "Подтвердить без фото",
+  "radarSuggestedCopied": "{price} ₺ скопировано в буфер обмена",
+  "radarCopyBtn": "Копировать предложенную цену: {price} ₺",
+  "retargetingBlastSent": "Уведомление отправлено {count} людям!",
+  "retargetingBlastCooldown": "Следующую трансляцию нужно дождаться 7 дней.",
+  "retargetingDialogTitle": "Отправить уведомление?",
+  "retargetingDialogBodyFree": "«Все еще интересно?» уведомление будет отправлено {count} людям. У вас есть баллы на уведомления {credits}, которые отправляются бесплатно.",
+  "retargetingDialogBodyPaid": "«Все еще интересно?» уведомление будет отправлено {count} людям. {cost} TUCi будет списано с вашего кошелька.",
+  "retargetingDialogBodyKarma": "Уведомление будет отправлено {count} людям.\n\nБудет использовано кредит(ы) {free} + будет списано {cost} TUCi.",
+  "retargetingDialogBodyInsufficient": "Недостаточный баланс TUCi.\nТребуется: {cost} TUCi | Доступно: {balance} TUCI",
+  "retargetingCostFree": "Бесплатно",
+  "retargetingCreditsLeft": "Осталось кредитов {count}",
+  "retargetingFreeSubtitle": "{count} человек — использовано 1 кредит на трансляцию",
+  "retargetingPaidSubtitle": "{count} человек × 10 TUCi",
+  "retargetingEstimatedCost": "Ориентировочная стоимость",
+  "retargetingSending": "Отправка...",
+  "retargetingSendBtnLabel": "Отправить уведомление {count} людям",
+  "retargetingCreditsBadge": "Осталось кредитов {count} · отправлено бесплатно",
+  "retargetingCostBadge": "{cost} TUCi будет потрачено",
+  "retargetingFootnote": "Пользователи получат сообщение «Все еще интересно?» уведомление. Отправляется только тем, кто не является покупателем.",
+  "retargetingInfoText": "Отправляет напоминание людям, которые просмотрели ваше объявление, но не купили. Бесплатно, если у вас есть ежемесячные кредиты на трансляцию, в противном случае — 10 TUCi на человека.",
+  "retargetingLast30Days": "Последние 30 дней",
+  "retargetingViewerLabel": "просмотрено",
+  "retargetingBoughtLabel": "куплен",
+  "retargetingReachableLabel": "достижимый",
+  "retargetingNoAudience": "Сейчас никто не доступен.",
+  "retargetingNoAudienceDesc": "Ваша аудитория будет расти по мере того, как все больше людей просматривают ваше объявление.",
+  "retargetingNoListings": "Активных объявлений не найдено.",
+  "retargetingNoListingsDesc": "Для ретаргетинга вам нужен как минимум 1 активный листинг.",
+  "errorGenericRetry": "Произошла ошибка, повторите попытку позже.",
+  "verifyEmailTitle": "Проверка электронной почты",
+  "btnVerify": "Проверьте",
+  "btnResetPassword": "Сбросить пароль",
+  "radarScreenTitle": "Радар конкурентов и скорость продаж",
+  "priceMinLabel": "{price} ₺ (мин)",
+  "priceMaxLabel": "{price} ₺ (макс.)",
+  "forYouLabel": "Для тебя",
+  "messagesUpdateFailed": "Обновление не удалось",
+  "btnRefresh": "Обновить",
+  "messagesLoadFailed": "Не удалось загрузить сообщения",
+  "btnSend": "Отправить",
+  "btnAcceptInvite": "Принять",
+  "btnPin": "Пин",
+  "retargetingBlastSuccess": "Уведомления успешно отправлены!",
+  "hostNotifDialogTitle": "Отправить уведомление",
+  "hostStreamDataError": "Не удалось загрузить данные",
+  "hostInviteError": "Не удалось отправить приглашение: {error}",
+  "hostModRemoved": "✖ @{username} удален с поста модератора",
+  "genericErrorDetail": "Ошибка: {error}",
+  "profilePhotoUploadError": "Не удалось загрузить фотографию. Попробуйте еще раз.",
+  "profileInviteCodeError": "Не удалось получить код приглашения. Повторите попытку.",
+  "profileInviteTitle": "Приглашайте друзей, зарабатывайте TUCi!",
+  "profileInviteSubtitle": "+50 TUCi за приглашение, ваш друг получит +10 TUCi",
+  "profileInviteShareText": "Присоединяйтесь к Теклифу! Дом живых аукционов и секонд-хэндов 🎁\n\nВведите этот пригласительный код при регистрации и мгновенно заработайте бонус TUCi:\n\n🔑 Код: {code}\n⏳ Срок действия истекает через: {expiry}\n\n📱 Магазин приложений iOS: apps.apple.com/app/teqlif\n🤖 Google Play: play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Веб-сайт: teqlif.com",
+  "profileInviteExpiryDays": "{days} дней",
+  "profileInviteExpiryHours": "{hours} часов",
+  "profileInviteExpirySoon": "короткое время",
+  "profileInviteCodeCopied": "Код скопирован!",
+  "profileInviteModalExpiry": "⏳ Срок действия истекает через: {expiry}",
+  "profileInviteShareBtn": "Поделиться ссылкой для приглашения",
+  "profilePickGallery": "Выбрать из галереи",
+  "profilePickCamera": "Сфотографироваться",
+  "listingDeleteDialogTitle": "Удалить объявление",
+  "shareLinkCopied": "Ссылка скопирована",
+  "listingDeleteDialogBody": "Вы уверены, что хотите навсегда удалить это объявление?",
+  "btnDeleteConfirm": "Удалить",
+  "favoritesEmpty": "Избранных пока нет",
+  "createNeedTitle": "Пожалуйста, сначала введите название объявления.",
+  "aiPriceError": "Не удалось получить оценку стоимости. Пожалуйста, попробуйте еще раз.",
+  "tuciSpent": "{count} TUCi потрачено.",
+  "videoTooLong": "Продолжительность видео не может превышать {max} секунд ({actual}s).",
+  "createPickCamera": "Запись с помощью камеры (макс. {sec}s)",
+  "videoUploading": "Видео все еще загружается, подождите.",
+  "videoLabel": "Видео (максимум {sec}s)",
+  "forYouStreams": "Стримы для вас",
+  "searchNoResults": "Результатов не найдено",
+  "proSearchCount": "{count} ищет",
+  "listingDeactivateTitle": "Деактивировать объявление",
+  "listingDeactivateWarning": "Если вы деактивируете, активные витрины/акции будут удалены.",
+  "listingDeactivateCostHint": "Внимание: срок действия вашего 30-дневного бесплатного окна истек. Повторная активация будет стоить {cost} TUCi с вашего баланса.",
+  "listingDeactivateFreeCreditHint": "Внимание: срок действия вашего 30-дневного бесплатного окна истек. При повторной активации будет использован 1 бесплатный кредит PRO.",
+  "listingDeactivateConfirm": "Я понимаю, деактивировать",
+  "listingReactivateTitle": "Возобновить объявление",
+  "listingReactivateFreeCredit": "У вас есть {remaining} бесплатных кредитов. 1 будет использоваться.",
+  "listingReactivatePaidPro": "Ежемесячные кредиты исчерпаны. {cost} TUCi будет взиматься плата.",
+  "listingReactivatePaidNormal": "{cost} TUCi будет взиматься плата. Баланс: {balance} TUCI.",
+  "listingReactivateProUpsell": "Станьте PRO, чтобы получать 5 бесплатных повторных активаций в месяц.",
+  "listingReactivateInsufficientBalance": "Недостаточный баланс. Пополните TUCi, чтобы продолжить.",
+  "listingReactivateConfirm": "Активировать",
+  "proReactivationSection": "Листинг кредитов на реактивацию",
+  "suggestedStreamers": "Рекомендуемые вещатели",
+  "listingsSelectedForYou": "Объявления, выбранные для вас",
+  "profileFaq": "Часто задаваемые вопросы",
+  "faqCatAccount": "Учетная запись, профиль и поддержка",
+  "faqQAccountSignup": "Как мне зарегистрироваться и войти в teqlif?",
+  "faqAAccountSignup": "Вы можете создать свою учетную запись за считанные секунды, используя свой адрес электронной почты, нажав кнопку «Войти / Зарегистрироваться» на главной странице, или безопасно войти в свою существующую учетную запись.",
+  "faqQAccountEmail": "Зачем мне нужно подтверждать свой адрес электронной почты?",
+  "faqAAccountEmail": "Проверка электронной почты обязательна для обеспечения безопасности вашей учетной записи и выполнения важных операций, таких как сброс пароля. Подтвержденные электронные письма также являются первым шагом для процесса подтвержденной учетной записи ([ICON_VERIFIED]) (синяя галочка ([ICON_VERIFIED])).",
+  "faqQAccountProfile": "Как я могу редактировать свой профиль (имя, фото, биографию)?",
+  "faqAAccountProfile": "Вы можете нажать кнопку «Редактировать профиль», перейдя на вкладку «Мой профиль» в приложении. Вы можете изменить свой аватар, обновить свое имя и написать биографию, чтобы лучше представиться потенциальным покупателям.",
+  "faqQAccountPassword": "Я забыл свой пароль, что мне делать?",
+  "faqAAccountPassword": "Нажав ссылку «Забыли пароль» на экране входа в систему, вы можете запросить ссылку для сброса на свою электронную почту и установить новый пароль.",
+  "faqQAccountDelete": "Как я могу удалить свою учетную запись?",
+  "faqAAccountDelete": "Вы можете навсегда удалить свою учетную запись, выбрав «Настройки» > «Удалить учетную запись». Этот процесс невозможно отменить; все ваши данные и объявления будут удалены без возможности восстановления.",
+  "faqCatExplore": "Исследование, предложения и меню",
+  "faqQExploreSellers": "Кто представлен в разделе «Рекомендуемые продавцы»?",
+  "faqAExploreSellers": "Этот список автоматически определяется нашим алгоритмом искусственного интеллекта. Здесь представлены пользователи с высокими рейтингами, часто посещаемыми объявлениями, быстрым откликом и обычно PRO-подпиской или значком «Надежный продавец».",
+  "faqQExploreStreamers": "Как работает раздел «Рекомендуемые стримеры»?",
+  "faqAExploreStreamers": "Стримеры, которые регулярно транслируются на SwipeLive, набирают высокие баллы «Ажиотажа» и имеют активную аудиторию, автоматически перемещаются в начало страницы «Обзор».",
+  "faqQExploreListings": "В чем разница между страницами «Списки» и «Обзор»?",
+  "faqAExploreListings": "Страница «Объявления» представляет собой вертикальную ленту недавно добавленных объявлений, выбранных AI специально для ваших интересов. Страница «Обзор» — это основной поисковый центр, где вы можете выполнять подробный поиск по категориям и находить популярных продавцов.",
+  "faqQExploreLiveMessages": "Для чего нужны меню «Живые сообщения» и «Сообщения»?",
+  "faqAExploreLiveMessages": "В прямом эфире: переход на ленту SwipeLive, где продавцы демонстрируют товары вживую. Сообщения: Вы можете напрямую общаться с продавцами и безопасно договариваться о ценах (ставках).",
+  "faqCatBadges": "Значки, теги и кредиты TUCI ([ICON_TUCI])",
+  "faqQBadgesVerified": "Что такое синяя галочка ([ICON_VERIFIED]) (подтвержденный аккаунт ([ICON_VERIFIED]))?",
+  "faqABadgesVerified": "Синяя галочка означает, что продавец успешно подтвердил свой адрес электронной почты и номер телефона, доказывая, что он надежный реальный человек.",
+  "faqQBadgesPro": "Что означает значок «👑 (Корона)»?",
+  "faqABadgesPro": "Этот значок указывает на то, что продавец является участником teqlif PRO ([ICON_PRO]). PRO-продавцы — это профессионалы, которых платформа алгоритмически продвигает больше.",
+  "faqQBadgesTrusted": "Что означают значки « ✅ Доверенный» и «⭐ Активный» продавец?",
+  "faqABadgesTrusted": "✅ Надежный продавец: предоставляется опытным продавцам, которые подтвердили идентификационную информацию и завоевали доверие. ⭐ Активный продавец: представляет динамичных продавцов, которые часто используют платформу и быстро отвечают.",
+  "faqQBadgesSponsored": "Что обозначают теги «Спонсируемые», «Тенденции» и «LIVE»?",
+  "faqABadgesSponsored": "Спонсорство: реклама объявления с использованием кредитов TUCi ([ICON_TUCI]). В тренде (Fire): объявление в последнее время пользуется большим спросом или добавлено в избранное. LIVE (мигает): Продавец в настоящее время ведет прямую трансляцию этого товара.",
+  "faqQBadgesTuci": "Что такое TUCI ([ICON_TUCI]) и где он используется?",
+  "faqABadgesTuci": "TUCi ([ICON_TUCI]) — наша виртуальная кредитная валюта. Он используется для продвижения объявлений, отправки подарков в прямых трансляциях, получения анализа цен с помощью ИИ и прямого контакта с покупателями с помощью функции привлечения потенциальных клиентов.",
+  "faqCatLive": "Прямые трансляции (SwipeLive) и аукционы",
+  "faqQLiveHost": "Что я могу делать на экране хоста (стримера)?",
+  "faqALiveHost": "Вы можете управлять чатом, запустить аукцион для своего продукта, мгновенно просмотреть входящие ставки и принять самую высокую ставку, чтобы подтвердить продажу за считанные секунды.",
+  "faqQLiveViewer": "Каковы особенности экрана просмотра?",
+  "faqALiveViewer": "Вы можете легко смотреть потоки, проведя пальцем по вертикали. Вы можете присоединиться к чату, отправлять подарки и делать ставки на аукционах.",
+  "faqQLiveHype": "Что такое уровень хайпа?",
+  "faqALiveHype": "Когда зрители общаются и отправляют подарки, показатель Hype комнаты увеличивается. Когда оно превышает лимит, система записывает этот захватывающий момент как «Высшее видео».",
+  "faqCatAI": "PRO-инструменты и искусственный интеллект",
+  "faqQAIInsights": "Что такое воронка конверсии (Pro Insights)?",
+  "faqAAIInsights": "Эксклюзивный инструмент для PRO-продавцов, который сообщает о количестве просмотров, времени ожидания и показателях колебаний для оптимизации вашей стратегии продаж.",
+  "faqQAIPrice": "Как работает AI Price Intel?",
+  "faqAAIPrice": "Наш ИИ анализирует миллионы строк данных, чтобы предложить оптимальную цену продажи на основе названия и категории вашего продукта.",
+  "faqQAILead": "Что такое функция «Оповещение массовой аудитории ([ICON_HOTDEMAND])»?",
+  "faqAAILead": "Система, которая с помощью искусственного интеллекта сопоставляет ваше объявление с наиболее подходящими потенциальными покупателями и отправляет им прямое уведомление «Предлагаемое объявление».",
+  "faqQAIRadar": "Анализ конкурентов и лучшее время трансляции",
+  "faqAAIRadar": "Анализ конкурентов сравнивает вашу цену и рейтинг кликов с конкурентами. Модуль «Лучшее время трансляции» сообщает, когда ваши подписчики наиболее активны.",
+  "editListingTitle": "Редактировать объявление",
+  "btnUpdate": "Обновление",
+  "btnUpdateListing": "Обновить список",
+  "faqCatIcons": "Глоссарий системных значков",
+  "faqIconVerified": "Подтвержденная учетная запись ([ICON_VERIFIED]): показывает, что пользователь подтвердил личность или телефон.",
+  "faqIconPro": "teqlif PRO ([ICON_PRO]): указывает на члена PRO, продвигаемого платформой.",
+  "faqIconTuci": "TUCi ([ICON_TUCI]): виртуальная валюта, используемая для расходов внутри приложения.",
+  "faqIconBlast": "Уведомление массовой аудитории ([ICON_BLAST]): отправляет ваше объявление/поток в виде мгновенного push-уведомления потенциальным покупателям.",
+  "faqIconAutoBid": "Автоматическая ставка ([ICON_AUTOBID]): система делает ставки от вашего имени до вашего лимита.",
+  "faqIconSales": "Статистика продаж: показывает объем продаж и прибыльность.",
+  "faqIconListings": "Аналитика листинга: просмотр и добавление в избранное показателей ваших объявлений.",
+  "faqIconMarket": "Аналитика рынка: рыночные цены и тенденции на основе категорий.",
+  "faqIconTime": "Лучшее время трансляции: оптимальное время трансляции на основе исторических данных.",
+  "faqIconConversion": "Анализ конверсий: ставки и воронка продаж на просмотр.",
+  "faqIconRadar": "Радар конкурентов: анализ цен и скорости продаж аналогичных продавцов.",
+  "faqIconRetargeting": "Ретаргетинг: отправляйте напоминания или сообщения о скидках непосредственно заинтересованным покупателям.",
+  "proToolHotDemandTitle": "Уведомление массовой аудитории",
+  "proToolHotDemandDesc": "Свяжитесь напрямую с потенциальными покупателями, заинтересованными в вашем объявлении.",
+  "proToolAiPriceTitle": "Анализ цен с помощью ИИ",
+  "proToolAiPriceDesc": "Узнайте рыночную стоимость своей продукции за считанные секунды с помощью искусственного интеллекта.",
+  "proToolStreamAnalyticsTitle": "Потоковая аналитика",
+  "proToolStreamAnalyticsDesc": "Подробно проанализируйте данные о просмотрах прямых трансляций и подарках.",
+  "faqIconNameVerified": "Подтвержденный аккаунт ([ICON_VERIFIED])",
+  "faqIconNamePro": "teqlif PRO ([ICON_PRO])",
+  "faqIconNameTuci": "TUCi ([ICON_TUCI])",
+  "faqIconNameBlast": "Уведомление массовой аудитории ([ICON_BLAST])",
+  "faqIconNameAutoBid": "Автоматическая ставка ([ICON_AUTOBID])",
+  "faqIconNameSales": "Статистика продаж",
+  "faqIconNameListings": "Аналитика листинга",
+  "faqIconNameMarket": "Аналитика рынка",
+  "faqIconNameTime": "Лучшее время трансляции",
+  "faqIconNameConversion": "Анализ конверсий",
+  "faqIconNameRadar": "Радар конкурентов",
+  "faqIconNameRetargeting": "Ретаргетинг",
+  "listingBlastEstimateLoading": "Оценка аудитории...",
+  "listingBlastDialogTitle": "Уведомление массовой аудитории",
+  "listingBlastDialogBody": "Найдено {count} потенциальных покупателей, которым может быть интересно ваше объявление. Хотите отправить им мгновенное уведомление?",
+  "listingBlastCost": "Стоимость: {cost} TUCI",
+  "reportMassNotificationTitle": "Отчет о массовом оповещении",
+  "reportMassNotificationDesc": "На этом экране отображается статистика конверсий уведомлений для массовой аудитории, отправленных в прямых трансляциях, и подробные сведения о листинге.",
+  "reportLoadError": "Не удалось загрузить отчет:",
+  "reportNoNotificationYet": "Вы еще не отправляли массовые уведомления.",
+  "centerNotificationAudience": "Центр уведомлений и аудиторий",
+  "reportTotalSpent": "Всего потрачено:",
+  "reportCostPerClick": "Стоимость за клик:",
+  "reportConversionFunnel": "Воронка конверсии",
+  "reportTargetAudience": "Целевая аудитория",
+  "reportSuccessfullyDelivered": "Успешно доставлено",
+  "reportClickOpen": "Нажмите (Открыть)",
+  "reportROI": "Рентабельность инвестиций (ROI)",
+  "actionConfirmAndStart": "Подтвердить и начать",
+  "auctionBuyNowRejected": "Запрос на покупку сейчас отклонен.",
+  "massAudienceNotification": "Уведомление массовой аудитории",
+  "actionSendMessageToSeller": "Отправить сообщение продавцу",
+  "badgeVerified": "Проверено",
+  "titleActions": "Действия",
+  "langTR": "TR",
+  "langEN": "EN",
+  "langAR": "AR",
+  "langRU": "RU",
+  "kickedFromStream": "🚫 Вас выгнали из этого потока",
+  "actionLeaveLiveStream": "Покинуть прямую трансляцию",
+  "streamNotificationAutoSent": "Уведомление будет отправлено автоматически при запуске трансляции.",
+  "proToolStreamHistoryTitle": "Прошлые трансляции",
+  "proToolStreamHistoryEmpty": "У вас еще нет завершенных трансляций.",
+  "analyticsRevenue": "Общий доход",
+  "analyticsUniqueViewers": "Уникальные зрители",
+  "analyticsAvgBudget": "Среднее Бюджет",
+  "analyticsPeakViewers": "Пик зрителей",
+  "analyticsHesitation": "Колебания",
+  "analyticsFeedImpressions": "Показы ленты",
+  "analyticsFeedReach": "Охват ленты",
+  "analyticsAiRecommendation": "Рекомендация ИИ",
+  "analyticsNoAuctions": "В этом потоке не создано ни одного аукциона.",
+  "analyticsItemsSold": "Проданные предметы",
+  "analyticsDuration": "{minutes} мин",
+  "proToolStreamHistoryDesc": "Подробно проанализируйте статистику продаж и аудитории ваших прошлых прямых трансляций.",
+  "proTabSales": "Производительность",
+  "proTabMarket": "Рынок",
+  "proTabAudience": "Аудитория",
+  "listingVideoComplete": "Видео завершено",
+  "audienceTotalViewers": "Всего зрителей",
+  "searchHintTextListing": "Искать по названию или описанию...",
+  "filterTitle": "Фильтры",
+  "categoryLabel": "Категория",
+  "cityLabel": "Город",
+  "clearFilters": "Очистить",
+  "applyFilters": "Применить",
+  "selectCity": "Выберите город",
+  "allCategories": "Все категории",
+  "hintExampleEmail": "example@email.com",
+  "competitorRadarTitle": "Радар цен конкурентов",
+  "competitorRadarYourPrice": "Ваша цена",
+  "competitorRadarAvg": "Среднее значение конкурента",
+  "competitorRadarSuggested": "Предлагается",
+  "competitorRadarPercentile": "Процентиль",
+  "competitorRadarDifference": "Разница",
+  "competitorRadarCompetitor": "Конкурент",
+  "competitorRadarSalesSpeed": "Скорость продаж",
+  "competitorRadarSold": "Продано",
+  "competitorRadarActive": "Активный конкурент",
+  "competitorRadarSalePrice": "Цена продажи",
+  "listingSuggestedStart": "Рекомендуемое начало",
+  "listingExpectedClose": "Ожидаемое закрытие",
+  "listingLowest": "Самый низкий",
+  "listingAverage": "Среднее",
+  "listingHighest": "Высший",
+  "audienceCalcError": "Произошла ошибка при расчете аудитории.",
+  "audienceNoPotentialFound": "На данный момент новых потенциальных покупателей для этого объявления не найдено.",
+  "audienceMassSendSuccess": "Уведомление для массовой аудитории успешно отправлено! 🚀",
+  "audienceMassSendError": "Во время отправки произошла ошибка.",
+  "audienceSendToX": "Отправить определенному количеству людей",
+  "audiencePersonCountHint": "Количество человек",
+  "audienceNotificationWillGoTo": "Уведомление будет отправлено по адресу:",
+  "audienceMonthlyFreeRights": "Ежемесячные бесплатные права:",
+  "audienceTotalCost": "Общая стоимость:",
+  "audienceInsufficientTuci": "⚠️ Недостаточно баланса TUCi, пополните баланс.",
+  "hostInvitedToStage": "был приглашен на сцену",
+  "hostModeration": "Модерация",
+  "hostMute": "Отключить звук",
+  "hostUnmute": "Включить звук",
+  "hostMakeModerator": "Сделать модератором",
+  "hostMadeModeratorMsg": "был сделан модератором!",
+  "hostRemoveModerator": "Удалить модератора",
+  "hostInviteToStage": "Пригласить на сцену",
+  "hostRemoveFromStage": "Удалить со сцены",
+  "hostKickFromStream": "Выкинуть из потока",
+  "hostShowToAllViewersHint": "Будет показано всем зрителям...",
+  "swipeMutedInStream": "Вас отключили в этом потоке",
+  "swipeMadeModeratorBy": "сделал тебя модератором! Теперь вы можете управлять зрителями.",
+  "swipeRemovedFromStage": "Вас сняли со сцены",
+  "swipeGiftSent": "отправил! 🎉",
+  "notificationStart": "Начать",
+  "notificationEnd": "Конец",
+  "proHubGotIt": "Понял",
+  "profileSearchListingHint": "Название объявления о поиске...",
+  "profileFilterAll": "Все",
+  "profileInviteAndEarn": "Приглашайте и зарабатывайте",
+  "publicProfileFollowers": "Последователи",
+  "publicProfileFollowing": "Следуя",
+  "publicProfileEditProfile": "Редактировать профиль",
+  "saleDetailGoToBuyer": "Перейти в профиль покупателя",
+  "searchAiHint": "Поиск с помощью ИИ (например, старинные часы)",
+  "searchFilterUsers": "Пользователи",
+  "searchFilterListings": "Объявления",
+  "searchFilterStreams": "Прямые трансляции",
+  "auctionSendVerificationEmail": "Отправить письмо с подтверждением",
+  "storyTrayRecordVideo": "Запись видео",
+  "storyTrayGalleryVideo": "Галерея Видео",
+  "storyTrayTakePhoto": "Сфотографироваться",
+  "storyTrayGalleryPhoto": "Галерея Фото",
+  "phoneInputHint": "Номер телефона",
+  "swipeListNoData": "Данные не найдены.",
+  "shareTitle": "Поделиться",
+  "shareInstagramLabel": "История Инстаграма",
+  "shareInstagramSubtitle": "Добавьте в свою историю визуально",
+  "shareWhatsAppLabel": "Ватсап",
+  "shareWhatsAppSubtitle": "Отправить прямо в WhatsApp",
+  "shareCopyLabel": "Копировать ссылку",
+  "shareOtherLabel": "Другое...",
+  "shareOtherSubtitle": "Показать все приложения"
+}

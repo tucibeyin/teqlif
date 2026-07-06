@@ -278,6 +278,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ButtonSegment(value: 'tr', label: Text(AppLocalizations.of(context)!.langTR)),
                       ButtonSegment(value: 'en', label: Text(AppLocalizations.of(context)!.langEN)),
                       ButtonSegment(value: 'ar', label: Text(AppLocalizations.of(context)!.langAR)),
+                      ButtonSegment(value: 'ru', label: Text(AppLocalizations.of(context)!.langRU)),
                     ],
                     selected: {currentLocale.languageCode},
                     showSelectedIcon: false,

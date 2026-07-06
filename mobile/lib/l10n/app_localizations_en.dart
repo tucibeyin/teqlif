@@ -3263,6 +3263,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get langAR => 'AR';
 
   @override
+  String get langRU => 'RU';
+
+  @override
   String get kickedFromStream => '🚫 You were kicked from this stream';
 
   @override

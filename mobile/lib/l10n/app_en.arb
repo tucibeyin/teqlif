@@ -1718,6 +1718,7 @@
   "langTR": "TR",
   "langEN": "EN",
   "langAR": "AR",
+  "langRU": "RU",
   "kickedFromStream": "🚫 You were kicked from this stream",
   "actionLeaveLiveStream": "Leave Live Stream",
   "streamNotificationAutoSent": "Notification will be sent automatically when stream starts.",
