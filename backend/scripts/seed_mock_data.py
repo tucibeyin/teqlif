@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 import random
+import uuid
 from datetime import datetime, timedelta, timezone
 from faker import Faker
 
@@ -79,9 +80,10 @@ async def seed_data():
             print(f"✅ '{custom_username}' zaten var, mevcut hesap kullanılacak.")
             users.append(existing_user)
         else:
+            uid = uuid.uuid4().hex[:6]
             custom_user = User(
                 username=custom_username,
-                email=f"{custom_username}{random.randint(100, 999)}@example.com",
+                email=f"{custom_username}_{uid}@example.com",
                 hashed_password=custom_pw_hash,
                 full_name="Test Kullanıcısı",
                 phone="555" + str(random.randint(1000000, 9999999)),
@@ -94,10 +96,11 @@ async def seed_data():
             
         for i in range(1, 100):
             is_pro = random.random() < 0.25 # 25% pro
+            uid = uuid.uuid4().hex[:6]
             
             user = User(
-                    username=fake.user_name() + str(random.randint(10, 9999)),
-                    email=fake.email(),
+                    username=f"{fake.user_name()}_{uid}",
+                    email=f"{fake.user_name()}_{uid}@example.com",
                     hashed_password=default_pw,
                     full_name=fake.name(),
                     phone=fake.phone_number()[:20],
