@@ -3297,13 +3297,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get langTR => 'TR';
 
   @override
-  String get langEN => 'EN';
+  String get langEN => 'ENG';
 
   @override
-  String get langAR => 'AR';
+  String get langAR => 'عربي';
 
   @override
-  String get langRU => 'RU';
+  String get langRU => 'РУС';
 
   @override
   String get kickedFromStream => '🚫 Вас выгнали из этого потока';

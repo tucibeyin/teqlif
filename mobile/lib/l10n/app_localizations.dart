@@ -5949,19 +5949,19 @@ abstract class AppLocalizations {
   /// No description provided for @langEN.
   ///
   /// In tr, this message translates to:
-  /// **'EN'**
+  /// **'ENG'**
   String get langEN;
 
   /// No description provided for @langAR.
   ///
   /// In tr, this message translates to:
-  /// **'AR'**
+  /// **'عربي'**
   String get langAR;
 
   /// No description provided for @langRU.
   ///
   /// In tr, this message translates to:
-  /// **'RU'**
+  /// **'РУС'**
   String get langRU;
 
   /// No description provided for @kickedFromStream.
