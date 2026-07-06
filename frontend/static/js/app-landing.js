@@ -31,10 +31,12 @@
     if (appScheme && appScheme !== '') {
       // Önce uygulamayı açmayı dene
       window.location.href = appScheme;
-      // Uygulama yoksa 1.5 saniye sonra store'a at
+      // Uygulama yoksa ve kullanıcı hala bu sayfadaysa store'a at
       setTimeout(function() {
-        window.location.href = storeUrl;
-      }, 1500);
+        if (!document.hidden) {
+          window.location.href = storeUrl;
+        }
+      }, 2500);
     } else {
       window.location.href = storeUrl;
     }
