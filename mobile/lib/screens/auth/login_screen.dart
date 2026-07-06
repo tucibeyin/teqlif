@@ -23,14 +23,14 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
+  final _identifierCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
   bool _obscure = true;
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
+    _identifierCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
@@ -40,7 +40,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() { _loading = true; });
     try {
       await AuthService.login(
-        email: _emailCtrl.text.trim(),
+        identifier: _identifierCtrl.text.trim(),
         password: _passCtrl.text,
       );
       PushNotificationService.initialize();
@@ -55,7 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (e is AppException && e.code == 'EMAIL_NOT_VERIFIED' && mounted) {
-        final email = _emailCtrl.text.trim();
+        final email = e.extra['email']?.toString() ?? _identifierCtrl.text.trim();
         try { await AuthService.resendCode(email); } catch (_) {}
         if (mounted) {
           Navigator.of(context).push(
@@ -147,13 +147,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: Column(
                           children: [
                             TextFormField(
-                              key: const Key('login_input_email'),
-                              controller: _emailCtrl,
-                              keyboardType: TextInputType.emailAddress,
+                              key: const Key('login_input_identifier'),
+                              controller: _identifierCtrl,
+                              keyboardType: TextInputType.visiblePassword,
                               autocorrect: false,
-                              decoration: InputDecoration(labelText: l.fieldEmail),
+                              decoration: InputDecoration(labelText: l.fieldLoginIdentifier),
                               validator: (v) =>
-                                  v == null || v.isEmpty ? l.fieldEmailHint : null,
+                                  v == null || v.isEmpty ? l.fieldLoginIdentifierHint : null,
                             ),
                             const SizedBox(height: 14),
                             TextFormField(

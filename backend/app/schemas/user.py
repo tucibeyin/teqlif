@@ -35,7 +35,7 @@ class UserRegister(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    login_identifier: str
     password: str
 
 

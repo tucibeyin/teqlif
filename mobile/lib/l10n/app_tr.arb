@@ -21,6 +21,8 @@
   "registerLoginLink": "Giriş yap",
   "fieldEmail": "E-posta",
   "fieldEmailHint": "E-posta giriniz",
+  "fieldLoginIdentifier": "E-posta veya Kullanıcı Adı",
+  "fieldLoginIdentifierHint": "Lütfen e-posta veya kullanıcı adınızı girin",
   "fieldPassword": "Şifre",
   "fieldPasswordHint": "Şifre giriniz",
   "fieldPasswordConfirm": "Şifre Tekrar",

@@ -21,6 +21,8 @@
   "registerLoginLink": "تسجيل الدخول",
   "fieldEmail": "البريد الإلكتروني",
   "fieldEmailHint": "أدخل البريد الإلكتروني",
+  "fieldLoginIdentifier": "البريد الإلكتروني أو اسم المستخدم",
+  "fieldLoginIdentifierHint": "يرجى إدخال البريد الإلكتروني أو اسم المستخدم",
   "fieldPassword": "كلمة المرور",
   "fieldPasswordConfirm": "تأكيد كلمة المرور",
   "fieldPasswordConfirmHint": "أدخل كلمة المرور للتأكيد",

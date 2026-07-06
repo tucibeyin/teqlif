@@ -62,6 +62,7 @@ Never _parseErrorBody(Map<String, dynamic> body, int statusCode) {
       error['message']?.toString() ?? 'Bir hata oluştu',
       code: error['code']?.toString() ?? 'ERR_$statusCode',
       statusCode: statusCode,
+      extra: error,
     );
   }
   throw AppException(

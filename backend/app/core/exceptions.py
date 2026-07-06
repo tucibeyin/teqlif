@@ -51,8 +51,9 @@ class ForbiddenException(AppException):
 class EmailNotVerifiedException(AppException):
     """403 — E-posta adresi henüz doğrulanmamış."""
 
-    def __init__(self, message: str = "E-posta adresinizi doğrulamanız gerekiyor"):
+    def __init__(self, message: str = "E-posta adresinizi doğrulamanız gerekiyor", email: str | None = None):
         super().__init__(status_code=403, message=message, code="EMAIL_NOT_VERIFIED")
+        self.email = email
 
 
 class UnauthorizedException(AppException):

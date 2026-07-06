@@ -73,6 +73,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldEmailHint => 'Enter your email';
 
   @override
+  String get fieldLoginIdentifier => 'Email or Username';
+
+  @override
+  String get fieldLoginIdentifierHint => 'Please enter your email or username';
+
+  @override
   String get fieldPassword => 'Password';
 
   @override

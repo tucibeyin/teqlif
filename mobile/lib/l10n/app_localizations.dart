@@ -226,6 +226,18 @@ abstract class AppLocalizations {
   /// **'E-posta giriniz'**
   String get fieldEmailHint;
 
+  /// No description provided for @fieldLoginIdentifier.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta veya Kullanıcı Adı'**
+  String get fieldLoginIdentifier;
+
+  /// No description provided for @fieldLoginIdentifierHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Lütfen e-posta veya kullanıcı adınızı girin'**
+  String get fieldLoginIdentifierHint;
+
   /// No description provided for @fieldPassword.
   ///
   /// In tr, this message translates to:

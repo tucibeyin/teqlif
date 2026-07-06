@@ -235,6 +235,7 @@ async def app_exception_handler(request: Request, exc: AppException):
             "error": {
                 "code": exc.error_code,
                 "message": exc.message,
+                **({"email": getattr(exc, "email")} if getattr(exc, "email", None) else {})
             },
         },
         headers=headers or None,

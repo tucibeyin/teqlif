@@ -21,6 +21,8 @@
   "registerLoginLink": "Sign in",
   "fieldEmail": "Email",
   "fieldEmailHint": "Enter your email",
+  "fieldLoginIdentifier": "Email or Username",
+  "fieldLoginIdentifierHint": "Please enter your email or username",
   "fieldPassword": "Password",
   "fieldPasswordConfirm": "Confirm Password",
   "fieldPasswordConfirmHint": "Enter your password to confirm",

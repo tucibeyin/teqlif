@@ -176,7 +176,13 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
 @router.post("/login", response_model=TokenOut)
 @limiter.limit("5/minute")
 async def login(request: Request, data: UserLogin, response: Response, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == data.email))
+    stmt = select(User).where(
+        or_(
+            func.lower(User.email) == data.login_identifier.lower(),
+            func.lower(User.username) == data.login_identifier.lower()
+        )
+    )
+    result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(data.password, user.hashed_password):
@@ -186,7 +192,7 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
         raise ForbiddenException("Hesabınız devre dışı")
 
     if not user.email_verified:
-        raise EmailNotVerifiedException()
+        raise EmailNotVerifiedException(email=user.email)
 
     if not user.onboarding_completed:
         from app.models.user_interest import UserInterest

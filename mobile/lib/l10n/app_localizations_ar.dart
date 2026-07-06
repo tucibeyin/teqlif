@@ -73,6 +73,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get fieldEmailHint => 'أدخل البريد الإلكتروني';
 
   @override
+  String get fieldLoginIdentifier => 'البريد الإلكتروني أو اسم المستخدم';
+
+  @override
+  String get fieldLoginIdentifierHint =>
+      'يرجى إدخال البريد الإلكتروني أو اسم المستخدم';
+
+  @override
   String get fieldPassword => 'كلمة المرور';
 
   @override

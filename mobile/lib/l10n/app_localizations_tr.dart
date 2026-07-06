@@ -73,6 +73,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get fieldEmailHint => 'E-posta giriniz';
 
   @override
+  String get fieldLoginIdentifier => 'E-posta veya Kullanıcı Adı';
+
+  @override
+  String get fieldLoginIdentifierHint =>
+      'Lütfen e-posta veya kullanıcı adınızı girin';
+
+  @override
   String get fieldPassword => 'Şifre';
 
   @override

@@ -92,14 +92,14 @@ class AuthService {
   }
 
   static Future<User> login({
-    required String email,
+    required String identifier,
     required String password,
   }) async {
     final body = await apiCall(
       () => http.post(
         Uri.parse('$kBaseUrl/auth/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({'login_identifier': identifier, 'password': password}),
       ),
     );
     await Future.wait([

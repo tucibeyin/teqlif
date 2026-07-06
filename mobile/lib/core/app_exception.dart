@@ -14,10 +14,14 @@ class AppException implements Exception {
   /// HTTP status kodu (örn: 404, 401, 500).
   final int statusCode;
 
+  /// Ekstra payload verisi (örn. EMAIL_NOT_VERIFIED için email)
+  final Map<String, dynamic> extra;
+
   const AppException(
     this.message, {
     this.code = 'ERR_UNKNOWN',
     this.statusCode = 0,
+    this.extra = const {},
   });
 
   /// 4xx/5xx hataları için Sentry'e gönderilip gönderilmeyeceği.
