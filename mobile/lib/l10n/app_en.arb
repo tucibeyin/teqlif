@@ -1980,5 +1980,33 @@
   "btnSendMassNotification": "Send Mass Notification",
   "btnShare": "Share",
   "shareListingText": "{title} — check it out on teqlif",
-  "shareLiveText": "{title} — watch live on teqlif"
+  "shareLiveText": "{title} — watch live on teqlif",
+  "apiErrReferralUsed": "You have already used an invite code. Each account can only use one.",
+  "apiErrReferralSelf": "You cannot use your own invite code.",
+  "apiErrReferralInvalid": "Invalid invite code. Please check and try again.",
+  "apiErrReferralExpired": "This invite code has expired (3-day validity has ended).",
+  "apiMsgReferralSavedVerify": "Invite code saved! Please complete your Email and Phone verification to claim your reward.",
+  "notifReferralTitle": "Invite Reward!",
+  "notifReferralBody": "Your friend ({username}) has used your code and completed verification! You earned {bonus} TUCi.",
+  "@notifReferralBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "bonus": {
+        "type": "int"
+      }
+    }
+  },
+  "apiMsgReferralSuccess": "Verifications completed! {referrer_username} invited you. {your_bonus} TUCi has been added to your account.",
+  "@apiMsgReferralSuccess": {
+    "placeholders": {
+      "referrer_username": {
+        "type": "String"
+      },
+      "your_bonus": {
+        "type": "int"
+      }
+    }
+  }
 }

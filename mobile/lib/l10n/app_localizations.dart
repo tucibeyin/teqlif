@@ -7241,6 +7241,54 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'{title} — teqlif\'te canlı izle'**
   String shareLiveText(Object title);
+
+  /// No description provided for @apiErrReferralUsed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Daha önce bir davet kodu kullandınız. Her hesap yalnızca bir kez kullanabilir.'**
+  String get apiErrReferralUsed;
+
+  /// No description provided for @apiErrReferralSelf.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kendi davet kodunuzu kullanamazsınız.'**
+  String get apiErrReferralSelf;
+
+  /// No description provided for @apiErrReferralInvalid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz davet kodu. Lütfen kontrol edip tekrar deneyin.'**
+  String get apiErrReferralInvalid;
+
+  /// No description provided for @apiErrReferralExpired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu davet kodunun süresi dolmuş (3 günlük geçerlilik süresi bitmiş).'**
+  String get apiErrReferralExpired;
+
+  /// No description provided for @apiMsgReferralSavedVerify.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet kodunuz kaydedildi! Ödül kazanmak için lütfen E-posta ve Telefon doğrulamanızı tamamlayın.'**
+  String get apiMsgReferralSavedVerify;
+
+  /// No description provided for @notifReferralTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet Ödülü!'**
+  String get notifReferralTitle;
+
+  /// No description provided for @notifReferralBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bir arkadaşınız ({username}) kodunuzu kullandı ve doğrulamasını tamamladı! {bonus} TUCi kazandınız.'**
+  String notifReferralBody(String username, int bonus);
+
+  /// No description provided for @apiMsgReferralSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğrulamalar tamamlandı! {referrer_username} sizi davet etti. Hesabınıza {your_bonus} TUCi eklendi.'**
+  String apiMsgReferralSuccess(String referrer_username, int your_bonus);
 }
 
 class _AppLocalizationsDelegate

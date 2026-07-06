@@ -3951,4 +3951,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String shareLiveText(Object title) {
     return '$title — watch live on teqlif';
   }
+
+  @override
+  String get apiErrReferralUsed =>
+      'You have already used an invite code. Each account can only use one.';
+
+  @override
+  String get apiErrReferralSelf => 'You cannot use your own invite code.';
+
+  @override
+  String get apiErrReferralInvalid =>
+      'Invalid invite code. Please check and try again.';
+
+  @override
+  String get apiErrReferralExpired =>
+      'This invite code has expired (3-day validity has ended).';
+
+  @override
+  String get apiMsgReferralSavedVerify =>
+      'Invite code saved! Please complete your Email and Phone verification to claim your reward.';
+
+  @override
+  String get notifReferralTitle => 'Invite Reward!';
+
+  @override
+  String notifReferralBody(String username, int bonus) {
+    return 'Your friend ($username) has used your code and completed verification! You earned $bonus TUCi.';
+  }
+
+  @override
+  String apiMsgReferralSuccess(String referrer_username, int your_bonus) {
+    return 'Verifications completed! $referrer_username invited you. $your_bonus TUCi has been added to your account.';
+  }
 }

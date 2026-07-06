@@ -4001,4 +4001,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String shareLiveText(Object title) {
     return '$title — смотрите в прямом эфире на teqlif';
   }
+
+  @override
+  String get apiErrReferralUsed =>
+      'Вы уже использовали код приглашения. Каждая учетная запись может использовать только один.';
+
+  @override
+  String get apiErrReferralSelf =>
+      'Вы не можете использовать свой собственный код приглашения.';
+
+  @override
+  String get apiErrReferralInvalid =>
+      'Неверный код приглашения. Пожалуйста, проверьте и попробуйте еще раз.';
+
+  @override
+  String get apiErrReferralExpired =>
+      'Срок действия этого кода приглашения истек (3-дневный срок действия истек).';
+
+  @override
+  String get apiMsgReferralSavedVerify =>
+      'Код приглашения сохранен! Пожалуйста, завершите проверку электронной почты и телефона, чтобы получить вознаграждение.';
+
+  @override
+  String get notifReferralTitle => 'Награда за приглашение!';
+
+  @override
+  String notifReferralBody(String username, int bonus) {
+    return 'Ваш друг ($username) использовал ваш код и завершил проверку! Вы заработали $bonus TUCi.';
+  }
+
+  @override
+  String apiMsgReferralSuccess(String referrer_username, int your_bonus) {
+    return 'Проверки завершены! $referrer_username пригласил вас. На ваш счет добавлено $your_bonus TUCi.';
+  }
 }

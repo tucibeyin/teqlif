@@ -3956,4 +3956,36 @@ class AppLocalizationsTr extends AppLocalizations {
   String shareLiveText(Object title) {
     return '$title — teqlif\'te canlı izle';
   }
+
+  @override
+  String get apiErrReferralUsed =>
+      'Daha önce bir davet kodu kullandınız. Her hesap yalnızca bir kez kullanabilir.';
+
+  @override
+  String get apiErrReferralSelf => 'Kendi davet kodunuzu kullanamazsınız.';
+
+  @override
+  String get apiErrReferralInvalid =>
+      'Geçersiz davet kodu. Lütfen kontrol edip tekrar deneyin.';
+
+  @override
+  String get apiErrReferralExpired =>
+      'Bu davet kodunun süresi dolmuş (3 günlük geçerlilik süresi bitmiş).';
+
+  @override
+  String get apiMsgReferralSavedVerify =>
+      'Davet kodunuz kaydedildi! Ödül kazanmak için lütfen E-posta ve Telefon doğrulamanızı tamamlayın.';
+
+  @override
+  String get notifReferralTitle => 'Davet Ödülü!';
+
+  @override
+  String notifReferralBody(String username, int bonus) {
+    return 'Bir arkadaşınız ($username) kodunuzu kullandı ve doğrulamasını tamamladı! $bonus TUCi kazandınız.';
+  }
+
+  @override
+  String apiMsgReferralSuccess(String referrer_username, int your_bonus) {
+    return 'Doğrulamalar tamamlandı! $referrer_username sizi davet etti. Hesabınıza $your_bonus TUCi eklendi.';
+  }
 }

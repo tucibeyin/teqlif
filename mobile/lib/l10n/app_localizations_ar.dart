@@ -3927,4 +3927,36 @@ class AppLocalizationsAr extends AppLocalizations {
   String shareLiveText(Object title) {
     return '$title — شاهد مباشرة على teqlif';
   }
+
+  @override
+  String get apiErrReferralUsed =>
+      'لقد استخدمت رمز دعوة من قبل. يمكن لكل حساب استخدام رمز واحد فقط.';
+
+  @override
+  String get apiErrReferralSelf => 'لا يمكنك استخدام رمز الدعوة الخاص بك.';
+
+  @override
+  String get apiErrReferralInvalid =>
+      'رمز الدعوة غير صالح. يرجى التحقق والمحاولة مرة أخرى.';
+
+  @override
+  String get apiErrReferralExpired =>
+      'لقد انتهت صلاحية رمز الدعوة هذا (انتهت فترة الصلاحية البالغة 3 أيام).';
+
+  @override
+  String get apiMsgReferralSavedVerify =>
+      'تم حفظ رمز الدعوة! يرجى إكمال التحقق من البريد الإلكتروني والهاتف للمطالبة بمكافأتك.';
+
+  @override
+  String get notifReferralTitle => 'مكافأة الدعوة!';
+
+  @override
+  String notifReferralBody(String username, int bonus) {
+    return 'استخدم صديقك ($username) الرمز الخاص بك وأكمل التحقق! ربحت $bonus TUCi.';
+  }
+
+  @override
+  String apiMsgReferralSuccess(String referrer_username, int your_bonus) {
+    return 'اكتملت التحققات! دعاك $referrer_username. تمت إضافة $your_bonus TUCi إلى حسابك.';
+  }
 }

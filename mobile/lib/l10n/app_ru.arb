@@ -1980,5 +1980,33 @@
   "btnSendMassNotification": "Отправить массовое уведомление",
   "btnShare": "Поделиться",
   "shareListingText": "{title} — посмотрите на teqlif",
-  "shareLiveText": "{title} — смотрите в прямом эфире на teqlif"
+  "shareLiveText": "{title} — смотрите в прямом эфире на teqlif",
+  "apiErrReferralUsed": "Вы уже использовали код приглашения. Каждая учетная запись может использовать только один.",
+  "apiErrReferralSelf": "Вы не можете использовать свой собственный код приглашения.",
+  "apiErrReferralInvalid": "Неверный код приглашения. Пожалуйста, проверьте и попробуйте еще раз.",
+  "apiErrReferralExpired": "Срок действия этого кода приглашения истек (3-дневный срок действия истек).",
+  "apiMsgReferralSavedVerify": "Код приглашения сохранен! Пожалуйста, завершите проверку электронной почты и телефона, чтобы получить вознаграждение.",
+  "notifReferralTitle": "Награда за приглашение!",
+  "notifReferralBody": "Ваш друг ({username}) использовал ваш код и завершил проверку! Вы заработали {bonus} TUCi.",
+  "@notifReferralBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "bonus": {
+        "type": "int"
+      }
+    }
+  },
+  "apiMsgReferralSuccess": "Проверки завершены! {referrer_username} пригласил вас. На ваш счет добавлено {your_bonus} TUCi.",
+  "@apiMsgReferralSuccess": {
+    "placeholders": {
+      "referrer_username": {
+        "type": "String"
+      },
+      "your_bonus": {
+        "type": "int"
+      }
+    }
+  }
 }

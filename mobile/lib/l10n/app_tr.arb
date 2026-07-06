@@ -1979,5 +1979,33 @@
   "btnSendMassNotification": "Toplu Kitle Bildirimi Gönder",
   "btnShare": "Paylaş",
   "shareListingText": "{title} — teqlif'te incele",
-  "shareLiveText": "{title} — teqlif'te canlı izle"
+  "shareLiveText": "{title} — teqlif'te canlı izle",
+  "apiErrReferralUsed": "Daha önce bir davet kodu kullandınız. Her hesap yalnızca bir kez kullanabilir.",
+  "apiErrReferralSelf": "Kendi davet kodunuzu kullanamazsınız.",
+  "apiErrReferralInvalid": "Geçersiz davet kodu. Lütfen kontrol edip tekrar deneyin.",
+  "apiErrReferralExpired": "Bu davet kodunun süresi dolmuş (3 günlük geçerlilik süresi bitmiş).",
+  "apiMsgReferralSavedVerify": "Davet kodunuz kaydedildi! Ödül kazanmak için lütfen E-posta ve Telefon doğrulamanızı tamamlayın.",
+  "notifReferralTitle": "Davet Ödülü!",
+  "notifReferralBody": "Bir arkadaşınız ({username}) kodunuzu kullandı ve doğrulamasını tamamladı! {bonus} TUCi kazandınız.",
+  "@notifReferralBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "bonus": {
+        "type": "int"
+      }
+    }
+  },
+  "apiMsgReferralSuccess": "Doğrulamalar tamamlandı! {referrer_username} sizi davet etti. Hesabınıza {your_bonus} TUCi eklendi.",
+  "@apiMsgReferralSuccess": {
+    "placeholders": {
+      "referrer_username": {
+        "type": "String"
+      },
+      "your_bonus": {
+        "type": "int"
+      }
+    }
+  }
 }

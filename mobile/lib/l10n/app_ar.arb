@@ -1959,5 +1959,33 @@
   "btnSendMassNotification": "إرسال إشعار جماعي",
   "btnShare": "مشاركة",
   "shareListingText": "{title} — تحقق منه على teqlif",
-  "shareLiveText": "{title} — شاهد مباشرة على teqlif"
+  "shareLiveText": "{title} — شاهد مباشرة على teqlif",
+  "apiErrReferralUsed": "لقد استخدمت رمز دعوة من قبل. يمكن لكل حساب استخدام رمز واحد فقط.",
+  "apiErrReferralSelf": "لا يمكنك استخدام رمز الدعوة الخاص بك.",
+  "apiErrReferralInvalid": "رمز الدعوة غير صالح. يرجى التحقق والمحاولة مرة أخرى.",
+  "apiErrReferralExpired": "لقد انتهت صلاحية رمز الدعوة هذا (انتهت فترة الصلاحية البالغة 3 أيام).",
+  "apiMsgReferralSavedVerify": "تم حفظ رمز الدعوة! يرجى إكمال التحقق من البريد الإلكتروني والهاتف للمطالبة بمكافأتك.",
+  "notifReferralTitle": "مكافأة الدعوة!",
+  "notifReferralBody": "استخدم صديقك ({username}) الرمز الخاص بك وأكمل التحقق! ربحت {bonus} TUCi.",
+  "@notifReferralBody": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "bonus": {
+        "type": "int"
+      }
+    }
+  },
+  "apiMsgReferralSuccess": "اكتملت التحققات! دعاك {referrer_username}. تمت إضافة {your_bonus} TUCi إلى حسابك.",
+  "@apiMsgReferralSuccess": {
+    "placeholders": {
+      "referrer_username": {
+        "type": "String"
+      },
+      "your_bonus": {
+        "type": "int"
+      }
+    }
+  }
 }
