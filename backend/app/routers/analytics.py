@@ -515,6 +515,7 @@ class PriceEstimateRequest(BaseModel):
 
 @router.post("/price-estimate")
 async def price_estimate(
+    request: Request,
     body: PriceEstimateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -562,8 +563,17 @@ async def price_estimate(
     if cached_emb:
         emb_str = cached_emb.decode("utf-8") if isinstance(cached_emb, bytes) else cached_emb
     else:
-        loop = asyncio.get_event_loop()
-        embedding: list[float] = await loop.run_in_executor(None, generate_embedding, combined)
+        # FastAPI'nin bloklanmaması için işlemi ARQ worker'a atıyoruz.
+        job = await request.app.state.arq_pool.enqueue_job("generate_embedding_task", combined)
+        if not job:
+            raise HTTPException(status_code=500, detail="Yapay zeka servisi şu anda meşgul. Lütfen tekrar deneyin.")
+        
+        try:
+            # Worker'dan sonucu en fazla 15 saniye bekliyoruz.
+            embedding: list[float] = await job.result(timeout=15.0)
+        except Exception:
+            raise HTTPException(status_code=504, detail="Yapay zeka servisi zaman aşımına uğradı.")
+        
         emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
         await redis.setex(emb_cache_key, 7 * 24 * 3600, emb_str)  # 7 gün cache
 

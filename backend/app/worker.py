@@ -889,6 +889,19 @@ async def update_user_preference_embedding(ctx: dict, user_id: int) -> None:
         raise
 
 
+async def generate_embedding_task(ctx: dict, text: str) -> list[float]:
+    """
+    Verilen metnin embedding vektörünü ARQ worker (ayrı process) üzerinde oluşturur.
+    PyTorch modeli thread-blocking yaptığı için FastAPI'den ayrı çalışmalıdır.
+    """
+    try:
+        from app.services.ml_service import generate_embedding
+        return generate_embedding(text)
+    except Exception as exc:
+        logger.error("[Worker] generate_embedding_task başarısız: %s", exc)
+        capture_exception(exc)
+        raise
+
 # ── Task: İlan Embedding Üretimi ─────────────────────────────────────────────
 
 async def generate_listing_embedding_task(ctx: dict, listing_id: int) -> None:
@@ -1719,6 +1732,7 @@ class WorkerSettings:
         compute_user_interests_task,
         cleanup_old_impressions_task,
         generate_listing_embedding_task,
+        generate_embedding_task,
         flush_interactions_to_db,
         update_user_preference_embedding,
         calculate_user_budgets_task,
