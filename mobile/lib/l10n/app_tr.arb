@@ -1457,6 +1457,26 @@
   "profileInviteCodeError": "Davet kodu alınamadı, tekrar deneyin.",
   "profileInviteTitle": "Arkadaşlarını Davet Et, TUCi Kazan!",
   "profileInviteSubtitle": "Her davet için +50, arkadaşın +10 TUCi kazanır",
+  "profileInviteShareText": "Teqlif'e katıl! Canlı mezat ve ikinci el alışverişin adresi 🎁\n\nKayıt olurken şu davet kodunu gir ve anında bonus TUCi kazan:\n\n🔑 Kod: {code}\n⏳ Son kullanım: {expiry} içinde\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Web: https://teqlif.com",
+  "@profileInviteShareText": {
+    "placeholders": {
+      "code": {"type": "String"},
+      "expiry": {"type": "String"}
+    }
+  },
+  "profileInviteExpiryDays": "{days} gün",
+  "@profileInviteExpiryDays": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "profileInviteExpiryHours": "{hours} saat",
+  "@profileInviteExpiryHours": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "profileInviteExpirySoon": "kısa süre",
   "profilePickGallery": "Galeriden Seç",
   "profilePickCamera": "Kameradan Çek",
   "listingDeleteDialogTitle": "İlanı Sil",

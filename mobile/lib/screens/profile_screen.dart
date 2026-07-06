@@ -1176,32 +1176,23 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     }
 
     // Kalan süreyi hesapla
-    String expiryText = '3 gün';
+    final l = AppLocalizations.of(context)!;
+    String expiryText = l.profileInviteExpiryDays(3);
     if (expiresAt != null) {
       try {
         final expiry = DateTime.parse(expiresAt);
         final diff = expiry.difference(DateTime.now().toUtc());
         if (diff.inHours >= 24) {
-          expiryText = '${diff.inDays} gün';
+          expiryText = l.profileInviteExpiryDays(diff.inDays);
         } else if (diff.inHours > 0) {
-          expiryText = '${diff.inHours} saat';
+          expiryText = l.profileInviteExpiryHours(diff.inHours);
         } else {
-          expiryText = 'kısa süre';
+          expiryText = l.profileInviteExpirySoon;
         }
       } catch (_) {}
     }
 
-    const iosLink = 'https://apps.apple.com/app/teqlif';
-    const androidLink = 'https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile';
-
-    final shareText =
-        'Teqlif\'e katıl! Canlı mezat ve ikinci el alışverişin adresi 🎁\n\n'
-        'Kayıt olurken şu davet kodunu gir ve anında bonus TUCi kazan:\n\n'
-        '🔑 Kod: $code\n'
-        '⏳ Son kullanım: $expiryText içinde\n\n'
-        '📱 iOS App Store: $iosLink\n'
-        '🤖 Google Play: $androidLink\n'
-        '🌐 Web: https://teqlif.com';
+    final shareText = l.profileInviteShareText(code, expiryText);
 
     // iOS 26+ sharePositionOrigin zorunlu — tile'ın ekran konumunu kullan
     final box = _shareTileKey.currentContext?.findRenderObject() as RenderBox?;

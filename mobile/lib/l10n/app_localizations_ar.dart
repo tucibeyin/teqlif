@@ -2721,7 +2721,25 @@ class AppLocalizationsAr extends AppLocalizations {
       '+50 TUCi لكل دعوة، صديقك يحصل على +10 TUCi';
 
   @override
-  String get profilePickGallery => 'اختر من المعرض';
+  String profileInviteShareText(String code, String expiry) =>
+      'انضم إلى Teqlif! مزادات حية وتسوّق مستعمل 🎁\n\n'
+      'استخدم رمز الدعوة هذا عند التسجيل لتحصل على TUCi إضافية فوراً:\n\n'
+      '🔑 الرمز: $code\n'
+      '⏳ صالح لمدة: $expiry\n\n'
+      '📱 iOS App Store: https://apps.apple.com/app/teqlif\n'
+      '🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n'
+      '🌐 الموقع: https://teqlif.com';
+
+  @override
+  String profileInviteExpiryDays(int days) => '$days أيام';
+
+  @override
+  String profileInviteExpiryHours(int hours) => '$hours ساعات';
+
+  @override
+  String get profileInviteExpirySoon => 'وقت قصير';
+
+
 
   @override
   String get profilePickCamera => 'التقط صورة';

@@ -1458,6 +1458,26 @@
   "profileInviteCodeError": "Invite code could not be retrieved, try again.",
   "profileInviteTitle": "Invite Friends, Earn TUCi!",
   "profileInviteSubtitle": "+50 TUCi per invite, your friend gets +10 TUCi",
+  "profileInviteShareText": "Join Teqlif! Live auctions & second-hand shopping 🎁\n\nUse this invite code when signing up to earn bonus TUCi instantly:\n\n🔑 Code: {code}\n⏳ Expires in: {expiry}\n\n📱 iOS App Store: https://apps.apple.com/app/teqlif\n🤖 Google Play: https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile\n🌐 Website: https://teqlif.com",
+  "@profileInviteShareText": {
+    "placeholders": {
+      "code": {"type": "String"},
+      "expiry": {"type": "String"}
+    }
+  },
+  "profileInviteExpiryDays": "{days} days",
+  "@profileInviteExpiryDays": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "profileInviteExpiryHours": "{hours} hours",
+  "@profileInviteExpiryHours": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "profileInviteExpirySoon": "a short time",
   "profilePickGallery": "Pick from Gallery",
   "profilePickCamera": "Take a Photo",
   "listingDeleteDialogTitle": "Delete Listing",
