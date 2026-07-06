@@ -585,7 +585,9 @@ async def apple_app_site_association():
                     "components": [
                         { "/": "/profil/*" },
                         { "/": "/ilan/*" },
-                        { "/": "/yayin/*" }
+                        { "/": "/yayin/*" },
+                        { "/": "/invite" },
+                        { "/": "/invite/*" }
                     ]
                 }
             ]
