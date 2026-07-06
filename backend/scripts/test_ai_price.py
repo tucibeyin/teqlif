@@ -14,8 +14,7 @@ async def get_token():
         # Login
         resp = await client.post(
             f"{BASE_URL}/auth/login",
-            data={"username": TEST_EMAIL, "password": password},
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
+            json={"email": TEST_EMAIL, "password": password}
         )
         if resp.status_code != 200:
             print(f"[HATA] Login başarısız! Yanıt: {resp.text}")
