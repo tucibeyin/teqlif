@@ -1030,14 +1030,15 @@ async def pro_insights(
         sales_rows = await db.execute(sql_text("""
             SELECT
                 COUNT(*)                                                            AS total_sales,
-                COALESCE(SUM(price), 0)                                             AS total_revenue,
-                COALESCE(SUM(price) FILTER (WHERE created_at >= :d30), 0)           AS revenue_30d,
-                COALESCE(SUM(price) FILTER (WHERE created_at >= :d60
-                                             AND created_at < :d30), 0)             AS revenue_prev_30d,
-                COUNT(*) FILTER (WHERE created_at >= :d30)                          AS sales_30d
-            FROM purchases
-            WHERE buyer_id != :uid
-              AND listing_id IN (SELECT id FROM listings WHERE user_id = :uid)
+                COALESCE(SUM(p.price), 0)                                             AS total_revenue,
+                COALESCE(SUM(p.price) FILTER (WHERE p.created_at >= :d30), 0)           AS revenue_30d,
+                COALESCE(SUM(p.price) FILTER (WHERE p.created_at >= :d60
+                                             AND p.created_at < :d30), 0)             AS revenue_prev_30d,
+                COUNT(*) FILTER (WHERE p.created_at >= :d30)                          AS sales_30d
+            FROM purchases p
+            JOIN listings l ON l.id = p.listing_id
+            WHERE p.buyer_id != :uid
+              AND l.user_id = :uid
         """), {"uid": uid, "d30": d30, "d60": d60})
         srow = sales_rows.fetchone()
 
