@@ -153,6 +153,24 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
             final wins = s['total_wins'] as int? ?? 0;
             final count = s['stream_count'] as int? ?? 0;
             final isTop = i == 0;
+            
+            String dayStr = s['day'] as String? ?? '';
+            String hourRangeStr = s['hour_range'] as String? ?? '';
+            
+            if (s.containsKey('utc_day_of_week') && s.containsKey('utc_hour_start')) {
+              final utcDow = s['utc_day_of_week'] as int;
+              final utcHour = s['utc_hour_start'] as int;
+              final dtUtcStart = DateTime.utc(2023, 1, 1 + utcDow, utcHour);
+              final dtUtcEnd = dtUtcStart.add(const Duration(hours: 3));
+              
+              final localStart = dtUtcStart.toLocal();
+              final localEnd = dtUtcEnd.toLocal();
+              
+              dayStr = DateFormat('EEEE', Localizations.localeOf(context).languageCode).format(localStart);
+              final timeFormat = DateFormat.Hm(Localizations.localeOf(context).languageCode);
+              hourRangeStr = '${timeFormat.format(localStart)} - ${timeFormat.format(localEnd)}';
+            }
+
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
@@ -170,7 +188,7 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        s['day'] as String? ?? '',
+                        dayStr,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -178,7 +196,7 @@ class _BestStreamTimeScreenState extends State<BestStreamTimeScreen> {
                         ),
                       ),
                       Text(
-                        s['hour_range'] as String? ?? '',
+                        hourRangeStr,
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                       ),
                     ],

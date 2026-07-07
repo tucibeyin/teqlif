@@ -1401,9 +1401,8 @@ async def best_stream_time(
         WITH stream_auctions AS (
             SELECT
                 ls.id                                                                     AS stream_id,
-                EXTRACT(DOW FROM ls.started_at AT TIME ZONE 'Europe/Istanbul')::int      AS day_of_week,
-                FLOOR(EXTRACT(HOUR FROM ls.started_at AT TIME ZONE 'Europe/Istanbul') / 3) * 3
-                                                                                          AS hour_block,
+                EXTRACT(DOW FROM ls.started_at AT TIME ZONE 'UTC')::int                  AS utc_dow,
+                FLOOR(EXTRACT(HOUR FROM ls.started_at AT TIME ZONE 'UTC') / 3) * 3       AS utc_hour,
                 COUNT(a.id)                                                               AS total_auctions,
                 COUNT(a.winner_id)                                                        AS won_auctions
             FROM live_streams ls
@@ -1414,30 +1413,40 @@ async def best_stream_time(
             GROUP BY ls.id, ls.started_at
         )
         SELECT
-            day_of_week,
-            hour_block::int,
+            utc_dow,
+            utc_hour::int,
             COUNT(*)                                                                       AS stream_count,
             COALESCE(SUM(won_auctions)::float / NULLIF(SUM(total_auctions), 0), 0)        AS conv_rate,
             SUM(won_auctions)                                                              AS total_wins
         FROM stream_auctions
-        GROUP BY day_of_week, hour_block
+        GROUP BY utc_dow, utc_hour
         HAVING COUNT(*) >= 2
         ORDER BY conv_rate DESC, total_wins DESC
         LIMIT 5
     """), {"uid": uid})
 
     rows = result.fetchall()
-    slots = [
-        {
-            "day": _DAYS[int(r.day_of_week)],
-            "hour_range": f"{int(r.hour_block):02d}:00 - {int(r.hour_block)+3:02d}:00",
+    slots = []
+    for r in rows:
+        utc_dow = int(r.utc_dow)
+        utc_hour = int(r.utc_hour)
+        
+        # Legacy values corresponding to Istanbul timezone (UTC+3)
+        tr_hour = (utc_hour + 3) % 24
+        tr_dow = utc_dow
+        if utc_hour + 3 >= 24:
+            tr_dow = (utc_dow + 1) % 7
+
+        slots.append({
+            "day": _DAYS[tr_dow],
+            "hour_range": f"{tr_hour:02d}:00 - {tr_hour+3:02d}:00",
+            "utc_day_of_week": utc_dow,
+            "utc_hour_start": utc_hour,
             "stream_count": int(r.stream_count),
             "conversion_rate": round(float(r.conv_rate) * 100, 1),
             "total_wins": int(r.total_wins),
             "confidence": "high" if int(r.stream_count) >= 5 else ("medium" if int(r.stream_count) >= 3 else "low"),
-        }
-        for r in rows
-    ]
+        })
     if not slots:
         return {"slots": [], "recommendation": t.get("proNotEnoughStreamData", "Henüz yeterli yayın verisi yok (min. 2 yayın gerekli).")}
 
