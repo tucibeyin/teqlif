@@ -2036,5 +2036,11 @@
   "day3": "Wednesday",
   "day4": "Thursday",
   "day5": "Friday",
-  "day6": "Saturday"
+  "day6": "Saturday",
+  "recNoBudgetHighHesitation": "Today, {count} viewers were interested in bidding but hesitated. You can convert this interest into sales by starting with a lower price in the next stream.",
+  "recNoBudgetDefault": "Not enough budget data yet. Keep your streams regular to build an audience profile and experiment with price ranges.",
+  "recHighHesitation": "Your audience's average budget is {budget} ₺. Today, {count} people wanted to bid but gave up — try starting at a lower price like {low} ₺ next time to convert this hesitant crowd.",
+  "recMedHesitation": "Your audience's average budget is {budget} ₺. {count} viewers gave up on bidding — clarify your product descriptions and price steps to boost your conversion rate.",
+  "recHighReach": "Your audience's average budget is {budget} ₺. Your audience profile looks strong. You can increase revenue by offering premium products up to {high} ₺ in your next stream.",
+  "recDefault": "Your audience's average budget is {budget} ₺. You can increase your sales by bringing products in this price range."
 }

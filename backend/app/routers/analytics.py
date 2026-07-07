@@ -154,52 +154,30 @@ async def track_interaction(
 
 # ── Satıcı Yayın Raporu ───────────────────────────────────────────────────────
 
-def _build_recommendation(avg_budget: float | None, hesitation_count: int, unique_users: int) -> str:
+def _build_recommendation(avg_budget: float | None, hesitation_count: int, unique_users: int, t: dict) -> str:
     """
     Metriklere göre kişiselleştirilmiş öneri metni üretir.
     Kural tabanlı 'makul AI' — harici API gerektirmez.
     """
     if avg_budget is None or avg_budget <= 0:
         if hesitation_count > 5:
-            return (
-                f"Bugün {hesitation_count} izleyici teklif vermekle ilgilendi ama tereddüt etti. "
-                "Bir dahaki yayında daha düşük başlangıç fiyatıyla başlayarak ilgiyi satışa dönüştürebilirsiniz."
-            )
-        return (
-            "Henüz yeterli bütçe verisi yok. Yayınlarınızı düzenli tutarak "
-            "kitle profili oluştururken fiyat aralıklarını deneyebilirsiniz."
-        )
+            return t.get("recNoBudgetHighHesitation", "Bugün {count} izleyici teklif vermekle ilgilendi ama tereddüt etti. Bir dahaki yayında daha düşük başlangıç fiyatıyla başlayarak ilgiyi satışa dönüştürebilirsiniz.").format(count=hesitation_count)
+        return t.get("recNoBudgetDefault", "Henüz yeterli bütçe verisi yok. Yayınlarınızı düzenli tutarak kitle profili oluştururken fiyat aralıklarını deneyebilirsiniz.")
 
     budget_fmt = f"{int(avg_budget):,}".replace(",", ".")
 
     if hesitation_count >= 10:
         low = int(avg_budget * 0.7)
         low_fmt = f"{low:,}".replace(",", ".")
-        return (
-            f"İzleyicilerinizin ortalama bütçesi {budget_fmt} TL. "
-            f"Bugün {hesitation_count} kişi teklif vermek istedi ama vazgeçti — "
-            f"bir dahaki yayında {low_fmt} TL gibi düşük başlangıç fiyatları deneyerek "
-            "bu kararsız kitleyi satışa çevirebilirsiniz."
-        )
+        return t.get("recHighHesitation", "İzleyicilerinizin ortalama bütçesi {budget} TL. Bugün {count} kişi teklif vermek istedi ama vazgeçti — bir dahaki yayında {low} TL gibi düşük başlangıç fiyatları deneyerek bu kararsız kitleyi satışa çevirebilirsiniz.").format(budget=budget_fmt, count=hesitation_count, low=low_fmt)
     elif hesitation_count >= 3:
-        return (
-            f"İzleyicilerinizin ortalama bütçesi {budget_fmt} TL. "
-            f"{hesitation_count} izleyici tekliften vazgeçti — "
-            "ürün açıklamalarını ve fiyat adımlarını netleştirerek dönüşüm oranınızı artırabilirsiniz."
-        )
+        return t.get("recMedHesitation", "İzleyicilerinizin ortalama bütçesi {budget} TL. {count} izleyici tekliften vazgeçti — ürün açıklamalarını ve fiyat adımlarını netleştirerek dönüşüm oranınızı artırabilirsiniz.").format(budget=budget_fmt, count=hesitation_count)
     elif unique_users >= 10:
         high = int(avg_budget * 1.15)
         high_fmt = f"{high:,}".replace(",", ".")
-        return (
-            f"İzleyicilerinizin ortalama bütçesi {budget_fmt} TL. "
-            f"Kitle profiliniz güçlü görünüyor. Bir dahaki yayında "
-            f"{high_fmt} TL'ye kadar premium ürünler sunarak geliri artırabilirsiniz."
-        )
+        return t.get("recHighReach", "İzleyicilerinizin ortalama bütçesi {budget} TL. Kitle profiliniz güçlü görünüyor. Bir dahaki yayında {high} TL'ye kadar premium ürünler sunarak geliri artırabilirsiniz.").format(budget=budget_fmt, high=high_fmt)
     else:
-        return (
-            f"İzleyicilerinizin ortalama bütçesi {budget_fmt} TL. "
-            "Bu fiyat bandında ürünler getirerek satışlarınızı artırabilirsiniz."
-        )
+        return t.get("recDefault", "İzleyicilerinizin ortalama bütçesi {budget} TL. Bu fiyat bandında ürünler getirerek satışlarınızı artırabilirsiniz.").format(budget=budget_fmt)
 
 
 @router.get("/seller-report/{stream_id}")
@@ -354,7 +332,9 @@ async def get_seller_report(
         logger.warning("[SellerReport] ClickHouse sorgusu başarısız: %s", ch_exc)
 
     # ── 4. Öneri metni ────────────────────────────────────────────────────────
-    recommendation = _build_recommendation(avg_budget, hesitation_count, unique_viewers)
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
+    recommendation = _build_recommendation(avg_budget, hesitation_count, unique_viewers, t)
 
     return {
         "stream_id": stream_id,
