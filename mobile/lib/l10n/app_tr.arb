@@ -2007,5 +2007,33 @@
         "type": "int"
       }
     }
-  }
+  },
+  "proTipPriceDownTitle": "Fiyat Ayarı Önerisi",
+  "proTipPriceDownBody": "\"{title}\" piyasa ortalamasının %{diff} üzerinde. Fiyatı {avg} ₺ civarına çekersen satış hızlanabilir.",
+  "proTipPriceUpTitle": "Fiyat Artırma Fırsatı",
+  "proTipPriceUpBody": "\"{title}\" benzer ilanların %{diff} altında. Piyasa fiyatı {avg} ₺ — artırma fırsatı var.",
+  "proTipLeadTitle": "Sıcak Alıcı Var",
+  "proTipLeadBody": "\"{title}\" için son 30 günde {count} kişi inceledi ama teklif vermedi. Fiyatı küçük düşür veya açıklama güçlendir.",
+  "proTipStreamTitle": "En İyi Yayın Saati",
+  "proTipStreamBody": "Platform genelinde en yoğun saat {hour}. Canlı yayını bu saatte başlatırsan daha fazla izleyiciye ulaşırsın.",
+  "proTipQualityTitle": "Görsel & Açıklama İyileştir",
+  "proTipQualityBody": "İlanlarının görüntülenme → teklif oranı %{pct}. Daha iyi fotoğraf ve detaylı açıklama bu oranı 3–5x artırabilir.",
+  "proTipAllGoodTitle": "Her Şey Yolunda",
+  "proTipAllGoodBody": "İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek.",
+  "cat_elektronik": "Elektronik",
+  "cat_giyim": "Giyim & Moda",
+  "cat_ev": "Ev & Yaşam",
+  "cat_vasita": "Vasıta",
+  "cat_spor": "Spor & Hobi",
+  "cat_kitap": "Kitap & Kültür",
+  "cat_emlak": "Emlak",
+  "cat_diger": "Diğer",
+  "cat_sohbet": "Sohbet",
+  "day0": "Pazar",
+  "day1": "Pazartesi",
+  "day2": "Salı",
+  "day3": "Çarşamba",
+  "day4": "Perşembe",
+  "day5": "Cuma",
+  "day6": "Cumartesi"
 }

@@ -1,15 +1,29 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from sqlalchemy import select
-from fastapi_cache.decorator import cache
 from app.database import AsyncSessionLocal
 from app.models.category import Category
+from app.models.user import User
+from app.utils.auth import get_current_user_optional
+from app.utils.email import _get_t
 
 router = APIRouter(prefix="/api/categories", tags=["categories"])
 
-
 @router.get("")
-@cache(expire=3600)  # 1 saat — kategoriler nadiren değişir
-async def list_categories(request: Request):
+async def list_categories(
+    request: Request,
+    current_user: User | None = Depends(get_current_user_optional)
+):
+    lang = "tr"
+    if current_user and current_user.locale:
+        lang = current_user.locale
+    else:
+        al = request.headers.get("accept-language", "")
+        if "en" in al: lang = "en"
+        elif "ru" in al: lang = "ru"
+        elif "ar" in al: lang = "ar"
+
+    t = _get_t(lang)
+
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Category)
@@ -17,4 +31,9 @@ async def list_categories(request: Request):
             .order_by(Category.sort_order)
         )
         cats = result.scalars().all()
-        return [{"key": c.key, "label": c.label} for c in cats]
+        return [
+            {
+                "key": c.key,
+                "label": t.get(f"cat_{c.key}", c.label)
+            } for c in cats
+        ]

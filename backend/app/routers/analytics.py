@@ -811,8 +811,8 @@ async def price_estimate(
         "fast_sell_price": fast_sell,
         "market_sell_price": market_sell,
         "slow_sell_price": slow_sell,
-        "min_close_price": min_close,
-        "max_close_price": max_close,
+        "min_close_price": min_price,
+        "max_close_price": max_price,
         "confidence": confidence,
         "category_match_count": cat_matched,
         "advice": advice,
@@ -838,6 +838,7 @@ _CATEGORY_LABELS: dict[str, str] = {
 
 @router.get("/market-trends")
 async def market_trends(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -848,8 +849,11 @@ async def market_trends(
     - average_spend_growth: ortalama harcama değişim yüzdesi (önceki 30 güne göre)
     """
     try:
+        from app.utils.email import _get_t
+        t = _get_t(current_user.locale or "tr")
+        
         redis = await get_redis()
-        cache_key = "cache:market_trends"
+        cache_key = f"cache:market_trends_global_{current_user.locale or 'tr'}"
         cached_data = await redis.get(cache_key)
         if cached_data:
             import json
@@ -927,7 +931,7 @@ async def market_trends(
             key = row.category or "diger"
             trending_categories.append({
                 "key": key,
-                "label": _CATEGORY_LABELS.get(key, key.capitalize()),
+                "label": t.get(f"cat_{key}", _CATEGORY_LABELS.get(key, key.capitalize())),
                 "recent_count": int(row.recent_cnt),
                 "prev_count": int(row.prev_cnt),
                 "growth_pct": float(row.growth_pct) if row.growth_pct is not None else None,
@@ -982,6 +986,7 @@ _CAT_LABELS: dict[str, str] = {
 
 @router.get("/pro-insights")
 async def pro_insights(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1289,53 +1294,61 @@ async def pro_insights(
     # ── 7. Akıllı Öneriler — kural motoru ────────────────────────────────────
     tips: list[dict] = []
     try:
+        from app.utils.email import _get_t
+        t = _get_t(current_user.locale or "tr")
+
         # Fiyat sinyali
         overpriced = [p for p in price_intel if p["signal"] == "pahalı"]
         underpriced = [p for p in price_intel if p["signal"] == "ucuz"]
         if overpriced:
             tips.append({
                 "icon": "💰", "type": "price",
-                "title": "Fiyat Ayarı Önerisi",
-                "body": f'"{overpriced[0]["title"]}" piyasa ortalamasının %{abs(overpriced[0]["diff_pct"]):.0f} üzerinde. '
-                        f'Fiyatı {overpriced[0]["market_avg"]:.0f} ₺ civarına çekersen satış hızlanabilir.',
+                "title": t.get("proTipPriceDownTitle", "Fiyat Ayarı Önerisi"),
+                "body": t.get("proTipPriceDownBody", '"{title}" piyasa ortalamasının %{diff} üzerinde. Fiyatı {avg} ₺ civarına çekersen satış hızlanabilir.').format(
+                    title=overpriced[0]["title"], diff=abs(overpriced[0]["diff_pct"]), avg=int(overpriced[0]["market_avg"])
+                ),
             })
         if underpriced:
             tips.append({
                 "icon": "🚀", "type": "price_up",
-                "title": "Fiyat Artırma Fırsatı",
-                "body": f'"{underpriced[0]["title"]}" benzer ilanların %{abs(underpriced[0]["diff_pct"]):.0f} altında. '
-                        f'Piyasa fiyatı {underpriced[0]["market_avg"]:.0f} ₺ — artırma fırsatı var.',
+                "title": t.get("proTipPriceUpTitle", "Fiyat Artırma Fırsatı"),
+                "body": t.get("proTipPriceUpBody", '"{title}" benzer ilanların %{diff} altında. Piyasa fiyatı {avg} ₺ — artırma fırsatı var.').format(
+                    title=underpriced[0]["title"], diff=abs(underpriced[0]["diff_pct"]), avg=int(underpriced[0]["market_avg"])
+                ),
             })
         # Sıcak talep
         if hot_leads and hot_leads[0].get("hesitations_30d", 0) > 0:
             tips.append({
                 "icon": "🎯", "type": "lead",
-                "title": "Sıcak Alıcı Var",
-                "body": f'"{hot_leads[0]["title"]}" için son 30 günde {hot_leads[0]["hesitations_30d"]} kişi '
-                        f'inceledi ama teklif vermedi. Fiyatı küçük düşür veya açıklama güçlendir.',
+                "title": t.get("proTipLeadTitle", "Sıcak Alıcı Var"),
+                "body": t.get("proTipLeadBody", '"{title}" için son 30 günde {count} kişi inceledi ama teklif vermedi. Fiyatı küçük düşür veya açıklama güçlendir.').format(
+                    title=hot_leads[0]["title"], count=hot_leads[0]["hesitations_30d"]
+                ),
             })
         # Yayın önerisi
         if peak_hours:
             best_hour = peak_hours[0]["label"]
             tips.append({
                 "icon": "📡", "type": "stream",
-                "title": "En İyi Yayın Saati",
-                "body": f"Platform genelinde en yoğun saat {best_hour}. "
-                        f"Canlı yayını bu saatte başlatırsan daha fazla izleyiciye ulaşırsın.",
+                "title": t.get("proTipStreamTitle", "En İyi Yayın Saati"),
+                "body": t.get("proTipStreamBody", "Platform genelinde en yoğun saat {hour}. Canlı yayını bu saatte başlatırsan daha fazla izleyiciye ulaşırsın.").format(
+                    hour=best_hour
+                ),
             })
         # Dönüşüm
         if funnel.get("view_to_bid_pct", 0) < 5 and funnel.get("views", 0) > 10:
             tips.append({
                 "icon": "📸", "type": "listing_quality",
-                "title": "Görsel & Açıklama İyileştir",
-                "body": f"İlanlarının görüntülenme → teklif oranı %{funnel['view_to_bid_pct']}. "
-                        f"Daha iyi fotoğraf ve detaylı açıklama bu oranı 3–5x artırabilir.",
+                "title": t.get("proTipQualityTitle", "Görsel & Açıklama İyileştir"),
+                "body": t.get("proTipQualityBody", "İlanlarının görüntülenme → teklif oranı %{pct}. Daha iyi fotoğraf ve detaylı açıklama bu oranı 3–5x artırabilir.").format(
+                    pct=funnel["view_to_bid_pct"]
+                ),
             })
         if not tips:
             tips.append({
                 "icon": "✅", "type": "general",
-                "title": "Her Şey Yolunda",
-                "body": "İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek.",
+                "title": t.get("proTipAllGoodTitle", "Her Şey Yolunda"),
+                "body": t.get("proTipAllGoodBody", "İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek."),
             })
     except Exception as exc:
         logger.warning("[ProInsights] tips başarısız: %s", exc)
@@ -1362,6 +1375,7 @@ async def pro_insights(
 
 @router.get("/pro/best-stream-time")
 async def best_stream_time(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1370,7 +1384,18 @@ async def best_stream_time(
     Son 90 günlük yayın geçmişini 3'er saatlik bloklara bölerek kategori bazlı analiz eder.
     """
     uid = current_user.id
-    _DAYS = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"]
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
+    
+    _DAYS = [
+        t.get("day0", "Pazar"),
+        t.get("day1", "Pazartesi"),
+        t.get("day2", "Salı"),
+        t.get("day3", "Çarşamba"),
+        t.get("day4", "Perşembe"),
+        t.get("day5", "Cuma"),
+        t.get("day6", "Cumartesi"),
+    ]
 
     result = await db.execute(sql_text("""
         WITH stream_auctions AS (
@@ -1414,7 +1439,7 @@ async def best_stream_time(
         for r in rows
     ]
     if not slots:
-        return {"slots": [], "recommendation": "Henüz yeterli yayın verisi yok (min. 2 yayın gerekli)."}
+        return {"slots": [], "recommendation": t.get("proNotEnoughStreamData", "Henüz yeterli yayın verisi yok (min. 2 yayın gerekli).")}
 
     best = slots[0]
     return {
@@ -1428,6 +1453,7 @@ async def best_stream_time(
 
 @router.get("/pro/conversion-breakdown")
 async def conversion_breakdown(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -1436,6 +1462,9 @@ async def conversion_breakdown(
     Her kategori için: toplam müzayede sayısı, kazanılan, ortalama fiyat, dönüşüm oranı.
     """
     uid = current_user.id
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
+    
     _CAT_LABELS_MAP = {
         "elektronik": "Elektronik", "giyim": "Giyim", "ev": "Ev & Yaşam",
         "spor": "Spor", "kitap": "Kitap", "oyun": "Oyun",
@@ -1464,7 +1493,7 @@ async def conversion_breakdown(
     return [
         {
             "category": r.category,
-            "label": _CAT_LABELS_MAP.get(r.category, r.category or "Diğer"),
+            "label": t.get(f"cat_{r.category}", _CAT_LABELS_MAP.get(r.category, r.category or "Diğer")),
             "total_auctions": int(r.total_auctions),
             "won_auctions": int(r.won_auctions),
             "avg_final_price": round(float(r.avg_final_price), 2),
