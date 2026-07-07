@@ -200,11 +200,14 @@ async def get_seller_report(
       - recommendation: kural tabanlı öneri metni
     """
     # ── 1. Yayını getir ve host doğrula ──────────────────────────────────────
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
+    
     stream = await db.scalar(select(LiveStream).where(LiveStream.id == stream_id))
     if stream is None:
-        raise HTTPException(status_code=404, detail="Yayın bulunamadı")
+        raise HTTPException(status_code=404, detail=t.get("errStreamNotFound", "Yayın bulunamadı"))
     if stream.host_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Bu rapora erişim yetkiniz yok")
+        raise HTTPException(status_code=403, detail=t.get("errAccessDenied", "Bu rapora erişim yetkiniz yok"))
 
     # Yayın süresi (dakika)
     from datetime import datetime, timezone
@@ -1603,8 +1606,10 @@ async def my_feed_stats(
     Pro satıcıya özel feed performans istatistikleri.
     Kullanıcının kendi ilanlarının impression/click/skip/CTR/dwell verilerini döndürür.
     """
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
     # Kullanıcının aktif ilan ID'lerini al
     result = await db.execute(
@@ -1727,8 +1732,10 @@ async def video_roi(
     Pro: Kullanıcının video ilanları ile fotoğraf ilanlarının CTR karşılaştırması.
     content_type='video' vs 'photo' segmentinde impression/click/CTR ayrımı.
     """
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
     result = await db.execute(
         select(Listing.id, Listing.title, Listing.video_url).where(
@@ -1814,8 +1821,10 @@ async def gallery_stats(
     user_events tablosundaki listing_photo_swipe olayları kullanılır;
     duration_seconds alanı max_page_reached değerini taşır.
     """
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
     result = await db.execute(
         select(Listing.id, Listing.title, Listing.image_urls).where(
@@ -1891,8 +1900,10 @@ async def video_performance(
     user_events tablosundaki listing_video_watch olayları kullanılır;
     duration_seconds alanı watch_pct (0.0–1.0) değerini taşır.
     """
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
     result = await db.execute(
         select(Listing.id, Listing.title).where(
@@ -1954,8 +1965,10 @@ async def demand_radar(
     Pro: Platform genelindeki arama trendleri.
     En çok aranan kelimeler ve kategori bazlı arama hacmi.
     """
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail="Bu özellik Pro kullanıcılara özeldir")
+        raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
     try:
         redis = await get_redis()
@@ -2041,8 +2054,10 @@ async def get_pro_metrics(
     - best_posting_hour: kullanıcının en yüksek CTR'a sahip ilan paylaşım saati
     - return_viewer_rate: en az 2 kez yayınını izleyen kullanıcı oranı
     """
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail="PRO üyelik gerekli")
+        raise HTTPException(status_code=403, detail=t.get("errProRequired", "PRO üyelik gerekli"))
 
     uid = current_user.id
 
@@ -2182,8 +2197,10 @@ async def competitor_radar(
     listing = await db.scalar(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
     if not listing:
-        raise HTTPException(404, "İlan bulunamadı")
+        raise HTTPException(404, t.get("errListingNotFound", "İlan bulunamadı"))
 
     if listing.price is None:
         return {"signal": "no_price", "competitors": [], "stats": {}}
@@ -2225,15 +2242,18 @@ async def competitor_radar(
     cheaper_count = sum(1 for p in prices if p < my_price)
     pct_rank = round((cheaper_count / len(prices)) * 100)  # 0=en ucuz, 100=en pahalı
 
+    from app.utils.email import _get_t
+    t = _get_t(current_user.locale or "tr")
+
     if pct_rank >= 75:
         signal = "pahalı"
-        signal_detail = f"Rakiplerin %{pct_rank}'inden pahalısın"
+        signal_detail = t.get("radarExpensive", "Rakiplerin %{pct_rank}'inden pahalısın").replace("{pct_rank}", str(pct_rank))
     elif pct_rank <= 25:
         signal = "ucuz"
-        signal_detail = f"Rakiplerin %{100 - pct_rank}'inden ucuzsun — fiyat artırabilirsin"
+        signal_detail = t.get("radarCheap", "Rakiplerin %{pct_rank}'inden ucuzsun — fiyat artırabilirsin").replace("{pct_rank}", str(100 - pct_rank))
     else:
         signal = "uygun"
-        signal_detail = "Fiyatın piyasa ortalamasına yakın"
+        signal_detail = t.get("radarFair", "Fiyatın piyasa ortalamasına yakın")
 
     if signal == "pahalı":
         suggested_price = round(avg_price * 0.95)
