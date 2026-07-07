@@ -311,13 +311,13 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         initialIndex: widget.initialIndex,
         child: Column(
           children: [
-            const TabBar(
-              indicatorColor: Color(0xFF14B8A6),
-              labelColor: Color(0xFF14B8A6),
+            TabBar(
+              indicatorColor: const Color(0xFF14B8A6),
+              labelColor: const Color(0xFF14B8A6),
               unselectedLabelColor: Colors.grey,
               tabs: [
-                Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
-                Tab(icon: Icon(Icons.auto_graph), text: AppLocalizations.of(context)!.tabReports),
+                const Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
+                Tab(icon: const Icon(Icons.auto_graph), text: AppLocalizations.of(context)!.tabReports),
               ],
             ),
             Expanded(
@@ -342,13 +342,13 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           title: Text(AppLocalizations.of(context)!.centerNotificationAudience),
           backgroundColor: AppColors.bg(context),
           elevation: 0,
-          bottom: const TabBar(
-            indicatorColor: Color(0xFF14B8A6),
-            labelColor: Color(0xFF14B8A6),
+          bottom: TabBar(
+            indicatorColor: const Color(0xFF14B8A6),
+            labelColor: const Color(0xFF14B8A6),
             unselectedLabelColor: Colors.grey,
             tabs: [
-              Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
-              Tab(icon: Icon(Icons.auto_graph), text: AppLocalizations.of(context)!.tabReports),
+              const Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
+              Tab(icon: const Icon(Icons.auto_graph), text: AppLocalizations.of(context)!.tabReports),
             ],
           ),
         ),
