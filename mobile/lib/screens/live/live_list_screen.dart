@@ -572,25 +572,26 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return ListView(
-      children: const [
-        SizedBox(height: 120),
+      children: [
+        const SizedBox(height: 120),
         Column(
           children: [
-            Icon(
+            const Icon(
               Icons.videocam_off_outlined,
               size: 56,
               color: Color(0xFFD1D5DB),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
-              'Şu an aktif yayın yok',
-              style: TextStyle(color: Color(0xFF6B7280), fontSize: 15),
+              l.liveNoStreams,
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
-              'İlk yayını sen başlat!',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
+              l.liveBeFirst,
+              style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 13),
             ),
           ],
         ),
