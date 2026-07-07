@@ -1454,8 +1454,8 @@ async def conversion_breakdown(
     Her kategori için: toplam müzayede sayısı, kazanılan, ortalama fiyat, dönüşüm oranı.
     """
     uid = current_user.id
-    t = _get_t(current_user.locale or "tr")
-    
+    t = _get_t(get_locale(current_user, request))
+
     _CAT_LABELS_MAP = {
         "elektronik": "Elektronik", "giyim": "Giyim", "ev": "Ev & Yaşam",
         "spor": "Spor", "kitap": "Kitap", "oyun": "Oyun",
