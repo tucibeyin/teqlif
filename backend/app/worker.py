@@ -339,8 +339,20 @@ async def flush_interactions_to_db(ctx: dict) -> None:
         # ── PostgreSQL insert ──────────────────────────────────────────────────
         from sqlalchemy import insert as sa_insert
         from app.models.analytics import UserInteraction
+        
+        pg_rows = []
+        for r in rows:
+            pg_rows.append({
+                "user_id": r["user_id"],
+                "item_id": r["item_id"],
+                "item_type": r["item_type"],
+                "interaction_type": r["interaction_type"],
+                "duration_seconds": r["duration_seconds"],
+                "created_at": r["created_at"],
+            })
+            
         async with AsyncSessionLocal() as db:
-            await db.execute(sa_insert(UserInteraction), rows)
+            await db.execute(sa_insert(UserInteraction), pg_rows)
             await db.commit()
 
         # ── ClickHouse bulk insert ─────────────────────────────────────────────
