@@ -1869,20 +1869,8 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     visualDensity: VisualDensity.compact,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  onSelectionChanged: (selection) async {
-                    final lang = selection.first;
-                    ref.read(localeProvider.notifier).setLocale(Locale(lang));
-                    // Backend'i bilgilendir (fire-and-forget)
-                    try {
-                      final token = await StorageService.getToken();
-                      if (token != null) {
-                        http.patch(
-                          Uri.parse('$kBaseUrl/auth/me'),
-                          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-                          body: jsonEncode({'locale': lang}),
-                        ).catchError((_) => http.Response('', 500));
-                      }
-                    } catch (_) {}
+                  onSelectionChanged: (selection) {
+                    ref.read(localeProvider.notifier).setLocale(Locale(selection.first));
                   },
                 ),
               ),

@@ -983,7 +983,8 @@ async def pro_insights(
     # ── Cache Check ─────────────────────────────────────────────────────────
     try:
         redis = await get_redis()
-        cache_key = f"cache:pro_insights:{uid}"
+        _locale = get_locale(current_user, request)
+        cache_key = f"cache:pro_insights:{uid}:{_locale}"
         cached_data = await redis.get(cache_key)
         if cached_data:
             import json
@@ -1278,7 +1279,7 @@ async def pro_insights(
     # ── 7. Akıllı Öneriler — kural motoru ────────────────────────────────────
     tips: list[dict] = []
     try:
-        t = _get_t(current_user.locale or "tr")
+        t = _get_t(get_locale(current_user, request))
 
         # Fiyat sinyali
         overpriced = [p for p in price_intel if p["signal"] == "pahalı"]
