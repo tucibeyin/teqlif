@@ -71,7 +71,6 @@ async def apply_referral(db: AsyncSession, current_user: User, referral_code: st
       4. Tam onaylıysa referrals tablosuna kayıt ekle, ödülleri dağıt, FCM bildirimi at.
     """
     from app.services.firebase_service import send_push
-    from app.utils.email import _get_t
     t = _get_t(lang)
     
     code = referral_code.strip().upper()

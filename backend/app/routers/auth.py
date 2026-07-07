@@ -17,7 +17,6 @@ from app.core.exceptions import NotFoundException, BadRequestException, Forbidde
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 from app.config import settings
-from app.utils.email import _get_t
 from app.services.referral_service import apply_referral
 
 logger = get_logger(__name__)

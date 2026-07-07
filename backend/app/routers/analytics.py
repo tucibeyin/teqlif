@@ -22,6 +22,7 @@ from app.utils.redis_client import get_redis
 from app.database_clickhouse import get_clickhouse_client
 from app.models.market_index import ExchangeRates
 from app.services.ner_service import extract_ner
+from app.utils.i18n import _get_t, get_locale
 
 AI_PRICE_ESTIMATE_COST = 5   # TUCi (standart kullanıcılar ve PRO limit aşınca)
 AI_PRICE_LIMIT_PRO    = 6  # PRO kullanıcılar ayda 6 ücretsiz sorgu
@@ -200,7 +201,6 @@ async def get_seller_report(
       - recommendation: kural tabanlı öneri metni
     """
     # ── 1. Yayını getir ve host doğrula ──────────────────────────────────────
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     
     stream = await db.scalar(select(LiveStream).where(LiveStream.id == stream_id))
@@ -337,7 +337,6 @@ async def get_seller_report(
         logger.warning("[SellerReport] ClickHouse sorgusu başarısız: %s", ch_exc)
 
     # ── 4. Öneri metni ────────────────────────────────────────────────────────
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     recommendation = _build_recommendation(avg_budget, hesitation_count, unique_viewers, t)
 
@@ -834,7 +833,6 @@ async def market_trends(
     - average_spend_growth: ortalama harcama değişim yüzdesi (önceki 30 güne göre)
     """
     try:
-        from app.utils.email import _get_t
         t = _get_t(current_user.locale or "tr")
         
         redis = await get_redis()
@@ -1280,7 +1278,6 @@ async def pro_insights(
     # ── 7. Akıllı Öneriler — kural motoru ────────────────────────────────────
     tips: list[dict] = []
     try:
-        from app.utils.email import _get_t
         t = _get_t(current_user.locale or "tr")
 
         # Fiyat sinyali
@@ -1370,7 +1367,6 @@ async def best_stream_time(
     Son 90 günlük yayın geçmişini 3'er saatlik bloklara bölerek kategori bazlı analiz eder.
     """
     uid = current_user.id
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     
     _DAYS = [
@@ -1457,7 +1453,6 @@ async def conversion_breakdown(
     Her kategori için: toplam müzayede sayısı, kazanılan, ortalama fiyat, dönüşüm oranı.
     """
     uid = current_user.id
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     
     _CAT_LABELS_MAP = {
@@ -1606,7 +1601,6 @@ async def my_feed_stats(
     Pro satıcıya özel feed performans istatistikleri.
     Kullanıcının kendi ilanlarının impression/click/skip/CTR/dwell verilerini döndürür.
     """
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
@@ -1732,7 +1726,6 @@ async def video_roi(
     Pro: Kullanıcının video ilanları ile fotoğraf ilanlarının CTR karşılaştırması.
     content_type='video' vs 'photo' segmentinde impression/click/CTR ayrımı.
     """
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
@@ -1821,7 +1814,6 @@ async def gallery_stats(
     user_events tablosundaki listing_photo_swipe olayları kullanılır;
     duration_seconds alanı max_page_reached değerini taşır.
     """
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
@@ -1900,7 +1892,6 @@ async def video_performance(
     user_events tablosundaki listing_video_watch olayları kullanılır;
     duration_seconds alanı watch_pct (0.0–1.0) değerini taşır.
     """
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
@@ -1965,7 +1956,6 @@ async def demand_radar(
     Pro: Platform genelindeki arama trendleri.
     En çok aranan kelimeler ve kategori bazlı arama hacmi.
     """
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
@@ -2054,7 +2044,6 @@ async def get_pro_metrics(
     - best_posting_hour: kullanıcının en yüksek CTR'a sahip ilan paylaşım saati
     - return_viewer_rate: en az 2 kez yayınını izleyen kullanıcı oranı
     """
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "PRO üyelik gerekli"))
@@ -2197,7 +2186,6 @@ async def competitor_radar(
     listing = await db.scalar(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
     if not listing:
         raise HTTPException(404, t.get("errListingNotFound", "İlan bulunamadı"))
@@ -2241,8 +2229,6 @@ async def competitor_radar(
     max_price = max(prices)
     cheaper_count = sum(1 for p in prices if p < my_price)
     pct_rank = round((cheaper_count / len(prices)) * 100)  # 0=en ucuz, 100=en pahalı
-
-    from app.utils.email import _get_t
     t = _get_t(current_user.locale or "tr")
 
     if pct_rank >= 75:
@@ -2370,7 +2356,6 @@ async def category_velocity(
             if ucuz and pahali and pahali["avg_days"] > 0 and ucuz["avg_days"] > 0:
                 speed_ratio = round(pahali["avg_days"] / ucuz["avg_days"], 1)
                 if speed_ratio >= 1.5:
-                    from app.utils.email import _get_t
                     t = _get_t(current_user.locale or "tr")
                     tip = t.get("proSalesSpeedTip", "Piyasa ortalamasının altında fiyatlanan ilanlar {ratio}× daha hızlı satılıyor").replace("{ratio}", str(speed_ratio))
 

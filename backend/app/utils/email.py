@@ -1,24 +1,8 @@
 import httpx
-import json
-import os
 
-_ARB_CACHE: dict = {}      # lang -> dict
-_ARB_MTIME: dict = {}     # lang -> float (last modified time)
-
-def _get_t(lang: str) -> dict:
-    try:
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        arb_path = os.path.join(base_dir, "mobile", "lib", "l10n", f"app_{lang}.arb")
-        mtime = os.path.getmtime(arb_path)
-        if lang not in _ARB_CACHE or _ARB_MTIME.get(lang) != mtime:
-            with open(arb_path, 'r', encoding='utf-8') as f:
-                _ARB_CACHE[lang] = json.load(f)
-            _ARB_MTIME[lang] = mtime
-    except Exception:
-        if lang != "tr":
-            return _get_t("tr")
-        return {}
-    return _ARB_CACHE[lang]
+# Geriye dönük uyumluluk: _get_t artık app.utils.i18n'de yaşıyor.
+# Eski import'lar (from app.utils.email import _get_t) çalışmaya devam eder.
+from app.utils.i18n import _get_t  # noqa: F401
 
 
 from app.config import settings
