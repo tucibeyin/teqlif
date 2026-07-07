@@ -4,6 +4,7 @@ from app.database import AsyncSessionLocal
 from app.models.category import Category
 from app.models.user import User
 from app.utils.auth import get_current_user_optional
+from app.utils.i18n import _get_t
 
 router = APIRouter(prefix="/api/categories", tags=["categories"])
 

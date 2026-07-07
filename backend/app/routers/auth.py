@@ -12,6 +12,7 @@ from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS, ForgotPassword, ResetPassword
 from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, set_auth_cookies, clear_auth_cookies
 from app.utils.email import send_verification_code, send_phone_verification_email, send_reset_password_email
+from app.utils.i18n import _get_t
 from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException, ConflictException
 from app.core.logger import get_logger, capture_exception
