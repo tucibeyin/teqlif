@@ -254,12 +254,14 @@ class _RadarSection extends StatelessWidget {
       case 'ucuz':
         signalColor = const Color(0xFF06B6D4);
         signalIcon = Icons.trending_down;
-        signalLabel = 'Ucuz';
+        signalLabel = l.radarCheapLabel;
         break;
+      case 'uygun':
       default:
         signalColor = const Color(0xFF22C55E);
         signalIcon = Icons.check_circle_outline;
-        signalLabel = 'Uygun';
+        signalLabel = l.radarFairLabel;
+        break;
     }
 
     return _SectionCard(

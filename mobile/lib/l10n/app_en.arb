@@ -2066,5 +2066,29 @@
   "errProRequired": "This feature is exclusive to Pro users",
   "@errProRequired": {
     "description": "Analytics missing key: errProRequired"
+  },
+  "radarCheapLabel": "Cheap",
+  "@radarCheapLabel": {
+    "description": "Analytics missing key: radarCheapLabel"
+  },
+  "radarFairLabel": "Fair",
+  "@radarFairLabel": {
+    "description": "Analytics missing key: radarFairLabel"
+  },
+  "proSalesSpeedTip": "Listings priced below market average sell {ratio}× faster",
+  "@proSalesSpeedTip": {
+    "description": "Analytics missing key: proSalesSpeedTip"
+  },
+  "proBestStreamRec": "You perform best on {day} at {hours} with a {rate}% conversion rate.",
+  "@proBestStreamRec": {
+    "description": "Analytics missing key: proBestStreamRec"
+  },
+  "tabReports": "Reports",
+  "@tabReports": {
+    "description": "Analytics missing key: tabReports"
+  },
+  "badgeSponsored": "Sponsored",
+  "@badgeSponsored": {
+    "description": "Badge label for sponsored listing"
   }
 }

@@ -2027,5 +2027,11 @@
   "errStreamNotFound": "البث غير موجود",
   "errAccessDenied": "ليس لديك إذن للوصول إلى هذا التقرير",
   "errListingNotFound": "الإعلان غير موجود",
-  "errProRequired": "هذه الميزة حصرية لمستخدمي Pro"
+  "errProRequired": "هذه الميزة حصرية لمستخدمي Pro",
+  "radarCheapLabel": "رخيص",
+  "radarFairLabel": "مناسب",
+  "proSalesSpeedTip": "القوائم التي يقل سعرها عن متوسط السوق تباع أسرع بـ {ratio} مرات",
+  "proBestStreamRec": "أداؤك هو الأفضل يوم {day} الساعة {hours} بمعدل تحويل {rate}%.",
+  "tabReports": "التقارير",
+  "badgeSponsored": "ممولة"
 }

@@ -7529,6 +7529,42 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bu özellik Pro kullanıcılara özeldir'**
   String get errProRequired;
+
+  /// No description provided for @radarCheapLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ucuz'**
+  String get radarCheapLabel;
+
+  /// No description provided for @radarFairLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygun'**
+  String get radarFairLabel;
+
+  /// No description provided for @proSalesSpeedTip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Piyasa ortalamasının altında fiyatlanan ilanlar {ratio}× daha hızlı satılıyor'**
+  String proSalesSpeedTip(Object ratio);
+
+  /// No description provided for @proBestStreamRec.
+  ///
+  /// In tr, this message translates to:
+  /// **'{day} {hours} saatlerinde %{rate} dönüşüm oranıyla en iyi performansı gösteriyorsunuz.'**
+  String proBestStreamRec(Object day, Object hours, Object rate);
+
+  /// No description provided for @tabReports.
+  ///
+  /// In tr, this message translates to:
+  /// **'Raporlar'**
+  String get tabReports;
+
+  /// No description provided for @badgeSponsored.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sponsorlu'**
+  String get badgeSponsored;
 }
 
 class _AppLocalizationsDelegate

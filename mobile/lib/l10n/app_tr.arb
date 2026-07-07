@@ -2047,5 +2047,11 @@
   "errStreamNotFound": "Yayın bulunamadı",
   "errAccessDenied": "Bu rapora erişim yetkiniz yok",
   "errListingNotFound": "İlan bulunamadı",
-  "errProRequired": "Bu özellik Pro kullanıcılara özeldir"
+  "errProRequired": "Bu özellik Pro kullanıcılara özeldir",
+  "radarCheapLabel": "Ucuz",
+  "radarFairLabel": "Uygun",
+  "proSalesSpeedTip": "Piyasa ortalamasının altında fiyatlanan ilanlar {ratio}× daha hızlı satılıyor",
+  "proBestStreamRec": "{day} {hours} saatlerinde %{rate} dönüşüm oranıyla en iyi performansı gösteriyorsunuz.",
+  "tabReports": "Raporlar",
+  "badgeSponsored": "Sponsorlu"
 }

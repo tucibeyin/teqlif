@@ -1187,9 +1187,9 @@ class _GridItemState extends State<_GridItem> {
                     color: Colors.black.withValues(alpha: 0.62),
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: const Text(
-                    'Sponsorlu',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context)!.badgeSponsored,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 9,
                       fontWeight: FontWeight.w600,

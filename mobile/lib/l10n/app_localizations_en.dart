@@ -4128,4 +4128,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errProRequired => 'This feature is exclusive to Pro users';
+
+  @override
+  String get radarCheapLabel => 'Cheap';
+
+  @override
+  String get radarFairLabel => 'Fair';
+
+  @override
+  String proSalesSpeedTip(Object ratio) {
+    return 'Listings priced below market average sell $ratio× faster';
+  }
+
+  @override
+  String proBestStreamRec(Object day, Object hours, Object rate) {
+    return 'You perform best on $day at $hours with a $rate% conversion rate.';
+  }
+
+  @override
+  String get tabReports => 'Reports';
+
+  @override
+  String get badgeSponsored => 'Sponsored';
 }

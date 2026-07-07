@@ -4179,4 +4179,26 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get errProRequired =>
       'Эта функция доступна только для пользователей Pro';
+
+  @override
+  String get radarCheapLabel => 'Дешево';
+
+  @override
+  String get radarFairLabel => 'Нормально';
+
+  @override
+  String proSalesSpeedTip(Object ratio) {
+    return 'Объявления с ценой ниже средней по рынку продаются в $ratio раз быстрее';
+  }
+
+  @override
+  String proBestStreamRec(Object day, Object hours, Object rate) {
+    return 'Вы показываете лучшие результаты в $day в $hours с коэффициентом конверсии $rate%.';
+  }
+
+  @override
+  String get tabReports => 'Отчеты';
+
+  @override
+  String get badgeSponsored => 'Реклама';
 }

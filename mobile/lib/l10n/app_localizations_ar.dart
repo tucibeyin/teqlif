@@ -4103,4 +4103,26 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get errProRequired => 'هذه الميزة حصرية لمستخدمي Pro';
+
+  @override
+  String get radarCheapLabel => 'رخيص';
+
+  @override
+  String get radarFairLabel => 'مناسب';
+
+  @override
+  String proSalesSpeedTip(Object ratio) {
+    return 'القوائم التي يقل سعرها عن متوسط السوق تباع أسرع بـ $ratio مرات';
+  }
+
+  @override
+  String proBestStreamRec(Object day, Object hours, Object rate) {
+    return 'أداؤك هو الأفضل يوم $day الساعة $hours بمعدل تحويل $rate%.';
+  }
+
+  @override
+  String get tabReports => 'التقارير';
+
+  @override
+  String get badgeSponsored => 'ممولة';
 }

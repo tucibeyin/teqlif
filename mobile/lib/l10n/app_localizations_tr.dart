@@ -4132,4 +4132,26 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get errProRequired => 'Bu özellik Pro kullanıcılara özeldir';
+
+  @override
+  String get radarCheapLabel => 'Ucuz';
+
+  @override
+  String get radarFairLabel => 'Uygun';
+
+  @override
+  String proSalesSpeedTip(Object ratio) {
+    return 'Piyasa ortalamasının altında fiyatlanan ilanlar $ratio× daha hızlı satılıyor';
+  }
+
+  @override
+  String proBestStreamRec(Object day, Object hours, Object rate) {
+    return '$day $hours saatlerinde %$rate dönüşüm oranıyla en iyi performansı gösteriyorsunuz.';
+  }
+
+  @override
+  String get tabReports => 'Raporlar';
+
+  @override
+  String get badgeSponsored => 'Sponsorlu';
 }

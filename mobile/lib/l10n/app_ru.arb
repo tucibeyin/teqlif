@@ -2048,5 +2048,11 @@
   "errStreamNotFound": "Трансляция не найдена",
   "errAccessDenied": "У вас нет доступа к этому отчету",
   "errListingNotFound": "Объявление не найдено",
-  "errProRequired": "Эта функция доступна только для пользователей Pro"
+  "errProRequired": "Эта функция доступна только для пользователей Pro",
+  "radarCheapLabel": "Дешево",
+  "radarFairLabel": "Нормально",
+  "proSalesSpeedTip": "Объявления с ценой ниже средней по рынку продаются в {ratio} раз быстрее",
+  "proBestStreamRec": "Вы показываете лучшие результаты в {day} в {hours} с коэффициентом конверсии {rate}%.",
+  "tabReports": "Отчеты",
+  "badgeSponsored": "Реклама"
 }

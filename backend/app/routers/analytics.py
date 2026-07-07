@@ -1439,10 +1439,10 @@ async def best_stream_time(
     best = slots[0]
     return {
         "slots": slots,
-        "recommendation": (
-            f"{best['day']} {best['hour_range']} saatlerinde "
-            f"%{best['conversion_rate']:.1f} dönüşüm oranıyla en iyi performansı gösteriyorsunuz."
-        ),
+        "recommendation": t.get(
+            "proBestStreamRec", 
+            "{day} {hours} saatlerinde %{rate} dönüşüm oranıyla en iyi performansı gösteriyorsunuz."
+        ).replace("{day}", best['day']).replace("{hours}", best['hour_range']).replace("{rate}", f"{best['conversion_rate']:.1f}"),
     }
 
 
@@ -2370,10 +2370,12 @@ async def category_velocity(
             if ucuz and pahali and pahali["avg_days"] > 0 and ucuz["avg_days"] > 0:
                 speed_ratio = round(pahali["avg_days"] / ucuz["avg_days"], 1)
                 if speed_ratio >= 1.5:
-                    tip = f"Piyasa ortalamasının altında fiyatlanan ilanlar {speed_ratio}× daha hızlı satılıyor"
+                    from app.utils.email import _get_t
+                    t = _get_t(current_user.locale or "tr")
+                    tip = t.get("proSalesSpeedTip", "Piyasa ortalamasının altında fiyatlanan ilanlar {ratio}× daha hızlı satılıyor").replace("{ratio}", str(speed_ratio))
 
     return {
-        "category": category,
+        "category": t.get(f"cat_{category}", category),
         "total_sold_90d": total_sold,
         "avg_days_to_sell": avg_days,
         "min_days_to_sell": min_days,

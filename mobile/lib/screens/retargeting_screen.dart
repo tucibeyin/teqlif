@@ -229,7 +229,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                 {'label': '👆 ${AppLocalizations.of(context)!.reportClickOpen}', 'value': '$clicks  (%$clickRate)'},
               ]),
               const SizedBox(height: 16),
-              _buildROICard(AppLocalizations.of(context)!.reportROI, '$spent TUCi', '$costPerClick TUCi / Tıklama'),
+              _buildROICard(AppLocalizations.of(context)!.reportROI, '$spent TUCi', '$costPerClick TUCi / ${AppLocalizations.of(context)!.adReportMetricClicks}'),
             ],
           ],
         );
@@ -317,7 +317,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               unselectedLabelColor: Colors.grey,
               tabs: [
                 Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
-                Tab(icon: Icon(Icons.auto_graph), text: 'Raporlar'),
+                Tab(icon: Icon(Icons.auto_graph), text: AppLocalizations.of(context)!.tabReports),
               ],
             ),
             Expanded(
@@ -348,7 +348,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             unselectedLabelColor: Colors.grey,
             tabs: [
               Tab(icon: Icon(Icons.touch_app), text: 'Retargeting'),
-              Tab(icon: Icon(Icons.auto_graph), text: 'Raporlar'),
+              Tab(icon: Icon(Icons.auto_graph), text: AppLocalizations.of(context)!.tabReports),
             ],
           ),
         ),

@@ -1069,9 +1069,9 @@ class _ListingGridItem extends StatelessWidget {
                   color: const Color(0xFFFFD700),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text(
-                  'Sponsorlu',
-                  style: TextStyle(
+                child: Text(
+                  AppLocalizations.of(context)!.badgeSponsored,
+                  style: const TextStyle(
                     color: Color(0xFF7c5700),
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
