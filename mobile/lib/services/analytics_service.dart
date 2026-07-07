@@ -172,9 +172,14 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
+      final prefs = await SharedPreferences.getInstance();
+      final lang = prefs.getString('app_locale_language_code') ?? 'tr';
       final resp = await http.get(
         Uri.parse('$kBaseUrl/analytics/pro-insights'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept-Language': lang,
+        },
       );
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;

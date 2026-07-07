@@ -47,16 +47,23 @@ def _get_t(lang: str) -> dict:
         return {}
 
 
+_SUPPORTED = {"tr", "en", "ar", "ru"}
+
 def get_locale(user=None, request=None, default: str = "tr") -> str:
     """
-    Kullanıcı veya istek başlığından locale belirler.
-    Öncelik: user.locale > Accept-Language header > default
+    Öncelik: Accept-Language header > user.locale (DB) > default.
+
+    Request header önce gelir çünkü kullanıcının o andaki uygulama
+    dilini yansıtır; DB değeri senkronizasyon gecikmesinden etkilenebilir.
     """
-    if user and getattr(user, "locale", None):
-        return user.locale
     if request is not None:
         al = request.headers.get("accept-language", "")
-        for lang in ("en", "ru", "ar"):
-            if lang in al:
+        for part in al.replace(",", ";").split(";"):
+            lang = part.strip()[:2].lower()
+            if lang in _SUPPORTED:
                 return lang
+    if user:
+        loc = getattr(user, "locale", None)
+        if loc and loc in _SUPPORTED:
+            return loc
     return default
