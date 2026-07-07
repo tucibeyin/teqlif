@@ -312,6 +312,14 @@ async def flush_interactions_to_db(ctx: dict) -> None:
         for item in raw_items:
             try:
                 data = json.loads(item)
+                
+                created_dt = now
+                if "timestamp" in data:
+                    try:
+                        created_dt = datetime.fromisoformat(data["timestamp"])
+                    except Exception:
+                        pass
+                        
                 rows.append({
                     "user_id": data.get("user_id"),
                     "item_id": int(data["item_id"]),
@@ -320,7 +328,7 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                     "duration_seconds": float(data["duration_seconds"]) if data.get("duration_seconds") is not None else None,
                     "price_point": float(data["price_point"]) if data.get("price_point") is not None else None,
                     "metadata": json.dumps(data["metadata"]) if data.get("metadata") else "",
-                    "created_at": now,
+                    "created_at": created_dt,
                 })
             except Exception:
                 continue

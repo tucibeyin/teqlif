@@ -110,6 +110,7 @@ async def track_interaction(
         except Exception:
             pass
 
+    from datetime import datetime, timezone
     record = {
         "user_id": user_id,
         "item_id": payload.item_id,
@@ -118,6 +119,7 @@ async def track_interaction(
         "duration_seconds": payload.duration_seconds,
         "price_point": payload.price_point,
         "metadata": payload.metadata,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     try:
