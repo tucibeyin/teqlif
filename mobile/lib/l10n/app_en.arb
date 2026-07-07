@@ -2042,5 +2042,29 @@
   "recHighHesitation": "Your audience's average budget is {budget} ₺. Today, {count} people wanted to bid but gave up — try starting at a lower price like {low} ₺ next time to convert this hesitant crowd.",
   "recMedHesitation": "Your audience's average budget is {budget} ₺. {count} viewers gave up on bidding — clarify your product descriptions and price steps to boost your conversion rate.",
   "recHighReach": "Your audience's average budget is {budget} ₺. Your audience profile looks strong. You can increase revenue by offering premium products up to {high} ₺ in your next stream.",
-  "recDefault": "Your audience's average budget is {budget} ₺. You can increase your sales by bringing products in this price range."
+  "recDefault": "Your audience's average budget is {budget} ₺. You can increase your sales by bringing products in this price range.",
+  "radarCheap": "Cheaper than %{pct_rank} of competitors — consider raising price",
+  "@radarCheap": {
+    "description": "Analytics missing key: radarCheap"
+  },
+  "radarFair": "Priced near market average",
+  "@radarFair": {
+    "description": "Analytics missing key: radarFair"
+  },
+  "errStreamNotFound": "Stream not found",
+  "@errStreamNotFound": {
+    "description": "Analytics missing key: errStreamNotFound"
+  },
+  "errAccessDenied": "You do not have permission to access this report",
+  "@errAccessDenied": {
+    "description": "Analytics missing key: errAccessDenied"
+  },
+  "errListingNotFound": "Listing not found",
+  "@errListingNotFound": {
+    "description": "Analytics missing key: errListingNotFound"
+  },
+  "errProRequired": "This feature is exclusive to Pro users",
+  "@errProRequired": {
+    "description": "Analytics missing key: errProRequired"
+  }
 }

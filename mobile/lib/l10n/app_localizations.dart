@@ -7289,6 +7289,246 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Doğrulamalar tamamlandı! {referrer_username} sizi davet etti. Hesabınıza {your_bonus} TUCi eklendi.'**
   String apiMsgReferralSuccess(String referrer_username, int your_bonus);
+
+  /// No description provided for @proTipPriceDownTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyat Ayarı Önerisi'**
+  String get proTipPriceDownTitle;
+
+  /// No description provided for @proTipPriceDownBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"{title}\" piyasa ortalamasının %{diff} üzerinde. Fiyatı {avg} ₺ civarına çekersen satış hızlanabilir.'**
+  String proTipPriceDownBody(Object avg, Object diff, Object title);
+
+  /// No description provided for @proTipPriceUpTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyat Artırma Fırsatı'**
+  String get proTipPriceUpTitle;
+
+  /// No description provided for @proTipPriceUpBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"{title}\" benzer ilanların %{diff} altında. Piyasa fiyatı {avg} ₺ — artırma fırsatı var.'**
+  String proTipPriceUpBody(Object avg, Object diff, Object title);
+
+  /// No description provided for @proTipLeadTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sıcak Alıcı Var'**
+  String get proTipLeadTitle;
+
+  /// No description provided for @proTipLeadBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"{title}\" için son 30 günde {count} kişi inceledi ama teklif vermedi. Fiyatı küçük düşür veya açıklama güçlendir.'**
+  String proTipLeadBody(Object count, Object title);
+
+  /// No description provided for @proTipStreamTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'En İyi Yayın Saati'**
+  String get proTipStreamTitle;
+
+  /// No description provided for @proTipStreamBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Platform genelinde en yoğun saat {hour}. Canlı yayını bu saatte başlatırsan daha fazla izleyiciye ulaşırsın.'**
+  String proTipStreamBody(Object hour);
+
+  /// No description provided for @proTipQualityTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Görsel & Açıklama İyileştir'**
+  String get proTipQualityTitle;
+
+  /// No description provided for @proTipQualityBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanlarının görüntülenme → teklif oranı %{pct}. Daha iyi fotoğraf ve detaylı açıklama bu oranı 3–5x artırabilir.'**
+  String proTipQualityBody(Object pct);
+
+  /// No description provided for @proTipAllGoodTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Her Şey Yolunda'**
+  String get proTipAllGoodTitle;
+
+  /// No description provided for @proTipAllGoodBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek.'**
+  String get proTipAllGoodBody;
+
+  /// No description provided for @cat_elektronik.
+  ///
+  /// In tr, this message translates to:
+  /// **'Elektronik'**
+  String get cat_elektronik;
+
+  /// No description provided for @cat_giyim.
+  ///
+  /// In tr, this message translates to:
+  /// **'Giyim & Moda'**
+  String get cat_giyim;
+
+  /// No description provided for @cat_ev.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ev & Yaşam'**
+  String get cat_ev;
+
+  /// No description provided for @cat_vasita.
+  ///
+  /// In tr, this message translates to:
+  /// **'Vasıta'**
+  String get cat_vasita;
+
+  /// No description provided for @cat_spor.
+  ///
+  /// In tr, this message translates to:
+  /// **'Spor & Hobi'**
+  String get cat_spor;
+
+  /// No description provided for @cat_kitap.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kitap & Kültür'**
+  String get cat_kitap;
+
+  /// No description provided for @cat_emlak.
+  ///
+  /// In tr, this message translates to:
+  /// **'Emlak'**
+  String get cat_emlak;
+
+  /// No description provided for @cat_diger.
+  ///
+  /// In tr, this message translates to:
+  /// **'Diğer'**
+  String get cat_diger;
+
+  /// No description provided for @cat_sohbet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sohbet'**
+  String get cat_sohbet;
+
+  /// No description provided for @day0.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pazar'**
+  String get day0;
+
+  /// No description provided for @day1.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pazartesi'**
+  String get day1;
+
+  /// No description provided for @day2.
+  ///
+  /// In tr, this message translates to:
+  /// **'Salı'**
+  String get day2;
+
+  /// No description provided for @day3.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çarşamba'**
+  String get day3;
+
+  /// No description provided for @day4.
+  ///
+  /// In tr, this message translates to:
+  /// **'Perşembe'**
+  String get day4;
+
+  /// No description provided for @day5.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cuma'**
+  String get day5;
+
+  /// No description provided for @day6.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cumartesi'**
+  String get day6;
+
+  /// No description provided for @recNoBudgetHighHesitation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bugün {count} izleyici teklif vermekle ilgilendi ama tereddüt etti. Bir dahaki yayında daha düşük başlangıç fiyatıyla başlayarak ilgiyi satışa dönüştürebilirsiniz.'**
+  String recNoBudgetHighHesitation(Object count);
+
+  /// No description provided for @recNoBudgetDefault.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz yeterli bütçe verisi yok. Yayınlarınızı düzenli tutarak kitle profili oluştururken fiyat aralıklarını deneyebilirsiniz.'**
+  String get recNoBudgetDefault;
+
+  /// No description provided for @recHighHesitation.
+  ///
+  /// In tr, this message translates to:
+  /// **'İzleyicilerinizin ortalama bütçesi {budget} TL. Bugün {count} kişi teklif vermek istedi ama vazgeçti — bir dahaki yayında {low} TL gibi düşük başlangıç fiyatları deneyerek bu kararsız kitleyi satışa çevirebilirsiniz.'**
+  String recHighHesitation(Object budget, Object count, Object low);
+
+  /// No description provided for @recMedHesitation.
+  ///
+  /// In tr, this message translates to:
+  /// **'İzleyicilerinizin ortalama bütçesi {budget} TL. {count} izleyici tekliften vazgeçti — ürün açıklamalarını ve fiyat adımlarını netleştirerek dönüşüm oranınızı artırabilirsiniz.'**
+  String recMedHesitation(Object budget, Object count);
+
+  /// No description provided for @recHighReach.
+  ///
+  /// In tr, this message translates to:
+  /// **'İzleyicilerinizin ortalama bütçesi {budget} TL. Kitle profiliniz güçlü görünüyor. Bir dahaki yayında {high} TL\'ye kadar premium ürünler sunarak geliri artırabilirsiniz.'**
+  String recHighReach(Object budget, Object high);
+
+  /// No description provided for @recDefault.
+  ///
+  /// In tr, this message translates to:
+  /// **'İzleyicilerinizin ortalama bütçesi {budget} TL. Bu fiyat bandında ürünler getirerek satışlarınızı artırabilirsiniz.'**
+  String recDefault(Object budget);
+
+  /// No description provided for @radarCheap.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rakiplerin %{pct_rank}\'inden ucuzsun — fiyat artırabilirsin'**
+  String radarCheap(Object pct_rank);
+
+  /// No description provided for @radarFair.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyatın piyasa ortalamasına yakın'**
+  String get radarFair;
+
+  /// No description provided for @errStreamNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın bulunamadı'**
+  String get errStreamNotFound;
+
+  /// No description provided for @errAccessDenied.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu rapora erişim yetkiniz yok'**
+  String get errAccessDenied;
+
+  /// No description provided for @errListingNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan bulunamadı'**
+  String get errListingNotFound;
+
+  /// No description provided for @errProRequired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu özellik Pro kullanıcılara özeldir'**
+  String get errProRequired;
 }
 
 class _AppLocalizationsDelegate

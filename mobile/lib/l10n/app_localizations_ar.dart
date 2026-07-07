@@ -3959,4 +3959,148 @@ class AppLocalizationsAr extends AppLocalizations {
   String apiMsgReferralSuccess(String referrer_username, int your_bonus) {
     return 'اكتملت التحققات! دعاك $referrer_username. تمت إضافة $your_bonus TUCi إلى حسابك.';
   }
+
+  @override
+  String get proTipPriceDownTitle => 'نصيحة تعديل السعر';
+
+  @override
+  String proTipPriceDownBody(Object avg, Object diff, Object title) {
+    return '\"$title\" أعلى من متوسط السوق بنسبة $diff%. تخفيض السعر إلى حوالي $avg ₺ يمكن أن يسرع البيع.';
+  }
+
+  @override
+  String get proTipPriceUpTitle => 'فرصة زيادة السعر';
+
+  @override
+  String proTipPriceUpBody(Object avg, Object diff, Object title) {
+    return '\"$title\" أقل بنسبة $diff% من الإعلانات المشابهة. سعر السوق هو $avg ₺ — هناك فرصة لزيادته.';
+  }
+
+  @override
+  String get proTipLeadTitle => 'مشتري محتمل';
+
+  @override
+  String proTipLeadBody(Object count, Object title) {
+    return 'شاهد $count شخصًا \"$title\" في آخر 30 يومًا لكنهم لم يقدموا عرضًا. خفض السعر قليلاً أو حسّن الوصف.';
+  }
+
+  @override
+  String get proTipStreamTitle => 'أفضل وقت للبث';
+
+  @override
+  String proTipStreamBody(Object hour) {
+    return 'أكثر الأوقات نشاطًا على المنصة هو $hour. بدء بث مباشر في هذا الوقت سيصل إلى مشاهدين أكثر.';
+  }
+
+  @override
+  String get proTipQualityTitle => 'تحسين الصور والوصف';
+
+  @override
+  String proTipQualityBody(Object pct) {
+    return 'نسبة المشاهدة إلى تقديم العروض هي $pct%. يمكن لصور أفضل ووصف دقيق أن تزيد هذه النسبة بمقدار 3-5 أضعاف.';
+  }
+
+  @override
+  String get proTipAllGoodTitle => 'كل شيء على ما يرام';
+
+  @override
+  String get proTipAllGoodBody =>
+      'بيانات إعلاناتك ومبيعاتك تبدو جيدة. ستظهر هنا نصائح مخصصة عند توفر المزيد من البيانات.';
+
+  @override
+  String get cat_elektronik => 'إلكترونيات';
+
+  @override
+  String get cat_giyim => 'ملابس وموضة';
+
+  @override
+  String get cat_ev => 'المنزل والمعيشة';
+
+  @override
+  String get cat_vasita => 'مركبات';
+
+  @override
+  String get cat_spor => 'رياضة وهوايات';
+
+  @override
+  String get cat_kitap => 'كتب وثقافة';
+
+  @override
+  String get cat_emlak => 'عقارات';
+
+  @override
+  String get cat_diger => 'أخرى';
+
+  @override
+  String get cat_sohbet => 'محادثة';
+
+  @override
+  String get day0 => 'الأحد';
+
+  @override
+  String get day1 => 'الإثنين';
+
+  @override
+  String get day2 => 'الثلاثاء';
+
+  @override
+  String get day3 => 'الأربعاء';
+
+  @override
+  String get day4 => 'الخميس';
+
+  @override
+  String get day5 => 'الجمعة';
+
+  @override
+  String get day6 => 'السبت';
+
+  @override
+  String recNoBudgetHighHesitation(Object count) {
+    return 'اليوم، اهتم $count مشاهدين بتقديم عروض لكنهم ترددوا. يمكنك تحويل هذا الاهتمام إلى مبيعات بالبدء بسعر أقل في البث القادم.';
+  }
+
+  @override
+  String get recNoBudgetDefault =>
+      'لا توجد بيانات ميزانية كافية بعد. حافظ على استمرار بثك لبناء ملف تعريف للجمهور وجرب نطاقات أسعار مختلفة.';
+
+  @override
+  String recHighHesitation(Object budget, Object count, Object low) {
+    return 'متوسط ميزانية جمهورك هو $budget ₺. اليوم، أراد $count شخصًا تقديم عرض لكنهم تراجعوا — جرب البدء بسعر أقل مثل $low ₺ في المرة القادمة لتحويل هذا الجمهور المتردد.';
+  }
+
+  @override
+  String recMedHesitation(Object budget, Object count) {
+    return 'متوسط ميزانية جمهورك هو $budget ₺. تراجع $count مشاهدين عن تقديم العروض — وضح أوصاف منتجاتك وخطوات الأسعار لزيادة معدل التحويل.';
+  }
+
+  @override
+  String recHighReach(Object budget, Object high) {
+    return 'متوسط ميزانية جمهورك هو $budget ₺. ملف تعريف جمهورك يبدو قويًا. يمكنك زيادة الإيرادات بتقديم منتجات مميزة تصل إلى $high ₺ في البث القادم.';
+  }
+
+  @override
+  String recDefault(Object budget) {
+    return 'متوسط ميزانية جمهورك هو $budget ₺. يمكنك زيادة مبيعاتك بتقديم منتجات في هذا النطاق السعري.';
+  }
+
+  @override
+  String radarCheap(Object pct_rank) {
+    return 'أرخص من %$pct_rank من المنافسين — يمكنك زيادة السعر';
+  }
+
+  @override
+  String get radarFair => 'السعر قريب من متوسط السوق';
+
+  @override
+  String get errStreamNotFound => 'البث غير موجود';
+
+  @override
+  String get errAccessDenied => 'ليس لديك إذن للوصول إلى هذا التقرير';
+
+  @override
+  String get errListingNotFound => 'الإعلان غير موجود';
+
+  @override
+  String get errProRequired => 'هذه الميزة حصرية لمستخدمي Pro';
 }

@@ -3988,4 +3988,148 @@ class AppLocalizationsTr extends AppLocalizations {
   String apiMsgReferralSuccess(String referrer_username, int your_bonus) {
     return 'Doğrulamalar tamamlandı! $referrer_username sizi davet etti. Hesabınıza $your_bonus TUCi eklendi.';
   }
+
+  @override
+  String get proTipPriceDownTitle => 'Fiyat Ayarı Önerisi';
+
+  @override
+  String proTipPriceDownBody(Object avg, Object diff, Object title) {
+    return '\"$title\" piyasa ortalamasının %$diff üzerinde. Fiyatı $avg ₺ civarına çekersen satış hızlanabilir.';
+  }
+
+  @override
+  String get proTipPriceUpTitle => 'Fiyat Artırma Fırsatı';
+
+  @override
+  String proTipPriceUpBody(Object avg, Object diff, Object title) {
+    return '\"$title\" benzer ilanların %$diff altında. Piyasa fiyatı $avg ₺ — artırma fırsatı var.';
+  }
+
+  @override
+  String get proTipLeadTitle => 'Sıcak Alıcı Var';
+
+  @override
+  String proTipLeadBody(Object count, Object title) {
+    return '\"$title\" için son 30 günde $count kişi inceledi ama teklif vermedi. Fiyatı küçük düşür veya açıklama güçlendir.';
+  }
+
+  @override
+  String get proTipStreamTitle => 'En İyi Yayın Saati';
+
+  @override
+  String proTipStreamBody(Object hour) {
+    return 'Platform genelinde en yoğun saat $hour. Canlı yayını bu saatte başlatırsan daha fazla izleyiciye ulaşırsın.';
+  }
+
+  @override
+  String get proTipQualityTitle => 'Görsel & Açıklama İyileştir';
+
+  @override
+  String proTipQualityBody(Object pct) {
+    return 'İlanlarının görüntülenme → teklif oranı %$pct. Daha iyi fotoğraf ve detaylı açıklama bu oranı 3–5x artırabilir.';
+  }
+
+  @override
+  String get proTipAllGoodTitle => 'Her Şey Yolunda';
+
+  @override
+  String get proTipAllGoodBody =>
+      'İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek.';
+
+  @override
+  String get cat_elektronik => 'Elektronik';
+
+  @override
+  String get cat_giyim => 'Giyim & Moda';
+
+  @override
+  String get cat_ev => 'Ev & Yaşam';
+
+  @override
+  String get cat_vasita => 'Vasıta';
+
+  @override
+  String get cat_spor => 'Spor & Hobi';
+
+  @override
+  String get cat_kitap => 'Kitap & Kültür';
+
+  @override
+  String get cat_emlak => 'Emlak';
+
+  @override
+  String get cat_diger => 'Diğer';
+
+  @override
+  String get cat_sohbet => 'Sohbet';
+
+  @override
+  String get day0 => 'Pazar';
+
+  @override
+  String get day1 => 'Pazartesi';
+
+  @override
+  String get day2 => 'Salı';
+
+  @override
+  String get day3 => 'Çarşamba';
+
+  @override
+  String get day4 => 'Perşembe';
+
+  @override
+  String get day5 => 'Cuma';
+
+  @override
+  String get day6 => 'Cumartesi';
+
+  @override
+  String recNoBudgetHighHesitation(Object count) {
+    return 'Bugün $count izleyici teklif vermekle ilgilendi ama tereddüt etti. Bir dahaki yayında daha düşük başlangıç fiyatıyla başlayarak ilgiyi satışa dönüştürebilirsiniz.';
+  }
+
+  @override
+  String get recNoBudgetDefault =>
+      'Henüz yeterli bütçe verisi yok. Yayınlarınızı düzenli tutarak kitle profili oluştururken fiyat aralıklarını deneyebilirsiniz.';
+
+  @override
+  String recHighHesitation(Object budget, Object count, Object low) {
+    return 'İzleyicilerinizin ortalama bütçesi $budget TL. Bugün $count kişi teklif vermek istedi ama vazgeçti — bir dahaki yayında $low TL gibi düşük başlangıç fiyatları deneyerek bu kararsız kitleyi satışa çevirebilirsiniz.';
+  }
+
+  @override
+  String recMedHesitation(Object budget, Object count) {
+    return 'İzleyicilerinizin ortalama bütçesi $budget TL. $count izleyici tekliften vazgeçti — ürün açıklamalarını ve fiyat adımlarını netleştirerek dönüşüm oranınızı artırabilirsiniz.';
+  }
+
+  @override
+  String recHighReach(Object budget, Object high) {
+    return 'İzleyicilerinizin ortalama bütçesi $budget TL. Kitle profiliniz güçlü görünüyor. Bir dahaki yayında $high TL\'ye kadar premium ürünler sunarak geliri artırabilirsiniz.';
+  }
+
+  @override
+  String recDefault(Object budget) {
+    return 'İzleyicilerinizin ortalama bütçesi $budget TL. Bu fiyat bandında ürünler getirerek satışlarınızı artırabilirsiniz.';
+  }
+
+  @override
+  String radarCheap(Object pct_rank) {
+    return 'Rakiplerin %$pct_rank\'inden ucuzsun — fiyat artırabilirsin';
+  }
+
+  @override
+  String get radarFair => 'Fiyatın piyasa ortalamasına yakın';
+
+  @override
+  String get errStreamNotFound => 'Yayın bulunamadı';
+
+  @override
+  String get errAccessDenied => 'Bu rapora erişim yetkiniz yok';
+
+  @override
+  String get errListingNotFound => 'İlan bulunamadı';
+
+  @override
+  String get errProRequired => 'Bu özellik Pro kullanıcılara özeldir';
 }

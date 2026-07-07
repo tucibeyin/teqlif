@@ -3983,4 +3983,149 @@ class AppLocalizationsEn extends AppLocalizations {
   String apiMsgReferralSuccess(String referrer_username, int your_bonus) {
     return 'Verifications completed! $referrer_username invited you. $your_bonus TUCi has been added to your account.';
   }
+
+  @override
+  String get proTipPriceDownTitle => 'Price Adjustment Tip';
+
+  @override
+  String proTipPriceDownBody(Object avg, Object diff, Object title) {
+    return '\"$title\" is $diff% above the market average. Lowering the price to around $avg ₺ can speed up the sale.';
+  }
+
+  @override
+  String get proTipPriceUpTitle => 'Price Increase Opportunity';
+
+  @override
+  String proTipPriceUpBody(Object avg, Object diff, Object title) {
+    return '\"$title\" is $diff% below similar listings. The market price is $avg ₺ — there\'s an opportunity to increase it.';
+  }
+
+  @override
+  String get proTipLeadTitle => 'Hot Lead Available';
+
+  @override
+  String proTipLeadBody(Object count, Object title) {
+    return '$count people viewed \"$title\" in the last 30 days but didn\'t bid. Lower the price slightly or improve the description.';
+  }
+
+  @override
+  String get proTipStreamTitle => 'Best Stream Time';
+
+  @override
+  String proTipStreamBody(Object hour) {
+    return 'The peak hour across the platform is $hour. Starting a live stream at this time will reach more viewers.';
+  }
+
+  @override
+  String get proTipQualityTitle => 'Improve Visuals & Description';
+
+  @override
+  String proTipQualityBody(Object pct) {
+    return 'Your view-to-bid ratio is $pct%. Better photos and a detailed description could increase this by 3–5x.';
+  }
+
+  @override
+  String get proTipAllGoodTitle => 'Everything is Good';
+
+  @override
+  String get proTipAllGoodBody =>
+      'Your listing and sales data look healthy. Custom tips will appear here as more data accumulates.';
+
+  @override
+  String get cat_elektronik => 'Electronics';
+
+  @override
+  String get cat_giyim => 'Clothing & Fashion';
+
+  @override
+  String get cat_ev => 'Home & Living';
+
+  @override
+  String get cat_vasita => 'Vehicles';
+
+  @override
+  String get cat_spor => 'Sports & Hobbies';
+
+  @override
+  String get cat_kitap => 'Books & Culture';
+
+  @override
+  String get cat_emlak => 'Real Estate';
+
+  @override
+  String get cat_diger => 'Other';
+
+  @override
+  String get cat_sohbet => 'Chat';
+
+  @override
+  String get day0 => 'Sunday';
+
+  @override
+  String get day1 => 'Monday';
+
+  @override
+  String get day2 => 'Tuesday';
+
+  @override
+  String get day3 => 'Wednesday';
+
+  @override
+  String get day4 => 'Thursday';
+
+  @override
+  String get day5 => 'Friday';
+
+  @override
+  String get day6 => 'Saturday';
+
+  @override
+  String recNoBudgetHighHesitation(Object count) {
+    return 'Today, $count viewers were interested in bidding but hesitated. You can convert this interest into sales by starting with a lower price in the next stream.';
+  }
+
+  @override
+  String get recNoBudgetDefault =>
+      'Not enough budget data yet. Keep your streams regular to build an audience profile and experiment with price ranges.';
+
+  @override
+  String recHighHesitation(Object budget, Object count, Object low) {
+    return 'Your audience\'s average budget is $budget ₺. Today, $count people wanted to bid but gave up — try starting at a lower price like $low ₺ next time to convert this hesitant crowd.';
+  }
+
+  @override
+  String recMedHesitation(Object budget, Object count) {
+    return 'Your audience\'s average budget is $budget ₺. $count viewers gave up on bidding — clarify your product descriptions and price steps to boost your conversion rate.';
+  }
+
+  @override
+  String recHighReach(Object budget, Object high) {
+    return 'Your audience\'s average budget is $budget ₺. Your audience profile looks strong. You can increase revenue by offering premium products up to $high ₺ in your next stream.';
+  }
+
+  @override
+  String recDefault(Object budget) {
+    return 'Your audience\'s average budget is $budget ₺. You can increase your sales by bringing products in this price range.';
+  }
+
+  @override
+  String radarCheap(Object pct_rank) {
+    return 'Cheaper than %$pct_rank of competitors — consider raising price';
+  }
+
+  @override
+  String get radarFair => 'Priced near market average';
+
+  @override
+  String get errStreamNotFound => 'Stream not found';
+
+  @override
+  String get errAccessDenied =>
+      'You do not have permission to access this report';
+
+  @override
+  String get errListingNotFound => 'Listing not found';
+
+  @override
+  String get errProRequired => 'This feature is exclusive to Pro users';
 }

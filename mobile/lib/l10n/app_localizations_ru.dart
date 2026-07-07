@@ -4034,4 +4034,149 @@ class AppLocalizationsRu extends AppLocalizations {
   String apiMsgReferralSuccess(String referrer_username, int your_bonus) {
     return 'Проверки завершены! $referrer_username пригласил вас. На ваш счет добавлено $your_bonus TUCi.';
   }
+
+  @override
+  String get proTipPriceDownTitle => 'Совет по корректировке цены';
+
+  @override
+  String proTipPriceDownBody(Object avg, Object diff, Object title) {
+    return '\"$title\" на $diff% выше среднего по рынку. Снижение цены примерно до $avg ₺ может ускорить продажу.';
+  }
+
+  @override
+  String get proTipPriceUpTitle => 'Возможность повышения цены';
+
+  @override
+  String proTipPriceUpBody(Object avg, Object diff, Object title) {
+    return '\"$title\" на $diff% ниже аналогичных объявлений. Рыночная цена $avg ₺ — есть возможность её повысить.';
+  }
+
+  @override
+  String get proTipLeadTitle => 'Горячий покупатель';
+
+  @override
+  String proTipLeadBody(Object count, Object title) {
+    return '$count человек просмотрели \"$title\" за последние 30 дней, но не сделали ставку. Слегка снизьте цену или улучшите описание.';
+  }
+
+  @override
+  String get proTipStreamTitle => 'Лучшее время для стрима';
+
+  @override
+  String proTipStreamBody(Object hour) {
+    return 'Самый загруженный час на платформе — $hour. Начало трансляции в это время привлечёт больше зрителей.';
+  }
+
+  @override
+  String get proTipQualityTitle => 'Улучшить визуальное оформление и описание';
+
+  @override
+  String proTipQualityBody(Object pct) {
+    return 'Ваше соотношение просмотров к ставкам составляет $pct%. Лучшие фотографии и подробное описание могут увеличить его в 3–5 раз.';
+  }
+
+  @override
+  String get proTipAllGoodTitle => 'Всё в порядке';
+
+  @override
+  String get proTipAllGoodBody =>
+      'Ваши данные об объявлениях и продажах выглядят здоровыми. Пользовательские советы появятся здесь по мере накопления данных.';
+
+  @override
+  String get cat_elektronik => 'Электроника';
+
+  @override
+  String get cat_giyim => 'Одежда и мода';
+
+  @override
+  String get cat_ev => 'Дом и быт';
+
+  @override
+  String get cat_vasita => 'Транспорт';
+
+  @override
+  String get cat_spor => 'Спорт и хобби';
+
+  @override
+  String get cat_kitap => 'Книги и культура';
+
+  @override
+  String get cat_emlak => 'Недвижимость';
+
+  @override
+  String get cat_diger => 'Другое';
+
+  @override
+  String get cat_sohbet => 'Чат';
+
+  @override
+  String get day0 => 'Воскресенье';
+
+  @override
+  String get day1 => 'Понедельник';
+
+  @override
+  String get day2 => 'Вторник';
+
+  @override
+  String get day3 => 'Среда';
+
+  @override
+  String get day4 => 'Четверг';
+
+  @override
+  String get day5 => 'Пятница';
+
+  @override
+  String get day6 => 'Суббота';
+
+  @override
+  String recNoBudgetHighHesitation(Object count) {
+    return 'Сегодня $count зрителей хотели сделать ставку, но передумали. Вы можете превратить этот интерес в продажи, начав со сниженной цены в следующем стриме.';
+  }
+
+  @override
+  String get recNoBudgetDefault =>
+      'Пока недостаточно данных о бюджете. Проводите стримы регулярно, чтобы сформировать профиль аудитории и экспериментировать с ценами.';
+
+  @override
+  String recHighHesitation(Object budget, Object count, Object low) {
+    return 'Средний бюджет вашей аудитории — $budget ₺. Сегодня $count человек хотели сделать ставку, но отказались — попробуйте в следующий раз начать с более низкой цены, например $low ₺, чтобы привлечь сомневающихся.';
+  }
+
+  @override
+  String recMedHesitation(Object budget, Object count) {
+    return 'Средний бюджет вашей аудитории — $budget ₺. $count зрителей передумали делать ставки — уточните описания товаров и шаги цен, чтобы повысить конверсию.';
+  }
+
+  @override
+  String recHighReach(Object budget, Object high) {
+    return 'Средний бюджет вашей аудитории — $budget ₺. Ваш профиль аудитории выглядит сильным. Вы можете увеличить доход, предлагая премиум-товары до $high ₺ в следующем стриме.';
+  }
+
+  @override
+  String recDefault(Object budget) {
+    return 'Средний бюджет вашей аудитории — $budget ₺. Вы можете увеличить продажи, предлагая товары в этом ценовом диапазоне.';
+  }
+
+  @override
+  String radarCheap(Object pct_rank) {
+    return 'Дешевле, чем у %$pct_rank конкурентов — можно поднять цену';
+  }
+
+  @override
+  String get radarFair => 'Цена близка к средней по рынку';
+
+  @override
+  String get errStreamNotFound => 'Трансляция не найдена';
+
+  @override
+  String get errAccessDenied => 'У вас нет доступа к этому отчету';
+
+  @override
+  String get errListingNotFound => 'Объявление не найдено';
+
+  @override
+  String get errProRequired =>
+      'Эта функция доступна только для пользователей Pro';
 }
