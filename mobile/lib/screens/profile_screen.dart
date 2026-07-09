@@ -25,6 +25,7 @@ import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import '../utils/error_helper.dart';
 import '../utils/start_stream_helper.dart';
+import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/async_button.dart';
 import '../utils/once.dart';
@@ -1532,7 +1533,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         } catch (e) {
                           LoggerService.instance.warning('ProfileScreen', 'Şifre kodu gönderilemedi: $e');
                           setS(() {
-                            error = l.errorConnection;
+                            error = l.errorNetworkMessage;
                             loading = false;
                           });
                         }
@@ -1574,7 +1575,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         } catch (e) {
                           LoggerService.instance.warning('ProfileScreen', 'Şifre değiştirme başarısız: $e');
                           setS(() {
-                            error = l.errorConnection;
+                            error = l.errorNetworkMessage;
                             loading = false;
                           });
                         }
@@ -1667,7 +1668,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   setS(() => error = e.message);
                 } catch (e) {
                   LoggerService.instance.warning('ProfileScreen', 'Hesap silinemedi: $e');
-                  setS(() => error = l.errorConnection);
+                  setS(() => error = l.errorNetworkMessage);
                 }
               },
               child: Text(l.btnDeleteAccount, style: const TextStyle(color: Colors.white)),
@@ -2583,6 +2584,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       }
     } catch (e) {
       LoggerService.instance.warning('MyListingsScreen', 'İlan durumu değiştirilemedi: $e');
+      if (mounted) showErrorSnackbar(context, e);
     }
   }
 
@@ -2613,6 +2615,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       if (resp.statusCode == 200) await _load();
     } catch (e) {
       LoggerService.instance.warning('MyListingsScreen', 'İlan silinemedi: $e');
+      if (mounted) showErrorSnackbar(context, e);
     }
   }
 
@@ -2746,6 +2749,7 @@ class _FavoritesScreen extends StatefulWidget {
 class _FavoritesScreenState extends State<_FavoritesScreen> {
   List<dynamic> _listings = [];
   bool _loading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -2754,7 +2758,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _hasError = false; });
     try {
       final token = await StorageService.getToken();
       if (token == null) return;
@@ -2767,6 +2771,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
       }
     } catch (e) {
       LoggerService.instance.warning('FavoritesScreen', 'Favoriler yüklenemedi: $e');
+      if (mounted) setState(() => _hasError = true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -2814,7 +2819,9 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
       backgroundColor: AppColors.bg(context),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
-          : _listings.isEmpty
+          : _hasError && _listings.isEmpty
+              ? NetworkErrorWidget(onRetry: _load)
+              : _listings.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,

@@ -25,6 +25,7 @@ import '../services/stream_service.dart';
 import '../services/pip_service.dart';
 import '../providers/pip_provider.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/network_error_widget.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -959,22 +960,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             child: _loading
                 ? const Center(child: CircularProgressIndicator(color: kPrimary))
                 : _error
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.wifi_off_rounded, size: 48, color: Color(0xFF9CA3AF)),
-                            const SizedBox(height: 12),
-                            Text(l.messagesLoadFailed,
-                                style: const TextStyle(color: Color(0xFF9CA3AF))),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              onPressed: _loadMessages,
-                              child: Text(l.btnRetry),
-                            ),
-                          ],
-                        ),
-                      )
+                    ? NetworkErrorWidget(onRetry: _loadMessages)
                     : _messages.isEmpty
                         ? Center(
                             child: Text(
