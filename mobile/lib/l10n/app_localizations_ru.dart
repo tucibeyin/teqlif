@@ -4239,4 +4239,30 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get editProfileFillAll => 'Пожалуйста, заполните все поля';
+
+  @override
+  String aiAdviceSimilarCount(int count) {
+    return 'Проанализировано $count похожих товаров';
+  }
+
+  @override
+  String aiAdviceSameCategory(int count) {
+    return '$count той же категории';
+  }
+
+  @override
+  String get aiAdviceCityBased => 'по городу';
+
+  @override
+  String aiAdviceMarketClose(String price) {
+    return 'Средняя цена закрытия: $price ₺.';
+  }
+
+  @override
+  String get aiAdviceBimodal =>
+      'В этой группе товаров обнаружены два ценовых уровня (бимодальный). Цена может варьироваться в зависимости от варианта товара или гарантии.';
+
+  @override
+  String get aiAdviceNoData =>
+      'Пока недостаточно данных о похожих товарах. По мере добавления объявлений прогнозы станут точнее. Изучите рынок для определения цены.';
 }

@@ -4188,4 +4188,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editProfileFillAll => 'Please fill in all fields';
+
+  @override
+  String aiAdviceSimilarCount(int count) {
+    return '$count similar products analyzed';
+  }
+
+  @override
+  String aiAdviceSameCategory(int count) {
+    return '$count same category';
+  }
+
+  @override
+  String get aiAdviceCityBased => 'city-based';
+
+  @override
+  String aiAdviceMarketClose(String price) {
+    return 'Average market close: $price ₺.';
+  }
+
+  @override
+  String get aiAdviceBimodal =>
+      'Two distinct market price levels (Bimodal) detected in this product group. Price may vary based on product variant or warranty.';
+
+  @override
+  String get aiAdviceNoData =>
+      'Not enough similar product data found yet. Estimates will improve as more listings are added to the platform. Research the market to set your price.';
 }

@@ -7637,6 +7637,42 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Tüm alanları doldurun'**
   String get editProfileFillAll;
+
+  /// No description provided for @aiAdviceSimilarCount.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} benzer ürün satış verisi analiz edildi'**
+  String aiAdviceSimilarCount(int count);
+
+  /// No description provided for @aiAdviceSameCategory.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} aynı kategori'**
+  String aiAdviceSameCategory(int count);
+
+  /// No description provided for @aiAdviceCityBased.
+  ///
+  /// In tr, this message translates to:
+  /// **'şehir bazlı'**
+  String get aiAdviceCityBased;
+
+  /// No description provided for @aiAdviceMarketClose.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ortalama piyasa kapanışı: {price} ₺.'**
+  String aiAdviceMarketClose(String price);
+
+  /// No description provided for @aiAdviceBimodal.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ürün grubunda iki farklı piyasa fiyatı (Bimodal) tespit edildi. Ürününüzün varyasyonuna veya garantisine göre fiyat farklılaşabilir.'**
+  String get aiAdviceBimodal;
+
+  /// No description provided for @aiAdviceNoData.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz yeterli benzer ürün verisi bulunamadı. Platforma eklendikçe tahminler daha isabetli hale gelecek. Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz.'**
+  String get aiAdviceNoData;
 }
 
 class _AppLocalizationsDelegate

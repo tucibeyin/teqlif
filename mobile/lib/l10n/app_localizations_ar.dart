@@ -4163,4 +4163,30 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get editProfileFillAll => 'يرجى ملء جميع الحقول';
+
+  @override
+  String aiAdviceSimilarCount(int count) {
+    return 'تم تحليل $count منتج مشابه';
+  }
+
+  @override
+  String aiAdviceSameCategory(int count) {
+    return '$count من نفس الفئة';
+  }
+
+  @override
+  String get aiAdviceCityBased => 'حسب المدينة';
+
+  @override
+  String aiAdviceMarketClose(String price) {
+    return 'متوسط سعر الإغلاق: $price ₺.';
+  }
+
+  @override
+  String get aiAdviceBimodal =>
+      'تم اكتشاف مستويين مختلفين للسعر (ثنائي النمط) في هذه المجموعة. قد يتفاوت السعر بحسب نوع المنتج أو الضمان.';
+
+  @override
+  String get aiAdviceNoData =>
+      'لم يتم العثور على بيانات كافية لمنتجات مشابهة حتى الآن. ستتحسن التقديرات مع إضافة المزيد من الإعلانات. يمكنك تحديد سعرك بإجراء بحث في السوق.';
 }
