@@ -303,9 +303,21 @@ async def record_impression(
 
     - Bütçe düşürmez; sadece istatistik kaydeder.
     - ClickHouse'a event_type='ad_impression' logu atılır.
-    - 'X kişi gördü' sayacı artık POST /listings/{id}/view ile ilan detayı açılışında yazılır.
+    - Redis'te ad_freq:{user_id}:{campaign_id} sayacını artırır (frekans kısıtı için).
     """
     user_id = _user_id_from_request(request)
+
+    if user_id:
+        try:
+            from app.utils.redis_client import get_redis as _get_redis
+            _redis = await _get_redis()
+            freq_key = f"ad_freq:{user_id}:{campaign_id}"
+            count = await _redis.incr(freq_key)
+            if count == 1:
+                await _redis.expire(freq_key, 86400)  # 24 saat TTL ilk artışta set edilir
+        except Exception as exc:
+            logger.warning("[Ads] Frekans sayacı yazılamadı | campaign=%d | %s", campaign_id, exc)
+
     background_tasks.add_task(_log_impression_to_clickhouse, campaign_id, user_id)
     return {"status": "queued"}
 

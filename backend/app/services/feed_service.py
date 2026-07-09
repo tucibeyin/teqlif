@@ -525,7 +525,7 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
     # Sponsored ilan enjeksiyonu — sadece ilk sayfa
     if page == 0:
         try:
-            ad_items = await _get_sponsored_listings(db, exclude_user_id=user_id)
+            ad_items = await _get_sponsored_listings(db, user_id=user_id, exclude_user_id=user_id)
             result = _inject_ads(result, ad_items)
         except Exception as exc:
             logger.warning("[Feed] Sponsored enjeksiyonu atlandı: %s", exc)
@@ -724,13 +724,52 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
 
 # ── Sponsored İlan Enjeksiyonu ────────────────────────────────────────────────
 
-async def _get_sponsored_listings(db: AsyncSession, exclude_user_id: int | None = None) -> list[dict]:
-    """
-    CTR × bid skoru ile sıralı sponsored ilan seçimi.
+_AD_FREQ_CAP = 3        # bir kullanıcı aynı reklamı 24 saatte max 3 kez görür
+_AD_FREQ_TTL = 86400    # saniye (24 saat)
+_CAT_MATCH_BOOST = 2.5  # kullanıcı ilgi kategorisiyle örtüşen reklama skor çarpanı
 
-    Eski: random.sample → her gösterimde rastgele kampanyalar seçiliyordu.
-    Yeni: (geçmiş CTR × cpc_bid) skoru yüksek kampanyalar öncelikli seçilir.
-          %80 en yüksek skora sahip kampanyalardan, %20 keşif için rastgele seçilir.
+
+async def _get_user_top_categories(user_id: int, db: AsyncSession, n: int = 5) -> list[str]:
+    """Kullanıcının son 30 gündeki izlenim geçmişinden en çok ilgi duyduğu kategorileri döndürür.
+    Sonuç 1 saat Redis'te önbelleklenir."""
+    redis = await get_redis()
+    cache_key = f"user_top_cats:{user_id}"
+    cached = await redis.get(cache_key)
+    if cached:
+        return json.loads(cached)
+
+    result = await db.execute(
+        text("""
+            SELECT l.category, COUNT(*) AS cnt
+            FROM listing_impressions li
+            JOIN listings l ON l.id = li.listing_id
+            WHERE li.user_id = :uid
+              AND li.seen_at > NOW() - INTERVAL '30 days'
+              AND l.is_deleted = FALSE
+            GROUP BY l.category
+            ORDER BY cnt DESC
+            LIMIT :n
+        """),
+        {"uid": user_id, "n": n},
+    )
+    cats = [row.category for row in result]
+    if cats:
+        await redis.set(cache_key, json.dumps(cats), ex=3600)
+    return cats
+
+
+async def _get_sponsored_listings(
+    db: AsyncSession,
+    user_id: int | None = None,
+    exclude_user_id: int | None = None,
+) -> list[dict]:
+    """
+    Kullanıcıya özel, frekans-kısıtlı ve kategori-hedefli sponsored ilan seçimi.
+
+    1. Redis'teki aktif kampanyaları tarar.
+    2. Aynı kullanıcıya aynı reklamı 24 saatte _AD_FREQ_CAP kereden fazla göstermez.
+    3. Kullanıcının son 30 günlük kategori geçmişiyle örtüşen reklamlara _CAT_MATCH_BOOST çarpanı uygular.
+    4. 80% exploit (en yüksek skor) + 20% keşif (rastgele) ile slot'ları doldurur.
     """
     redis = await get_redis()
 
@@ -746,7 +785,7 @@ async def _get_sponsored_listings(db: AsyncSession, exclude_user_id: int | None 
     if not campaign_ids:
         return []
 
-    # Kampanyaları CTR × bid skoruna göre sırala
+    # Kampanya meta verilerini çek
     rows = await db.execute(
         select(AdCampaign, Listing, User)
         .join(Listing, Listing.id == AdCampaign.listing_id)
@@ -763,13 +802,35 @@ async def _get_sponsored_listings(db: AsyncSession, exclude_user_id: int | None 
     if not candidates:
         return []
 
-    def _ad_score(campaign: AdCampaign) -> float:
-        # ClickHouse'tan CTR çekmek maliyetli olduğu için şimdilik sadece TBM (cpc_bid) bazlı sıralıyoruz.
-        return float(campaign.cpc_bid)
+    # ── Frekans kısıtı (frequency cap) ──────────────────────────────────────
+    if user_id:
+        freq_keys = [f"ad_freq:{user_id}:{c.id}" for c, _, _ in candidates]
+        counts = await redis.mget(*freq_keys)
+        candidates = [
+            row for row, cnt in zip(candidates, counts)
+            if cnt is None or int(cnt) < _AD_FREQ_CAP
+        ]
+        if not candidates:
+            return []
 
-    scored = sorted(candidates, key=lambda t: _ad_score(t[0]), reverse=True)
+    # ── Kullanıcı ilgi kategorileri ──────────────────────────────────────────
+    user_cats: set[str] = set()
+    if user_id:
+        try:
+            user_cats = set(await _get_user_top_categories(user_id, db))
+        except Exception:
+            pass
 
-    # %80 exploit (en iyi skorlular), %20 keşif (rastgele)
+    # ── Skor hesaplama: cpc_bid × kategori eşleşme çarpanı ──────────────────
+    def _ad_score(campaign: AdCampaign, listing: Listing) -> float:
+        score = float(campaign.cpc_bid)
+        if user_cats and listing.category in user_cats:
+            score *= _CAT_MATCH_BOOST
+        return score
+
+    scored = sorted(candidates, key=lambda t: _ad_score(t[0], t[1]), reverse=True)
+
+    # ── 80% exploit + 20% keşif ──────────────────────────────────────────────
     n_slots = len(AD_SLOTS)
     n_exploit = max(1, int(n_slots * 0.8))
     top = scored[:n_exploit]
@@ -897,7 +958,7 @@ async def get_mixed_recent_feed(
     # ── Sponsored enjeksiyonu (yalnızca page 0) ───────────────────────────────
     if page == 0:
         try:
-            ad_items = await _get_sponsored_listings(db, exclude_user_id=user_id)
+            ad_items = await _get_sponsored_listings(db, user_id=user_id, exclude_user_id=user_id)
             result = _inject_ads(result, ad_items)
         except Exception as exc:
             logger.warning("[MixedRecent] Sponsored enjeksiyonu atlandı: %s", exc)
