@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show compute;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';

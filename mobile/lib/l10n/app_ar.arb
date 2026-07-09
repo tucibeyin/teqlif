@@ -2073,5 +2073,21 @@
     }
   },
   "aiAdviceBimodal": "تم اكتشاف مستويين مختلفين للسعر (ثنائي النمط) في هذه المجموعة. قد يتفاوت السعر بحسب نوع المنتج أو الضمان.",
-  "aiAdviceNoData": "لم يتم العثور على بيانات كافية لمنتجات مشابهة حتى الآن. ستتحسن التقديرات مع إضافة المزيد من الإعلانات. يمكنك تحديد سعرك بإجراء بحث في السوق."
+  "aiAdviceNoData": "لم يتم العثور على بيانات كافية لمنتجات مشابهة حتى الآن. ستتحسن التقديرات مع إضافة المزيد من الإعلانات. يمكنك تحديد سعرك بإجراء بحث في السوق.",
+  "listingBlastEstimateLoading": "جارٍ حساب الجمهور المستهدف...",
+  "listingBlastDialogTitle": "إشعار جماعي للجمهور",
+  "listingBlastDialogBody": "تم العثور على {count} مشترٍ محتمل قد يهتم بإعلانك. هل تريد إرسال إشعار فوري لهم؟",
+  "@listingBlastDialogBody": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "listingBlastCost": "التكلفة: {cost} TUCi",
+  "@listingBlastCost": {
+    "placeholders": {
+      "cost": { "type": "int" }
+    }
+  },
+  "listingVideoComplete": "اكتمل الفيديو",
+  "audienceTotalViewers": "إجمالي المشاهدين"
 }
