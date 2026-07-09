@@ -2356,6 +2356,7 @@ async def category_velocity(
     ] if price_sens else []
 
     # Öneri metni
+    t = _get_t(get_locale(current_user, request))
     tip = None
     if avg_days and avg_days > 0:
         if price_sensitivity:
@@ -2364,7 +2365,6 @@ async def category_velocity(
             if ucuz and pahali and pahali["avg_days"] > 0 and ucuz["avg_days"] > 0:
                 speed_ratio = round(pahali["avg_days"] / ucuz["avg_days"], 1)
                 if speed_ratio >= 1.5:
-                    t = _get_t(get_locale(current_user, request))
                     tip = t.get("proSalesSpeedTip", "Piyasa ortalamasının altında fiyatlanan ilanlar {ratio}× daha hızlı satılıyor").replace("{ratio}", str(speed_ratio))
 
     return {

@@ -38,8 +38,8 @@ async def get_als_scores(user_id: int, listing_ids: list[int]) -> dict[int, floa
     if not listing_ids:
         return {}
 
-    from app.utils.redis_client import get_redis
-    redis = await get_redis()
+    from app.utils.redis_client import get_redis_binary
+    redis = await get_redis_binary()
 
     user_bytes = await redis.get(_USER_VEC_KEY.format(uid=user_id))
     if not user_bytes:
@@ -81,7 +81,7 @@ async def train_feed_als() -> None:
         return
 
     from app.database_clickhouse import get_clickhouse_client
-    from app.utils.redis_client import get_redis
+    from app.utils.redis_client import get_redis_binary as get_redis
 
     try:
         ch = await get_clickhouse_client()
