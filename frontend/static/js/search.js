@@ -75,6 +75,7 @@
 
     /* ── Keşfet verisini yükle ────────────────────────────────── */
     async function loadExplore() {
+        await Auth.ready; // token cookie'den restore edilsin, auth durumu kesin olsun
         exploreLoading.style.display = 'block';
         streamsSection.style.display = 'none';
         listingsSection.style.display = 'none';
@@ -141,7 +142,8 @@
     /* ── Arama ────────────────────────────────────────────────── */
     let _debounce = null;
 
-    function onInput() {
+    async function onInput() {
+        await Auth.ready;
         const q = searchInput.value.trim();
 
         if (!Auth.getToken()) {

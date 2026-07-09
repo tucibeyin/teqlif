@@ -180,8 +180,7 @@
 
     /* ── Başlat ──────────────────────────────────────────────── */
     function init() {
-        // Auth hazır olmadan önce getToken çağrılırsa null döner;
-        // Auth.getToken() synchronous olduğu için burada güvenli.
+        // Auth.ready await edildikten sonra çağrıldığı için token garanti edilir.
         const isLoggedIn = typeof Auth !== 'undefined' && !!Auth.getToken();
 
         if (!isLoggedIn) {
@@ -199,9 +198,8 @@
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', function () { Auth.ready.then(init); });
     } else {
-        // auth.js'nin token'ı yüklemesi için kısa gecikme
-        setTimeout(init, 50);
+        Auth.ready.then(init);
     }
 })();
