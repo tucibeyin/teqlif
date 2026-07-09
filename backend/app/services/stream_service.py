@@ -568,12 +568,12 @@ class StreamService:
         if ext is None:
             raise BadRequestException("Sadece JPEG, PNG veya WebP yüklenebilir")
 
+        from app.services import storage_service as storage
+        _CONTENT_TYPES = {"jpg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
         filename = f"thumb_{uuid.uuid4().hex}.{ext}"
-        os.makedirs(settings.upload_dir, exist_ok=True)
-        with open(os.path.join(settings.upload_dir, filename), "wb") as f:
-            f.write(data)
+        thumbnail_url = storage.upload_bytes(filename, data, _CONTENT_TYPES[ext])
 
-        stream.thumbnail_url = f"/uploads/{filename}"
+        stream.thumbnail_url = thumbnail_url
         try:
             await self.db.commit()
         except Exception as exc:

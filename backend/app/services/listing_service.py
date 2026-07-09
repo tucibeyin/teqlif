@@ -624,35 +624,23 @@ class ListingService:
             listing.image_url = new_images[0] if new_images else None
             listing.thumbnail_url = payload.get("thumbnail_url", listing.thumbnail_url)
             
+            from app.services import storage_service as storage
             for old_img in old_images:
                 if old_img not in new_images:
                     filename = old_img.split("/")[-1]
-                    file_path = os.path.join(settings.upload_dir, filename)
-                    try:
-                        if os.path.exists(file_path):
-                            os.remove(file_path)
-                        base, ext = os.path.splitext(filename)
-                        thumb_ext = ".jpg" if ext.lower() in (".jpg", ".webp", ".gif") else ".png"
-                        thumb_path = os.path.join(settings.upload_dir, f"{base}_thumb{thumb_ext}")
-                        if os.path.exists(thumb_path):
-                            os.remove(thumb_path)
-                    except Exception as e:
-                        logger.warning(f"Eski resim silinemedi: {filename} - {e}")
-                        
+                    base, ext = os.path.splitext(filename)
+                    thumb_ext = ".jpg" if ext.lower() in (".jpg", ".webp", ".gif") else ".png"
+                    storage.delete_object(filename)
+                    storage.delete_object(f"{base}_thumb{thumb_ext}")
+
         if "video_url" in payload:
             listing.video_url = new_video
             if old_video and old_video != new_video:
+                from app.services import storage_service as storage
                 filename = old_video.split("/")[-1]
-                file_path = os.path.join(settings.upload_dir, filename)
-                try:
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                    base, _ = os.path.splitext(filename)
-                    vthumb_path = os.path.join(settings.upload_dir, f"{base}_vthumb.jpg")
-                    if os.path.exists(vthumb_path):
-                        os.remove(vthumb_path)
-                except Exception as e:
-                    logger.warning(f"Eski video silinemedi: {filename} - {e}")
+                base, _ = os.path.splitext(filename)
+                storage.delete_object(filename)
+                storage.delete_object(f"{base}_vthumb.jpg")
 
         try:
             await self.db.commit()
