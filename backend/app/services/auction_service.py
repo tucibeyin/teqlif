@@ -1214,7 +1214,7 @@ class AuctionService:
         # Kazananın preference_embedding'ini kuyruğa al
         if winner_user_id:
             try:
-                from app.core.arq_pool import get_pool
+                from app.core.task_queue import get_pool
                 pool = get_pool()
                 if pool:
                     await pool.enqueue_job(
