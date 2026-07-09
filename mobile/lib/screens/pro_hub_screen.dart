@@ -881,7 +881,7 @@ class _CreditsSummaryCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                l.proCreditsUsedFormat(used, remaining),
+                                l.proCreditsUsedFormat(limit - remaining, remaining),
                                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                               ),
                             ],
