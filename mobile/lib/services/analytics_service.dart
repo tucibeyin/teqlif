@@ -52,19 +52,9 @@ class AnalyticsService {
 
   // ── PostHog ────────────────────────────────────────────────────────────────
 
-  static const _postHogKey = String.fromEnvironment('POSTHOG_API_KEY');
-  static const _postHogHost = String.fromEnvironment(
-    'POSTHOG_HOST',
-    defaultValue: 'https://eu.i.posthog.com',
-  );
-
   static Future<void> initPostHog() async {
-    if (_postHogKey.isEmpty) {
-      debugPrint('[PostHog] POSTHOG_API_KEY not set — skipping init');
-      return;
-    }
-    final config = PostHogConfig(_postHogKey)
-      ..host = _postHogHost
+    final config = PostHogConfig('phc_o9uA5ENbbCkucvfZorfYQjNrRnBMSgU3sUdgep7gBZwy')
+      ..host = 'https://eu.i.posthog.com'
       ..captureApplicationLifecycleEvents = true
       ..debug = kDebugMode;
     await Posthog().setup(config);
