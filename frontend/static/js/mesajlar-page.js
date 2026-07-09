@@ -4,6 +4,89 @@
     let _currentOtherUserId = null;
     let _currentOtherUsername = null;
 
+    // ── WebSocket (real-time DM) ───────────────────────────────────────────
+    let _ws = null;
+    let _wsReconnectDelay = 1000;
+    let _wsPingInterval = null;
+    let _wsDestroyed = false;
+
+    async function connectDmWs() {
+        if (_wsDestroyed) return;
+        const token = Auth.getToken();
+        if (!token) return;
+
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        try {
+            _ws = new WebSocket(`${proto}://${location.host}/api/messages/ws`);
+        } catch (_) {
+            scheduleReconnect();
+            return;
+        }
+
+        _ws.onopen = () => {
+            _wsReconnectDelay = 1000;
+            _ws.send(JSON.stringify({ token }));
+            clearInterval(_wsPingInterval);
+            _wsPingInterval = setInterval(() => {
+                if (_ws && _ws.readyState === WebSocket.OPEN) {
+                    try { _ws.send('ping'); } catch (_) {}
+                }
+            }, 25000);
+        };
+
+        _ws.onmessage = (e) => {
+            if (e.data === 'pong') return;
+            try {
+                const msg = JSON.parse(e.data);
+                handleDmEvent(msg);
+            } catch (_) {}
+        };
+
+        _ws.onclose = () => {
+            clearInterval(_wsPingInterval);
+            scheduleReconnect();
+        };
+
+        _ws.onerror = () => {
+            try { _ws.close(); } catch (_) {}
+        };
+    }
+
+    function scheduleReconnect() {
+        if (_wsDestroyed) return;
+        setTimeout(connectDmWs, _wsReconnectDelay);
+        _wsReconnectDelay = Math.min(_wsReconnectDelay * 2, 60000);
+    }
+
+    function handleDmEvent(msg) {
+        if (msg.type === 'message') {
+            const myId = myUser ? myUser.id : null;
+            const isFromCurrentChat =
+                _currentOtherUserId !== null &&
+                (msg.sender_id === _currentOtherUserId || msg.receiver_id === _currentOtherUserId);
+
+            if (isFromCurrentChat) {
+                // Sadece karşı tarafın mesajını ekle; kendi gönderdiğimizi sendMsg() zaten ekliyor
+                if (msg.sender_id !== myId) {
+                    appendBubble(msg, myId);
+                    scrollToBottom();
+                }
+            } else {
+                // Farklı bir konuşmadan mesaj geldi → listeyi yenile (unread badge görünsün)
+                loadConversations();
+            }
+        } else if (msg.type === 'messages_read') {
+            // Karşı taraf mesajlarımızı okudu → listede unread badge'i temizle
+            loadConversations();
+        }
+    }
+
+    window.addEventListener('beforeunload', () => {
+        _wsDestroyed = true;
+        clearInterval(_wsPingInterval);
+        if (_ws) try { _ws.close(); } catch (_) {}
+    });
+
     // ── Tab switching ──────────────────────────────────────────────────────
     function switchTab(name) {
         document.querySelectorAll('.tab-btn').forEach(b => {
@@ -219,6 +302,7 @@
     // ── Init ───────────────────────────────────────────────────────────────
     loadConversations();
     loadNotifications();
+    connectDmWs();
 
     // Auto-open chat if URL has ?to_id=&to_name= (e.g. from profil.html)
     (function checkUrlParams() {
