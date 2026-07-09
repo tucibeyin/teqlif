@@ -265,28 +265,24 @@ class _MessagesTabState extends State<_MessagesTab> {
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
+    if (_hasError && _conversations.isEmpty) {
+      return NetworkErrorWidget(scrollable: true, onRetry: _load);
+    }
     if (_conversations.isEmpty) {
-      return Column(
-        children: [
-          if (_hasError) _buildErrorBanner(),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.chat_bubble_outline, size: 64, color: Color(0xFFD1D5DB)),
-                  const SizedBox(height: 16),
-                  Text(
-                    l.msgNoMessages,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(l.msgNoMessagesDesc, textAlign: TextAlign.center),
-                ],
-              ),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.chat_bubble_outline, size: 64, color: Color(0xFFD1D5DB)),
+            const SizedBox(height: 16),
+            Text(
+              l.msgNoMessages,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(l.msgNoMessagesDesc, textAlign: TextAlign.center),
+          ],
+        ),
       );
     }
     return Column(
@@ -581,6 +577,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     final l = AppLocalizations.of(context)!;
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
+    }
+    if (_notifHasError && _notifications.isEmpty) {
+      return NetworkErrorWidget(scrollable: true, onRetry: _load);
     }
     if (_notifications.isEmpty) {
       return Center(

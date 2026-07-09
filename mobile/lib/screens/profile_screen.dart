@@ -55,6 +55,7 @@ class ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _user;
   List<dynamic> _listings = [];
   bool _loading = true;
+  bool _listingsError = false;
   bool _purchasesLoading = false;
   int? _tuciBalance;
   List<dynamic> _tuciHistory = [];
@@ -210,9 +211,9 @@ class ProfileScreenState extends State<ProfileScreen> {
         fromJson: (raw) => raw as List,
       ).listen(
         (listings) {
-          if (mounted) setState(() { _listings = listings; _loading = false; });
+          if (mounted) setState(() { _listings = listings; _loading = false; _listingsError = false; });
         },
-        onError: (_) { if (mounted) setState(() => _loading = false); },
+        onError: (_) { if (mounted) setState(() { _loading = false; _listingsError = true; }); },
       ),
     );
 
@@ -653,6 +654,10 @@ class ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
+            // ── Stale veri uyarısı ──
+            if (_listingsError && _listings.isNotEmpty)
+              SliverToBoxAdapter(child: StaleDataBanner(onRetry: () => _load(bypassCache: true))),
+
             // ── Arama & Kategori filtresi ──
             if (!_loading || _listings.isNotEmpty)
               SliverToBoxAdapter(
@@ -688,6 +693,11 @@ class ProfileScreenState extends State<ProfileScreen> {
                     childCount: 9,
                   ),
                 ),
+              )
+            else if (_listingsError && _listings.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: NetworkErrorWidget(scrollable: true, onRetry: () => _load(bypassCache: true)),
               )
             else if (_listings.isEmpty)
               SliverFillRemaining(

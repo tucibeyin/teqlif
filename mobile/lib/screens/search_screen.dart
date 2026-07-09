@@ -12,7 +12,9 @@ import '../services/api_service.dart';
 import '../services/feed_telemetry_service.dart';
 import '../services/storage_service.dart';
 import '../services/stream_service.dart';
+import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
+import '../widgets/stale_data_banner.dart';
 import '../widgets/streamer_avatar_card.dart';
 import '../widgets/seller_avatar_card.dart';
 import 'public_profile_screen.dart';
@@ -52,6 +54,7 @@ class SearchScreenState extends State<SearchScreen> {
   List<Map<String, dynamic>> _suggestedSellers = [];
   List<Map<String, dynamic>> _suggestedStreamers = [];
   bool _exploreLoading = true;
+  bool _exploreNetworkError = false;
   bool _isLoggedIn = false;
   int _forYouPage = 0;
   bool _forYouExhausted = false;
@@ -200,6 +203,7 @@ class SearchScreenState extends State<SearchScreen> {
     if (!mounted) return;
     setState(() {
       _exploreLoading = true;
+      _exploreNetworkError = false;
       _forYouPage = 0;
       _forYouExhausted = false;
     });
@@ -297,7 +301,10 @@ class SearchScreenState extends State<SearchScreen> {
         }
       });
       onData();
-    }, onError: (_) => onData());
+    }, onError: (_) {
+      if (mounted) setState(() => _exploreNetworkError = true);
+      onData();
+    });
   }
 
   void _loadExploreRecent({
@@ -319,7 +326,10 @@ class SearchScreenState extends State<SearchScreen> {
         });
       }
       onData();
-    }, onError: (_) => onData());
+    }, onError: (_) {
+      if (mounted) setState(() => _exploreNetworkError = true);
+      onData();
+    });
   }
 
   Future<void> _loadMoreRecentListings() async {
@@ -1108,35 +1118,41 @@ class SearchScreenState extends State<SearchScreen> {
           // ── Boş durum ────────────────────────────────────────────
           if (!_exploreLoading &&
               _exploreStreams.isEmpty &&
-              _exploreListings.isEmpty)
+              _exploreListings.isEmpty &&
+              _recentListings.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _isLoggedIn
-                            ? Icons.auto_awesome_outlined
-                            : Icons.explore_outlined,
-                        size: 56,
-                        color: const Color(0xFFD1D5DB),
+              child: _exploreNetworkError
+                  ? NetworkErrorWidget(scrollable: true, onRetry: () => _loadExplore(bypassCache: true))
+                  : Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isLoggedIn
+                                  ? Icons.auto_awesome_outlined
+                                  : Icons.explore_outlined,
+                              size: 56,
+                              color: const Color(0xFFD1D5DB),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _isLoggedIn
+                                  ? 'Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!'
+                                  : l.searchNoContent,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Color(0xFF6B7280)),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _isLoggedIn
-                            ? 'Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!'
-                            : l.searchNoContent,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFF6B7280)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                    ),
             ),
+          if (!_exploreLoading && _exploreNetworkError &&
+              (_exploreListings.isNotEmpty || _recentListings.isNotEmpty))
+            SliverToBoxAdapter(child: StaleDataBanner(onRetry: () => _loadExplore(bypassCache: true))),
         ],
       ),
     );
