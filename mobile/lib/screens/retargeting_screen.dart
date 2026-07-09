@@ -25,6 +25,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   bool _sending = false;
   bool _sent = false;
   int _sentCount = 0;
+  int _blastCooldownSeconds = 0;
 
   Future<List<Map<String, dynamic>>> _fetchListingsPage(int offset) async {
     final token = await StorageService.getToken();
@@ -46,11 +47,17 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       _loadingAudience = true;
       _audienceData = null;
       _sent = false;
+      _blastCooldownSeconds = 0;
     });
-    final data = await AnalyticsService.retargetingAudience(listing['id'] as int);
+    final listingId = listing['id'] as int;
+    final results = await Future.wait([
+      AnalyticsService.retargetingAudience(listingId),
+      AnalyticsService.getNotificationCooldown(listingId),
+    ]);
     if (mounted) {
       setState(() {
-        _audienceData = data;
+        _audienceData = results[0] as Map<String, dynamic>?;
+        _blastCooldownSeconds = (results[1] as int?) ?? 0;
         _loadingAudience = false;
       });
     }
@@ -156,7 +163,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
 
     if (result != null && result['error'] == null) {
       final sent = result['sent'] as int? ?? actualCount;
-      setState(() { _sent = true; _sentCount = sent; });
+      setState(() { _sent = true; _sentCount = sent; _blastCooldownSeconds = 86400; });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.retargetingBlastSuccess),
@@ -675,7 +682,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  child: _sent
+                  child: (_sent || _blastCooldownSeconds > 0)
                       ? Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(

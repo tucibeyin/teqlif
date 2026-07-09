@@ -45,6 +45,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
   // Toplu Kitle Bildirimi (Mass Notification)
   bool _massNotificationSending = false;
+  bool _cooldownLoading = false;
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
 
@@ -151,16 +152,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         // İlanın sahibiyiz — taze kampanya durumunu çek + bildirim cooldown'unu yükle
         _refreshCampaignStatus(token);
         final listingId = widget.listing['id'] as int?;
-        if (listingId != null) _loadNotificationCooldown(listingId);
+        if (listingId != null) {
+          setState(() => _cooldownLoading = true);
+          _loadNotificationCooldown(listingId);
+        }
       }
     }
   }
 
   Future<void> _loadNotificationCooldown(int listingId) async {
     final secs = await AnalyticsService.getNotificationCooldown(listingId);
-    if (!mounted || secs <= 0) return;
-    setState(() => _cooldownSeconds = secs);
-    _startCooldownTimer();
+    if (!mounted) return;
+    setState(() {
+      _cooldownLoading = false;
+      _cooldownSeconds = secs > 0 ? secs : 0;
+    });
+    if (secs > 0) _startCooldownTimer();
   }
 
   void _startCooldownTimer() {
@@ -1599,17 +1606,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ElevatedButton.icon(
-                          onPressed: _massNotificationSending
+                          onPressed: (_massNotificationSending || _cooldownLoading)
                               ? null
                               : _cooldownSeconds > 0
                                   ? () => _openMassNotificationReport(context)
                                   : () => _sendMassNotification(context),
-                          icon: _massNotificationSending
+                          icon: (_massNotificationSending || _cooldownLoading)
                               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                               : _cooldownSeconds > 0
                                   ? const Icon(Icons.auto_graph, size: 18)
                                   : const Text('📢', style: TextStyle(fontSize: 16)),
-                          label: Text(_cooldownSeconds > 0 ? l.btnViewNotificationReport : l.btnSendMassNotification),
+                          label: Text(_cooldownLoading ? '' : _cooldownSeconds > 0 ? l.btnViewNotificationReport : l.btnSendMassNotification),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF14B8A6),
                             foregroundColor: Colors.white,
