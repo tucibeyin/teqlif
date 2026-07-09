@@ -125,26 +125,37 @@ class _Manager:
         )
 
     def disconnect(self, ws: WebSocket, stream_id: int):
-        self._conns.get(stream_id, set()).discard(ws)
+        s = self._conns.get(stream_id)
+        if s is not None:
+            s.discard(ws)
+            if not s:
+                del self._conns[stream_id]
         total = len(self._conns.get(stream_id, set()))
         logger.info("[WS] AYRILDI | stream_id=%s | bu_worker=%s bağlı", stream_id, total)
 
     async def local_broadcast(self, stream_id: int, payload: dict):
-        """Sadece bu worker'daki WS bağlantılarına gönder."""
+        """Sadece bu worker'daki WS bağlantılarına paralel fan-out."""
         targets = list(self._conns.get(stream_id, set()))
         if not targets:
             return
-        dead = set()
-        for ws in targets:
+
+        async def _send(ws: WebSocket) -> bool:
             try:
                 await ws.send_json(payload)
+                return True
             except Exception as exc:
                 logger.error("[WS] SEND HATA | stream_id=%s | %s", stream_id, exc)
-                dead.add(ws)
+                return False
+
+        results = await asyncio.gather(*[_send(ws) for ws in targets], return_exceptions=True)
+        dead = {ws for ws, ok in zip(targets, results) if ok is not True}
         if dead:
-            logger.error("[WS] %s ölü bağlantı temizlendi | stream_id=%s", len(dead), stream_id)
-            for ws in dead:
-                self._conns.get(stream_id, set()).discard(ws)
+            logger.info("[WS] %s ölü bağlantı temizlendi | stream_id=%s", len(dead), stream_id)
+            s = self._conns.get(stream_id)
+            if s is not None:
+                s -= dead
+                if not s:
+                    del self._conns[stream_id]
 
     def conn_count(self, stream_id: int) -> int:
         return len(self._conns.get(stream_id, set()))

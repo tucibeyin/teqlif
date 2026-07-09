@@ -155,7 +155,11 @@ class GlobalWSManager:
                 alive += 1
             else:
                 live_set.discard(ws)
-                self._ws_topics.get(ws, set()).discard(topic)
+                ws_topics = self._ws_topics.get(ws)
+                if ws_topics is not None:
+                    ws_topics.discard(topic)
+                    if not ws_topics:
+                        del self._ws_topics[ws]
                 logger.debug(
                     "[WS GATEWAY] Ölü bağlantı temizlendi | topic=%s result=%s",
                     topic, result,
