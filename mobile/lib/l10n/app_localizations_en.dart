@@ -2562,7 +2562,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retargetingBlastCooldown =>
-      'You need to wait 7 days for the next broadcast.';
+      'You can send the next broadcast for this listing in 24 hours.';
 
   @override
   String get retargetingDialogTitle => 'Send notification?';

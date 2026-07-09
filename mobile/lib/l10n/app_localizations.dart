@@ -4797,7 +4797,7 @@ abstract class AppLocalizations {
   /// No description provided for @retargetingBlastCooldown.
   ///
   /// In tr, this message translates to:
-  /// **'Bir sonraki toplu duyuru için 7 gün beklemeniz gerekiyor.'**
+  /// **'Bu ilan için bir sonraki toplu duyuruyu 24 saat sonra gönderebilirsiniz.'**
   String get retargetingBlastCooldown;
 
   /// No description provided for @retargetingDialogTitle.

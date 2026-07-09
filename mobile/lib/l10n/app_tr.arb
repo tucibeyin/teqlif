@@ -1289,7 +1289,7 @@
       }
     }
   },
-  "retargetingBlastCooldown": "Bir sonraki toplu duyuru için 7 gün beklemeniz gerekiyor.",
+  "retargetingBlastCooldown": "Bu ilan için bir sonraki toplu duyuruyu 24 saat sonra gönderebilirsiniz.",
   "retargetingDialogTitle": "Bildirim gönderilsin mi?",
   "retargetingDialogBodyFree": "{count} kişiye \"Hâlâ ilgileniyor musun?\" bildirimi gönderilecek. {credits} bildirim krediniz var, ücretsiz gönderilecek.",
   "@retargetingDialogBodyFree": {

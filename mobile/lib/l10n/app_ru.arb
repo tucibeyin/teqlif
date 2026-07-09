@@ -1532,7 +1532,7 @@
   "radarSuggestedCopied": "{price} ₺ скопировано в буфер обмена",
   "radarCopyBtn": "Копировать предложенную цену: {price} ₺",
   "retargetingBlastSent": "Уведомление отправлено {count} людям!",
-  "retargetingBlastCooldown": "Следующую трансляцию нужно дождаться 7 дней.",
+  "retargetingBlastCooldown": "Следующую рассылку для этого объявления можно отправить через 24 часа.",
   "retargetingDialogTitle": "Отправить уведомление?",
   "retargetingDialogBodyFree": "«Все еще интересно?» уведомление будет отправлено {count} людям. У вас есть баллы на уведомления {credits}, которые отправляются бесплатно.",
   "retargetingDialogBodyPaid": "«Все еще интересно?» уведомление будет отправлено {count} людям. {cost} TUCi будет списано с вашего кошелька.",

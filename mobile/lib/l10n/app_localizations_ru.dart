@@ -2597,7 +2597,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get retargetingBlastCooldown =>
-      'Следующую трансляцию нужно дождаться 7 дней.';
+      'Следующую рассылку для этого объявления можно отправить через 24 часа.';
 
   @override
   String get retargetingDialogTitle => 'Отправить уведомление?';

@@ -2564,7 +2564,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get retargetingBlastCooldown =>
-      'Bir sonraki toplu duyuru için 7 gün beklemeniz gerekiyor.';
+      'Bu ilan için bir sonraki toplu duyuruyu 24 saat sonra gönderebilirsiniz.';
 
   @override
   String get retargetingDialogTitle => 'Bildirim gönderilsin mi?';
