@@ -31,6 +31,7 @@
     }
 
     async function loadProfile() {
+        await Auth.ready;
         const inner = document.getElementById('profileInner');
         try {
             const user = await apiFetch(`/users/${encodeURIComponent(username)}`);

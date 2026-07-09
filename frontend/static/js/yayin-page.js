@@ -45,6 +45,7 @@
     }
 
     async function init() {
+        await Auth.ready;
         let info = Stream.load();
 
         // Session'da bilgi yoksa ya da ID uyuşmuyorsa — direkt URL ile gelen viewer
