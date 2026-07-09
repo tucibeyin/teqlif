@@ -78,7 +78,7 @@ const Auth = (() => {
     async function login(email, password) {
         const data = await apiFetch('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ login_identifier: email, password }),
         });
         _save(data);
         return data;
