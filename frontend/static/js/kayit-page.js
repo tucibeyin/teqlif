@@ -91,13 +91,17 @@
             registeredEmail = document.getElementById('email').value.trim();
             const rawPhone = phoneInput.value.trim();
             const digits = rawPhone.replace(/\D/g, '');
+            const lang = (navigator.language || 'tr').split('-')[0];
+            const refCode = new URLSearchParams(window.location.search).get('ref') || '';
             const payload = {
                 full_name: document.getElementById('full_name').value.trim(),
                 username: document.getElementById('username').value.trim(),
                 email: registeredEmail,
                 password: document.getElementById('password').value,
+                lang,
             };
             if (digits.length === 11) payload.phone = '+90' + digits.slice(1);
+            if (refCode) payload.referred_by = refCode;
 
             await Auth.register(payload);
             document.getElementById('stepRegister').style.display = 'none';

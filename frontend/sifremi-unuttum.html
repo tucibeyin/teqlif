@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Şifremi Unuttum — teqlif</title>
+    <meta name="description" content="teqlif şifre sıfırlama">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <link rel="manifest" href="/static/icons/manifest.json">
+    <meta name="theme-color" content="#06b6d4">
+    <link rel="stylesheet" href="/static/css/main.css">
+
+    <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script src="/static/js/sentry-init.js"></script>
+</head>
+
+<body>
+    <nav>
+        <a href="/" class="logo" data-track-id="sifre-nav-logo-anasayfa">teqlif</a>
+        <div class="nav-links">
+            <a href="/giris.html" data-track-id="sifre-nav-link-giris">Giriş Yap</a>
+        </div>
+    </nav>
+
+    <div class="page-center">
+        <div class="form-card">
+
+            <!-- Adım 1: E-posta -->
+            <div id="stepEmail">
+                <h2>Şifremi Unuttum</h2>
+                <p class="subtitle">E-posta adresine sıfırlama kodu gönderilecek</p>
+
+                <div class="alert" id="alertEmail"></div>
+
+                <form id="emailForm" data-track-id="sifre-form-email">
+                    <div class="form-group">
+                        <label for="email">E-posta</label>
+                        <input type="email" id="email" placeholder="ornek@mail.com" required autocomplete="email" data-track-id="sifre-input-email">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="emailBtn" data-track-id="sifre-btn-kod-gonder">
+                        Kod Gönder
+                    </button>
+                </form>
+
+                <div class="form-footer">
+                    <a href="/giris.html" data-track-id="sifre-link-giriste-kal">Giriş sayfasına dön</a>
+                </div>
+            </div>
+
+            <!-- Adım 2: Kod + Yeni Şifre -->
+            <div id="stepReset" style="display:none;">
+                <h2>Yeni Şifre</h2>
+                <p class="subtitle" id="resetSubtitle"></p>
+
+                <div class="alert" id="alertReset"></div>
+
+                <form id="resetForm" data-track-id="sifre-form-reset">
+                    <div class="form-group">
+                        <label for="code">Doğrulama Kodu</label>
+                        <input type="text" id="code" placeholder="123456" required
+                            autocomplete="one-time-code"
+                            inputmode="numeric" maxlength="6"
+                            style="letter-spacing:4px;font-size:1.2rem;font-weight:700;text-align:center;"
+                            data-track-id="sifre-input-kod">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">Yeni Şifre</label>
+                        <input type="password" id="newPassword" placeholder="En az 8 karakter" required
+                            autocomplete="new-password" minlength="8" data-track-id="sifre-input-yeni-sifre">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPasswordConfirm">Yeni Şifre (Tekrar)</label>
+                        <input type="password" id="newPasswordConfirm" placeholder="Şifreyi tekrar girin" required
+                            autocomplete="new-password" minlength="8" data-track-id="sifre-input-sifre-tekrar">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="resetBtn" data-track-id="sifre-btn-sifreyi-guncelle">
+                        Şifreyi Güncelle
+                    </button>
+                </form>
+
+                <div class="form-footer">
+                    Kod gelmedi mi?
+                    <a href="#" id="resendLink" data-track-id="sifre-link-tekrar-gonder">Tekrar gönder</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <a href="/" class="logo" data-track-id="footer-logo-anasayfa">teqlif</a>
+            </div>
+            <div class="footer-links">
+                <a href="/support.html" data-track-id="footer-link-destek">Yardım Merkezi</a>
+                <a href="/gizlilik-politikasi.html" data-track-id="footer-link-gizlilik">Gizlilik Politikası</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 teqlif. Tüm hakları saklıdır.
+        </div>
+    </footer>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/auth.js?v=7"></script>
+    <script src="/static/js/sifremi-unuttum-page.js?v=1"></script>
+</body>
+
+</html>

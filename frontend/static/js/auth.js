@@ -100,6 +100,21 @@ const Auth = (() => {
         return data;
     }
 
+    async function forgotPassword(email) {
+        const lang = (navigator.language || 'tr').split('-')[0];
+        return apiFetch('/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email, lang }),
+        });
+    }
+
+    async function resetPassword(email, code, newPassword) {
+        return apiFetch('/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({ email, code, new_password: newPassword }),
+        });
+    }
+
     async function me() {
         // Reuse the cached init context if available — avoids a redundant /auth/me call.
         if (_initCtxPromise) {
@@ -117,7 +132,7 @@ const Auth = (() => {
         return _initCtxPromise;
     }
 
-    return { getToken, getUser, login, register, verify, logout, tryRefresh, me, getInitContext };
+    return { getToken, getUser, login, register, verify, forgotPassword, resetPassword, logout, tryRefresh, me, getInitContext };
 })();
 
 // Sayfa yüklenince token bellekte yoksa HttpOnly cookie üzerinden restore et.

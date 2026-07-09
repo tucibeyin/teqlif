@@ -1,4 +1,12 @@
-    const _nextUrl = new URLSearchParams(location.search).get('next') || '/';
+    const _params = new URLSearchParams(location.search);
+    const _nextUrl = _params.get('next') || '/';
+
+    if (_params.get('reset') === '1') {
+        const alertEl = document.getElementById('alert');
+        alertEl.textContent = 'Şifreniz güncellendi. Yeni şifrenizle giriş yapabilirsiniz.';
+        alertEl.className = 'alert alert-success show';
+    }
+
     if (Auth.getToken()) { window.location.href = _nextUrl; }
     else if (Auth.getUser()) {
         // Kullanıcı adı localStorage'da var ama token yok → oturum sona ermiş.
