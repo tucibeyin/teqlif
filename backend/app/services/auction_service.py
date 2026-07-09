@@ -180,7 +180,7 @@ async def pubsub_listener():
 
     delay = 1.0
     while True:
-        r = aioredis.from_url(settings.redis_url, decode_responses=True, socket_keepalive=True)
+        r = aioredis.from_url(settings.redis_url, decode_responses=True)
         pubsub = r.pubsub()
         keepalive_task: asyncio.Task | None = None
         try:
@@ -188,16 +188,19 @@ async def pubsub_listener():
             logger.info("[PUBSUB] Dinleyici başladı (worker)")
             delay = 1.0  # başarılı bağlantıda sıfırla
 
-            # Redis'in idle timeout'unu önlemek için periyodik PING gönder
-            async def _keepalive(ps: aioredis.client.PubSub) -> None:
+            async def _keepalive(ps: aioredis.client.PubSub, conn: aioredis.Redis) -> None:
                 while True:
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(25)
                     try:
                         await ps.ping()
                     except Exception:
+                        try:
+                            await conn.aclose()
+                        except Exception:
+                            pass
                         break
 
-            keepalive_task = asyncio.create_task(_keepalive(pubsub))
+            keepalive_task = asyncio.create_task(_keepalive(pubsub, r))
 
             async for message in pubsub.listen():
                 if message["type"] in ("pong", "subscribe", "unsubscribe"):

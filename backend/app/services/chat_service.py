@@ -85,7 +85,7 @@ async def chat_pubsub_listener() -> None:
     """
     delay = 1.0
     while True:
-        r = aioredis.from_url(settings.redis_url, decode_responses=True, socket_keepalive=True)
+        r = aioredis.from_url(settings.redis_url, decode_responses=True)
         pubsub = r.pubsub()
         keepalive_task: asyncio.Task | None = None
         try:
@@ -146,7 +146,7 @@ async def moderation_pubsub_listener() -> None:
     """
     delay = 1.0
     while True:
-        r = aioredis.from_url(settings.redis_url, decode_responses=True, socket_keepalive=True)
+        r = aioredis.from_url(settings.redis_url, decode_responses=True)
         pubsub = r.pubsub()
         keepalive_task: asyncio.Task | None = None
         try:
