@@ -806,6 +806,11 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
   Future<void> _showGiftSheet() async {
     final hostUsername = _resolvedHostUsername ?? widget.stream.host.username;
     if (hostUsername.isEmpty) return;
+    AnalyticsService.logInteraction(
+      itemId: widget.stream.id,
+      itemType: 'stream',
+      interactionType: 'stream_gift_sheet_open',
+    );
 
     const gifts = [
       ('🔥 Ateş', 10),
@@ -1479,6 +1484,13 @@ class _GiftSheetState extends State<_GiftSheet> {
     if (!mounted) return;
     setState(() => _sending = false);
     if (result['ok'] == true) {
+      AnalyticsService.logInteraction(
+        itemId: widget.streamId,
+        itemType: 'stream',
+        interactionType: 'stream_gift_sent',
+        pricePoint: cost.toDouble(),
+        metadata: {'gift_name': giftName},
+      );
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

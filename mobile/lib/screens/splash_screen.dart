@@ -86,6 +86,10 @@ class _SplashScreenState extends State<SplashScreen> {
     await AnalyticsService.setConsent(true);
     await AnalyticsService.init();
 
+    AnalyticsService.trackEvent('session_start', {
+      'platform': Platform.isIOS ? 'ios' : 'android',
+    });
+
     if (!mounted) return;
 
     // Cold-start deep link'i yakala — token kontrolünden önce çalışmalı

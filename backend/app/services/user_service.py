@@ -190,4 +190,10 @@ class UserService:
             "tuci_balance": user.tuci_balance,
             "bio": user.bio,
             "website_url": user.website_url,
+            "instagram_url": user.instagram_url,
+            "kick_url": user.kick_url,
+            "twitch_url": user.twitch_url,
+            "facebook_url": user.facebook_url,
+            "youtube_url": user.youtube_url,
+            "tiktok_url": user.tiktok_url,
         }

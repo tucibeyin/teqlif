@@ -553,7 +553,11 @@ async def compute_user_interests_task(ctx: dict) -> None:
                       AND created_at > NOW() - INTERVAL '30 days'
                       AND event_type IN (
                           'listing_view', 'listing_skip',
-                          'listing_photo_swipe', 'listing_video_watch'
+                          'listing_photo_swipe', 'listing_video_watch',
+                          'listing_offer_submit', 'listing_share',
+                          'listing_favorite', 'listing_unfavorite',
+                          'listing_chat_open', 'listing_like',
+                          'detail_dwell', 'listing_photo_fullscreen'
                       )
                       AND event_metadata->>'category' IS NOT NULL
                 ),
@@ -562,12 +566,20 @@ async def compute_user_interests_task(ctx: dict) -> None:
                         user_id,
                         category,
                         SUM(time_w * CASE
-                            WHEN event_type = 'listing_skip'  THEN -1.0
-                            WHEN event_type = 'listing_photo_swipe' THEN 2.0 * COALESCE(swipe_count, 1)
+                            WHEN event_type = 'listing_offer_submit'   THEN 5.0
+                            WHEN event_type = 'listing_share'          THEN 4.0
+                            WHEN event_type = 'listing_favorite'       THEN 3.0
+                            WHEN event_type = 'listing_chat_open'      THEN 3.0
+                            WHEN event_type = 'listing_like'           THEN 1.5
+                            WHEN event_type = 'listing_photo_fullscreen' THEN 1.5
+                            WHEN event_type = 'listing_unfavorite'     THEN -1.0
+                            WHEN event_type = 'listing_skip'           THEN -1.0
+                            WHEN event_type = 'listing_photo_swipe'    THEN 2.0 * COALESCE(swipe_count, 1)
                             WHEN event_type = 'listing_video_watch' AND watch_pct >= 80 THEN 3.0
                             WHEN event_type = 'listing_video_watch' AND watch_pct >= 30 THEN 1.0
+                            WHEN event_type = 'detail_dwell'           THEN 2.5
                             WHEN event_type = 'listing_view' AND dwell_sec >= 10 THEN 2.0
-                            WHEN event_type = 'listing_view' THEN 1.0
+                            WHEN event_type = 'listing_view'           THEN 1.0
                             ELSE 0.0
                         END) AS raw_score
                     FROM time_weight

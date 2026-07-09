@@ -4,10 +4,22 @@ import 'package:url_launcher/url_launcher_string.dart';
 import '../config/theme.dart';
 import '../config/app_colors.dart';
 import '../l10n/app_localizations.dart';
+import '../services/analytics_service.dart';
 import '../services/version_service.dart';
 
-class SoftUpdateDialog extends StatelessWidget {
+class SoftUpdateDialog extends StatefulWidget {
   const SoftUpdateDialog({super.key});
+
+  @override
+  State<SoftUpdateDialog> createState() => _SoftUpdateDialogState();
+}
+
+class _SoftUpdateDialogState extends State<SoftUpdateDialog> {
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.trackEvent('update_prompt_shown', {});
+  }
 
   Future<void> _launchStore() async {
     final url = Platform.isIOS ? VersionService.iosStoreUrl : VersionService.androidStoreUrl;
@@ -45,6 +57,7 @@ class SoftUpdateDialog extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
+                  AnalyticsService.trackEvent('update_prompt_accepted', {});
                   _launchStore();
                   Navigator.pop(context);
                 },
@@ -54,7 +67,10 @@ class SoftUpdateDialog extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                AnalyticsService.trackEvent('update_prompt_dismissed', {});
+                Navigator.pop(context);
+              },
               child: Text(
                 l.softUpdateLater,
                 style: TextStyle(color: AppColors.textSecondary(context)),

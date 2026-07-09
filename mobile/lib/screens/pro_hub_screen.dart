@@ -39,6 +39,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
     _loadCredits();
     _verifyPremium();
     _loadLocalPlanType();
+    AnalyticsService.trackEvent('pro_hub_view', {'is_premium': widget.isPremium});
   }
 
   Future<void> _loadLocalPlanType() async {
@@ -325,6 +326,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
   }
 
   void _showUpgrade(BuildContext context) {
+    AnalyticsService.trackEvent('pro_upgrade_intent', {});
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,

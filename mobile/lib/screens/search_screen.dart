@@ -452,6 +452,9 @@ class SearchScreenState extends State<SearchScreen> {
         _searching = false;
       });
       AnalyticsService.trackSearch(query: q, resultCount: resultCount);
+      if (resultCount == 0) {
+        AnalyticsService.trackEvent('search_no_results', {'query': q});
+      }
     } catch (_) {
       if (mounted && myToken == _searchToken) {
         setState(() => _searching = false);
@@ -728,6 +731,11 @@ class SearchScreenState extends State<SearchScreen> {
                     if (id != null && _isLoggedIn) {
                       _trackInteraction(id, ownerId);
                     }
+                    AnalyticsService.trackEvent('search_result_tap', {
+                      'item_type': 'listing',
+                      'item_id': id,
+                      'position': i,
+                    });
                     Navigator.push(
                       ctx,
                       MaterialPageRoute(

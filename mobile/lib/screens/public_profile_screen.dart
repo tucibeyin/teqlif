@@ -2,6 +2,8 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/analytics_service.dart';
 import '../services/share_service.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_colors.dart';
@@ -543,7 +545,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ],
                   ),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                _SocialLinksRow(user: _user, userId: userId),
+                const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -1478,6 +1482,88 @@ class _LiveAvatarRingState extends State<_LiveAvatarRing>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SocialLinksRow extends StatelessWidget {
+  final Map<String, dynamic>? user;
+  final int? userId;
+
+  const _SocialLinksRow({required this.user, required this.userId});
+
+  static const _platforms = [
+    ('instagram_url', 'IG', Color(0xFFE1306C)),
+    ('kick_url', 'KICK', Color(0xFF53FC18)),
+    ('twitch_url', 'TV', Color(0xFF9146FF)),
+    ('facebook_url', 'FB', Color(0xFF1877F2)),
+    ('youtube_url', 'YT', Color(0xFFFF0000)),
+    ('tiktok_url', 'TT', Color(0xFF010101)),
+    ('website_url', 'WEB', Color(0xFF0EA5E9)),
+  ];
+
+  String _platformKey(String field) {
+    switch (field) {
+      case 'instagram_url': return 'instagram';
+      case 'kick_url': return 'kick';
+      case 'twitch_url': return 'twitch';
+      case 'facebook_url': return 'facebook';
+      case 'youtube_url': return 'youtube';
+      case 'tiktok_url': return 'tiktok';
+      default: return 'website';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final links = _platforms
+        .where((p) => (user?[p.$1] as String?)?.isNotEmpty == true)
+        .toList();
+    if (links.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: links.map((p) {
+        final (field, label, color) = p;
+        return GestureDetector(
+          onTap: () async {
+            final raw = user![field] as String;
+            final uri = Uri.tryParse(raw.startsWith('http') ? raw : 'https://$raw');
+            if (uri != null && await canLaunchUrl(uri)) {
+              AnalyticsService.logInteraction(
+                itemId: userId ?? 0,
+                itemType: 'user',
+                interactionType: 'social_link_tap',
+                metadata: {'platform': _platformKey(field)},
+              );
+              launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color == const Color(0xFF010101)
+                    ? (Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black)
+                    : color,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

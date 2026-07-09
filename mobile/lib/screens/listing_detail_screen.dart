@@ -49,6 +49,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
 
+  // Scroll depth tracking
+  late final ScrollController _scrollCtrl;
+  double _maxScrollDepth = 0.0; // 0.0–1.0
+
   // Video player
   String? _videoUrl;
   VideoPlayerController? _videoCtrl;
@@ -106,6 +110,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         setState(() => _videoInitialized = true);
       });
     }
+    _scrollCtrl = ScrollController()
+      ..addListener(() {
+        final pos = _scrollCtrl.position;
+        if (pos.maxScrollExtent > 0) {
+          final depth = (pos.pixels / pos.maxScrollExtent).clamp(0.0, 1.0);
+          if (depth > _maxScrollDepth) _maxScrollDepth = depth;
+        }
+      });
     _loadMyId();
     _loadOffers();
     _loadSimilarListings();
@@ -229,6 +241,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     if (token == null) return;
     // Optimistic UI
     HapticFeedback.lightImpact();
+    final listingId = widget.listing['id'] as int?;
+    final rawPrice = widget.listing['price'];
+    final pricePoint = rawPrice != null ? (rawPrice as num).toDouble() : null;
     final prevLiked = _isLiked;
     final prevCount = _likesCount;
     final prevFav = _isFavorited;
@@ -263,6 +278,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           _isLiked = newLiked;
           _isFavorited = newLiked;
         });
+        if (listingId != null) {
+          AnalyticsService.logInteraction(
+            itemId: listingId,
+            itemType: 'listing',
+            interactionType: newLiked ? 'listing_like' : 'listing_unlike',
+            pricePoint: pricePoint,
+          );
+        }
       }
     } catch (_) {
       widget.listing['likes_count'] = prevCount;
@@ -318,20 +341,28 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   Future<void> _toggleFavorite() async {
     final token = await StorageService.getToken();
     if (token == null) return;
-    final id = widget.listing['id'];
+    final id = widget.listing['id'] as int?;
+    final rawPrice = widget.listing['price'];
+    final pricePoint = rawPrice != null ? (rawPrice as num).toDouble() : null;
     try {
       if (_isFavorited) {
         await http.delete(
           Uri.parse('$kBaseUrl/favorites/$id'),
           headers: {'Authorization': 'Bearer $token'},
         );
-        if (mounted) setState(() { _isFavorited = false; _isLiked = false; });
+        if (mounted) {
+          setState(() { _isFavorited = false; _isLiked = false; });
+          if (id != null) AnalyticsService.logInteraction(itemId: id, itemType: 'listing', interactionType: 'listing_unfavorite', pricePoint: pricePoint);
+        }
       } else {
         await http.post(
           Uri.parse('$kBaseUrl/favorites/$id'),
           headers: {'Authorization': 'Bearer $token'},
         );
-        if (mounted) setState(() { _isFavorited = true; _isLiked = true; });
+        if (mounted) {
+          setState(() { _isFavorited = true; _isLiked = true; });
+          if (id != null) AnalyticsService.logInteraction(itemId: id, itemType: 'listing', interactionType: 'listing_favorite', pricePoint: pricePoint);
+        }
       }
     } catch (_) {}
   }
@@ -475,6 +506,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         durationSeconds: _maxPhotoReached.toDouble(),
       );
     }
+    // Scroll depth
+    if (listingId != null && _maxScrollDepth > 0.1) {
+      AnalyticsService.logInteraction(
+        itemId: listingId,
+        itemType: 'listing',
+        interactionType: 'listing_scroll_depth',
+        durationSeconds: _maxScrollDepth,
+      );
+    }
+    _scrollCtrl.dispose();
     // Video completion
     if (listingId != null && _videoCtrl != null && _videoInitialized) {
       final dur = _videoCtrl!.value.duration.inMilliseconds;
@@ -561,6 +602,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       await ListingService.placeOffer(id, amount);
       if (!mounted) return;
       _offerCtrl.clear();
+      AnalyticsService.logInteraction(
+        itemId: id,
+        itemType: 'listing',
+        interactionType: 'listing_offer_submit',
+        pricePoint: amount.toDouble(),
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l.offerSuccess)),
       );
@@ -588,6 +635,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   void _goToProfile() {
     final user = widget.listing['user'] as Map<String, dynamic>?;
     if (user == null) return;
+    final sellerId = user['id'] as int?;
+    if (sellerId != null && sellerId != _myUserId) {
+      AnalyticsService.logInteraction(
+        itemId: widget.listing['id'] as int? ?? 0,
+        itemType: 'listing',
+        interactionType: 'listing_profile_tap',
+        metadata: {'seller_id': sellerId},
+      );
+    }
     // Kendi ilanıysa kendi profil ekranına git (loop'u önle)
     if (_myUserId != null && user['id'] == _myUserId) {
       Navigator.push(
@@ -627,6 +683,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       return;
     }
 
+    AnalyticsService.logInteraction(
+      itemId: widget.listing['id'] as int? ?? 0,
+      itemType: 'listing',
+      interactionType: 'listing_chat_open',
+      metadata: {'seller_id': otherId},
+    );
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1127,12 +1189,19 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               icon: const Icon(Icons.share_outlined),
               tooltip: l.btnShare,
               onPressed: () {
-                final id = listing['id'];
+                final id = listing['id'] as int?;
                 final box = btnCtx.findRenderObject() as RenderBox?;
                 final origin = box == null
                     ? Rect.zero
                     : box.localToGlobal(Offset.zero) & box.size;
                 final imageUrl = (_images.isNotEmpty) ? _images.first : null;
+                if (id != null) {
+                  AnalyticsService.logInteraction(
+                    itemId: id,
+                    itemType: 'listing',
+                    interactionType: 'listing_share',
+                  );
+                }
                 ShareService.show(
                   btnCtx,
                   url: 'https://www.teqlif.com/ilan/$id',
@@ -1198,6 +1267,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         ],
       ),
       body: SingleChildScrollView(
+        controller: _scrollCtrl,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1992,6 +2062,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   void _openFullscreen(int startIndex) {
+    final listingId = widget.listing['id'] as int?;
+    if (listingId != null) {
+      AnalyticsService.logInteraction(
+        itemId: listingId,
+        itemType: 'listing',
+        interactionType: 'listing_photo_fullscreen',
+        metadata: {'photo_index': startIndex},
+      );
+    }
     Navigator.push(
       context,
       MaterialPageRoute(

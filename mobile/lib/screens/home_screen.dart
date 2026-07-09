@@ -429,9 +429,11 @@ class HomeScreenState extends State<HomeScreen> {
                 return GestureDetector(
                   key: Key('home_cat_$slug'),
                   onTap: () {
-                    setState(
-                      () => _selectedCategory = isSelected ? null : slug,
-                    );
+                    final next = isSelected ? null : slug;
+                    setState(() => _selectedCategory = next);
+                    if (next != null) {
+                      AnalyticsService.trackEvent('filter_applied', {'category': next, 'source': 'home'});
+                    }
                     _load();
                   },
                   child: Container(

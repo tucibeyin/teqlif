@@ -11,6 +11,7 @@ import '../core/logger_service.dart';
 import '../l10n/app_localizations.dart';
 import '../models/chat.dart';
 import '../screens/public_profile_screen.dart';
+import '../services/analytics_service.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../utils/username_color.dart';
@@ -670,6 +671,11 @@ class ChatPanelState extends State<ChatPanel> {
   void _sendMessage() {
     final content = _inputCtrl.text.trim();
     if (content.isEmpty) return;
+    AnalyticsService.logInteraction(
+      itemId: widget.streamId,
+      itemType: 'stream',
+      interactionType: 'stream_chat_send',
+    );
     _lastSentText = content;
     _ws?.send({'type': 'message', 'content': content});
     _inputCtrl.clear();

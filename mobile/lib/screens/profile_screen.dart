@@ -17,6 +17,7 @@ import '../core/logger_service.dart';
 import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
 
+import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/cache_service.dart';
@@ -619,6 +620,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ],
+                        _SocialLinksRow(user: _user, userId: _user?['id'] as int?),
                       ],
                     ),
                   ),
@@ -2048,6 +2050,12 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
   late final TextEditingController _usernameCtrl;
   late final TextEditingController _bioCtrl;
   late final TextEditingController _linkCtrl;
+  late final TextEditingController _instagramCtrl;
+  late final TextEditingController _kickCtrl;
+  late final TextEditingController _twitchCtrl;
+  late final TextEditingController _facebookCtrl;
+  late final TextEditingController _youtubeCtrl;
+  late final TextEditingController _tiktokCtrl;
   bool _saving = false;
   bool _uploadingAvatar = false;
   String? _profileImageUrl;
@@ -2063,6 +2071,12 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     _usernameCtrl = TextEditingController(text: widget.user?['username'] ?? '');
     _bioCtrl = TextEditingController(text: widget.user?['bio'] as String? ?? '');
     _linkCtrl = TextEditingController(text: widget.user?['website_url'] as String? ?? '');
+    _instagramCtrl = TextEditingController(text: widget.user?['instagram_url'] as String? ?? '');
+    _kickCtrl = TextEditingController(text: widget.user?['kick_url'] as String? ?? '');
+    _twitchCtrl = TextEditingController(text: widget.user?['twitch_url'] as String? ?? '');
+    _facebookCtrl = TextEditingController(text: widget.user?['facebook_url'] as String? ?? '');
+    _youtubeCtrl = TextEditingController(text: widget.user?['youtube_url'] as String? ?? '');
+    _tiktokCtrl = TextEditingController(text: widget.user?['tiktok_url'] as String? ?? '');
     _profileImageUrl = widget.user?['profile_image_url'] as String?;
     _usernameCtrl.addListener(_onUsernameChanged);
   }
@@ -2074,6 +2088,12 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     _usernameCtrl.dispose();
     _bioCtrl.dispose();
     _linkCtrl.dispose();
+    _instagramCtrl.dispose();
+    _kickCtrl.dispose();
+    _twitchCtrl.dispose();
+    _facebookCtrl.dispose();
+    _youtubeCtrl.dispose();
+    _tiktokCtrl.dispose();
     super.dispose();
   }
 
@@ -2218,6 +2238,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         setState(() => _saving = false);
         return;
       }
+      String? normLink(String v) => v.isEmpty ? null : v;
       final updatedUser = await apiCall(
         () => http.patch(
           Uri.parse('$kBaseUrl/auth/me'),
@@ -2226,7 +2247,13 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             'full_name': name,
             'username': username,
             'bio': bio.isEmpty ? null : bio,
-            'website_url': link.isEmpty ? null : link,
+            'website_url': normLink(link),
+            'instagram_url': normLink(_instagramCtrl.text.trim()),
+            'kick_url': normLink(_kickCtrl.text.trim()),
+            'twitch_url': normLink(_twitchCtrl.text.trim()),
+            'facebook_url': normLink(_facebookCtrl.text.trim()),
+            'youtube_url': normLink(_youtubeCtrl.text.trim()),
+            'tiktok_url': normLink(_tiktokCtrl.text.trim()),
           }),
         ),
       );
@@ -2267,7 +2294,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -2407,8 +2434,47 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
                 );
               },
             ),
+            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Sosyal Medya',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _socialField(_instagramCtrl, 'Instagram', 'https://instagram.com/kullaniciadi'),
+            const SizedBox(height: 12),
+            _socialField(_kickCtrl, 'Kick', 'https://kick.com/kullaniciadi'),
+            const SizedBox(height: 12),
+            _socialField(_twitchCtrl, 'Twitch', 'https://twitch.tv/kullaniciadi'),
+            const SizedBox(height: 12),
+            _socialField(_facebookCtrl, 'Facebook', 'https://facebook.com/kullaniciadi'),
+            const SizedBox(height: 12),
+            _socialField(_youtubeCtrl, 'YouTube', 'https://youtube.com/@kanal'),
+            const SizedBox(height: 12),
+            _socialField(_tiktokCtrl, 'TikTok', 'https://tiktok.com/@kullaniciadi'),
+            const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _socialField(TextEditingController ctrl, String label, String hint) {
+    return TextField(
+      controller: ctrl,
+      keyboardType: TextInputType.url,
+      autocorrect: false,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 12),
+        prefixIcon: const Icon(Icons.link_rounded, size: 18),
       ),
     );
   }
@@ -3469,4 +3535,85 @@ class _TxnRow extends StatelessWidget {
   }
 }
 
+class _SocialLinksRow extends StatelessWidget {
+  final Map<String, dynamic>? user;
+  final int? userId;
+
+  const _SocialLinksRow({required this.user, required this.userId});
+
+  static const _platforms = [
+    ('instagram_url', 'IG', Color(0xFFE1306C)),
+    ('kick_url', 'KICK', Color(0xFF53FC18)),
+    ('twitch_url', 'TV', Color(0xFF9146FF)),
+    ('facebook_url', 'FB', Color(0xFF1877F2)),
+    ('youtube_url', 'YT', Color(0xFFFF0000)),
+    ('tiktok_url', 'TT', Color(0xFF010101)),
+    ('website_url', 'WEB', Color(0xFF0EA5E9)),
+  ];
+
+  String _platformKey(String field) {
+    switch (field) {
+      case 'instagram_url': return 'instagram';
+      case 'kick_url': return 'kick';
+      case 'twitch_url': return 'twitch';
+      case 'facebook_url': return 'facebook';
+      case 'youtube_url': return 'youtube';
+      case 'tiktok_url': return 'tiktok';
+      default: return 'website';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final links = _platforms
+        .where((p) => (user?[p.$1] as String?)?.isNotEmpty == true)
+        .toList();
+    if (links.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: links.map((p) {
+        final (field, label, color) = p;
+        return GestureDetector(
+          onTap: () async {
+            final raw = user![field] as String;
+            final uri = Uri.tryParse(raw.startsWith('http') ? raw : 'https://$raw');
+            if (uri != null && await canLaunchUrl(uri)) {
+              AnalyticsService.logInteraction(
+                itemId: userId ?? 0,
+                itemType: 'user',
+                interactionType: 'social_link_tap',
+                metadata: {'platform': _platformKey(field)},
+              );
+              launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color == const Color(0xFF010101)
+                    ? (Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black)
+                    : color,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
 

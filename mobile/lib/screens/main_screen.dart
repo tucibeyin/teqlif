@@ -34,6 +34,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   int _unreadMessages = 0;
   int _unreadNotifs = 0;
+  DateTime _sessionStart = DateTime.now();
 
   Timer? _badgeTimer;
   StreamSubscription<RemoteMessage>? _fcmSub;
@@ -75,7 +76,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WsService.connect();
     _refreshBadges();
     _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBadges());
-    _fcmSub = FirebaseMessaging.onMessage.listen((_) => _refreshBadges());
+    _fcmSub = FirebaseMessaging.onMessage.listen((msg) {
+      _refreshBadges();
+      AnalyticsService.trackEvent('push_received', {
+        'notification_type': msg.data['type'] ?? 'unknown',
+      });
+    });
     _notifStreamSub = PushNotificationService.notificationStream.stream.listen((data) {
       _refreshBadges();
       if (data['type'] != null && (data['type'] as String).isNotEmpty) {
@@ -125,6 +131,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       PushNotificationService.notificationStream.add({});
       // App arka plandan döndü: aktif sekmenin TTL'i dolmuşsa SWR ile yenile
       _maybeRefreshCurrentTab();
+      _sessionStart = DateTime.now();
+    } else if (state == AppLifecycleState.paused ||
+               state == AppLifecycleState.detached) {
+      final durationSec = DateTime.now().difference(_sessionStart).inSeconds;
+      if (durationSec > 2) {
+        AnalyticsService.trackEvent('session_end', {
+          'duration_sec': durationSec,
+          'active_tab': _kTabNames[_currentIndex],
+        });
+      }
     }
   }
 
@@ -162,6 +178,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
+  static const _kTabNames = ['live', 'home', 'search', 'messages', 'profile'];
+
   void _onNavTap(int index) {
     if (index != _currentIndex) {
       final ttl = _kTabTtl[index];
@@ -179,6 +197,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         }
         // TTL dolmamış: içerik olduğu gibi kalır, ağ isteği atılmaz
       }
+      AnalyticsService.trackEvent('tab_switch', {
+        'from': _kTabNames[_currentIndex],
+        'to': _kTabNames[index],
+      });
     }
     setState(() => _currentIndex = index);
     // Mesajlar tabına geçince badge'i güncelle (içerik TTL ile yönetiliyor)

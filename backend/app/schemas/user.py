@@ -56,6 +56,12 @@ class UserOut(BaseModel):
     plan_type: Optional[str] = None
     bio: Optional[str] = None
     website_url: Optional[str] = None
+    instagram_url: Optional[str] = None
+    kick_url: Optional[str] = None
+    twitch_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    youtube_url: Optional[str] = None
+    tiktok_url: Optional[str] = None
     onboarding_completed: bool = False
 
     model_config = {"from_attributes": True}
@@ -68,6 +74,12 @@ class UserUpdate(BaseModel):
     profile_image_thumb_url: Optional[str] = None
     bio: Optional[str] = None
     website_url: Optional[str] = None
+    instagram_url: Optional[str] = None
+    kick_url: Optional[str] = None
+    twitch_url: Optional[str] = None
+    facebook_url: Optional[str] = None
+    youtube_url: Optional[str] = None
+    tiktok_url: Optional[str] = None
     locale: Optional[str] = None
 
 

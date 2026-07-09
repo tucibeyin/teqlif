@@ -142,6 +142,14 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
     _completed = true;
     _isDragging = false;
     HapticFeedback.heavyImpact();
+    if (widget.itemId != null) {
+      AnalyticsService.logInteraction(
+        itemId: widget.itemId!,
+        itemType: 'listing',
+        interactionType: 'stream_bid',
+        pricePoint: widget.pricePoint,
+      );
+    }
     widget.onSwipeComplete();
     // İşlem bittikten kısa süre sonra geri dön
     Future.delayed(const Duration(milliseconds: 150), () {

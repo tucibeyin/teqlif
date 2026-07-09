@@ -51,6 +51,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.trackEvent('listing_create_start', {});
     SharedPreferences.getInstance().then((prefs) {
       final locale = prefs.getString('app_locale_language_code') ?? 'tr';
       CategoryService.getCategories(locale: locale).then((cats) {
@@ -568,6 +569,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       );
 
       if (!mounted) return;
+      AnalyticsService.trackEvent('listing_create_complete', {
+        'category': _selectedCategory,
+        'has_video': _videoUploadUrl != null,
+        'photo_count': _images.length,
+      });
       final l = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

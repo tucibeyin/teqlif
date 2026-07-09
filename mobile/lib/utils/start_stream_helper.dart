@@ -255,6 +255,11 @@ Future<void> showStartStreamDialog(
   if (result == null) return;
   final (title, category, blastApproved, blastCost) = result;
 
+  AnalyticsService.trackEvent('stream_start_intent', {
+    'category': category,
+    'blast_approved': blastApproved,
+  });
+
   if (!context.mounted) return;
 
   showDialog(
