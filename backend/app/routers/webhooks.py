@@ -2,7 +2,7 @@ import asyncio
 import aiohttp
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
 from sqlalchemy import select
@@ -14,6 +14,7 @@ from app.database import get_db, AsyncSessionLocal
 from app.models.stream import LiveStream
 from app.utils.redis_client import get_redis
 from app.config import settings
+from app.core.task_queue import get_pool
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
@@ -61,9 +62,8 @@ _HOST_GRACE_SECONDS = 120  # 2 dakika bekleme süresi
 async def _on_host_left(room_name: str, identity: str, disconnected_at: float) -> None:
     """
     Host LiveKit odasından ayrıldığında çağrılır.
-    2 dakika bekler; host bu sürede geri dönmezse yayını otomatik kapatır.
+    ARQ job olarak planlanır; restart-safe. ARQ yoksa asyncio.sleep fallback.
     """
-    # Katılımcı bu odanın host'u mu?
     stream_id: int | None = None
     async with AsyncSessionLocal() as db:
         result = await db.execute(
@@ -82,24 +82,30 @@ async def _on_host_left(room_name: str, identity: str, disconnected_at: float) -
         _HOST_GRACE_SECONDS, stream_id, room_name,
     )
 
+    pool = get_pool()
+    if pool:
+        await pool.enqueue_job(
+            "auto_close_stream_if_host_absent_task",
+            stream_id,
+            room_name,
+            disconnected_at,
+            _defer_by=timedelta(seconds=_HOST_GRACE_SECONDS),
+            _job_id=f"close_stream_{stream_id}_{int(disconnected_at)}",
+        )
+        return
+
+    # Fallback: ARQ pool yok (geliştirme ortamı vb.)
     await asyncio.sleep(_HOST_GRACE_SECONDS)
 
-    # Grace period boyunca host geri döndü mü?
     try:
         redis = await get_redis()
         reconnect_raw = await redis.get(f"live:host_reconnect:{stream_id}")
-        if reconnect_raw:
-            reconnect_ts = float(reconnect_raw)
-            if reconnect_ts > disconnected_at:
-                logger.info(
-                    "[STREAMS] Host grace period içinde geri döndü — kapatma iptal | stream_id=%s",
-                    stream_id,
-                )
-                return
+        if reconnect_raw and float(reconnect_raw) > disconnected_at:
+            logger.info("[STREAMS] Host grace period içinde geri döndü — kapatma iptal | stream_id=%s", stream_id)
+            return
     except Exception as exc:
         logger.warning("[STREAMS] Redis host_reconnect okunamadı | stream_id=%s | %s", stream_id, exc)
 
-    # Yayın hâlâ aktif mi?
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(LiveStream).where(
@@ -108,13 +114,13 @@ async def _on_host_left(room_name: str, identity: str, disconnected_at: float) -
             )
         )
         if not result.scalar_one_or_none():
-            return  # Yayın zaten kapatılmış
-
+            return
         logger.warning(
             "[STREAMS] Host %d sn görüntü göndermedi — yayın otomatik kapatılıyor | stream_id=%s",
             _HOST_GRACE_SECONDS, stream_id,
         )
-        await _close_stream(db, room_name)
+        from app.services.stream_service import force_close_stream
+        await force_close_stream(db, room_name)
 
 
 async def _on_host_rejoined(room_name: str, identity: str) -> None:
@@ -141,7 +147,19 @@ async def _on_host_rejoined(room_name: str, identity: str) -> None:
 
 
 async def _delayed_close_stream(room_name: str) -> None:
-    await asyncio.sleep(60)  # Grace period: Wait 60 seconds
+    """room_finished webhook'tan 60sn sonra oda hâlâ aktifse kapatır. ARQ yoksa asyncio.sleep fallback."""
+    pool = get_pool()
+    if pool:
+        await pool.enqueue_job(
+            "delayed_close_stream_task",
+            room_name,
+            _defer_by=timedelta(seconds=60),
+            _job_id=f"delayed_close_{room_name}",
+        )
+        return
+
+    # Fallback: ARQ pool yok
+    await asyncio.sleep(60)
     try:
         async with aiohttp.ClientSession() as session:
             svc = RoomService(
@@ -158,55 +176,11 @@ async def _delayed_close_stream(room_name: str) -> None:
         logger.warning("LiveKit API check failed for %s, proceeding to close stream", room_name)
 
     async for db in get_db():
-        await _close_stream(db, room_name)
+        from app.services.stream_service import force_close_stream
+        await force_close_stream(db, room_name)
+
 
 async def _close_stream(db: AsyncSession, room_name: str) -> None:
-    from app.services.auction_service import AuctionService
-
-    result = await db.execute(
-        select(LiveStream).where(
-            LiveStream.room_name == room_name,
-            LiveStream.is_live == True,  # noqa: E712
-        )
-    )
-    stream = result.scalar_one_or_none()
-    if not stream:
-        return
-
-    stream_id = stream.id
-    stream.is_live = False
-    stream.ended_at = datetime.now(timezone.utc)
-
-    # Yetim açık artırmayı sistem zorlamasıyla bitir
-    try:
-        auction_svc = AuctionService(db)
-        await auction_svc.end_auction(stream_id, force_system=True)
-    except Exception as exc:
-        logger.error("Webhook: Yetim Müzayede kapatılamadı | stream_id=%s", stream_id, exc_info=True)
-
-    try:
-        await db.commit()
-        logger.info("Yayın otomatik sonlandırıldı | stream_id=%s room=%s", stream_id, room_name)
-    except Exception:
-        logger.error("Webhook: yayın DB güncellenemedi | stream_id=%s", stream_id, exc_info=True)
-        return
-
-    # Tüm izleyicilere yayın kapandı sinyali gönder
-    try:
-        from app.constants import ws_types as WS
-        from app.core.ws_manager import ws_manager
-        from app.services.chat_service import publish_chat
-        await publish_chat(stream_id, {"type": WS.STREAM_ENDED})
-        await ws_manager.publish(
-            "chat_broadcast", "global",
-            {"type": WS.STREAM_ENDED, "stream_id": stream_id},
-        )
-    except Exception:
-        logger.warning("Webhook: stream_ended WS yayınlanamadı | room=%s", room_name, exc_info=True)
-
-    try:
-        redis = await get_redis()
-        await redis.delete(f"live:viewers:{room_name}")
-        await redis.delete(f"live:host_reconnect:{stream_id}")
-    except Exception:
-        logger.error("Webhook: Redis temizliği başarısız | room=%s", room_name, exc_info=True)
+    """Geriye dönük uyumluluk için ince sarmalayıcı."""
+    from app.services.stream_service import force_close_stream
+    await force_close_stream(db, room_name)

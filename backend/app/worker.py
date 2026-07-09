@@ -1090,7 +1090,7 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
                 logger.warning("[Worker] Stale stream cleanup: LiveKit API erişilemedi | %s", lk_exc)
                 return
 
-            from app.routers.webhooks import _close_stream
+            from app.services.stream_service import force_close_stream as _close_stream
             for stream in streams:
                 num_participants = active_rooms.get(stream.room_name)
                 # Oda yok VEYA boş → kapat
@@ -1123,6 +1123,96 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
     except Exception as exc:
         logger.error("[Worker] cleanup_stale_streams başarısız | %s", str(exc), exc_info=True)
         capture_exception(exc)
+
+
+async def auto_close_stream_if_host_absent_task(
+    ctx: dict,
+    stream_id: int,
+    room_name: str,
+    disconnected_at: float,
+) -> None:
+    """
+    Host ayrıldıktan sonra grace period dolduktan çalışır (ARQ defer).
+    Host bu sürede geri dönmüşse iptal eder, dönmemişse yayını ve açık artırmayı kapatır.
+    Restart-safe: ARQ job Redis'te saklandığı için VPS yeniden başlasa bile çalışır.
+    """
+    try:
+        from app.utils.redis_client import get_redis
+        from app.database import AsyncSessionLocal
+        from app.services.stream_service import force_close_stream
+
+        redis = await get_redis()
+        reconnect_raw = await redis.get(f"live:host_reconnect:{stream_id}")
+        if reconnect_raw and float(reconnect_raw) > disconnected_at:
+            logger.info(
+                "[Worker] Host grace period içinde geri döndü — kapatma iptal | stream_id=%s",
+                stream_id,
+            )
+            return
+
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import select
+            from app.models.stream import LiveStream
+            result = await db.execute(
+                select(LiveStream).where(
+                    LiveStream.id == stream_id,
+                    LiveStream.is_live == True,  # noqa: E712
+                )
+            )
+            if not result.scalar_one_or_none():
+                return  # Yayın zaten kapatılmış
+            logger.warning(
+                "[Worker] Host görüntü göndermedi — yayın otomatik kapatılıyor | stream_id=%s",
+                stream_id,
+            )
+            await force_close_stream(db, room_name)
+
+    except Exception as exc:
+        logger.error(
+            "[Worker] auto_close_stream_if_host_absent hatası | stream_id=%s | %s",
+            stream_id, exc, exc_info=True,
+        )
+        capture_exception(exc)
+        raise
+
+
+async def delayed_close_stream_task(ctx: dict, room_name: str) -> None:
+    """
+    room_finished webhook'tan 60sn sonra oda hâlâ aktifse yayını kapatır (ARQ defer).
+    Restart-safe: ARQ job Redis'te saklandığı için VPS yeniden başlasa bile çalışır.
+    """
+    try:
+        import aiohttp
+        from livekit.api.room_service import RoomService, ListRoomsRequest
+        from app.config import settings
+        from app.database import AsyncSessionLocal
+        from app.services.stream_service import force_close_stream
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                svc = RoomService(
+                    session,
+                    settings.livekit_api_base,
+                    settings.livekit_api_key,
+                    settings.livekit_api_secret,
+                )
+                res = await svc.list_rooms(ListRoomsRequest())
+                if any(r.name == room_name for r in res.rooms):
+                    logger.info("[Worker] LiveKit odası hâlâ aktif, kapatma iptal | room=%s", room_name)
+                    return
+        except Exception:
+            logger.warning("[Worker] LiveKit API kontrolü başarısız, kapatmaya devam | room=%s", room_name)
+
+        async with AsyncSessionLocal() as db:
+            await force_close_stream(db, room_name)
+
+    except Exception as exc:
+        logger.error(
+            "[Worker] delayed_close_stream_task hatası | room=%s | %s",
+            room_name, exc, exc_info=True,
+        )
+        capture_exception(exc)
+        raise
 
 
 async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
@@ -1779,6 +1869,8 @@ class WorkerSettings:
         nsfw_backfill_task,
         rebuild_faiss_index_task,
         cleanup_stale_streams_task,
+        auto_close_stream_if_host_absent_task,
+        delayed_close_stream_task,
         send_telegram_notification_task,
     ]
 
