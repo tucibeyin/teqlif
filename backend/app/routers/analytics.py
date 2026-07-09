@@ -186,6 +186,7 @@ def _build_recommendation(avg_budget: float | None, hesitation_count: int, uniqu
 @router.get("/seller-report/{stream_id}")
 async def get_seller_report(
     stream_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -201,7 +202,7 @@ async def get_seller_report(
       - recommendation: kural tabanlı öneri metni
     """
     # ── 1. Yayını getir ve host doğrula ──────────────────────────────────────
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     
     stream = await db.scalar(select(LiveStream).where(LiveStream.id == stream_id))
     if stream is None:
@@ -337,7 +338,7 @@ async def get_seller_report(
         logger.warning("[SellerReport] ClickHouse sorgusu başarısız: %s", ch_exc)
 
     # ── 4. Öneri metni ────────────────────────────────────────────────────────
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     recommendation = _build_recommendation(avg_budget, hesitation_count, unique_viewers, t)
 
     return {
@@ -833,10 +834,10 @@ async def market_trends(
     - average_spend_growth: ortalama harcama değişim yüzdesi (önceki 30 güne göre)
     """
     try:
-        t = _get_t(current_user.locale or "tr")
+        t = _get_t(get_locale(current_user, request))
         
         redis = await get_redis()
-        cache_key = f"cache:market_trends_global_{current_user.locale or 'tr'}"
+        cache_key = f"cache:market_trends_global_{get_locale(current_user, request)}"
         cached_data = await redis.get(cache_key)
         if cached_data:
             import json
@@ -1368,7 +1369,7 @@ async def best_stream_time(
     Son 90 günlük yayın geçmişini 3'er saatlik bloklara bölerek kategori bazlı analiz eder.
     """
     uid = current_user.id
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     
     _DAYS = [
         t.get("day0", "Pazar"),
@@ -1602,7 +1603,7 @@ async def my_feed_stats(
     Pro satıcıya özel feed performans istatistikleri.
     Kullanıcının kendi ilanlarının impression/click/skip/CTR/dwell verilerini döndürür.
     """
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
@@ -1727,7 +1728,7 @@ async def video_roi(
     Pro: Kullanıcının video ilanları ile fotoğraf ilanlarının CTR karşılaştırması.
     content_type='video' vs 'photo' segmentinde impression/click/CTR ayrımı.
     """
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
@@ -1806,6 +1807,7 @@ async def video_roi(
 
 @router.get("/gallery-stats")
 async def gallery_stats(
+    request: Request,
     days: int = Query(default=30, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -1815,7 +1817,7 @@ async def gallery_stats(
     user_events tablosundaki listing_photo_swipe olayları kullanılır;
     duration_seconds alanı max_page_reached değerini taşır.
     """
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
@@ -1884,6 +1886,7 @@ async def gallery_stats(
 
 @router.get("/video-performance")
 async def video_performance(
+    request: Request,
     days: int = Query(default=30, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -1893,7 +1896,7 @@ async def video_performance(
     user_events tablosundaki listing_video_watch olayları kullanılır;
     duration_seconds alanı watch_pct (0.0–1.0) değerini taşır.
     """
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
@@ -1950,6 +1953,7 @@ async def video_performance(
 
 @router.get("/demand-radar")
 async def demand_radar(
+    request: Request,
     days: int = Query(default=7, ge=1, le=30),
     current_user: User = Depends(get_current_user),
 ):
@@ -1957,7 +1961,7 @@ async def demand_radar(
     Pro: Platform genelindeki arama trendleri.
     En çok aranan kelimeler ve kategori bazlı arama hacmi.
     """
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
@@ -2035,6 +2039,7 @@ async def demand_radar(
 
 @router.get("/pro/metrics")
 async def get_pro_metrics(
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -2045,7 +2050,7 @@ async def get_pro_metrics(
     - best_posting_hour: kullanıcının en yüksek CTR'a sahip ilan paylaşım saati
     - return_viewer_rate: en az 2 kez yayınını izleyen kullanıcı oranı
     """
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "PRO üyelik gerekli"))
 
@@ -2177,6 +2182,7 @@ async def get_pro_metrics(
 @router.get("/competitor-radar/{listing_id}")
 async def competitor_radar(
     listing_id: int,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -2187,7 +2193,7 @@ async def competitor_radar(
     listing = await db.scalar(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
     if not listing:
         raise HTTPException(404, t.get("errListingNotFound", "İlan bulunamadı"))
 
@@ -2230,7 +2236,7 @@ async def competitor_radar(
     max_price = max(prices)
     cheaper_count = sum(1 for p in prices if p < my_price)
     pct_rank = round((cheaper_count / len(prices)) * 100)  # 0=en ucuz, 100=en pahalı
-    t = _get_t(current_user.locale or "tr")
+    t = _get_t(get_locale(current_user, request))
 
     if pct_rank >= 75:
         signal = "pahalı"
@@ -2274,6 +2280,7 @@ async def competitor_radar(
 
 @router.get("/category-velocity")
 async def category_velocity(
+    request: Request,
     category: str = Query(..., min_length=1),
     listing_id: Optional[int] = Query(None),
     current_user: User = Depends(get_current_user),
@@ -2357,7 +2364,7 @@ async def category_velocity(
             if ucuz and pahali and pahali["avg_days"] > 0 and ucuz["avg_days"] > 0:
                 speed_ratio = round(pahali["avg_days"] / ucuz["avg_days"], 1)
                 if speed_ratio >= 1.5:
-                    t = _get_t(current_user.locale or "tr")
+                    t = _get_t(get_locale(current_user, request))
                     tip = t.get("proSalesSpeedTip", "Piyasa ortalamasının altında fiyatlanan ilanlar {ratio}× daha hızlı satılıyor").replace("{ratio}", str(speed_ratio))
 
     return {
