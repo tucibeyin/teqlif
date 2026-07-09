@@ -2033,5 +2033,24 @@
   "proSalesSpeedTip": "القوائم التي يقل سعرها عن متوسط السوق تباع أسرع بـ {ratio} مرات",
   "proBestStreamRec": "أداؤك هو الأفضل يوم {day} الساعة {hours} بمعدل تحويل {rate}%.",
   "tabReports": "التقارير",
-  "badgeSponsored": "ممولة"
+  "badgeSponsored": "ممولة",
+  "aiPriceTitle": "تقدير السعر بالذكاء الاصطناعي",
+  "aiPriceSimilar": "تم تحليل {count} منتج مشابه",
+  "@aiPriceSimilar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "confidenceHigh": "● ثقة عالية",
+  "confidenceMedium": "● ثقة متوسطة",
+  "confidenceLow": "● ثقة منخفضة",
+  "aiPriceApply": "تطبيق السعر المقترح",
+  "aiPriceAnalyzing": "جارٍ التحليل…",
+  "aiPriceButton": "تحديد السعر بالذكاء الاصطناعي",
+  "aiCreditsLeftSuffix": "رصيد متبقٍ",
+  "editProfileFullName": "الاسم الكامل",
+  "editProfileUsername": "اسم المستخدم",
+  "editProfileFillAll": "يرجى ملء جميع الحقول"
 }

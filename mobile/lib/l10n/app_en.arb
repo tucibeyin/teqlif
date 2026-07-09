@@ -2090,5 +2090,24 @@
   "badgeSponsored": "Sponsored",
   "@badgeSponsored": {
     "description": "Badge label for sponsored listing"
-  }
+  },
+  "aiPriceTitle": "AI Price Estimate",
+  "aiPriceSimilar": "{count} similar products analyzed",
+  "@aiPriceSimilar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "confidenceHigh": "● High confidence",
+  "confidenceMedium": "● Medium confidence",
+  "confidenceLow": "● Low confidence",
+  "aiPriceApply": "Apply Suggested Price",
+  "aiPriceAnalyzing": "Analyzing…",
+  "aiPriceButton": "Set Price with AI",
+  "aiCreditsLeftSuffix": "credits left",
+  "editProfileFullName": "Full Name",
+  "editProfileUsername": "Username",
+  "editProfileFillAll": "Please fill in all fields"
 }

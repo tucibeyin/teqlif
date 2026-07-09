@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -49,13 +50,16 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   @override
   void initState() {
     super.initState();
-    CategoryService.getCategories().then((cats) {
-      if (mounted) {
-        setState(() {
-          _categories = cats;
-          if (cats.isNotEmpty) _selectedCategory = cats.first.$1;
-        });
-      }
+    SharedPreferences.getInstance().then((prefs) {
+      final locale = prefs.getString('app_locale_language_code') ?? 'tr';
+      CategoryService.getCategories(locale: locale).then((cats) {
+        if (mounted) {
+          setState(() {
+            _categories = cats;
+            if (cats.isNotEmpty) _selectedCategory = cats.first.$1;
+          });
+        }
+      });
     });
     CityService.getCities().then((c) {
       if (mounted) setState(() => _cities = c);
@@ -165,11 +169,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             ? const Color(0xFFF59E0B)
             : const Color(0xFF64748B);
 
+    final l10n = AppLocalizations.of(context)!;
     String confidenceLabel = confidence == 'high'
-        ? '● Yüksek güven'
+        ? l10n.confidenceHigh
         : confidence == 'medium'
-            ? '● Orta güven'
-            : '● Düşük güven';
+            ? l10n.confidenceMedium
+            : l10n.confidenceLow;
 
     showModalBottomSheet(
       context: context,
@@ -218,16 +223,16 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Yapay Zeka Fiyat Tahmini',
-                          style: TextStyle(
+                        Text(
+                          l10n.aiPriceTitle,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         Text(
-                          '$foundSimilar benzer ürün analiz edildi',
+                          l10n.aiPriceSimilar(foundSimilar),
                           style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
                         ),
                       ],
@@ -336,9 +341,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text(
-                      'Önerilen Fiyatı Uygula',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    child: Text(
+                      l10n.aiPriceApply,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                     ),
                   ),
                 ),
@@ -972,73 +977,76 @@ class _AiPriceButton extends StatelessWidget {
                 : const Color(0xFF6366F1).withValues(alpha: 0.5),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: loading
-              ? [
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(Color(0xFF6366F1)),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Analiz ediliyor…',
-                    style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                ]
-              : [
-                  const Text('✨', style: TextStyle(fontSize: 15)),
-                  const SizedBox(width: 8),
-                  const Flexible(
-                    child: Text(
-                      'Yapay Zeka ile Fiyat Belirle',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+        child: Builder(builder: (context) {
+          final l = AppLocalizations.of(context)!;
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: loading
+                ? [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Color(0xFF6366F1)),
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  if (isPro) ...[
+                    const SizedBox(width: 10),
+                    Text(
+                      l.aiPriceAnalyzing,
+                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ]
+                : [
+                    const Text('✨', style: TextStyle(fontSize: 15)),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.workspace_premium_rounded, size: 10,
-                              color: (creditsRemaining == null || creditsRemaining! > 0)
-                                  ? const Color(0xFF34D399)
-                                  : const Color(0xFFF59E0B)),
-                          const SizedBox(width: 3),
-                          Text(
-                            creditsRemaining == null || creditsRemaining! > 0
-                                ? '${creditsRemaining ?? '…'} hak kaldı'
-                                : '5 TUCi',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: (creditsRemaining == null || creditsRemaining! > 0)
-                                  ? const Color(0xFF34D399)
-                                  : const Color(0xFFF59E0B),
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
+                    Flexible(
+                      child: Text(
+                        l.aiPriceButton,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (isPro) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.workspace_premium_rounded, size: 10,
+                                color: (creditsRemaining == null || creditsRemaining! > 0)
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0xFFF59E0B)),
+                            const SizedBox(width: 3),
+                            Text(
+                              creditsRemaining == null || creditsRemaining! > 0
+                                  ? '${creditsRemaining ?? '…'} ${l.aiCreditsLeftSuffix}'
+                                  : '5 TUCi',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: (creditsRemaining == null || creditsRemaining! > 0)
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0xFFF59E0B),
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-        ),
+          );
+        }),
       ),
     );
   }

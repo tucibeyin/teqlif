@@ -2053,5 +2053,24 @@
   "proSalesSpeedTip": "Piyasa ortalamasının altında fiyatlanan ilanlar {ratio}× daha hızlı satılıyor",
   "proBestStreamRec": "{day} {hours} saatlerinde %{rate} dönüşüm oranıyla en iyi performansı gösteriyorsunuz.",
   "tabReports": "Raporlar",
-  "badgeSponsored": "Sponsorlu"
+  "badgeSponsored": "Sponsorlu",
+  "aiPriceTitle": "Yapay Zeka Fiyat Tahmini",
+  "aiPriceSimilar": "{count} benzer ürün analiz edildi",
+  "@aiPriceSimilar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "confidenceHigh": "● Yüksek güven",
+  "confidenceMedium": "● Orta güven",
+  "confidenceLow": "● Düşük güven",
+  "aiPriceApply": "Önerilen Fiyatı Uygula",
+  "aiPriceAnalyzing": "Analiz ediliyor…",
+  "aiPriceButton": "Yapay Zeka ile Fiyat Belirle",
+  "aiCreditsLeftSuffix": "hak kaldı",
+  "editProfileFullName": "Ad Soyad",
+  "editProfileUsername": "Kullanıcı Adı",
+  "editProfileFillAll": "Tüm alanları doldurun"
 }

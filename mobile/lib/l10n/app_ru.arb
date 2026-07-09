@@ -2054,5 +2054,24 @@
   "proSalesSpeedTip": "Объявления с ценой ниже средней по рынку продаются в {ratio} раз быстрее",
   "proBestStreamRec": "Вы показываете лучшие результаты в {day} в {hours} с коэффициентом конверсии {rate}%.",
   "tabReports": "Отчеты",
-  "badgeSponsored": "Реклама"
+  "badgeSponsored": "Реклама",
+  "aiPriceTitle": "Оценка цены с ИИ",
+  "aiPriceSimilar": "Проанализировано {count} похожих товаров",
+  "@aiPriceSimilar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "confidenceHigh": "● Высокая уверенность",
+  "confidenceMedium": "● Средняя уверенность",
+  "confidenceLow": "● Низкая уверенность",
+  "aiPriceApply": "Применить рекомендованную цену",
+  "aiPriceAnalyzing": "Анализируем…",
+  "aiPriceButton": "Определить цену с помощью ИИ",
+  "aiCreditsLeftSuffix": "осталось",
+  "editProfileFullName": "Полное имя",
+  "editProfileUsername": "Имя пользователя",
+  "editProfileFillAll": "Пожалуйста, заполните все поля"
 }

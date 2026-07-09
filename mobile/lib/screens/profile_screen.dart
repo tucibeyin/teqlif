@@ -2175,20 +2175,21 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
     final username = _usernameCtrl.text.trim();
+    final l = AppLocalizations.of(context)!;
     if (name.isEmpty || username.isEmpty) {
-      showErrorSnackbar(context, Exception('Tüm alanları doldurun'));
+      showErrorSnackbar(context, Exception(l.editProfileFillAll));
       return;
     }
     if (username.length < 3 || !RegExp(r'^[a-z0-9_]+$').hasMatch(username)) {
-      showErrorSnackbar(context, Exception('Kullanıcı adı geçersiz. Sadece küçük harf, rakam ve _ kullanılabilir.'));
+      showErrorSnackbar(context, Exception(l.validUsernameInvalid));
       return;
     }
     if (_usernameStatus == 'taken') {
-      showErrorSnackbar(context, Exception('Bu kullanıcı adı zaten alınmış'));
+      showErrorSnackbar(context, Exception(l.validUsernameTaken));
       return;
     }
     if (_usernameStatus == 'checking') {
-      showErrorSnackbar(context, Exception('Kullanıcı adı kontrol ediliyor, lütfen bekleyin...'));
+      showErrorSnackbar(context, Exception(l.usernameCheckingWait));
       return;
     }
     setState(() { _saving = true; });
@@ -2244,7 +2245,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
           TextButton(
             onPressed: _saving ? null : _save,
             child: Text(
-              'Kaydet',
+              AppLocalizations.of(context)!.btnSave,
               style: TextStyle(
                 color: _saving ? Colors.grey : kPrimary,
                 fontWeight: FontWeight.w600,
@@ -2316,17 +2317,22 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            TextField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Ad Soyad'),
-            ),
+            Builder(builder: (ctx) {
+              final l = AppLocalizations.of(ctx)!;
+              return TextField(
+                controller: _nameCtrl,
+                decoration: InputDecoration(labelText: l.editProfileFullName),
+              );
+            }),
             const SizedBox(height: 14),
-            TextField(
-              controller: _usernameCtrl,
-              autocorrect: false,
-              decoration: InputDecoration(
-                labelText: 'Kullanıcı Adı',
-                helperText: 'Küçük harf, rakam ve _ kullanılabilir',
+            Builder(builder: (ctx) {
+              final l = AppLocalizations.of(ctx)!;
+              return TextField(
+                controller: _usernameCtrl,
+                autocorrect: false,
+                decoration: InputDecoration(
+                  labelText: l.editProfileUsername,
+                  helperText: l.validUsernameChars,
                 helperStyle: const TextStyle(fontSize: 11),
                 suffixIcon: _usernameStatus == 'checking'
                     ? const SizedBox(
@@ -2342,8 +2348,9 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
                         : _usernameStatus == 'taken'
                             ? const Icon(Icons.cancel, color: Colors.red, size: 20)
                             : null,
-              ),
-            ),
+                ),
+              );
+            }),
             const SizedBox(height: 14),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _bioCtrl,
