@@ -146,6 +146,19 @@ async def create_campaign(
     if not listing:
         raise HTTPException(status_code=404, detail="İlan bulunamadı veya size ait değil")
 
+    # Zaten aktif/duraklatılmış bir kampanya varsa ikinci kampanya açılamaz
+    existing = await db.scalar(
+        select(AdCampaign.id).where(
+            AdCampaign.listing_id == body.listing_id,
+            AdCampaign.status.in_(["active", "paused"]),
+        )
+    )
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="Bu ilan için zaten aktif bir kampanya var. Mevcut kampanya tamamlandıktan sonra tekrar öne çıkarabilirsin.",
+        )
+
     campaign = AdCampaign(
         listing_id=body.listing_id,
         seller_id=current_user.id,
