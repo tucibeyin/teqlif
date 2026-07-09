@@ -213,6 +213,27 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               AppLocalizations.of(context)!.reportMassNotificationDesc,
               style: TextStyle(color: AppColors.textSecondary(context)),
             ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF14B8A6).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF14B8A6).withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 15, color: Color(0xFF14B8A6)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)!.massNotifPerListingInfo,
+                      style: const TextStyle(color: Color(0xFF14B8A6), fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
             if (target == 0)
               Center(

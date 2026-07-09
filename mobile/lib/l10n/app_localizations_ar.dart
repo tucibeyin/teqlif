@@ -2445,9 +2445,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get adMetricCategoryAvgCtr => 'اهتمام الإعلانات المشابهة';
 
   @override
-  String get adMetricBurnRate => 'الوقت المتبقي';
-
-  @override
   String get softUpdateTitle => 'إصدار جديد متاح';
 
   @override
@@ -3923,6 +3920,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get btnSendMassNotification => 'إرسال إشعار جماعي';
+
+  @override
+  String massNotifCooldownHours(int hours, int min) {
+    return 'متاح خلال $hoursس $minد';
+  }
+
+  @override
+  String massNotifCooldownMinutes(int min) {
+    return 'متاح خلال $minد';
+  }
+
+  @override
+  String massNotifCooldownSeconds(int sec) {
+    return 'متاح خلال $secث';
+  }
+
+  @override
+  String get massNotifPerListingInfo =>
+      'يمكن إرسال إشعار جماعي مرة واحدة كل 24 ساعة لكل إعلان.';
 
   @override
   String get btnShare => 'مشاركة';

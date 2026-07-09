@@ -598,7 +598,25 @@ class AnalyticsService {
     return null;
   }
 
+  /// İlan başına 24h bildirim cooldown süresi (saniye). 0 = gönderim yapılabilir.
+  static Future<int> getNotificationCooldown(int listingId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return 0;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/$listingId/notification-cooldown'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        return (data['seconds_remaining'] as num?)?.toInt() ?? 0;
+      }
+    } catch (_) {}
+    return 0;
+  }
+
   /// İlanlar için toplu kitle bildirimi gönder → `POST /api/listings/{listingId}/send-mass-notification`
+  /// Dönen map: success → blast result; cooldown → {'cooldown': true, 'seconds_remaining': N}; error → {'error': msg}
   static Future<Map<String, dynamic>?> sendMassNotificationForListing({
     required int listingId,
     required int estimatedCost,
@@ -623,6 +641,12 @@ class AnalyticsService {
       }
       try {
         final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
+        if (resp.statusCode == 429) {
+          final detail = body['detail'];
+          if (detail is Map && detail['code'] == 'cooldown') {
+            return {'cooldown': true, 'seconds_remaining': detail['seconds_remaining'] ?? 86400};
+          }
+        }
         return {'error': body['detail'] ?? 'Bildirim gönderilemedi.'};
       } catch (_) {}
       return {'error': 'Bildirim gönderilemedi.'};

@@ -536,9 +536,8 @@ class _AdvancedMetrics extends StatelessWidget {
   Widget build(BuildContext context) {
     final bestHour = report['best_hour'] as int?;
     final catAvgCtr = report['category_avg_ctr'];
-    final daysLeft = report['estimated_days_left'];
 
-    if (bestHour == null && catAvgCtr == null && daysLeft == null) {
+    if (bestHour == null && catAvgCtr == null) {
       return const SizedBox.shrink();
     }
 
@@ -567,13 +566,6 @@ class _AdvancedMetrics extends StatelessWidget {
                 icon: Icons.bar_chart,
                 label: l.adMetricCategoryAvgCtr,
                 value: '%${(catAvgCtr as num).toStringAsFixed(1)}',
-              ),
-            ),
-            if (daysLeft != null) Expanded(
-              child: _MiniStat(
-                icon: Icons.local_fire_department,
-                label: l.adMetricBurnRate,
-                value: '~${(daysLeft as num).toStringAsFixed(0)} gün',
               ),
             ),
           ]),

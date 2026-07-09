@@ -2467,9 +2467,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adMetricCategoryAvgCtr => 'Similar Listings\' Interest';
 
   @override
-  String get adMetricBurnRate => 'Time Remaining';
-
-  @override
   String get softUpdateTitle => 'New Version Available';
 
   @override
@@ -3948,6 +3945,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get btnSendMassNotification => 'Send Mass Notification';
+
+  @override
+  String massNotifCooldownHours(int hours, int min) {
+    return 'Available in ${hours}h ${min}m';
+  }
+
+  @override
+  String massNotifCooldownMinutes(int min) {
+    return 'Available in ${min}m';
+  }
+
+  @override
+  String massNotifCooldownSeconds(int sec) {
+    return 'Available in ${sec}s';
+  }
+
+  @override
+  String get massNotifPerListingInfo =>
+      'A mass notification can be sent once every 24 hours per listing.';
 
   @override
   String get btnShare => 'Share';

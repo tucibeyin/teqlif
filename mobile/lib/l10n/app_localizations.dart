@@ -4626,12 +4626,6 @@ abstract class AppLocalizations {
   /// **'Benzer İlanların İlgi Oranı'**
   String get adMetricCategoryAvgCtr;
 
-  /// No description provided for @adMetricBurnRate.
-  ///
-  /// In tr, this message translates to:
-  /// **'Kalan Süre'**
-  String get adMetricBurnRate;
-
   /// No description provided for @softUpdateTitle.
   ///
   /// In tr, this message translates to:
@@ -7241,6 +7235,30 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Toplu Kitle Bildirimi Gönder'**
   String get btnSendMassNotification;
+
+  /// No description provided for @massNotifCooldownHours.
+  ///
+  /// In tr, this message translates to:
+  /// **'{hours}s {min}dk sonra gönderilebilir'**
+  String massNotifCooldownHours(int hours, int min);
+
+  /// No description provided for @massNotifCooldownMinutes.
+  ///
+  /// In tr, this message translates to:
+  /// **'{min}dk sonra gönderilebilir'**
+  String massNotifCooldownMinutes(int min);
+
+  /// No description provided for @massNotifCooldownSeconds.
+  ///
+  /// In tr, this message translates to:
+  /// **'{sec}sn sonra gönderilebilir'**
+  String massNotifCooldownSeconds(int sec);
+
+  /// No description provided for @massNotifPerListingInfo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Her ilan için 24 saatte bir toplu bildirim gönderilebilir.'**
+  String get massNotifPerListingInfo;
 
   /// No description provided for @btnShare.
   ///

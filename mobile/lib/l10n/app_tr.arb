@@ -1240,7 +1240,6 @@
   "adMetricDailyTrend": "Günlük CTR Trendi",
   "adMetricBestHour": "En İyi Saat",
   "adMetricCategoryAvgCtr": "Benzer İlanların İlgi Oranı",
-  "adMetricBurnRate": "Kalan Süre",
   "softUpdateTitle": "Yeni Sürüm Mevcut",
   "softUpdateMessage": "Uygulamanın yeni bir sürümü yayınlandı. Daha iyi bir deneyim için hemen güncelleyebilirsiniz.",
   "softUpdateUpdateNow": "Şimdi Güncelle",
@@ -1980,6 +1979,26 @@
   "lblOther": "diğer",
   "btnViewNotificationReport": "Bildirim Raporunu Gör",
   "btnSendMassNotification": "Toplu Kitle Bildirimi Gönder",
+  "massNotifCooldownHours": "{hours}s {min}dk sonra gönderilebilir",
+  "@massNotifCooldownHours": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "min": {"type": "int"}
+    }
+  },
+  "massNotifCooldownMinutes": "{min}dk sonra gönderilebilir",
+  "@massNotifCooldownMinutes": {
+    "placeholders": {
+      "min": {"type": "int"}
+    }
+  },
+  "massNotifCooldownSeconds": "{sec}sn sonra gönderilebilir",
+  "@massNotifCooldownSeconds": {
+    "placeholders": {
+      "sec": {"type": "int"}
+    }
+  },
+  "massNotifPerListingInfo": "Her ilan için 24 saatte bir toplu bildirim gönderilebilir.",
   "btnShare": "Paylaş",
   "shareListingText": "{title} — teqlif'te incele",
   "shareLiveText": "{title} — teqlif'te canlı izle",

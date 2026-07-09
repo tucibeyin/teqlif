@@ -1241,7 +1241,6 @@
   "adMetricDailyTrend": "Daily CTR Trend",
   "adMetricBestHour": "Best Hour",
   "adMetricCategoryAvgCtr": "Similar Listings' Interest",
-  "adMetricBurnRate": "Time Remaining",
   "softUpdateTitle": "New Version Available",
   "softUpdateMessage": "A new version of the app is available. Please update for a better experience.",
   "softUpdateUpdateNow": "Update Now",
@@ -1981,6 +1980,26 @@
   "lblOther": "other",
   "btnViewNotificationReport": "View Notification Report",
   "btnSendMassNotification": "Send Mass Notification",
+  "massNotifCooldownHours": "Available in {hours}h {min}m",
+  "@massNotifCooldownHours": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "min": {"type": "int"}
+    }
+  },
+  "massNotifCooldownMinutes": "Available in {min}m",
+  "@massNotifCooldownMinutes": {
+    "placeholders": {
+      "min": {"type": "int"}
+    }
+  },
+  "massNotifCooldownSeconds": "Available in {sec}s",
+  "@massNotifCooldownSeconds": {
+    "placeholders": {
+      "sec": {"type": "int"}
+    }
+  },
+  "massNotifPerListingInfo": "A mass notification can be sent once every 24 hours per listing.",
   "btnShare": "Share",
   "shareListingText": "{title} — check it out on teqlif",
   "shareLiveText": "{title} — watch live on teqlif",

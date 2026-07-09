@@ -400,6 +400,18 @@ class MassNotificationRequest(BaseModel):
     estimated_cost: int | None = Field(default=None, ge=0)
     recipient_count: int | None = Field(default=None, ge=1)
 
+@router.get("/{listing_id}/notification-cooldown")
+async def notification_cooldown(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    """İlan başına 24 saatlik bildirim cooldown süresi (saniye). 0 ise gönderim yapılabilir."""
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    ttl = await redis.ttl(f"blast_cooldown:{current_user.id}:{listing_id}")
+    return {"seconds_remaining": max(0, ttl)}
+
+
 @router.post("/{listing_id}/send-mass-notification", status_code=202)
 async def send_mass_notification_for_listing(
     listing_id: int,
@@ -410,19 +422,29 @@ async def send_mass_notification_for_listing(
     """
     İlan için Toplu Kitle Bildirimi gönderir.
     Ücretsiz krediler ve/veya TUCi bakiyesi kullanılır.
+    Her ilan için 24 saatlik cooldown uygulanır.
     """
     from app.routers.leads import BlastRequest, send_blast
     from app.models.listing import Listing
     from sqlalchemy import select
-    
+    from app.utils.redis_client import get_redis
+
     listing = await db.scalar(select(Listing).where(Listing.id == listing_id))
     if not listing:
         raise HTTPException(status_code=404, detail="İlan bulunamadı.")
-        
+
     if listing.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok.")
 
-    # Reuse send_blast logic
+    redis = await get_redis()
+    cooldown_key = f"blast_cooldown:{current_user.id}:{listing_id}"
+    ttl = await redis.ttl(cooldown_key)
+    if ttl > 0:
+        raise HTTPException(
+            status_code=429,
+            detail={"code": "cooldown", "seconds_remaining": ttl},
+        )
+
     blast_req = BlastRequest(
         title=listing.title,
         category=listing.category or "",
@@ -430,6 +452,7 @@ async def send_mass_notification_for_listing(
         estimated_cost=body.estimated_cost,
         recipient_count=body.recipient_count,
     )
-    
-    # send_blast expects the request object and dependencies
-    return await send_blast(body=blast_req, db=db, current_user=current_user)
+
+    result = await send_blast(body=blast_req, db=db, current_user=current_user)
+    await redis.setex(cooldown_key, 86400, 1)
+    return result

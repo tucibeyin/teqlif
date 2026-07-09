@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -44,7 +45,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
   // Toplu Kitle Bildirimi (Mass Notification)
   bool _massNotificationSending = false;
-  bool _massNotificationSent = false;
+  int _cooldownSeconds = 0;
+  Timer? _cooldownTimer;
 
   // Video player
   String? _videoUrl;
@@ -146,9 +148,43 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         _loadFavoriteStatus(token);
         _recordView(token);
       } else {
-        // İlanın sahibiyiz — taze kampanya durumunu çek
+        // İlanın sahibiyiz — taze kampanya durumunu çek + bildirim cooldown'unu yükle
         _refreshCampaignStatus(token);
+        final listingId = widget.listing['id'] as int?;
+        if (listingId != null) _loadNotificationCooldown(listingId);
       }
+    }
+  }
+
+  Future<void> _loadNotificationCooldown(int listingId) async {
+    final secs = await AnalyticsService.getNotificationCooldown(listingId);
+    if (!mounted || secs <= 0) return;
+    setState(() => _cooldownSeconds = secs);
+    _startCooldownTimer();
+  }
+
+  void _startCooldownTimer() {
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) { _cooldownTimer?.cancel(); return; }
+      setState(() {
+        if (_cooldownSeconds > 0) {
+          _cooldownSeconds--;
+        } else {
+          _cooldownTimer?.cancel();
+        }
+      });
+    });
+  }
+
+  String _formatCooldown(int totalSeconds) {
+    final l = AppLocalizations.of(context)!;
+    if (totalSeconds >= 3600) {
+      return l.massNotifCooldownHours(totalSeconds ~/ 3600, (totalSeconds % 3600) ~/ 60);
+    } else if (totalSeconds >= 60) {
+      return l.massNotifCooldownMinutes(totalSeconds ~/ 60);
+    } else {
+      return l.massNotifCooldownSeconds(totalSeconds);
     }
   }
 
@@ -450,6 +486,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     }
     _heartAnimCtrl?.stop();
     _heartAnimCtrl?.dispose();
+    _cooldownTimer?.cancel();
     _chewieCtrl?.dispose();
     _videoCtrl?.dispose();
     _pageCtrl.dispose();
@@ -710,12 +747,21 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     if (!mounted) return;
     setState(() => _massNotificationSending = false);
 
-    if (apiResult != null && apiResult.containsKey('error')) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(apiResult['error'])));
+    if (apiResult != null && apiResult['cooldown'] == true) {
+      final secs = (apiResult['seconds_remaining'] as num?)?.toInt() ?? 86400;
+      setState(() => _cooldownSeconds = secs);
+      _startCooldownTimer();
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text(_formatCooldown(secs))),
+      );
+    } else if (apiResult != null && apiResult.containsKey('error')) {
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(apiResult['error'] as String)));
     } else if (apiResult != null) {
-      setState(() => _massNotificationSent = true);
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceMassSendSuccess),
-        backgroundColor: Color(0xFF14B8A6),
+      setState(() => _cooldownSeconds = 86400);
+      _startCooldownTimer();
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context)!.audienceMassSendSuccess),
+        backgroundColor: const Color(0xFF14B8A6),
       ));
     } else {
       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceMassSendError)));
@@ -1553,15 +1599,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ElevatedButton.icon(
-                          onPressed: _massNotificationSending 
-                              ? null 
-                              : () => _massNotificationSent 
-                                  ? _openMassNotificationReport(context) 
-                                  : _sendMassNotification(context),
-                          icon: _massNotificationSending 
+                          onPressed: _massNotificationSending
+                              ? null
+                              : _cooldownSeconds > 0
+                                  ? () => _openMassNotificationReport(context)
+                                  : () => _sendMassNotification(context),
+                          icon: _massNotificationSending
                               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : const Text('📢', style: TextStyle(fontSize: 16)),
-                          label: Text(_massNotificationSent ? l.btnViewNotificationReport : l.btnSendMassNotification),
+                              : _cooldownSeconds > 0
+                                  ? const Icon(Icons.auto_graph, size: 18)
+                                  : const Text('📢', style: TextStyle(fontSize: 16)),
+                          label: Text(_cooldownSeconds > 0 ? l.btnViewNotificationReport : l.btnSendMassNotification),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF14B8A6),
                             foregroundColor: Colors.white,
@@ -1571,6 +1619,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                             textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                           ),
                         ),
+                        if (_cooldownSeconds > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Text(
+                              _formatCooldown(_cooldownSeconds),
+                              style: const TextStyle(color: Colors.white54, fontSize: 11),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         const SizedBox(height: 8),
                         _campaignId != null
                             ? ElevatedButton.icon(

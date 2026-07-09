@@ -2469,9 +2469,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get adMetricCategoryAvgCtr => 'Benzer İlanların İlgi Oranı';
 
   @override
-  String get adMetricBurnRate => 'Kalan Süre';
-
-  @override
   String get softUpdateTitle => 'Yeni Sürüm Mevcut';
 
   @override
@@ -3953,6 +3950,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get btnSendMassNotification => 'Toplu Kitle Bildirimi Gönder';
+
+  @override
+  String massNotifCooldownHours(int hours, int min) {
+    return '${hours}s ${min}dk sonra gönderilebilir';
+  }
+
+  @override
+  String massNotifCooldownMinutes(int min) {
+    return '${min}dk sonra gönderilebilir';
+  }
+
+  @override
+  String massNotifCooldownSeconds(int sec) {
+    return '${sec}sn sonra gönderilebilir';
+  }
+
+  @override
+  String get massNotifPerListingInfo =>
+      'Her ilan için 24 saatte bir toplu bildirim gönderilebilir.';
 
   @override
   String get btnShare => 'Paylaş';

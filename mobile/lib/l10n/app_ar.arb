@@ -1960,6 +1960,26 @@
   "lblOther": "أخرى",
   "btnViewNotificationReport": "عرض تقرير الإشعارات",
   "btnSendMassNotification": "إرسال إشعار جماعي",
+  "massNotifCooldownHours": "متاح خلال {hours}س {min}د",
+  "@massNotifCooldownHours": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "min": {"type": "int"}
+    }
+  },
+  "massNotifCooldownMinutes": "متاح خلال {min}د",
+  "@massNotifCooldownMinutes": {
+    "placeholders": {
+      "min": {"type": "int"}
+    }
+  },
+  "massNotifCooldownSeconds": "متاح خلال {sec}ث",
+  "@massNotifCooldownSeconds": {
+    "placeholders": {
+      "sec": {"type": "int"}
+    }
+  },
+  "massNotifPerListingInfo": "يمكن إرسال إشعار جماعي مرة واحدة كل 24 ساعة لكل إعلان.",
   "btnShare": "مشاركة",
   "shareListingText": "{title} — تحقق منه على teqlif",
   "shareLiveText": "{title} — شاهد مباشرة على teqlif",

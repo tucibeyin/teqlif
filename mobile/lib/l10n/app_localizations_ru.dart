@@ -2501,9 +2501,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get adMetricCategoryAvgCtr => 'Интерес к подобным объявлениям';
 
   @override
-  String get adMetricBurnRate => 'Оставшееся время';
-
-  @override
   String get softUpdateTitle => 'Доступна новая версия';
 
   @override
@@ -3998,6 +3995,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get btnSendMassNotification => 'Отправить массовое уведомление';
+
+  @override
+  String massNotifCooldownHours(int hours, int min) {
+    return 'Доступно через $hoursч $minм';
+  }
+
+  @override
+  String massNotifCooldownMinutes(int min) {
+    return 'Доступно через $minм';
+  }
+
+  @override
+  String massNotifCooldownSeconds(int sec) {
+    return 'Доступно через $secс';
+  }
+
+  @override
+  String get massNotifPerListingInfo =>
+      'Массовое уведомление можно отправлять раз в 24 часа для каждого объявления.';
 
   @override
   String get btnShare => 'Поделиться';

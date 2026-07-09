@@ -1981,6 +1981,26 @@
   "lblOther": "другое",
   "btnViewNotificationReport": "Просмотр отчета об уведомлениях",
   "btnSendMassNotification": "Отправить массовое уведомление",
+  "massNotifCooldownHours": "Доступно через {hours}ч {min}м",
+  "@massNotifCooldownHours": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "min": {"type": "int"}
+    }
+  },
+  "massNotifCooldownMinutes": "Доступно через {min}м",
+  "@massNotifCooldownMinutes": {
+    "placeholders": {
+      "min": {"type": "int"}
+    }
+  },
+  "massNotifCooldownSeconds": "Доступно через {sec}с",
+  "@massNotifCooldownSeconds": {
+    "placeholders": {
+      "sec": {"type": "int"}
+    }
+  },
+  "massNotifPerListingInfo": "Массовое уведомление можно отправлять раз в 24 часа для каждого объявления.",
   "btnShare": "Поделиться",
   "shareListingText": "{title} — посмотрите на teqlif",
   "shareLiveText": "{title} — смотрите в прямом эфире на teqlif",
