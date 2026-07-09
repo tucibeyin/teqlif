@@ -20,6 +20,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 
+import redis
 import redis.asyncio as aioredis
 from sqlalchemy import select
 
@@ -122,7 +123,7 @@ async def chat_pubsub_listener() -> None:
                         except Exception as exc:
                             logger.warning("[CHAT PUBSUB] Mesaj işleme hatası: %s", exc)
                     break
-                except aioredis.exceptions.TimeoutError:
+                except redis.exceptions.TimeoutError:
                     continue
                 except Exception:
                     raise
@@ -188,7 +189,7 @@ async def moderation_pubsub_listener() -> None:
                         except Exception as exc:
                             logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
                     break
-                except aioredis.exceptions.TimeoutError:
+                except redis.exceptions.TimeoutError:
                     continue
                 except Exception:
                     raise

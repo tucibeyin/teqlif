@@ -2,6 +2,7 @@ from typing import List
 
 import asyncio
 import json
+import redis
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,7 +73,7 @@ async def dm_pubsub_listener() -> None:
                         except Exception as exc:
                             logger.warning("[DM PUBSUB] Mesaj işleme hatası: %s", exc)
                     break
-                except aioredis.exceptions.TimeoutError:
+                except redis.exceptions.TimeoutError:
                     continue
                 except Exception:
                     raise

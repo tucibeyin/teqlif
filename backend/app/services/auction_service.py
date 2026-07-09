@@ -175,6 +175,7 @@ async def pubsub_listener():
 
     Redis bağlantısı koptuğunda otomatik olarak yeniden bağlanır.
     """
+    import redis
     import redis.asyncio as aioredis
     from app.config import settings
 
@@ -216,7 +217,7 @@ async def pubsub_listener():
                         except Exception as exc:
                             logger.error("[PUBSUB] Mesaj işleme hatası: %s", exc)
                     break
-                except aioredis.exceptions.TimeoutError:
+                except redis.exceptions.TimeoutError:
                     continue
                 except Exception:
                     raise
