@@ -51,7 +51,6 @@ dependencies:
   in_app_update: ^4.2.3
   audio_service: ^0.18.18
   audio_session: ^0.2.3
-  posthog_flutter: ^4.4.3
 
 dev_dependencies:
   flutter_test:

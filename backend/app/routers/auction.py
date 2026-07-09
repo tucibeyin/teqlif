@@ -21,7 +21,7 @@ from app.utils.auth import get_current_user, decode_token
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
 from app.core.rate_limit import limiter, get_user_id_or_ip
-from app.utils import posthog_client
+from app.database_clickhouse import buffer_user_event
 from app.services.auction_service import (
     AuctionService,
     manager,
@@ -108,15 +108,13 @@ async def place_bid(
 ):
     bidder_ip = request.client.host if request.client else None
     result = await AuctionService(db).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
-    posthog_client.capture(
-        current_user.id,
-        "bid_placed",
-        {
-            "amount": data.amount,
-            "stream_id": stream_id,
-            "listing_id": result.listing_id,
-        },
-    )
+    asyncio.create_task(buffer_user_event(
+        event_type="bid_placed",
+        item_id=result.listing_id or stream_id,
+        item_type="listing" if result.listing_id else "stream",
+        user_id=current_user.id,
+        price_point=data.amount,
+    ))
     return result
 
 

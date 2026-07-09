@@ -1,10 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 import '../services/storage_service.dart';
@@ -48,34 +46,6 @@ class AnalyticsService {
   static Future<bool?> getConsentStatus() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('teqlif_tracking_consent');
-  }
-
-  // ── PostHog ────────────────────────────────────────────────────────────────
-
-  static Future<void> initPostHog() async {
-    final config = PostHogConfig('phc_o9uA5ENbbCkucvfZorfYQjNrRnBMSgU3sUdgep7gBZwy')
-      ..host = 'https://eu.i.posthog.com'
-      ..captureApplicationLifecycleEvents = true
-      ..debug = kDebugMode;
-    await Posthog().setup(config);
-  }
-
-  static Future<void> identifyUser(String userId) async {
-    try {
-      await Posthog().identify(userId: userId);
-    } catch (_) {}
-  }
-
-  static Future<void> logCustomEvent(
-    String eventName,
-    Map<String, dynamic> properties,
-  ) async {
-    try {
-      await Posthog().capture(
-        eventName: eventName,
-        properties: properties.map((k, v) => MapEntry(k, v as Object)),
-      );
-    } catch (_) {}
   }
 
   static Future<void> setConsent(bool accepted) async {
