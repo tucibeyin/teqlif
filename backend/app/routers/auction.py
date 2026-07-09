@@ -110,8 +110,8 @@ async def place_bid(
     result = await AuctionService(db).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
     asyncio.create_task(buffer_user_event(
         event_type="bid_placed",
-        item_id=result.listing_id or stream_id,
-        item_type="listing" if result.listing_id else "stream",
+        item_id=result.get("listing_id") or stream_id,
+        item_type="listing" if result.get("listing_id") else "stream",
         user_id=current_user.id,
         price_point=data.amount,
     ))
