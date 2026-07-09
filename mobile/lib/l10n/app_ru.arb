@@ -2073,5 +2073,26 @@
   "aiCreditsLeftSuffix": "осталось",
   "editProfileFullName": "Полное имя",
   "editProfileUsername": "Имя пользователя",
-  "editProfileFillAll": "Пожалуйста, заполните все поля"
+  "editProfileFillAll": "Пожалуйста, заполните все поля",
+  "aiAdviceSimilarCount": "Проанализировано {count} похожих товаров",
+  "@aiAdviceSimilarCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiAdviceSameCategory": "{count} той же категории",
+  "@aiAdviceSameCategory": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiAdviceCityBased": "по городу",
+  "aiAdviceMarketClose": "Средняя цена закрытия: {price} ₺.",
+  "@aiAdviceMarketClose": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
+  "aiAdviceBimodal": "В этой группе товаров обнаружены два ценовых уровня (бимодальный). Цена может варьироваться в зависимости от варианта товара или гарантии.",
+  "aiAdviceNoData": "Пока недостаточно данных о похожих товарах. По мере добавления объявлений прогнозы станут точнее. Изучите рынок для определения цены."
 }

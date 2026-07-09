@@ -141,11 +141,14 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
+      final prefs = await SharedPreferences.getInstance();
+      final lang = prefs.getString('app_locale_language_code') ?? 'tr';
       final resp = await http.post(
         Uri.parse('$kBaseUrl/analytics/price-estimate'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'Accept-Language': lang,
         },
         body: jsonEncode({
           'title': title,

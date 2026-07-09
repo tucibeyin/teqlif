@@ -606,6 +606,7 @@ async def price_estimate(
     })
     rows = result.fetchall()
 
+    _t = _get_t(get_locale(current_user, request))
     _no_data = {
         "found_similar": 0,
         "suggested_start_price": None,
@@ -614,7 +615,8 @@ async def price_estimate(
         "max_close_price": None,
         "confidence": "low",
         "category_match_count": 0,
-        "advice": (
+        "advice": _t.get(
+            "aiAdviceNoData",
             "Henüz yeterli benzer ürün verisi bulunamadı. "
             "Platforma eklendikçe tahminler daha isabetli hale gelecek. "
             "Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz."
@@ -720,7 +722,11 @@ async def price_estimate(
                 if y_kde[i] > y_kde[i-1] and y_kde[i] > y_kde[i+1]:
                     peaks.append(x_grid[i])
             if len(peaks) > 1 and (peaks[-1] - peaks[0]) > (min(prices_for_kde) * 0.3):
-                alert_msg = "Bu ürün grubunda iki farklı piyasa fiyatı (Bimodal) tespit edildi. Ürününüzün varyasyonuna veya garantisine göre fiyat farklılaşabilir."
+                alert_msg = _t.get(
+                    "aiAdviceBimodal",
+                    "Bu ürün grubunda iki farklı piyasa fiyatı (Bimodal) tespit edildi. "
+                    "Ürününüzün varyasyonuna veya garantisine göre fiyat farklılaşabilir."
+                )
         except Exception as e:
             logger.warning(f"KDE analysis failed: {e}")
 
@@ -747,16 +753,19 @@ async def price_estimate(
     start_fmt = f"{int(suggested_start):,}".replace(",", ".")
     signals = []
     if cat_matched > 0:
-        signals.append(f"{cat_matched} aynı kategori")
+        signals.append(
+            _t.get("aiAdviceSameCategory", "{count} aynı kategori").replace("{count}", str(cat_matched))
+        )
     if body_city and any(body_city in (r.location or "").lower() for _, r, _ in top):
-        signals.append("şehir bazlı")
+        signals.append(_t.get("aiAdviceCityBased", "şehir bazlı"))
     signal_str = f" ({', '.join(signals)})" if signals else ""
-    
-    advice = f"{cnt} benzer ürün satış verisi analiz edildi{signal_str}. "
+
+    advice = _t.get("aiAdviceSimilarCount", "{count} benzer ürün satış verisi analiz edildi").replace("{count}", str(cnt))
+    advice += signal_str + ". "
     if alert_msg:
         advice += alert_msg
     else:
-        advice += f"Ortalama piyasa kapanışı: {close_fmt} ₺."
+        advice += _t.get("aiAdviceMarketClose", "Ortalama piyasa kapanışı: {price} ₺.").replace("{price}", close_fmt)
 
     # ── TUCi düş + sayaç güncelle (Atomik) ────────────────────────────────────
     tuci_spent = 0

@@ -2109,5 +2109,26 @@
   "aiCreditsLeftSuffix": "credits left",
   "editProfileFullName": "Full Name",
   "editProfileUsername": "Username",
-  "editProfileFillAll": "Please fill in all fields"
+  "editProfileFillAll": "Please fill in all fields",
+  "aiAdviceSimilarCount": "{count} similar products analyzed",
+  "@aiAdviceSimilarCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiAdviceSameCategory": "{count} same category",
+  "@aiAdviceSameCategory": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiAdviceCityBased": "city-based",
+  "aiAdviceMarketClose": "Average market close: {price} ₺.",
+  "@aiAdviceMarketClose": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
+  "aiAdviceBimodal": "Two distinct market price levels (Bimodal) detected in this product group. Price may vary based on product variant or warranty.",
+  "aiAdviceNoData": "Not enough similar product data found yet. Estimates will improve as more listings are added to the platform. Research the market to set your price."
 }

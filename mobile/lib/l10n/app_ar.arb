@@ -2052,5 +2052,26 @@
   "aiCreditsLeftSuffix": "رصيد متبقٍ",
   "editProfileFullName": "الاسم الكامل",
   "editProfileUsername": "اسم المستخدم",
-  "editProfileFillAll": "يرجى ملء جميع الحقول"
+  "editProfileFillAll": "يرجى ملء جميع الحقول",
+  "aiAdviceSimilarCount": "تم تحليل {count} منتج مشابه",
+  "@aiAdviceSimilarCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiAdviceSameCategory": "{count} من نفس الفئة",
+  "@aiAdviceSameCategory": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "aiAdviceCityBased": "حسب المدينة",
+  "aiAdviceMarketClose": "متوسط سعر الإغلاق: {price} ₺.",
+  "@aiAdviceMarketClose": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
+  "aiAdviceBimodal": "تم اكتشاف مستويين مختلفين للسعر (ثنائي النمط) في هذه المجموعة. قد يتفاوت السعر بحسب نوع المنتج أو الضمان.",
+  "aiAdviceNoData": "لم يتم العثور على بيانات كافية لمنتجات مشابهة حتى الآن. ستتحسن التقديرات مع إضافة المزيد من الإعلانات. يمكنك تحديد سعرك بإجراء بحث في السوق."
 }
