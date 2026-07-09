@@ -656,7 +656,7 @@ async def my_auction_context(
 
 
 @router.post("/refresh")
-@limiter.limit("20/minute")
+@limiter.limit("60/minute")
 async def refresh_token(
     request: Request,
     response: Response,
