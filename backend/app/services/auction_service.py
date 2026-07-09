@@ -39,7 +39,10 @@ from app.core.exceptions import (
     DatabaseException,
 )
 from app.core.logger import get_logger, capture_exception
+from app.core.ws_manager import ws_manager
 from app.constants import ws_types as WS
+
+_DM_CHANNEL = "dm_broadcast"
 
 logger = get_logger(__name__)
 
@@ -875,12 +878,27 @@ class AuctionService:
             )
             self.db.add(purchase)
 
+            winner_dm_content = dm_content + f"\n📋 teqlif://auction/{auction.id}"
+            host_dm_content = (
+                f"✅ Hemen Al tamamlandı!\n"
+                f"📦 Ürün: {item_name}\n"
+                f"💰 Fiyat: {fmt_price(bin_price)}\n"
+                f"🛒 Alan: @{buyer_username}"
+                f"{listing_line}"
+                f"\n📋 teqlif://auction/{auction.id}"
+            )
             dm = DirectMessage(
                 sender_id=user.id,
                 receiver_id=buyer_id,
-                content=dm_content + f"\n📋 teqlif://auction/{auction.id}",
+                content=winner_dm_content,
+            )
+            dm_host = DirectMessage(
+                sender_id=buyer_id,
+                receiver_id=user.id,
+                content=host_dm_content,
             )
             self.db.add(dm)
+            self.db.add(dm_host)
             await self.db.commit()
 
         except Exception as exc:
@@ -892,6 +910,36 @@ class AuctionService:
             )
             capture_exception(exc)
             raise DatabaseException("Satın alma işlemi kaydedilemedi, lütfen tekrar deneyin")
+
+        # DM WS broadcast (her iki tarafa)
+        try:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            buyer_dm_payload = {
+                "type": "message",
+                "id": dm.id,
+                "sender_id": user.id,
+                "receiver_id": buyer_id,
+                "sender_username": user.username,
+                "content": winner_dm_content,
+                "is_read": False,
+                "created_at": now_iso,
+            }
+            host_dm_payload = {
+                "type": "message",
+                "id": dm_host.id,
+                "sender_id": buyer_id,
+                "receiver_id": user.id,
+                "sender_username": buyer_username,
+                "content": host_dm_content,
+                "is_read": False,
+                "created_at": now_iso,
+            }
+            asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{buyer_id}", buyer_dm_payload))
+            asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{user.id}", buyer_dm_payload))
+            asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{user.id}", host_dm_payload))
+            asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{buyer_id}", host_dm_payload))
+        except Exception as exc:
+            logger.error("[HEMEN AL KABUL] DM WS broadcast başarısız | %s", exc)
 
         # Commit sonrası bildirim (non-blocking)
         try:
@@ -1051,10 +1099,14 @@ class AuctionService:
             listing.is_active = False
 
         winner_user_id: int | None = None
+        dm: DirectMessage | None = None
+        dm_host: DirectMessage | None = None
+        winner_dm_content: str = ""
+        host_dm_content: str = ""
         if winner_id_str:
             try:
                 winner_user_id = int(winner_id_str)
-                
+
                 if listing_id:
                     purchase = Purchase(
                         buyer_id=winner_user_id,
@@ -1064,11 +1116,25 @@ class AuctionService:
                         purchase_type="AUCTION_WIN",
                     )
                     self.db.add(purchase)
-                
+
+                winner_dm_content = dm_content + f"\n📋 teqlif://auction/{auction.id}"
+                host_dm_content = (
+                    f"✅ Teklif kabul edildi!\n"
+                    f"📦 Ürün: {item_name}\n"
+                    f"💰 Fiyat: {fmt_price(final_price)}\n"
+                    f"🏅 Kazanan: @{winner_name}"
+                    f"{listing_line}"
+                    f"\n📋 teqlif://auction/{auction.id}"
+                )
                 dm = DirectMessage(
                     sender_id=user.id,
                     receiver_id=winner_user_id,
-                    content=dm_content + f"\n📋 teqlif://auction/{auction.id}",
+                    content=winner_dm_content,
+                )
+                dm_host = DirectMessage(
+                    sender_id=winner_user_id,
+                    receiver_id=user.id,
+                    content=host_dm_content,
                 )
                 # Kazananın preference_embedding'ini güçlendir (×20 ağırlık)
                 if listing_id:
@@ -1080,6 +1146,7 @@ class AuctionService:
                         interaction_type="auction_won",
                     ))
                 self.db.add(dm)
+                self.db.add(dm_host)
             except ValueError:
                 logger.warning(
                     "[ACCEPT] Geçersiz winner_id_str formatı, DM atlandı | stream_id=%s winner_id_str=%r",
@@ -1101,6 +1168,37 @@ class AuctionService:
         # Commit başarılı → şimdi Redis'i güncelle ve temizle
         await redis.hset(key, "status", "ended")
         await redis.delete(key)
+
+        # DM WS broadcast (her iki tarafa)
+        if winner_user_id and dm and dm_host:
+            try:
+                now_iso = datetime.now(timezone.utc).isoformat()
+                winner_dm_payload = {
+                    "type": "message",
+                    "id": dm.id,
+                    "sender_id": user.id,
+                    "receiver_id": winner_user_id,
+                    "sender_username": user.username,
+                    "content": winner_dm_content,
+                    "is_read": False,
+                    "created_at": now_iso,
+                }
+                host_dm_payload = {
+                    "type": "message",
+                    "id": dm_host.id,
+                    "sender_id": winner_user_id,
+                    "receiver_id": user.id,
+                    "sender_username": winner_name,
+                    "content": host_dm_content,
+                    "is_read": False,
+                    "created_at": now_iso,
+                }
+                asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{winner_user_id}", winner_dm_payload))
+                asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{user.id}", winner_dm_payload))
+                asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{user.id}", host_dm_payload))
+                asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{winner_user_id}", host_dm_payload))
+            except Exception as exc:
+                logger.error("[ACCEPT] DM WS broadcast başarısız | %s", exc)
 
         # Kazananın preference_embedding'ini kuyruğa al
         if winner_user_id:
