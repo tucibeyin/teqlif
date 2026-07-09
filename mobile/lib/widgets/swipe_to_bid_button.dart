@@ -44,6 +44,8 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
   int _lastHapticStep = -1;
   // Kullanıcının o pan hareketi sırasında ulaştığı en yüksek ilerleme
   double _peakProgress = 0.0;
+  // Gesture başındaki konumu: net kaydırma mesafesi = peak - start
+  double _gestureStartProgress = 0.0;
 
   // Spring-back için unbounded controller
   late final AnimationController _springCtrl;
@@ -86,6 +88,7 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
     if (widget.isLoading || _completed) return;
     _springCtrl.stop();
     _isDragging = true;
+    _gestureStartProgress = _dragProgress; // spring-back sırasında başlarsa net mesafeyi doğru ölç
     _peakProgress = _dragProgress;
     _lastHapticStep = (_dragProgress * 10).floor();
   }
@@ -116,8 +119,10 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
     _isDragging = false;
     if (_completed) return;
 
-    // Kullanıcı sürüklemeye başlayıp (>15%) tamamlamadan bıraktı → kararsızlık sinyali
-    if (_peakProgress >= 0.15 && widget.itemId != null) {
+    // Kullanıcı bu gesture'da ≥15% net ilerledi ama tamamlamadı → kararsızlık sinyali
+    // _gestureStartProgress ile net mesafe ölçülür; önceki spring-back pozisyonu false-positive yaratmaz
+    final netProgress = _peakProgress - _gestureStartProgress;
+    if (netProgress >= 0.15 && widget.itemId != null) {
       AnalyticsService.logInteraction(
         itemId: widget.itemId!,
         itemType: 'listing',

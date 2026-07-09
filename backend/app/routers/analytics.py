@@ -40,6 +40,7 @@ class InteractionPayload(BaseModel):
     duration_seconds: Optional[float] = None
     price_point: Optional[float] = None
     metadata: Optional[Dict[str, Any]] = None
+    user_id: Optional[int] = None  # mobil fallback — JWT expire olduğunda kullanılır
 
 async def _save_event_async(data: AnalyticsEventCreate, user_id: int | None, ip_address: str | None, db: AsyncSession):
     try:
@@ -103,13 +104,15 @@ async def track_interaction(
     DB'ye yazmaz — Redis kuyruğuna (interaction_queue) ekler.
     Worker periyodik olarak kuyruğu boşaltır ve bulk-insert yapar.
     """
-    user_id = None
+    # JWT decode: sunucu imzası güvenilir → öncelikli kaynak
+    # Fallback: mobil istemcinin body'ye gömdüğü user_id (JWT expire durumu)
+    user_id = payload.user_id  # fallback
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         try:
-            user_id = decode_token(auth_header.split(" ")[1])
+            user_id = decode_token(auth_header.split(" ")[1])  # JWT her zaman kazanır
         except Exception:
-            pass
+            pass  # fallback (payload.user_id) korunur
 
     from datetime import datetime, timezone
     record = {
@@ -272,9 +275,9 @@ async def get_seller_report(
             # user_events: detay ekranı etkileşimleri
             result = await ch.query(f"""
                 SELECT
-                    countDistinct(user_id)                          AS unique_viewers,
-                    avgIf(price_point, price_point > 0)             AS avg_budget,
-                    countDistinctIf(user_id, event_type = 'bid_hesitation') AS hesitation_count
+                    countDistinct(user_id)                                   AS unique_viewers,
+                    avgIf(price_point, price_point > 0)                      AS avg_budget,
+                    countDistinctIf(user_id, event_type = 'bid_hesitation')  AS hesitation_count
                 FROM user_events
                 WHERE item_id IN ({ids_str})
                   AND item_type = 'listing'

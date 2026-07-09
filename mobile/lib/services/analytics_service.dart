@@ -323,10 +323,8 @@ class AnalyticsService {
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      if (ownerId != null) {
-        final myUserId = await StorageService.getCurrentUserId();
-        if (myUserId == ownerId) return; // Kendi içeriği, analitik atla
-      }
+      final myUserId = await StorageService.getCurrentUserId();
+      if (ownerId != null && myUserId == ownerId) return; // Kendi içeriği, analitik atla
 
       final token = await StorageService.getToken();
       final headers = {
@@ -340,6 +338,8 @@ class AnalyticsService {
         'duration_seconds': ?durationSeconds,
         'price_point': ?pricePoint,
         'metadata': ?metadata,
+        // JWT expire olsa bile user_id kaybolmasın diye body'ye de yaz
+        if (myUserId != null) 'user_id': myUserId,
       };
       http
           .post(Uri.parse('$kBaseUrl/analytics/interaction'),
