@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles  # frontend /static için hâlâ gerekli
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, ORJSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.gzip import GZipMiddleware
@@ -375,9 +375,6 @@ app.include_router(config.router)
 app.include_router(onboarding.router)
 app.include_router(search_alerts.router)
 
-# Upload klasörü varsa static olarak sun
-if os.path.exists(settings.upload_dir):
-    app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
 # Frontend dosyalarını sun
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))

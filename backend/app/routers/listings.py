@@ -29,6 +29,7 @@ from app.services.listing_service import (
 from app.services.like_service import LikeService
 from app.schemas.listing import ListingOfferCreate
 from app.core.task_queue import get_pool
+from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
@@ -97,7 +98,9 @@ async def get_listing(
 
 
 @router.post("")
+@limiter.limit("20/minute")
 async def create_listing(
+    request: Request,
     payload: dict,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

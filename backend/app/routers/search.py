@@ -2,7 +2,7 @@ import asyncio
 import json
 import re
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_, func, text as sa_text
 
@@ -14,6 +14,7 @@ from app.models.block import UserBlock
 from app.models.user_interest import UserInterest
 from app.utils.auth import bearer_scheme, decode_token
 from app.services.ml_service import generate_embedding
+from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
@@ -40,7 +41,9 @@ async def _optional_user_id(
 
 
 @router.get("/users")
+@limiter.limit("30/minute")
 async def search_users(
+    request: Request,
     q: str = "",
     offset: int = 0,
     current_user_id: Optional[int] = Depends(_optional_user_id),
@@ -178,7 +181,9 @@ async def explore(
 
 
 @router.get("/all")
+@limiter.limit("30/minute")
 async def search_all(
+    request: Request,
     q: str = "",
     offset: int = 0,
     current_user_id: Optional[int] = Depends(_optional_user_id),
@@ -353,7 +358,9 @@ async def search_all(
 # ── Anlamsal İlan Arama ────────────────────────────────────────────────────────
 
 @router.get("/listings")
+@limiter.limit("30/minute")
 async def search_listings(
+    request: Request,
     q: str = "",
     offset: int = 0,
     current_user_id: Optional[int] = Depends(_optional_user_id),

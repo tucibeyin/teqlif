@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     debug: bool = False  # True → localhost CORS origins eklenir (sadece geliştirme ortamı)
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
+    minio_endpoint: str = "localhost:9000"
+    minio_access_key: str = ""
+    minio_secret_key: str = ""
+    minio_bucket: str = "teqlif"
+    minio_secure: bool = False
 
     class Config:
         env_file = ".env"

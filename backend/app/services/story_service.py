@@ -289,46 +289,45 @@ class StoryService:
         if len(raw) > _MAX_BYTES:
             raise BadRequestException("Dosya çok büyük (Maks 20 MB)")
 
-        # Diske yaz
-        stories_dir = os.path.join(settings.upload_dir, "stories")
-        os.makedirs(stories_dir, exist_ok=True)
+        import tempfile
+        from app.services import storage_service as storage
 
         fallback = "photo.jpg" if is_image else "video.mp4"
         ext = os.path.splitext(file.filename or fallback)[1] or (".jpg" if is_image else ".mp4")
         filename = f"{uuid.uuid4().hex}{ext}"
-        file_path = os.path.join(stories_dir, filename)
+        minio_key = f"stories/{filename}"
+        content_type = "image/jpeg" if is_image else "video/mp4"
 
-        try:
-            with open(file_path, "wb") as f:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = os.path.join(tmp_dir, filename)
+            with open(tmp_path, "wb") as f:
                 f.write(raw)
-        except OSError as exc:
-            logger.error(
-                "[STORY UPLOAD] Dosya yazılamadı: %s | user_id=%s | %s",
-                file_path,
-                user_id,
-                exc,
-                exc_info=True,
-            )
-            capture_exception(exc)
-            raise DatabaseException("Dosya kaydedilemedi")
 
-        # ffmpeg sıkıştırma — yalnızca video için
-        if is_video:
-            compressed_path, _ = await _compress_video(file_path, stories_dir, ext)
-            if compressed_path:
-                try:
-                    os.replace(compressed_path, file_path)
-                    logger.info("[STORY UPLOAD] Sıkıştırıldı | %s", file_path)
-                except OSError as exc:
-                    logger.warning("[STORY UPLOAD] Sıkıştırılmış dosya taşınamadı, orijinal kullanılıyor: %s", exc)
+            upload_path = tmp_path
+            if is_video:
+                compressed_path, _ = await _compress_video(tmp_path, tmp_dir, ext)
+                if compressed_path:
+                    upload_path = compressed_path
+                    logger.info("[STORY UPLOAD] Sıkıştırıldı | user_id=%s", user_id)
 
-        video_url = f"/uploads/stories/{filename}"
+            try:
+                video_url = storage.upload_file(minio_key, upload_path, content_type)
+            except Exception as exc:
+                logger.error(
+                    "[STORY UPLOAD] MinIO yükleme başarısız | user_id=%s | %s",
+                    user_id,
+                    exc,
+                    exc_info=True,
+                )
+                capture_exception(exc)
+                raise DatabaseException("Dosya kaydedilemedi")
+
         expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
 
         story = Story(
             user_id=user_id,
             media_type=media_type,
-            video_path=file_path,
+            video_path=minio_key,
             video_url=video_url,
             expires_at=expires_at,
         )
@@ -337,11 +336,7 @@ class StoryService:
             await self.db.commit()
             await self.db.refresh(story)
         except Exception as exc:
-            # Disk'teki dosyayı geri al
-            try:
-                os.remove(file_path)
-            except OSError:
-                pass
+            storage.delete_object(minio_key)
             logger.error(
                 "[STORY UPLOAD] DB kaydı oluşturulamadı | user_id=%s | %s",
                 user_id,
@@ -352,10 +347,10 @@ class StoryService:
             raise DatabaseException("Hikaye kaydedilemedi")
 
         logger.info(
-            "[STORY UPLOAD] Yüklendi | story_id=%d | user_id=%s | path=%s",
+            "[STORY UPLOAD] Yüklendi | story_id=%d | user_id=%s | key=%s",
             story.id,
             user_id,
-            file_path,
+            minio_key,
         )
         return story
 
@@ -540,22 +535,22 @@ class StoryService:
             from app.core.exceptions import ForbiddenException
             raise ForbiddenException("Bu hikayeyi silme yetkiniz yok")
 
-        # Disk dosyalarını sil
-        files_to_delete: list[tuple[str, str]] = []
-        if story.video_path:
-            files_to_delete.append(("video", story.video_path))
-        if story.thumbnail_url:
-            thumb_path = settings.upload_dir + story.thumbnail_url[len("/uploads"):]
-            files_to_delete.append(("thumbnail", thumb_path))
+        # Medya dosyalarını sil
+        from app.services import storage_service as storage
 
-        for file_label, file_path in files_to_delete:
-            try:
-                os.remove(file_path)
-                logger.info("[STORY DELETE] %s silindi: %s | story_id=%d", file_label, file_path, story_id)
-            except FileNotFoundError:
-                pass
-            except OSError as os_err:
-                logger.error("[STORY DELETE] %s silinemedi: %s | story_id=%d | %s", file_label, file_path, story_id, os_err)
+        if story.video_path:
+            if story.video_path.startswith("/"):
+                # Eski disk path (migration öncesi kayıtlar)
+                try:
+                    os.remove(story.video_path)
+                except (FileNotFoundError, OSError):
+                    pass
+            else:
+                storage.delete_object(story.video_path)
+            logger.info("[STORY DELETE] video silindi | story_id=%d", story_id)
+
+        if story.thumbnail_url:
+            storage.delete_object(storage.url_to_key(story.thumbnail_url))
 
         try:
             await self.db.delete(story)
@@ -598,39 +593,21 @@ class StoryService:
         deleted_count = 0
         for story in expired:
             # ── Fiziksel dosyaları sil (video + thumbnail) ────────────────
-            files_to_delete: list[tuple[str, str]] = []
-            if story.video_path:
-                files_to_delete.append(("video", story.video_path))
-            if story.thumbnail_url:
-                # /uploads/stories/thumb_xxx.jpg → {upload_dir}/stories/thumb_xxx.jpg
-                thumb_path = settings.upload_dir + story.thumbnail_url[len("/uploads"):]
-                files_to_delete.append(("thumbnail", thumb_path))
+            from app.services import storage_service as storage
 
-            for file_label, file_path in files_to_delete:
-                try:
-                    os.remove(file_path)
-                    logger.info(
-                        "[STORY CLEANUP] %s silindi: %s | story_id=%d",
-                        file_label,
-                        file_path,
-                        story.id,
-                    )
-                except FileNotFoundError:
-                    logger.warning(
-                        "[STORY CLEANUP] %s bulunamadı, atlandı: %s | story_id=%d",
-                        file_label,
-                        file_path,
-                        story.id,
-                    )
-                except OSError as os_err:
-                    logger.error(
-                        "[STORY CLEANUP] %s silinemedi: %s | story_id=%d | hata: %s",
-                        file_label,
-                        file_path,
-                        story.id,
-                        os_err,
-                        exc_info=True,
-                    )
+            if story.video_path:
+                if story.video_path.startswith("/"):
+                    # Eski disk path (migration öncesi kayıtlar)
+                    try:
+                        os.remove(story.video_path)
+                    except (FileNotFoundError, OSError):
+                        pass
+                else:
+                    storage.delete_object(story.video_path)
+                logger.info("[STORY CLEANUP] video silindi | story_id=%d", story.id)
+
+            if story.thumbnail_url:
+                storage.delete_object(storage.url_to_key(story.thumbnail_url))
 
             # ── DB kaydını sil (story_views CASCADE ile otomatik silinir) ─
             try:
