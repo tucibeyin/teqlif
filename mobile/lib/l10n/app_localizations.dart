@@ -7565,6 +7565,78 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Sponsorlu'**
   String get badgeSponsored;
+
+  /// No description provided for @aiPriceTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay Zeka Fiyat Tahmini'**
+  String get aiPriceTitle;
+
+  /// No description provided for @aiPriceSimilar.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} benzer ürün analiz edildi'**
+  String aiPriceSimilar(int count);
+
+  /// No description provided for @confidenceHigh.
+  ///
+  /// In tr, this message translates to:
+  /// **'● Yüksek güven'**
+  String get confidenceHigh;
+
+  /// No description provided for @confidenceMedium.
+  ///
+  /// In tr, this message translates to:
+  /// **'● Orta güven'**
+  String get confidenceMedium;
+
+  /// No description provided for @confidenceLow.
+  ///
+  /// In tr, this message translates to:
+  /// **'● Düşük güven'**
+  String get confidenceLow;
+
+  /// No description provided for @aiPriceApply.
+  ///
+  /// In tr, this message translates to:
+  /// **'Önerilen Fiyatı Uygula'**
+  String get aiPriceApply;
+
+  /// No description provided for @aiPriceAnalyzing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Analiz ediliyor…'**
+  String get aiPriceAnalyzing;
+
+  /// No description provided for @aiPriceButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay Zeka ile Fiyat Belirle'**
+  String get aiPriceButton;
+
+  /// No description provided for @aiCreditsLeftSuffix.
+  ///
+  /// In tr, this message translates to:
+  /// **'hak kaldı'**
+  String get aiCreditsLeftSuffix;
+
+  /// No description provided for @editProfileFullName.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ad Soyad'**
+  String get editProfileFullName;
+
+  /// No description provided for @editProfileUsername.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcı Adı'**
+  String get editProfileUsername;
+
+  /// No description provided for @editProfileFillAll.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm alanları doldurun'**
+  String get editProfileFillAll;
 }
 
 class _AppLocalizationsDelegate

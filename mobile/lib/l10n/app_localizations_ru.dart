@@ -4201,4 +4201,42 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get badgeSponsored => 'Реклама';
+
+  @override
+  String get aiPriceTitle => 'Оценка цены с ИИ';
+
+  @override
+  String aiPriceSimilar(int count) {
+    return 'Проанализировано $count похожих товаров';
+  }
+
+  @override
+  String get confidenceHigh => '● Высокая уверенность';
+
+  @override
+  String get confidenceMedium => '● Средняя уверенность';
+
+  @override
+  String get confidenceLow => '● Низкая уверенность';
+
+  @override
+  String get aiPriceApply => 'Применить рекомендованную цену';
+
+  @override
+  String get aiPriceAnalyzing => 'Анализируем…';
+
+  @override
+  String get aiPriceButton => 'Определить цену с помощью ИИ';
+
+  @override
+  String get aiCreditsLeftSuffix => 'осталось';
+
+  @override
+  String get editProfileFullName => 'Полное имя';
+
+  @override
+  String get editProfileUsername => 'Имя пользователя';
+
+  @override
+  String get editProfileFillAll => 'Пожалуйста, заполните все поля';
 }

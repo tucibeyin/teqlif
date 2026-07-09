@@ -4150,4 +4150,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get badgeSponsored => 'Sponsored';
+
+  @override
+  String get aiPriceTitle => 'AI Price Estimate';
+
+  @override
+  String aiPriceSimilar(int count) {
+    return '$count similar products analyzed';
+  }
+
+  @override
+  String get confidenceHigh => '● High confidence';
+
+  @override
+  String get confidenceMedium => '● Medium confidence';
+
+  @override
+  String get confidenceLow => '● Low confidence';
+
+  @override
+  String get aiPriceApply => 'Apply Suggested Price';
+
+  @override
+  String get aiPriceAnalyzing => 'Analyzing…';
+
+  @override
+  String get aiPriceButton => 'Set Price with AI';
+
+  @override
+  String get aiCreditsLeftSuffix => 'credits left';
+
+  @override
+  String get editProfileFullName => 'Full Name';
+
+  @override
+  String get editProfileUsername => 'Username';
+
+  @override
+  String get editProfileFillAll => 'Please fill in all fields';
 }

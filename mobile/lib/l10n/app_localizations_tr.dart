@@ -4154,4 +4154,42 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get badgeSponsored => 'Sponsorlu';
+
+  @override
+  String get aiPriceTitle => 'Yapay Zeka Fiyat Tahmini';
+
+  @override
+  String aiPriceSimilar(int count) {
+    return '$count benzer ürün analiz edildi';
+  }
+
+  @override
+  String get confidenceHigh => '● Yüksek güven';
+
+  @override
+  String get confidenceMedium => '● Orta güven';
+
+  @override
+  String get confidenceLow => '● Düşük güven';
+
+  @override
+  String get aiPriceApply => 'Önerilen Fiyatı Uygula';
+
+  @override
+  String get aiPriceAnalyzing => 'Analiz ediliyor…';
+
+  @override
+  String get aiPriceButton => 'Yapay Zeka ile Fiyat Belirle';
+
+  @override
+  String get aiCreditsLeftSuffix => 'hak kaldı';
+
+  @override
+  String get editProfileFullName => 'Ad Soyad';
+
+  @override
+  String get editProfileUsername => 'Kullanıcı Adı';
+
+  @override
+  String get editProfileFillAll => 'Tüm alanları doldurun';
 }

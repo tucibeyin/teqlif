@@ -4125,4 +4125,42 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get badgeSponsored => 'ممولة';
+
+  @override
+  String get aiPriceTitle => 'تقدير السعر بالذكاء الاصطناعي';
+
+  @override
+  String aiPriceSimilar(int count) {
+    return 'تم تحليل $count منتج مشابه';
+  }
+
+  @override
+  String get confidenceHigh => '● ثقة عالية';
+
+  @override
+  String get confidenceMedium => '● ثقة متوسطة';
+
+  @override
+  String get confidenceLow => '● ثقة منخفضة';
+
+  @override
+  String get aiPriceApply => 'تطبيق السعر المقترح';
+
+  @override
+  String get aiPriceAnalyzing => 'جارٍ التحليل…';
+
+  @override
+  String get aiPriceButton => 'تحديد السعر بالذكاء الاصطناعي';
+
+  @override
+  String get aiCreditsLeftSuffix => 'رصيد متبقٍ';
+
+  @override
+  String get editProfileFullName => 'الاسم الكامل';
+
+  @override
+  String get editProfileUsername => 'اسم المستخدم';
+
+  @override
+  String get editProfileFillAll => 'يرجى ملء جميع الحقول';
 }
