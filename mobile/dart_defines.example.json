@@ -1,0 +1,4 @@
+{
+  "POSTHOG_API_KEY": "phc_YOUR_KEY_HERE",
+  "POSTHOG_HOST": "https://eu.i.posthog.com"
+}

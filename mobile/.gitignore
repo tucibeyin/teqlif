@@ -1,3 +1,6 @@
+# Secret build defines — copy dart_defines.example.json, fill in real values
+dart_defines.json
+
 # Miscellaneous
 *.class
 *.log
