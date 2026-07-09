@@ -21,6 +21,7 @@ from app.utils.auth import get_current_user, decode_token
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
 from app.core.rate_limit import limiter, get_user_id_or_ip
+from app.utils import posthog_client
 from app.services.auction_service import (
     AuctionService,
     manager,
@@ -106,7 +107,17 @@ async def place_bid(
     current_user: User = Depends(get_current_user),
 ):
     bidder_ip = request.client.host if request.client else None
-    return await AuctionService(db).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
+    result = await AuctionService(db).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
+    posthog_client.capture(
+        current_user.id,
+        "bid_placed",
+        {
+            "amount": data.amount,
+            "stream_id": stream_id,
+            "listing_id": result.listing_id,
+        },
+    )
+    return result
 
 
 @router.post("/{stream_id}/buy-it-now", response_model=dict)

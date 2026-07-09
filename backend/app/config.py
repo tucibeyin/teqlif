@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     debug: bool = False  # True → localhost CORS origins eklenir (sadece geliştirme ortamı)
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
+    posthog_api_key: str = ""
+    posthog_host: str = "https://eu.i.posthog.com"
 
     class Config:
         env_file = ".env"
