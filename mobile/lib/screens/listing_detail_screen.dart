@@ -2221,7 +2221,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'İlanınızla ilgilenebilecek potansiyel ${widget.maxAudience} kişi bulundu. Bu kişilere anında bildirim göndermek ister misiniz?',
+            AppLocalizations.of(context)!.listingBlastDialogBody(widget.maxAudience),
             style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
           ),
           const SizedBox(height: 16),
