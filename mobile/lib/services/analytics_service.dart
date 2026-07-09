@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 import '../services/storage_service.dart';
@@ -47,6 +48,44 @@ class AnalyticsService {
   static Future<bool?> getConsentStatus() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('teqlif_tracking_consent');
+  }
+
+  // ── PostHog ────────────────────────────────────────────────────────────────
+
+  static const _postHogKey = String.fromEnvironment('POSTHOG_API_KEY');
+  static const _postHogHost = String.fromEnvironment(
+    'POSTHOG_HOST',
+    defaultValue: 'https://eu.i.posthog.com',
+  );
+
+  static Future<void> initPostHog() async {
+    if (_postHogKey.isEmpty) {
+      debugPrint('[PostHog] POSTHOG_API_KEY not set — skipping init');
+      return;
+    }
+    final config = PostHogConfig(_postHogKey)
+      ..host = _postHogHost
+      ..captureApplicationLifecycleEvents = true
+      ..debug = kDebugMode;
+    await Posthog().setup(config);
+  }
+
+  static Future<void> identifyUser(String userId) async {
+    try {
+      await Posthog().identify(userId: userId);
+    } catch (_) {}
+  }
+
+  static Future<void> logCustomEvent(
+    String eventName,
+    Map<String, dynamic> properties,
+  ) async {
+    try {
+      await Posthog().capture(
+        eventName: eventName,
+        properties: properties.map((k, v) => MapEntry(k, v as Object)),
+      );
+    } catch (_) {}
   }
 
   static Future<void> setConsent(bool accepted) async {

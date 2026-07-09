@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:posthog_flutter/posthog_flutter.dart';
 import 'l10n/app_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -63,6 +64,7 @@ void main() async {
       OfflineQueueService.startDrainOnReconnect();
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
       await ThemeProvider.instance.load();
+      await AnalyticsService.initPostHog();
       // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
       // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
       PushNotificationService.initEarly();
@@ -113,7 +115,7 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        navigatorObservers: [AnalyticsRouteObserver()],
+        navigatorObservers: [AnalyticsRouteObserver(), PosthogObserver()],
         builder: (context, child) {
           return GlobalKeyboardAccessory(child: child!);
         },
