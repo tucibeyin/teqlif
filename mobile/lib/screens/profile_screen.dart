@@ -19,6 +19,7 @@ import '../providers/theme_provider.dart';
 
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/cache_service.dart';
 import '../services/listing_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
@@ -27,6 +28,7 @@ import '../utils/error_helper.dart';
 import '../utils/start_stream_helper.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
+import '../widgets/stale_data_banner.dart';
 import '../widgets/async_button.dart';
 import '../utils/once.dart';
 import 'follow_list_screen.dart';
@@ -2758,7 +2760,12 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _hasError = false; });
+    final cached = CacheService.getData('user_favorites');
+    if (cached != null) {
+      if (mounted) setState(() { _listings = List.from(cached as List); _loading = false; _hasError = false; });
+    } else {
+      if (mounted) setState(() { _loading = true; _hasError = false; });
+    }
     try {
       final token = await StorageService.getToken();
       if (token == null) return;
@@ -2767,7 +2774,9 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200 && mounted) {
-        setState(() => _listings = jsonDecode(resp.body) as List);
+        final data = jsonDecode(resp.body) as List;
+        await CacheService.saveData('user_favorites', data, ttl: const Duration(minutes: 10));
+        if (mounted) setState(() { _listings = data; _hasError = false; });
       }
     } catch (e) {
       LoggerService.instance.warning('FavoritesScreen', 'Favoriler yüklenemedi: $e');
@@ -2833,7 +2842,10 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                     ],
                   ),
                 )
-              : RefreshIndicator(
+              : Column(
+                  children: [
+                    if (_hasError) StaleDataBanner(onRetry: _load),
+                    Expanded(child: RefreshIndicator(
                   color: kPrimary,
                   onRefresh: _load,
                   child: ListView.separated(
@@ -2892,7 +2904,9 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                       );
                     },
                   ),
-                ),
+                )),  // ListView.separated + RefreshIndicator + Expanded
+                  ],
+                ),   // Column
     );
   }
 

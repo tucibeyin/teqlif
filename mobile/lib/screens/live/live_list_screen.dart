@@ -17,6 +17,7 @@ import '../../providers/story_provider.dart';
 import '../../widgets/live/story_tray.dart';
 import '../../widgets/network_error_widget.dart';
 import '../../widgets/offline_banner.dart';
+import '../../widgets/stale_data_banner.dart';
 import 'swipe_live_screen.dart';
 import '../public_profile_screen.dart';
 import '../../l10n/app_localizations.dart';
@@ -144,7 +145,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        if (_streams.isEmpty) _error = 'network';
+        _error = 'network';
       });
     }
   }
@@ -263,6 +264,8 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 ],
               ),
             ),
+          if (_error != null && _streams.isNotEmpty)
+            StaleDataBanner(onRetry: _load),
           // ── İçerik ──────────────────────────────────────────────
           Expanded(
             child: RefreshIndicator(
@@ -272,7 +275,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                   ? const Center(
                       child: CircularProgressIndicator(color: kPrimary),
                     )
-                  : _error != null
+                  : _error != null && filtered.isEmpty
                   ? NetworkErrorWidget(onRetry: _load, scrollable: true)
                   : filtered.isEmpty
                   ? const _EmptyState()

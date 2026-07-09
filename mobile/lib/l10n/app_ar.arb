@@ -1424,6 +1424,7 @@
   },
   "forYouLabel": "مخصص لك",
   "messagesUpdateFailed": "فشل التحديث",
+  "staleDataBannerMessage": "قد تكون البيانات غير محدّثة",
   "btnRefresh": "تحديث",
   "messagesLoadFailed": "تعذّر تحميل الرسائل",
   "btnSend": "إرسال",

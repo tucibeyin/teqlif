@@ -26,6 +26,7 @@ import '../services/pip_service.dart';
 import '../providers/pip_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/network_error_widget.dart';
+import '../widgets/stale_data_banner.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -422,6 +423,7 @@ class _NotificationsTab extends StatefulWidget {
 class _NotificationsTabState extends State<_NotificationsTab> {
   List<dynamic> _notifications = [];
   bool _loading = true;
+  bool _notifHasError = false;
   StreamSubscription<Map<String, dynamic>>? _sub;
 
   @override
@@ -454,12 +456,13 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       final data = await NotificationService.getNotifications();
       // ── C: Başarı → kasa güncelle, UI yenile ──────────────────────────
       await StorageService.cacheData(StorageService.cacheNotifications, data);
-      if (mounted) setState(() { _notifications = data; _loading = false; });
+      if (mounted) setState(() { _notifications = data; _loading = false; _notifHasError = false; });
     } catch (e) {
       // ── D: Hata → kasa doluysa yut, boşsa boş ekran göster ───────────
       if (cached == null && mounted) {
         setState(() => _loading = false);
       }
+      if (mounted) setState(() => _notifHasError = true);
       debugPrint('[NotificationsTab] API hatası (cache=${ cached != null }): $e');
     }
   }
@@ -604,8 +607,11 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     return RefreshIndicator(
       color: kPrimary,
       onRefresh: _load,
-      child: ListView.separated(
-        itemCount: _notifications.length,
+      child: Column(
+        children: [
+          if (_notifHasError) StaleDataBanner(onRetry: _load),
+          Expanded(child: ListView.separated(
+            itemCount: _notifications.length,
         separatorBuilder: (_, _) => const Divider(height: 1, indent: 60),
         itemBuilder: (context, i) {
           final notif = _notifications[i];
@@ -621,7 +627,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           return ListTile(
             onTap: () {
               setState(() => (_notifications[i] as Map<String, dynamic>)['is_read'] = true);
-              _navigate(_notifications[i] as Map<String, dynamic>);  // async, fire-and-forget
+              _navigate(_notifications[i] as Map<String, dynamic>);
             },
             tileColor: isRead ? null : kPrimary.withValues(alpha: 0.06),
             leading: Container(
@@ -673,6 +679,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
                   ),
           );
         },
+      )),
+        ],
       ),
     );
   }
@@ -959,17 +967,22 @@ class _DirectChatScreenState extends State<DirectChatScreen>
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator(color: kPrimary))
-                : _error
-                    ? NetworkErrorWidget(onRetry: _loadMessages)
-                    : _messages.isEmpty
-                        ? Center(
-                            child: Text(
-                              l.msgNoChat,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Color(0xFF9CA3AF)),
-                            ),
-                          )
-                        : ListView.builder(
+                : Column(
+                    children: [
+                      if (_error && _messages.isNotEmpty)
+                        StaleDataBanner(onRetry: _loadMessages),
+                      Expanded(
+                        child: _error && _messages.isEmpty
+                            ? NetworkErrorWidget(scrollable: true, onRetry: _loadMessages)
+                            : _messages.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      l.msgNoChat,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(color: Color(0xFF9CA3AF)),
+                                    ),
+                                  )
+                                : ListView.builder(
                             controller: _scrollCtrl,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 12),
@@ -1049,6 +1062,9 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                               );
                             },
                           ),
+                      ),   // inner Expanded
+                    ],
+                  ),       // Column
           ),
           // Yazıyor göstergesi
           if (_isOtherTyping)

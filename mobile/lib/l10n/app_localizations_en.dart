@@ -2695,6 +2695,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesUpdateFailed => 'Update failed';
 
   @override
+  String get staleDataBannerMessage => 'Data may be outdated';
+
+  @override
   String get btnRefresh => 'Refresh';
 
   @override

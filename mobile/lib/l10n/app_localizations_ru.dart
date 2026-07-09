@@ -2730,6 +2730,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get messagesUpdateFailed => 'Обновление не удалось';
 
   @override
+  String get staleDataBannerMessage => 'Данные могут быть устаревшими';
+
+  @override
   String get btnRefresh => 'Обновить';
 
   @override

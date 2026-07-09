@@ -2698,6 +2698,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get messagesUpdateFailed => 'Güncellenemedi';
 
   @override
+  String get staleDataBannerMessage => 'Veriler güncel olmayabilir';
+
+  @override
   String get btnRefresh => 'Yenile';
 
   @override

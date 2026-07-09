@@ -1566,6 +1566,7 @@
   "priceMaxLabel": "{price} ₺ (макс.)",
   "forYouLabel": "Для тебя",
   "messagesUpdateFailed": "Обновление не удалось",
+  "staleDataBannerMessage": "Данные могут быть устаревшими",
   "btnRefresh": "Обновить",
   "messagesLoadFailed": "Не удалось загрузить сообщения",
   "btnSend": "Отправить",

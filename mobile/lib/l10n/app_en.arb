@@ -1424,6 +1424,7 @@
   },
   "forYouLabel": "For You",
   "messagesUpdateFailed": "Update failed",
+  "staleDataBannerMessage": "Data may be outdated",
   "btnRefresh": "Refresh",
   "messagesLoadFailed": "Messages could not be loaded",
   "btnSend": "Send",

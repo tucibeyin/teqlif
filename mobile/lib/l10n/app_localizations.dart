@@ -5004,6 +5004,12 @@ abstract class AppLocalizations {
   /// **'Güncellenemedi'**
   String get messagesUpdateFailed;
 
+  /// No description provided for @staleDataBannerMessage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Veriler güncel olmayabilir'**
+  String get staleDataBannerMessage;
+
   /// No description provided for @btnRefresh.
   ///
   /// In tr, this message translates to:

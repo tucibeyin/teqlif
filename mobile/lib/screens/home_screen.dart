@@ -23,6 +23,7 @@ import 'listing_detail_screen.dart';
 import '../core/app_exception.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/network_error_widget.dart';
+import '../widgets/stale_data_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -182,7 +183,7 @@ class HomeScreenState extends State<HomeScreen> {
       debugPrint('[HomeScreen] _loadRecent: $e');
       if (!mounted) return;
       setState(() {
-        if (_recentListings.isEmpty) _networkError = e is NetworkException || e is AppException;
+        _networkError = true;
         _recentLoading = false;
       });
     }
@@ -807,6 +808,10 @@ class HomeScreenState extends State<HomeScreen> {
                             childCount: 9,
                           ),
                         ),
+                      ),
+                    if (_networkError && _recentListings.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: StaleDataBanner(onRetry: _load),
                       )
                     else if (_networkError && _recentListings.isEmpty)
                       SliverFillRemaining(

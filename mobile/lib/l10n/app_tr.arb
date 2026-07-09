@@ -1423,6 +1423,7 @@
   },
   "forYouLabel": "Sana Özel",
   "messagesUpdateFailed": "Güncellenemedi",
+  "staleDataBannerMessage": "Veriler güncel olmayabilir",
   "btnRefresh": "Yenile",
   "messagesLoadFailed": "Mesajlar yüklenemedi",
   "btnSend": "Gönder",

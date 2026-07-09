@@ -2674,6 +2674,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get messagesUpdateFailed => 'فشل التحديث';
 
   @override
+  String get staleDataBannerMessage => 'قد تكون البيانات غير محدّثة';
+
+  @override
   String get btnRefresh => 'تحديث';
 
   @override
