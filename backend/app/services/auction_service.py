@@ -202,17 +202,24 @@ async def pubsub_listener():
 
             keepalive_task = asyncio.create_task(_keepalive(pubsub, r))
 
-            async for message in pubsub.listen():
-                if message["type"] in ("pong", "subscribe", "unsubscribe"):
-                    continue
-                if message["type"] != "message":
-                    continue
+            while True:
                 try:
-                    data = json.loads(message["data"])
-                    stream_id = data.pop("_stream_id")
-                    await manager.local_broadcast(stream_id, data)
-                except Exception as exc:
-                    logger.error("[PUBSUB] Mesaj işleme hatası: %s", exc)
+                    async for message in pubsub.listen():
+                        if message["type"] in ("pong", "subscribe", "unsubscribe"):
+                            continue
+                        if message["type"] != "message":
+                            continue
+                        try:
+                            data = json.loads(message["data"])
+                            stream_id = data.pop("_stream_id")
+                            await manager.local_broadcast(stream_id, data)
+                        except Exception as exc:
+                            logger.error("[PUBSUB] Mesaj işleme hatası: %s", exc)
+                    break
+                except aioredis.exceptions.TimeoutError:
+                    continue
+                except Exception:
+                    raise
         except asyncio.CancelledError:
             if keepalive_task:
                 keepalive_task.cancel()

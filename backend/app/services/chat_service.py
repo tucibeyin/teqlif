@@ -108,17 +108,24 @@ async def chat_pubsub_listener() -> None:
 
             keepalive_task = asyncio.create_task(_keepalive(pubsub, r))
 
-            async for message in pubsub.listen():
-                if message["type"] in ("pong", "subscribe", "unsubscribe"):
-                    continue
-                if message["type"] != "message":
-                    continue
+            while True:
                 try:
-                    data = json.loads(message["data"])
-                    topic = data.pop("_topic")
-                    asyncio.create_task(ws_manager.broadcast_local(topic, data))
-                except Exception as exc:
-                    logger.warning("[CHAT PUBSUB] Mesaj işleme hatası: %s", exc)
+                    async for message in pubsub.listen():
+                        if message["type"] in ("pong", "subscribe", "unsubscribe"):
+                            continue
+                        if message["type"] != "message":
+                            continue
+                        try:
+                            data = json.loads(message["data"])
+                            topic = data.pop("_topic")
+                            asyncio.create_task(ws_manager.broadcast_local(topic, data))
+                        except Exception as exc:
+                            logger.warning("[CHAT PUBSUB] Mesaj işleme hatası: %s", exc)
+                    break
+                except aioredis.exceptions.TimeoutError:
+                    continue
+                except Exception:
+                    raise
         except asyncio.CancelledError:
             if keepalive_task:
                 keepalive_task.cancel()
@@ -168,16 +175,23 @@ async def moderation_pubsub_listener() -> None:
 
             keepalive_task = asyncio.create_task(_keepalive(pubsub, r))
 
-            async for message in pubsub.listen():
-                if message["type"] in ("pong", "subscribe", "unsubscribe"):
-                    continue
-                if message["type"] != "message":
-                    continue
+            while True:
                 try:
-                    data = json.loads(message["data"])
-                    await _dispatch_mod_event(data)
-                except Exception as exc:
-                    logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
+                    async for message in pubsub.listen():
+                        if message["type"] in ("pong", "subscribe", "unsubscribe"):
+                            continue
+                        if message["type"] != "message":
+                            continue
+                        try:
+                            data = json.loads(message["data"])
+                            await _dispatch_mod_event(data)
+                        except Exception as exc:
+                            logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
+                    break
+                except aioredis.exceptions.TimeoutError:
+                    continue
+                except Exception:
+                    raise
         except asyncio.CancelledError:
             if keepalive_task:
                 keepalive_task.cancel()
