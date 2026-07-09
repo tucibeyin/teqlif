@@ -474,6 +474,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get errorConnection => 'Bağlantı hatası';
 
   @override
+  String get errorNetworkTitle => 'Bağlantı yok';
+
+  @override
+  String get errorNetworkMessage =>
+      'İnternet bağlantınızı kontrol edip tekrar deneyin.';
+
+  @override
   String get errorListingsLoad => 'İlanlar yüklenemedi';
 
   @override

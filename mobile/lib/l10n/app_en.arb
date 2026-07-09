@@ -153,6 +153,8 @@
   "emptyPassiveListings": "No inactive listings",
   "emptyFavorites": "No favorite listings yet",
   "errorConnection": "Connection error",
+  "errorNetworkTitle": "No connection",
+  "errorNetworkMessage": "Check your internet connection and try again.",
   "errorListingsLoad": "Failed to load listings",
   "errorVideoProcessing": "Failed to process video. Please try again.",
   "giftInsufficientBalance": "Insufficient balance. Purchase TUCi to send a gift.",

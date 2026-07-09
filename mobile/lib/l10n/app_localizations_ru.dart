@@ -479,6 +479,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorConnection => 'Ошибка подключения';
 
   @override
+  String get errorNetworkTitle => 'Нет соединения';
+
+  @override
+  String get errorNetworkMessage =>
+      'Проверьте подключение к интернету и повторите попытку.';
+
+  @override
   String get errorListingsLoad => 'Не удалось загрузить объявления';
 
   @override

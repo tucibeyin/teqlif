@@ -32,3 +32,10 @@ class AppException implements Exception {
   @override
   String toString() => 'AppException($statusCode/$code): $message';
 }
+
+/// SocketException / TimeoutException gibi ağ katmanı hatalarını temsil eder.
+/// UI katmanı bu tipi yakalayıp standart "bağlantı yok" mesajını gösterebilir.
+class NetworkException extends AppException {
+  const NetworkException()
+      : super('ERR_NETWORK', code: 'ERR_NETWORK', statusCode: 0);
+}

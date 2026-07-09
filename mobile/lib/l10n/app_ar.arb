@@ -153,6 +153,8 @@
   "emptyPassiveListings": "لا توجد إعلانات معلّقة",
   "emptyFavorites": "لا توجد إعلانات مفضّلة بعد",
   "errorConnection": "خطأ في الاتصال",
+  "errorNetworkTitle": "لا يوجد اتصال",
+  "errorNetworkMessage": "تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
   "giftInsufficientBalance": "رصيد غير كاف. شراء TUCi لإرسال هدية.",
   "giftLoadBalanceButton": "شحن الرصيد",
   "purchaseLoadError": "حدث خطأ أثناء تحميل مشترياتك. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.",

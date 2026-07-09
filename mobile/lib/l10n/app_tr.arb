@@ -153,6 +153,8 @@
   "emptyPassiveListings": "Pasif ilan yok",
   "emptyFavorites": "Henüz favori ilan yok",
   "errorConnection": "Bağlantı hatası",
+  "errorNetworkTitle": "Bağlantı yok",
+  "errorNetworkMessage": "İnternet bağlantınızı kontrol edip tekrar deneyin.",
   "errorListingsLoad": "İlanlar yüklenemedi",
   "errorPhotoUpload": "Fotoğraf yüklenemedi. Tekrar deneyin.",
   "errorCaptchaFailed": "Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.",

@@ -17,6 +17,7 @@ import '../services/city_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/error_helper.dart';
 
 class CreateListingScreen extends StatefulWidget {
   const CreateListingScreen({super.key});
@@ -397,9 +398,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     } catch (e, st) {
       debugPrint('[CreateListing] Video upload HATA: $e\n$st');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_uploadError(e))),
-        );
+        showErrorSnackbar(context, _uploadError(e));
         _removeVideo();
         return;
       }
@@ -604,8 +603,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
       return 'Oturum süreniz dolmuş, lütfen tekrar giriş yapın.';
     }
-    if (s.contains('SocketException') || s.contains('Connection') || s.contains('network')) {
-      return 'İnternet bağlantınızı kontrol edin.';
+    if (e is NetworkException) {
+      return AppLocalizations.of(context)!.errorNetworkMessage;
     }
     return 'Video yüklenemedi, lütfen tekrar deneyin.';
   }

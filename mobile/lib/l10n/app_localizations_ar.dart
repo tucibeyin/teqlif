@@ -476,6 +476,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get errorConnection => 'خطأ في الاتصال';
 
   @override
+  String get errorNetworkTitle => 'لا يوجد اتصال';
+
+  @override
+  String get errorNetworkMessage => 'تحقق من اتصالك بالإنترنت وحاول مرة أخرى.';
+
+  @override
   String get errorListingsLoad => 'تعذّر تحميل الإعلانات';
 
   @override

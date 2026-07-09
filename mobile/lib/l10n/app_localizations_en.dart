@@ -474,6 +474,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorConnection => 'Connection error';
 
   @override
+  String get errorNetworkTitle => 'No connection';
+
+  @override
+  String get errorNetworkMessage =>
+      'Check your internet connection and try again.';
+
+  @override
   String get errorListingsLoad => 'Failed to load listings';
 
   @override

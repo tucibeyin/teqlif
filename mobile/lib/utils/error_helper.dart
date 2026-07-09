@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/app_exception.dart';
+import '../l10n/app_localizations.dart';
 
 /// Merkezi UI hata gösterme helper'ı.
 ///
@@ -15,7 +16,7 @@ import '../core/app_exception.dart';
 /// }
 /// ```
 void showErrorSnackbar(BuildContext context, dynamic error) {
-  final message = _extractMessage(error);
+  final message = _extractMessage(context, error);
 
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
@@ -46,13 +47,15 @@ void showErrorSnackbar(BuildContext context, dynamic error) {
     );
 }
 
-String _extractMessage(dynamic error) {
+String _extractMessage(BuildContext context, dynamic error) {
+  final l = AppLocalizations.of(context)!;
+  if (error is NetworkException) return l.errorNetworkMessage;
   if (error is AppException) return error.message;
+  if (error is String) return error;
   if (error is Exception) {
     final msg = error.toString();
-    // "Exception: ..." prefix'ini temizle
     if (msg.startsWith('Exception: ')) return msg.substring(11);
     return msg;
   }
-  return 'Bilinmeyen bir hata oluştu.';
+  return l.errorGenericRetry;
 }

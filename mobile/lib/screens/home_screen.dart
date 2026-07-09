@@ -20,7 +20,9 @@ import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 
+import '../core/app_exception.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/network_error_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,7 +42,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   // Filtreli sonuçlar (filtre aktifken _recentListings'in yerine geçer)
   bool _isLoggedIn = false;
-  String? _error;
+  bool _networkError = false;
   String? _selectedCategory;
   String? _selectedCity;
   String _searchQuery = '';
@@ -120,7 +122,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   /// [bypassCache]: pull-to-refresh'te true — Hive okuma atlanır, cache ezilir.
   Future<void> _load({bool bypassCache = false}) async {
-    _error = null;
+    _networkError = false;
     _recentPage = 0;
     _recentExhausted = false;
 
@@ -179,15 +181,10 @@ class HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       debugPrint('[HomeScreen] _loadRecent: $e');
       if (!mounted) return;
-      if (_recentListings.isEmpty) {
-        final l = AppLocalizations.of(context)!;
-        setState(() {
-          _error = l.errorConnection;
-          _recentLoading = false;
-        });
-      } else {
-        setState(() => _recentLoading = false);
-      }
+      setState(() {
+        if (_recentListings.isEmpty) _networkError = e is NetworkException || e is AppException;
+        _recentLoading = false;
+      });
     }
   }
 
@@ -811,26 +808,10 @@ class HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       )
-                    else if (_error != null && _recentListings.isEmpty)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _error!,
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                              const SizedBox(height: 12),
-                              TextButton(
-                                key: const Key('home_btn_tekrar_dene'),
-                                onPressed: _load,
-                                child: Text(l.btnRetry),
-                              ),
-                            ],
-                          ),
-                        ),
+                    else if (_networkError && _recentListings.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: NetworkErrorWidget(onRetry: _load),
                       )
                     else if (_recentListings.isEmpty)
                       SliverToBoxAdapter(

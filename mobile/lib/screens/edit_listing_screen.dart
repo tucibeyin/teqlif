@@ -636,8 +636,8 @@ class _EditListingScreenState extends State<EditListingScreen> {
     if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
       return 'Oturum süreniz dolmuş, lütfen tekrar giriş yapın.';
     }
-    if (s.contains('SocketException') || s.contains('Connection') || s.contains('network')) {
-      return 'İnternet bağlantınızı kontrol edin.';
+    if (e is NetworkException) {
+      return AppLocalizations.of(context)!.errorNetworkMessage;
     }
     return 'Video yüklenemedi, lütfen tekrar deneyin.';
   }

@@ -15,6 +15,7 @@ import '../../services/stream_connection_manager.dart';
 import '../../utils/start_stream_helper.dart';
 import '../../providers/story_provider.dart';
 import '../../widgets/live/story_tray.dart';
+import '../../widgets/network_error_widget.dart';
 import '../../widgets/offline_banner.dart';
 import 'swipe_live_screen.dart';
 import '../public_profile_screen.dart';
@@ -143,11 +144,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        if (_streams.isEmpty) {
-          _error = e is AppException
-              ? e.message
-              : AppLocalizations.of(context)!.liveStreamsLoadError;
-        }
+        if (_streams.isEmpty) _error = 'network';
       });
     }
   }
@@ -276,7 +273,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                       child: CircularProgressIndicator(color: kPrimary),
                     )
                   : _error != null
-                  ? _ErrorState(message: _error!)
+                  ? NetworkErrorWidget(onRetry: _load, scrollable: true)
                   : filtered.isEmpty
                   ? const _EmptyState()
                   : _buildContent(l, filtered),
@@ -526,43 +523,6 @@ class _CategoryChip extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  const _ErrorState({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    // ListView + AlwaysScrollableScrollPhysics olmadan
-    // RefreshIndicator parmak hareketini algılayamaz.
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
-        Column(
-          children: [
-            const Icon(
-              Icons.cloud_off_outlined,
-              size: 56,
-              color: Color(0xFFD1D5DB),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Yenilemek için aşağı çekin',
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

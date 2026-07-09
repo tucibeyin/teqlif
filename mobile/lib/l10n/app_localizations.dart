@@ -1020,6 +1020,18 @@ abstract class AppLocalizations {
   /// **'Bağlantı hatası'**
   String get errorConnection;
 
+  /// No description provided for @errorNetworkTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bağlantı yok'**
+  String get errorNetworkTitle;
+
+  /// No description provided for @errorNetworkMessage.
+  ///
+  /// In tr, this message translates to:
+  /// **'İnternet bağlantınızı kontrol edip tekrar deneyin.'**
+  String get errorNetworkMessage;
+
   /// No description provided for @errorListingsLoad.
   ///
   /// In tr, this message translates to:

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import '../core/app_exception.dart';
@@ -103,6 +105,12 @@ class ApiService {
         );
       }
       // Cache zaten yayıldıysa ve HTTP != 200 → hatayı yut
+    } on SocketException {
+      if (!cacheYielded) throw const NetworkException();
+      debugPrint('[ApiService] Ağ hatası — cache korunuyor ($cacheKey)');
+    } on TimeoutException {
+      if (!cacheYielded) throw const NetworkException();
+      debugPrint('[ApiService] Timeout — cache korunuyor ($cacheKey)');
     } catch (e) {
       if (!cacheYielded) rethrow;
       debugPrint('[ApiService] Ağ hatası — cache korunuyor ($cacheKey): $e');

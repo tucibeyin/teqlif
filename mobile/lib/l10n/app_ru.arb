@@ -901,6 +901,8 @@
   "emptyPassiveListings": "Нет неактивных объявлений",
   "emptyFavorites": "Избранных объявлений пока нет",
   "errorConnection": "Ошибка подключения",
+  "errorNetworkTitle": "Нет соединения",
+  "errorNetworkMessage": "Проверьте подключение к интернету и повторите попытку.",
   "errorListingsLoad": "Не удалось загрузить объявления",
   "errorVideoProcessing": "Не удалось обработать видео. Пожалуйста, попробуйте еще раз.",
   "giftInsufficientBalance": "Недостаточный баланс. Купите TUCi, чтобы отправить подарок.",
