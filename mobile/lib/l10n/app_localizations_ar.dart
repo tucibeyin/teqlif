@@ -3160,19 +3160,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get faqIconNameRetargeting => 'إعادة الاستهداف';
 
   @override
-  String get listingBlastEstimateLoading => 'Hedef kitle hesaplanıyor...';
+  String get listingBlastEstimateLoading => 'جارٍ حساب الجمهور المستهدف...';
 
   @override
-  String get listingBlastDialogTitle => 'Toplu Kitle Bildirimi';
+  String get listingBlastDialogTitle => 'إشعار جماعي للجمهور';
 
   @override
   String listingBlastDialogBody(int count) {
-    return 'İlanınızla ilgilenebilecek potansiyel $count kişi bulundu. Bu kişilere anında bildirim göndermek ister misiniz?';
+    return 'تم العثور على $count مشترٍ محتمل قد يهتم بإعلانك. هل تريد إرسال إشعار فوري لهم؟';
   }
 
   @override
   String listingBlastCost(int cost) {
-    return 'Maliyet: $cost TUCi';
+    return 'التكلفة: $cost TUCi';
   }
 
   @override
@@ -3307,10 +3307,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proTabAudience => 'الجمهور';
 
   @override
-  String get listingVideoComplete => 'Video Tamamlandı';
+  String get listingVideoComplete => 'اكتمل الفيديو';
 
   @override
-  String get audienceTotalViewers => 'Toplam İzleyici';
+  String get audienceTotalViewers => 'إجمالي المشاهدين';
 
   @override
   String get searchHintTextListing => 'البحث في العنوان أو الوصف...';
