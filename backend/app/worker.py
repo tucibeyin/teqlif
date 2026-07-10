@@ -1483,6 +1483,18 @@ async def compute_trending_categories_task(ctx: dict) -> None:
             """))
             trending = [row[0] for row in rows.fetchall()]
 
+            # Fallback: auction verisi yoksa en çok active listing'e sahip top-3 kategoriyi al
+            if not trending:
+                fallback_rows = await db.execute(sql_text("""
+                    SELECT category, COUNT(*) AS cnt
+                    FROM listings
+                    WHERE is_active = TRUE AND is_deleted = FALSE AND category IS NOT NULL
+                    GROUP BY category
+                    ORDER BY cnt DESC
+                    LIMIT 3
+                """))
+                trending = [row[0] for row in fallback_rows.fetchall()]
+
         redis = await get_redis()
         key = "trending:categories"
         pipe = redis.pipeline()
