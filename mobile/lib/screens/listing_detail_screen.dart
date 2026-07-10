@@ -2176,6 +2176,7 @@ class _SellerTrustRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l     = AppLocalizations.of(context)!;
     final trust = user['trust_score'] as int?;
     final rank  = user['influence_rank'] as int?;
     if (trust == null && rank == null) return const SizedBox.shrink();
@@ -2187,7 +2188,9 @@ class _SellerTrustRow extends StatelessWidget {
           if (trust != null)
             _TrustChip(
               icon: Icons.verified_outlined,
-              label: trust.toString(),
+              value: '$trust / 100',
+              hint: l.trustScoreHint,
+              title: l.trustScoreLabel,
               color: trust >= 70
                   ? const Color(0xFF10B981)
                   : trust >= 35
@@ -2197,7 +2200,9 @@ class _SellerTrustRow extends StatelessWidget {
           if (rank != null)
             _TrustChip(
               icon: Icons.trending_up,
-              label: '#$rank',
+              value: '#$rank',
+              hint: l.influenceRankHint,
+              title: l.influenceRankLabel,
               color: const Color(0xFF8B5CF6),
             ),
         ],
@@ -2208,14 +2213,38 @@ class _SellerTrustRow extends StatelessWidget {
 
 class _TrustChip extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String value;
+  final String title;
+  final String hint;
   final Color color;
-  const _TrustChip({required this.icon, required this.label, required this.color});
+  const _TrustChip({
+    required this.icon,
+    required this.value,
+    required this.title,
+    required this.hint,
+    required this.color,
+  });
+
+  void _showInfo(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(hint),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.fromLTRB(6, 2, 4, 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
@@ -2225,7 +2254,12 @@ class _TrustChip extends StatelessWidget {
         children: [
           Icon(icon, size: 10, color: color),
           const SizedBox(width: 3),
-          Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+          Text(value, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 2),
+          GestureDetector(
+            onTap: () => _showInfo(context),
+            child: Icon(Icons.help_outline, size: 11, color: color.withValues(alpha: 0.55)),
+          ),
         ],
       ),
     );

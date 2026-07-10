@@ -2152,13 +2152,13 @@
   "demandTrendsEmptyLabel": "Henüz yeterli arama verisi yok.",
 
   "trustScoreLabel": "Güven Skoru",
-  "trustScoreHint": "Satıcının platform güvenilirliği",
+  "trustScoreHint": "0–100 arası platform güvenilirlik puanı. Açık artırma tamamlama oranı, kazanma geçmişi, ilan kalitesi, hesap yaşı ve teklif tutarlılığından hesaplanır. Her gece güncellenir.",
   "trustScoreLow": "Yeni Üye",
   "trustScoreMedium": "Güvenilir",
   "trustScoreHigh": "Çok Güvenilir",
 
   "influenceRankLabel": "Ağ Sıralaması",
-  "influenceRankHint": "Topluluk içindeki etkiniz",
+  "influenceRankHint": "Platformdaki takipçi ağına göre hesaplanan etki sıralaması. Ne kadar düşük numara, o kadar geniş erişim. Haftalık güncellenir.",
   "influenceRankValue": "#{rank}. sıra",
   "@influenceRankValue": {
     "placeholders": {

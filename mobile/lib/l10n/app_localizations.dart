@@ -7875,7 +7875,7 @@ abstract class AppLocalizations {
   /// No description provided for @trustScoreHint.
   ///
   /// In tr, this message translates to:
-  /// **'Satıcının platform güvenilirliği'**
+  /// **'0–100 arası platform güvenilirlik puanı. Açık artırma tamamlama oranı, kazanma geçmişi, ilan kalitesi, hesap yaşı ve teklif tutarlılığından hesaplanır. Her gece güncellenir.'**
   String get trustScoreHint;
 
   /// No description provided for @trustScoreLow.
@@ -7905,7 +7905,7 @@ abstract class AppLocalizations {
   /// No description provided for @influenceRankHint.
   ///
   /// In tr, this message translates to:
-  /// **'Topluluk içindeki etkiniz'**
+  /// **'Platformdaki takipçi ağına göre hesaplanan etki sıralaması. Ne kadar düşük numara, o kadar geniş erişim. Haftalık güncellenir.'**
   String get influenceRankHint;
 
   /// No description provided for @influenceRankValue.

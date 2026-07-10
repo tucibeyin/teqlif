@@ -816,17 +816,15 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
     if (rawScore != null) {
       final score = (rawScore as num).toInt();
-      final (tsLabel, tsColor) = score >= 70
-          ? (l.trustScoreHigh, const Color(0xFF10B981))
-          : score >= 35
-              ? (l.trustScoreMedium, const Color(0xFF3B82F6))
-              : (l.trustScoreLow, const Color(0xFF9CA3AF));
+      final tsColor = score >= 70
+          ? const Color(0xFF10B981)
+          : score >= 35 ? const Color(0xFF3B82F6) : const Color(0xFF9CA3AF);
       badges.add(_ProfileBadge(
         icon: Icons.verified_outlined,
-        label: tsLabel,
-        value: '$score',
+        title: l.trustScoreLabel,
+        value: '$score / 100',
         color: tsColor,
-        tooltip: l.trustScoreHint,
+        hint: l.trustScoreHint,
       ));
     }
 
@@ -835,10 +833,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       if (rank > 0) {
         badges.add(_ProfileBadge(
           icon: Icons.hub_outlined,
-          label: l.influenceRankLabel,
-          value: l.influenceRankValue(rank),
+          title: l.influenceRankLabel,
+          value: '#$rank',
           color: const Color(0xFF8B5CF6),
-          tooltip: l.influenceRankHint,
+          hint: l.influenceRankHint,
         ));
       }
     }
@@ -1615,46 +1613,59 @@ class _SocialLinksRow extends StatelessWidget {
 
 class _ProfileBadge extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String title;
   final String value;
   final Color color;
-  final String tooltip;
+  final String hint;
 
   const _ProfileBadge({
     required this.icon,
-    required this.label,
+    required this.title,
     required this.value,
     required this.color,
-    required this.tooltip,
+    required this.hint,
   });
+
+  void _showInfo(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(hint),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.30)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(width: 3),
-            Text(
-              value,
-              style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.75)),
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(9, 4, 5, 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(width: 2),
+          GestureDetector(
+            onTap: () => _showInfo(context),
+            child: Icon(Icons.help_outline, size: 13, color: color.withValues(alpha: 0.60)),
+          ),
+        ],
       ),
     );
   }

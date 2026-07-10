@@ -4331,7 +4331,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trustScoreLabel => 'Trust Score';
 
   @override
-  String get trustScoreHint => 'Seller\'s platform credibility';
+  String get trustScoreHint =>
+      'A 0–100 credibility score. Calculated from auction completion rate, win history, listing quality, account age, and bid consistency. Updated nightly.';
 
   @override
   String get trustScoreLow => 'New Member';
@@ -4346,7 +4347,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get influenceRankLabel => 'Network Rank';
 
   @override
-  String get influenceRankHint => 'Your influence in the community';
+  String get influenceRankHint =>
+      'Influence ranking based on the follower network. The lower the number, the broader your reach. Updated weekly.';
 
   @override
   String influenceRankValue(int rank) {

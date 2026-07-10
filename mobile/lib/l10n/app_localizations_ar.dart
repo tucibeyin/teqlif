@@ -4304,7 +4304,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get trustScoreLabel => 'درجة الثقة';
 
   @override
-  String get trustScoreHint => 'مصداقية البائع في المنصة';
+  String get trustScoreHint =>
+      'نقاط مصداقية من 0 إلى 100. تُحسب من معدل إتمام المزادات وتاريخ الفوز وجودة الإعلانات وعمر الحساب. يتجدد يومياً.';
 
   @override
   String get trustScoreLow => 'عضو جديد';
@@ -4319,7 +4320,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get influenceRankLabel => 'ترتيب الشبكة';
 
   @override
-  String get influenceRankHint => 'تأثيرك في المجتمع';
+  String get influenceRankHint =>
+      'ترتيب التأثير بناءً على شبكة المتابعين. كلما كان الرقم أقل، كان نطاق وصولك أوسع. يتجدد أسبوعياً.';
 
   @override
   String influenceRankValue(int rank) {

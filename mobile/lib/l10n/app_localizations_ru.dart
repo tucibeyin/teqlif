@@ -4383,7 +4383,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get trustScoreLabel => 'Рейтинг доверия';
 
   @override
-  String get trustScoreHint => 'Надёжность продавца на платформе';
+  String get trustScoreHint =>
+      'Рейтинг надёжности от 0 до 100. Рассчитывается на основе выполнения аукционов, истории побед, качества объявлений, возраста аккаунта и стабильности ставок. Обновляется ежедневно.';
 
   @override
   String get trustScoreLow => 'Новый участник';
@@ -4398,7 +4399,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get influenceRankLabel => 'Рейтинг в сети';
 
   @override
-  String get influenceRankHint => 'Ваше влияние в сообществе';
+  String get influenceRankHint =>
+      'Рейтинг влияния на основе сети подписчиков. Чем меньше число, тем шире охват. Обновляется еженедельно.';
 
   @override
   String influenceRankValue(int rank) {

@@ -2189,13 +2189,13 @@
   "demandTrendsEmptyLabel": "Not enough search data yet.",
 
   "trustScoreLabel": "Trust Score",
-  "trustScoreHint": "Seller's platform credibility",
+  "trustScoreHint": "A 0–100 credibility score. Calculated from auction completion rate, win history, listing quality, account age, and bid consistency. Updated nightly.",
   "trustScoreLow": "New Member",
   "trustScoreMedium": "Trusted",
   "trustScoreHigh": "Highly Trusted",
 
   "influenceRankLabel": "Network Rank",
-  "influenceRankHint": "Your influence in the community",
+  "influenceRankHint": "Influence ranking based on the follower network. The lower the number, the broader your reach. Updated weekly.",
   "influenceRankValue": "Rank #{rank}",
   "@influenceRankValue": {
     "placeholders": {

@@ -2149,13 +2149,13 @@
   "demandTrendsEmptyLabel": "لا توجد بيانات بحث كافية بعد.",
 
   "trustScoreLabel": "درجة الثقة",
-  "trustScoreHint": "مصداقية البائع في المنصة",
+  "trustScoreHint": "نقاط مصداقية من 0 إلى 100. تُحسب من معدل إتمام المزادات وتاريخ الفوز وجودة الإعلانات وعمر الحساب. يتجدد يومياً.",
   "trustScoreLow": "عضو جديد",
   "trustScoreMedium": "موثوق",
   "trustScoreHigh": "موثوق جداً",
 
   "influenceRankLabel": "ترتيب الشبكة",
-  "influenceRankHint": "تأثيرك في المجتمع",
+  "influenceRankHint": "ترتيب التأثير بناءً على شبكة المتابعين. كلما كان الرقم أقل، كان نطاق وصولك أوسع. يتجدد أسبوعياً.",
   "influenceRankValue": "المرتبة #{rank}",
   "@influenceRankValue": {
     "placeholders": {

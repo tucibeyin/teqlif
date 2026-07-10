@@ -603,18 +603,18 @@ class ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 if (ts != null) _ScoreBadge(
                                   icon: Icons.verified_outlined,
-                                  label: ts >= 70
-                                      ? l.trustScoreHigh
-                                      : ts >= 35 ? l.trustScoreMedium : l.trustScoreLow,
-                                  value: '$ts',
+                                  title: l.trustScoreLabel,
+                                  value: '$ts / 100',
+                                  hint: l.trustScoreHint,
                                   color: ts >= 70
                                       ? const Color(0xFF10B981)
                                       : ts >= 35 ? const Color(0xFF3B82F6) : const Color(0xFF9CA3AF),
                                 ),
                                 if (ir != null && ir > 0) _ScoreBadge(
                                   icon: Icons.hub_outlined,
-                                  label: l.influenceRankLabel,
-                                  value: l.influenceRankValue(ir),
+                                  title: l.influenceRankLabel,
+                                  value: '#$ir',
+                                  hint: l.influenceRankHint,
                                   color: const Color(0xFF8B5CF6),
                                 ),
                               ],
@@ -3651,21 +3651,39 @@ class _SocialLinksRow extends StatelessWidget {
 
 class _ScoreBadge extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String title;
   final String value;
+  final String hint;
   final Color color;
 
   const _ScoreBadge({
     required this.icon,
-    required this.label,
+    required this.title,
     required this.value,
+    required this.hint,
     required this.color,
   });
+
+  void _showInfo(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(hint),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.fromLTRB(8, 3, 4, 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
@@ -3677,13 +3695,13 @@ class _ScoreBadge extends StatelessWidget {
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
-            label,
-            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(width: 3),
-          Text(
             value,
-            style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.75)),
+            style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(width: 2),
+          GestureDetector(
+            onTap: () => _showInfo(context),
+            child: Icon(Icons.help_outline, size: 13, color: color.withValues(alpha: 0.60)),
           ),
         ],
       ),

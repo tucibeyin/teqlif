@@ -4335,7 +4335,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get trustScoreLabel => 'Güven Skoru';
 
   @override
-  String get trustScoreHint => 'Satıcının platform güvenilirliği';
+  String get trustScoreHint =>
+      '0–100 arası platform güvenilirlik puanı. Açık artırma tamamlama oranı, kazanma geçmişi, ilan kalitesi, hesap yaşı ve teklif tutarlılığından hesaplanır. Her gece güncellenir.';
 
   @override
   String get trustScoreLow => 'Yeni Üye';
@@ -4350,7 +4351,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get influenceRankLabel => 'Ağ Sıralaması';
 
   @override
-  String get influenceRankHint => 'Topluluk içindeki etkiniz';
+  String get influenceRankHint =>
+      'Platformdaki takipçi ağına göre hesaplanan etki sıralaması. Ne kadar düşük numara, o kadar geniş erişim. Haftalık güncellenir.';
 
   @override
   String influenceRankValue(int rank) {
