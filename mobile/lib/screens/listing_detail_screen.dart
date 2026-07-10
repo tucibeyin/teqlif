@@ -2466,12 +2466,13 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
       backgroundColor: const Color(0xFF1E293B),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(AppLocalizations.of(context)!.massAudienceNotification, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            AppLocalizations.of(context)!.listingBlastDialogBody(widget.maxAudience),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppLocalizations.of(context)!.listingBlastDialogBody(widget.maxAudience),
             style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
           ),
           const SizedBox(height: 16),
@@ -2557,7 +2558,8 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
               padding: const EdgeInsets.only(top: 8.0),
               child: Text(AppLocalizations.of(context)!.audienceInsufficientTuci, style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.bold)),
             ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
