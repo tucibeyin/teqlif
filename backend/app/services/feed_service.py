@@ -138,7 +138,7 @@ async def get_personalized_feed(
 
     # Sıralamayı koru (scoring'den gelen sıra)
     all_uids = list({rows[lid][1].id for lid in listing_ids if lid in rows})
-    badge_map, trending_cats, trust_map, influence_map = await _fetch_seller_meta(all_uids)
+    badge_map, trending_cats, trending_lids, trust_map, influence_map = await _fetch_seller_meta(all_uids)
 
     result = []
     for lid in listing_ids:
@@ -148,7 +148,7 @@ async def get_personalized_feed(
         result.append(_row_dict(
             listing, user, counts.get(lid, 0), lid in liked_set,
             seller_badge=badge_map.get(user.id),
-            is_trending=listing.category in trending_cats,
+            is_trending=listing.category in trending_cats or listing.id in trending_lids,
             impression_count=impression_map.get(lid, 0) if user.id == user_id else None,
             seller_trust_score=trust_map.get(user.id),
             seller_influence_rank=influence_map.get(user.id),
@@ -530,7 +530,7 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
                 impression_map[lid] = imp_count
 
     foryou_uids = list({rows[lid][1].id for lid in listing_ids if lid in rows})
-    badge_map_fy, trending_cats_fy, trust_map_fy, influence_map_fy = await _fetch_seller_meta(foryou_uids)
+    badge_map_fy, trending_cats_fy, trending_lids_fy, trust_map_fy, influence_map_fy = await _fetch_seller_meta(foryou_uids)
 
     result = []
     for lid in listing_ids:
@@ -540,7 +540,7 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
         result.append(_row_dict(
             listing, user, counts.get(lid, 0), lid in liked_set,
             seller_badge=badge_map_fy.get(user.id),
-            is_trending=listing.category in trending_cats_fy,
+            is_trending=listing.category in trending_cats_fy or listing.id in trending_lids_fy,
             impression_count=impression_map.get(lid, 0) if user.id == user_id else None,
             seller_trust_score=trust_map_fy.get(user.id),
             seller_influence_rank=influence_map_fy.get(user.id),
@@ -875,7 +875,7 @@ async def _get_sponsored_listings(
         selected_rows = top
 
     sponsor_uids = [user.id for _, _, user in selected_rows[:n_slots]]
-    badge_map_sp, trending_cats_sp, trust_map_sp, influence_map_sp = await _fetch_seller_meta(sponsor_uids)
+    badge_map_sp, trending_cats_sp, trending_lids_sp, trust_map_sp, influence_map_sp = await _fetch_seller_meta(sponsor_uids)
 
     return [
         _row_dict(
@@ -883,7 +883,7 @@ async def _get_sponsored_listings(
             is_sponsored=True,
             campaign_id=campaign.id,
             seller_badge=badge_map_sp.get(user.id),
-            is_trending=listing.category in trending_cats_sp,
+            is_trending=listing.category in trending_cats_sp or listing.id in trending_lids_sp,
             seller_trust_score=trust_map_sp.get(user.id),
             seller_influence_rank=influence_map_sp.get(user.id),
         )
@@ -959,12 +959,12 @@ async def get_mixed_recent_feed(
     counts, liked_set = await LikeService.batch_listing_likes(db, base_ids, user_id)
 
     recent_uids = list({rows[lid][1].id for lid in base_ids if lid in rows})
-    badge_map_r, trending_cats_r, trust_map_r, influence_map_r = await _fetch_seller_meta(recent_uids)
+    badge_map_r, trending_cats_r, trending_lids_r, trust_map_r, influence_map_r = await _fetch_seller_meta(recent_uids)
 
     result = [
         _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
                   seller_badge=badge_map_r.get(user.id),
-                  is_trending=listing.category in trending_cats_r,
+                  is_trending=listing.category in trending_cats_r or listing.id in trending_lids_r,
                   seller_trust_score=trust_map_r.get(user.id),
                   seller_influence_rank=influence_map_r.get(user.id))
         for lid in base_ids
@@ -1040,12 +1040,12 @@ async def _fetch_interest_items(
     counts, liked_set = await LikeService.batch_listing_likes(db, ids, user_id)
 
     interest_uids = list({rows[lid][1].id for lid in ids if lid in rows})
-    badge_map_i, trending_cats_i, trust_map_i, influence_map_i = await _fetch_seller_meta(interest_uids)
+    badge_map_i, trending_cats_i, trending_lids_i, trust_map_i, influence_map_i = await _fetch_seller_meta(interest_uids)
 
     return [
         _row_dict(listing, user, counts.get(lid, 0), lid in liked_set,
                   seller_badge=badge_map_i.get(user.id),
-                  is_trending=listing.category in trending_cats_i,
+                  is_trending=listing.category in trending_cats_i or listing.id in trending_lids_i,
                   seller_trust_score=trust_map_i.get(user.id),
                   seller_influence_rank=influence_map_i.get(user.id))
         for lid in ids

@@ -106,10 +106,11 @@ async def _increment_reactivation(user_id: int, premium_since: datetime | None =
 # ── Yardımcı: model → dict dönüşümü ─────────────────────────────────────────
 async def _fetch_seller_meta(
     user_ids: list[int],
-) -> tuple[dict[int, str | None], set[str], dict[int, int | None], dict[int, int | None]]:
+) -> tuple[dict[int, str | None], set[str], set[int], dict[int, int | None], dict[int, int | None]]:
     """
-    Batch olarak Redis'ten seller_badge, trending kategoriler, trust_score ve influence_rank çeker.
-    Döner: (badge_map, trending_categories, trust_map, influence_map)
+    Batch olarak Redis'ten seller_badge, trending kategoriler, trending listing ID'leri,
+    trust_score ve influence_rank çeker.
+    Döner: (badge_map, trending_categories, trending_listing_ids, trust_map, influence_map)
     """
     try:
         from app.utils.redis_client import get_redis
@@ -125,10 +126,11 @@ async def _fetch_seller_meta(
         trust_map    = {uid: (int(val) if val is not None else None) for uid, val in zip(user_ids, trust_vals)}
         influence_map= {uid: (int(val) if val is not None else None) for uid, val in zip(user_ids, inf_vals)}
         trending_cats = set(await redis.smembers("trending:categories") or [])
-        return badge_map, trending_cats, trust_map, influence_map
+        trending_listing_ids = {int(v) for v in (await redis.smembers("trending:listings") or [])}
+        return badge_map, trending_cats, trending_listing_ids, trust_map, influence_map
     except Exception as exc:
         logger.warning("[SellerMeta] Redis fetch başarısız — badge/trending boş dönüyor: %s", exc)
-        return {}, set(), {}, {}
+        return {}, set(), set(), {}, {}
 
 
 def _row_dict(
@@ -317,7 +319,7 @@ class ListingService:
             )
             for lid, cid in camp_result.all():
                 campaign_map.setdefault(lid, cid)
-        badge_map, trending_cats, trust_map, influence_map = await _fetch_seller_meta(user_ids)
+        badge_map, trending_cats, trending_lids, trust_map, influence_map = await _fetch_seller_meta(user_ids)
 
         # Sadece mevcut kullanıcıya ait olan ilanların görüntülenmelerini çek
         impression_map: dict[int, int] = {}
@@ -333,7 +335,7 @@ class ListingService:
                 is_sponsored=listing.id in campaign_map,
                 campaign_id=campaign_map.get(listing.id),
                 seller_badge=badge_map.get(user.id),
-                is_trending=listing.category in trending_cats,
+                is_trending=listing.category in trending_cats or listing.id in trending_lids,
                 impression_count=impression_map.get(listing.id, 0) if user.id == current_user_id else None,
                 seller_trust_score=trust_map.get(user.id),
                 seller_influence_rank=influence_map.get(user.id),
@@ -374,7 +376,7 @@ class ListingService:
             )
             for lid, cid in camp_result.all():
                 campaign_map.setdefault(lid, cid)
-        badge_map, trending_cats, trust_map, influence_map = await _fetch_seller_meta([current_user.id])
+        badge_map, trending_cats, trending_lids, trust_map, influence_map = await _fetch_seller_meta([current_user.id])
 
         impression_map: dict[int, int] = {}
         if listing_ids:
@@ -387,7 +389,7 @@ class ListingService:
                 is_sponsored=listing.id in campaign_map,
                 campaign_id=campaign_map.get(listing.id),
                 seller_badge=badge_map.get(user.id),
-                is_trending=listing.category in trending_cats,
+                is_trending=listing.category in trending_cats or listing.id in trending_lids,
                 impression_count=impression_map.get(listing.id, 0),
                 seller_trust_score=trust_map.get(user.id),
                 seller_influence_rank=influence_map.get(user.id),
@@ -420,7 +422,7 @@ class ListingService:
             .limit(1)
         )
         campaign_id = camp_result.scalar_one_or_none()
-        badge_map, trending_cats, trust_map, influence_map = await _fetch_seller_meta([user.id])
+        badge_map, trending_cats, trending_lids, trust_map, influence_map = await _fetch_seller_meta([user.id])
         impression_count: Optional[int] = None
         if current_user_id == listing.user_id:
             imp_map = {}
@@ -433,7 +435,7 @@ class ListingService:
             is_sponsored=campaign_id is not None,
             campaign_id=campaign_id,
             seller_badge=badge_map.get(user.id),
-            is_trending=listing.category in trending_cats,
+            is_trending=listing.category in trending_cats or listing.id in trending_lids,
             impression_count=impression_count,
             seller_trust_score=trust_map.get(user.id),
             seller_influence_rank=influence_map.get(user.id),

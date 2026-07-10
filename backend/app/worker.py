@@ -1495,15 +1495,43 @@ async def compute_trending_categories_task(ctx: dict) -> None:
                 """))
                 trending = [row[0] for row in fallback_rows.fetchall()]
 
+        # Per-listing trending: son 24 saatte en çok görüntülenen ilanlar
+        trending_listing_ids: list[int] = []
+        try:
+            ch = await get_clickhouse_client()
+            if ch is not None:
+                ch_rows = await ch.query("""
+                    SELECT item_id, count() AS views
+                    FROM user_events
+                    WHERE item_type = 'listing'
+                      AND event_type = 'view'
+                      AND timestamp >= now() - INTERVAL 24 HOUR
+                    GROUP BY item_id
+                    HAVING views >= 5
+                    ORDER BY views DESC
+                    LIMIT 100
+                """)
+                trending_listing_ids = [int(r[0]) for r in ch_rows.result_rows]
+        except Exception as ch_exc:
+            logger.warning("[Worker] trending_listings ClickHouse başarısız: %s", ch_exc)
+
         redis = await get_redis()
-        key = "trending:categories"
         pipe = redis.pipeline()
+
+        key = "trending:categories"
         pipe.delete(key)
         if trending:
             pipe.sadd(key, *trending)
         pipe.expire(key, 21_600)  # 6 saat
+
+        lkey = "trending:listings"
+        pipe.delete(lkey)
+        if trending_listing_ids:
+            pipe.sadd(lkey, *trending_listing_ids)
+        pipe.expire(lkey, 21_600)  # 6 saat
+
         await pipe.execute()
-        logger.info("[Worker] compute_trending_categories_task | trend=%s", trending)
+        logger.info("[Worker] compute_trending_categories_task | cats=%s listings=%d", trending, len(trending_listing_ids))
     except Exception as exc:
         logger.error("[Worker] compute_trending_categories_task başarısız | %s", exc, exc_info=True)
         capture_exception(exc)
