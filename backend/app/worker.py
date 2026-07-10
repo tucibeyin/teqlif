@@ -1495,25 +1495,67 @@ async def compute_trending_categories_task(ctx: dict) -> None:
                 """))
                 trending = [row[0] for row in fallback_rows.fetchall()]
 
-        # Per-listing trending: son 24 saatte en çok görüntülenen ilanlar
+        # Per-listing trending: ağırlıklı engagement skoru + zaman çürümesi
+        # Sinyal ağırlıkları: view×1, like×2, bid_hesitation×3, bid×5
+        # Skor = ham_puan / (saat + 2)^1.5  — Hacker News benzeri decay
+        # Trending: ham_puan >= 5 VE skor >= ortalama + 1.5×std_sapma
         trending_listing_ids: list[int] = []
         try:
             ch = await get_clickhouse_client()
             if ch is not None:
                 ch_rows = await ch.query("""
-                    SELECT item_id, count() AS views
+                    SELECT
+                        item_id,
+                        countIf(event_type = 'view')                              AS views,
+                        countIf(event_type = 'bid_hesitation')                    AS hesitations,
+                        countDistinctIf(user_id, event_type = 'bid')              AS bids,
+                        date_diff('hour', min(timestamp), now())                  AS age_hours
                     FROM user_events
                     WHERE item_type = 'listing'
-                      AND event_type = 'view'
-                      AND timestamp >= now() - INTERVAL 24 HOUR
+                      AND timestamp >= now() - INTERVAL 48 HOUR
                     GROUP BY item_id
-                    HAVING views >= 5
-                    ORDER BY views DESC
-                    LIMIT 100
+                    HAVING (views + hesitations + bids) > 0
                 """)
-                trending_listing_ids = [int(r[0]) for r in ch_rows.result_rows]
+                ch_signals: dict[int, dict] = {}
+                for item_id, views, hesitations, bids, age_hours in ch_rows.result_rows:
+                    ch_signals[int(item_id)] = {
+                        "views": int(views),
+                        "hesitations": int(hesitations),
+                        "bids": int(bids),
+                        "age_hours": max(float(age_hours), 0.1),
+                    }
+
+                if ch_signals:
+                    import math
+                    # PostgreSQL'den son 48s like sayılarını çek
+                    from app.database import AsyncSessionLocal
+                    from sqlalchemy import text as sql_text
+                    async with AsyncSessionLocal() as db:
+                        like_rows = await db.execute(sql_text("""
+                            SELECT listing_id, COUNT(*) AS cnt
+                            FROM listing_likes
+                            WHERE created_at >= NOW() - INTERVAL '48 hours'
+                              AND listing_id = ANY(:ids)
+                            GROUP BY listing_id
+                        """), {"ids": list(ch_signals.keys())})
+                        like_map: dict[int, int] = {row[0]: row[1] for row in like_rows.fetchall()}
+
+                    scores: dict[int, float] = {}
+                    for lid, s in ch_signals.items():
+                        raw = s["views"] * 1 + like_map.get(lid, 0) * 2 + s["hesitations"] * 3 + s["bids"] * 5
+                        if raw < 5:
+                            continue
+                        scores[lid] = raw / math.pow(s["age_hours"] + 2, 1.5)
+
+                    if scores:
+                        vals = list(scores.values())
+                        mean = sum(vals) / len(vals)
+                        variance = sum((v - mean) ** 2 for v in vals) / len(vals)
+                        std = math.sqrt(variance) if variance > 0 else 0
+                        threshold = mean + 1.5 * std
+                        trending_listing_ids = [lid for lid, sc in scores.items() if sc >= threshold]
         except Exception as ch_exc:
-            logger.warning("[Worker] trending_listings ClickHouse başarısız: %s", ch_exc)
+            logger.warning("[Worker] trending_listings başarısız: %s", ch_exc)
 
         redis = await get_redis()
         pipe = redis.pipeline()
