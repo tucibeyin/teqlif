@@ -1261,6 +1261,7 @@
   "newPasswordConfirm": "Confirm New Password",
   "passwordResetSuccess": "Your password has been successfully reset. You can now login.",
   "settingsMyPurchases": "My Purchases",
+  "noListingPhoto": "No Listing Photo",
   "purchaseDetailTitle": "Purchase Detail",
   "purchaseSeller": "Seller",
   "purchaseProofImage": "Sale Proof Image",

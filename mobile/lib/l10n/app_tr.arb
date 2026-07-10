@@ -1260,6 +1260,7 @@
   "newPasswordConfirm": "Yeni Şifre (Tekrar)",
   "passwordResetSuccess": "Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.",
   "settingsMyPurchases": "Alışverişlerim",
+  "noListingPhoto": "İlan Fotoğrafı Yok",
   "purchaseDetailTitle": "Alışveriş Detayı",
   "purchaseSeller": "Satıcı",
   "purchaseProofImage": "Satış Onay Görseli",

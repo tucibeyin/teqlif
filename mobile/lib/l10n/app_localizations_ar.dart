@@ -2511,6 +2511,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsMyPurchases => 'مشترياتي';
 
   @override
+  String get noListingPhoto => 'لا توجد صورة للإعلان';
+
+  @override
   String get purchaseDetailTitle => 'تفاصيل الشراء';
 
   @override

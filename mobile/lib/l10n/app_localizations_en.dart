@@ -2532,6 +2532,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsMyPurchases => 'My Purchases';
 
   @override
+  String get noListingPhoto => 'No Listing Photo';
+
+  @override
   String get purchaseDetailTitle => 'Purchase Detail';
 
   @override

@@ -2534,6 +2534,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsMyPurchases => 'Alışverişlerim';
 
   @override
+  String get noListingPhoto => 'İlan Fotoğrafı Yok';
+
+  @override
   String get purchaseDetailTitle => 'Alışveriş Detayı';
 
   @override

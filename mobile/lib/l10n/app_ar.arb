@@ -1262,6 +1262,7 @@
   "newPasswordConfirm": "تأكيد كلمة المرور الجديدة",
   "passwordResetSuccess": "تمت إعادة تعيين كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.",
   "settingsMyPurchases": "مشترياتي",
+  "noListingPhoto": "لا توجد صورة للإعلان",
   "purchaseDetailTitle": "تفاصيل الشراء",
   "purchaseSeller": "البائع",
   "purchaseProofImage": "صورة إثبات البيع",

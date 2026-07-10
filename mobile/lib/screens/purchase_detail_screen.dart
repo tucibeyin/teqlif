@@ -59,7 +59,7 @@ class PurchaseDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Image section
-            if (thumbnailUrl != null && thumbnailUrl.isNotEmpty)
+            if (thumbnailUrl != null && thumbnailUrl.isNotEmpty) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: CachedNetworkImage(
@@ -69,11 +69,18 @@ class PurchaseDetailScreen extends StatelessWidget {
                   errorWidget: (_, _, _) => _imagePlaceholder(),
                   placeholder: (_, _) => _imagePlaceholder(),
                 ),
-              )
-            else
-              _imagePlaceholder(),
-
-            const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 16),
+            ] else ...[
+              Row(
+                children: [
+                  const Icon(Icons.hide_image_outlined, size: 16, color: Color(0xFF9CA3AF)),
+                  const SizedBox(width: 6),
+                  Text(l.noListingPhoto, style: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF))),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
 
             // Item details card
             Container(

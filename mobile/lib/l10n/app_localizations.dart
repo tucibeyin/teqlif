@@ -4746,6 +4746,12 @@ abstract class AppLocalizations {
   /// **'Alışverişlerim'**
   String get settingsMyPurchases;
 
+  /// No description provided for @noListingPhoto.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan Fotoğrafı Yok'**
+  String get noListingPhoto;
+
   /// No description provided for @purchaseDetailTitle.
   ///
   /// In tr, this message translates to:

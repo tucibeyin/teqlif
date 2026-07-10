@@ -2567,6 +2567,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsMyPurchases => 'Мои покупки';
 
   @override
+  String get noListingPhoto => 'Нет фото объявления';
+
+  @override
   String get purchaseDetailTitle => 'Детали покупки';
 
   @override

@@ -1524,6 +1524,7 @@
   "newPasswordConfirm": "Подтвердите новый пароль",
   "passwordResetSuccess": "Ваш пароль был успешно сброшен. Теперь вы можете войти.",
   "settingsMyPurchases": "Мои покупки",
+  "noListingPhoto": "Нет фото объявления",
   "purchaseDetailTitle": "Детали покупки",
   "purchaseSeller": "Продавец",
   "purchaseProofImage": "Изображение, подтверждающее продажу",
