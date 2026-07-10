@@ -111,17 +111,17 @@ class PurchaseDetailScreen extends StatelessWidget {
                   const Divider(height: 24),
                   _infoRow(context, AppLocalizations.of(context)!.competitorRadarSalePrice, fmtPrice(finalPrice), valueColor: const Color(0xFF4ADE80)),
                   if (startPrice != null)
-                    _infoRow(context, 'Başlangıç Fiyatı', fmtPrice(startPrice)),
+                    _infoRow(context, l.saleStartPrice, fmtPrice(startPrice)),
                   _infoRow(
                     context,
-                    'Satış Türü',
-                    isBuyItNow ? 'Hemen Al' : 'Açık Artırma',
+                    l.saleType,
+                    isBuyItNow ? l.saleTypeBuyNow : l.saleTypeAuction,
                     valueColor: isBuyItNow
                         ? const Color(0xFF16A34A)
                         : const Color(0xFFF97316),
                   ),
                   if (!isBuyItNow && bidCount != null)
-                    _infoRow(context, 'Teklif Sayısı', '$bidCount'),
+                    _infoRow(context, l.saleBidCount, '$bidCount'),
                   if (startedAt != null)
                     _infoRow(context, AppLocalizations.of(context)!.notificationStart, _formatDate(startedAt)),
                   if (endedAt != null)

@@ -2166,5 +2166,38 @@
     "placeholders": {
       "rank": { "type": "int" }
     }
-  }
+  },
+
+  "radarNoActiveListing": "Активные объявления не найдены.",
+  "radarNeedActiveListing": "Для радара конкурентов требуется минимум 1 активное объявление.",
+  "radarNoPriceSet": "Цена для этого объявления не установлена.",
+  "radarNoCompetitorData": "Недостаточно данных о конкурентах для этой категории.",
+  "radarNo90DayData": "Нет данных о продажах в этой категории за последние 90 дней.",
+  "radarVsAvgPrice": "от средней цены",
+  "radarActiveListings": "активных объявлений",
+  "radarDaysAvg": "дней (в среднем)",
+  "radarDayRange": "Диапазон: {min} – {max} дней",
+  "@radarDayRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "radarAverage": "среднее",
+  "radarSweetSpotLabel": "Самый продаваемый ценовой диапазон",
+  "radarPriceSensitivity": "Чувствительность к цене",
+  "radarDaySaleStat": "{days} дней ({count} продаж)",
+  "@radarDaySaleStat": {
+    "placeholders": {
+      "days": {},
+      "count": {}
+    }
+  },
+  "proNotEnoughStreamData": "Недостаточно данных о трансляциях (мин. 2 трансляции).",
+  "saleTypeBuyNow": "Купить сейчас",
+  "saleTypeBid": "Ставка",
+  "saleTypeAuction": "Аукцион",
+  "saleStartPrice": "Начальная цена",
+  "saleType": "Тип продажи",
+  "saleBidCount": "Количество ставок"
 }

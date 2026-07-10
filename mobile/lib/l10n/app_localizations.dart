@@ -7913,6 +7913,126 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'#{rank}. sıra'**
   String influenceRankValue(int rank);
+
+  /// No description provided for @radarNoActiveListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif ilanın bulunamadı.'**
+  String get radarNoActiveListing;
+
+  /// No description provided for @radarNeedActiveListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Rakip radarı için en az 1 aktif ilana ihtiyaç var.'**
+  String get radarNeedActiveListing;
+
+  /// No description provided for @radarNoPriceSet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ilana fiyat girilmemiş.'**
+  String get radarNoPriceSet;
+
+  /// No description provided for @radarNoCompetitorData.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kategori için yeterli rakip verisi yok.'**
+  String get radarNoCompetitorData;
+
+  /// No description provided for @radarNo90DayData.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son 90 günde bu kategoride satış verisi yok.'**
+  String get radarNo90DayData;
+
+  /// No description provided for @radarVsAvgPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'ort. fiyattan'**
+  String get radarVsAvgPrice;
+
+  /// No description provided for @radarActiveListings.
+  ///
+  /// In tr, this message translates to:
+  /// **'aktif ilan'**
+  String get radarActiveListings;
+
+  /// No description provided for @radarDaysAvg.
+  ///
+  /// In tr, this message translates to:
+  /// **'gün (ortalama)'**
+  String get radarDaysAvg;
+
+  /// No description provided for @radarDayRange.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aralık: {min} – {max} gün'**
+  String radarDayRange(Object min, Object max);
+
+  /// No description provided for @radarAverage.
+  ///
+  /// In tr, this message translates to:
+  /// **'ortalama'**
+  String get radarAverage;
+
+  /// No description provided for @radarSweetSpotLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'En çok satılan fiyat aralığı'**
+  String get radarSweetSpotLabel;
+
+  /// No description provided for @radarPriceSensitivity.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyat Hassasiyeti'**
+  String get radarPriceSensitivity;
+
+  /// No description provided for @radarDaySaleStat.
+  ///
+  /// In tr, this message translates to:
+  /// **'{days} gün ({count} satış)'**
+  String radarDaySaleStat(Object days, Object count);
+
+  /// No description provided for @proNotEnoughStreamData.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz yeterli yayın verisi yok (min. 2 yayın gerekli).'**
+  String get proNotEnoughStreamData;
+
+  /// No description provided for @saleTypeBuyNow.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hemen Al'**
+  String get saleTypeBuyNow;
+
+  /// No description provided for @saleTypeBid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif'**
+  String get saleTypeBid;
+
+  /// No description provided for @saleTypeAuction.
+  ///
+  /// In tr, this message translates to:
+  /// **'Açık Artırma'**
+  String get saleTypeAuction;
+
+  /// No description provided for @saleStartPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç Fiyatı'**
+  String get saleStartPrice;
+
+  /// No description provided for @saleType.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış Türü'**
+  String get saleType;
+
+  /// No description provided for @saleBidCount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif Sayısı'**
+  String get saleBidCount;
 }
 
 class _AppLocalizationsDelegate

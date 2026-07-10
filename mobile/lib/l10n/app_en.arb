@@ -2201,5 +2201,38 @@
     "placeholders": {
       "rank": { "type": "int" }
     }
-  }
+  },
+
+  "radarNoActiveListing": "No active listings found.",
+  "radarNeedActiveListing": "At least 1 active listing is required for Competitor Radar.",
+  "radarNoPriceSet": "This listing has no price set.",
+  "radarNoCompetitorData": "Not enough competitor data for this category.",
+  "radarNo90DayData": "No sales data for this category in the last 90 days.",
+  "radarVsAvgPrice": "vs. avg. price",
+  "radarActiveListings": "active listings",
+  "radarDaysAvg": "days (avg.)",
+  "radarDayRange": "Range: {min} – {max} days",
+  "@radarDayRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "radarAverage": "average",
+  "radarSweetSpotLabel": "Best-selling price range",
+  "radarPriceSensitivity": "Price Sensitivity",
+  "radarDaySaleStat": "{days} days ({count} sales)",
+  "@radarDaySaleStat": {
+    "placeholders": {
+      "days": {},
+      "count": {}
+    }
+  },
+  "proNotEnoughStreamData": "Not enough stream data yet (min. 2 streams required).",
+  "saleTypeBuyNow": "Buy Now",
+  "saleTypeBid": "Bid",
+  "saleTypeAuction": "Auction",
+  "saleStartPrice": "Starting Price",
+  "saleType": "Sale Type",
+  "saleBidCount": "Bid Count"
 }

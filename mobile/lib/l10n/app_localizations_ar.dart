@@ -4327,4 +4327,72 @@ class AppLocalizationsAr extends AppLocalizations {
   String influenceRankValue(int rank) {
     return 'المرتبة #$rank';
   }
+
+  @override
+  String get radarNoActiveListing => 'لم يتم العثور على قوائم نشطة.';
+
+  @override
+  String get radarNeedActiveListing =>
+      'يلزم وجود قائمة نشطة واحدة على الأقل لرادار المنافسين.';
+
+  @override
+  String get radarNoPriceSet => 'لم يتم تحديد سعر لهذا الإعلان.';
+
+  @override
+  String get radarNoCompetitorData =>
+      'لا توجد بيانات منافسين كافية لهذه الفئة.';
+
+  @override
+  String get radarNo90DayData =>
+      'لا توجد بيانات مبيعات لهذه الفئة في آخر 90 يومًا.';
+
+  @override
+  String get radarVsAvgPrice => 'مقارنة بالمتوسط';
+
+  @override
+  String get radarActiveListings => 'إعلانات نشطة';
+
+  @override
+  String get radarDaysAvg => 'أيام (متوسط)';
+
+  @override
+  String radarDayRange(Object min, Object max) {
+    return 'النطاق: $min – $max يوم';
+  }
+
+  @override
+  String get radarAverage => 'متوسط';
+
+  @override
+  String get radarSweetSpotLabel => 'نطاق السعر الأكثر مبيعاً';
+
+  @override
+  String get radarPriceSensitivity => 'حساسية السعر';
+
+  @override
+  String radarDaySaleStat(Object days, Object count) {
+    return '$days يوم ($count مبيعات)';
+  }
+
+  @override
+  String get proNotEnoughStreamData =>
+      'لا توجد بيانات بث كافية بعد (الحد الأدنى: بثّان).';
+
+  @override
+  String get saleTypeBuyNow => 'اشتر الآن';
+
+  @override
+  String get saleTypeBid => 'مزايدة';
+
+  @override
+  String get saleTypeAuction => 'مزاد';
+
+  @override
+  String get saleStartPrice => 'سعر البداية';
+
+  @override
+  String get saleType => 'نوع البيع';
+
+  @override
+  String get saleBidCount => 'عدد العروض';
 }

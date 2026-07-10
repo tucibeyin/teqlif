@@ -2161,5 +2161,38 @@
     "placeholders": {
       "rank": { "type": "int" }
     }
-  }
+  },
+
+  "radarNoActiveListing": "لم يتم العثور على قوائم نشطة.",
+  "radarNeedActiveListing": "يلزم وجود قائمة نشطة واحدة على الأقل لرادار المنافسين.",
+  "radarNoPriceSet": "لم يتم تحديد سعر لهذا الإعلان.",
+  "radarNoCompetitorData": "لا توجد بيانات منافسين كافية لهذه الفئة.",
+  "radarNo90DayData": "لا توجد بيانات مبيعات لهذه الفئة في آخر 90 يومًا.",
+  "radarVsAvgPrice": "مقارنة بالمتوسط",
+  "radarActiveListings": "إعلانات نشطة",
+  "radarDaysAvg": "أيام (متوسط)",
+  "radarDayRange": "النطاق: {min} – {max} يوم",
+  "@radarDayRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "radarAverage": "متوسط",
+  "radarSweetSpotLabel": "نطاق السعر الأكثر مبيعاً",
+  "radarPriceSensitivity": "حساسية السعر",
+  "radarDaySaleStat": "{days} يوم ({count} مبيعات)",
+  "@radarDaySaleStat": {
+    "placeholders": {
+      "days": {},
+      "count": {}
+    }
+  },
+  "proNotEnoughStreamData": "لا توجد بيانات بث كافية بعد (الحد الأدنى: بثّان).",
+  "saleTypeBuyNow": "اشتر الآن",
+  "saleTypeBid": "مزايدة",
+  "saleTypeAuction": "مزاد",
+  "saleStartPrice": "سعر البداية",
+  "saleType": "نوع البيع",
+  "saleBidCount": "عدد العروض"
 }

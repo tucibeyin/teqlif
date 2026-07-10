@@ -2164,5 +2164,38 @@
     "placeholders": {
       "rank": { "type": "int" }
     }
-  }
+  },
+
+  "radarNoActiveListing": "Aktif ilanın bulunamadı.",
+  "radarNeedActiveListing": "Rakip radarı için en az 1 aktif ilana ihtiyaç var.",
+  "radarNoPriceSet": "Bu ilana fiyat girilmemiş.",
+  "radarNoCompetitorData": "Bu kategori için yeterli rakip verisi yok.",
+  "radarNo90DayData": "Son 90 günde bu kategoride satış verisi yok.",
+  "radarVsAvgPrice": "ort. fiyattan",
+  "radarActiveListings": "aktif ilan",
+  "radarDaysAvg": "gün (ortalama)",
+  "radarDayRange": "Aralık: {min} – {max} gün",
+  "@radarDayRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "radarAverage": "ortalama",
+  "radarSweetSpotLabel": "En çok satılan fiyat aralığı",
+  "radarPriceSensitivity": "Fiyat Hassasiyeti",
+  "radarDaySaleStat": "{days} gün ({count} satış)",
+  "@radarDaySaleStat": {
+    "placeholders": {
+      "days": {},
+      "count": {}
+    }
+  },
+  "proNotEnoughStreamData": "Henüz yeterli yayın verisi yok (min. 2 yayın gerekli).",
+  "saleTypeBuyNow": "Hemen Al",
+  "saleTypeBid": "Teklif",
+  "saleTypeAuction": "Açık Artırma",
+  "saleStartPrice": "Başlangıç Fiyatı",
+  "saleType": "Satış Türü",
+  "saleBidCount": "Teklif Sayısı"
 }

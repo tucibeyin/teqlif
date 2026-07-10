@@ -4358,4 +4358,71 @@ class AppLocalizationsTr extends AppLocalizations {
   String influenceRankValue(int rank) {
     return '#$rank. sıra';
   }
+
+  @override
+  String get radarNoActiveListing => 'Aktif ilanın bulunamadı.';
+
+  @override
+  String get radarNeedActiveListing =>
+      'Rakip radarı için en az 1 aktif ilana ihtiyaç var.';
+
+  @override
+  String get radarNoPriceSet => 'Bu ilana fiyat girilmemiş.';
+
+  @override
+  String get radarNoCompetitorData =>
+      'Bu kategori için yeterli rakip verisi yok.';
+
+  @override
+  String get radarNo90DayData => 'Son 90 günde bu kategoride satış verisi yok.';
+
+  @override
+  String get radarVsAvgPrice => 'ort. fiyattan';
+
+  @override
+  String get radarActiveListings => 'aktif ilan';
+
+  @override
+  String get radarDaysAvg => 'gün (ortalama)';
+
+  @override
+  String radarDayRange(Object min, Object max) {
+    return 'Aralık: $min – $max gün';
+  }
+
+  @override
+  String get radarAverage => 'ortalama';
+
+  @override
+  String get radarSweetSpotLabel => 'En çok satılan fiyat aralığı';
+
+  @override
+  String get radarPriceSensitivity => 'Fiyat Hassasiyeti';
+
+  @override
+  String radarDaySaleStat(Object days, Object count) {
+    return '$days gün ($count satış)';
+  }
+
+  @override
+  String get proNotEnoughStreamData =>
+      'Henüz yeterli yayın verisi yok (min. 2 yayın gerekli).';
+
+  @override
+  String get saleTypeBuyNow => 'Hemen Al';
+
+  @override
+  String get saleTypeBid => 'Teklif';
+
+  @override
+  String get saleTypeAuction => 'Açık Artırma';
+
+  @override
+  String get saleStartPrice => 'Başlangıç Fiyatı';
+
+  @override
+  String get saleType => 'Satış Türü';
+
+  @override
+  String get saleBidCount => 'Teklif Sayısı';
 }

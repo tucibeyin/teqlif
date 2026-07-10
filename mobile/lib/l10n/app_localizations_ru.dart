@@ -4406,4 +4406,72 @@ class AppLocalizationsRu extends AppLocalizations {
   String influenceRankValue(int rank) {
     return 'Место #$rank';
   }
+
+  @override
+  String get radarNoActiveListing => 'Активные объявления не найдены.';
+
+  @override
+  String get radarNeedActiveListing =>
+      'Для радара конкурентов требуется минимум 1 активное объявление.';
+
+  @override
+  String get radarNoPriceSet => 'Цена для этого объявления не установлена.';
+
+  @override
+  String get radarNoCompetitorData =>
+      'Недостаточно данных о конкурентах для этой категории.';
+
+  @override
+  String get radarNo90DayData =>
+      'Нет данных о продажах в этой категории за последние 90 дней.';
+
+  @override
+  String get radarVsAvgPrice => 'от средней цены';
+
+  @override
+  String get radarActiveListings => 'активных объявлений';
+
+  @override
+  String get radarDaysAvg => 'дней (в среднем)';
+
+  @override
+  String radarDayRange(Object min, Object max) {
+    return 'Диапазон: $min – $max дней';
+  }
+
+  @override
+  String get radarAverage => 'среднее';
+
+  @override
+  String get radarSweetSpotLabel => 'Самый продаваемый ценовой диапазон';
+
+  @override
+  String get radarPriceSensitivity => 'Чувствительность к цене';
+
+  @override
+  String radarDaySaleStat(Object days, Object count) {
+    return '$days дней ($count продаж)';
+  }
+
+  @override
+  String get proNotEnoughStreamData =>
+      'Недостаточно данных о трансляциях (мин. 2 трансляции).';
+
+  @override
+  String get saleTypeBuyNow => 'Купить сейчас';
+
+  @override
+  String get saleTypeBid => 'Ставка';
+
+  @override
+  String get saleTypeAuction => 'Аукцион';
+
+  @override
+  String get saleStartPrice => 'Начальная цена';
+
+  @override
+  String get saleType => 'Тип продажи';
+
+  @override
+  String get saleBidCount => 'Количество ставок';
 }

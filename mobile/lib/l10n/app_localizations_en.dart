@@ -4354,4 +4354,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String influenceRankValue(int rank) {
     return 'Rank #$rank';
   }
+
+  @override
+  String get radarNoActiveListing => 'No active listings found.';
+
+  @override
+  String get radarNeedActiveListing =>
+      'At least 1 active listing is required for Competitor Radar.';
+
+  @override
+  String get radarNoPriceSet => 'This listing has no price set.';
+
+  @override
+  String get radarNoCompetitorData =>
+      'Not enough competitor data for this category.';
+
+  @override
+  String get radarNo90DayData =>
+      'No sales data for this category in the last 90 days.';
+
+  @override
+  String get radarVsAvgPrice => 'vs. avg. price';
+
+  @override
+  String get radarActiveListings => 'active listings';
+
+  @override
+  String get radarDaysAvg => 'days (avg.)';
+
+  @override
+  String radarDayRange(Object min, Object max) {
+    return 'Range: $min – $max days';
+  }
+
+  @override
+  String get radarAverage => 'average';
+
+  @override
+  String get radarSweetSpotLabel => 'Best-selling price range';
+
+  @override
+  String get radarPriceSensitivity => 'Price Sensitivity';
+
+  @override
+  String radarDaySaleStat(Object days, Object count) {
+    return '$days days ($count sales)';
+  }
+
+  @override
+  String get proNotEnoughStreamData =>
+      'Not enough stream data yet (min. 2 streams required).';
+
+  @override
+  String get saleTypeBuyNow => 'Buy Now';
+
+  @override
+  String get saleTypeBid => 'Bid';
+
+  @override
+  String get saleTypeAuction => 'Auction';
+
+  @override
+  String get saleStartPrice => 'Starting Price';
+
+  @override
+  String get saleType => 'Sale Type';
+
+  @override
+  String get saleBidCount => 'Bid Count';
 }

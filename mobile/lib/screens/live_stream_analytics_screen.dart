@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../l10n/app_localizations.dart';
@@ -38,9 +40,11 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
     });
     try {
       final token = await StorageService.getToken();
+      final prefs = await SharedPreferences.getInstance();
+      final lang = prefs.getString('app_locale_language_code') ?? 'tr';
       final resp = await http.get(
         Uri.parse('$kBaseUrl/analytics/seller-report/${widget.streamId}'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
       );
       if (resp.statusCode == 200) {
         if (mounted) {
@@ -157,7 +161,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${revenue.toStringAsFixed(2)} TUCi',
+                        '${NumberFormat('#,##0.##').format(revenue)} TUCi',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 36,

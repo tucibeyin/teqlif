@@ -184,7 +184,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                                               borderRadius: BorderRadius.circular(4),
                                             ),
                                             child: Text(
-                                              isBuyItNow ? 'Hemen Al' : 'Teklif',
+                                              isBuyItNow ? l.saleTypeBuyNow : l.saleTypeBid,
                                               style: TextStyle(
                                                 color: isBuyItNow
                                                     ? const Color(0xFF16A34A)

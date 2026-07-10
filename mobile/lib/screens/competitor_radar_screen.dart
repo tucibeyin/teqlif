@@ -143,7 +143,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 48),
                 child: Center(
                   child: Text(
-                    'Veri yüklenemedi.',
+                    l.proLoadError,
                     style: TextStyle(color: AppColors.textSecondary(context)),
                   ),
                 ),
@@ -183,12 +183,12 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
           Icon(Icons.inventory_2_outlined, size: 56, color: AppColors.textSecondary(context)),
           const SizedBox(height: 12),
           Text(
-            'Aktif ilanın bulunamadı.',
+            AppLocalizations.of(context)!.radarNoActiveListing,
             style: TextStyle(fontSize: 15, color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 6),
           Text(
-            'Rakip radarı için en az 1 aktif ilana ihtiyaç var.',
+            AppLocalizations.of(context)!.radarNeedActiveListing,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
           ),
@@ -221,8 +221,8 @@ class _RadarSection extends StatelessWidget {
           child: Center(
             child: Text(
               signal == 'no_price'
-                  ? 'Bu ilana fiyat girilmemiş.'
-                  : 'Bu kategori için yeterli rakip verisi yok.',
+                  ? AppLocalizations.of(context)!.radarNoPriceSet
+                  : AppLocalizations.of(context)!.radarNoCompetitorData,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
             ),
@@ -382,7 +382,7 @@ class _RadarSection extends StatelessWidget {
                 child: _StatChip(
                   label: AppLocalizations.of(context)!.competitorRadarDifference,
                   value: '${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%',
-                  sub: 'ort. fiyattan',
+                  sub: l.radarVsAvgPrice,
                   valueColor: diffPct > 0 ? const Color(0xFFEF4444) : const Color(0xFF22C55E),
                 ),
               ),
@@ -391,7 +391,7 @@ class _RadarSection extends StatelessWidget {
                 child: _StatChip(
                   label: AppLocalizations.of(context)!.competitorRadarCompetitor,
                   value: '$competitorCount',
-                  sub: 'aktif ilan',
+                  sub: l.radarActiveListings,
                 ),
               ),
             ],
@@ -486,7 +486,7 @@ class _VelocitySection extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                'Son 90 günde bu kategoride satış verisi yok.',
+                AppLocalizations.of(context)!.radarNo90DayData,
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
               ),
             )
@@ -508,7 +508,7 @@ class _VelocitySection extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4, left: 6),
                     child: Text(
-                      'gün (ortalama)',
+                      AppLocalizations.of(context)!.radarDaysAvg,
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
                     ),
                   ),
@@ -517,7 +517,7 @@ class _VelocitySection extends StatelessWidget {
               const SizedBox(height: 4),
               if (minDays != null && maxDays != null)
                 Text(
-                  'Aralık: ${minDays.toStringAsFixed(0)} – ${maxDays.toStringAsFixed(0)} gün',
+                  AppLocalizations.of(context)!.radarDayRange(minDays.toStringAsFixed(0), maxDays.toStringAsFixed(0)),
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
               const SizedBox(height: 14),
@@ -547,7 +547,7 @@ class _VelocitySection extends StatelessWidget {
                     child: _StatChip(
                       label: AppLocalizations.of(context)!.competitorRadarSalePrice,
                       value: '${_fmtPrice(avgSoldPrice)} ₺',
-                      sub: 'ortalama',
+                      sub: AppLocalizations.of(context)!.radarAverage,
                     ),
                   ),
                 ],
@@ -573,7 +573,7 @@ class _VelocitySection extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'En çok satılan fiyat aralığı',
+                            AppLocalizations.of(context)!.radarSweetSpotLabel,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
@@ -601,7 +601,7 @@ class _VelocitySection extends StatelessWidget {
             if (sensitivity.length == 2) ...[
               const SizedBox(height: 14),
               Text(
-                'Fiyat Hassasiyeti',
+                AppLocalizations.of(context)!.radarPriceSensitivity,
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary(context)),
               ),
               const SizedBox(height: 8),
@@ -625,7 +625,7 @@ class _VelocitySection extends StatelessWidget {
                       ),
                       const Spacer(),
                       Text(
-                        '${days.toStringAsFixed(1)} gün  ($count satış)',
+                        AppLocalizations.of(context)!.radarDaySaleStat(days.toStringAsFixed(1), count),
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
                       ),
                     ],
