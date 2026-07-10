@@ -178,25 +178,27 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextField(
-          controller: ctrl,
-          decoration: InputDecoration(
-            hintText: l.searchHintTextListing,
-            prefixIcon: const Icon(Icons.search, size: 20),
-            suffixIcon: searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () { ctrl.clear(); onSearchChanged(''); },
-                  )
-                : null,
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: TextField(
+            controller: ctrl,
+            decoration: InputDecoration(
+              hintText: l.searchHintTextListing,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () { ctrl.clear(); onSearchChanged(''); },
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onChanged: onSearchChanged,
           ),
-          onChanged: onSearchChanged,
         ),
         if (categories.isNotEmpty) ...[
-          const SizedBox(height: 6),
           SizedBox(
             height: 32,
             child: ListView(
@@ -211,9 +213,10 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 6),
         ],
         ...extraChipRows,
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
       ],
     );
   }

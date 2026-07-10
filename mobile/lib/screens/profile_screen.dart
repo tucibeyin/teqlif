@@ -687,6 +687,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ],
+                        const SizedBox(height: 10),
                         _SocialLinksRow(user: _user, userId: _user?['id'] as int?),
                       ],
                     ),
@@ -2826,7 +2827,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: TextField(
             controller: _searchCtrl,
             decoration: InputDecoration(
@@ -2884,6 +2885,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
               ],
             ),
           ),
+        const SizedBox(height: 6),
         _buildDateRangePicker(l),
         const SizedBox(height: 4),
       ],
@@ -3194,7 +3196,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: TextField(
             controller: _searchCtrl,
             decoration: InputDecoration(
@@ -3247,6 +3249,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
               ],
             ),
           ),
+        const SizedBox(height: 6),
         _buildFavDateRangePicker(l),
         const SizedBox(height: 4),
       ],

@@ -116,7 +116,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: TextField(
             controller: _searchCtrl,
             decoration: InputDecoration(
@@ -169,6 +169,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
               ],
             ),
           ),
+        const SizedBox(height: 6),
         _buildDateRangePicker(l),
         const SizedBox(height: 4),
       ],
