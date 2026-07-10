@@ -16,6 +16,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../widgets/async_button.dart';
 import '../models/listing_offer.dart';
+import '../services/cache_service.dart';
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
@@ -843,6 +844,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     } else if (apiResult != null && apiResult.containsKey('error')) {
       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(apiResult['error'] as String)));
     } else if (apiResult != null) {
+      CacheService.clearData('user_wallet_data');
       setState(() => _cooldownSeconds = 86400);
       _startCooldownTimer();
       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
@@ -942,6 +944,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             if (resp.statusCode == 201) {
               final data = jsonDecode(resp.body) as Map<String, dynamic>;
               final wasFree = data['is_free'] == true;
+              CacheService.clearData('user_wallet_data');
               setState(() {
                 _campaignId = data['id'] as int?;
                 widget.listing['campaign_id'] = _campaignId;

@@ -142,6 +142,7 @@ class AnalyticsService {
     required String description,
     required String category,
     String city = '',
+    int? excludeListingId,
   }) async {
     try {
       final token = await StorageService.getToken();
@@ -160,6 +161,8 @@ class AnalyticsService {
           'description': description,
           'category': category,
           'city': city,
+          if (excludeListingId != null && excludeListingId > 0)
+            'exclude_listing_id': excludeListingId,
         }),
       );
       if (resp.statusCode == 200) {

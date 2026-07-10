@@ -806,6 +806,8 @@ async def price_estimate(
                 user_id=current_user.id,
                 amount=-AI_PRICE_ESTIMATE_COST,
                 transaction_type="spend_ai",
+                reference_id=body.exclude_listing_id if body.exclude_listing_id else None,
+                reference_type="listing" if body.exclude_listing_id else None,
             ))
             await db.commit()
             tuci_spent = AI_PRICE_ESTIMATE_COST
@@ -818,6 +820,8 @@ async def price_estimate(
             user_id=current_user.id,
             amount=-AI_PRICE_ESTIMATE_COST,
             transaction_type="spend_ai",
+            reference_id=body.exclude_listing_id if body.exclude_listing_id else None,
+            reference_type="listing" if body.exclude_listing_id else None,
         ))
         await db.commit()
         tuci_spent = AI_PRICE_ESTIMATE_COST

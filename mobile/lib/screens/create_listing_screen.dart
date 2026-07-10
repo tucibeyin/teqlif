@@ -12,6 +12,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../core/app_exception.dart';
 import '../services/analytics_service.dart';
+import '../services/cache_service.dart';
 import '../services/captcha_service.dart';
 import '../services/category_service.dart';
 import '../services/city_service.dart';
@@ -129,6 +130,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       final tuciSpent = (result['tuci_spent'] as num?)?.toInt() ?? 0;
       if (tuciSpent > 0) {
         // TUCi harcandı — badge'i serverdan taze al
+        CacheService.clearData('user_wallet_data');
         _loadAiCredits();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(AppLocalizations.of(context)!.tuciSpent(tuciSpent)),

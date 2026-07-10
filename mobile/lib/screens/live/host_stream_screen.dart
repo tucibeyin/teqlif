@@ -10,6 +10,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/analytics_service.dart';
+import '../../services/cache_service.dart';
 import '../../services/stream_service.dart';
 import 'seller_report_screen.dart';
 import '../../utils/price_formatter.dart';
@@ -185,6 +186,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       );
       if (!mounted) return;
       if (result != null && result['error'] == null) {
+        CacheService.clearData('user_wallet_data');
         final sent = result['sent'] as int? ?? _audienceSize;
         final msg = sent > 0
             ? '🎯 $sent kişiye bildirim gönderildi!'

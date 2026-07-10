@@ -184,6 +184,15 @@ async def create_campaign(
             reference_id=body.listing_id,
             reference_type="listing",
         ))
+    else:
+        # PRO ücretsiz boost hakkı kullanıldı — işlem geçmişine kaydet
+        db.add(TuciTransaction(
+            user_id=current_user.id,
+            amount=0,
+            transaction_type="spend_boost",
+            reference_id=body.listing_id,
+            reference_type="listing",
+        ))
 
     await db.commit()
     await db.refresh(campaign)

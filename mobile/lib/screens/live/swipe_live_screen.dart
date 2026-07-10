@@ -12,6 +12,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/api.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
+import '../../services/cache_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/wallet_service.dart';
@@ -1484,6 +1485,7 @@ class _GiftSheetState extends State<_GiftSheet> {
     if (!mounted) return;
     setState(() => _sending = false);
     if (result['ok'] == true) {
+      CacheService.clearData('user_wallet_data');
       AnalyticsService.logInteraction(
         itemId: widget.streamId,
         itemType: 'stream',

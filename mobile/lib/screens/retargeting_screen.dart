@@ -8,6 +8,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
+import '../services/cache_service.dart';
 import '../services/category_service.dart';
 import '../services/storage_service.dart';
 
@@ -590,6 +591,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     setState(() => _sending = false);
 
     if (result != null && result['error'] == null) {
+      CacheService.clearData('user_wallet_data');
       final sent = result['sent'] as int? ?? actualCount;
       setState(() { _sent = true; _sentCount = sent; _blastCooldownSeconds = 86400; });
       _startCountdown();
