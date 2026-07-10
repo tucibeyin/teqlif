@@ -25,6 +25,7 @@
             if (tfSub)   tfSub.textContent    = '/ yıl · ~₺166/ay · 2 ay bedava';
 
             /* tablo: AI */
+            document.querySelector('tr[data-key="ai"] .td-pro span').textContent = '⚡ 72 adet / yıl';
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺360/yıl';
             document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '72 sorgu × 5 TL<br>= 360 TL tasarruf';
 
@@ -67,6 +68,7 @@
             if (tfSub)   tfSub.textContent    = '/ ay · iptal istediğin an';
 
             /* tablo: AI */
+            document.querySelector('tr[data-key="ai"] .td-pro span').textContent = '⚡ 6 adet / ay';
             document.querySelector('tr[data-key="ai"] .val-amount').textContent = '~₺30/ay';
             document.querySelector('tr[data-key="ai"] .val-desc').innerHTML = '6 sorgu × 5 TL<br>= 30 TL tasarruf';
 
