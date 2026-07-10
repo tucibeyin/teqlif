@@ -7,7 +7,7 @@ import '../config/api.dart';
 enum VersionStatus { upToDate, softUpdate, forceUpdate }
 
 class VersionService {
-  static String _iosStoreUrl = 'https://apps.apple.com/app/teqlif';
+  static String _iosStoreUrl = 'https://apps.apple.com/tr/app/teqlif/id6759490205';
   static String _androidStoreUrl = 'https://play.google.com/store/apps/details?id=com.teqlif.app';
 
   static String get iosStoreUrl => _iosStoreUrl;
