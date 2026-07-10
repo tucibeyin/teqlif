@@ -104,22 +104,31 @@ async def _increment_reactivation(user_id: int, premium_since: datetime | None =
 
 
 # ── Yardımcı: model → dict dönüşümü ─────────────────────────────────────────
-async def _fetch_seller_meta(user_ids: list[int]) -> tuple[dict[int, str | None], set[str]]:
+async def _fetch_seller_meta(
+    user_ids: list[int],
+) -> tuple[dict[int, str | None], set[str], dict[int, int | None], dict[int, int | None]]:
     """
-    Batch olarak Redis'ten seller_badge ve trending kategorileri çeker.
-    Döner: (badge_map {user_id: badge}, trending_categories set)
+    Batch olarak Redis'ten seller_badge, trending kategoriler, trust_score ve influence_rank çeker.
+    Döner: (badge_map, trending_categories, trust_map, influence_map)
     """
     try:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
-        badge_keys = [f"seller:badge:{uid}" for uid in user_ids]
-        results = await redis.mget(*badge_keys) if badge_keys else []
-        badge_map = {uid: (val or None) for uid, val in zip(user_ids, results)}
+        badge_keys     = [f"seller:badge:{uid}"   for uid in user_ids]
+        trust_keys     = [f"trust_score:{uid}"     for uid in user_ids]
+        influence_keys = [f"influence_rank:{uid}"  for uid in user_ids]
+        all_keys = badge_keys + trust_keys + influence_keys
+        all_vals = await redis.mget(*all_keys) if all_keys else []
+        n = len(user_ids)
+        badge_vals, trust_vals, inf_vals = all_vals[:n], all_vals[n:2*n], all_vals[2*n:]
+        badge_map    = {uid: (val or None) for uid, val in zip(user_ids, badge_vals)}
+        trust_map    = {uid: (int(val) if val is not None else None) for uid, val in zip(user_ids, trust_vals)}
+        influence_map= {uid: (int(val) if val is not None else None) for uid, val in zip(user_ids, inf_vals)}
         trending_cats = set(await redis.smembers("trending:categories") or [])
-        return badge_map, trending_cats
+        return badge_map, trending_cats, trust_map, influence_map
     except Exception as exc:
         logger.warning("[SellerMeta] Redis fetch başarısız — badge/trending boş dönüyor: %s", exc)
-        return {}, set()
+        return {}, set(), {}, {}
 
 
 def _row_dict(
@@ -308,7 +317,7 @@ class ListingService:
             )
             for lid, cid in camp_result.all():
                 campaign_map.setdefault(lid, cid)
-        badge_map, trending_cats = await _fetch_seller_meta(user_ids)
+        badge_map, trending_cats, trust_map, influence_map = await _fetch_seller_meta(user_ids)
 
         # Sadece mevcut kullanıcıya ait olan ilanların görüntülenmelerini çek
         impression_map: dict[int, int] = {}
@@ -326,6 +335,8 @@ class ListingService:
                 seller_badge=badge_map.get(user.id),
                 is_trending=listing.category in trending_cats,
                 impression_count=impression_map.get(listing.id, 0) if user.id == current_user_id else None,
+                seller_trust_score=trust_map.get(user.id),
+                seller_influence_rank=influence_map.get(user.id),
             )
             for listing, user in rows
         ]
@@ -363,7 +374,7 @@ class ListingService:
             )
             for lid, cid in camp_result.all():
                 campaign_map.setdefault(lid, cid)
-        badge_map, trending_cats = await _fetch_seller_meta([current_user.id])
+        badge_map, trending_cats, trust_map, influence_map = await _fetch_seller_meta([current_user.id])
 
         impression_map: dict[int, int] = {}
         if listing_ids:
@@ -378,6 +389,8 @@ class ListingService:
                 seller_badge=badge_map.get(user.id),
                 is_trending=listing.category in trending_cats,
                 impression_count=impression_map.get(listing.id, 0),
+                seller_trust_score=trust_map.get(user.id),
+                seller_influence_rank=influence_map.get(user.id),
             )
             for listing, user in rows
         ]
@@ -407,27 +420,12 @@ class ListingService:
             .limit(1)
         )
         campaign_id = camp_result.scalar_one_or_none()
-        badge_map, trending_cats = await _fetch_seller_meta([user.id])
+        badge_map, trending_cats, trust_map, influence_map = await _fetch_seller_meta([user.id])
         impression_count: Optional[int] = None
         if current_user_id == listing.user_id:
             imp_map = {}
             await self._fetch_unique_reach(self.db, imp_map, [listing.id])
             impression_count = imp_map.get(listing.id, 0)
-
-        seller_trust_score: int | None = None
-        seller_influence_rank: int | None = None
-        try:
-            from app.utils.redis_client import get_redis
-            redis = await get_redis()
-            ts_raw, ir_raw = await redis.mget(
-                f"trust_score:{user.id}", f"influence_rank:{user.id}"
-            )
-            if ts_raw is not None:
-                seller_trust_score = int(ts_raw)
-            if ir_raw is not None:
-                seller_influence_rank = int(ir_raw)
-        except Exception:
-            pass
 
         return _row_dict(
             listing, user,
@@ -437,8 +435,8 @@ class ListingService:
             seller_badge=badge_map.get(user.id),
             is_trending=listing.category in trending_cats,
             impression_count=impression_count,
-            seller_trust_score=seller_trust_score,
-            seller_influence_rank=seller_influence_rank,
+            seller_trust_score=trust_map.get(user.id),
+            seller_influence_rank=influence_map.get(user.id),
         )
 
     # ── İlan Oluştur ─────────────────────────────────────────────────────────

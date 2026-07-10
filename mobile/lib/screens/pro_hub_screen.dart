@@ -187,6 +187,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
             title: l.proHubTabMarket,
             icon: Icons.public,
             iconColor: const Color(0xFFF59E0B),
+            initiallyExpanded: true,
             children: [
               _ToolCard(
                 icon: Icons.insights_outlined,
@@ -300,6 +301,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
     required IconData icon,
     required Color iconColor,
     required List<Widget> children,
+    bool initiallyExpanded = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -310,7 +312,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          initiallyExpanded: false,
+          initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           leading: Container(
