@@ -910,12 +910,12 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       if (!_scrollCtrl.hasClients) return;
       if (animate) {
         _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
+          0,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       } else {
-        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+        _scrollCtrl.jumpTo(0);
       }
     });
   }
@@ -1080,11 +1080,12 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                                   )
                                 : ListView.builder(
                             controller: _scrollCtrl,
+                            reverse: true,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 12),
                             itemCount: _messages.length,
                             itemBuilder: (context, i) {
-                              final msg = _messages[i];
+                              final msg = _messages[_messages.length - 1 - i];
                               final senderId = msg['sender_id'] as int?;
                               final isMe = senderId == _myUserId;
                               final content = msg['content'] as String? ?? '';
