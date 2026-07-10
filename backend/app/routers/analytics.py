@@ -1013,6 +1013,7 @@ async def pro_insights(
              yayın performansı · pazar trendleri · akıllı öneriler
     """
     uid = current_user.id
+    _t = _get_t(get_locale(current_user, request))
 
     # ── Cache Check ─────────────────────────────────────────────────────────
     try:
@@ -1174,7 +1175,7 @@ async def pro_insights(
                     "listing_id": r.id,
                     "title": r.title,
                     "price": r.price,
-                    "category": _CAT_LABELS.get(r.category or "diger", r.category or "Diğer"),
+                    "category": _t.get(f"cat_{r.category or 'diger'}", _CAT_LABELS.get(r.category or "diger", r.category or "Diğer")),
                     "views_30d": view_map.get(r.id, 0),
                     "hesitations_30d": hes_map.get(r.id, 0),
                     "heat_score": view_map.get(r.id, 0) * 1 + hes_map.get(r.id, 0) * 3,
