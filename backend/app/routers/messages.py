@@ -4,9 +4,10 @@ import asyncio
 import json
 import redis
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
+from app.core.rate_limit import limiter, get_user_id_or_ip
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func, or_, and_
+from sqlalchemy import select, update, func, or_, and_, delete
 from app.config import settings
 from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
@@ -189,6 +190,50 @@ async def unread_dm_count(
     )
     count = result.scalar_one()
     return UnreadCountOut(count=count)
+
+
+@router.delete("/{message_id}", status_code=204)
+@limiter.limit("10/minute", key_func=get_user_id_or_ip)
+async def delete_message(
+    request: Request,
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(DirectMessage).where(DirectMessage.id == message_id))
+    msg = result.scalar_one_or_none()
+    if not msg:
+        raise NotFoundException("Mesaj bulunamadı")
+    if msg.sender_id != current_user.id:
+        raise ForbiddenException("Bu mesajı silemezsiniz")
+
+    other_user_id = msg.receiver_id
+    await db.delete(msg)
+    await db.commit()
+
+    payload = {"type": "message_deleted", "id": message_id}
+    await _broadcast_dm(current_user.id, payload)
+    await _broadcast_dm(other_user_id, payload)
+
+
+@router.delete("/conversation/{other_user_id}", status_code=204)
+@limiter.limit("5/minute", key_func=get_user_id_or_ip)
+async def delete_conversation(
+    request: Request,
+    other_user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    uid = current_user.id
+    await db.execute(
+        delete(DirectMessage).where(
+            or_(
+                and_(DirectMessage.sender_id == uid, DirectMessage.receiver_id == other_user_id),
+                and_(DirectMessage.sender_id == other_user_id, DirectMessage.receiver_id == uid),
+            )
+        )
+    )
+    await db.commit()
 
 
 @router.get("/{other_user_id}", response_model=List[MessageOut])

@@ -611,6 +611,32 @@ class AppLocalizationsRu extends AppLocalizations {
   String get msgGoToListing => '📌 Перейти к объявлению';
 
   @override
+  String get msgDeleteMessage => 'Удалить сообщение';
+
+  @override
+  String get msgDeleteMessageConfirm =>
+      'Вы уверены, что хотите удалить это сообщение?';
+
+  @override
+  String get msgDeleteMessageSuccess => 'Сообщение удалено';
+
+  @override
+  String get msgDeleteMessageFailed => 'Не удалось удалить сообщение';
+
+  @override
+  String get msgDeleteConversation => 'Удалить переписку';
+
+  @override
+  String get msgDeleteConversationConfirm =>
+      'Вы уверены, что хотите удалить эту переписку? Все сообщения будут удалены.';
+
+  @override
+  String get msgDeleteConversationSuccess => 'Переписка удалена';
+
+  @override
+  String get msgDeleteConversationFailed => 'Не удалось удалить переписку';
+
+  @override
   String get notifNone => 'Нет уведомлений';
 
   @override

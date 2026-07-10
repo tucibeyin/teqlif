@@ -605,6 +605,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get msgGoToListing => '📌 Go to Listing';
 
   @override
+  String get msgDeleteMessage => 'Delete Message';
+
+  @override
+  String get msgDeleteMessageConfirm =>
+      'Are you sure you want to delete this message?';
+
+  @override
+  String get msgDeleteMessageSuccess => 'Message deleted';
+
+  @override
+  String get msgDeleteMessageFailed => 'Failed to delete message';
+
+  @override
+  String get msgDeleteConversation => 'Delete Conversation';
+
+  @override
+  String get msgDeleteConversationConfirm =>
+      'Are you sure you want to delete this conversation? All messages will be removed.';
+
+  @override
+  String get msgDeleteConversationSuccess => 'Conversation deleted';
+
+  @override
+  String get msgDeleteConversationFailed => 'Failed to delete conversation';
+
+  @override
   String get notifNone => 'No notifications';
 
   @override

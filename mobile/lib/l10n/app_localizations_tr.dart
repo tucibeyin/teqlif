@@ -606,6 +606,32 @@ class AppLocalizationsTr extends AppLocalizations {
   String get msgGoToListing => '📌 İlana Git';
 
   @override
+  String get msgDeleteMessage => 'Mesajı Sil';
+
+  @override
+  String get msgDeleteMessageConfirm =>
+      'Bu mesajı silmek istediğine emin misin?';
+
+  @override
+  String get msgDeleteMessageSuccess => 'Mesaj silindi';
+
+  @override
+  String get msgDeleteMessageFailed => 'Mesaj silinemedi';
+
+  @override
+  String get msgDeleteConversation => 'Sohbeti Sil';
+
+  @override
+  String get msgDeleteConversationConfirm =>
+      'Bu sohbeti silmek istediğine emin misin? Tüm mesajlar silinecek.';
+
+  @override
+  String get msgDeleteConversationSuccess => 'Sohbet silindi';
+
+  @override
+  String get msgDeleteConversationFailed => 'Sohbet silinemedi';
+
+  @override
   String get notifNone => 'Bildirim yok';
 
   @override

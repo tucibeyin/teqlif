@@ -602,6 +602,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get msgGoToListing => '📌 الانتقال إلى الإعلان';
 
   @override
+  String get msgDeleteMessage => 'حذف الرسالة';
+
+  @override
+  String get msgDeleteMessageConfirm =>
+      'هل أنت متأكد أنك تريد حذف هذه الرسالة؟';
+
+  @override
+  String get msgDeleteMessageSuccess => 'تم حذف الرسالة';
+
+  @override
+  String get msgDeleteMessageFailed => 'تعذّر حذف الرسالة';
+
+  @override
+  String get msgDeleteConversation => 'حذف المحادثة';
+
+  @override
+  String get msgDeleteConversationConfirm =>
+      'هل أنت متأكد أنك تريد حذف هذه المحادثة؟ سيتم حذف جميع الرسائل.';
+
+  @override
+  String get msgDeleteConversationSuccess => 'تم حذف المحادثة';
+
+  @override
+  String get msgDeleteConversationFailed => 'تعذّر حذف المحادثة';
+
+  @override
   String get notifNone => 'لا توجد إشعارات';
 
   @override

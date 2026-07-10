@@ -245,6 +245,48 @@ class _MessagesTabState extends State<_MessagesTab> {
     if (mounted) setState(() => _conversations = updated);
   }
 
+  Future<void> _deleteConversation(int otherId) async {
+    final l = AppLocalizations.of(context)!;
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(l.msgDeleteConversationConfirm, textAlign: TextAlign.center),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: Text(l.msgDeleteConversation, style: const TextStyle(color: Colors.red)),
+              onTap: () => Navigator.pop(ctx, true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: Text(l.btnCancel),
+              onTap: () => Navigator.pop(ctx, false),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final ok = await NotificationService.deleteConversation(otherId);
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _conversations.removeWhere((c) => (c['user_id'] as int?) == otherId));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.msgDeleteConversationSuccess)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.msgDeleteConversationFailed)));
+    }
+  }
+
   String _timeAgo(String? isoStr) {
     if (isoStr == null) return '';
     try {
@@ -371,6 +413,7 @@ class _MessagesTabState extends State<_MessagesTab> {
               PushNotificationService.badgeRefreshNeeded.add(null);
             });
             },
+            onLongPress: () => _deleteConversation(otherId),
           );
         },
       ),
@@ -825,6 +868,12 @@ class _DirectChatScreenState extends State<DirectChatScreen>
         return;
       }
 
+      if (type == 'message_deleted') {
+        final id = data['id'];
+        if (mounted) setState(() => _messages.removeWhere((m) => m['id'] == id));
+        return;
+      }
+
       if (type != 'message') return;
       final senderId = data['sender_id'] as int?;
       final receiverId = data['receiver_id'] as int?;
@@ -866,6 +915,51 @@ class _DirectChatScreenState extends State<DirectChatScreen>
         );
       }
     });
+  }
+
+  Future<void> _deleteMessage(int messageId) async {
+    final l = AppLocalizations.of(context)!;
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(l.msgDeleteMessageConfirm, textAlign: TextAlign.center),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: Text(l.msgDeleteMessage, style: const TextStyle(color: Colors.red)),
+              onTap: () => Navigator.pop(ctx, true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: Text(l.btnCancel),
+              onTap: () => Navigator.pop(ctx, false),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    // Optimistik kaldır
+    setState(() => _messages.removeWhere((m) => m['id'] == messageId));
+    final ok = await NotificationService.deleteMessage(messageId);
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.msgDeleteMessageFailed)));
+      // Başarısız olursa listeyi yeniden yükle
+      _loadMessages();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.msgDeleteMessageSuccess)));
+    }
   }
 
   Future<void> _send() async {
@@ -995,67 +1089,71 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                               final isRead = (msg['is_read'] as bool?) ?? false;
                               final isPending = (msg['_pending'] as bool?) ?? false;
 
+                              final msgId = msg['id'] as int? ?? -1;
                               return Align(
                                 alignment: isMe
                                     ? Alignment.centerRight
                                     : Alignment.centerLeft,
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(vertical: 3),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                  constraints: BoxConstraints(
-                                    maxWidth:
-                                        MediaQuery.of(context).size.width * 0.72,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isMe
-                                        ? kPrimary
-                                        : AppColors.card(context),
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: const Radius.circular(16),
-                                      topRight: const Radius.circular(16),
-                                      bottomLeft: isMe
-                                          ? const Radius.circular(16)
-                                          : const Radius.circular(4),
-                                      bottomRight: isMe
-                                          ? const Radius.circular(4)
-                                          : const Radius.circular(16),
+                                child: GestureDetector(
+                                  onLongPress: (isMe && msgId > 0) ? () => _deleteMessage(msgId) : null,
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    constraints: BoxConstraints(
+                                      maxWidth:
+                                          MediaQuery.of(context).size.width * 0.72,
                                     ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      _MessageText(content: content, isMe: isMe),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            time,
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: isMe
-                                                  ? Colors.white.withValues(alpha: 0.75)
-                                                  : const Color(0xFF9CA3AF),
-                                            ),
-                                          ),
-                                          if (isMe) ...[
-                                            const SizedBox(width: 3),
-                                            Icon(
-                                              isPending
-                                                  ? Icons.access_time_rounded
-                                                  : (isRead ? Icons.done_all : Icons.done),
-                                              size: 12,
-                                              color: isPending
-                                                  ? Colors.white.withValues(alpha: 0.45)
-                                                  : (isRead
-                                                      ? Colors.blue.shade200
-                                                      : Colors.white.withValues(alpha: 0.6)),
-                                            ),
-                                          ],
-                                        ],
+                                    decoration: BoxDecoration(
+                                      color: isMe
+                                          ? kPrimary
+                                          : AppColors.card(context),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: const Radius.circular(16),
+                                        topRight: const Radius.circular(16),
+                                        bottomLeft: isMe
+                                            ? const Radius.circular(16)
+                                            : const Radius.circular(4),
+                                        bottomRight: isMe
+                                            ? const Radius.circular(4)
+                                            : const Radius.circular(16),
                                       ),
-                                    ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        _MessageText(content: content, isMe: isMe),
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              time,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: isMe
+                                                    ? Colors.white.withValues(alpha: 0.75)
+                                                    : const Color(0xFF9CA3AF),
+                                              ),
+                                            ),
+                                            if (isMe) ...[
+                                              const SizedBox(width: 3),
+                                              Icon(
+                                                isPending
+                                                    ? Icons.access_time_rounded
+                                                    : (isRead ? Icons.done_all : Icons.done),
+                                                size: 12,
+                                                color: isPending
+                                                    ? Colors.white.withValues(alpha: 0.45)
+                                                    : (isRead
+                                                        ? Colors.blue.shade200
+                                                        : Colors.white.withValues(alpha: 0.6)),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );

@@ -1260,6 +1260,54 @@ abstract class AppLocalizations {
   /// **'📌 İlana Git'**
   String get msgGoToListing;
 
+  /// No description provided for @msgDeleteMessage.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mesajı Sil'**
+  String get msgDeleteMessage;
+
+  /// No description provided for @msgDeleteMessageConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu mesajı silmek istediğine emin misin?'**
+  String get msgDeleteMessageConfirm;
+
+  /// No description provided for @msgDeleteMessageSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mesaj silindi'**
+  String get msgDeleteMessageSuccess;
+
+  /// No description provided for @msgDeleteMessageFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mesaj silinemedi'**
+  String get msgDeleteMessageFailed;
+
+  /// No description provided for @msgDeleteConversation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sohbeti Sil'**
+  String get msgDeleteConversation;
+
+  /// No description provided for @msgDeleteConversationConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu sohbeti silmek istediğine emin misin? Tüm mesajlar silinecek.'**
+  String get msgDeleteConversationConfirm;
+
+  /// No description provided for @msgDeleteConversationSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sohbet silindi'**
+  String get msgDeleteConversationSuccess;
+
+  /// No description provided for @msgDeleteConversationFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sohbet silinemedi'**
+  String get msgDeleteConversationFailed;
+
   /// No description provided for @notifNone.
   ///
   /// In tr, this message translates to:

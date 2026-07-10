@@ -84,6 +84,32 @@ class NotificationService {
     }
   }
 
+  /// Tek mesajı sil — hata durumunda false döner.
+  static Future<bool> deleteMessage(int messageId) async {
+    try {
+      await apiCall(
+        () async => http.delete(Uri.parse('$kBaseUrl/messages/$messageId'), headers: await _headers()),
+      );
+      return true;
+    } catch (e) {
+      LoggerService.instance.warning('NotificationService', 'Mesaj silinemedi: $e');
+      return false;
+    }
+  }
+
+  /// Konuşmayı sil — hata durumunda false döner.
+  static Future<bool> deleteConversation(int otherUserId) async {
+    try {
+      await apiCall(
+        () async => http.delete(Uri.parse('$kBaseUrl/messages/conversation/$otherUserId'), headers: await _headers()),
+      );
+      return true;
+    } catch (e) {
+      LoggerService.instance.warning('NotificationService', 'Konuşma silinemedi: $e');
+      return false;
+    }
+  }
+
   /// Mesaj gönder — hata durumunda false döner ve loglama yapılır.
   static Future<bool> sendMessage(int receiverId, String content, {int? listingId}) async {
     try {
