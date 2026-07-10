@@ -761,6 +761,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   bool _sending = false;
   bool _error = false;
   bool _isOtherTyping = false;
+  bool _initialScrollDone = false;
   StreamSubscription<Map<String, dynamic>>? _wsSub;
   int? _myUserId;
   Timer? _typingDebounce;
@@ -786,7 +787,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   }
 
   Future<void> _loadMessages({bool bypassCache = false}) async {
-    if (mounted) setState(() { _loading = true; _error = false; });
+    if (mounted) setState(() { _loading = true; _error = false; _initialScrollDone = false; });
     try {
       // SWR: önce Hive cache (anlık), sonra API (taze)
       await for (final data in ApiService.get<List<Map<String, dynamic>>>(
@@ -905,9 +906,13 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     });
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
+      if (!_scrollCtrl.hasClients) return;
+      if (!animate || !_initialScrollDone) {
+        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+        _initialScrollDone = true;
+      } else {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
