@@ -1346,7 +1346,7 @@ async def pro_insights(
         # Tereddüt fiyat noktası: alıcıların yazdığı fiyat lisans fiyatının çok altındaysa somut öneri
         try:
             seller_lid_rows = await db.execute(sql_text(
-                "SELECT id, title, price FROM listings WHERE user_id = :uid AND status = 'active' LIMIT 20"
+                "SELECT id, title, price FROM listings WHERE user_id = :uid AND is_active = true AND is_deleted = false LIMIT 20"
             ), {"uid": uid})
             seller_listings = {r.id: {"title": r.title, "price": float(r.price or 0)} for r in seller_lid_rows.fetchall()}
             if seller_listings:
