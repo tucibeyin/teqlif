@@ -177,11 +177,11 @@ async function loadUsers(page) {
         pag.innerHTML = `
             <span style="color:#94a3b8;font-size:0.85rem;">${start}–${end} / ${total} kullanıcı</span>
             <div style="display:flex;gap:4px;align-items:center;">
-                <button onclick="loadUsers(1)" ${_usersPage === 1 ? 'disabled' : ''} class="pag-btn">«</button>
-                <button onclick="loadUsers(${_usersPage - 1})" ${_usersPage <= 1 ? 'disabled' : ''} class="pag-btn">‹</button>
+                <button data-page="1" ${_usersPage === 1 ? 'disabled' : ''} class="pag-btn">«</button>
+                <button data-page="${_usersPage - 1}" ${_usersPage <= 1 ? 'disabled' : ''} class="pag-btn">‹</button>
                 <span style="color:#e2e8f0;font-size:0.85rem;padding:0 8px;">${_usersPage} / ${totalPages}</span>
-                <button onclick="loadUsers(${_usersPage + 1})" ${_usersPage >= totalPages ? 'disabled' : ''} class="pag-btn">›</button>
-                <button onclick="loadUsers(${totalPages})" ${_usersPage === totalPages ? 'disabled' : ''} class="pag-btn">»</button>
+                <button data-page="${_usersPage + 1}" ${_usersPage >= totalPages ? 'disabled' : ''} class="pag-btn">›</button>
+                <button data-page="${totalPages}" ${_usersPage === totalPages ? 'disabled' : ''} class="pag-btn">»</button>
             </div>`;
     }
 }
@@ -546,6 +546,13 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('btnLoadListings')?.addEventListener('click', loadListings);
     document.getElementById('btnLoadReports')?.addEventListener('click', loadReports);
     document.getElementById('btnLoadAnalytics')?.addEventListener('click', loadAnalytics);
+
+    // Pagination delegation
+    document.getElementById('users-pagination')?.addEventListener('click', e => {
+        const btn = e.target.closest('[data-page]');
+        if (!btn || btn.disabled) return;
+        loadUsers(parseInt(btn.dataset.page, 10));
+    });
 
     // Search
     document.getElementById('search-users')?.addEventListener('input', e => {
