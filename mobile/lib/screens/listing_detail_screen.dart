@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'retargeting_screen.dart';
 import '../config/api.dart';
@@ -1449,6 +1450,44 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if ((user['is_verified'] as bool? ?? false) ||
+                                (user['is_premium'] as bool? ?? false)) ...[
+                              Wrap(
+                                spacing: 4,
+                                children: [
+                                  if (user['is_verified'] == true)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF2563EB),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                        const FaIcon(FontAwesomeIcons.circleCheck, size: 8, color: Colors.white),
+                                        const SizedBox(width: 3),
+                                        Text(AppLocalizations.of(context)!.badgeVerified,
+                                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                                      ]),
+                                    ),
+                                  if (user['is_premium'] == true)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                        FaIcon(FontAwesomeIcons.crown, size: 8, color: Colors.white),
+                                        SizedBox(width: 3),
+                                        Text('PRO', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                                      ]),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                            ],
                             Text(
                               user['full_name'] ?? user['username'] ?? '',
                               style: const TextStyle(
@@ -2187,7 +2226,7 @@ class _SellerTrustRow extends StatelessWidget {
         children: [
           if (trust != null)
             _TrustChip(
-              icon: Icons.verified_outlined,
+              icon: FontAwesomeIcons.shieldHalved,
               value: '$trust / 100',
               hint: l.trustScoreHint,
               title: l.trustScoreLabel,
@@ -2199,7 +2238,7 @@ class _SellerTrustRow extends StatelessWidget {
             ),
           if (rank != null)
             _TrustChip(
-              icon: Icons.trending_up,
+              icon: FontAwesomeIcons.rankingStar,
               value: '#$rank',
               hint: l.influenceRankHint,
               title: l.influenceRankLabel,
@@ -2252,7 +2291,7 @@ class _TrustChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 10, color: color),
+          FaIcon(icon, size: 10, color: color),
           const SizedBox(width: 3),
           Text(value, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
           const SizedBox(width: 2),

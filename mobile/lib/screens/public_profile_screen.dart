@@ -324,7 +324,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.verified, size: 12, color: Colors.white),
+                                const FaIcon(FontAwesomeIcons.circleCheck, size: 12, color: Colors.white),
                                 const SizedBox(width: 4),
                                 Text(AppLocalizations.of(context)!.badgeVerified, style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
                               ],
@@ -342,7 +342,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Text('👑', style: TextStyle(fontSize: 10)),
+                                const FaIcon(FontAwesomeIcons.crown, size: 10, color: Colors.white),
                                 const SizedBox(width: 4),
                                 Text(AppLocalizations.of(context)!.pro, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                               ],
@@ -821,7 +821,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           ? const Color(0xFF10B981)
           : score >= 35 ? const Color(0xFF3B82F6) : const Color(0xFF9CA3AF);
       badges.add(_ProfileBadge(
-        icon: Icons.verified_outlined,
+        icon: FontAwesomeIcons.shieldHalved,
         title: l.trustScoreLabel,
         value: '$score / 100',
         color: tsColor,
@@ -833,7 +833,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       final rank = (rawRank as num).toInt();
       if (rank > 0) {
         badges.add(_ProfileBadge(
-          icon: Icons.hub_outlined,
+          icon: FontAwesomeIcons.rankingStar,
           title: l.influenceRankLabel,
           value: '#$rank',
           color: const Color(0xFF8B5CF6),
@@ -1657,7 +1657,7 @@ class _ProfileBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
+          FaIcon(icon, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
             value,

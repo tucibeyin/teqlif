@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
@@ -386,7 +387,7 @@ class _ProStatusCard extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.workspace_premium, color: Color(0xFF06B6D4), size: 28),
+            child: const FaIcon(FontAwesomeIcons.crown, color: Color(0xFF06B6D4), size: 28),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -655,7 +656,7 @@ class _UpgradeSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          const Icon(Icons.workspace_premium, size: 48, color: Color(0xFFFFB800)),
+          const FaIcon(FontAwesomeIcons.crown, size: 48, color: Color(0xFFFFB800)),
           const SizedBox(height: 12),
           Text(
             l.proUpgradeTitle,

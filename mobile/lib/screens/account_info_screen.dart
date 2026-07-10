@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -220,7 +221,7 @@ class _InfoRow extends StatelessWidget {
           ),
           if (verified) ...[
             const SizedBox(width: 6),
-            const Icon(Icons.verified_rounded, color: Color(0xFF0D9488), size: 14),
+            const FaIcon(FontAwesomeIcons.circleCheck, color: Color(0xFF0D9488), size: 14),
           ] else ...[
             const SizedBox(width: 6),
             Container(

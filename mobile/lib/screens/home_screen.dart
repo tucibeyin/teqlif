@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1185,7 +1186,23 @@ class _GridItemState extends State<_GridItem> {
                   ),
                 ),
               ),
-            // Seller badge — sol alt (sponsorlu yokken sol üst)
+            // PRO rozeti — sağ üst (kalp butonunun altı)
+            if (widget.listing['seller_is_premium'] == true)
+              Positioned(
+                top: 36,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const FaIcon(FontAwesomeIcons.crown, size: 7, color: Colors.white),
+                ),
+              ),
+            // Seller badge — sol alt
             if (widget.listing['seller_badge'] == 'trusted_seller')
               Positioned(
                 bottom: price.isNotEmpty ? 26 : 6,
@@ -1246,7 +1263,7 @@ class _GridItemState extends State<_GridItem> {
                     color: Colors.deepOrange.withValues(alpha: 0.88),
                     borderRadius: BorderRadius.circular(5),
                   ),
-                  child: const Text('🔥', style: TextStyle(fontSize: 10)),
+                  child: const FaIcon(FontAwesomeIcons.fire, size: 10, color: Colors.white),
                 ),
               ),
             // Kalp butonu — sağ üst köşe

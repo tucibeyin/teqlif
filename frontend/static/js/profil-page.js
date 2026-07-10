@@ -242,6 +242,10 @@
             </div>` : ''}
             ${avatarHtml}
             <div class="profile-name">${escHtml(user.full_name || user.username)}</div>
+            ${(user.is_verified || user.is_premium) ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin:.3rem 0;">
+                ${user.is_verified ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#2563eb;color:#fff;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:50px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width:9px;height:9px;fill:white;flex-shrink:0;"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>Onaylı</span>` : ''}
+                ${user.is_premium ? `<span style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(to right,#0891b2,#06b6d4);color:#fff;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:50px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" style="width:9px;height:9px;fill:white;flex-shrink:0;"><path d="M309 106c11.4-7 19-19.7 19-34 0-22.1-17.9-40-40-40s-40 17.9-40 40c0 14.4 7.6 27 19 34L209.7 220.6c-9.1 18.2-32.7 23.4-48.6 10.7L72 160c5-6.7 8-15 8-24 0-22.1-17.9-40-40-40S0 113.9 0 136s17.9 40 40 40l.7 0L86.4 427.4c5.5 30.4 32 52.6 63.6 52.6l276 0c31.6 0 58.1-22.2 63.6-52.6L535.3 176l.7 0c22.1 0 40-17.9 40-40s-17.9-40-40-40-40 17.9-40 40c0 9 3 17.3 8 24l-89.1 71.3c-15.9 12.7-39.5 7.5-48.6-10.7L309 106z"/></svg>PRO</span>` : ''}
+            </div>` : ''}
             <div class="profile-handle">@${escHtml(user.username)}</div>
             <div id="ratingBadgeWrap"></div>
             <div class="stats-bar">

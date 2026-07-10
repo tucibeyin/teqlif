@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../l10n/app_localizations.dart';
 import '../config/app_colors.dart';
 
@@ -13,7 +14,7 @@ class FaqScreen extends StatelessWidget {
     final categories = [
       _FaqCategory(
         title: l.faqCatAccount,
-        icon: Icons.person_outline,
+        icon: const Icon(Icons.person_outline),
         items: [
           _FaqItem(question: l.faqQAccountSignup, answer: l.faqAAccountSignup),
           _FaqItem(question: l.faqQAccountEmail, answer: l.faqAAccountEmail),
@@ -24,7 +25,7 @@ class FaqScreen extends StatelessWidget {
       ),
       _FaqCategory(
         title: l.faqCatExplore,
-        icon: Icons.explore_outlined,
+        icon: const Icon(Icons.explore_outlined),
         items: [
           _FaqItem(question: l.faqQExploreSellers, answer: l.faqAExploreSellers),
           _FaqItem(question: l.faqQExploreStreamers, answer: l.faqAExploreStreamers),
@@ -34,7 +35,7 @@ class FaqScreen extends StatelessWidget {
       ),
       _FaqCategory(
         title: l.faqCatBadges,
-        icon: Icons.verified_outlined,
+        icon: const FaIcon(FontAwesomeIcons.shieldHalved),
         items: [
           _FaqItem(question: l.faqQBadgesVerified, answer: l.faqABadgesVerified),
           _FaqItem(question: l.faqQBadgesPro, answer: l.faqABadgesPro),
@@ -45,7 +46,7 @@ class FaqScreen extends StatelessWidget {
       ),
       _FaqCategory(
         title: l.faqCatLive,
-        icon: Icons.sensors,
+        icon: const Icon(Icons.sensors),
         items: [
           _FaqItem(question: l.faqQLiveHost, answer: l.faqALiveHost),
           _FaqItem(question: l.faqQLiveViewer, answer: l.faqALiveViewer),
@@ -54,7 +55,7 @@ class FaqScreen extends StatelessWidget {
       ),
       _FaqCategory(
         title: l.faqCatAI,
-        icon: Icons.auto_awesome,
+        icon: const Icon(Icons.auto_awesome),
         items: [
           _FaqItem(question: l.faqQAIInsights, answer: l.faqAAIInsights),
           _FaqItem(question: l.faqQAIPrice, answer: l.faqAAIPrice),
@@ -64,20 +65,20 @@ class FaqScreen extends StatelessWidget {
       ),
       _FaqCategory(
         title: l.faqCatIcons,
-        icon: Icons.grid_view_rounded,
+        icon: const Icon(Icons.grid_view_rounded),
         items: [
-          _FaqItem(question: l.faqIconNameVerified, answer: l.faqIconVerified, icon: Icons.verified),
-          _FaqItem(question: l.faqIconNamePro, answer: l.faqIconPro, icon: Icons.workspace_premium),
-          _FaqItem(question: l.faqIconNameTuci, answer: l.faqIconTuci, icon: Icons.monetization_on),
-          _FaqItem(question: l.faqIconNameBlast, answer: l.faqIconBlast, icon: Icons.rocket_launch),
-          _FaqItem(question: l.faqIconNameAutoBid, answer: l.faqIconAutoBid, icon: Icons.gavel),
-          _FaqItem(question: l.faqIconNameSales, answer: l.faqIconSales, icon: Icons.auto_graph_outlined),
-          _FaqItem(question: l.faqIconNameListings, answer: l.faqIconListings, icon: Icons.bar_chart_outlined),
-          _FaqItem(question: l.faqIconNameMarket, answer: l.faqIconMarket, icon: Icons.insights_outlined),
-          _FaqItem(question: l.faqIconNameTime, answer: l.faqIconTime, icon: Icons.schedule_outlined),
-          _FaqItem(question: l.faqIconNameConversion, answer: l.faqIconConversion, icon: Icons.pie_chart_outline),
-          _FaqItem(question: l.faqIconNameRadar, answer: l.faqIconRadar, icon: Icons.radar),
-          _FaqItem(question: l.faqIconNameRetargeting, answer: l.faqIconRetargeting, icon: Icons.mark_email_unread_outlined),
+          _FaqItem(question: l.faqIconNameVerified, answer: l.faqIconVerified, icon: const FaIcon(FontAwesomeIcons.circleCheck, size: 20)),
+          _FaqItem(question: l.faqIconNamePro, answer: l.faqIconPro, icon: const FaIcon(FontAwesomeIcons.crown, size: 20)),
+          _FaqItem(question: l.faqIconNameTuci, answer: l.faqIconTuci, icon: const Icon(Icons.monetization_on)),
+          _FaqItem(question: l.faqIconNameBlast, answer: l.faqIconBlast, icon: const Icon(Icons.rocket_launch)),
+          _FaqItem(question: l.faqIconNameAutoBid, answer: l.faqIconAutoBid, icon: const Icon(Icons.gavel)),
+          _FaqItem(question: l.faqIconNameSales, answer: l.faqIconSales, icon: const Icon(Icons.auto_graph_outlined)),
+          _FaqItem(question: l.faqIconNameListings, answer: l.faqIconListings, icon: const Icon(Icons.bar_chart_outlined)),
+          _FaqItem(question: l.faqIconNameMarket, answer: l.faqIconMarket, icon: const Icon(Icons.insights_outlined)),
+          _FaqItem(question: l.faqIconNameTime, answer: l.faqIconTime, icon: const Icon(Icons.schedule_outlined)),
+          _FaqItem(question: l.faqIconNameConversion, answer: l.faqIconConversion, icon: const Icon(Icons.pie_chart_outline)),
+          _FaqItem(question: l.faqIconNameRadar, answer: l.faqIconRadar, icon: const Icon(Icons.radar)),
+          _FaqItem(question: l.faqIconNameRetargeting, answer: l.faqIconRetargeting, icon: const Icon(Icons.mark_email_unread_outlined)),
         ],
       ),
     ];
@@ -103,7 +104,10 @@ class FaqScreen extends StatelessWidget {
               data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
                 initiallyExpanded: index == 0, // İlk kategori açık gelsin
-                leading: Icon(cat.icon, color: Theme.of(context).primaryColor),
+                leading: IconTheme(
+                  data: IconThemeData(color: Theme.of(context).primaryColor, size: 22),
+                  child: cat.icon,
+                ),
                 title: _buildAnswerWithIcons(
                   context, 
                   cat.title,
@@ -119,7 +123,10 @@ class FaqScreen extends StatelessWidget {
                         title: Row(
                           children: [
                             if (item.icon != null) ...[
-                              Icon(item.icon, size: 20, color: Theme.of(context).primaryColor),
+                              IconTheme(
+                                data: IconThemeData(color: Theme.of(context).primaryColor, size: 20),
+                                child: item.icon!,
+                              ),
                               const SizedBox(width: 8),
                             ],
                             Expanded(
@@ -156,7 +163,7 @@ class FaqScreen extends StatelessWidget {
 
 class _FaqCategory {
   final String title;
-  final IconData icon;
+  final Widget icon;
   final List<_FaqItem> items;
 
   _FaqCategory({required this.title, required this.icon, required this.items});
@@ -165,7 +172,7 @@ class _FaqCategory {
 class _FaqItem {
   final String question;
   final String answer;
-  final IconData? icon;
+  final Widget? icon;
 
   _FaqItem({required this.question, required this.answer, this.icon});
 }
@@ -177,13 +184,13 @@ Widget _buildAnswerWithIcons(BuildContext context, String text, {TextStyle? cust
     height: 1.5,
   );
 
-  final Map<String, IconData> tokenIconMap = {
-    'VERIFIED': Icons.verified,
-    'PRO': Icons.workspace_premium,
-    'TUCI': Icons.monetization_on,
-    'BLAST': Icons.rocket_launch,
-    'HOTDEMAND': Icons.local_fire_department_outlined,
-    'AUTOBID': Icons.gavel,
+  final Map<String, Widget Function(Color)> tokenIconMap = {
+    'VERIFIED': (c) => FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: c),
+    'PRO':      (c) => FaIcon(FontAwesomeIcons.crown,        size: 16, color: c),
+    'TUCI':     (c) => Icon(Icons.monetization_on,           size: 16, color: c),
+    'BLAST':    (c) => Icon(Icons.rocket_launch,             size: 16, color: c),
+    'HOTDEMAND':(c) => Icon(Icons.local_fire_department_outlined, size: 16, color: c),
+    'AUTOBID':  (c) => Icon(Icons.gavel,                     size: 16, color: c),
   };
 
   final Map<String, Color> tokenColorMap = {
@@ -206,16 +213,16 @@ Widget _buildAnswerWithIcons(BuildContext context, String text, {TextStyle? cust
     }
 
     final String token = match.group(1)!;
-    final IconData? icon = tokenIconMap[token];
+    final Widget Function(Color)? iconBuilder = tokenIconMap[token];
     final Color iconColor = tokenColorMap[token] ?? Theme.of(context).primaryColor;
 
-    if (icon != null) {
+    if (iconBuilder != null) {
       spans.add(
         WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: Icon(icon, size: 16, color: iconColor),
+            child: iconBuilder(iconColor),
           ),
         ),
       );

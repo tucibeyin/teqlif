@@ -378,10 +378,10 @@ class ProfileScreenState extends State<ProfileScreen> {
             ),
             if (isVerified) ...[
               const SizedBox(width: 4),
-              const Icon(
-                Icons.verified,
+              const FaIcon(
+                FontAwesomeIcons.circleCheck,
                 color: Colors.blue,
-                size: 18,
+                size: 16,
               ),
             ],
           ],
@@ -558,14 +558,21 @@ class ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ],
                                 ),
-                                child: const Text(
-                                  'PRO',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    letterSpacing: 1.2,
-                                  ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    FaIcon(FontAwesomeIcons.crown, size: 8, color: Colors.white),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'PRO',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -603,7 +610,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                               runSpacing: 4,
                               children: [
                                 if (ts != null) _ScoreBadge(
-                                  icon: Icons.verified_outlined,
+                                  icon: FontAwesomeIcons.shieldHalved,
                                   title: l.trustScoreLabel,
                                   value: '$ts / 100',
                                   hint: l.trustScoreHint,
@@ -612,7 +619,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                       : ts >= 35 ? const Color(0xFF3B82F6) : const Color(0xFF9CA3AF),
                                 ),
                                 if (ir != null && ir > 0) _ScoreBadge(
-                                  icon: Icons.hub_outlined,
+                                  icon: FontAwesomeIcons.rankingStar,
                                   title: l.influenceRankLabel,
                                   value: '#$ir',
                                   hint: l.influenceRankHint,
@@ -1744,8 +1751,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             items: [
               _SettingsTile(
                 icon: Icons.workspace_premium_outlined,
+                leadingWidget: const FaIcon(FontAwesomeIcons.crown, color: Color(0xFF06B6D4), size: 22),
                 iconColor: const Color(0xFF06B6D4),
-                label: '👑 ${l.proHubTitle}',
+                label: l.proHubTitle,
                 trailing: _isPremium
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -2048,6 +2056,7 @@ class _SettingsTile extends StatelessWidget {
   final VoidCallback onTap;
   final Widget? trailing;
   final Color? iconColor;
+  final Widget? leadingWidget;
 
   const _SettingsTile({
     required this.icon,
@@ -2055,12 +2064,13 @@ class _SettingsTile extends StatelessWidget {
     required this.onTap,
     this.trailing,
     this.iconColor,
+    this.leadingWidget,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
+      leading: leadingWidget ?? Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
       title: Text(label, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
       trailing: trailing ?? Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
       onTap: onTap,
@@ -3709,7 +3719,7 @@ class _ScoreBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
+          FaIcon(icon, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
             value,

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -16,6 +17,7 @@ import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/stale_data_banner.dart';
 import '../widgets/streamer_avatar_card.dart';
+import '../widgets/listing_badge_overlay.dart';
 import '../widgets/seller_avatar_card.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
@@ -1495,79 +1497,9 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                         ),
                       ),
                     ),
-                  if (widget.listing['seller_is_premium'] == true)
-                    Positioned(
-                      top: 5,
-                      right: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
-                          ),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: const Text('👑', style: TextStyle(fontSize: 9)),
-                      ),
-                    ),
-                  if (widget.listing['seller_badge'] == 'trusted_seller')
-                    Positioned(
-                      top: widget.listing['seller_is_premium'] == true ? 24 : 5,
-                      right: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF16A34A),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: const Text('✅', style: TextStyle(fontSize: 9)),
-                      ),
-                    )
-                  else if (widget.listing['seller_badge'] == 'active_seller')
-                    Positioned(
-                      top: widget.listing['seller_is_premium'] == true ? 24 : 5,
-                      right: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: const Text('⭐', style: TextStyle(fontSize: 9)),
-                      ),
-                    ),
-                  if (widget.listing['is_trending'] == true)
-                    Positioned(
-                      bottom: 5,
-                      right: 5,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.deepOrange.withValues(alpha: 0.88),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          AppLocalizations.of(context)!.badgeTrending,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
+                  Positioned.fill(
+                    child: ListingBadgeOverlay(listing: widget.listing),
+                  ),
                   if (widget.listing['is_highlight'] == true)
                     Positioned.fill(
                       child: Container(
@@ -1765,74 +1697,9 @@ class _ListingTile extends StatelessWidget {
                   ),
                 ),
               ),
-            // ── Sağ üst: Premium + Rozet ────────────────────────────────────
-            if (listing['seller_is_premium'] == true)
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
-                    ),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('👑', style: TextStyle(fontSize: 8)),
-                ),
-              ),
-            if (listing['seller_badge'] == 'trusted_seller')
-              Positioned(
-                top: listing['seller_is_premium'] == true ? 22 : 4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16A34A),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('✅', style: TextStyle(fontSize: 8)),
-                ),
-              )
-            else if (listing['seller_badge'] == 'active_seller')
-              Positioned(
-                top: listing['seller_is_premium'] == true ? 22 : 4,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('⭐', style: TextStyle(fontSize: 8)),
-                ),
-              ),
-            // ── Sağ alt: Trending ───────────────────────────────────────────
-            if (listing['is_trending'] == true)
-              Positioned(
-                bottom: 22,
-                right: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.deepOrange.withValues(alpha: 0.88),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('🔥', style: TextStyle(fontSize: 8)),
-                ),
-              ),
+            Positioned.fill(
+              child: ListingBadgeOverlay(listing: listing, badgeSize: 8, pad: 4),
+            ),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1027,7 +1028,7 @@ class _AiPriceButton extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.workspace_premium_rounded, size: 10,
+                            FaIcon(FontAwesomeIcons.crown, size: 10,
                                 color: (creditsRemaining == null || creditsRemaining! > 0)
                                     ? const Color(0xFF34D399)
                                     : const Color(0xFFF59E0B)),
