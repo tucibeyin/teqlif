@@ -9,7 +9,6 @@ import '../config/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
-import '../widgets/swipe_paginated_list.dart';
 
 class RetargetingScreen extends StatefulWidget {
   final int initialIndex;
@@ -70,7 +69,13 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
 
   Future<void> _loadReportListings() async {
     final listings = await _fetchListingsPage(0);
-    if (mounted) setState(() => _reportListings = listings);
+    if (mounted) {
+      setState(() => _reportListings = listings);
+      if (_selectedListing == null && listings.isNotEmpty) {
+        setState(() => _selectedListing = listings.first);
+        _loadAudience();
+      }
+    }
   }
 
   void _selectReportListing(int? listingId) {
@@ -603,61 +608,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       children: [
         _infoCard(),
         const SizedBox(height: 16),
-        SwipePaginatedList<Map<String, dynamic>>(
-          fetchPage: _fetchListingsPage,
-          itemHeight: 62,
-          maxVisible: 5,
-          onFirstLoad: (firstPage) {
-            if (firstPage.isNotEmpty && _selectedListing == null) {
-              setState(() => _selectedListing = firstPage.first);
-              _loadAudience();
-            }
-          },
-          emptyWidget: _emptyState(),
-          itemBuilder: (ctx, lItem) {
-            final isSelected = _selectedListing != null && lItem['id'] == _selectedListing!['id'];
-            final price = lItem['price'];
-            return InkWell(
-              onTap: () {
-                setState(() => _selectedListing = lItem);
-                _loadAudience();
-              },
-              child: Container(
-                height: 62,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                color: isSelected ? const Color(0xFF6366F1).withValues(alpha: 0.08) : Colors.transparent,
-                child: Row(
-                  children: [
-                    Icon(
-                      isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                      size: 18,
-                      color: isSelected ? const Color(0xFF6366F1) : AppColors.textSecondary(ctx),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        lItem['title'] as String? ?? '—',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                          color: AppColors.textPrimary(ctx),
-                        ),
-                      ),
-                    ),
-                    if (price != null) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        '${NumberFormat('#,##0', 'tr_TR').format((price as num).toDouble())} ₺',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(ctx)),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+        _buildCampaignListingCarousel(),
         const SizedBox(height: 20),
                   if (_loadingAudience)
                     const _AudienceSkeleton()
@@ -1157,6 +1108,86 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFFF59E0B), fontFeatures: [FontFeature.tabularFigures()]),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCampaignListingCarousel() {
+    if (_reportListings.isEmpty) return _emptyState();
+    return SizedBox(
+      height: 112,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _reportListings.length,
+        itemBuilder: (ctx, i) {
+          final item = _reportListings[i];
+          final isSelected = _selectedListing != null && item['id'] == _selectedListing!['id'];
+          final imageUrls = item['image_urls'] as List? ?? [];
+          final rawImg = imageUrls.isNotEmpty ? imageUrls.first as String? : item['image_url'] as String?;
+          final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+          return GestureDetector(
+            onTap: () {
+              if (!isSelected) {
+                setState(() => _selectedListing = item);
+                _loadAudience();
+              }
+            },
+            child: Container(
+              width: 128,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(
+                color: AppColors.card(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF14B8A6) : AppColors.border(context),
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(11),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    imageUrl != null
+                        ? Image.network(imageUrl, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(color: AppColors.border(context)))
+                        : Container(
+                            color: AppColors.border(context),
+                            child: Icon(Icons.image_not_supported_outlined,
+                                color: AppColors.textSecondary(context)),
+                          ),
+                    Positioned(
+                      bottom: 0, left: 0, right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter, end: Alignment.topCenter,
+                            colors: [Colors.black.withValues(alpha: 0.80), Colors.transparent],
+                          ),
+                        ),
+                        child: Text(
+                          item['title'] as String? ?? '—',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    if (isSelected)
+                      Positioned(
+                        top: 6, right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(color: Color(0xFF14B8A6), shape: BoxShape.circle),
+                          child: const Icon(Icons.check, color: Colors.white, size: 12),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

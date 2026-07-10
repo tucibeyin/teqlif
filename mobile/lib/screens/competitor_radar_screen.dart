@@ -10,7 +10,7 @@ import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
-import '../widgets/swipe_paginated_list.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class CompetitorRadarScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -31,6 +31,15 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
   DateTimeRange? _dateRange;
   Timer? _searchDebounce;
 
+  List<Map<String, dynamic>> _listings = [];
+  bool _listingsLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadListings();
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -41,8 +50,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
   Future<List<Map<String, dynamic>>> _fetchListingsPage(int offset) async {
     final token = await StorageService.getToken();
     if (token == null) return [];
-    var url = '$kBaseUrl/listings/my?limit=20&offset=$offset&active=true';
-    if (_listingQuery.isNotEmpty) url += '&q=${Uri.encodeComponent(_listingQuery)}';
+    var url = '$kBaseUrl/listings/my?limit=50&offset=$offset&active=true';
     if (_dateRange != null) {
       url += '&start_date=${_dateRange!.start.toIso8601String().substring(0, 10)}';
       url += '&end_date=${_dateRange!.end.toIso8601String().substring(0, 10)}';
@@ -68,7 +76,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
           initialDateRange: _dateRange,
           locale: Localizations.localeOf(context),
         );
-        if (picked != null) setState(() => _dateRange = picked);
+        if (picked != null) { setState(() => _dateRange = picked); _loadListings(); }
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -94,7 +102,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
             ),
             if (hasRange)
               GestureDetector(
-                onTap: () => setState(() => _dateRange = null),
+                onTap: () { setState(() => _dateRange = null); _loadListings(); },
                 child: Icon(Icons.close, size: 16, color: kPrimary),
               ),
           ],
@@ -124,6 +132,26 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
         _loadingData = false;
       });
     }
+  }
+
+  List<Map<String, dynamic>> get _filteredListings {
+    if (_listingQuery.isEmpty) return _listings;
+    final q = _listingQuery.toLowerCase();
+    return _listings.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+  }
+
+  Future<void> _loadListings() async {
+    if (mounted) setState(() => _listingsLoading = true);
+    final results = await _fetchListingsPage(0);
+    if (!mounted) return;
+    final prevId = _selectedListing?['id'];
+    final stillHere = prevId != null ? results.any((r) => r['id'] == prevId) : false;
+    setState(() {
+      _listings = results;
+      _listingsLoading = false;
+      if (!stillHere) _selectedListing = results.isNotEmpty ? results.first : null;
+    });
+    if (_selectedListing != null) _loadData();
   }
 
   @override
@@ -166,62 +194,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
           ),
           _buildDateRangePicker(l),
           const SizedBox(height: 8),
-          SwipePaginatedList<Map<String, dynamic>>(
-            key: ValueKey('$_listingQuery-${_dateRange?.start}-${_dateRange?.end}'),
-            fetchPage: _fetchListingsPage,
-            itemHeight: 62,
-            maxVisible: 5,
-            onFirstLoad: (firstPage) {
-              if (firstPage.isNotEmpty && _selectedListing == null) {
-                setState(() => _selectedListing = firstPage.first);
-                _loadData();
-              }
-            },
-            emptyWidget: _emptyState(),
-            itemBuilder: (ctx, lItem) {
-              final isSelected = _selectedListing != null && lItem['id'] == _selectedListing!['id'];
-              final price = lItem['price'];
-              return InkWell(
-                onTap: () {
-                  setState(() => _selectedListing = lItem);
-                  _loadData();
-                },
-                child: Container(
-                  height: 62,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  color: isSelected ? const Color(0xFF6366F1).withValues(alpha: 0.08) : Colors.transparent,
-                  child: Row(
-                    children: [
-                      Icon(
-                        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                        size: 18,
-                        color: isSelected ? const Color(0xFF6366F1) : AppColors.textSecondary(ctx),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          lItem['title'] as String? ?? '—',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                            color: AppColors.textPrimary(ctx),
-                          ),
-                        ),
-                      ),
-                      if (price != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '${NumberFormat('#,##0', 'tr_TR').format((price as num).toDouble())} ₺',
-                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(ctx)),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+          _buildHorizontalCarousel(l),
           const SizedBox(height: 20),
           if (_loadingData)
             const _RadarSkeleton()
@@ -269,6 +242,101 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
         ],
       ),
       body: bodyContent,
+    );
+  }
+
+  Widget _buildHorizontalCarousel(AppLocalizations l) {
+    if (_listingsLoading) {
+      return const SizedBox(
+        height: 112,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+    final items = _filteredListings;
+    if (items.isEmpty) return _emptyState();
+    return SizedBox(
+      height: 112,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        itemBuilder: (ctx, i) {
+          final item = items[i];
+          final isSelected = _selectedListing != null && item['id'] == _selectedListing!['id'];
+          final imageUrls = item['image_urls'] as List? ?? [];
+          final rawImg = imageUrls.isNotEmpty ? imageUrls.first as String? : item['image_url'] as String?;
+          final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+          return GestureDetector(
+            onTap: () {
+              if (!isSelected) {
+                setState(() => _selectedListing = item);
+                _loadData();
+              }
+            },
+            child: Container(
+              width: 128,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(
+                color: AppColors.card(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF6366F1) : AppColors.border(context),
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(11),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    imageUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(color: AppColors.border(context)),
+                            errorWidget: (_, __, ___) => Container(
+                              color: AppColors.border(context),
+                              child: Icon(Icons.image_not_supported_outlined,
+                                  color: AppColors.textSecondary(context)),
+                            ),
+                          )
+                        : Container(
+                            color: AppColors.border(context),
+                            child: Icon(Icons.image_not_supported_outlined,
+                                color: AppColors.textSecondary(context)),
+                          ),
+                    Positioned(
+                      bottom: 0, left: 0, right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter, end: Alignment.topCenter,
+                            colors: [Colors.black.withValues(alpha: 0.80), Colors.transparent],
+                          ),
+                        ),
+                        child: Text(
+                          item['title'] as String? ?? '—',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    if (isSelected)
+                      Positioned(
+                        top: 6, right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(color: Color(0xFF6366F1), shape: BoxShape.circle),
+                          child: const Icon(Icons.check, color: Colors.white, size: 12),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
