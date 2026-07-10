@@ -2849,6 +2849,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get searchNoResults => 'لا توجد نتائج';
 
   @override
+  String get searchNoSupplyHint =>
+      'لا توجد إعلانات كثيرة لهذا البحث. أنشئ تنبيهاً لتحصل على إشعار عند وصول إعلانات جديدة.';
+
+  @override
+  String get searchCreateAlertBtn => 'إنشاء تنبيه';
+
+  @override
   String proSearchCount(int count) {
     return '$count بحث';
   }

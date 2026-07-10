@@ -220,7 +220,7 @@ class _MiniBarChart extends StatelessWidget {
                   Container(
                     height: height,
                     decoration: BoxDecoration(
-                      color: dirColor.withOpacity(0.75),
+                      color: dirColor.withValues(alpha: 0.75),
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
                     ),
                   ),

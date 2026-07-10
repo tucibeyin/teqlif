@@ -5298,6 +5298,18 @@ abstract class AppLocalizations {
   /// **'Sonuç bulunamadı'**
   String get searchNoResults;
 
+  /// No description provided for @searchNoSupplyHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu arama için şu an ilan az. Uyarı kur, yeni ilan gelince bildirim al.'**
+  String get searchNoSupplyHint;
+
+  /// No description provided for @searchCreateAlertBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uyarı Kur'**
+  String get searchCreateAlertBtn;
+
   /// No description provided for @proSearchCount.
   ///
   /// In tr, this message translates to:

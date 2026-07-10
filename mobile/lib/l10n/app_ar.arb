@@ -1556,6 +1556,8 @@
   },
   "forYouStreams": "بثوث مخصصة لك",
   "searchNoResults": "لا توجد نتائج",
+  "searchNoSupplyHint": "لا توجد إعلانات كثيرة لهذا البحث. أنشئ تنبيهاً لتحصل على إشعار عند وصول إعلانات جديدة.",
+  "searchCreateAlertBtn": "إنشاء تنبيه",
   "proSearchCount": "{count} بحث",
   "@proSearchCount": {
     "placeholders": {

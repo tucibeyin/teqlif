@@ -555,6 +555,30 @@ class SearchScreenState extends State<SearchScreen> {
               l.searchNoResults,
               style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
             ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                l.searchNoSupplyHint,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textTertiary(context),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _alertCreating ? null : () => _showAlertSheet(context),
+              icon: _alertCreating
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.notifications_none_outlined, size: 16),
+              label: Text(l.searchCreateAlertBtn),
+            ),
           ],
         ),
       );

@@ -132,6 +132,8 @@ def _row_dict(
     seller_badge: str | None = None,
     is_trending: bool = False,
     impression_count: Optional[int] = None,
+    seller_trust_score: int | None = None,
+    seller_influence_rank: int | None = None,
 ) -> dict:
     return {
         "id": listing.id,
@@ -146,7 +148,13 @@ def _row_dict(
         "video_url": listing.video_url,
         "created_at": listing.created_at.isoformat() if listing.created_at else None,
         "is_active": listing.is_active,
-        "user": {"id": user.id, "username": user.username, "full_name": user.full_name},
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "full_name": user.full_name,
+            "trust_score": seller_trust_score,
+            "influence_rank": seller_influence_rank,
+        },
         "likes_count": likes_count,
         "is_liked": is_liked,
         "is_sponsored": is_sponsored,
@@ -405,7 +413,22 @@ class ListingService:
             imp_map = {}
             await self._fetch_unique_reach(self.db, imp_map, [listing.id])
             impression_count = imp_map.get(listing.id, 0)
-        
+
+        seller_trust_score: int | None = None
+        seller_influence_rank: int | None = None
+        try:
+            from app.utils.redis_client import get_redis
+            redis = await get_redis()
+            ts_raw, ir_raw = await redis.mget(
+                f"trust_score:{user.id}", f"influence_rank:{user.id}"
+            )
+            if ts_raw is not None:
+                seller_trust_score = int(ts_raw)
+            if ir_raw is not None:
+                seller_influence_rank = int(ir_raw)
+        except Exception:
+            pass
+
         return _row_dict(
             listing, user,
             counts.get(listing.id, 0), listing.id in liked_set,
@@ -414,6 +437,8 @@ class ListingService:
             seller_badge=badge_map.get(user.id),
             is_trending=listing.category in trending_cats,
             impression_count=impression_count,
+            seller_trust_score=seller_trust_score,
+            seller_influence_rank=seller_influence_rank,
         )
 
     # ── İlan Oluştur ─────────────────────────────────────────────────────────

@@ -1556,6 +1556,8 @@
   },
   "forYouStreams": "Streams For You",
   "searchNoResults": "No results found",
+  "searchNoSupplyHint": "Very few listings match this search. Set an alert to get notified when new ones arrive.",
+  "searchCreateAlertBtn": "Create Alert",
   "proSearchCount": "{count} searches",
   "@proSearchCount": {
     "placeholders": {

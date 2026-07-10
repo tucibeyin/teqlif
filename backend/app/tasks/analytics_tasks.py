@@ -145,6 +145,25 @@ async def _fetch_risky_user_ids() -> tuple[set[int], set[int]]:
             # Satıcı churn aynı zamanda alıcı churn olabilir — çakışan ID'leri satıcı olarak tut
             buyer_risky -= seller_risky
 
+        # ML tahminini heuristik sonuçlarına ekle
+        try:
+            from app.services import churn_ml_service
+            ml_user_ids, ml_features = await churn_ml_service.fetch_candidate_features()
+            if ml_features:
+                probs = churn_ml_service.predict_churn_risk(ml_features)
+                _ML_THRESHOLD = 0.65
+                ml_risky = {
+                    uid for uid, p in zip(ml_user_ids, probs) if p >= _ML_THRESHOLD
+                }
+                added = ml_risky - buyer_risky - seller_risky
+                buyer_risky |= added
+                logger.info(
+                    "[ChurnAirdrop] ML tahmin: toplam=%d yeni=%d (threshold=%.2f)",
+                    len(ml_risky), len(added), _ML_THRESHOLD,
+                )
+        except Exception as ml_exc:
+            logger.warning("[ChurnAirdrop] ML tahmin atlandı: %s", ml_exc)
+
         logger.info(
             "[ChurnAirdrop] ClickHouse riskli kullanıcı: alıcı=%d satıcı=%d",
             len(buyer_risky), len(seller_risky),

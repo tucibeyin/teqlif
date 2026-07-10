@@ -1555,6 +1555,8 @@
   },
   "forYouStreams": "Sana Özel Yayınlar",
   "searchNoResults": "Sonuç bulunamadı",
+  "searchNoSupplyHint": "Bu arama için şu an ilan az. Uyarı kur, yeni ilan gelince bildirim al.",
+  "searchCreateAlertBtn": "Uyarı Kur",
   "proSearchCount": "{count} arama",
   "@proSearchCount": {
     "placeholders": {

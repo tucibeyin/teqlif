@@ -1616,6 +1616,8 @@
   "videoLabel": "Видео (максимум {sec}s)",
   "forYouStreams": "Стримы для вас",
   "searchNoResults": "Результатов не найдено",
+  "searchNoSupplyHint": "По этому запросу очень мало объявлений. Создайте уведомление, чтобы узнать о новых.",
+  "searchCreateAlertBtn": "Создать уведомление",
   "proSearchCount": "{count} ищет",
   "listingDeactivateTitle": "Деактивировать объявление",
   "listingDeactivateWarning": "Если вы деактивируете, активные витрины/акции будут удалены.",

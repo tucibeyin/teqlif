@@ -171,6 +171,51 @@ def _train_sync(X: list[list[float]], y: list[int]) -> None:
     logger.info("[ChurnML] Model kaydedildi: %s", model_path)
 
 
+async def fetch_candidate_features() -> tuple[list[int], list[list[float]]]:
+    """
+    Tahmin için son 44 günde aktif kullanıcıların özellik vektörlerini çeker.
+    Döner: (user_ids, feature_matrix)
+    """
+    from app.database_clickhouse import get_clickhouse_client
+
+    ch = await get_clickhouse_client()
+    if ch is None:
+        return [], []
+
+    result = await ch.query("""
+        SELECT
+            user_id,
+            dateDiff('day', max(timestamp), now())                     AS days_since_last,
+            coalesce(avgIf(duration_seconds, event_type='impression'
+                           AND timestamp >= now() - INTERVAL 7 DAY), 0) AS avg_dwell_7d,
+            coalesce(avgIf(duration_seconds, event_type='impression'
+                           AND timestamp >= now() - INTERVAL 14 DAY
+                           AND timestamp <  now() - INTERVAL 7 DAY), 0) AS avg_dwell_prev,
+            if(countIf(event_type='impression' AND timestamp >= now() - INTERVAL 30 DAY) > 0,
+               countIf(event_type='click' AND timestamp >= now() - INTERVAL 30 DAY) /
+               countIf(event_type='impression' AND timestamp >= now() - INTERVAL 30 DAY), 0) AS ctr,
+            countIf(event_type='bid_placed' AND timestamp >= now() - INTERVAL 30 DAY)        AS bids_30d,
+            uniqIf(toDate(timestamp), timestamp >= now() - INTERVAL 7 DAY)                   AS active_days_7d,
+            countIf(event_type='bid_hesitation' AND timestamp >= now() - INTERVAL 30 DAY) /
+                (countIf(event_type='bid_placed' AND timestamp >= now() - INTERVAL 30 DAY) + 1) AS hes_ratio
+        FROM user_events
+        WHERE user_id IS NOT NULL
+          AND timestamp >= now() - INTERVAL 44 DAY
+        GROUP BY user_id
+        HAVING countIf(event_type='impression' AND timestamp >= now() - INTERVAL 30 DAY) >= 3
+    """)
+
+    user_ids, X = [], []
+    for row in result.result_rows:
+        uid, *features = row
+        if uid is None or None in features:
+            continue
+        user_ids.append(int(uid))
+        X.append([float(f) for f in features])
+
+    return user_ids, X
+
+
 def predict_churn_risk(user_features: list[list[float]]) -> list[float]:
     """
     Kayıtlı modelden churn olasılığı tahmin eder (0.0–1.0).

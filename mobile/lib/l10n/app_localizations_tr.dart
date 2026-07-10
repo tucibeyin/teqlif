@@ -2872,6 +2872,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get searchNoResults => 'Sonuç bulunamadı';
 
   @override
+  String get searchNoSupplyHint =>
+      'Bu arama için şu an ilan az. Uyarı kur, yeni ilan gelince bildirim al.';
+
+  @override
+  String get searchCreateAlertBtn => 'Uyarı Kur';
+
+  @override
   String proSearchCount(int count) {
     return '$count arama';
   }

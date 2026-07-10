@@ -2871,6 +2871,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchNoResults => 'No results found';
 
   @override
+  String get searchNoSupplyHint =>
+      'Very few listings match this search. Set an alert to get notified when new ones arrive.';
+
+  @override
+  String get searchCreateAlertBtn => 'Create Alert';
+
+  @override
   String proSearchCount(int count) {
     return '$count searches';
   }

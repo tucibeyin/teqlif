@@ -1459,6 +1459,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                               style: TextStyle(
                                   color: AppColors.textSecondary(context), fontSize: 12),
                             ),
+                            _SellerTrustRow(user: user),
                           ],
                         ),
                       ),
@@ -2169,6 +2170,68 @@ class _PriceInputFormatter extends TextInputFormatter {
 
 /// Deep link ile sadece ilan ID'si geldiğinde kullanılır.
 /// API'dan veri çekip [ListingDetailScreen]'e yönlendirir.
+class _SellerTrustRow extends StatelessWidget {
+  final Map<String, dynamic> user;
+  const _SellerTrustRow({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final trust = user['trust_score'] as int?;
+    final rank  = user['influence_rank'] as int?;
+    if (trust == null && rank == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Wrap(
+        spacing: 6,
+        children: [
+          if (trust != null)
+            _TrustChip(
+              icon: Icons.verified_outlined,
+              label: trust.toString(),
+              color: trust >= 70
+                  ? const Color(0xFF10B981)
+                  : trust >= 35
+                      ? const Color(0xFF3B82F6)
+                      : const Color(0xFF9CA3AF),
+            ),
+          if (rank != null)
+            _TrustChip(
+              icon: Icons.trending_up,
+              label: '#$rank',
+              color: const Color(0xFF8B5CF6),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrustChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  const _TrustChip({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 3),
+          Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
 class ListingDeepLinkLoader extends StatefulWidget {
   final int listingId;
   const ListingDeepLinkLoader({super.key, required this.listingId});

@@ -224,6 +224,29 @@ async def _score_and_rank(
     # Exploration bonusu — top-5 dışı
     exploration_expr = f"CASE WHEN l.category NOT IN ({','.join(repr(c) for c in top_cat_names)}) THEN 0.3 ELSE 0.0 END"
 
+    influence_w = 0.03
+
+    # Satıcı influence boost — Redis'ten batch okuma
+    influence_values_sql = "VALUES (-1, 0.0::float)"
+    try:
+        redis = await get_redis()
+        seller_res = await db.execute(text(
+            "SELECT DISTINCT l.user_id FROM listings l "
+            "WHERE l.is_active = TRUE AND l.is_deleted = FALSE "
+            "AND l.user_id != :uid AND l.category = ANY(:cats) LIMIT 120"
+        ), {"uid": user_id, "cats": top_cat_names})
+        seller_ids = [r[0] for r in seller_res.all()]
+        if seller_ids:
+            raw_ranks = await redis.mget(*[f"influence_rank:{sid}" for sid in seller_ids])
+            pairs = [
+                f"({sid}, {int(rv) / 100.0:.4f})"
+                for sid, rv in zip(seller_ids, raw_ranks) if rv is not None
+            ]
+            if pairs:
+                influence_values_sql = "VALUES " + ", ".join(pairs)
+    except Exception:
+        pass
+
     # Filtreler
     ni_filter = f"AND l.id NOT IN ({','.join(str(i) for i in excluded_ids)})" if excluded_ids else ""
 
@@ -336,6 +359,9 @@ async def _score_and_rank(
             WHERE a.ended_at > NOW() - INTERVAL '30 days'
             GROUP BY li.user_id
         ),
+        seller_influence AS (
+            SELECT seller_id, boost FROM ({influence_values_sql}) AS t(seller_id bigint, boost float)
+        ),
         scored AS (
             SELECT
                 l.id,
@@ -351,6 +377,7 @@ async def _score_and_rank(
                     - COALESCE(imp.seen_decay, 0.0) * {seen_w}
                     + COALESCE(hq.quality, 0.0) * {host_w}
                     + COALESCE(sc.conv_rate, 0.0) * {conv_w}
+                    + COALESCE(si.boost, 0.0) * {influence_w}
                 ) AS feed_score
             FROM candidates c
             INNER JOIN listings l ON l.id = c.id
@@ -373,6 +400,7 @@ async def _score_and_rank(
             ) imp ON imp.listing_id = l.id
             LEFT JOIN host_quality hq ON hq.host_id = l.user_id
             LEFT JOIN seller_conv sc ON sc.seller_id = l.user_id
+            LEFT JOIN seller_influence si ON si.seller_id = l.user_id
         ),
         -- Çeşitlilik kısıtı: bir kategoriden maksimum 3 ilan
         diversified AS (

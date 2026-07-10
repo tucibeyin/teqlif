@@ -2908,6 +2908,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get searchNoResults => 'Результатов не найдено';
 
   @override
+  String get searchNoSupplyHint =>
+      'По этому запросу очень мало объявлений. Создайте уведомление, чтобы узнать о новых.';
+
+  @override
+  String get searchCreateAlertBtn => 'Создать уведомление';
+
+  @override
   String proSearchCount(int count) {
     return '$count ищет';
   }
