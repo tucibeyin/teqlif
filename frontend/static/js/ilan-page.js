@@ -16,6 +16,8 @@
     let _isActive = true;
     let _isLiked = false;
     let _likesCount = 0;
+    let _offerTouched = false;
+    let _offerTouchedAmount = 0;
 
     /* ── Helpers ── */
     function fmt(p) {
@@ -476,7 +478,43 @@
             if (offerInputEl) offerInputEl.addEventListener('input', function () {
                 var digits = this.value.replace(/\D/g, '');
                 this.value = digits ? Number(digits).toLocaleString('tr-TR') : '';
+                var amt = parseFloat(digits);
+                if (amt > 0) {
+                    _offerTouched = true;
+                    _offerTouchedAmount = amt;
+                } else {
+                    _offerTouched = false;
+                    _offerTouchedAmount = 0;
+                }
             });
+
+            function _fireOfferHesitation() {
+                if (!_offerTouched || !listingId) return;
+                _offerTouched = false;
+                var token = typeof Auth !== 'undefined' ? Auth.getToken() : null;
+                var payload = JSON.stringify({
+                    item_id: listingId,
+                    item_type: 'listing',
+                    interaction_type: 'bid_hesitation',
+                    price_point: _offerTouchedAmount || null,
+                });
+                try {
+                    fetch('/api/analytics/interaction', {
+                        method: 'POST',
+                        headers: Object.assign(
+                            { 'Content-Type': 'application/json' },
+                            token ? { 'Authorization': 'Bearer ' + token } : {}
+                        ),
+                        body: payload,
+                        keepalive: true,
+                    }).catch(function () {});
+                } catch (_) {}
+            }
+
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'hidden') _fireOfferHesitation();
+            });
+            window.addEventListener('beforeunload', _fireOfferHesitation);
 
             loadOffers();
 
@@ -662,6 +700,8 @@
                 body: JSON.stringify({ amount }),
             });
             input.value = '';
+            _offerTouched = false;
+            _offerTouchedAmount = 0;
             await loadOffers();
         } catch (e) {
             console.error('[Offers] Teklif gönderilemedi:', e);

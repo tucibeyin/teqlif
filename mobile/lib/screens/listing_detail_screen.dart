@@ -72,6 +72,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   bool _offerSubmitting = false;
   bool _isLoggedIn = false; // token var mı (form gösterimi için)
   final _offerCtrl = TextEditingController();
+  bool _offerFieldTouched = false; // teklif yazılıp submit edilmeden çıkıldı mı
+  double? _offerTypedAmount;
 
   // Dwell süresi ölçümü
   late final DateTime _enteredAt;
@@ -539,6 +541,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     _chewieCtrl?.dispose();
     _videoCtrl?.dispose();
     _pageCtrl.dispose();
+    if (_offerFieldTouched) {
+      final id = widget.listing['id'] as int?;
+      if (id != null) {
+        AnalyticsService.logInteraction(
+          itemId: id,
+          itemType: 'listing',
+          interactionType: 'bid_hesitation',
+          pricePoint: _offerTypedAmount,
+        );
+      }
+    }
     _offerCtrl.dispose();
     _offersNotifier.dispose();
     super.dispose();
@@ -603,6 +616,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       await ListingService.placeOffer(id, amount);
       if (!mounted) return;
       _offerCtrl.clear();
+      _offerFieldTouched = false;
+      _offerTypedAmount = null;
       AnalyticsService.logInteraction(
         itemId: id,
         itemType: 'listing',
@@ -1537,6 +1552,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                             controller: _offerCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [_PriceInputFormatter()],
+                            onChanged: (val) {
+                              final parsed = _parseFormattedPrice(val);
+                              if (parsed != null && parsed > 0) {
+                                _offerFieldTouched = true;
+                                _offerTypedAmount = parsed;
+                              } else if (val.isEmpty) {
+                                _offerFieldTouched = false;
+                                _offerTypedAmount = null;
+                              }
+                            },
                             decoration: InputDecoration(
                               hintText: l.offerAmountHint,
                               prefixText: '₺ ',
