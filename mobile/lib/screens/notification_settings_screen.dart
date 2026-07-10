@@ -29,12 +29,12 @@ class _NotificationSettingsScreenState
     'new_listing': true,
     'new_bid': true,
     'outbid': true,
-    'receive_blast_notifications': true,
   };
 
   // Pro ayarları
   int _bidThreshold = 0;
   bool _quietEnabled = false;
+  bool _receiveBlastNotifications = true;
   TimeOfDay _quietFrom = const TimeOfDay(hour: 22, minute: 0);
   TimeOfDay _quietTo = const TimeOfDay(hour: 8, minute: 0);
 
@@ -76,6 +76,7 @@ class _NotificationSettingsScreenState
             _quietEnabled = (data['quiet_hours_enabled'] as bool?) ?? false;
             _quietFrom = _parseTime(data['quiet_from'] as String? ?? '22:00');
             _quietTo = _parseTime(data['quiet_to'] as String? ?? '08:00');
+            _receiveBlastNotifications = (data['receive_blast_notifications'] as bool?) ?? true;
             _loading = false;
           });
         }
@@ -105,6 +106,7 @@ class _NotificationSettingsScreenState
     'quiet_hours_enabled': _quietEnabled,
     'quiet_from': _formatTime(_quietFrom),
     'quiet_to': _formatTime(_quietTo),
+    'receive_blast_notifications': _receiveBlastNotifications,
   };
 
   Future<void> _patch(Map<String, dynamic> payload) async {
@@ -148,6 +150,11 @@ class _NotificationSettingsScreenState
 
   Future<void> _setQuietEnabled(bool value) async {
     setState(() => _quietEnabled = value);
+    await _patch(_buildPayload());
+  }
+
+  Future<void> _setBlastNotifications(bool value) async {
+    setState(() => _receiveBlastNotifications = value);
     await _patch(_buildPayload());
   }
 
@@ -270,12 +277,12 @@ class _NotificationSettingsScreenState
                       quietEnabled: _quietEnabled,
                       quietFrom: _quietFrom,
                       quietTo: _quietTo,
-                      receiveBlastNotifications: _prefs['receive_blast_notifications'] ?? true,
+                      receiveBlastNotifications: _receiveBlastNotifications,
                       onBidThreshold: widget.isPremium ? _setBidThreshold : null,
                       onQuietEnabled: widget.isPremium ? _setQuietEnabled : null,
                       onPickFrom: widget.isPremium ? () => _pickTime(isFrom: true) : null,
                       onPickTo: widget.isPremium ? () => _pickTime(isFrom: false) : null,
-                      onBlastNotifChanged: widget.isPremium ? (v) => _toggle('receive_blast_notifications', v) : null,
+                      onBlastNotifChanged: widget.isPremium ? _setBlastNotifications : null,
                       onUpgradeTap: _showUpgradeSheet,
                     ),
                     const SizedBox(height: 24),
