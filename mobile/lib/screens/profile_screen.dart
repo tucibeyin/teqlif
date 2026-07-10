@@ -69,14 +69,27 @@ class ProfileScreenState extends State<ProfileScreen> {
   String _searchQuery = '';
   String? _selectedCategory;
   final _searchCtrl = TextEditingController();
+  List<(String, String)>? _allCategoryLabels;
 
-  List<String> get _categories => _listings
-      .map((l) => l['category'] as String?)
-      .whereType<String>()
-      .where((c) => c.isNotEmpty)
-      .toSet()
-      .toList()
-    ..sort();
+  List<(String, String)> get _categories {
+    final keys = _listings
+        .map((l) => l['category'] as String?)
+        .whereType<String>()
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    if (_allCategoryLabels == null) {
+      return keys.map((k) => (k, k)).toList();
+    }
+    return keys.map((k) {
+      final match = _allCategoryLabels!.firstWhere(
+        (p) => p.$1 == k,
+        orElse: () => (k, k),
+      );
+      return (k, match.$2);
+    }).toList();
+  }
 
   List<dynamic> get _filteredListings {
     var r = _listings;
@@ -97,6 +110,17 @@ class ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_allCategoryLabels == null) {
+      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
+          .then((cats) {
+        if (mounted) setState(() => _allCategoryLabels = cats);
+      });
+    }
   }
 
   void refresh({bool bypassCache = false}) => _load(bypassCache: bypassCache);
@@ -837,7 +861,7 @@ class ListingFilter extends StatefulWidget {
   final TextEditingController searchCtrl;
   final String searchQuery;
   final String? selectedCategory;
-  final List<String> categories;
+  final List<(String, String)> categories;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onSearchCleared;
   final ValueChanged<String?> onCategorySelected;
@@ -874,7 +898,7 @@ class _ListingFilterState extends State<ListingFilter> {
                 Icon(Icons.filter_list, size: 20, color: AppColors.textSecondary(context)),
                 const SizedBox(width: 8),
                 Text(
-                  'Filtre',
+                  AppLocalizations.of(context)!.filterTitle,
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
@@ -939,9 +963,9 @@ class _ListingFilterState extends State<ListingFilter> {
                         onTap: () => widget.onCategorySelected(null),
                       ),
                       ...widget.categories.map((cat) => _CategoryChip(
-                            label: cat,
-                            selected: widget.selectedCategory == cat,
-                            onTap: () => widget.onCategorySelected(cat),
+                            label: cat.$2,
+                            selected: widget.selectedCategory == cat.$1,
+                            onTap: () => widget.onCategorySelected(cat.$1),
                           )),
                     ],
                   ),

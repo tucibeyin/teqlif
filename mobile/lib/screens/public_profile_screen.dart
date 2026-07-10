@@ -17,6 +17,7 @@ import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
 import 'profile_screen.dart' show ListingFilter;
+import '../services/category_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 const _starColor = Color(0xFFF59E0B);
@@ -44,14 +45,27 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   String _searchQuery = '';
   String? _selectedCategory;
   final _searchCtrl = TextEditingController();
+  List<(String, String)>? _allCategoryLabels;
 
-  List<String> get _categories => _listings
-      .map((l) => l['category'] as String?)
-      .whereType<String>()
-      .where((c) => c.isNotEmpty)
-      .toSet()
-      .toList()
-    ..sort();
+  List<(String, String)> get _categories {
+    final keys = _listings
+        .map((l) => l['category'] as String?)
+        .whereType<String>()
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    if (_allCategoryLabels == null) {
+      return keys.map((k) => (k, k)).toList();
+    }
+    return keys.map((k) {
+      final match = _allCategoryLabels!.firstWhere(
+        (p) => p.$1 == k,
+        orElse: () => (k, k),
+      );
+      return (k, match.$2);
+    }).toList();
+  }
 
   List<dynamic> get _filteredListings {
     var r = _listings;
@@ -69,6 +83,17 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_allCategoryLabels == null) {
+      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
+          .then((cats) {
+        if (mounted) setState(() => _allCategoryLabels = cats);
+      });
+    }
   }
 
   @override
