@@ -389,6 +389,12 @@ async def update_me(
             raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrLinkFormat", "Link http:// veya https:// ile başlamalı"))
         current_user.website_url = url or None
 
+    _social_fields = ("instagram_url", "kick_url", "twitch_url", "facebook_url", "youtube_url", "tiktok_url")
+    for _field in _social_fields:
+        _val = getattr(data, _field, None)
+        if _val is not None:
+            setattr(current_user, _field, _val.strip() or None)
+
     if data.locale is not None:
         current_user.locale = data.locale.strip()
 

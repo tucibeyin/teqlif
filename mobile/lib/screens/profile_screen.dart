@@ -666,7 +666,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                         MaterialPageRoute(
                           builder: (_) => _EditProfileScreen(user: _user),
                         ),
-                      ).then((_) => _load()),
+                      ).then((_) => _load(bypassCache: true)),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 36),
                         side: BorderSide(color: AppColors.border(context)),
@@ -2103,12 +2103,12 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     _usernameCtrl = TextEditingController(text: widget.user?['username'] ?? '');
     _bioCtrl = TextEditingController(text: widget.user?['bio'] as String? ?? '');
     _linkCtrl = TextEditingController(text: widget.user?['website_url'] as String? ?? '');
-    _instagramCtrl = TextEditingController(text: widget.user?['instagram_url'] as String? ?? '');
-    _kickCtrl = TextEditingController(text: widget.user?['kick_url'] as String? ?? '');
-    _twitchCtrl = TextEditingController(text: widget.user?['twitch_url'] as String? ?? '');
-    _facebookCtrl = TextEditingController(text: widget.user?['facebook_url'] as String? ?? '');
-    _youtubeCtrl = TextEditingController(text: widget.user?['youtube_url'] as String? ?? '');
-    _tiktokCtrl = TextEditingController(text: widget.user?['tiktok_url'] as String? ?? '');
+    _instagramCtrl = TextEditingController(text: _stripPrefix(widget.user?['instagram_url'] as String? ?? '', 'https://instagram.com/'));
+    _kickCtrl      = TextEditingController(text: _stripPrefix(widget.user?['kick_url']      as String? ?? '', 'https://kick.com/'));
+    _twitchCtrl    = TextEditingController(text: _stripPrefix(widget.user?['twitch_url']    as String? ?? '', 'https://twitch.tv/'));
+    _facebookCtrl  = TextEditingController(text: _stripPrefix(widget.user?['facebook_url']  as String? ?? '', 'https://facebook.com/'));
+    _youtubeCtrl   = TextEditingController(text: _stripPrefix(widget.user?['youtube_url']   as String? ?? '', 'https://youtube.com/@'));
+    _tiktokCtrl    = TextEditingController(text: _stripPrefix(widget.user?['tiktok_url']    as String? ?? '', 'https://tiktok.com/@'));
     _profileImageUrl = widget.user?['profile_image_url'] as String?;
     _usernameCtrl.addListener(_onUsernameChanged);
   }
@@ -2271,6 +2271,10 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         return;
       }
       String? normLink(String v) => v.isEmpty ? null : v;
+      String? buildSocial(String prefix, String username) {
+        final u = username.replaceAll('@', '').trim();
+        return u.isEmpty ? null : '$prefix$u';
+      }
       final updatedUser = await apiCall(
         () => http.patch(
           Uri.parse('$kBaseUrl/auth/me'),
@@ -2280,12 +2284,12 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             'username': username,
             'bio': bio.isEmpty ? null : bio,
             'website_url': normLink(link),
-            'instagram_url': normLink(_instagramCtrl.text.trim()),
-            'kick_url': normLink(_kickCtrl.text.trim()),
-            'twitch_url': normLink(_twitchCtrl.text.trim()),
-            'facebook_url': normLink(_facebookCtrl.text.trim()),
-            'youtube_url': normLink(_youtubeCtrl.text.trim()),
-            'tiktok_url': normLink(_tiktokCtrl.text.trim()),
+            'instagram_url': buildSocial('https://instagram.com/', _instagramCtrl.text),
+            'kick_url':      buildSocial('https://kick.com/',      _kickCtrl.text),
+            'twitch_url':    buildSocial('https://twitch.tv/',     _twitchCtrl.text),
+            'facebook_url':  buildSocial('https://facebook.com/',  _facebookCtrl.text),
+            'youtube_url':   buildSocial('https://youtube.com/@',  _youtubeCtrl.text),
+            'tiktok_url':    buildSocial('https://tiktok.com/@',   _tiktokCtrl.text),
           }),
         ),
       );
@@ -2479,17 +2483,17 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            _socialField(_instagramCtrl, 'Instagram', 'https://instagram.com/kullaniciadi'),
+            _socialField(_instagramCtrl, 'Instagram', 'instagram.com/'),
             const SizedBox(height: 12),
-            _socialField(_kickCtrl, 'Kick', 'https://kick.com/kullaniciadi'),
+            _socialField(_kickCtrl, 'Kick', 'kick.com/'),
             const SizedBox(height: 12),
-            _socialField(_twitchCtrl, 'Twitch', 'https://twitch.tv/kullaniciadi'),
+            _socialField(_twitchCtrl, 'Twitch', 'twitch.tv/'),
             const SizedBox(height: 12),
-            _socialField(_facebookCtrl, 'Facebook', 'https://facebook.com/kullaniciadi'),
+            _socialField(_facebookCtrl, 'Facebook', 'facebook.com/'),
             const SizedBox(height: 12),
-            _socialField(_youtubeCtrl, 'YouTube', 'https://youtube.com/@kanal'),
+            _socialField(_youtubeCtrl, 'YouTube', 'youtube.com/@'),
             const SizedBox(height: 12),
-            _socialField(_tiktokCtrl, 'TikTok', 'https://tiktok.com/@kullaniciadi'),
+            _socialField(_tiktokCtrl, 'TikTok', 'tiktok.com/@'),
             const SizedBox(height: 20),
           ],
         ),
@@ -2497,16 +2501,26 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     );
   }
 
-  Widget _socialField(TextEditingController ctrl, String label, String hint) {
+  String _stripPrefix(String url, String prefix) {
+    if (url.startsWith(prefix)) return url.substring(prefix.length);
+    // legacy: tam URL girişlerini de temizle
+    final uri = Uri.tryParse(url);
+    if (uri != null && url.startsWith('http')) return uri.pathSegments.where((s) => s.isNotEmpty).join('/').replaceAll('@', '');
+    return url;
+  }
+
+  Widget _socialField(TextEditingController ctrl, String label, String urlPrefix) {
     return TextField(
       controller: ctrl,
-      keyboardType: TextInputType.url,
+      keyboardType: TextInputType.text,
       autocorrect: false,
       decoration: InputDecoration(
         labelText: label,
-        hintText: hint,
+        hintText: 'kullaniciadi',
         hintStyle: const TextStyle(fontSize: 12),
         prefixIcon: const Icon(Icons.link_rounded, size: 18),
+        prefixText: urlPrefix,
+        prefixStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
       ),
     );
   }
@@ -3574,14 +3588,46 @@ class _SocialLinksRow extends StatelessWidget {
   const _SocialLinksRow({required this.user, required this.userId});
 
   static const _platforms = [
-    ('instagram_url', 'IG', Color(0xFFE1306C)),
-    ('kick_url', 'KICK', Color(0xFF53FC18)),
-    ('twitch_url', 'TV', Color(0xFF9146FF)),
-    ('facebook_url', 'FB', Color(0xFF1877F2)),
-    ('youtube_url', 'YT', Color(0xFFFF0000)),
-    ('tiktok_url', 'TT', Color(0xFF010101)),
-    ('website_url', 'WEB', Color(0xFF0EA5E9)),
+    ('instagram_url', Color(0xFFE1306C)),
+    ('kick_url',      Color(0xFF53FC18)),
+    ('twitch_url',    Color(0xFF9146FF)),
+    ('facebook_url',  Color(0xFF1877F2)),
+    ('youtube_url',   Color(0xFFFF0000)),
+    ('tiktok_url',    Color(0xFF010101)),
+    ('website_url',   Color(0xFF0EA5E9)),
   ];
+
+  static const _urlPrefixes = {
+    'instagram_url': 'https://instagram.com/',
+    'kick_url':      'https://kick.com/',
+    'twitch_url':    'https://twitch.tv/',
+    'facebook_url':  'https://facebook.com/',
+    'youtube_url':   'https://youtube.com/@',
+    'tiktok_url':    'https://tiktok.com/@',
+  };
+
+  static const _shortLabels = {
+    'instagram_url': 'IG',
+    'kick_url':      'KICK',
+    'twitch_url':    'TV',
+    'facebook_url':  'FB',
+    'youtube_url':   'YT',
+    'tiktok_url':    'TT',
+  };
+
+  String _displayLabel(String field, String rawUrl) {
+    if (field == 'website_url') {
+      return Uri.tryParse(rawUrl.startsWith('http') ? rawUrl : 'https://$rawUrl')
+              ?.host.replaceFirst('www.', '') ?? rawUrl;
+    }
+    final prefix = _urlPrefixes[field];
+    if (prefix != null && rawUrl.startsWith(prefix)) {
+      return '@${rawUrl.substring(prefix.length)}';
+    }
+    final uri = Uri.tryParse(rawUrl.startsWith('http') ? rawUrl : 'https://$rawUrl');
+    final seg = uri?.pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => '');
+    return (seg != null && seg.isNotEmpty) ? '@${seg.replaceAll('@', '')}' : rawUrl;
+  }
 
   String _platformKey(String field) {
     switch (field) {
@@ -3607,10 +3653,17 @@ class _SocialLinksRow extends StatelessWidget {
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: links.map((p) {
-        final (field, label, color) = p;
+        final (field, color) = p;
+        final raw = user![field] as String;
+        final username = _displayLabel(field, raw);
+        final shortLabel = _shortLabels[field];
+        final textColor = color == const Color(0xFF010101)
+            ? (Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black)
+            : color;
         return GestureDetector(
           onTap: () async {
-            final raw = user![field] as String;
             final uri = Uri.tryParse(raw.startsWith('http') ? raw : 'https://$raw');
             if (uri != null && await canLaunchUrl(uri)) {
               AnalyticsService.logInteraction(
@@ -3623,24 +3676,39 @@ class _SocialLinksRow extends StatelessWidget {
             }
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
             ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color == const Color(0xFF010101)
-                    ? (Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black)
-                    : color,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (shortLabel != null) ...[
+                  Text(
+                    shortLabel,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Container(width: 1, height: 11, color: color.withValues(alpha: 0.4)),
+                  const SizedBox(width: 5),
+                ],
+                Text(
+                  username,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
             ),
           ),
         );

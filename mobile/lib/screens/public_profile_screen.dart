@@ -1536,14 +1536,46 @@ class _SocialLinksRow extends StatelessWidget {
   const _SocialLinksRow({required this.user, required this.userId});
 
   static const _platforms = [
-    ('instagram_url', 'IG', Color(0xFFE1306C)),
-    ('kick_url', 'KICK', Color(0xFF53FC18)),
-    ('twitch_url', 'TV', Color(0xFF9146FF)),
-    ('facebook_url', 'FB', Color(0xFF1877F2)),
-    ('youtube_url', 'YT', Color(0xFFFF0000)),
-    ('tiktok_url', 'TT', Color(0xFF010101)),
-    ('website_url', 'WEB', Color(0xFF0EA5E9)),
+    ('instagram_url', Color(0xFFE1306C)),
+    ('kick_url',      Color(0xFF53FC18)),
+    ('twitch_url',    Color(0xFF9146FF)),
+    ('facebook_url',  Color(0xFF1877F2)),
+    ('youtube_url',   Color(0xFFFF0000)),
+    ('tiktok_url',    Color(0xFF010101)),
+    ('website_url',   Color(0xFF0EA5E9)),
   ];
+
+  static const _urlPrefixes = {
+    'instagram_url': 'https://instagram.com/',
+    'kick_url':      'https://kick.com/',
+    'twitch_url':    'https://twitch.tv/',
+    'facebook_url':  'https://facebook.com/',
+    'youtube_url':   'https://youtube.com/@',
+    'tiktok_url':    'https://tiktok.com/@',
+  };
+
+  static const _shortLabels = {
+    'instagram_url': 'IG',
+    'kick_url':      'KICK',
+    'twitch_url':    'TV',
+    'facebook_url':  'FB',
+    'youtube_url':   'YT',
+    'tiktok_url':    'TT',
+  };
+
+  String _displayLabel(String field, String rawUrl) {
+    if (field == 'website_url') {
+      return Uri.tryParse(rawUrl.startsWith('http') ? rawUrl : 'https://$rawUrl')
+              ?.host.replaceFirst('www.', '') ?? rawUrl;
+    }
+    final prefix = _urlPrefixes[field];
+    if (prefix != null && rawUrl.startsWith(prefix)) {
+      return '@${rawUrl.substring(prefix.length)}';
+    }
+    final uri = Uri.tryParse(rawUrl.startsWith('http') ? rawUrl : 'https://$rawUrl');
+    final seg = uri?.pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => '');
+    return (seg != null && seg.isNotEmpty) ? '@${seg.replaceAll('@', '')}' : rawUrl;
+  }
 
   String _platformKey(String field) {
     switch (field) {
@@ -1569,10 +1601,17 @@ class _SocialLinksRow extends StatelessWidget {
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: links.map((p) {
-        final (field, label, color) = p;
+        final (field, color) = p;
+        final raw = user![field] as String;
+        final username = _displayLabel(field, raw);
+        final shortLabel = _shortLabels[field];
+        final textColor = color == const Color(0xFF010101)
+            ? (Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black)
+            : color;
         return GestureDetector(
           onTap: () async {
-            final raw = user![field] as String;
             final uri = Uri.tryParse(raw.startsWith('http') ? raw : 'https://$raw');
             if (uri != null && await canLaunchUrl(uri)) {
               AnalyticsService.logInteraction(
@@ -1585,24 +1624,39 @@ class _SocialLinksRow extends StatelessWidget {
             }
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
             ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color == const Color(0xFF010101)
-                    ? (Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black)
-                    : color,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (shortLabel != null) ...[
+                  Text(
+                    shortLabel,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Container(width: 1, height: 11, color: color.withValues(alpha: 0.4)),
+                  const SizedBox(width: 5),
+                ],
+                Text(
+                  username,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
             ),
           ),
         );
