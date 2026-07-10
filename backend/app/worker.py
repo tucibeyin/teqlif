@@ -1707,25 +1707,6 @@ async def optimize_notification_timing_task(ctx: dict) -> None:
         capture_exception(exc)
 
 
-# ── Task: LightFM Hybrid Model ────────────────────────────────────────────────
-
-async def train_lightfm_task(ctx: dict) -> None:
-    """
-    Her gece 04:15'te çalışır.
-    LightFM hybrid collaborative + content filtering modelini eğitir.
-    Kullanıcı ve ilan vektörlerini Redis'e yazar (25 saat TTL).
-    """
-    try:
-        from app.services.feed_lightfm_ml import train_lightfm
-        await train_lightfm()
-        logger.info("[Worker] train_lightfm_task tamamlandı")
-    except ImportError:
-        logger.warning("[Worker] lightfm kurulu değil, atlanıyor")
-    except Exception as exc:
-        logger.error("[Worker] train_lightfm_task başarısız | %s", exc, exc_info=True)
-        capture_exception(exc)
-
-
 # ── Task: CLIP Visual Embedding Backfill ─────────────────────────────────────
 
 async def clip_visual_backfill_task(ctx: dict) -> None:
@@ -2166,7 +2147,6 @@ class WorkerSettings:
         sync_swipelive_interests_task,
         backfill_listing_embeddings_task,
         optimize_notification_timing_task,
-        train_lightfm_task,
         clip_visual_backfill_task,
         compute_listing_phash_task,
         backfill_phash_task,
@@ -2225,8 +2205,6 @@ class WorkerSettings:
         cron(train_feed_als_task, hour=3, minute=45),
         # Her gece 04:00 — kullanıcı bazlı bildirim saat optimizasyonu
         cron(optimize_notification_timing_task, hour=4, minute=0),
-        # Her gece 04:15 — LightFM hybrid model eğitimi
-        cron(train_lightfm_task, hour=4, minute=15),
         # Her gece 04:30 — CLIP görsel embedding backfill (30 ilan/çalıştırma)
         cron(clip_visual_backfill_task, hour=4, minute=30),
         # Her gece 05:15 — NSFW backfill (20 ilan/çalıştırma)
