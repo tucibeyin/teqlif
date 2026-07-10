@@ -1401,6 +1401,31 @@ async def compute_seller_badges_task(ctx: dict) -> None:
         from app.utils.redis_client import get_redis
 
         ch = await get_clickhouse_client()
+
+        # Dinamik eşikler: veri dağılımından p75 conv_rate ve p50 total
+        pct_r = await ch.query("""
+            SELECT
+                quantileExact(0.75)(toFloat64(won) / toFloat64(total)) AS p75_conv,
+                toUInt32(quantileExact(0.5)(total))                    AS p50_total
+            FROM (
+                SELECT
+                    user_id,
+                    countIf(event_type = 'auction_won')                        AS won,
+                    countIf(event_type IN ('auction_won', 'auction_ended'))     AS total
+                FROM user_events
+                WHERE timestamp >= now() - INTERVAL 30 DAY
+                  AND event_type IN ('auction_won', 'auction_ended')
+                  AND user_id IS NOT NULL
+                GROUP BY user_id
+                HAVING total >= 2
+            )
+        """)
+        if pct_r.result_rows and pct_r.result_rows[0][0] is not None:
+            trusted_threshold = max(float(pct_r.result_rows[0][0]), 0.50)
+            active_threshold  = max(int(pct_r.result_rows[0][1]), 3)
+        else:
+            trusted_threshold, active_threshold = 0.65, 5
+
         result = await ch.query("""
             SELECT
                 user_id,
@@ -1411,7 +1436,7 @@ async def compute_seller_badges_task(ctx: dict) -> None:
               AND event_type IN ('auction_won', 'auction_ended')
               AND user_id IS NOT NULL
             GROUP BY user_id
-            HAVING total >= 3
+            HAVING total >= 2
         """)
 
         redis = await get_redis()
@@ -1420,9 +1445,9 @@ async def compute_seller_badges_task(ctx: dict) -> None:
         for row in result.result_rows:
             uid, won, total = row
             conv = won / total if total > 0 else 0.0
-            if conv >= 0.65:
+            if conv >= trusted_threshold:
                 badge = "trusted_seller"
-            elif total >= 5:
+            elif total >= active_threshold:
                 badge = "active_seller"
             else:
                 continue
@@ -2055,6 +2080,25 @@ async def compute_trust_scores_task(ctx: dict) -> None:
         ch = await get_clickhouse_client()
         redis = await get_redis()
 
+        # p90 normalizasyon eşiği: sabit 10 yerine gerçek dağılımdan
+        p90_auctions = 10.0
+        if ch:
+            try:
+                stats_r = await ch.query("""
+                    SELECT quantile(0.9)(total_auctions)
+                    FROM (
+                        SELECT user_id,
+                               countIf(event_type IN ('auction_won', 'auction_ended')) AS total_auctions
+                        FROM user_events
+                        WHERE timestamp >= now() - INTERVAL 90 DAY AND user_id IS NOT NULL
+                        GROUP BY user_id HAVING total_auctions >= 1
+                    )
+                """)
+                if stats_r.result_rows and stats_r.result_rows[0][0]:
+                    p90_auctions = max(float(stats_r.result_rows[0][0]), 5.0)
+            except Exception:
+                pass
+
         ch_result = None
         hes_result = None
         if ch:
@@ -2114,8 +2158,8 @@ async def compute_trust_scores_task(ctx: dict) -> None:
             pg = pg_data.get(uid, {"age_days": 0, "active": 0, "deleted": 0, "total": 0})
             ch = ch_data.get(uid, {"wins": 0, "total": 0, "hes": 0, "bids": 0})
 
-            # Sinyal 1: tamamlanan artırma (+30 max)
-            auction_score = min(ch["total"] / 10, 1.0) * 30
+            # Sinyal 1: tamamlanan artırma (+30 max) — p90 ile normalize edilir
+            auction_score = min(ch["total"] / p90_auctions, 1.0) * 30
 
             # Sinyal 2: kazanım oranı (+25 max)
             win_rate = ch["wins"] / max(ch["total"], 1)

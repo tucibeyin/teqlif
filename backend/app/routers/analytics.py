@@ -1146,30 +1146,47 @@ async def pro_insights(
         active_listings = active_ids_r.fetchall()
         if active_listings:
             ids_str = ", ".join(str(r.id) for r in active_listings)
+            import time as _time_mod
             view_map: dict[int, int] = {r.id: 0 for r in active_listings}
             hes_map: dict[int, int] = {r.id: 0 for r in active_listings}
+            ts_map: dict[int, float] = {}
+            like_map: dict[int, int] = {}
             try:
                 from app.database_clickhouse import get_clickhouse_client
                 ch = await get_clickhouse_client()
                 ch_r2 = await ch.query(f"""
                     SELECT item_id,
                            countIf(event_type = 'view') AS views,
-                           countDistinctIf(user_id, event_type = 'bid_hesitation') AS hes
+                           countDistinctIf(user_id, event_type = 'bid_hesitation') AS hes,
+                           toUnixTimestamp(max(timestamp)) AS last_event_ts
                     FROM user_events
                     WHERE item_type = 'listing' AND item_id IN ({ids_str})
                       AND timestamp >= now() - INTERVAL 30 DAY
-                    GROUP BY item_id ORDER BY views DESC LIMIT 10
+                    GROUP BY item_id
                 """)
                 view_map = {int(r[0]): int(r[1]) for r in ch_r2.result_rows}
                 hes_map  = {int(r[0]): int(r[2]) for r in ch_r2.result_rows}
+                ts_map   = {int(r[0]): float(r[3]) for r in ch_r2.result_rows}
             except Exception:
                 pass
+            try:
+                like_r = await db.execute(sql_text("""
+                    SELECT listing_id, COUNT(*)::int FROM listing_likes
+                    WHERE listing_id = ANY(:ids) AND created_at >= NOW() - INTERVAL '30 days'
+                    GROUP BY listing_id
+                """), {"ids": [r.id for r in active_listings]})
+                like_map = {row[0]: row[1] for row in like_r.fetchall()}
+            except Exception:
+                await db.rollback()
 
-            scored = sorted(
-                active_listings,
-                key=lambda r: view_map.get(r.id, 0) * 1 + hes_map.get(r.id, 0) * 3,
-                reverse=True,
-            )[:5]
+            _now_ts = _time_mod.time()
+
+            def _heat(lid: int) -> float:
+                age_h = max((_now_ts - ts_map.get(lid, _now_ts)) / 3600, 0.0)
+                raw = view_map.get(lid, 0) * 1 + like_map.get(lid, 0) * 2 + hes_map.get(lid, 0) * 3
+                return raw / (age_h + 2) ** 1.2
+
+            scored = sorted(active_listings, key=lambda r: _heat(r.id), reverse=True)[:5]
             hot_leads = [
                 {
                     "listing_id": r.id,
@@ -1178,9 +1195,9 @@ async def pro_insights(
                     "category": _t.get(f"cat_{r.category or 'diger'}", _CAT_LABELS.get(r.category or "diger", r.category or "Diğer")),
                     "views_30d": view_map.get(r.id, 0),
                     "hesitations_30d": hes_map.get(r.id, 0),
-                    "heat_score": view_map.get(r.id, 0) * 1 + hes_map.get(r.id, 0) * 3,
+                    "heat_score": round(_heat(r.id), 2),
                 }
-                for i, r in enumerate(scored)
+                for r in scored
             ]
     except Exception as exc:
         logger.warning("[ProInsights] hot_leads başarısız: %s", exc)
@@ -1198,6 +1215,7 @@ async def pro_insights(
         my_listings = my_listings_r.fetchall()
         for ml in my_listings:
             market_avg: float | None = None
+            price_stddev: float | None = None
             # Fiyat aralığı: ilanın fiyatının 0.05x–20x arası (test verisi ve aykırı değerleri eler)
             price_lo = float(ml.price) * 0.05
             price_hi = float(ml.price) * 20.0
@@ -1205,7 +1223,7 @@ async def pro_insights(
                 try:
                     emb_str = "[" + ",".join(f"{x:.6f}" for x in ml.embedding) + "]"
                     sim_r = await db.execute(sql_text("""
-                        SELECT AVG(price) FROM (
+                        SELECT AVG(price), STDDEV(price) FROM (
                             SELECT price FROM listings
                             WHERE user_id != :uid
                               AND category = :cat
@@ -1217,23 +1235,28 @@ async def pro_insights(
                         ) sub
                     """), {"uid": uid, "emb": emb_str, "cat": ml.category,
                            "lo": price_lo, "hi": price_hi})
-                    market_avg = sim_r.scalar()
+                    _sim_row = sim_r.fetchone()
+                    market_avg = _sim_row[0] if _sim_row else None
+                    price_stddev = _sim_row[1] if _sim_row else None
                 except Exception:
                     await db.rollback()
 
             if market_avg is None:
                 cat_r = await db.execute(sql_text("""
-                    SELECT AVG(price) FROM listings
+                    SELECT AVG(price), STDDEV(price) FROM listings
                     WHERE category = :cat AND user_id != :uid
                       AND is_active AND NOT is_deleted
                       AND price > :lo AND price < :hi
                 """), {"cat": ml.category, "uid": uid,
                        "lo": price_lo, "hi": price_hi})
-                market_avg = cat_r.scalar()
+                _cat_row = cat_r.fetchone()
+                market_avg = _cat_row[0] if _cat_row else None
+                price_stddev = _cat_row[1] if _cat_row else None
 
             if market_avg and market_avg > 0:
                 diff_pct = round(((ml.price - market_avg) / market_avg) * 100, 1)
-                signal = "pahalı" if diff_pct > 15 else ("ucuz" if diff_pct < -15 else "uygun")
+                _threshold = max(min((price_stddev / market_avg) * 100, 40.0), 10.0) if price_stddev else 15.0
+                signal = "pahalı" if diff_pct > _threshold else ("ucuz" if diff_pct < -_threshold else "uygun")
                 price_intel.append({
                     "listing_id": ml.id,
                     "title": ml.title,

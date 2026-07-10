@@ -864,17 +864,26 @@ class StreamService:
             return []
 
         interests = await get_user_interests(user_id, self.db)
-        top_cats: set[str] = set(list(interests.keys())[:4]) if interests else set()
+        _max_interest = max(interests.values(), default=1.0) if interests else 1.0
 
-        # Maksimum izleyici sayısı (normalize için)
         max_viewers = max((s.viewer_count for s in all_streams), default=1) or 1
         max_likes = max((getattr(s, "likes_count", 0) for s in all_streams), default=1) or 1
 
+        from datetime import datetime, timezone as _tz
+
         def _score(stream) -> float:
-            cat_score = 0.6 if (top_cats and stream.category in top_cats) else 0.0
-            viewer_score = (stream.viewer_count / max_viewers) * 0.2
-            likes_score = (getattr(stream, "likes_count", 0) / max_likes) * 0.2
-            return cat_score + viewer_score + likes_score
+            raw_aff = interests.get(stream.category, 0.0) if interests else 0.0
+            cat_score = (raw_aff / _max_interest) * 0.50
+            viewer_score = (stream.viewer_count / max_viewers) * 0.25
+            likes_score = (getattr(stream, "likes_count", 0) / max_likes) * 0.20
+            if stream.started_at:
+                _now = datetime.now(_tz.utc)
+                _sa = stream.started_at if stream.started_at.tzinfo else stream.started_at.replace(tzinfo=_tz.utc)
+                age_h = (_now - _sa).total_seconds() / 3600
+                recency_score = max(0.0, (1.0 - age_h / 2.0)) * 0.05
+            else:
+                recency_score = 0.0
+            return cat_score + viewer_score + likes_score + recency_score
 
         all_streams.sort(key=_score, reverse=True)
         return all_streams[:8]

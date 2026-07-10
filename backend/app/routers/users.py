@@ -9,6 +9,7 @@ Her endpoint sadece:
 İş mantığı, DB sorguları ve yetki kontrolleri tamamen
 app.services.user_service.UserService'e taşınmıştır.
 """
+import math
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -189,9 +190,10 @@ async def get_suggested_sellers(
         LIMIT :lim
     """
 
+    fetch_lim = min(limit * 2, 100)
     result = await db.execute(
         sa_text(base_query.format(follow_filter="AND u.id NOT IN (SELECT followed_id FROM follows WHERE follower_id = :uid)")),
-        {"uid": current_user.id, "lim": limit},
+        {"uid": current_user.id, "lim": fetch_lim},
     )
     rows_out = result.fetchall()
 
@@ -199,9 +201,36 @@ async def get_suggested_sellers(
     if not rows_out:
         result = await db.execute(
             sa_text(base_query.format(follow_filter="")),
-            {"uid": current_user.id, "lim": limit},
+            {"uid": current_user.id, "lim": fetch_lim},
         )
         rows_out = result.fetchall()
+
+    # Redis'ten satıcı rozeti verisi — badge sinyal ağırlığı
+    if rows_out:
+        seller_ids = [row[0] for row in rows_out]
+        raw_badges = await redis.mget(*[f"seller:badge:{sid}" for sid in seller_ids])
+
+        def _badge_score(b) -> float:
+            if b is None:
+                return 0.0
+            s = b.decode() if isinstance(b, bytes) else str(b)
+            return 1.0 if s == "trusted_seller" else (0.5 if s == "active_seller" else 0.0)
+
+        badge_map = {sid: _badge_score(b) for sid, b in zip(seller_ids, raw_badges)}
+
+        def _rank(row) -> float:
+            cat_m = float(row[8])
+            badge = badge_map.get(row[0], 0.0)
+            lst_cnt = int(row[7])
+            fol_cnt = int(row[9])
+            return (
+                cat_m * 0.45
+                + badge * 0.20
+                + min(math.log(1.0 + lst_cnt) / 4.0, 0.20)
+                + min(math.log(1.0 + fol_cnt) / 8.0, 0.15)
+            )
+
+        rows_out = sorted(rows_out, key=_rank, reverse=True)[:limit]
 
     return [
         {
