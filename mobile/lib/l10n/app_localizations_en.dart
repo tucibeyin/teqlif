@@ -1448,6 +1448,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletTxnWebTopup => 'Web top-up';
 
   @override
+  String get walletTxnSendGift => 'Live gift sent';
+
+  @override
+  String get walletTxnReferralBonus => 'Referral bonus';
+
+  @override
+  String get walletTxnWelcomeBonus => 'Welcome bonus';
+
+  @override
+  String get walletTxnSpendRetargeting => 'Retargeting notification';
+
+  @override
+  String get walletTxnSpendBoost => 'Listing boost';
+
+  @override
+  String get walletTxnSpendBoostPaid => 'Paid listing boost';
+
+  @override
+  String get walletTxnSpendReactivation => 'Listing reactivation';
+
+  @override
+  String walletSeeAllTxns(int n) {
+    return 'See all $n transactions';
+  }
+
+  @override
+  String get walletAllTxnsTitle => 'All Transactions';
+
+  @override
   String get walletComingSoonLabel => 'TUCi Purchase Coming Soon!';
 
   @override

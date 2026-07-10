@@ -1467,6 +1467,35 @@ class AppLocalizationsRu extends AppLocalizations {
   String get walletTxnWebTopup => 'Пополнение счета через Интернет';
 
   @override
+  String get walletTxnSendGift => 'Живой подарок отправлен';
+
+  @override
+  String get walletTxnReferralBonus => 'Реферальный бонус';
+
+  @override
+  String get walletTxnWelcomeBonus => 'Приветственный бонус';
+
+  @override
+  String get walletTxnSpendRetargeting => 'Ретаргетинг-уведомление';
+
+  @override
+  String get walletTxnSpendBoost => 'Продвижение объявления';
+
+  @override
+  String get walletTxnSpendBoostPaid => 'Платное продвижение';
+
+  @override
+  String get walletTxnSpendReactivation => 'Повторная публикация объявления';
+
+  @override
+  String walletSeeAllTxns(int n) {
+    return 'Показать все $n транзакции';
+  }
+
+  @override
+  String get walletAllTxnsTitle => 'Все транзакции';
+
+  @override
   String get walletComingSoonLabel => 'Покупка TUCi скоро состоится!';
 
   @override

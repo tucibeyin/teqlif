@@ -1195,6 +1195,20 @@
   "walletTxnSpendAdCampaign": "Рекламная кампания",
   "walletTxnSpendAi": "Цены на ИИ",
   "walletTxnWebTopup": "Пополнение счета через Интернет",
+  "walletTxnSendGift": "Живой подарок отправлен",
+  "walletTxnReferralBonus": "Реферальный бонус",
+  "walletTxnWelcomeBonus": "Приветственный бонус",
+  "walletTxnSpendRetargeting": "Ретаргетинг-уведомление",
+  "walletTxnSpendBoost": "Продвижение объявления",
+  "walletTxnSpendBoostPaid": "Платное продвижение",
+  "walletTxnSpendReactivation": "Повторная публикация объявления",
+  "walletSeeAllTxns": "Показать все {n} транзакции",
+  "@walletSeeAllTxns": {
+    "placeholders": {
+      "n": { "type": "int" }
+    }
+  },
+  "walletAllTxnsTitle": "Все транзакции",
   "walletComingSoonLabel": "Покупка TUCi скоро состоится!",
   "walletComingSoonDesc": "Наша платежная инфраструктура находится в стадии подготовки. В настоящее время все пользователи начинают с баланса в 100 TUCi.",
   "walletBuyBtn": "Скоро состоится покупка TUCi",

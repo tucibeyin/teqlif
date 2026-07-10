@@ -613,6 +613,20 @@
   "walletTxnSpendAdCampaign": "حملة إعلانية",
   "walletTxnSpendAi": "تسعير الذكاء الاصطناعي",
   "walletTxnWebTopup": "شحن الرصيد عبر الويب",
+  "walletTxnSendGift": "تم إرسال هدية مباشرة",
+  "walletTxnReferralBonus": "مكافأة الإحالة",
+  "walletTxnWelcomeBonus": "مكافأة ترحيبية",
+  "walletTxnSpendRetargeting": "إشعار إعادة الاستهداف",
+  "walletTxnSpendBoost": "تعزيز الإعلان",
+  "walletTxnSpendBoostPaid": "تعزيز مدفوع للإعلان",
+  "walletTxnSpendReactivation": "إعادة تفعيل الإعلان",
+  "walletSeeAllTxns": "عرض جميع {n} معاملة",
+  "@walletSeeAllTxns": {
+    "placeholders": {
+      "n": { "type": "int" }
+    }
+  },
+  "walletAllTxnsTitle": "جميع المعاملات",
   "walletComingSoonLabel": "شراء TUCi قريباً!",
   "walletComingSoonDesc": "جارٍ إعداد بنيتنا للدفع. جميع المستخدمين يحصلون حالياً على 100 TUCi كرصيد بداية.",
   "walletBuyBtn": "شراء TUCi قريباً",

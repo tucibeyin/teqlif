@@ -3677,12 +3677,19 @@ class _WalletScreenState extends State<WalletScreen> {
   bool _loading = false;
 
   Map<String, String> _typeLabels(AppLocalizations l) => {
-    'airdrop':           l.walletTxnAirdrop,
-    'receive_gift':      l.walletTxnReceiveGift,
-    'spend_lead_gen':    l.walletTxnSpendLeadGen,
-    'spend_ad_campaign': l.walletTxnSpendAdCampaign,
-    'spend_ai':          l.walletTxnSpendAi,
-    'web_topup':         l.walletTxnWebTopup,
+    'airdrop':              l.walletTxnAirdrop,
+    'receive_gift':         l.walletTxnReceiveGift,
+    'send_gift':            l.walletTxnSendGift,
+    'spend_lead_gen':       l.walletTxnSpendLeadGen,
+    'spend_ad_campaign':    l.walletTxnSpendAdCampaign,
+    'spend_ai':             l.walletTxnSpendAi,
+    'spend_retargeting':    l.walletTxnSpendRetargeting,
+    'spend_boost':          l.walletTxnSpendBoost,
+    'spend_boost_paid':     l.walletTxnSpendBoostPaid,
+    'spend_reactivation':   l.walletTxnSpendReactivation,
+    'web_topup':            l.walletTxnWebTopup,
+    'referral_bonus':       l.walletTxnReferralBonus,
+    'welcome_bonus':        l.walletTxnWelcomeBonus,
   };
 
   @override
@@ -3704,6 +3711,80 @@ class _WalletScreenState extends State<WalletScreen> {
         _txns = data['transactions'] as List? ?? [];
       }
     });
+  }
+
+  Widget _buildTxnRow(dynamic t, AppLocalizations l) {
+    final amount = t['amount'] as int? ?? 0;
+    final label = _typeLabels(l)[t['transaction_type'] as String? ?? ''] ??
+        (t['label'] as String? ?? t['transaction_type'] as String? ?? '');
+    final isPos = amount > 0;
+    final dateStr = t['created_at'] as String? ?? '';
+    String formattedDate = '';
+    try {
+      final d = DateTime.parse(dateStr).toLocal();
+      formattedDate =
+          '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}  ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    } catch (_) {}
+    return _TxnRow(label: label, amount: amount, isPositive: isPos, date: formattedDate);
+  }
+
+  void _showAllTxnsModal(BuildContext context, AppLocalizations l) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (ctx, scrollCtrl) => Column(
+          children: [
+            // Tutamaç
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 8),
+              child: Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ),
+            // Başlık
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
+              child: Row(
+                children: [
+                  Text(l.walletAllTxnsTitle,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // İşlem listesi
+            Expanded(
+              child: ListView.builder(
+                controller: scrollCtrl,
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                itemCount: _txns.length,
+                itemBuilder: (_, i) => _buildTxnRow(_txns[i], l),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // Harcama özeti: spend_* türlerini topla
@@ -3799,25 +3880,22 @@ class _WalletScreenState extends State<WalletScreen> {
               Text(l.walletTxnHistory,
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 10),
-              ..._txns.map((t) {
-                final amount = t['amount'] as int? ?? 0;
-                final label = _typeLabels(l)[t['transaction_type']] ??
-                    (t['label'] as String? ?? '');
-                final isPos = amount > 0;
-                final dateStr = t['created_at'] as String? ?? '';
-                String formattedDate = '';
-                try {
-                  final d = DateTime.parse(dateStr).toLocal();
-                  formattedDate =
-                      '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}  ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-                } catch (_) {}
-                return _TxnRow(
-                  label: label,
-                  amount: amount,
-                  isPositive: isPos,
-                  date: formattedDate,
-                );
-              }),
+              ..._txns.take(20).map((t) => _buildTxnRow(t, l)),
+              if (_txns.length > 20) ...[
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showAllTxnsModal(context, l),
+                    icon: const Icon(Icons.expand_more_rounded, size: 18),
+                    label: Text(l.walletSeeAllTxns(_txns.length)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
             ] else if (!_loading) ...[
               Padding(

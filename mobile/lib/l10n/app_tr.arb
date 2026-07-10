@@ -613,6 +613,20 @@
   "walletTxnSpendAdCampaign": "Reklam kampanyası",
   "walletTxnSpendAi": "Yapay Zeka fiyatlama",
   "walletTxnWebTopup": "Web yükleme",
+  "walletTxnSendGift": "Canlı hediye gönderildi",
+  "walletTxnReferralBonus": "Davet ödülü",
+  "walletTxnWelcomeBonus": "Davet kodu bonusu",
+  "walletTxnSpendRetargeting": "Retargeting bildirimi",
+  "walletTxnSpendBoost": "Öne çıkarma",
+  "walletTxnSpendBoostPaid": "Öne çıkarma (ücretli)",
+  "walletTxnSpendReactivation": "İlan yeniden yayına alma",
+  "walletSeeAllTxns": "Tümünü gör ({n} işlem)",
+  "@walletSeeAllTxns": {
+    "placeholders": {
+      "n": { "type": "int" }
+    }
+  },
+  "walletAllTxnsTitle": "Tüm İşlemler",
   "walletComingSoonLabel": "TUCi Satın Alma Yakında!",
   "walletComingSoonDesc": "Ödeme altyapımız hazırlanıyor. Şu an tüm kullanıcılara 100 TUCi başlangıç bakiyesi tanımlandı.",
   "walletBuyBtn": "TUCi Satın Alma Yakında",

@@ -2820,6 +2820,60 @@ abstract class AppLocalizations {
   /// **'Web yükleme'**
   String get walletTxnWebTopup;
 
+  /// No description provided for @walletTxnSendGift.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı hediye gönderildi'**
+  String get walletTxnSendGift;
+
+  /// No description provided for @walletTxnReferralBonus.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet ödülü'**
+  String get walletTxnReferralBonus;
+
+  /// No description provided for @walletTxnWelcomeBonus.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet kodu bonusu'**
+  String get walletTxnWelcomeBonus;
+
+  /// No description provided for @walletTxnSpendRetargeting.
+  ///
+  /// In tr, this message translates to:
+  /// **'Retargeting bildirimi'**
+  String get walletTxnSpendRetargeting;
+
+  /// No description provided for @walletTxnSpendBoost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Öne çıkarma'**
+  String get walletTxnSpendBoost;
+
+  /// No description provided for @walletTxnSpendBoostPaid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Öne çıkarma (ücretli)'**
+  String get walletTxnSpendBoostPaid;
+
+  /// No description provided for @walletTxnSpendReactivation.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan yeniden yayına alma'**
+  String get walletTxnSpendReactivation;
+
+  /// No description provided for @walletSeeAllTxns.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tümünü gör ({n} işlem)'**
+  String walletSeeAllTxns(int n);
+
+  /// No description provided for @walletAllTxnsTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm İşlemler'**
+  String get walletAllTxnsTitle;
+
   /// No description provided for @walletComingSoonLabel.
   ///
   /// In tr, this message translates to:

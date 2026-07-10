@@ -1447,6 +1447,35 @@ class AppLocalizationsTr extends AppLocalizations {
   String get walletTxnWebTopup => 'Web yükleme';
 
   @override
+  String get walletTxnSendGift => 'Canlı hediye gönderildi';
+
+  @override
+  String get walletTxnReferralBonus => 'Davet ödülü';
+
+  @override
+  String get walletTxnWelcomeBonus => 'Davet kodu bonusu';
+
+  @override
+  String get walletTxnSpendRetargeting => 'Retargeting bildirimi';
+
+  @override
+  String get walletTxnSpendBoost => 'Öne çıkarma';
+
+  @override
+  String get walletTxnSpendBoostPaid => 'Öne çıkarma (ücretli)';
+
+  @override
+  String get walletTxnSpendReactivation => 'İlan yeniden yayına alma';
+
+  @override
+  String walletSeeAllTxns(int n) {
+    return 'Tümünü gör ($n işlem)';
+  }
+
+  @override
+  String get walletAllTxnsTitle => 'Tüm İşlemler';
+
+  @override
   String get walletComingSoonLabel => 'TUCi Satın Alma Yakında!';
 
   @override

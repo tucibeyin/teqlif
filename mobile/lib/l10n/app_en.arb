@@ -614,6 +614,20 @@
   "walletTxnSpendAdCampaign": "Ad campaign",
   "walletTxnSpendAi": "AI pricing",
   "walletTxnWebTopup": "Web top-up",
+  "walletTxnSendGift": "Live gift sent",
+  "walletTxnReferralBonus": "Referral bonus",
+  "walletTxnWelcomeBonus": "Welcome bonus",
+  "walletTxnSpendRetargeting": "Retargeting notification",
+  "walletTxnSpendBoost": "Listing boost",
+  "walletTxnSpendBoostPaid": "Paid listing boost",
+  "walletTxnSpendReactivation": "Listing reactivation",
+  "walletSeeAllTxns": "See all {n} transactions",
+  "@walletSeeAllTxns": {
+    "placeholders": {
+      "n": { "type": "int" }
+    }
+  },
+  "walletAllTxnsTitle": "All Transactions",
   "walletComingSoonLabel": "TUCi Purchase Coming Soon!",
   "walletComingSoonDesc": "Our payment infrastructure is being prepared. All users currently start with 100 TUCi balance.",
   "walletBuyBtn": "TUCi Purchase Coming Soon",

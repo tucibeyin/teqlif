@@ -1435,6 +1435,35 @@ class AppLocalizationsAr extends AppLocalizations {
   String get walletTxnWebTopup => 'شحن الرصيد عبر الويب';
 
   @override
+  String get walletTxnSendGift => 'تم إرسال هدية مباشرة';
+
+  @override
+  String get walletTxnReferralBonus => 'مكافأة الإحالة';
+
+  @override
+  String get walletTxnWelcomeBonus => 'مكافأة ترحيبية';
+
+  @override
+  String get walletTxnSpendRetargeting => 'إشعار إعادة الاستهداف';
+
+  @override
+  String get walletTxnSpendBoost => 'تعزيز الإعلان';
+
+  @override
+  String get walletTxnSpendBoostPaid => 'تعزيز مدفوع للإعلان';
+
+  @override
+  String get walletTxnSpendReactivation => 'إعادة تفعيل الإعلان';
+
+  @override
+  String walletSeeAllTxns(int n) {
+    return 'عرض جميع $n معاملة';
+  }
+
+  @override
+  String get walletAllTxnsTitle => 'جميع المعاملات';
+
+  @override
   String get walletComingSoonLabel => 'شراء TUCi قريباً!';
 
   @override
