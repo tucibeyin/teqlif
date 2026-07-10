@@ -62,7 +62,7 @@ async def get_my_stream_history(
     )
     if cursor:
         from datetime import datetime
-        cursor_dt = datetime.fromisoformat(cursor)
+        cursor_dt = datetime.fromisoformat(cursor.replace(' ', '+'))
         query = query.where(LiveStream.started_at < cursor_dt)
 
     query = (
