@@ -800,9 +800,12 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             children: [
               const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 20),
               const SizedBox(width: 8),
-              Text(
-                l.retargetingBlastSent(_sentCount),
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF22C55E)),
+              Flexible(
+                child: Text(
+                  l.retargetingBlastSent(_sentCount),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF22C55E)),
+                ),
               ),
             ],
           ),
@@ -837,9 +840,12 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             children: [
               const Icon(Icons.timer_outlined, color: Color(0xFFF59E0B), size: 20),
               const SizedBox(width: 8),
-              Text(
-                l.retargetingBlastCooldown,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B)),
+              Flexible(
+                child: Text(
+                  l.retargetingBlastCooldown,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B)),
+                ),
               ),
             ],
           ),
