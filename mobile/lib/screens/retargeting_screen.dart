@@ -163,7 +163,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           final lid = listing['id'] as int;
           final sel = _selectedReportListingId == lid;
           final imageUrls = listing['image_urls'] as List? ?? [];
-          final imageUrl = imageUrls.isNotEmpty ? imageUrls.first as String : null;
+          final imageUrl = imageUrls.isNotEmpty ? imgUrl(imageUrls.first as String) : null;
           final title = listing['title'] as String? ?? '';
           return GestureDetector(
             onTap: () => _selectReportListing(lid),
