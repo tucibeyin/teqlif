@@ -1,0 +1,9 @@
+[Unit]
+Description=Redis RDB Backup – Her gece 02:00
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

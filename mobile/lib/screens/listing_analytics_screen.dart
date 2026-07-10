@@ -85,10 +85,6 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
     if (!mounted) return;
 
-    final roi = results[0];
-    final videoPerf = results[1];
-    final gallery = results[2];
-
     if (roi == null && videoPerf == null && gallery == null) {
       setState(() {
         _loading = false;
