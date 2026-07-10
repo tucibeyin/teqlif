@@ -1158,7 +1158,7 @@ class SearchScreenState extends State<SearchScreen> {
             SliverFillRemaining(
               hasScrollBody: false,
               child: _exploreNetworkError
-                  ? NetworkErrorWidget(scrollable: true, onRetry: () => _loadExplore(bypassCache: true))
+                  ? NetworkErrorWidget(onRetry: () => _loadExplore(bypassCache: true))
                   : Center(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
