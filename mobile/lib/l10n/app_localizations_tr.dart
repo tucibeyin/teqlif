@@ -1476,6 +1476,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get walletAllTxnsTitle => 'Tüm İşlemler';
 
   @override
+  String get walletDetailTitle => 'İşlem Detayı';
+
+  @override
+  String get walletDetailDate => 'Tarih';
+
+  @override
+  String get walletDetailType => 'İşlem Türü';
+
+  @override
+  String get walletDetailAmount => 'Tutar';
+
+  @override
+  String get walletDetailListing => 'İlan';
+
+  @override
+  String get walletDetailStream => 'Canlı Yayın';
+
+  @override
+  String get walletDetailListingInactive => 'Pasif ilan';
+
+  @override
+  String get walletDetailLoadingError => 'Detay yüklenemedi.';
+
+  @override
   String get walletComingSoonLabel => 'TUCi Satın Alma Yakında!';
 
   @override

@@ -181,6 +181,8 @@ async def create_campaign(
             user_id=current_user.id,
             amount=-tuci_cost,
             transaction_type="spend_boost_paid",
+            reference_id=body.listing_id,
+            reference_type="listing",
         ))
 
     await db.commit()

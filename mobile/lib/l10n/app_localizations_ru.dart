@@ -1496,6 +1496,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get walletAllTxnsTitle => 'Все транзакции';
 
   @override
+  String get walletDetailTitle => 'Детали транзакции';
+
+  @override
+  String get walletDetailDate => 'Дата';
+
+  @override
+  String get walletDetailType => 'Тип транзакции';
+
+  @override
+  String get walletDetailAmount => 'Сумма';
+
+  @override
+  String get walletDetailListing => 'Объявление';
+
+  @override
+  String get walletDetailStream => 'Прямой эфир';
+
+  @override
+  String get walletDetailListingInactive => 'Неактивное объявление';
+
+  @override
+  String get walletDetailLoadingError => 'Не удалось загрузить детали.';
+
+  @override
   String get walletComingSoonLabel => 'Покупка TUCi скоро состоится!';
 
   @override

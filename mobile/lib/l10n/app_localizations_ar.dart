@@ -1464,6 +1464,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get walletAllTxnsTitle => 'جميع المعاملات';
 
   @override
+  String get walletDetailTitle => 'تفاصيل المعاملة';
+
+  @override
+  String get walletDetailDate => 'التاريخ';
+
+  @override
+  String get walletDetailType => 'نوع المعاملة';
+
+  @override
+  String get walletDetailAmount => 'المبلغ';
+
+  @override
+  String get walletDetailListing => 'الإعلان';
+
+  @override
+  String get walletDetailStream => 'البث المباشر';
+
+  @override
+  String get walletDetailListingInactive => 'إعلان غير نشط';
+
+  @override
+  String get walletDetailLoadingError => 'تعذّر تحميل التفاصيل.';
+
+  @override
   String get walletComingSoonLabel => 'شراء TUCi قريباً!';
 
   @override

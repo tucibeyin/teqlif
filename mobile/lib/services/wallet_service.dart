@@ -52,6 +52,21 @@ class WalletService {
     return null;
   }
 
+  static Future<Map<String, dynamic>?> getTransactionDetail(int txnId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/wallet/transaction/$txnId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// SWR Stream: önce Hive cache, sonra taze API verisi.
   /// Giriş yapılmamışsa stream hiç emit etmez.
   /// [bypassCache]: pull-to-refresh için cache okumayı atlar.

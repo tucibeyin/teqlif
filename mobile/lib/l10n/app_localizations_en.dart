@@ -1477,6 +1477,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletAllTxnsTitle => 'All Transactions';
 
   @override
+  String get walletDetailTitle => 'Transaction Detail';
+
+  @override
+  String get walletDetailDate => 'Date';
+
+  @override
+  String get walletDetailType => 'Transaction Type';
+
+  @override
+  String get walletDetailAmount => 'Amount';
+
+  @override
+  String get walletDetailListing => 'Listing';
+
+  @override
+  String get walletDetailStream => 'Live Stream';
+
+  @override
+  String get walletDetailListingInactive => 'Inactive listing';
+
+  @override
+  String get walletDetailLoadingError => 'Could not load detail.';
+
+  @override
   String get walletComingSoonLabel => 'TUCi Purchase Coming Soon!';
 
   @override

@@ -3725,7 +3725,42 @@ class _WalletScreenState extends State<WalletScreen> {
       formattedDate =
           '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}  ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     } catch (_) {}
-    return _TxnRow(label: label, amount: amount, isPositive: isPos, date: formattedDate);
+    return InkWell(
+      onTap: () => _showTxnDetailSheet(context, t, l),
+      borderRadius: BorderRadius.circular(8),
+      child: _TxnRow(label: label, amount: amount, isPositive: isPos, date: formattedDate),
+    );
+  }
+
+  void _showTxnDetailSheet(BuildContext context, dynamic t, AppLocalizations l) {
+    final txnId = t['id'] as int?;
+    final amount = t['amount'] as int? ?? 0;
+    final label = _typeLabels(l)[t['transaction_type'] as String? ?? ''] ??
+        (t['label'] as String? ?? t['transaction_type'] as String? ?? '');
+    final isPos = amount > 0;
+    final dateStr = t['created_at'] as String? ?? '';
+    String formattedDate = '';
+    try {
+      final d = DateTime.parse(dateStr).toLocal();
+      formattedDate =
+          '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}  ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    } catch (_) {}
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _TxnDetailSheet(
+        txnId: txnId,
+        label: label,
+        amount: amount,
+        isPositive: isPos,
+        formattedDate: formattedDate,
+        l: l,
+      ),
+    );
   }
 
   void _showAllTxnsModal(BuildContext context, AppLocalizations l) {
@@ -4035,6 +4070,275 @@ class _TxnRow extends StatelessWidget {
     );
   }
 }
+
+// ─── Transaction Detail Bottom Sheet ─────────────────────────────────────────
+
+class _TxnDetailSheet extends StatefulWidget {
+  final int? txnId;
+  final String label;
+  final int amount;
+  final bool isPositive;
+  final String formattedDate;
+  final AppLocalizations l;
+
+  const _TxnDetailSheet({
+    required this.txnId,
+    required this.label,
+    required this.amount,
+    required this.isPositive,
+    required this.formattedDate,
+    required this.l,
+  });
+
+  @override
+  State<_TxnDetailSheet> createState() => _TxnDetailSheetState();
+}
+
+class _TxnDetailSheetState extends State<_TxnDetailSheet> {
+  Map<String, dynamic>? _detail;
+  bool _loading = true;
+  bool _error = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDetail();
+  }
+
+  Future<void> _loadDetail() async {
+    if (widget.txnId == null) {
+      setState(() => _loading = false);
+      return;
+    }
+    final data = await WalletService.getTransactionDetail(widget.txnId!);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _detail = data;
+      _error = data == null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = widget.l;
+    final listing = _detail?['listing'] as Map<String, dynamic>?;
+    final stream = _detail?['stream'] as Map<String, dynamic>?;
+    final imageUrl = listing?['image_url'] as String?;
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      maxChildSize: 0.90,
+      minChildSize: 0.35,
+      expand: false,
+      builder: (ctx, scrollCtrl) => ListView(
+        controller: scrollCtrl,
+        padding: EdgeInsets.zero,
+        children: [
+          // Handle
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 8),
+            child: Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          // Header row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
+            child: Row(
+              children: [
+                Text(l.walletDetailTitle,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else if (_error)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(l.walletDetailLoadingError,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey)),
+            )
+          else ...[
+            // Listing thumbnail (collapse if none)
+            if (hasImage)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl.startsWith('/uploads')
+                        ? 'https://teqlif.com$imageUrl'
+                        : imageUrl,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      height: 160,
+                      color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    ),
+                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 20),
+
+            // Amount badge
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: widget.isPositive
+                      ? Colors.green.withValues(alpha: 0.12)
+                      : Colors.red.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      widget.isPositive ? Icons.add_circle_rounded : Icons.remove_circle_rounded,
+                      color: widget.isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l.walletDetailAmount,
+                            style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(
+                          '${widget.isPositive ? '+' : ''}${widget.amount} TUCi',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: widget.isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Detail rows
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  _DetailRow(label: l.walletDetailType, value: widget.label),
+                  _DetailRow(label: l.walletDetailDate, value: widget.formattedDate),
+
+                  // Listing info
+                  if (listing != null) ...[
+                    const Divider(height: 24),
+                    _DetailRow(
+                      label: l.walletDetailListing,
+                      value: listing['title'] as String? ?? '—',
+                      badge: (listing['is_active'] == false)
+                          ? l.walletDetailListingInactive
+                          : null,
+                    ),
+                    if ((listing['category'] as String?) != null)
+                      _DetailRow(label: 'Kategori', value: listing['category'] as String),
+                    if (listing['price'] != null)
+                      _DetailRow(label: 'Fiyat', value: '${listing['price']} ₺'),
+                  ],
+
+                  // Stream info
+                  if (stream != null) ...[
+                    const Divider(height: 24),
+                    _DetailRow(
+                      label: l.walletDetailStream,
+                      value: stream['title'] as String? ?? '—',
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final String? badge;
+  const _DetailRow({required this.label, required this.value, this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(label,
+                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(value,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                ),
+                if (badge != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(badge!,
+                        style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _SocialLinksRow extends StatelessWidget {
   final Map<String, dynamic>? user;

@@ -2874,6 +2874,54 @@ abstract class AppLocalizations {
   /// **'Tüm İşlemler'**
   String get walletAllTxnsTitle;
 
+  /// No description provided for @walletDetailTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İşlem Detayı'**
+  String get walletDetailTitle;
+
+  /// No description provided for @walletDetailDate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tarih'**
+  String get walletDetailDate;
+
+  /// No description provided for @walletDetailType.
+  ///
+  /// In tr, this message translates to:
+  /// **'İşlem Türü'**
+  String get walletDetailType;
+
+  /// No description provided for @walletDetailAmount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tutar'**
+  String get walletDetailAmount;
+
+  /// No description provided for @walletDetailListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan'**
+  String get walletDetailListing;
+
+  /// No description provided for @walletDetailStream.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı Yayın'**
+  String get walletDetailStream;
+
+  /// No description provided for @walletDetailListingInactive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pasif ilan'**
+  String get walletDetailListingInactive;
+
+  /// No description provided for @walletDetailLoadingError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Detay yüklenemedi.'**
+  String get walletDetailLoadingError;
+
   /// No description provided for @walletComingSoonLabel.
   ///
   /// In tr, this message translates to:

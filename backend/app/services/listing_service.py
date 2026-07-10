@@ -781,6 +781,8 @@ class ListingService:
                     user_id=current_user.id,
                     amount=-_REACTIVATION_COST_TUCI,
                     transaction_type="spend_reactivation",
+                    reference_id=listing_id,
+                    reference_type="listing",
                 ))
 
             if not reactivating:
