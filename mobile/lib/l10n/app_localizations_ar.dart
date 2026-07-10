@@ -1488,6 +1488,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get walletDetailLoadingError => 'تعذّر تحميل التفاصيل.';
 
   @override
+  String get walletDetailGoListing => 'الذهاب إلى الإعلان';
+
+  @override
+  String get walletDetailGoOwner => 'ملف صاحب الإعلان';
+
+  @override
+  String get walletDetailGoStream => 'تحليلات البث';
+
+  @override
+  String get walletDetailGoStreamHost => 'ملف مضيف البث';
+
+  @override
   String get walletComingSoonLabel => 'شراء TUCi قريباً!';
 
   @override

@@ -2922,6 +2922,30 @@ abstract class AppLocalizations {
   /// **'Detay yüklenemedi.'**
   String get walletDetailLoadingError;
 
+  /// No description provided for @walletDetailGoListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlana Git'**
+  String get walletDetailGoListing;
+
+  /// No description provided for @walletDetailGoOwner.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan Sahibi Profili'**
+  String get walletDetailGoOwner;
+
+  /// No description provided for @walletDetailGoStream.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın Analizine Git'**
+  String get walletDetailGoStream;
+
+  /// No description provided for @walletDetailGoStreamHost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın Sahibi Profili'**
+  String get walletDetailGoStreamHost;
+
   /// No description provided for @walletComingSoonLabel.
   ///
   /// In tr, this message translates to:

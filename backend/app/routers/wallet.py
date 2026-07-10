@@ -104,6 +104,7 @@ async def get_transaction_detail(
     if txn.reference_type == "listing" and txn.reference_id:
         listing = await db.scalar(select(Listing).where(Listing.id == txn.reference_id))
         if listing:
+            owner = await db.scalar(select(User).where(User.id == listing.user_id))
             detail["listing"] = {
                 "id": listing.id,
                 "title": listing.title,
@@ -111,14 +112,21 @@ async def get_transaction_detail(
                 "price": listing.price,
                 "image_url": listing.image_url,
                 "is_active": listing.is_active,
+                "owner_id": listing.user_id,
+                "owner_username": owner.username if owner else None,
+                "owner_avatar": owner.profile_image_thumb_url if owner else None,
             }
 
     elif txn.reference_type == "stream" and txn.reference_id:
         stream = await db.scalar(select(LiveStream).where(LiveStream.id == txn.reference_id))
         if stream:
+            host = await db.scalar(select(User).where(User.id == stream.host_id))
             detail["stream"] = {
                 "id": stream.id,
                 "title": stream.title,
+                "host_id": stream.host_id,
+                "host_username": host.username if host else None,
+                "host_avatar": host.profile_image_thumb_url if host else None,
             }
 
     return detail

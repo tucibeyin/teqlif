@@ -36,6 +36,8 @@ import '../widgets/async_button.dart';
 import '../utils/once.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
+import 'live_stream_analytics_screen.dart';
+import 'public_profile_screen.dart';
 import 'create_listing_screen.dart';
 import 'pro_hub_screen.dart';
 import 'notification_settings_screen.dart';
@@ -4266,6 +4268,32 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                       _DetailRow(label: 'Kategori', value: listing['category'] as String),
                     if (listing['price'] != null)
                       _DetailRow(label: 'Fiyat', value: '${listing['price']} ₺'),
+                    const SizedBox(height: 12),
+                    _NavButton(
+                      icon: Icons.storefront_rounded,
+                      label: l.walletDetailGoListing,
+                      onTap: () async {
+                        final listingId = listing['id'] as int?;
+                        if (listingId == null) return;
+                        final full = await ListingService.getListingById(listingId);
+                        if (full != null && ctx.mounted) {
+                          Navigator.push(ctx, MaterialPageRoute(
+                            builder: (_) => ListingDetailScreen(listing: Map<String, dynamic>.from(full)),
+                          ));
+                        }
+                      },
+                    ),
+                    if ((listing['owner_username'] as String?) != null)
+                      _NavButton(
+                        icon: Icons.person_rounded,
+                        label: l.walletDetailGoOwner,
+                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                          builder: (_) => PublicProfileScreen(
+                            username: listing['owner_username'] as String,
+                            userId: listing['owner_id'] as int?,
+                          ),
+                        )),
+                      ),
                   ],
 
                   // Stream info
@@ -4275,6 +4303,27 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                       label: l.walletDetailStream,
                       value: stream['title'] as String? ?? '—',
                     ),
+                    const SizedBox(height: 12),
+                    _NavButton(
+                      icon: Icons.bar_chart_rounded,
+                      label: l.walletDetailGoStream,
+                      onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                        builder: (_) => LiveStreamAnalyticsScreen(
+                          streamId: stream['id'] as int,
+                        ),
+                      )),
+                    ),
+                    if ((stream['host_username'] as String?) != null)
+                      _NavButton(
+                        icon: Icons.person_rounded,
+                        label: l.walletDetailGoStreamHost,
+                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                          builder: (_) => PublicProfileScreen(
+                            username: stream['host_username'] as String,
+                            userId: stream['host_id'] as int?,
+                          ),
+                        )),
+                      ),
                   ],
                 ],
               ),
@@ -4283,6 +4332,33 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
             const SizedBox(height: 32),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _NavButton({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: onTap,
+          icon: Icon(icon, size: 16),
+          label: Text(label, style: const TextStyle(fontSize: 13)),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            alignment: Alignment.centerLeft,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
       ),
     );
   }

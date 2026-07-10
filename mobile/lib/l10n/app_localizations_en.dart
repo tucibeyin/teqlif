@@ -1501,6 +1501,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletDetailLoadingError => 'Could not load detail.';
 
   @override
+  String get walletDetailGoListing => 'Go to Listing';
+
+  @override
+  String get walletDetailGoOwner => 'Listing Owner Profile';
+
+  @override
+  String get walletDetailGoStream => 'Go to Stream Analytics';
+
+  @override
+  String get walletDetailGoStreamHost => 'Stream Host Profile';
+
+  @override
   String get walletComingSoonLabel => 'TUCi Purchase Coming Soon!';
 
   @override

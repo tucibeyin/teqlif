@@ -1500,6 +1500,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get walletDetailLoadingError => 'Detay yüklenemedi.';
 
   @override
+  String get walletDetailGoListing => 'İlana Git';
+
+  @override
+  String get walletDetailGoOwner => 'İlan Sahibi Profili';
+
+  @override
+  String get walletDetailGoStream => 'Yayın Analizine Git';
+
+  @override
+  String get walletDetailGoStreamHost => 'Yayın Sahibi Profili';
+
+  @override
   String get walletComingSoonLabel => 'TUCi Satın Alma Yakında!';
 
   @override

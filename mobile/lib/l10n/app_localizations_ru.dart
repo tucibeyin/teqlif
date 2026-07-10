@@ -1520,6 +1520,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get walletDetailLoadingError => 'Не удалось загрузить детали.';
 
   @override
+  String get walletDetailGoListing => 'Перейти к объявлению';
+
+  @override
+  String get walletDetailGoOwner => 'Профиль владельца объявления';
+
+  @override
+  String get walletDetailGoStream => 'Аналитика трансляции';
+
+  @override
+  String get walletDetailGoStreamHost => 'Профиль ведущего трансляции';
+
+  @override
   String get walletComingSoonLabel => 'Покупка TUCi скоро состоится!';
 
   @override
