@@ -1913,11 +1913,6 @@ class AppLocalizationsAr extends AppLocalizations {
       'ستظهر البيانات حين تُعرض إعلاناتك في الخلاصة.';
 
   @override
-  String listingDayFilterN(int n) {
-    return 'آخر $n يوماً';
-  }
-
-  @override
   String get listingTotalViews => 'إجمالي المشاهدات';
 
   @override

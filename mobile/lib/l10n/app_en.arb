@@ -901,14 +901,6 @@
   "listingPerfTitle": "Your Listings' PRO Performance",
   "listingNoDataTitle": "No Data Yet",
   "listingNoDataDesc": "Data will appear once your listings are shown in the feed.",
-  "listingDayFilterN": "Last {n} Days",
-  "@listingDayFilterN": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "listingTotalViews": "Total Views",
   "listingAvgCtr": "Avg. Click Rate",
   "listingVideoBeatsPhoto": "🎬 Video listings get {x}× more clicks than photo listings.",

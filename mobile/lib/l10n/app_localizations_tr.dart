@@ -1931,11 +1931,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'İlanlarınız swipe feed\'de gösterime girince buradaki veriler dolmaya başlayacak.';
 
   @override
-  String listingDayFilterN(int n) {
-    return 'Son $n Gün';
-  }
-
-  @override
   String get listingTotalViews => 'Toplam Görüntülenme';
 
   @override

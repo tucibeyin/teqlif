@@ -440,43 +440,52 @@ class AnalyticsService {
     } catch (_) {}
   }
 
-  static Future<Map<String, dynamic>?> getVideoRoi({int days = 30}) async {
+  static Future<Map<String, dynamic>?> getVideoRoi({String? startDate, String? endDate, String? category}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final lang = await _lang();
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/video-roi?days=$days'),
-        headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
-      );
+      var url = '$kBaseUrl/analytics/video-roi';
+      final params = <String>[];
+      if (startDate != null) params.add('start_date=$startDate');
+      if (endDate != null) params.add('end_date=$endDate');
+      if (category != null && category.isNotEmpty) params.add('category=$category');
+      if (params.isNotEmpty) url += '?${params.join('&')}';
+      final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang});
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getGalleryStats({int days = 30}) async {
+  static Future<Map<String, dynamic>?> getGalleryStats({String? startDate, String? endDate, String? category}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final lang = await _lang();
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/gallery-stats?days=$days'),
-        headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
-      );
+      var url = '$kBaseUrl/analytics/gallery-stats';
+      final params = <String>[];
+      if (startDate != null) params.add('start_date=$startDate');
+      if (endDate != null) params.add('end_date=$endDate');
+      if (category != null && category.isNotEmpty) params.add('category=$category');
+      if (params.isNotEmpty) url += '?${params.join('&')}';
+      final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang});
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
 
-  static Future<Map<String, dynamic>?> getVideoPerformance({int days = 30}) async {
+  static Future<Map<String, dynamic>?> getVideoPerformance({String? startDate, String? endDate, String? category}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final lang = await _lang();
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/video-performance?days=$days'),
-        headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
-      );
+      var url = '$kBaseUrl/analytics/video-performance';
+      final params = <String>[];
+      if (startDate != null) params.add('start_date=$startDate');
+      if (endDate != null) params.add('end_date=$endDate');
+      if (category != null && category.isNotEmpty) params.add('category=$category');
+      if (params.isNotEmpty) url += '?${params.join('&')}';
+      final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang});
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;

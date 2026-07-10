@@ -900,14 +900,6 @@
   "listingPerfTitle": "İlanlarınızın PRO ile Performansı",
   "listingNoDataTitle": "Henüz veri yok",
   "listingNoDataDesc": "İlanlarınız swipe feed'de gösterime girince buradaki veriler dolmaya başlayacak.",
-  "listingDayFilterN": "Son {n} Gün",
-  "@listingDayFilterN": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "listingTotalViews": "Toplam Görüntülenme",
   "listingAvgCtr": "Ortalama Tıklanma",
   "listingVideoBeatsPhoto": "🎬 Videolu ilanlarınız, fotoğraflılara göre {x} kat daha fazla tıklanıyor.",

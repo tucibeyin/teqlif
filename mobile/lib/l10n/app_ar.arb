@@ -900,14 +900,6 @@
   "listingPerfTitle": "أداء إعلاناتك مع PRO",
   "listingNoDataTitle": "لا توجد بيانات بعد",
   "listingNoDataDesc": "ستظهر البيانات حين تُعرض إعلاناتك في الخلاصة.",
-  "listingDayFilterN": "آخر {n} يوماً",
-  "@listingDayFilterN": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "listingTotalViews": "إجمالي المشاهدات",
   "listingAvgCtr": "متوسط معدل النقر",
   "listingVideoBeatsPhoto": "🎬 إعلانات الفيديو تحصل على {x}× نقرات أكثر من الصور.",

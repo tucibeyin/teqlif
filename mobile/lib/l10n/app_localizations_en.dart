@@ -1928,11 +1928,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Data will appear once your listings are shown in the feed.';
 
   @override
-  String listingDayFilterN(int n) {
-    return 'Last $n Days';
-  }
-
-  @override
   String get listingTotalViews => 'Total Views';
 
   @override

@@ -304,13 +304,6 @@
       }
     }
   },
-  "@listingDayFilterN": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
   "@listingVideoBeatsPhoto": {
     "placeholders": {
       "x": {
@@ -1345,7 +1338,6 @@
   "listingPerfTitle": "PRO-эффективность ваших объявлений",
   "listingNoDataTitle": "Данных пока нет",
   "listingNoDataDesc": "Данные появятся, как только ваши объявления появятся в ленте.",
-  "listingDayFilterN": "Последние {n} дней",
   "listingTotalViews": "Всего просмотров",
   "listingAvgCtr": "Среднее Нажмите Оценить",
   "listingVideoBeatsPhoto": "🎬 Видеоролики получают на {x}× больше кликов, чем фотолистинги.",

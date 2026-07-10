@@ -3678,12 +3678,6 @@ abstract class AppLocalizations {
   /// **'İlanlarınız swipe feed\'de gösterime girince buradaki veriler dolmaya başlayacak.'**
   String get listingNoDataDesc;
 
-  /// No description provided for @listingDayFilterN.
-  ///
-  /// In tr, this message translates to:
-  /// **'Son {n} Gün'**
-  String listingDayFilterN(int n);
-
   /// No description provided for @listingTotalViews.
   ///
   /// In tr, this message translates to:

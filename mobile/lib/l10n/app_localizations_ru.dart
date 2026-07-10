@@ -1955,11 +1955,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Данные появятся, как только ваши объявления появятся в ленте.';
 
   @override
-  String listingDayFilterN(int n) {
-    return 'Последние $n дней';
-  }
-
-  @override
   String get listingTotalViews => 'Всего просмотров';
 
   @override

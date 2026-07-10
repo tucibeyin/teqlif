@@ -1869,7 +1869,9 @@ async def track_search(
 @router.get("/video-roi")
 async def video_roi(
     request: Request,
-    days: int = Query(default=30, ge=1, le=90),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1881,12 +1883,18 @@ async def video_roi(
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
-    result = await db.execute(
-        select(Listing.id, Listing.title, Listing.video_url, Listing.image_urls, Listing.image_url).where(
-            Listing.user_id == current_user.id,
-            Listing.is_deleted == False,  # noqa: E712
-        )
+    _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
+    _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
+    _ts_cond = (f"AND timestamp >= '{_sd.strftime('%Y-%m-%d %H:%M:%S')}' AND timestamp < '{_ed.strftime('%Y-%m-%d %H:%M:%S')}'"
+                if (_sd and _ed) else "AND timestamp >= now() - INTERVAL 30 DAY")
+
+    listing_q = select(Listing.id, Listing.title, Listing.video_url, Listing.image_urls, Listing.image_url).where(
+        Listing.user_id == current_user.id,
+        Listing.is_deleted == False,  # noqa: E712
     )
+    if category:
+        listing_q = listing_q.where(Listing.category == category)
+    result = await db.execute(listing_q)
     listings = result.fetchall()
     if not listings:
         return {"video": {}, "photo": {}, "by_listing": []}
@@ -1913,7 +1921,7 @@ async def video_roi(
                 if(impressions > 0, round(toFloat64(clicks) / impressions * 100, 2), 0)  AS ctr,
                 round(avgIf(dwell_time_ms, event_type IN ('impression','skip')), 0)       AS avg_dwell_ms
             FROM feed_analytics
-            WHERE timestamp >= now() - INTERVAL {days} DAY
+            WHERE 1=1 {_ts_cond}
               AND listing_id IN ({placeholders})
             GROUP BY content_type
         """)
@@ -1930,7 +1938,7 @@ async def video_roi(
                 countIf(event_type = 'click')                                             AS clicks,
                 if(impressions > 0, round(toFloat64(clicks) / impressions * 100, 2), 0)  AS ctr
             FROM feed_analytics
-            WHERE timestamp >= now() - INTERVAL {days} DAY
+            WHERE 1=1 {_ts_cond}
               AND listing_id IN ({placeholders})
             GROUP BY listing_id, content_type
             ORDER BY impressions DESC
@@ -1966,7 +1974,9 @@ async def video_roi(
 @router.get("/gallery-stats")
 async def gallery_stats(
     request: Request,
-    days: int = Query(default=30, ge=1, le=90),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1979,12 +1989,18 @@ async def gallery_stats(
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
-    result = await db.execute(
-        select(Listing.id, Listing.title, Listing.image_urls).where(
-            Listing.user_id == current_user.id,
-            Listing.is_deleted == False,  # noqa: E712
-        )
+    _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
+    _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
+    _ts_cond = (f"AND timestamp >= '{_sd.strftime('%Y-%m-%d %H:%M:%S')}' AND timestamp < '{_ed.strftime('%Y-%m-%d %H:%M:%S')}'"
+                if (_sd and _ed) else "AND timestamp >= now() - INTERVAL 30 DAY")
+
+    listing_q = select(Listing.id, Listing.title, Listing.image_urls).where(
+        Listing.user_id == current_user.id,
+        Listing.is_deleted == False,  # noqa: E712
     )
+    if category:
+        listing_q = listing_q.where(Listing.category == category)
+    result = await db.execute(listing_q)
     listings = result.fetchall()
     if not listings:
         return {"stats": []}
@@ -2013,7 +2029,7 @@ async def gallery_stats(
             WHERE item_type = 'listing'
               AND event_type = 'listing_photo_swipe'
               AND item_id IN ({ids_str})
-              AND timestamp >= now() - INTERVAL {days} DAY
+              {_ts_cond}
             GROUP BY item_id
             ORDER BY avg_swipe_depth DESC
             LIMIT 20
@@ -2045,7 +2061,9 @@ async def gallery_stats(
 @router.get("/video-performance")
 async def video_performance(
     request: Request,
-    days: int = Query(default=30, ge=1, le=90),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -2058,13 +2076,19 @@ async def video_performance(
     if not current_user.is_premium:
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
-    result = await db.execute(
-        select(Listing.id, Listing.title).where(
-            Listing.user_id == current_user.id,
-            Listing.is_deleted == False,  # noqa: E712
-            Listing.video_url.isnot(None),
-        )
+    _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
+    _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
+    _ts_cond = (f"AND timestamp >= '{_sd.strftime('%Y-%m-%d %H:%M:%S')}' AND timestamp < '{_ed.strftime('%Y-%m-%d %H:%M:%S')}'"
+                if (_sd and _ed) else "AND timestamp >= now() - INTERVAL 30 DAY")
+
+    listing_q = select(Listing.id, Listing.title).where(
+        Listing.user_id == current_user.id,
+        Listing.is_deleted == False,  # noqa: E712
+        Listing.video_url.isnot(None),
     )
+    if category:
+        listing_q = listing_q.where(Listing.category == category)
+    result = await db.execute(listing_q)
     listings = result.fetchall()
     if not listings:
         return {"stats": []}
@@ -2085,7 +2109,7 @@ async def video_performance(
             WHERE item_type = 'listing'
               AND event_type = 'listing_video_watch'
               AND item_id IN ({ids_str})
-              AND timestamp >= now() - INTERVAL {days} DAY
+              {_ts_cond}
             GROUP BY item_id
             ORDER BY avg_completion_pct DESC
             LIMIT 20

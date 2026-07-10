@@ -4,14 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/api.dart';
+import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
-
-// Basit bellek önbelleği: days → (timestamp, veri)
-final _roiCache = <int, (DateTime, Map<String, dynamic>)>{};
-final _videoPerfCache = <int, (DateTime, Map<String, dynamic>)>{};
-final _galleryCache = <int, (DateTime, Map<String, dynamic>)>{};
-const _cacheTtl = Duration(minutes: 5);
+import '../services/category_service.dart';
 
 class ListingAnalyticsScreen extends StatefulWidget {
   final bool isPremium;
@@ -27,7 +23,6 @@ class ListingAnalyticsScreen extends StatefulWidget {
 }
 
 class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
-  int _days = 30;
   bool _loading = true;
   bool _hasError = false;
   String? _selectedListingId;
@@ -40,6 +35,9 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = '';
+  String _categoryFilter = '';
+  DateTimeRange? _dateRange;
+  List<(String, String)>? _categories;
 
   List<_ListingMetric> get _filteredListings => _searchQuery.isEmpty
       ? _listings
@@ -56,19 +54,18 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_categories == null) {
+      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
+          .then((cats) { if (mounted) setState(() => _categories = cats); });
+    }
+  }
+
+  @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
-  }
-
-  Map<String, dynamic>? _fromCache<T>(Map<int, (DateTime, Map<String, dynamic>)> cache) {
-    final entry = cache[_days];
-    if (entry == null) return null;
-    if (DateTime.now().difference(entry.$1) > _cacheTtl) {
-      cache.remove(_days);
-      return null;
-    }
-    return entry.$2;
   }
 
   Future<void> _load() async {
@@ -77,24 +74,18 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
       _hasError = false;
     });
 
-    var roi = _fromCache(_roiCache);
-    var videoPerf = _fromCache(_videoPerfCache);
-    var gallery = _fromCache(_galleryCache);
+    final sd = _dateRange?.start.toIso8601String().substring(0, 10);
+    final ed = _dateRange?.end.toIso8601String().substring(0, 10);
+    final cat = _categoryFilter.isNotEmpty ? _categoryFilter : null;
 
-    if (roi == null || videoPerf == null || gallery == null) {
-      final results = await Future.wait([
-        roi == null ? AnalyticsService.getVideoRoi(days: _days) : Future.value(roi),
-        videoPerf == null ? AnalyticsService.getVideoPerformance(days: _days) : Future.value(videoPerf),
-        gallery == null ? AnalyticsService.getGalleryStats(days: _days) : Future.value(gallery),
-      ]);
-      roi = results[0];
-      videoPerf = results[1];
-      gallery = results[2];
-      final now = DateTime.now();
-      if (roi != null) _roiCache[_days] = (now, roi);
-      if (videoPerf != null) _videoPerfCache[_days] = (now, videoPerf);
-      if (gallery != null) _galleryCache[_days] = (now, gallery);
-    }
+    final results = await Future.wait([
+      AnalyticsService.getVideoRoi(startDate: sd, endDate: ed, category: cat),
+      AnalyticsService.getVideoPerformance(startDate: sd, endDate: ed, category: cat),
+      AnalyticsService.getGalleryStats(startDate: sd, endDate: ed, category: cat),
+    ]);
+    final roi = results[0];
+    final videoPerf = results[1];
+    final gallery = results[2];
 
     if (!mounted) return;
 
@@ -207,6 +198,145 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
     );
   }
 
+  String _fmtDate(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+
+  Widget _buildDateRangePicker(AppLocalizations l) {
+    final hasRange = _dateRange != null;
+    return InkWell(
+      onTap: () async {
+        final picked = await showDateRangePicker(
+          context: context,
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+          initialDateRange: _dateRange,
+          locale: Localizations.localeOf(context),
+        );
+        if (picked != null) {
+          setState(() => _dateRange = picked);
+          _load();
+        }
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: hasRange ? const Color(0xFF6366F1) : AppColors.border(context)),
+          borderRadius: BorderRadius.circular(8),
+          color: hasRange ? const Color(0xFF6366F1).withValues(alpha: 0.08) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 16,
+                color: hasRange ? const Color(0xFF6366F1) : AppColors.textSecondary(context)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                hasRange
+                    ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
+                    : l.filterSelectDate,
+                style: TextStyle(fontSize: 13,
+                    color: hasRange ? const Color(0xFF6366F1) : AppColors.textSecondary(context)),
+              ),
+            ),
+            if (hasRange)
+              GestureDetector(
+                onTap: () { setState(() => _dateRange = null); _load(); },
+                child: const Icon(Icons.close, size: 16, color: Color(0xFF6366F1)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(AppLocalizations l) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: l.searchHintTextListing,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() {
+                          _searchQuery = '';
+                          if (_selectedListingId != null &&
+                              !_filteredListings.any((m) => m.id == _selectedListingId)) {
+                            _selectedListingId = null;
+                          }
+                        });
+                      },
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onChanged: (v) {
+              setState(() {
+                _searchQuery = v;
+                if (_selectedListingId != null &&
+                    !_filteredListings.any((m) => m.id == _selectedListingId)) {
+                  _selectedListingId = null;
+                }
+              });
+            },
+          ),
+        ),
+        if (_categories != null && _categories!.isNotEmpty) ...[
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(l.allCategories, style: const TextStyle(fontSize: 12)),
+                    selected: _categoryFilter.isEmpty,
+                    onSelected: (_) {
+                      if (_categoryFilter.isNotEmpty) {
+                        setState(() => _categoryFilter = '');
+                        _load();
+                      }
+                    },
+                    selectedColor: kPrimary.withValues(alpha: 0.15),
+                    checkmarkColor: kPrimary,
+                  ),
+                ),
+                ..._categories!.map((cat) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
+                    selected: _categoryFilter == cat.$1,
+                    onSelected: (_) {
+                      final newVal = _categoryFilter == cat.$1 ? '' : cat.$1;
+                      setState(() => _categoryFilter = newVal);
+                      _load();
+                    },
+                    selectedColor: kPrimary.withValues(alpha: 0.15),
+                    checkmarkColor: kPrimary,
+                  ),
+                )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
+        _buildDateRangePicker(l),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
   Widget _buildContent(AppLocalizations l) {
     final _ListingMetric? selectedItem = _selectedListingId == null
         ? null
@@ -231,53 +361,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
-          _DayFilter(
-            days: _days,
-            l: l,
-            onChanged: (d) {
-              setState(() => _days = d);
-              _load();
-            },
-          ),
-          const SizedBox(height: 12),
-
-          if (_listings.isNotEmpty) ...[
-            TextField(
-              controller: _searchCtrl,
-              decoration: InputDecoration(
-                hintText: l.searchHintTextListing,
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() {
-                            _searchQuery = '';
-                            if (_selectedListingId != null &&
-                                !_filteredListings.any((m) => m.id == _selectedListingId)) {
-                              _selectedListingId = null;
-                            }
-                          });
-                        },
-                      )
-                    : null,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onChanged: (v) {
-                setState(() {
-                  _searchQuery = v;
-                  if (_selectedListingId != null &&
-                      !_filteredListings.any((m) => m.id == _selectedListingId)) {
-                    _selectedListingId = null;
-                  }
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
+          _buildFilterBar(l),
 
           if (_listings.isNotEmpty) ...[
             // Horizontal Carousel for Selection
@@ -706,65 +790,6 @@ class _ListingMetric {
 }
 
 // ── Reusable Widgets ──────────────────────────────────────────────────────────
-
-class _DayFilter extends StatelessWidget {
-  final int days;
-  final AppLocalizations l;
-  final ValueChanged<int> onChanged;
-  const _DayFilter({
-    required this.days,
-    required this.l,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [7, 30].map((d) {
-        final active = days == d;
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: d == 7 ? 6 : 0,
-              left: d == 30 ? 6 : 0,
-            ),
-            child: GestureDetector(
-              onTap: () {
-                if (days != d) onChanged(d);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: active
-                      ? const Color(0xFF6366F1)
-                      : AppColors.card(context),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: active
-                        ? const Color(0xFF6366F1)
-                        : AppColors.border(context),
-                  ),
-                ),
-                child: Text(
-                  l.listingDayFilterN(d),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: active
-                        ? Colors.white
-                        : AppColors.textPrimary(context),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
 
 class _SummaryTile extends StatelessWidget {
   final String label;
