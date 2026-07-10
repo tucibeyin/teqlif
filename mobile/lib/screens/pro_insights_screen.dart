@@ -4,6 +4,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
+import '../services/category_service.dart';
 
 class ProInsightsScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -22,10 +23,40 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
 
   static const int _kMaxVisible = 5;
 
+  // ── Filtre state ─────────────────────────────────────────────────────────
+  final TextEditingController _hotLeadsSearchCtrl = TextEditingController();
+  String _hotLeadsSearch = '';
+  String _hotLeadsCategory = '';
+
+  final TextEditingController _priceIntelSearchCtrl = TextEditingController();
+  String _priceIntelSearch = '';
+  String _priceIntelCategory = '';
+  String _priceIntelSignal = '';
+
+  List<(String, String)>? _categoryLabels;
+
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_categoryLabels == null) {
+      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
+          .then((cats) {
+        if (mounted) setState(() => _categoryLabels = cats);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _hotLeadsSearchCtrl.dispose();
+    _priceIntelSearchCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -89,14 +120,133 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
     );
   }
 
+  // ── Filtre yardımcıları ──────────────────────────────────────────────────
+  List<Map<String, dynamic>> _applyHotLeadsFilter(List<Map<String, dynamic>> raw) {
+    var r = raw;
+    if (_hotLeadsSearch.isNotEmpty) {
+      final q = _hotLeadsSearch.toLowerCase();
+      r = r.where((m) => (m['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+    }
+    if (_hotLeadsCategory.isNotEmpty) {
+      r = r.where((m) => m['category'] == _hotLeadsCategory).toList();
+    }
+    return r;
+  }
+
+  List<Map<String, dynamic>> _applyPriceIntelFilter(List<Map<String, dynamic>> raw) {
+    var r = raw;
+    if (_priceIntelSearch.isNotEmpty) {
+      final q = _priceIntelSearch.toLowerCase();
+      r = r.where((m) => (m['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+    }
+    if (_priceIntelCategory.isNotEmpty) {
+      r = r.where((m) => m['category'] == _priceIntelCategory).toList();
+    }
+    if (_priceIntelSignal.isNotEmpty) {
+      r = r.where((m) => m['signal'] == _priceIntelSignal).toList();
+    }
+    return r;
+  }
+
+  List<(String, String)> _categoriesFor(List<Map<String, dynamic>> items) {
+    final keys = items
+        .map((m) => m['category'] as String?)
+        .whereType<String>()
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return keys.map((k) {
+      final label = _categoryLabels?.firstWhere(
+            (p) => p.$1 == k,
+            orElse: () => (k, k),
+          ).$2 ?? k;
+      return (k, label);
+    }).toList();
+  }
+
+  Widget _filterBar({
+    required TextEditingController ctrl,
+    required String searchQuery,
+    required String selectedCategory,
+    required List<(String, String)> categories,
+    required ValueChanged<String> onSearchChanged,
+    required ValueChanged<String> onCategoryChanged,
+    required AppLocalizations l,
+    List<Widget> extraChipRows = const [],
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: ctrl,
+          decoration: InputDecoration(
+            hintText: l.searchHintTextListing,
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () { ctrl.clear(); onSearchChanged(''); },
+                  )
+                : null,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          onChanged: onSearchChanged,
+        ),
+        if (categories.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 32,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _filterChip(l.allCategories, selectedCategory.isEmpty,
+                    () => onCategoryChanged('')),
+                ...categories.map((cat) => _filterChip(
+                    cat.$2,
+                    selectedCategory == cat.$1,
+                    () => onCategoryChanged(selectedCategory == cat.$1 ? '' : cat.$1))),
+              ],
+            ),
+          ),
+        ],
+        ...extraChipRows,
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _filterChip(String label, bool selected, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: FilterChip(
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        selected: selected,
+        onSelected: (_) => onTap(),
+        selectedColor: kPrimary.withValues(alpha: 0.15),
+        checkmarkColor: kPrimary,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      ),
+    );
+  }
+
   Widget _buildBody(AppLocalizations l) {
-    final kpis        = (_data?['kpis']        as Map<String, dynamic>?) ?? {};
-    final funnel      = (_data?['funnel']       as Map<String, dynamic>?) ?? {};
-    final hotLeads    = (_data?['hot_leads']    as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final priceIntel  = (_data?['price_intel']  as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final streamStats = (_data?['stream_stats'] as Map<String, dynamic>?) ?? {};
-    final peakHours   = (_data?['peak_hours']   as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final tips        = (_data?['tips']         as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final kpis           = (_data?['kpis']        as Map<String, dynamic>?) ?? {};
+    final funnel         = (_data?['funnel']       as Map<String, dynamic>?) ?? {};
+    final allHotLeads    = (_data?['hot_leads']    as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final allPriceIntel  = (_data?['price_intel']  as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final streamStats    = (_data?['stream_stats'] as Map<String, dynamic>?) ?? {};
+    final peakHours      = (_data?['peak_hours']   as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final tips           = (_data?['tips']         as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+    final hotLeads   = _applyHotLeadsFilter(allHotLeads);
+    final priceIntel = _applyPriceIntelFilter(allPriceIntel);
+
+    final bool hlFiltered = _hotLeadsSearch.isNotEmpty || _hotLeadsCategory.isNotEmpty;
+    final bool piFiltered = _priceIntelSearch.isNotEmpty || _priceIntelCategory.isNotEmpty || _priceIntelSignal.isNotEmpty;
 
     return ListView(shrinkWrap: widget.isEmbedded, physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
@@ -115,33 +265,86 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
           const SizedBox(height: 20),
         ],
 
-        if (hotLeads.isNotEmpty) ...[
+        if (allHotLeads.isNotEmpty) ...[
           _SectionLabel(l.proSectionHotLeads),
           _SubLabel(l.proHotLeadsDesc),
-          ..._limited('hotLeads', hotLeads).map((lead) => _HotLeadRow(lead: lead, l: l)),
-          _ShowMoreBtn(
-            total: hotLeads.length,
-            visible: _visibleCount('hotLeads', hotLeads.length),
-            sectionKey: 'hotLeads',
-            showAll: _showAll['hotLeads'] ?? false,
-            onToggle: () => setState(() => _showAll['hotLeads'] = !(_showAll['hotLeads'] ?? false)),
+          _filterBar(
+            ctrl: _hotLeadsSearchCtrl,
+            searchQuery: _hotLeadsSearch,
+            selectedCategory: _hotLeadsCategory,
+            categories: _categoriesFor(allHotLeads),
+            onSearchChanged: (v) => setState(() { _hotLeadsSearch = v; _showAll['hotLeads'] = false; }),
+            onCategoryChanged: (v) => setState(() { _hotLeadsCategory = v; _showAll['hotLeads'] = false; }),
             l: l,
           ),
+          if (hlFiltered && hotLeads.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(l.searchNoResults,
+                  style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13)),
+            )
+          else ...[
+            ..._limited('hotLeads', hotLeads).map((lead) => _HotLeadRow(lead: lead, l: l, categoryLabels: _categoryLabels)),
+            _ShowMoreBtn(
+              total: hotLeads.length,
+              visible: _visibleCount('hotLeads', hotLeads.length),
+              sectionKey: 'hotLeads',
+              showAll: _showAll['hotLeads'] ?? false,
+              onToggle: () => setState(() => _showAll['hotLeads'] = !(_showAll['hotLeads'] ?? false)),
+              l: l,
+            ),
+          ],
           const SizedBox(height: 20),
         ],
 
-        if (priceIntel.isNotEmpty) ...[
+        if (allPriceIntel.isNotEmpty) ...[
           _SectionLabel(l.proSectionPriceIntel),
           _SubLabel(l.proPriceIntelDesc),
-          ..._limited('priceIntel', priceIntel).map((p) => _PriceIntelRow(item: p, l: l)),
-          _ShowMoreBtn(
-            total: priceIntel.length,
-            visible: _visibleCount('priceIntel', priceIntel.length),
-            sectionKey: 'priceIntel',
-            showAll: _showAll['priceIntel'] ?? false,
-            onToggle: () => setState(() => _showAll['priceIntel'] = !(_showAll['priceIntel'] ?? false)),
+          _filterBar(
+            ctrl: _priceIntelSearchCtrl,
+            searchQuery: _priceIntelSearch,
+            selectedCategory: _priceIntelCategory,
+            categories: _categoriesFor(allPriceIntel),
+            onSearchChanged: (v) => setState(() { _priceIntelSearch = v; _showAll['priceIntel'] = false; }),
+            onCategoryChanged: (v) => setState(() { _priceIntelCategory = v; _showAll['priceIntel'] = false; }),
             l: l,
+            extraChipRows: [
+              const SizedBox(height: 6),
+              SizedBox(
+                height: 32,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _filterChip(l.profileFilterAll, _priceIntelSignal.isEmpty,
+                        () => setState(() { _priceIntelSignal = ''; _showAll['priceIntel'] = false; })),
+                    _filterChip(l.priceSignalExpensive, _priceIntelSignal == 'pahalı',
+                        () => setState(() { _priceIntelSignal = _priceIntelSignal == 'pahalı' ? '' : 'pahalı'; _showAll['priceIntel'] = false; })),
+                    _filterChip(l.priceSignalCheap, _priceIntelSignal == 'ucuz',
+                        () => setState(() { _priceIntelSignal = _priceIntelSignal == 'ucuz' ? '' : 'ucuz'; _showAll['priceIntel'] = false; })),
+                    _filterChip(l.priceSignalFair, _priceIntelSignal == 'uygun',
+                        () => setState(() { _priceIntelSignal = _priceIntelSignal == 'uygun' ? '' : 'uygun'; _showAll['priceIntel'] = false; })),
+                  ],
+                ),
+              ),
+            ],
           ),
+          if (piFiltered && priceIntel.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(l.searchNoResults,
+                  style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13)),
+            )
+          else ...[
+            ..._limited('priceIntel', priceIntel).map((p) => _PriceIntelRow(item: p, l: l, categoryLabels: _categoryLabels)),
+            _ShowMoreBtn(
+              total: priceIntel.length,
+              visible: _visibleCount('priceIntel', priceIntel.length),
+              sectionKey: 'priceIntel',
+              showAll: _showAll['priceIntel'] ?? false,
+              onToggle: () => setState(() => _showAll['priceIntel'] = !(_showAll['priceIntel'] ?? false)),
+              l: l,
+            ),
+          ],
           const SizedBox(height: 20),
         ],
 
@@ -495,7 +698,8 @@ class _TipCard extends StatelessWidget {
 class _HotLeadRow extends StatelessWidget {
   final Map<String, dynamic> lead;
   final AppLocalizations l;
-  const _HotLeadRow({required this.lead, required this.l});
+  final List<(String, String)>? categoryLabels;
+  const _HotLeadRow({required this.lead, required this.l, this.categoryLabels});
 
   @override
   Widget build(BuildContext context) {
@@ -528,7 +732,7 @@ class _HotLeadRow extends StatelessWidget {
               children: [
                 Text(lead['title'] as String? ?? '', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text('${lead['category']}  •  ${price != null ? '${NumberFormat('#,##0', 'tr_TR').format(price)} ₺' : '—'}',
+                Text('${categoryLabels?.firstWhere((p) => p.$1 == lead['category'], orElse: () => (lead['category'] as String? ?? '', lead['category'] as String? ?? '')).$2 ?? lead['category']}  •  ${price != null ? '${NumberFormat('#,##0', 'tr_TR').format(price)} ₺' : '—'}',
                     style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
               ],
             ),
@@ -567,7 +771,8 @@ class _Chip extends StatelessWidget {
 class _PriceIntelRow extends StatelessWidget {
   final Map<String, dynamic> item;
   final AppLocalizations l;
-  const _PriceIntelRow({required this.item, required this.l});
+  final List<(String, String)>? categoryLabels;
+  const _PriceIntelRow({required this.item, required this.l, this.categoryLabels});
 
   @override
   Widget build(BuildContext context) {
