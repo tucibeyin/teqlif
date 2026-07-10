@@ -540,7 +540,7 @@
                     <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:2rem;">Kullanıcıların mobil cihazlarında alacağı güncelleme bildirimlerini yönetin. <b>Zorunlu Sürüm (Min Version)</b> altındaki kullanıcılar uygulamayı açamaz. <b>Önerilen Sürüm (Latest Version)</b> altındaki kullanıcılar uygulamayı açtığında atlanabilir bir uyarı görür.</p>
                     
                     <h3 style="color:var(--admin-primary);margin-bottom:1rem;">🍏 iOS (App Store)</h3>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
                         <div>
                             <label>Zorunlu Sürüm (Min)</label>
                             <input type="text" id="configIosMin" placeholder="Örn: 1.0.0">
@@ -550,9 +550,13 @@
                             <input type="text" id="configIosLatest" placeholder="Örn: 1.0.5">
                         </div>
                     </div>
+                    <div style="margin-bottom:2rem;">
+                        <label>App Store URL</label>
+                        <input type="text" id="configIosStoreUrl" placeholder="https://apps.apple.com/tr/app/teqlif/id...">
+                    </div>
 
                     <h3 style="color:#38bdf8;margin-bottom:1rem;">🤖 Android (Play Store)</h3>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
                         <div>
                             <label>Zorunlu Sürüm (Min)</label>
                             <input type="text" id="configAndroidMin" placeholder="Örn: 1.0.0">
@@ -561,6 +565,10 @@
                             <label>Önerilen Sürüm (Latest)</label>
                             <input type="text" id="configAndroidLatest" placeholder="Örn: 1.0.5">
                         </div>
+                    </div>
+                    <div style="margin-bottom:2rem;">
+                        <label>Play Store URL</label>
+                        <input type="text" id="configAndroidStoreUrl" placeholder="https://play.google.com/store/apps/details?id=...">
                     </div>
 
                     <button id="btnSaveConfig" style="background:var(--admin-primary);margin-top:1rem;">💾 Değişiklikleri Kaydet</button>
@@ -636,6 +644,6 @@
         </div>
     </div>
 
-    <script src="/static/js/admin-page.js?v=14"></script>
+    <script src="/static/js/admin-page.js?v=15"></script>
 </body>
 </html>

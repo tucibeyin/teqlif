@@ -634,8 +634,10 @@ async function loadConfig() {
         
         document.getElementById('configIosMin').value = data.ios.min_version || '';
         document.getElementById('configIosLatest').value = data.ios.latest_version || '';
+        document.getElementById('configIosStoreUrl').value = data.ios.store_url || '';
         document.getElementById('configAndroidMin').value = data.android.min_version || '';
         document.getElementById('configAndroidLatest').value = data.android.latest_version || '';
+        document.getElementById('configAndroidStoreUrl').value = data.android.store_url || '';
         
         alert('Ayarlar yüklendi');
     } catch (e) {
@@ -647,8 +649,10 @@ async function saveConfig() {
     const payload = {
         ios_min_version: document.getElementById('configIosMin').value.trim(),
         ios_latest_version: document.getElementById('configIosLatest').value.trim(),
+        ios_store_url: document.getElementById('configIosStoreUrl').value.trim(),
         android_min_version: document.getElementById('configAndroidMin').value.trim(),
-        android_latest_version: document.getElementById('configAndroidLatest').value.trim()
+        android_latest_version: document.getElementById('configAndroidLatest').value.trim(),
+        android_store_url: document.getElementById('configAndroidStoreUrl').value.trim(),
     };
     
     try {
