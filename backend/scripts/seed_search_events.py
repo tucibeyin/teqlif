@@ -106,12 +106,12 @@ async def seed(ch):
                 user_id = random.randint(1, 20) if random.random() < 0.8 else None
 
                 rows.append([
-                    ts.strftime("%Y-%m-%d %H:%M:%S"),  # timestamp
-                    user_id,                            # user_id (nullable)
-                    query_str,                          # query
-                    cat,                                # category
-                    result_count,                       # result_count
-                    intent,                             # intent
+                    ts.replace(tzinfo=None),  # timestamp — naive datetime (UTC)
+                    user_id,                  # user_id (nullable)
+                    query_str,                # query
+                    cat,                      # category
+                    result_count,             # result_count
+                    intent,                   # intent
                 ])
 
     # clickhouse_connect'in insert() metodu: (tablo, veri, sütun_isimleri)
