@@ -2445,7 +2445,22 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
   }
 
   void _onCountChanged() {
-    setState(() {}); // Recalculate
+    final parsed = int.tryParse(_countCtrl.text);
+    if (parsed != null) {
+      final maxAllowed = widget.maxAudience < widget.perBlastCap
+          ? widget.maxAudience
+          : widget.perBlastCap;
+      final clamped = parsed.clamp(1, maxAllowed);
+      if (clamped != parsed) {
+        final s = clamped.toString();
+        _countCtrl.value = TextEditingValue(
+          text: s,
+          selection: TextSelection.collapsed(offset: s.length),
+        );
+        return;
+      }
+    }
+    setState(() {});
   }
 
   @override
@@ -2501,6 +2516,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
               child: TextField(
                 controller: _countCtrl,
                 keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: AppLocalizations.of(context)!.audiencePersonCountHint,
