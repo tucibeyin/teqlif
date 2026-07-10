@@ -383,6 +383,7 @@ class _ProStatusCard extends StatelessWidget {
           Container(
             width: 48,
             height: 48,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
@@ -475,6 +476,7 @@ class _UpgradeBanner extends StatelessWidget {
           Container(
             width: 48,
             height: 48,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
@@ -557,6 +559,7 @@ class _ToolCard extends StatelessWidget {
             Container(
               width: 44,
               height: 44,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: iconColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(11),
@@ -886,9 +889,12 @@ class _CreditsSummaryCard extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  Text(
-                                    item.titleBuilder(l),
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                                  Flexible(
+                                    child: Text(
+                                      item.titleBuilder(l),
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   const SizedBox(width: 4),
                                   Icon(Icons.info_outline, size: 14, color: AppColors.textSecondary(context)),
