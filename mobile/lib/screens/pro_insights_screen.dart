@@ -283,17 +283,8 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
               child: Text(l.searchNoResults,
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13)),
             )
-          else ...[
-            ..._limited('hotLeads', hotLeads).map((lead) => _HotLeadRow(lead: lead, l: l, categoryLabels: _categoryLabels)),
-            _ShowMoreBtn(
-              total: hotLeads.length,
-              visible: _visibleCount('hotLeads', hotLeads.length),
-              sectionKey: 'hotLeads',
-              showAll: _showAll['hotLeads'] ?? false,
-              onToggle: () => setState(() => _showAll['hotLeads'] = !(_showAll['hotLeads'] ?? false)),
-              l: l,
-            ),
-          ],
+          else
+            _buildHotLeadsCarousel(hotLeads, l),
           const SizedBox(height: 20),
         ],
 
@@ -334,17 +325,8 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
               child: Text(l.searchNoResults,
                   style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13)),
             )
-          else ...[
-            ..._limited('priceIntel', priceIntel).map((p) => _PriceIntelRow(item: p, l: l, categoryLabels: _categoryLabels)),
-            _ShowMoreBtn(
-              total: priceIntel.length,
-              visible: _visibleCount('priceIntel', priceIntel.length),
-              sectionKey: 'priceIntel',
-              showAll: _showAll['priceIntel'] ?? false,
-              onToggle: () => setState(() => _showAll['priceIntel'] = !(_showAll['priceIntel'] ?? false)),
-              l: l,
-            ),
-          ],
+          else
+            _buildPriceIntelCarousel(priceIntel, l),
           const SizedBox(height: 20),
         ],
 
@@ -384,6 +366,30 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
 
   int _visibleCount(String key, int total) =>
       _showAll[key] == true ? total : total.clamp(0, _kMaxVisible);
+
+  Widget _buildHotLeadsCarousel(List<Map<String, dynamic>> items, AppLocalizations l) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 140,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        itemBuilder: (ctx, i) => _HotLeadCard(lead: items[i], l: l, categoryLabels: _categoryLabels),
+      ),
+    );
+  }
+
+  Widget _buildPriceIntelCarousel(List<Map<String, dynamic>> items, AppLocalizations l) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 140,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        itemBuilder: (ctx, i) => _PriceIntelCard(item: items[i], l: l, categoryLabels: _categoryLabels),
+      ),
+    );
+  }
 
   List<Widget> _buildPeakBars(List<Map<String, dynamic>> hours, AppLocalizations l) {
     final maxCount = hours.map((h) => (h['count'] as num?)?.toInt() ?? 0).reduce((a, b) => a > b ? a : b);
@@ -693,7 +699,167 @@ class _TipCard extends StatelessWidget {
   }
 }
 
-// ── Sıcak Talep ─────────────────────────────────────────────────────────────
+// ── Sıcak Talep Carousel Kartı ───────────────────────────────────────────────
+
+class _HotLeadCard extends StatelessWidget {
+  final Map<String, dynamic> lead;
+  final AppLocalizations l;
+  final List<(String, String)>? categoryLabels;
+  const _HotLeadCard({required this.lead, required this.l, this.categoryLabels});
+
+  @override
+  Widget build(BuildContext context) {
+    final views = (lead['views_30d'] as num?)?.toInt() ?? 0;
+    final hes   = (lead['hesitations_30d'] as num?)?.toInt() ?? 0;
+    final heat  = (lead['heat_score'] as num?)?.toInt() ?? 0;
+    final price = (lead['price'] as num?)?.toDouble();
+    final catKey = lead['category'] as String? ?? '';
+    final catLabel = categoryLabels?.firstWhere(
+          (p) => p.$1 == catKey, orElse: () => (catKey, catKey)).$2 ?? catKey;
+    final heatColor = heat > 15
+        ? const Color(0xFFEF4444)
+        : heat > 5 ? const Color(0xFFF59E0B) : const Color(0xFF22C55E);
+
+    return Container(
+      width: 170,
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: heat > 10
+              ? const Color(0xFFF59E0B).withValues(alpha: 0.5)
+              : AppColors.border(context),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8, height: 8,
+                decoration: BoxDecoration(color: heatColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(catLabel,
+                    style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context)),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              if (price != null)
+                Text('${NumberFormat('#,##0', 'tr_TR').format(price)} ₺',
+                    style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            lead['title'] as String? ?? '',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(child: _Chip(l.hotLeadViewed(views), const Color(0xFF3B82F6))),
+              const SizedBox(width: 4),
+              Expanded(child: _Chip(l.hotLeadHesitated(hes), const Color(0xFFF59E0B))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Fiyat Zekası Carousel Kartı ───────────────────────────────────────────────
+
+class _PriceIntelCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final AppLocalizations l;
+  final List<(String, String)>? categoryLabels;
+  const _PriceIntelCard({required this.item, required this.l, this.categoryLabels});
+
+  @override
+  Widget build(BuildContext context) {
+    final yourPrice = (item['your_price'] as num?)?.toDouble() ?? 0;
+    final marketAvg = (item['market_avg'] as num?)?.toDouble() ?? 0;
+    final diffPct   = (item['diff_pct'] as num?)?.toDouble() ?? 0;
+    final signal    = item['signal'] as String? ?? 'uygun';
+
+    final sigColor = signal == 'pahalı' ? const Color(0xFFEF4444)
+        : signal == 'ucuz' ? const Color(0xFF22C55E)
+        : const Color(0xFF3B82F6);
+    final sigLabel = signal == 'pahalı' ? l.priceSignalExpensive
+        : signal == 'ucuz' ? l.priceSignalCheap
+        : l.priceSignalFair;
+
+    return Container(
+      width: 170,
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  item['title'] as String? ?? '',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)),
+                  maxLines: 2, overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: sigColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(sigLabel,
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: sigColor)),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(children: [
+                Text('${NumberFormat('#,##0', 'tr_TR').format(yourPrice)} ₺',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sigColor)),
+                Text(l.priceYours,
+                    style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
+              ]),
+              Column(children: [
+                Text('${NumberFormat('#,##0', 'tr_TR').format(marketAvg)} ₺',
+                    style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context))),
+                Text(l.priceMarketAvg,
+                    style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
+              ]),
+              Column(children: [
+                Text('${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sigColor)),
+                Text(l.priceDiff,
+                    style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
+              ]),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Sıcak Talep (eski dikey satır - geriye dönük uyumluluk için) ─────────────
 
 class _HotLeadRow extends StatelessWidget {
   final Map<String, dynamic> lead;
