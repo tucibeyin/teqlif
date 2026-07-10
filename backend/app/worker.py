@@ -1478,8 +1478,8 @@ async def compute_trending_categories_task(ctx: dict) -> None:
                 SELECT r.category
                 FROM recent r
                 LEFT JOIN prev p ON p.category = r.category
-                WHERE r.cnt >= 2
-                  AND (p.cnt IS NULL OR r.cnt > p.cnt * 1.3)
+                WHERE r.cnt >= 1
+                  AND (p.cnt IS NULL OR r.cnt > p.cnt * 1.1)
             """))
             trending = [row[0] for row in rows.fetchall()]
 
