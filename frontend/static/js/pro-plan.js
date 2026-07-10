@@ -42,7 +42,7 @@
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+36 ekstra kredi + 2× alıcı kapasitesi · max ₺3.600/yıl tasarruf';
 
             /* tablo: reactivation */
-            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 60 ücretsiz / yıl';
+            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 60 adet / yıl';
             document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺600/yıl';
             document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '60 reaktivasyon × 10 TL<br>= 600 TL tasarruf';
 
@@ -85,7 +85,7 @@
             document.querySelector('tr[data-key="blast"] .val-desc').innerHTML = '+3 ekstra kredi + 2× alıcı kapasitesi · max ₺300/ay tasarruf';
 
             /* tablo: reactivation */
-            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 5 ücretsiz / ay';
+            document.querySelector('tr[data-key="reactivation"] .td-pro span').textContent = '⚡ 5 adet / ay';
             document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺50/ay';
             document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '5 reaktivasyon × 10 TL<br>= 50 TL tasarruf';
 
