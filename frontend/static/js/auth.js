@@ -26,10 +26,24 @@ const Auth = (() => {
         return _memToken;
     }
 
+    const _USER_TTL_MS = 24 * 60 * 60 * 1000; // 24 saat
+
+    function saveUser(user) {
+        try { localStorage.setItem(USER_KEY, JSON.stringify({ _d: Date.now(), u: user })); } catch (_) {}
+    }
+
     function getUser() {
         try {
-            const u = localStorage.getItem(USER_KEY);
-            return u && u !== 'undefined' ? JSON.parse(u) : null;
+            const raw = localStorage.getItem(USER_KEY);
+            if (!raw || raw === 'undefined') return null;
+            const parsed = JSON.parse(raw);
+            // Eski format (TTL sarması olmayan düz obje) — geçerliyse döndür, sil
+            if (!parsed._d) return parsed;
+            if (Date.now() - parsed._d > _USER_TTL_MS) {
+                localStorage.removeItem(USER_KEY);
+                return null;
+            }
+            return parsed.u;
         } catch (err) {
             console.warn('[Auth] getUser JSON parse hatası:', err);
             return null;
@@ -38,7 +52,7 @@ const Auth = (() => {
 
     function _save(data) {
         _memToken = data.access_token || null;
-        if (data.user) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        if (data.user) saveUser(data.user);
     }
 
     async function logout() {
@@ -132,7 +146,7 @@ const Auth = (() => {
         return _initCtxPromise;
     }
 
-    return { getToken, getUser, login, register, verify, forgotPassword, resetPassword, logout, tryRefresh, me, getInitContext };
+    return { getToken, getUser, saveUser, login, register, verify, forgotPassword, resetPassword, logout, tryRefresh, me, getInitContext };
 })();
 
 // Sayfa yüklenince token bellekte yoksa HttpOnly cookie üzerinden restore et.

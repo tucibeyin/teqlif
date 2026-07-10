@@ -53,6 +53,8 @@ async def publish_chat(stream_id: int, payload: dict) -> None:
 
 
 # ── Viewer count ─────────────────────────────────────────────────────────────
+_VIEWER_TTL = 12 * 3600  # 12 saat — yayın crash'lansa bile key otomatik silinir
+
 async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> None:
     """Redis'teki izleyici sayısını günceller ve tüm istemcilere yayınlar."""
     try:
@@ -61,15 +63,17 @@ async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> Non
         peak_key = f"live:peak_viewers:{room_name}"
         if delta > 0:
             count = await redis.incr(key)
+            await redis.expire(key, _VIEWER_TTL)
             peak_raw = await redis.get(peak_key)
             current_peak = int(peak_raw) if peak_raw else 0
             if count > current_peak:
-                await redis.set(peak_key, count)
+                await redis.setex(peak_key, _VIEWER_TTL, count)
         else:
             count = await redis.decr(key)
             if count < 0:
                 await redis.set(key, 0)
                 count = 0
+            await redis.expire(key, _VIEWER_TTL)
         await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
     except Exception:
         logger.error(

@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'retargeting_screen.dart';
 import '../config/api.dart';
 import '../services/analytics_service.dart';
+import '../services/image_cache_manager.dart';
 import '../services/share_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
@@ -1694,7 +1695,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           children: [
                             Expanded(
                               child: photo != null
-                                ? CachedNetworkImage(imageUrl: photo,
+                                ? CachedNetworkImage(cacheManager: TeqlifCacheManager(), imageUrl: photo,
  fit: BoxFit.cover, width: double.infinity)
                                 : Container(color: AppColors.surfaceVariant(context)),
                             ),
@@ -1927,6 +1928,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 onDoubleTap: _triggerHeartAnimation,
                 child: CachedNetworkImage(
                   imageUrl: _images[imgIdx],
+                  cacheManager: TeqlifCacheManager(),
                   fit: BoxFit.cover,
                   width: double.infinity,
                   placeholder: (_, _) => const ShimmerBox(),
@@ -2190,6 +2192,7 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
           child: Center(
             child: CachedNetworkImage(
               imageUrl: widget.images[i],
+              cacheManager: TeqlifCacheManager(),
               fit: BoxFit.contain,
               placeholder: (_, _) => const Center(
                   child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2)),

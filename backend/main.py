@@ -584,11 +584,18 @@ async def apple_app_site_association():
     return Response(content=content, media_type="application/json")
 
 
+_SITEMAP_CACHE_KEY = "cache:sitemap_xml"
+_SITEMAP_TTL = 3600  # 1 saat
+
 @app.get("/sitemap.xml", include_in_schema=False)
 async def sitemap_xml():
+    from app.utils.redis_client import get_redis
+    redis = await get_redis()
+    cached = await redis.get(_SITEMAP_CACHE_KEY)
+    if cached:
+        return Response(content=cached, media_type="application/xml")
+
     from app.models.listing import Listing
-    from app.database import get_db
-    from sqlalchemy.ext.asyncio import AsyncSession
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Listing.id, Listing.created_at)
@@ -615,6 +622,7 @@ async def sitemap_xml():
         + "\n".join(urls)
         + "\n</urlset>"
     )
+    await redis.setex(_SITEMAP_CACHE_KEY, _SITEMAP_TTL, xml)
     return Response(content=xml, media_type="application/xml")
 
 

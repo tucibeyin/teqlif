@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 _BUDGET_KEY = "ad_campaign_budget:{}"
 _CPC_KEY = "ad_campaign_cpc:{}"
+_CAMPAIGN_TTL = 48 * 3600  # 48 saat — kampanya silinse bile key otomatik temizlenir
 
 # Lua script: atomik check-and-decrement (TUCi, integer).
 # Döndürdüğü değer:
@@ -67,8 +68,8 @@ async def load_active_campaigns_to_redis() -> int:
     pipe = redis.pipeline()
     for c in campaigns:
         remaining = max(0, c.total_budget - c.spent_budget)
-        pipe.set(_BUDGET_KEY.format(c.id), str(remaining))
-        pipe.set(_CPC_KEY.format(c.id), str(c.cpc_bid))
+        pipe.setex(_BUDGET_KEY.format(c.id), _CAMPAIGN_TTL, str(remaining))
+        pipe.setex(_CPC_KEY.format(c.id), _CAMPAIGN_TTL, str(c.cpc_bid))
     await pipe.execute()
 
     logger.info("[AdService] %d kampanya Redis'e yüklendi.", len(campaigns))
@@ -92,8 +93,8 @@ async def _reload_campaign_to_redis(campaign_id: int) -> Optional[int]:
     remaining = max(0, campaign.total_budget - campaign.spent_budget)
     redis = await get_redis()
     pipe = redis.pipeline()
-    pipe.set(_BUDGET_KEY.format(campaign_id), str(remaining))
-    pipe.set(_CPC_KEY.format(campaign_id), str(campaign.cpc_bid))
+    pipe.setex(_BUDGET_KEY.format(campaign_id), _CAMPAIGN_TTL, str(remaining))
+    pipe.setex(_CPC_KEY.format(campaign_id), _CAMPAIGN_TTL, str(campaign.cpc_bid))
     await pipe.execute()
     logger.info("[AdService] Kampanya Redis'e yeniden yüklendi: id=%d remaining=%d TUCi", campaign_id, remaining)
     return campaign.cpc_bid
@@ -248,8 +249,8 @@ async def resume_campaign(campaign_id: int, seller_id: int) -> bool:
         remaining = max(0, campaign.total_budget - campaign.spent_budget)
         redis = await get_redis()
         pipe = redis.pipeline()
-        pipe.set(_BUDGET_KEY.format(campaign_id), str(remaining))
-        pipe.set(_CPC_KEY.format(campaign_id), str(campaign.cpc_bid))
+        pipe.setex(_BUDGET_KEY.format(campaign_id), _CAMPAIGN_TTL, str(remaining))
+        pipe.setex(_CPC_KEY.format(campaign_id), _CAMPAIGN_TTL, str(campaign.cpc_bid))
         await pipe.execute()
 
     return True

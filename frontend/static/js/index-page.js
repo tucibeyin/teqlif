@@ -156,7 +156,7 @@
 
         // Güncel kullanıcı verisini localStorage'a yaz (profil fotosu değişmişse)
         if (freshMe) {
-            try { localStorage.setItem('teqlif_user', JSON.stringify(freshMe)); } catch (_) {}
+            try { Auth.saveUser(freshMe); } catch (_) {}
         }
 
         const me      = freshMe ?? Auth.getUser();

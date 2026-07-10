@@ -58,6 +58,8 @@ void main() async {
       }
 
       await CacheService.init();
+      // Süresi dolmuş Hive kayıtlarını arka planda temizle — startup'ı bloke etme
+      CacheService.clearExpired().ignore();
       await StorageService.restoreAvatarUrl();
       await OfflineQueueService.init();
       OfflineQueueService.startDrainOnReconnect();

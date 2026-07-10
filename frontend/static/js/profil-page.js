@@ -691,7 +691,7 @@
             if (storedUser) {
                 storedUser.full_name = updated.full_name;
                 storedUser.username = updated.username;
-                localStorage.setItem('teqlif_user', JSON.stringify(storedUser));
+                Auth.saveUser(storedUser);
             }
             closeEditProfileModal(null);
             // UI güncelle

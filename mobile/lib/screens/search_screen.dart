@@ -11,6 +11,7 @@ import '../models/stream.dart';
 import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 import '../services/feed_telemetry_service.dart';
+import '../services/image_cache_manager.dart';
 import '../services/storage_service.dart';
 import '../services/stream_service.dart';
 import '../widgets/network_error_widget.dart';
@@ -1259,6 +1260,7 @@ class _StreamCard extends StatelessWidget {
           children: [
             if (hasThumbnail)
               CachedNetworkImage(
+                  cacheManager: TeqlifCacheManager(),
                 imageUrl: imgUrl(stream.thumbnailUrl),
                 fit: BoxFit.cover,
                 placeholder: (_, _) => const Center(
@@ -1461,6 +1463,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                 children: [
                   photo != null
                       ? CachedNetworkImage(
+                  cacheManager: TeqlifCacheManager(),
                           imageUrl: photo,
                           fit: BoxFit.cover,
                           width: double.infinity,
@@ -1639,6 +1642,7 @@ class _ListingTile extends StatelessWidget {
           children: [
             photo != null
                 ? CachedNetworkImage(
+                  cacheManager: TeqlifCacheManager(),
                     imageUrl: photo,
                     fit: BoxFit.cover,
                     placeholder: (_, _) => const Center(

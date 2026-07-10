@@ -72,7 +72,14 @@ async def get_my_listings(
     return await ListingService(db).get_my_listings(current_user, active, q, category, limit, offset)
 
 
+def _listing_key_builder(func, namespace="", *, request=None, response=None, args=None, kwargs=None):
+    listing_id = (kwargs or {}).get("listing_id") or (args[0] if args else "?")
+    uid = (kwargs or {}).get("current_user_id") or "anon"
+    return f"listing:detail:{listing_id}:{uid}"
+
+
 @router.get("/video-feed")
+@cache(expire=60)
 async def get_video_feed(
     limit: int = 8,
     db: AsyncSession = Depends(get_db),
@@ -81,6 +88,7 @@ async def get_video_feed(
 
 
 @router.get("/swipe-feed")
+@cache(expire=60)
 async def get_swipe_feed(
     limit: int = 10,
     db: AsyncSession = Depends(get_db),
@@ -89,6 +97,7 @@ async def get_swipe_feed(
 
 
 @router.get("/{listing_id}")
+@cache(expire=60, key_builder=_listing_key_builder)
 async def get_listing(
     listing_id: int,
     current_user_id: Optional[int] = Depends(_optional_user_id),

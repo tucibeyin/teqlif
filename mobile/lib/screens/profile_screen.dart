@@ -21,6 +21,7 @@ import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/cache_service.dart';
+import '../services/image_cache_manager.dart';
 import '../services/listing_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
@@ -252,6 +253,7 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
     return ClipOval(
       child: CachedNetworkImage(
+                  cacheManager: TeqlifCacheManager(),
         imageUrl: imageUrl,
         width: radius * 2,
         height: radius * 2,
@@ -1054,6 +1056,7 @@ class _ListingGridItem extends StatelessWidget {
         children: [
           imageUrl != null
               ? CachedNetworkImage(
+                  cacheManager: TeqlifCacheManager(),
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
                   placeholder: (_, _) =>
@@ -2815,6 +2818,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                             borderRadius: BorderRadius.circular(8),
                             child: imageUrl != null
                                 ? CachedNetworkImage(
+                  cacheManager: TeqlifCacheManager(),
                                     imageUrl: imageUrl,
                                     width: 60, height: 60, fit: BoxFit.cover,
                                     placeholder: (_, _) => const SizedBox(
@@ -2999,6 +3003,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                             borderRadius: BorderRadius.circular(8),
                             child: imageUrl != null
                                 ? CachedNetworkImage(
+                  cacheManager: TeqlifCacheManager(),
                                     imageUrl: imageUrl,
                                     width: 60, height: 60, fit: BoxFit.cover,
                                     placeholder: (_, _) => const SizedBox(

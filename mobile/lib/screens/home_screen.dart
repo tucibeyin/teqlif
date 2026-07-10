@@ -12,6 +12,7 @@ import '../config/theme.dart';
 import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 import '../services/city_service.dart';
+import '../services/image_cache_manager.dart';
 
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
@@ -844,7 +845,7 @@ class HomeScreenState extends State<HomeScreen> {
                                         fit: StackFit.expand,
                                         children: [
                                           if (photo != null)
-                                            CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover)
+                                            CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, cacheManager: TeqlifCacheManager())
                                           else
                                             Container(color: AppColors.surfaceVariant(context)),
                                           if (price.isNotEmpty)
@@ -1236,6 +1237,7 @@ class _GridItemState extends State<_GridItem> {
                 ? CachedNetworkImage(
                     imageUrl: photo,
                     fit: BoxFit.cover,
+                    cacheManager: TeqlifCacheManager(),
                     placeholder: (_, _) => const ShimmerBox(),
                     errorWidget: (_, _, _) => _placeholder(context),
                   )

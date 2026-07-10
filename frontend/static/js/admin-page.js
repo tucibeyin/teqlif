@@ -1,12 +1,15 @@
 const GOOGLE_CLIENT_ID = "232766108005-c193qv63qkv5c6m3c2klrs2ihoj7b2ok.apps.googleusercontent.com";
 let currentUserId = null;
+// Admin token yalnızca bellekte tutulur — sessionStorage/localStorage'a yazılmaz.
+// XSS bu değişkene erişemez; sayfa yenilenince tekrar giriş yapılır.
+let _adminToken = null;
 
 window.onload = function () {
-    if (sessionStorage.getItem("teqlif_admin_session")) { showFinalStep(); } else { initGoogleAuth(); }
+    if (_adminToken) { showFinalStep(); } else { initGoogleAuth(); }
 };
 
 function getAuthHeaders() {
-    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStorage.getItem("teqlif_admin_session")}` };
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_adminToken}` };
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -22,10 +25,10 @@ async function handleCredentialResponse(r) {
 async function verifyPassword() {
     const p = document.getElementById("adminPasswordInput").value;
     const res = await fetch('/api/admin-auth/verify-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: p }) });
-    if (res.ok) { const data = await res.json(); sessionStorage.setItem("teqlif_admin_session", data.access_token); showFinalStep(); }
+    if (res.ok) { const data = await res.json(); _adminToken = data.access_token; showFinalStep(); }
     else { alert("Hatalı şifre!"); }
 }
-function adminLogout() { sessionStorage.removeItem("teqlif_admin_session"); location.reload(); }
+function adminLogout() { _adminToken = null; location.reload(); }
 
 // Sadece 401/403 → logout; diğer hatalar (404, 500) → null döner, UI sessizce görmezden gelir
 async function adminFetch(url, opts) {

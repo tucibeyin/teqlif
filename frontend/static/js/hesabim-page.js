@@ -72,7 +72,7 @@
             const stored = Auth.getUser();
             if (stored) {
                 stored.profile_image_url = updated.profile_image_url;
-                localStorage.setItem('teqlif_user', JSON.stringify(stored));
+                Auth.saveUser(stored);
             }
             renderProfile(updated);
         } catch (err) {
@@ -189,7 +189,7 @@
             if (stored) {
                 stored.full_name = updated.full_name || fullName;
                 stored.username = updated.username || username;
-                localStorage.setItem('teqlif_user', JSON.stringify(stored));
+                Auth.saveUser(stored);
             }
             renderProfile(updated);
             closeModal('editModal');
