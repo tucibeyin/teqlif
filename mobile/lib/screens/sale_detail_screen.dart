@@ -5,6 +5,7 @@ import '../../utils/price_formatter.dart';
 import 'listing_detail_screen.dart';
 import 'public_profile_screen.dart';
 import '../../services/listing_service.dart';
+import '../../services/category_service.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
@@ -102,14 +103,23 @@ class SaleDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   if (category != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: kPrimary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(category, style: const TextStyle(color: kPrimary, fontSize: 12)),
+                    FutureBuilder<List<(String, String)>>(
+                      future: CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode),
+                      builder: (context, snap) {
+                        final label = snap.data?.firstWhere(
+                          (p) => p.$1 == category,
+                          orElse: () => (category, category),
+                        ).$2 ?? category;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: kPrimary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(label, style: const TextStyle(color: kPrimary, fontSize: 12)),
+                        );
+                      },
                     ),
                   Text(
                     '${l.saleBuyerLabel}: @$buyerUsername',
