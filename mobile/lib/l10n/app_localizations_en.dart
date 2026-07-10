@@ -3271,7 +3271,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportCostPerClick => 'Cost Per Click:';
 
   @override
-  String get reportConversionFunnel => 'Conversion Funnel';
+  String get reportConversionFunnel => 'Delivery Summary';
+
+  @override
+  String get reportAll => 'All';
+
+  @override
+  String get reportFreeCreditsUsed => 'Free Credits:';
 
   @override
   String get reportTargetAudience => 'Target Audience';

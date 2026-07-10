@@ -3247,7 +3247,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reportCostPerClick => 'تكلفة النقرة:';
 
   @override
-  String get reportConversionFunnel => 'مسار التحويل';
+  String get reportConversionFunnel => 'ملخص التسليم';
+
+  @override
+  String get reportAll => 'الكل';
+
+  @override
+  String get reportFreeCreditsUsed => 'رصيد مجاني:';
 
   @override
   String get reportTargetAudience => 'الجمهور المستهدف';

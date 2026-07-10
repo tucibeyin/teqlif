@@ -856,9 +856,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
 
   void _openMassNotificationReport(BuildContext ctx) {
+    final listingId = widget.listing['id'] as int?;
     Navigator.push(
       ctx,
-      MaterialPageRoute(builder: (_) => const RetargetingScreen(initialIndex: 1)),
+      MaterialPageRoute(
+        builder: (_) => RetargetingScreen(initialIndex: 1, listingId: listingId),
+      ),
     );
   }
 

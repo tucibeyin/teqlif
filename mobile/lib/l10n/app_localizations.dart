@@ -5967,8 +5967,20 @@ abstract class AppLocalizations {
   /// No description provided for @reportConversionFunnel.
   ///
   /// In tr, this message translates to:
-  /// **'Dönüşüm Hunisi'**
+  /// **'Gönderim Özeti'**
   String get reportConversionFunnel;
+
+  /// No description provided for @reportAll.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tümü'**
+  String get reportAll;
+
+  /// No description provided for @reportFreeCreditsUsed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ücretsiz Hak:'**
+  String get reportFreeCreditsUsed;
 
   /// No description provided for @reportTargetAudience.
   ///

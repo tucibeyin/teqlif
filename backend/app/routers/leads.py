@@ -659,28 +659,68 @@ async def send_retargeting(
 
 @router.get("/mass-notification-report")
 async def get_mass_notification_report(
+    listing_id: int | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import select, func
     from app.models.mass_notification import MassNotificationCampaign
-    
-    query = select(
+    from app.models.listing import Listing
+
+    base = [MassNotificationCampaign.user_id == current_user.id]
+    if listing_id:
+        base.append(MassNotificationCampaign.listing_id == listing_id)
+
+    agg = select(
         func.sum(MassNotificationCampaign.target_count).label('total_target'),
         func.sum(MassNotificationCampaign.sent_count).label('total_sent'),
         func.sum(MassNotificationCampaign.click_count).label('total_clicks'),
-        func.sum(MassNotificationCampaign.spent_tuci).label('total_spent_tuci')
-    ).where(MassNotificationCampaign.user_id == current_user.id)
-    
-    result = await db.execute(query)
-    row = result.fetchone()
-    
-    return {
+        func.sum(MassNotificationCampaign.spent_tuci).label('total_spent_tuci'),
+        func.sum(MassNotificationCampaign.spent_free_credits).label('total_free_credits'),
+    ).where(*base)
+
+    row = (await db.execute(agg)).fetchone()
+
+    response: dict = {
         "total_target": int(row.total_target or 0),
         "total_sent": int(row.total_sent or 0),
         "total_clicks": int(row.total_clicks or 0),
         "total_spent_tuci": int(row.total_spent_tuci or 0),
+        "total_free_credits": int(row.total_free_credits or 0),
     }
+
+    if listing_id:
+        camp_q = (
+            select(
+                MassNotificationCampaign.id,
+                MassNotificationCampaign.target_count,
+                MassNotificationCampaign.sent_count,
+                MassNotificationCampaign.click_count,
+                MassNotificationCampaign.spent_tuci,
+                MassNotificationCampaign.spent_free_credits,
+                MassNotificationCampaign.created_at,
+            )
+            .where(*base)
+            .order_by(MassNotificationCampaign.created_at.desc())
+            .limit(30)
+        )
+        camps = (await db.execute(camp_q)).fetchall()
+        response["campaigns"] = [
+            {
+                "id": r.id,
+                "target_count": r.target_count,
+                "sent_count": r.sent_count,
+                "click_count": r.click_count,
+                "spent_tuci": r.spent_tuci,
+                "spent_free_credits": r.spent_free_credits,
+                "sent_at": r.created_at.isoformat(),
+            }
+            for r in camps
+        ]
+        title_r = await db.execute(select(Listing.title).where(Listing.id == listing_id))
+        response["listing_title"] = title_r.scalar()
+
+    return response
 
 @router.post("/campaign/{campaign_id}/click", status_code=204)
 async def track_campaign_click(

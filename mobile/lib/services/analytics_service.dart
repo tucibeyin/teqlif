@@ -670,16 +670,15 @@ class AnalyticsService {
     return null;
   }
 
-  static Future<Map<String, dynamic>> getMassNotificationReport() async {
+  static Future<Map<String, dynamic>> getMassNotificationReport({int? listingId}) async {
     final token = await StorageService.getToken();
     if (token == null) throw Exception('Yetkilendirme hatası' /* AppLocalizations handled in UI */);
 
-    final response = await http.get(
-      Uri.parse('$kBaseUrl/leads/mass-notification-report'),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final uri = listingId != null
+        ? Uri.parse('$kBaseUrl/leads/mass-notification-report?listing_id=$listingId')
+        : Uri.parse('$kBaseUrl/leads/mass-notification-report');
+
+    final response = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
 
     if (response.statusCode == 200) {
       return json.decode(response.body);

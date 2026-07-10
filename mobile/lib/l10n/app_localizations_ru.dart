@@ -3311,7 +3311,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reportCostPerClick => 'Стоимость за клик:';
 
   @override
-  String get reportConversionFunnel => 'Воронка конверсии';
+  String get reportConversionFunnel => 'Сводка доставки';
+
+  @override
+  String get reportAll => 'Все';
+
+  @override
+  String get reportFreeCreditsUsed => 'Бесплатные кредиты:';
 
   @override
   String get reportTargetAudience => 'Целевая аудитория';

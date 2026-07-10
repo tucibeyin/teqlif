@@ -3275,7 +3275,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get reportCostPerClick => 'Tıklama Başı Maliyet:';
 
   @override
-  String get reportConversionFunnel => 'Dönüşüm Hunisi';
+  String get reportConversionFunnel => 'Gönderim Özeti';
+
+  @override
+  String get reportAll => 'Tümü';
+
+  @override
+  String get reportFreeCreditsUsed => 'Ücretsiz Hak:';
 
   @override
   String get reportTargetAudience => 'Hedeflenen Kitle';
