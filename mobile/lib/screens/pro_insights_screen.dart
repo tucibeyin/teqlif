@@ -33,6 +33,8 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
   String _priceIntelCategory = '';
   String _priceIntelSignal = '';
 
+  DateTimeRange? _dateRange;
+
   List<(String, String)>? _categoryLabels;
 
   @override
@@ -59,10 +61,64 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
     super.dispose();
   }
 
+  String _fmtDate(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+
+  Widget _buildDateRangePicker(AppLocalizations l) {
+    final hasRange = _dateRange != null;
+    return InkWell(
+      onTap: () async {
+        final picked = await showDateRangePicker(
+          context: context,
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+          initialDateRange: _dateRange,
+          locale: Localizations.localeOf(context),
+        );
+        if (picked != null) {
+          setState(() { _dateRange = picked; _showAll.clear(); });
+          _load();
+        }
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
+          borderRadius: BorderRadius.circular(8),
+          color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 16,
+                color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                hasRange
+                    ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
+                    : l.filterSelectDate,
+                style: TextStyle(fontSize: 13,
+                    color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+              ),
+            ),
+            if (hasRange)
+              GestureDetector(
+                onTap: () { setState(() { _dateRange = null; _showAll.clear(); }); _load(); },
+                child: Icon(Icons.close, size: 16, color: kPrimary),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _load() async {
     setState(() { _loading = true; _hasError = false; });
+    final sd = _dateRange?.start.toIso8601String().substring(0, 10);
+    final ed = _dateRange?.end.toIso8601String().substring(0, 10);
     final results = await Future.wait([
-      AnalyticsService.getProInsights(),
+      AnalyticsService.getProInsights(startDate: sd, endDate: ed),
       AnalyticsService.getProMetrics(),
     ]);
     if (mounted) {
@@ -279,6 +335,10 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
             onSearchChanged: (v) => setState(() { _hotLeadsSearch = v; _showAll['hotLeads'] = false; }),
             onCategoryChanged: (v) => setState(() { _hotLeadsCategory = v; _showAll['hotLeads'] = false; }),
             l: l,
+            extraChipRows: [
+              const SizedBox(height: 6),
+              _buildDateRangePicker(l),
+            ],
           ),
           if (hlFiltered && hotLeads.isEmpty)
             Padding(
@@ -320,6 +380,8 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 6),
+              _buildDateRangePicker(l),
             ],
           ),
           if (piFiltered && priceIntel.isEmpty)

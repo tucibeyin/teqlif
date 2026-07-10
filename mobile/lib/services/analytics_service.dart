@@ -176,14 +176,19 @@ class AnalyticsService {
   }
 
   /// Pro satıcı kapsamlı analitik → `GET /api/analytics/pro-insights`
-  static Future<Map<String, dynamic>?> getProInsights() async {
+  static Future<Map<String, dynamic>?> getProInsights({String? startDate, String? endDate}) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
       final prefs = await SharedPreferences.getInstance();
       final lang = prefs.getString('app_locale_language_code') ?? 'tr';
+      var url = '$kBaseUrl/analytics/pro-insights';
+      final params = <String>[];
+      if (startDate != null) params.add('start_date=$startDate');
+      if (endDate != null) params.add('end_date=$endDate');
+      if (params.isNotEmpty) url += '?${params.join('&')}';
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/analytics/pro-insights'),
+        Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept-Language': lang,

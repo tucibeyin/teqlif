@@ -1006,21 +1006,27 @@ async def pro_insights(
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
 ):
     """
     Pro satıcıya özel kapsamlı analitik paketi.
     7 bölüm: KPI özeti · dönüşüm hunisi · sıcak talepler · fiyat zekası ·
              yayın performansı · pazar trendleri · akıllı öneriler
     """
+    from datetime import datetime as _dt, timedelta as _td
     uid = current_user.id
     _t = _get_t(get_locale(current_user, request))
 
-    # ── Cache Check ─────────────────────────────────────────────────────────
+    _sd = _dt.strptime(start_date, '%Y-%m-%d') if start_date else None
+    _ed = (_dt.strptime(end_date, '%Y-%m-%d') + _td(days=1)) if end_date else None
+
+    # ── Cache Check (skip when date filters applied) ─────────────────────────
     try:
         redis = await get_redis()
         _locale = get_locale(current_user, request)
-        cache_key = f"cache:pro_insights:{uid}:{_locale}"
-        cached_data = await redis.get(cache_key)
+        cache_key = f"cache:pro_insights:{uid}:{_locale}:{start_date or ''}:{end_date or ''}"
+        cached_data = await redis.get(cache_key) if not (start_date or end_date) else None
         if cached_data:
             import json
             return json.loads(cached_data)
@@ -1138,11 +1144,13 @@ async def pro_insights(
     # ── 3. Sıcak Talepler — En çok ilgi gören ama satılmayan ilanlar ─────────
     hot_leads: list[dict] = []
     try:
-        active_ids_r = await db.execute(
+        _hl_q = (
             select(Listing.id, Listing.title, Listing.price, Listing.category)
             .where(Listing.user_id == uid, Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
-            .limit(20)
         )
+        if _sd: _hl_q = _hl_q.where(Listing.created_at >= _sd)
+        if _ed: _hl_q = _hl_q.where(Listing.created_at < _ed)
+        active_ids_r = await db.execute(_hl_q.limit(20))
         active_listings = active_ids_r.fetchall()
         if active_listings:
             ids_str = ", ".join(str(r.id) for r in active_listings)
@@ -1206,12 +1214,14 @@ async def pro_insights(
     # ── 4. Fiyat Zekası — pgvector + PostgreSQL piyasa ortalaması ────────────
     price_intel: list[dict] = []
     try:
-        my_listings_r = await db.execute(
+        _pi_q = (
             select(Listing.id, Listing.title, Listing.price, Listing.category, Listing.embedding)
             .where(Listing.user_id == uid, Listing.is_active == True, Listing.is_deleted == False,  # noqa: E712
                    Listing.price.is_not(None))
-            .limit(5)
         )
+        if _sd: _pi_q = _pi_q.where(Listing.created_at >= _sd)
+        if _ed: _pi_q = _pi_q.where(Listing.created_at < _ed)
+        my_listings_r = await db.execute(_pi_q.limit(5))
         my_listings = my_listings_r.fetchall()
         for ml in my_listings:
             market_avg: float | None = None
