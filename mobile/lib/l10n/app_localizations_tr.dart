@@ -1747,6 +1747,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get proSectionPeakHours => 'Platform En Çok Kaçta Aktif?';
 
   @override
+  String get proSectionAIMetrics => 'AI Metrikler';
+
+  @override
   String get proPeakHoursDesc =>
       'Bu saatlerde yayın yap, daha fazla izleyiciye ulaş';
 

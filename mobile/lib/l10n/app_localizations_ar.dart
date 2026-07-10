@@ -1731,6 +1731,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get proSectionPeakHours => 'متى تكون المنصة أكثر نشاطاً؟';
 
   @override
+  String get proSectionAIMetrics => 'مقاييس الذكاء الاصطناعي';
+
+  @override
   String get proPeakHoursDesc =>
       'ابثّ في هذه الأوقات للوصول إلى المزيد من المشاهدين';
 

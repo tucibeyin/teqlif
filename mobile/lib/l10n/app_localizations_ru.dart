@@ -1770,6 +1770,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get proSectionPeakHours => 'Когда платформа наиболее активна?';
 
   @override
+  String get proSectionAIMetrics => 'AI-метрики';
+
+  @override
   String get proPeakHoursDesc =>
       'Выходите в эфир в это время, чтобы привлечь больше зрителей';
 

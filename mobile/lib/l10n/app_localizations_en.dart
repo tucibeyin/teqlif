@@ -1746,6 +1746,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proSectionPeakHours => 'When Is the Platform Most Active?';
 
   @override
+  String get proSectionAIMetrics => 'AI Metrics';
+
+  @override
   String get proPeakHoursDesc => 'Go live at these times to reach more viewers';
 
   @override

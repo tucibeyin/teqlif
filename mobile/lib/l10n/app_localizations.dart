@@ -3360,6 +3360,12 @@ abstract class AppLocalizations {
   /// **'Platform En Çok Kaçta Aktif?'**
   String get proSectionPeakHours;
 
+  /// No description provided for @proSectionAIMetrics.
+  ///
+  /// In tr, this message translates to:
+  /// **'AI Metrikler'**
+  String get proSectionAIMetrics;
+
   /// No description provided for @proPeakHoursDesc.
   ///
   /// In tr, this message translates to:

@@ -416,8 +416,8 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
         ],
 
         if (_metrics != null) ...[
-          _SectionLabel('AI Metrikler'),
-          _ProMetricsCard(metrics: _metrics!, l: l),
+          _SectionLabel(l.proSectionAIMetrics),
+          _ProMetricsCard(metrics: _metrics!, l: l, categoryLabels: _categoryLabels),
           const SizedBox(height: 20),
         ],
       ],
@@ -1267,7 +1267,8 @@ class _PeakHourBar extends StatelessWidget {
 class _ProMetricsCard extends StatelessWidget {
   final Map<String, dynamic> metrics;
   final AppLocalizations l;
-  const _ProMetricsCard({required this.metrics, required this.l});
+  final List<(String, String)>? categoryLabels;
+  const _ProMetricsCard({required this.metrics, required this.l, this.categoryLabels});
 
   @override
   Widget build(BuildContext context) {
@@ -1306,7 +1307,9 @@ class _ProMetricsCard extends StatelessWidget {
             ...searchVis.map((e) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(children: [
-                Expanded(child: Text(e['category'] as String? ?? '', style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)))),
+                Expanded(child: Text(
+                  categoryLabels?.firstWhere((p) => p.$1 == (e['category'] as String? ?? ''), orElse: () => (e['category'] as String? ?? '', e['category'] as String? ?? '')).$2 ?? (e['category'] as String? ?? ''),
+                  style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)))),
                 Text(l.proSearchCount((e['search_count'] as num?)?.toInt() ?? 0), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
               ]),
             )),
