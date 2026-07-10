@@ -4474,4 +4474,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get saleBidCount => 'Количество ставок';
+
+  @override
+  String get notifProUpgradeTitle => '👑 Pro настройки уведомлений';
+
+  @override
+  String get notifProUpgradeDesc =>
+      'Порог ставки и тихие часы доступны только для Pro.\nПерейдите на Pro, чтобы избавиться от лишних уведомлений.';
+
+  @override
+  String get notifBidThresholdTitle => 'Порог ставки';
+
+  @override
+  String get notifBidThresholdDesc =>
+      'Уведомлять только о ставках выше определённой суммы';
+
+  @override
+  String get notifQuietHoursTitle => 'Тихие часы';
+
+  @override
+  String get notifQuietHoursDesc =>
+      'Откладывать уведомления на эти часы, показывать утром';
 }

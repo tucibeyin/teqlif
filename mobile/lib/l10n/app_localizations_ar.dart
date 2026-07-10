@@ -4395,4 +4395,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get saleBidCount => 'عدد العروض';
+
+  @override
+  String get notifProUpgradeTitle => '👑 إعدادات إشعارات Pro';
+
+  @override
+  String get notifProUpgradeDesc =>
+      'إعدادات حد العرض والساعات الهادئة حصرية لمستخدمي Pro.\nانتقل إلى Pro للتخلص من الإشعارات غير الضرورية.';
+
+  @override
+  String get notifBidThresholdTitle => 'حد العرض';
+
+  @override
+  String get notifBidThresholdDesc =>
+      'إشعار فقط بالعروض التي تتجاوز مبلغاً معيناً';
+
+  @override
+  String get notifQuietHoursTitle => 'الساعات الهادئة';
+
+  @override
+  String get notifQuietHoursDesc =>
+      'تأجيل الإشعارات خلال هذه الساعات، وعرضها في الصباح';
 }

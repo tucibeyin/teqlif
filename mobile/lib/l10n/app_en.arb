@@ -2234,5 +2234,11 @@
   "saleTypeAuction": "Auction",
   "saleStartPrice": "Starting Price",
   "saleType": "Sale Type",
-  "saleBidCount": "Bid Count"
+  "saleBidCount": "Bid Count",
+  "notifProUpgradeTitle": "👑 Pro Notification Settings",
+  "notifProUpgradeDesc": "Bid threshold and quiet hours settings are exclusive to Pro users.\nGo Pro to stop irrelevant notifications.",
+  "notifBidThresholdTitle": "Bid Threshold",
+  "notifBidThresholdDesc": "Only notify about bids above a certain amount",
+  "notifQuietHoursTitle": "Quiet Hours",
+  "notifQuietHoursDesc": "Delay notifications during these hours, show in the morning"
 }

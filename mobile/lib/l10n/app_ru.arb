@@ -2199,5 +2199,11 @@
   "saleTypeAuction": "Аукцион",
   "saleStartPrice": "Начальная цена",
   "saleType": "Тип продажи",
-  "saleBidCount": "Количество ставок"
+  "saleBidCount": "Количество ставок",
+  "notifProUpgradeTitle": "👑 Pro настройки уведомлений",
+  "notifProUpgradeDesc": "Порог ставки и тихие часы доступны только для Pro.\nПерейдите на Pro, чтобы избавиться от лишних уведомлений.",
+  "notifBidThresholdTitle": "Порог ставки",
+  "notifBidThresholdDesc": "Уведомлять только о ставках выше определённой суммы",
+  "notifQuietHoursTitle": "Тихие часы",
+  "notifQuietHoursDesc": "Откладывать уведомления на эти часы, показывать утром"
 }

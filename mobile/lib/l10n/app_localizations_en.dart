@@ -4422,4 +4422,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saleBidCount => 'Bid Count';
+
+  @override
+  String get notifProUpgradeTitle => '👑 Pro Notification Settings';
+
+  @override
+  String get notifProUpgradeDesc =>
+      'Bid threshold and quiet hours settings are exclusive to Pro users.\nGo Pro to stop irrelevant notifications.';
+
+  @override
+  String get notifBidThresholdTitle => 'Bid Threshold';
+
+  @override
+  String get notifBidThresholdDesc =>
+      'Only notify about bids above a certain amount';
+
+  @override
+  String get notifQuietHoursTitle => 'Quiet Hours';
+
+  @override
+  String get notifQuietHoursDesc =>
+      'Delay notifications during these hours, show in the morning';
 }

@@ -2194,5 +2194,11 @@
   "saleTypeAuction": "مزاد",
   "saleStartPrice": "سعر البداية",
   "saleType": "نوع البيع",
-  "saleBidCount": "عدد العروض"
+  "saleBidCount": "عدد العروض",
+  "notifProUpgradeTitle": "👑 إعدادات إشعارات Pro",
+  "notifProUpgradeDesc": "إعدادات حد العرض والساعات الهادئة حصرية لمستخدمي Pro.\nانتقل إلى Pro للتخلص من الإشعارات غير الضرورية.",
+  "notifBidThresholdTitle": "حد العرض",
+  "notifBidThresholdDesc": "إشعار فقط بالعروض التي تتجاوز مبلغاً معيناً",
+  "notifQuietHoursTitle": "الساعات الهادئة",
+  "notifQuietHoursDesc": "تأجيل الإشعارات خلال هذه الساعات، وعرضها في الصباح"
 }

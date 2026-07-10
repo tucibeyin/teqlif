@@ -4425,4 +4425,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get saleBidCount => 'Teklif Sayısı';
+
+  @override
+  String get notifProUpgradeTitle => '👑 Pro Bildirim Ayarları';
+
+  @override
+  String get notifProUpgradeDesc =>
+      'Teklif eşiği ve sessiz saat ayarları Pro kullanıcılara özel.\nPro\'ya geçerek gereksiz bildirimlerden kurtulun.';
+
+  @override
+  String get notifBidThresholdTitle => 'Teklif Eşiği';
+
+  @override
+  String get notifBidThresholdDesc =>
+      'Sadece belirli tutarın üzerindeki teklifleri bildir';
+
+  @override
+  String get notifQuietHoursTitle => 'Sessiz Saatler';
+
+  @override
+  String get notifQuietHoursDesc =>
+      'Bu saatler arası bildirimleri ertele, sabah göster';
 }

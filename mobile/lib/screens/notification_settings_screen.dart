@@ -199,13 +199,13 @@ class _NotificationSettingsScreenState
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              '👑 Pro Bildirim Ayarları',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            Text(
+              AppLocalizations.of(context)!.notifProUpgradeTitle,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
             Text(
-              'Teklif eşiği ve sessiz saat ayarları Pro kullanıcılara özel.\nPro\'ya geçerek gereksiz bildirimlerden kurtulun.',
+              AppLocalizations.of(context)!.notifProUpgradeDesc,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
             ),
@@ -383,7 +383,7 @@ class _ProSection extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Teklif Eşiği',
+                              l.notifBidThresholdTitle,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -391,7 +391,7 @@ class _ProSection extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Sadece belirli tutarın üzerindeki teklifleri bildir',
+                              l.notifBidThresholdDesc,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary(context),
@@ -515,7 +515,7 @@ class _ProSection extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Sessiz Saatler',
+                              l.notifQuietHoursTitle,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -523,7 +523,7 @@ class _ProSection extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Bu saatler arası bildirimleri ertele, sabah göster',
+                              l.notifQuietHoursDesc,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary(context),

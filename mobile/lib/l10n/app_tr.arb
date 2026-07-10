@@ -2197,5 +2197,11 @@
   "saleTypeAuction": "Açık Artırma",
   "saleStartPrice": "Başlangıç Fiyatı",
   "saleType": "Satış Türü",
-  "saleBidCount": "Teklif Sayısı"
+  "saleBidCount": "Teklif Sayısı",
+  "notifProUpgradeTitle": "👑 Pro Bildirim Ayarları",
+  "notifProUpgradeDesc": "Teklif eşiği ve sessiz saat ayarları Pro kullanıcılara özel.\nPro'ya geçerek gereksiz bildirimlerden kurtulun.",
+  "notifBidThresholdTitle": "Teklif Eşiği",
+  "notifBidThresholdDesc": "Sadece belirli tutarın üzerindeki teklifleri bildir",
+  "notifQuietHoursTitle": "Sessiz Saatler",
+  "notifQuietHoursDesc": "Bu saatler arası bildirimleri ertele, sabah göster"
 }

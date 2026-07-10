@@ -8033,6 +8033,42 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Teklif Sayısı'**
   String get saleBidCount;
+
+  /// No description provided for @notifProUpgradeTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'👑 Pro Bildirim Ayarları'**
+  String get notifProUpgradeTitle;
+
+  /// No description provided for @notifProUpgradeDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif eşiği ve sessiz saat ayarları Pro kullanıcılara özel.\nPro\'ya geçerek gereksiz bildirimlerden kurtulun.'**
+  String get notifProUpgradeDesc;
+
+  /// No description provided for @notifBidThresholdTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif Eşiği'**
+  String get notifBidThresholdTitle;
+
+  /// No description provided for @notifBidThresholdDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sadece belirli tutarın üzerindeki teklifleri bildir'**
+  String get notifBidThresholdDesc;
+
+  /// No description provided for @notifQuietHoursTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sessiz Saatler'**
+  String get notifQuietHoursTitle;
+
+  /// No description provided for @notifQuietHoursDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu saatler arası bildirimleri ertele, sabah göster'**
+  String get notifQuietHoursDesc;
 }
 
 class _AppLocalizationsDelegate
