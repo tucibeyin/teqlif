@@ -28,37 +28,6 @@ async def main():
     except Exception as e:
         print(f"✗ compute_seller_badges_task başarısız: {e}")
 
-    # ── 1b. ClickHouse listing event debug ────────────────────────────────
-    try:
-        from app.database_clickhouse import get_clickhouse_client
-        ch = await get_clickhouse_client()
-        if ch:
-            r = await ch.query("""
-                SELECT event_type, count() AS cnt
-                FROM user_events
-                WHERE item_type = 'listing' AND timestamp >= now() - INTERVAL 48 HOUR
-                GROUP BY event_type ORDER BY cnt DESC
-            """)
-            print(f"  [ClickHouse] Son 48s listing event'leri: {r.result_rows or '(yok)'}")
-            r2 = await ch.query("""
-                SELECT count(DISTINCT item_id) FROM user_events
-                WHERE item_type = 'listing' AND timestamp >= now() - INTERVAL 48 HOUR
-            """)
-            print(f"  [ClickHouse] Unique listing sayısı: {r2.result_rows[0][0] if r2.result_rows else 0}")
-            r3 = await ch.query("""
-                SELECT item_id,
-                       countIf(event_type='view') AS v,
-                       countIf(event_type='bid_hesitation') AS h,
-                       countDistinctIf(user_id, event_type='bid_placed') AS b,
-                       date_diff('hour', max(timestamp), now()) AS hrs
-                FROM user_events
-                WHERE item_type='listing' AND timestamp >= now() - INTERVAL 48 HOUR
-                GROUP BY item_id ORDER BY (v + h*3 + b*5) DESC LIMIT 5
-            """)
-            print(f"  [ClickHouse] Top 5 ilan (id, views, hes, bids, hrs_since_last): {r3.result_rows}")
-    except Exception as e:
-        print(f"  [ClickHouse] Debug sorgusu başarısız: {e}")
-
     # ── 2. Trend kategorileri hesapla (PostgreSQL auction verisinden) ──────
     print("▶ compute_trending_categories_task çalışıyor...")
     try:
