@@ -1457,23 +1457,23 @@ async def compute_trending_categories_task(ctx: dict) -> None:
             rows = await db.execute(sql_text("""
                 WITH
                     recent AS (
-                        SELECT l.category, COUNT(*) AS cnt
+                        SELECT s.category, COUNT(*) AS cnt
                         FROM auctions a
-                        INNER JOIN listings l ON l.id = a.listing_id
+                        JOIN live_streams s ON s.id = a.stream_id
                         WHERE a.ended_at >= NOW() - INTERVAL '7 days'
                           AND a.winner_id IS NOT NULL
-                          AND l.category IS NOT NULL
-                        GROUP BY l.category
+                          AND s.category IS NOT NULL AND s.category != ''
+                        GROUP BY s.category
                     ),
                     prev AS (
-                        SELECT l.category, COUNT(*) AS cnt
+                        SELECT s.category, COUNT(*) AS cnt
                         FROM auctions a
-                        INNER JOIN listings l ON l.id = a.listing_id
+                        JOIN live_streams s ON s.id = a.stream_id
                         WHERE a.ended_at >= NOW() - INTERVAL '14 days'
                           AND a.ended_at <  NOW() - INTERVAL '7 days'
                           AND a.winner_id IS NOT NULL
-                          AND l.category IS NOT NULL
-                        GROUP BY l.category
+                          AND s.category IS NOT NULL AND s.category != ''
+                        GROUP BY s.category
                     )
                 SELECT r.category
                 FROM recent r
