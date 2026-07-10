@@ -28,6 +28,26 @@ async def main():
     except Exception as e:
         print(f"✗ compute_seller_badges_task başarısız: {e}")
 
+    # ── 1b. ClickHouse listing event debug ────────────────────────────────
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        if ch:
+            r = await ch.query("""
+                SELECT event_type, count() AS cnt
+                FROM user_events
+                WHERE item_type = 'listing' AND timestamp >= now() - INTERVAL 48 HOUR
+                GROUP BY event_type ORDER BY cnt DESC
+            """)
+            print(f"  [ClickHouse] Son 48s listing event'leri: {r.result_rows or '(yok)'}")
+            r2 = await ch.query("""
+                SELECT count(DISTINCT item_id) FROM user_events
+                WHERE item_type = 'listing' AND timestamp >= now() - INTERVAL 48 HOUR
+            """)
+            print(f"  [ClickHouse] Unique listing sayısı: {r2.result_rows[0][0] if r2.result_rows else 0}")
+    except Exception as e:
+        print(f"  [ClickHouse] Debug sorgusu başarısız: {e}")
+
     # ── 2. Trend kategorileri hesapla (PostgreSQL auction verisinden) ──────
     print("▶ compute_trending_categories_task çalışıyor...")
     try:
