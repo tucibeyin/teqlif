@@ -3,7 +3,7 @@ import logging
 import httpx
 from xml.etree import ElementTree
 from datetime import datetime
-from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.market_index import ExchangeRates
@@ -35,18 +35,15 @@ async def fetch_and_save_tcmb_rates(db: AsyncSession):
 
             if usd_try and eur_try:
                 today = datetime.now().date()
-                
-                # Check if today's rates already exist
-                result = await db.execute(select(ExchangeRates).where(ExchangeRates.date == today))
-                existing = result.scalar_one_or_none()
-                
-                if existing:
-                    existing.usd_try = usd_try
-                    existing.eur_try = eur_try
-                else:
-                    new_rate = ExchangeRates(date=today, usd_try=usd_try, eur_try=eur_try)
-                    db.add(new_rate)
-                    
+                stmt = (
+                    insert(ExchangeRates)
+                    .values(date=today, usd_try=usd_try, eur_try=eur_try)
+                    .on_conflict_do_update(
+                        index_elements=["date"],
+                        set_={"usd_try": usd_try, "eur_try": eur_try},
+                    )
+                )
+                await db.execute(stmt)
                 await db.commit()
                 logger.info(f"[TCMB] Rates updated for {today}: USD={usd_try}, EUR={eur_try}")
             else:
