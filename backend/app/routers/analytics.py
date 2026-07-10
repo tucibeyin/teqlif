@@ -1683,6 +1683,41 @@ async def my_feed_stats(
     }
 
 
+# ── A6: Arama Intent Sınıflandırması ─────────────────────────────────────────
+
+_TRANSACTIONAL_TOKENS = frozenset({
+    "al", "sat", "alıyorum", "satıyorum", "acil", "acilen", "tl", "fiyat",
+    "fiyatı", "ikinci", "el", "sıfır", "kutusunda", "indirim", "kampanya",
+    "ucuz", "uygun", "pazarlık", "takas",
+})
+
+
+def _classify_search_intent(query: str, category: str, result_count: int) -> str:
+    """
+    Arama sorgusunu 4 kategoriden birine atar:
+      navigational  — marka veya model adı içeriyor (hedefli arama)
+      transactional — satın alma / fiyat sinyali var
+      no_supply     — sonuç sıfır (arz açığı)
+      exploratory   — genel keşif
+    """
+    try:
+        from app.services.ner_service import extract_ner
+        ner = extract_ner(query, "", category or "")
+        if ner.get("brand") or ner.get("model_name"):
+            return "navigational"
+    except Exception:
+        pass
+
+    tokens = set(query.lower().split())
+    if tokens & _TRANSACTIONAL_TOKENS:
+        return "transactional"
+
+    if result_count == 0:
+        return "no_supply"
+
+    return "exploratory"
+
+
 # ── Arama Olayı Kayıt ─────────────────────────────────────────────────────────
 
 @router.post("/track-search", status_code=204)
@@ -1703,6 +1738,12 @@ async def track_search(
         except Exception:
             pass
 
+    intent = _classify_search_intent(
+        query=body.query.strip(),
+        category=body.category,
+        result_count=body.result_count,
+    )
+
     try:
         from app.database_clickhouse import buffer_search_event
         await buffer_search_event(
@@ -1710,6 +1751,7 @@ async def track_search(
             query=body.query.strip(),
             category=body.category,
             result_count=body.result_count,
+            intent=intent,
         )
     except Exception as exc:
         logger.warning("[track-search] ClickHouse buffer başarısız: %s", exc)
@@ -2392,3 +2434,87 @@ async def category_velocity(
         "price_sensitivity": price_sensitivity,
         "tip": tip,
     }
+
+
+# ── A5: Kategori Talep Tahmini ────────────────────────────────────────────────
+
+@router.get("/demand-trends")
+async def demand_trends(
+    weeks: int = Query(default=8, ge=4, le=16),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    PRO: Son N haftanın search_events verisinden kategori bazlı talep trendi.
+    Döner: kategori, haftalık arama sayısı, trend yönü, momentum, arz açığı oranı.
+    """
+    if not current_user.is_premium:
+        raise HTTPException(status_code=403, detail="Bu özellik PRO üyelere özeldir.")
+
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        if ch is None:
+            raise HTTPException(status_code=503, detail="Analitik servisi geçici olarak kullanılamıyor.")
+
+        result = await ch.query(f"""
+            SELECT
+                category,
+                toStartOfWeek(timestamp, 1)  AS week,
+                count()                       AS search_count,
+                countIf(result_count = 0)     AS zero_result_count
+            FROM search_events
+            WHERE timestamp >= now() - INTERVAL {weeks} WEEK
+              AND category   != ''
+            GROUP BY category, week
+            ORDER BY category, week
+        """)
+
+        from collections import defaultdict
+        cat_weeks: dict[str, list[dict]] = defaultdict(list)
+        for cat, week, cnt, zero in result.result_rows:
+            cat_weeks[str(cat)].append({
+                "week": str(week)[:10],
+                "count": int(cnt),
+                "zero": int(zero),
+            })
+
+        trends = []
+        for cat, weekly in cat_weeks.items():
+            if len(weekly) < 2:
+                continue
+            weekly.sort(key=lambda x: x["week"])
+            counts = [w["count"] for w in weekly]
+            zeros  = [w["zero"] for w in weekly]
+
+            first, last = counts[0], counts[-1]
+            prev  = counts[-2] if len(counts) >= 2 else last
+
+            pct_change = round((last - first) / max(first, 1) * 100, 1)
+            momentum   = round(last / max(prev, 1), 2)
+            avg_zero_ratio = round(sum(zeros) / max(sum(counts), 1) * 100, 1)
+
+            if pct_change >= 20:
+                direction = "up"
+            elif pct_change <= -20:
+                direction = "down"
+            else:
+                direction = "stable"
+
+            trends.append({
+                "category": cat,
+                "weekly": weekly,
+                "pct_change_8w": pct_change,
+                "momentum": momentum,
+                "direction": direction,
+                "zero_result_pct": avg_zero_ratio,
+                "supply_gap": avg_zero_ratio >= 30,
+            })
+
+        trends.sort(key=lambda x: abs(x["pct_change_8w"]), reverse=True)
+        return {"weeks": weeks, "trends": trends}
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("[DemandTrends] Hata: %s", exc)
+        raise HTTPException(status_code=500, detail="Talep verisi alınamadı.")

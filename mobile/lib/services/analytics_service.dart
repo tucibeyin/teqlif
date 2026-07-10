@@ -687,6 +687,21 @@ class AnalyticsService {
       debugPrint('Click tracking failed: $e');
     }
   }
+
+  static Future<Map<String, dynamic>?> demandTrends({int weeks = 8}) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/analytics/demand-trends?weeks=$weeks'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
 }
 
 // --- Screen Tracking Observer ---

@@ -2128,5 +2128,41 @@
     }
   },
   "aiAdviceBimodal": "В этой группе товаров обнаружены два ценовых уровня (бимодальный). Цена может варьироваться в зависимости от варианта товара или гарантии.",
-  "aiAdviceNoData": "Пока недостаточно данных о похожих товарах. По мере добавления объявлений прогнозы станут точнее. Изучите рынок для определения цены."
+  "aiAdviceNoData": "Пока недостаточно данных о похожих товарах. По мере добавления объявлений прогнозы станут точнее. Изучите рынок для определения цены.",
+
+  "proToolDemandTrendsTitle": "Тренды спроса по категориям",
+  "proToolDemandTrendsDesc": "Какие категории растут? Найди возможности с дефицитом предложения.",
+
+  "notifPriceDropTitle": "Цена снизилась! 🔥",
+  "notifPriceDropBody": "Объявление, которое вы просматривали, стало дешевле.",
+
+  "demandTrendsTitle": "Тренды спроса по категориям",
+  "demandTrendsSubtitle": "Данные поиска за последние 8 недель",
+  "demandTrendsUpLabel": "Растёт",
+  "demandTrendsDownLabel": "Падает",
+  "demandTrendsStableLabel": "Стабильно",
+  "demandTrendsSupplyGapLabel": "Дефицит предложения",
+  "demandTrendsSupplyGapHint": "Пользователи ищут, но объявлений мало",
+  "demandTrendsChangeLabel": "{pct}% изменение (8 нед.)",
+  "@demandTrendsChangeLabel": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "demandTrendsEmptyLabel": "Пока недостаточно данных поиска.",
+
+  "trustScoreLabel": "Рейтинг доверия",
+  "trustScoreHint": "Надёжность продавца на платформе",
+  "trustScoreLow": "Новый участник",
+  "trustScoreMedium": "Надёжный",
+  "trustScoreHigh": "Очень надёжный",
+
+  "influenceRankLabel": "Рейтинг в сети",
+  "influenceRankHint": "Ваше влияние в сообществе",
+  "influenceRankValue": "Место #{rank}",
+  "@influenceRankValue": {
+    "placeholders": {
+      "rank": { "type": "int" }
+    }
+  }
 }

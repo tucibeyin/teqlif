@@ -2126,5 +2126,41 @@
     }
   },
   "aiAdviceBimodal": "Bu ürün grubunda iki farklı piyasa fiyatı (Bimodal) tespit edildi. Ürününüzün varyasyonuna veya garantisine göre fiyat farklılaşabilir.",
-  "aiAdviceNoData": "Henüz yeterli benzer ürün verisi bulunamadı. Platforma eklendikçe tahminler daha isabetli hale gelecek. Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz."
+  "aiAdviceNoData": "Henüz yeterli benzer ürün verisi bulunamadı. Platforma eklendikçe tahminler daha isabetli hale gelecek. Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz.",
+
+  "proToolDemandTrendsTitle": "Kategori Talep Trendi",
+  "proToolDemandTrendsDesc": "Hangi kategoriler yükseliyor? Arz açığı olan fırsatları keşfet.",
+
+  "notifPriceDropTitle": "Fiyat düştü! 🔥",
+  "notifPriceDropBody": "Baktığın ilan indirime girdi.",
+
+  "demandTrendsTitle": "Kategori Talep Trendi",
+  "demandTrendsSubtitle": "Son 8 haftanın arama verisi",
+  "demandTrendsUpLabel": "Yükselen",
+  "demandTrendsDownLabel": "Düşen",
+  "demandTrendsStableLabel": "Sabit",
+  "demandTrendsSupplyGapLabel": "Arz Açığı",
+  "demandTrendsSupplyGapHint": "Kullanıcılar arıyor ama yeterli ilan yok",
+  "demandTrendsChangeLabel": "%{pct} değişim (8 hafta)",
+  "@demandTrendsChangeLabel": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "demandTrendsEmptyLabel": "Henüz yeterli arama verisi yok.",
+
+  "trustScoreLabel": "Güven Skoru",
+  "trustScoreHint": "Satıcının platform güvenilirliği",
+  "trustScoreLow": "Yeni Üye",
+  "trustScoreMedium": "Güvenilir",
+  "trustScoreHigh": "Çok Güvenilir",
+
+  "influenceRankLabel": "Ağ Sıralaması",
+  "influenceRankHint": "Topluluk içindeki etkiniz",
+  "influenceRankValue": "#{rank}. sıra",
+  "@influenceRankValue": {
+    "placeholders": {
+      "rank": { "type": "int" }
+    }
+  }
 }

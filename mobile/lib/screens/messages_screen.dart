@@ -596,6 +596,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         }
       case 'listing_deactivated':
       case 'auction_won':
+      case 'price_drop_alert':
         if (relatedId != null) {
           Navigator.push(context, MaterialPageRoute(
             builder: (_) => ListingDeepLinkLoader(listingId: relatedId),

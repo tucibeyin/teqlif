@@ -358,6 +358,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
                 // Rating badge
                 _buildRatingBadge(hasRating, avgRaw),
+                const SizedBox(height: 8),
+
+                // Trust score rozeti
+                _buildTrustBadge(context),
                 const SizedBox(height: 12),
 
                 // Stats row
@@ -800,6 +804,47 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildTrustBadge(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final rawScore = _user?['trust_score'];
+    final rawRank  = _user?['influence_rank'];
+    if (rawScore == null && rawRank == null) return const SizedBox.shrink();
+
+    final badges = <Widget>[];
+
+    if (rawScore != null) {
+      final score = (rawScore as num).toInt();
+      final (tsLabel, tsColor) = score >= 70
+          ? (l.trustScoreHigh, const Color(0xFF10B981))
+          : score >= 35
+              ? (l.trustScoreMedium, const Color(0xFF3B82F6))
+              : (l.trustScoreLow, const Color(0xFF9CA3AF));
+      badges.add(_ProfileBadge(
+        icon: Icons.verified_outlined,
+        label: tsLabel,
+        value: '$score',
+        color: tsColor,
+        tooltip: l.trustScoreHint,
+      ));
+    }
+
+    if (rawRank != null) {
+      final rank = (rawRank as num).toInt();
+      if (rank > 0) {
+        badges.add(_ProfileBadge(
+          icon: Icons.hub_outlined,
+          label: l.influenceRankLabel,
+          value: l.influenceRankValue(rank),
+          color: const Color(0xFF8B5CF6),
+          tooltip: l.influenceRankHint,
+        ));
+      }
+    }
+
+    if (badges.isEmpty) return const SizedBox.shrink();
+    return Wrap(spacing: 6, runSpacing: 4, children: badges);
   }
 
   Widget _statCell(String label, dynamic count) => Builder(
@@ -1564,6 +1609,53 @@ class _SocialLinksRow extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _ProfileBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final String tooltip;
+
+  const _ProfileBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.30)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(width: 3),
+            Text(
+              value,
+              style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.75)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

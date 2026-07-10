@@ -92,12 +92,17 @@ CREATE TABLE IF NOT EXISTS search_events
     user_id      Nullable(UInt32),
     query        String,
     category     LowCardinality(String) DEFAULT '',
-    result_count UInt32 DEFAULT 0
+    result_count UInt32 DEFAULT 0,
+    intent       LowCardinality(String) DEFAULT ''
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (category, timestamp)
 """
+
+_ALTER_SEARCH_EVENTS = [
+    "ALTER TABLE search_events ADD COLUMN IF NOT EXISTS intent LowCardinality(String) DEFAULT ''",
+]
 
 _CREATE_SWIPE_LIVE_EVENTS_TABLE = """
 CREATE TABLE IF NOT EXISTS swipe_live_events
@@ -152,6 +157,8 @@ async def init_clickhouse() -> None:
         for stmt in _ALTER_FEED_ANALYTICS:
             await _client.command(stmt)
         await _client.command(_CREATE_SEARCH_EVENTS_TABLE)
+        for stmt in _ALTER_SEARCH_EVENTS:
+            await _client.command(stmt)
         await _client.command(_CREATE_SWIPE_LIVE_EVENTS_TABLE)
         logger.info("[ClickHouse] Bağlantı kuruldu, tablolar hazır.")
     except Exception as exc:
@@ -207,12 +214,13 @@ async def buffer_search_event(
     query: str,
     category: str = "",
     result_count: int = 0,
+    intent: str = "",
 ) -> None:
     """search_events Redis buffer'ına ekler."""
     try:
         from app.utils.redis_client import get_redis
         redis = await get_redis()
-        row = [_now_str(), user_id, query, category, result_count]
+        row = [_now_str(), user_id, query, category, result_count, intent]
         await redis.rpush(_BUF_SEARCH_EVENTS, json.dumps(row))
     except Exception as exc:
         logger.warning("[ClickHouse] buffer_search_event başarısız: %s", exc)
@@ -338,18 +346,19 @@ async def flush_all_buffers() -> None:
         if rows:
             data = [
                 [
-                    _parse_dt(r[0]),   # timestamp  DateTime
-                    r[1],              # user_id    Nullable(UInt32)
-                    str(r[2]),         # query      String
-                    str(r[3]),         # category   LowCardinality
-                    int(r[4]),         # result_count UInt32
+                    _parse_dt(r[0]),          # timestamp  DateTime
+                    r[1],                     # user_id    Nullable(UInt32)
+                    str(r[2]),                # query      String
+                    str(r[3]),                # category   LowCardinality
+                    int(r[4]),                # result_count UInt32
+                    str(r[5]) if len(r) > 5 else "",  # intent LowCardinality
                 ]
                 for r in rows
             ]
             await _client.insert(
                 "search_events",
                 data,
-                column_names=["timestamp", "user_id", "query", "category", "result_count"],
+                column_names=["timestamp", "user_id", "query", "category", "result_count", "intent"],
             )
             logger.debug("[ClickHouse] search_events flush | %d satır", len(data))
 

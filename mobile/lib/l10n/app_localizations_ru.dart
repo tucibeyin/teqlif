@@ -4327,4 +4327,74 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get aiAdviceNoData =>
       'Пока недостаточно данных о похожих товарах. По мере добавления объявлений прогнозы станут точнее. Изучите рынок для определения цены.';
+
+  @override
+  String get proToolDemandTrendsTitle => 'Тренды спроса по категориям';
+
+  @override
+  String get proToolDemandTrendsDesc =>
+      'Какие категории растут? Найди возможности с дефицитом предложения.';
+
+  @override
+  String get notifPriceDropTitle => 'Цена снизилась! 🔥';
+
+  @override
+  String get notifPriceDropBody =>
+      'Объявление, которое вы просматривали, стало дешевле.';
+
+  @override
+  String get demandTrendsTitle => 'Тренды спроса по категориям';
+
+  @override
+  String get demandTrendsSubtitle => 'Данные поиска за последние 8 недель';
+
+  @override
+  String get demandTrendsUpLabel => 'Растёт';
+
+  @override
+  String get demandTrendsDownLabel => 'Падает';
+
+  @override
+  String get demandTrendsStableLabel => 'Стабильно';
+
+  @override
+  String get demandTrendsSupplyGapLabel => 'Дефицит предложения';
+
+  @override
+  String get demandTrendsSupplyGapHint =>
+      'Пользователи ищут, но объявлений мало';
+
+  @override
+  String demandTrendsChangeLabel(String pct) {
+    return '$pct% изменение (8 нед.)';
+  }
+
+  @override
+  String get demandTrendsEmptyLabel => 'Пока недостаточно данных поиска.';
+
+  @override
+  String get trustScoreLabel => 'Рейтинг доверия';
+
+  @override
+  String get trustScoreHint => 'Надёжность продавца на платформе';
+
+  @override
+  String get trustScoreLow => 'Новый участник';
+
+  @override
+  String get trustScoreMedium => 'Надёжный';
+
+  @override
+  String get trustScoreHigh => 'Очень надёжный';
+
+  @override
+  String get influenceRankLabel => 'Рейтинг в сети';
+
+  @override
+  String get influenceRankHint => 'Ваше влияние в сообществе';
+
+  @override
+  String influenceRankValue(int rank) {
+    return 'Место #$rank';
+  }
 }

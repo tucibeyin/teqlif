@@ -4250,4 +4250,72 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get aiAdviceNoData =>
       'لم يتم العثور على بيانات كافية لمنتجات مشابهة حتى الآن. ستتحسن التقديرات مع إضافة المزيد من الإعلانات. يمكنك تحديد سعرك بإجراء بحث في السوق.';
+
+  @override
+  String get proToolDemandTrendsTitle => 'اتجاه طلب الفئات';
+
+  @override
+  String get proToolDemandTrendsDesc =>
+      'أي الفئات في ارتفاع؟ اكتشف فرص فجوة العرض.';
+
+  @override
+  String get notifPriceDropTitle => 'انخفض السعر! 🔥';
+
+  @override
+  String get notifPriceDropBody => 'انخفض سعر إعلان شاهدته مؤخرًا.';
+
+  @override
+  String get demandTrendsTitle => 'اتجاه الطلب في الفئة';
+
+  @override
+  String get demandTrendsSubtitle => 'بيانات البحث لآخر 8 أسابيع';
+
+  @override
+  String get demandTrendsUpLabel => 'متصاعد';
+
+  @override
+  String get demandTrendsDownLabel => 'متراجع';
+
+  @override
+  String get demandTrendsStableLabel => 'مستقر';
+
+  @override
+  String get demandTrendsSupplyGapLabel => 'فجوة العرض';
+
+  @override
+  String get demandTrendsSupplyGapHint => 'يبحث المستخدمون لكن الإعلانات شحيحة';
+
+  @override
+  String demandTrendsChangeLabel(String pct) {
+    return 'تغيير $pct٪ (8 أسابيع)';
+  }
+
+  @override
+  String get demandTrendsEmptyLabel => 'لا توجد بيانات بحث كافية بعد.';
+
+  @override
+  String get trustScoreLabel => 'درجة الثقة';
+
+  @override
+  String get trustScoreHint => 'مصداقية البائع في المنصة';
+
+  @override
+  String get trustScoreLow => 'عضو جديد';
+
+  @override
+  String get trustScoreMedium => 'موثوق';
+
+  @override
+  String get trustScoreHigh => 'موثوق جداً';
+
+  @override
+  String get influenceRankLabel => 'ترتيب الشبكة';
+
+  @override
+  String get influenceRankHint => 'تأثيرك في المجتمع';
+
+  @override
+  String influenceRankValue(int rank) {
+    return 'المرتبة #$rank';
+  }
 }

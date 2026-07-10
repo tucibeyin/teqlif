@@ -4280,4 +4280,73 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get aiAdviceNoData =>
       'Henüz yeterli benzer ürün verisi bulunamadı. Platforma eklendikçe tahminler daha isabetli hale gelecek. Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz.';
+
+  @override
+  String get proToolDemandTrendsTitle => 'Kategori Talep Trendi';
+
+  @override
+  String get proToolDemandTrendsDesc =>
+      'Hangi kategoriler yükseliyor? Arz açığı olan fırsatları keşfet.';
+
+  @override
+  String get notifPriceDropTitle => 'Fiyat düştü! 🔥';
+
+  @override
+  String get notifPriceDropBody => 'Baktığın ilan indirime girdi.';
+
+  @override
+  String get demandTrendsTitle => 'Kategori Talep Trendi';
+
+  @override
+  String get demandTrendsSubtitle => 'Son 8 haftanın arama verisi';
+
+  @override
+  String get demandTrendsUpLabel => 'Yükselen';
+
+  @override
+  String get demandTrendsDownLabel => 'Düşen';
+
+  @override
+  String get demandTrendsStableLabel => 'Sabit';
+
+  @override
+  String get demandTrendsSupplyGapLabel => 'Arz Açığı';
+
+  @override
+  String get demandTrendsSupplyGapHint =>
+      'Kullanıcılar arıyor ama yeterli ilan yok';
+
+  @override
+  String demandTrendsChangeLabel(String pct) {
+    return '%$pct değişim (8 hafta)';
+  }
+
+  @override
+  String get demandTrendsEmptyLabel => 'Henüz yeterli arama verisi yok.';
+
+  @override
+  String get trustScoreLabel => 'Güven Skoru';
+
+  @override
+  String get trustScoreHint => 'Satıcının platform güvenilirliği';
+
+  @override
+  String get trustScoreLow => 'Yeni Üye';
+
+  @override
+  String get trustScoreMedium => 'Güvenilir';
+
+  @override
+  String get trustScoreHigh => 'Çok Güvenilir';
+
+  @override
+  String get influenceRankLabel => 'Ağ Sıralaması';
+
+  @override
+  String get influenceRankHint => 'Topluluk içindeki etkiniz';
+
+  @override
+  String influenceRankValue(int rank) {
+    return '#$rank. sıra';
+  }
 }

@@ -171,6 +171,22 @@ class UserService:
             is_following = follow_chk is not None
             is_blocked   = block_chk  is not None
 
+        trust_score = None
+        influence_rank = None
+        try:
+            from app.utils.redis_client import get_redis
+            redis = await get_redis()
+            ts_raw, ir_raw = await asyncio.gather(
+                redis.get(f"trust_score:{user.id}"),
+                redis.get(f"influence_rank:{user.id}"),
+            )
+            if ts_raw is not None:
+                trust_score = int(ts_raw)
+            if ir_raw is not None:
+                influence_rank = int(ir_raw)
+        except Exception:
+            pass
+
         return {
             "id": user.id,
             "username": user.username,
@@ -196,4 +212,6 @@ class UserService:
             "facebook_url": user.facebook_url,
             "youtube_url": user.youtube_url,
             "tiktok_url": user.tiktok_url,
+            "trust_score": trust_score,
+            "influence_rank": influence_rank,
         }

@@ -589,6 +589,38 @@ class ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ],
+                        // Güven skoru + etki sıralaması rozetleri
+                        Builder(builder: (ctx) {
+                          final l = AppLocalizations.of(ctx)!;
+                          final ts = _user?['trust_score'] as int?;
+                          final ir = _user?['influence_rank'] as int?;
+                          if (ts == null && ir == null) return const SizedBox.shrink();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                if (ts != null) _ScoreBadge(
+                                  icon: Icons.verified_outlined,
+                                  label: ts >= 70
+                                      ? l.trustScoreHigh
+                                      : ts >= 35 ? l.trustScoreMedium : l.trustScoreLow,
+                                  value: '$ts',
+                                  color: ts >= 70
+                                      ? const Color(0xFF10B981)
+                                      : ts >= 35 ? const Color(0xFF3B82F6) : const Color(0xFF9CA3AF),
+                                ),
+                                if (ir != null && ir > 0) _ScoreBadge(
+                                  icon: Icons.hub_outlined,
+                                  label: l.influenceRankLabel,
+                                  value: l.influenceRankValue(ir),
+                                  color: const Color(0xFF8B5CF6),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                         if ((_user?['website_url'] as String?)?.isNotEmpty == true) ...[
                           const SizedBox(height: 4),
                           GestureDetector(
@@ -3613,6 +3645,48 @@ class _SocialLinksRow extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _ScoreBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _ScoreBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 3),
+          Text(
+            value,
+            style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.75)),
+          ),
+        ],
+      ),
     );
   }
 }

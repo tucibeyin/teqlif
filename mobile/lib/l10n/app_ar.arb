@@ -2123,5 +2123,41 @@
     }
   },
   "listingVideoComplete": "اكتمل الفيديو",
-  "audienceTotalViewers": "إجمالي المشاهدين"
+  "audienceTotalViewers": "إجمالي المشاهدين",
+
+  "proToolDemandTrendsTitle": "اتجاه طلب الفئات",
+  "proToolDemandTrendsDesc": "أي الفئات في ارتفاع؟ اكتشف فرص فجوة العرض.",
+
+  "notifPriceDropTitle": "انخفض السعر! 🔥",
+  "notifPriceDropBody": "انخفض سعر إعلان شاهدته مؤخرًا.",
+
+  "demandTrendsTitle": "اتجاه الطلب في الفئة",
+  "demandTrendsSubtitle": "بيانات البحث لآخر 8 أسابيع",
+  "demandTrendsUpLabel": "متصاعد",
+  "demandTrendsDownLabel": "متراجع",
+  "demandTrendsStableLabel": "مستقر",
+  "demandTrendsSupplyGapLabel": "فجوة العرض",
+  "demandTrendsSupplyGapHint": "يبحث المستخدمون لكن الإعلانات شحيحة",
+  "demandTrendsChangeLabel": "تغيير {pct}٪ (8 أسابيع)",
+  "@demandTrendsChangeLabel": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "demandTrendsEmptyLabel": "لا توجد بيانات بحث كافية بعد.",
+
+  "trustScoreLabel": "درجة الثقة",
+  "trustScoreHint": "مصداقية البائع في المنصة",
+  "trustScoreLow": "عضو جديد",
+  "trustScoreMedium": "موثوق",
+  "trustScoreHigh": "موثوق جداً",
+
+  "influenceRankLabel": "ترتيب الشبكة",
+  "influenceRankHint": "تأثيرك في المجتمع",
+  "influenceRankValue": "المرتبة #{rank}",
+  "@influenceRankValue": {
+    "placeholders": {
+      "rank": { "type": "int" }
+    }
+  }
 }

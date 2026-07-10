@@ -1830,6 +1830,261 @@ async def invalidate_swipe_live_configs_task(ctx: dict) -> None:
         logger.warning("[Worker] invalidate_swipe_live_configs başarısız | %s", exc)
 
 
+# ── A4: Fiyat Esnekliği Retargeting ──────────────────────────────────────────
+
+async def hesitation_retarget_task(ctx: dict) -> None:
+    """
+    Her gün 06:00'da çalışır.
+    Son 7 günde bid_hesitation olayı kaydedilen kullanıcıları bulur;
+    o ilanın fiyatı hesitation fiyatına göre ≥%8 düşmüşse price_drop_alert bildirimi gönderir.
+    Redis dedup: retarget:hes:{user_id}:{listing_id} — 7 gün TTL.
+    """
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        from app.database import AsyncSessionLocal
+        from app.utils.redis_client import get_redis
+        from sqlalchemy import text as sql_text
+
+        ch = await get_clickhouse_client()
+        if ch is None:
+            logger.warning("[HesitationRetarget] ClickHouse yok, atlanıyor")
+            return
+
+        result = await ch.query("""
+            SELECT
+                user_id,
+                item_id                      AS listing_id,
+                AVG(price_point)             AS avg_hesitation_price,
+                MAX(timestamp)               AS last_event
+            FROM user_events
+            WHERE event_type  = 'bid_hesitation'
+              AND item_type   = 'listing'
+              AND timestamp  >= now() - INTERVAL 7 DAY
+              AND user_id IS NOT NULL
+              AND price_point IS NOT NULL
+            GROUP BY user_id, item_id
+            HAVING avg_hesitation_price > 0
+        """)
+
+        if not result.result_rows:
+            logger.info("[HesitationRetarget] Hesitation verisi yok, atlanıyor")
+            return
+
+        # listing_id → (user_id, hesitation_price) haritası
+        from collections import defaultdict
+        listing_user_map: dict[int, list[tuple[int, float]]] = defaultdict(list)
+        for uid, lid, avg_price, _ in result.result_rows:
+            if uid and lid and avg_price:
+                listing_user_map[int(lid)].append((int(uid), float(avg_price)))
+
+        listing_ids = list(listing_user_map.keys())
+        if not listing_ids:
+            return
+
+        redis = await get_redis()
+        from app.routers.notifications import push_notification
+
+        async with AsyncSessionLocal() as db:
+            rows = await db.execute(sql_text("""
+                SELECT id, title, price, is_active, is_deleted
+                FROM listings
+                WHERE id = ANY(:ids) AND is_active = TRUE AND is_deleted = FALSE
+            """), {"ids": listing_ids})
+            listings = {row[0]: {"title": row[1], "price": row[2]} for row in rows.fetchall()}
+
+        sent = 0
+        for lid, user_entries in listing_user_map.items():
+            listing = listings.get(lid)
+            if not listing or listing["price"] is None:
+                continue
+            current_price = float(listing["price"])
+
+            for uid, hes_price in user_entries:
+                if current_price > hes_price * 0.92:
+                    continue  # %8'den az düşüş, atla
+
+                dedup_key = f"retarget:hes:{uid}:{lid}"
+                if await redis.exists(dedup_key):
+                    continue
+
+                try:
+                    await push_notification(
+                        user_id=uid,
+                        notif={
+                            "type": "price_drop_alert",
+                            "title": "Fiyat düştü! 🔥",
+                            "body": f"{listing['title']} — artık {int(current_price):,} TL".replace(",", "."),
+                            "related_id": lid,
+                        },
+                        pref_key="new_bid",
+                    )
+                    await redis.setex(dedup_key, 604_800, "1")  # 7 gün
+                    sent += 1
+                except Exception as exc:
+                    logger.warning("[HesitationRetarget] Push gönderilemedi uid=%d lid=%d: %s", uid, lid, exc)
+
+        logger.info("[HesitationRetarget] Tamamlandı | gönderilen=%d", sent)
+
+    except Exception as exc:
+        logger.error("[HesitationRetarget] Görev başarısız: %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
+# ── A7: Güven Skoru ───────────────────────────────────────────────────────────
+
+async def compute_trust_scores_task(ctx: dict) -> None:
+    """
+    Her gün 02:15'te çalışır.
+    ClickHouse + PostgreSQL verilerinden çok sinyalli kullanıcı güven skoru (0–100) hesaplar.
+    Redis: trust_score:{uid} = int  (TTL 25 saat)
+
+    Sinyaller:
+      - Tamamlanan açık artırma sayısı (max +30)
+      - Kazanım oranı (max +25)
+      - Aktif ilan sürümlülüğü (max +20)
+      - Hesap yaşı — max 365 gün (max +15)
+      - Düşük hesitation/bid oranı (max +10)
+    """
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        from app.database import AsyncSessionLocal
+        from app.utils.redis_client import get_redis
+        from sqlalchemy import text as sql_text
+
+        ch = await get_clickhouse_client()
+        redis = await get_redis()
+
+        ch_result = None
+        hes_result = None
+        if ch:
+            ch_task = ch.query("""
+                SELECT
+                    user_id,
+                    countIf(event_type = 'auction_won')                      AS wins,
+                    countIf(event_type IN ('auction_won', 'auction_ended'))   AS total_auctions,
+                    countIf(event_type = 'bid_hesitation')                    AS hesitations,
+                    countIf(event_type = 'bid_placed')                        AS bids
+                FROM user_events
+                WHERE timestamp >= now() - INTERVAL 90 DAY
+                  AND user_id IS NOT NULL
+                GROUP BY user_id
+            """)
+            ch_result, hes_result = await asyncio.gather(ch_task, asyncio.sleep(0))
+            ch_result = ch_result
+
+        async with AsyncSessionLocal() as db:
+            pg_rows = await db.execute(sql_text("""
+                SELECT
+                    u.id,
+                    EXTRACT(DAY FROM (NOW() - u.created_at))::int  AS account_age_days,
+                    COUNT(l.id) FILTER (WHERE l.is_active AND NOT l.is_deleted) AS active_listings,
+                    COUNT(l.id) FILTER (WHERE l.is_deleted)                      AS deleted_listings,
+                    COUNT(l.id)                                                    AS total_listings
+                FROM users u
+                LEFT JOIN listings l ON l.user_id = u.id
+                GROUP BY u.id
+            """))
+            pg_data = {
+                row[0]: {
+                    "age_days": row[1] or 0,
+                    "active": row[2] or 0,
+                    "deleted": row[3] or 0,
+                    "total": row[4] or 0,
+                }
+                for row in pg_rows.fetchall()
+            }
+
+        ch_data: dict[int, dict] = {}
+        if ch_result and ch_result.result_rows:
+            for uid, wins, total, hes, bids in ch_result.result_rows:
+                if uid:
+                    ch_data[int(uid)] = {
+                        "wins": int(wins),
+                        "total": int(total),
+                        "hes": int(hes),
+                        "bids": int(bids),
+                    }
+
+        all_uids = set(pg_data.keys()) | set(ch_data.keys())
+        pipe = redis.pipeline()
+        _TTL = 90_000  # 25 saat
+
+        for uid in all_uids:
+            pg = pg_data.get(uid, {"age_days": 0, "active": 0, "deleted": 0, "total": 0})
+            ch = ch_data.get(uid, {"wins": 0, "total": 0, "hes": 0, "bids": 0})
+
+            # Sinyal 1: tamamlanan artırma (+30 max)
+            auction_score = min(ch["total"] / 10, 1.0) * 30
+
+            # Sinyal 2: kazanım oranı (+25 max)
+            win_rate = ch["wins"] / max(ch["total"], 1)
+            win_score = win_rate * 25
+
+            # Sinyal 3: aktif ilan sürümlülüğü (+20 max)
+            del_ratio = pg["deleted"] / max(pg["total"], 1)
+            listing_score = (1.0 - min(del_ratio, 1.0)) * 20 if pg["total"] > 0 else 10.0
+
+            # Sinyal 4: hesap yaşı (max 365 gün = +15)
+            age_score = min(pg["age_days"] / 365, 1.0) * 15
+
+            # Sinyal 5: düşük hesitation/bid oranı (+10 max)
+            hes_ratio = ch["hes"] / max(ch["bids"], 1) if ch["bids"] > 0 else 0.5
+            hes_score = max(0.0, 1.0 - min(hes_ratio, 1.0)) * 10
+
+            trust = round(auction_score + win_score + listing_score + age_score + hes_score)
+            trust = max(0, min(100, trust))
+            pipe.setex(f"trust_score:{uid}", _TTL, str(trust))
+
+        await pipe.execute()
+        logger.info("[TrustScore] Tamamlandı | kullanıcı=%d", len(all_uids))
+
+    except Exception as exc:
+        logger.error("[TrustScore] compute_trust_scores_task başarısız: %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
+# ── B1: ML Churn Eğitimi ─────────────────────────────────────────────────────
+
+async def train_churn_model_task(ctx: dict) -> None:
+    """
+    Her Pazartesi 05:00'de çalışır.
+    ClickHouse'daki son 90 günlük kullanıcı davranışından GradientBoosting churn modeli eğitir.
+    Model pickle → /var/www/teqlif.com/models/churn_model.pkl
+    Model yoksa mevcut heuristik çalışmaya devam eder.
+    """
+    try:
+        from app.services.churn_ml_service import train_churn_model
+        trained = await train_churn_model()
+        if trained:
+            logger.info("[ChurnML] Model başarıyla eğitildi")
+        else:
+            logger.info("[ChurnML] Yetersiz veri, model eğitilmedi")
+    except ImportError:
+        logger.warning("[ChurnML] scikit-learn yüklü değil, atlanıyor")
+    except Exception as exc:
+        logger.error("[ChurnML] train_churn_model_task başarısız: %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
+# ── B3: Sosyal Graf Influence Scoring ────────────────────────────────────────
+
+async def compute_influence_scores_task(ctx: dict) -> None:
+    """
+    Her Pazar 05:30'da çalışır.
+    follows tablosundan NetworkX directed graph kurarak PageRank hesaplar.
+    Redis: influence_rank:{uid} = int (0–100, yüksek = etkili)  TTL 7 gün
+    """
+    try:
+        from app.services.influence_service import compute_influence_scores
+        count = await compute_influence_scores()
+        logger.info("[Influence] PageRank tamamlandı | kullanıcı=%d", count)
+    except ImportError:
+        logger.warning("[Influence] networkx yüklü değil, atlanıyor")
+    except Exception as exc:
+        logger.error("[Influence] compute_influence_scores_task başarısız: %s", exc, exc_info=True)
+        capture_exception(exc)
+
+
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
 class WorkerSettings:
@@ -1884,6 +2139,10 @@ class WorkerSettings:
         auto_close_stream_if_host_absent_task,
         delayed_close_stream_task,
         send_telegram_notification_task,
+        hesitation_retarget_task,
+        compute_trust_scores_task,
+        train_churn_model_task,
+        compute_influence_scores_task,
     ]
 
     cron_jobs = [
@@ -1943,6 +2202,14 @@ class WorkerSettings:
         cron(backfill_listing_embeddings_task, minute=30),
         # Her 2 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
+        # Her gün 06:00 — bid_hesitation → fiyat düşüş retarget bildirimi
+        cron(hesitation_retarget_task, hour=6, minute=0),
+        # Her gün 02:15 — çok sinyalli kullanıcı güven skoru (Redis cache)
+        cron(compute_trust_scores_task, hour=2, minute=15),
+        # Her Pazartesi 05:00 — GradientBoosting churn modeli eğitimi
+        cron(train_churn_model_task, weekday=0, hour=5, minute=0),
+        # Her Pazar 05:30 — NetworkX PageRank influence scoring
+        cron(compute_influence_scores_task, weekday=6, hour=5, minute=30),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)

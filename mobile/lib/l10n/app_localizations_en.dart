@@ -4276,4 +4276,73 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aiAdviceNoData =>
       'Not enough similar product data found yet. Estimates will improve as more listings are added to the platform. Research the market to set your price.';
+
+  @override
+  String get proToolDemandTrendsTitle => 'Category Demand Trends';
+
+  @override
+  String get proToolDemandTrendsDesc =>
+      'Which categories are rising? Discover supply gap opportunities.';
+
+  @override
+  String get notifPriceDropTitle => 'Price dropped! 🔥';
+
+  @override
+  String get notifPriceDropBody => 'A listing you viewed just went on sale.';
+
+  @override
+  String get demandTrendsTitle => 'Category Demand Trends';
+
+  @override
+  String get demandTrendsSubtitle => 'Last 8 weeks of search data';
+
+  @override
+  String get demandTrendsUpLabel => 'Rising';
+
+  @override
+  String get demandTrendsDownLabel => 'Falling';
+
+  @override
+  String get demandTrendsStableLabel => 'Stable';
+
+  @override
+  String get demandTrendsSupplyGapLabel => 'Supply Gap';
+
+  @override
+  String get demandTrendsSupplyGapHint =>
+      'Users are searching but listings are scarce';
+
+  @override
+  String demandTrendsChangeLabel(String pct) {
+    return '$pct% change (8 weeks)';
+  }
+
+  @override
+  String get demandTrendsEmptyLabel => 'Not enough search data yet.';
+
+  @override
+  String get trustScoreLabel => 'Trust Score';
+
+  @override
+  String get trustScoreHint => 'Seller\'s platform credibility';
+
+  @override
+  String get trustScoreLow => 'New Member';
+
+  @override
+  String get trustScoreMedium => 'Trusted';
+
+  @override
+  String get trustScoreHigh => 'Highly Trusted';
+
+  @override
+  String get influenceRankLabel => 'Network Rank';
+
+  @override
+  String get influenceRankHint => 'Your influence in the community';
+
+  @override
+  String influenceRankValue(int rank) {
+    return 'Rank #$rank';
+  }
 }

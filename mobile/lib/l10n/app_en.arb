@@ -2163,5 +2163,41 @@
     }
   },
   "aiAdviceBimodal": "Two distinct market price levels (Bimodal) detected in this product group. Price may vary based on product variant or warranty.",
-  "aiAdviceNoData": "Not enough similar product data found yet. Estimates will improve as more listings are added to the platform. Research the market to set your price."
+  "aiAdviceNoData": "Not enough similar product data found yet. Estimates will improve as more listings are added to the platform. Research the market to set your price.",
+
+  "proToolDemandTrendsTitle": "Category Demand Trends",
+  "proToolDemandTrendsDesc": "Which categories are rising? Discover supply gap opportunities.",
+
+  "notifPriceDropTitle": "Price dropped! 🔥",
+  "notifPriceDropBody": "A listing you viewed just went on sale.",
+
+  "demandTrendsTitle": "Category Demand Trends",
+  "demandTrendsSubtitle": "Last 8 weeks of search data",
+  "demandTrendsUpLabel": "Rising",
+  "demandTrendsDownLabel": "Falling",
+  "demandTrendsStableLabel": "Stable",
+  "demandTrendsSupplyGapLabel": "Supply Gap",
+  "demandTrendsSupplyGapHint": "Users are searching but listings are scarce",
+  "demandTrendsChangeLabel": "{pct}% change (8 weeks)",
+  "@demandTrendsChangeLabel": {
+    "placeholders": {
+      "pct": { "type": "String" }
+    }
+  },
+  "demandTrendsEmptyLabel": "Not enough search data yet.",
+
+  "trustScoreLabel": "Trust Score",
+  "trustScoreHint": "Seller's platform credibility",
+  "trustScoreLow": "New Member",
+  "trustScoreMedium": "Trusted",
+  "trustScoreHigh": "Highly Trusted",
+
+  "influenceRankLabel": "Network Rank",
+  "influenceRankHint": "Your influence in the community",
+  "influenceRankValue": "Rank #{rank}",
+  "@influenceRankValue": {
+    "placeholders": {
+      "rank": { "type": "int" }
+    }
+  }
 }

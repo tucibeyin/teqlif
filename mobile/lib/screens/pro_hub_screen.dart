@@ -7,6 +7,7 @@ import '../services/analytics_service.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import 'competitor_radar_screen.dart';
+import 'demand_trends_screen.dart';
 import 'listing_analytics_screen.dart';
 import 'market_intelligence_screen.dart';
 import 'pro_insights_screen.dart';
@@ -197,6 +198,17 @@ class _ProHubScreenState extends State<ProHubScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => MarketIntelligenceScreen(isPremium: isPremium)),
                 ),
+              ),
+              const SizedBox(height: 10),
+              _ToolCard(
+                icon: Icons.trending_up_outlined,
+                iconColor: const Color(0xFF10B981),
+                title: l.proToolDemandTrendsTitle,
+                description: l.proToolDemandTrendsDesc,
+                isPremium: isPremium,
+                onTap: isPremium
+                    ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DemandTrendsScreen()))
+                    : () => _showUpgrade(context),
               ),
               const SizedBox(height: 10),
               _ToolCard(

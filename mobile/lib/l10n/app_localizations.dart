@@ -7775,6 +7775,132 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Henüz yeterli benzer ürün verisi bulunamadı. Platforma eklendikçe tahminler daha isabetli hale gelecek. Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz.'**
   String get aiAdviceNoData;
+
+  /// No description provided for @proToolDemandTrendsTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori Talep Trendi'**
+  String get proToolDemandTrendsTitle;
+
+  /// No description provided for @proToolDemandTrendsDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hangi kategoriler yükseliyor? Arz açığı olan fırsatları keşfet.'**
+  String get proToolDemandTrendsDesc;
+
+  /// No description provided for @notifPriceDropTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyat düştü! 🔥'**
+  String get notifPriceDropTitle;
+
+  /// No description provided for @notifPriceDropBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Baktığın ilan indirime girdi.'**
+  String get notifPriceDropBody;
+
+  /// No description provided for @demandTrendsTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori Talep Trendi'**
+  String get demandTrendsTitle;
+
+  /// No description provided for @demandTrendsSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son 8 haftanın arama verisi'**
+  String get demandTrendsSubtitle;
+
+  /// No description provided for @demandTrendsUpLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yükselen'**
+  String get demandTrendsUpLabel;
+
+  /// No description provided for @demandTrendsDownLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düşen'**
+  String get demandTrendsDownLabel;
+
+  /// No description provided for @demandTrendsStableLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sabit'**
+  String get demandTrendsStableLabel;
+
+  /// No description provided for @demandTrendsSupplyGapLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arz Açığı'**
+  String get demandTrendsSupplyGapLabel;
+
+  /// No description provided for @demandTrendsSupplyGapHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcılar arıyor ama yeterli ilan yok'**
+  String get demandTrendsSupplyGapHint;
+
+  /// No description provided for @demandTrendsChangeLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'%{pct} değişim (8 hafta)'**
+  String demandTrendsChangeLabel(String pct);
+
+  /// No description provided for @demandTrendsEmptyLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz yeterli arama verisi yok.'**
+  String get demandTrendsEmptyLabel;
+
+  /// No description provided for @trustScoreLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güven Skoru'**
+  String get trustScoreLabel;
+
+  /// No description provided for @trustScoreHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satıcının platform güvenilirliği'**
+  String get trustScoreHint;
+
+  /// No description provided for @trustScoreLow.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni Üye'**
+  String get trustScoreLow;
+
+  /// No description provided for @trustScoreMedium.
+  ///
+  /// In tr, this message translates to:
+  /// **'Güvenilir'**
+  String get trustScoreMedium;
+
+  /// No description provided for @trustScoreHigh.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çok Güvenilir'**
+  String get trustScoreHigh;
+
+  /// No description provided for @influenceRankLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ağ Sıralaması'**
+  String get influenceRankLabel;
+
+  /// No description provided for @influenceRankHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Topluluk içindeki etkiniz'**
+  String get influenceRankHint;
+
+  /// No description provided for @influenceRankValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'#{rank}. sıra'**
+  String influenceRankValue(int rank);
 }
 
 class _AppLocalizationsDelegate
