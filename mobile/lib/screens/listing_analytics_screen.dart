@@ -1,9 +1,17 @@
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../config/api.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
+
+// Basit bellek önbelleği: days → (timestamp, veri)
+final _roiCache = <int, (DateTime, Map<String, dynamic>)>{};
+final _videoPerfCache = <int, (DateTime, Map<String, dynamic>)>{};
+final _galleryCache = <int, (DateTime, Map<String, dynamic>)>{};
+const _cacheTtl = Duration(minutes: 5);
 
 class ListingAnalyticsScreen extends StatefulWidget {
   final bool isPremium;
@@ -40,17 +48,40 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
     }
   }
 
+  Map<String, dynamic>? _fromCache<T>(Map<int, (DateTime, Map<String, dynamic>)> cache) {
+    final entry = cache[_days];
+    if (entry == null) return null;
+    if (DateTime.now().difference(entry.$1) > _cacheTtl) {
+      cache.remove(_days);
+      return null;
+    }
+    return entry.$2;
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
       _hasError = false;
     });
 
-    final results = await Future.wait([
-      AnalyticsService.getVideoRoi(days: _days),
-      AnalyticsService.getVideoPerformance(days: _days),
-      AnalyticsService.getGalleryStats(days: _days),
-    ]);
+    var roi = _fromCache(_roiCache);
+    var videoPerf = _fromCache(_videoPerfCache);
+    var gallery = _fromCache(_galleryCache);
+
+    if (roi == null || videoPerf == null || gallery == null) {
+      final results = await Future.wait([
+        roi == null ? AnalyticsService.getVideoRoi(days: _days) : Future.value(roi),
+        videoPerf == null ? AnalyticsService.getVideoPerformance(days: _days) : Future.value(videoPerf),
+        gallery == null ? AnalyticsService.getGalleryStats(days: _days) : Future.value(gallery),
+      ]);
+      roi = results[0];
+      videoPerf = results[1];
+      gallery = results[2];
+      final now = DateTime.now();
+      if (roi != null) _roiCache[_days] = (now, roi);
+      if (videoPerf != null) _videoPerfCache[_days] = (now, videoPerf);
+      if (gallery != null) _galleryCache[_days] = (now, gallery);
+    }
 
     if (!mounted) return;
 
@@ -82,9 +113,14 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
     final merged = byListing.map((l) {
       final lid = l['listing_id'].toString();
       final isVideo = (l['content_type'] as String?) == 'video';
+      final rawImg = l['image_url'] as String?;
+      final resolvedImg = (rawImg != null && rawImg.isNotEmpty)
+          ? (rawImg.startsWith('/uploads') ? '$kBaseHost$rawImg' : '$kBaseUrl$rawImg')
+          : null;
       return _ListingMetric(
         id: lid,
         title: l['title'] as String? ?? '—',
+        imageUrl: resolvedImg,
         isVideo: isVideo,
         impressions: l['impressions'] as int? ?? 0,
         ctr: (l['ctr'] as num?)?.toDouble() ?? 0,
@@ -255,13 +291,10 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                   return GestureDetector(
                     onTap: () => setState(() => _selectedListingId = metric.id),
                     child: Container(
-                      width: 140,
+                      width: 120,
                       margin: const EdgeInsets.only(right: 12),
-                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF6366F1).withValues(alpha: 0.1)
-                            : AppColors.card(context),
+                        color: AppColors.card(context),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
@@ -270,29 +303,68 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                           width: isSelected ? 2 : 1,
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          Icon(
-                            metric.isVideo
-                                ? Icons.play_circle_outline
-                                : Icons.photo_library_outlined,
-                            size: 20,
-                            color: AppColors.textSecondary(context),
-                          ),
-                          const Spacer(),
-                          Text(
-                            metric.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
-                              color: AppColors.textPrimary(context),
+                          // Arka plan: resim varsa göster, yoksa gri
+                          if (metric.imageUrl != null)
+                            CachedNetworkImage(
+                              imageUrl: metric.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) => Container(
+                                color: AppColors.surfaceVariant(context),
+                              ),
+                            )
+                          else
+                            Container(color: AppColors.surfaceVariant(context)),
+                          // Gradient + başlık
+                          Positioned(
+                            left: 0, right: 0, bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [Colors.transparent, Colors.black87],
+                                ),
+                              ),
+                              child: Text(
+                                metric.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
+                          // Video rozeti
+                          if (metric.isVideo)
+                            Positioned(
+                              top: 6, right: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Icon(Icons.play_arrow, size: 12, color: Colors.white),
+                              ),
+                            ),
+                          // Seçim halkas
+                          if (isSelected)
+                            Positioned.fill(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: const Color(0xFF6366F1), width: 2),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -565,6 +637,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 class _ListingMetric {
   final String id;
   final String title;
+  final String? imageUrl;
   final bool isVideo;
   final int impressions;
   final double ctr;
@@ -573,6 +646,7 @@ class _ListingMetric {
   const _ListingMetric({
     required this.id,
     required this.title,
+    this.imageUrl,
     required this.isVideo,
     required this.impressions,
     required this.ctr,

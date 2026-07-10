@@ -1848,7 +1848,7 @@ async def video_roi(
         raise HTTPException(status_code=403, detail=t.get("errProRequired", "Bu özellik Pro kullanıcılara özeldir"))
 
     result = await db.execute(
-        select(Listing.id, Listing.title, Listing.video_url).where(
+        select(Listing.id, Listing.title, Listing.video_url, Listing.image_urls, Listing.image_url).where(
             Listing.user_id == current_user.id,
             Listing.is_deleted == False,  # noqa: E712
         )
@@ -1857,7 +1857,15 @@ async def video_roi(
     if not listings:
         return {"video": {}, "photo": {}, "by_listing": []}
 
-    listing_map = {str(r.id): {"title": r.title, "has_video": bool(r.video_url)} for r in listings}
+    def _first_image(r) -> str:
+        try:
+            import json as _json
+            imgs = _json.loads(r.image_urls) if r.image_urls else []
+            return imgs[0] if imgs else (r.image_url or "")
+        except Exception:
+            return r.image_url or ""
+
+    listing_map = {str(r.id): {"title": r.title, "has_video": bool(r.video_url), "image_url": _first_image(r)} for r in listings}
     listing_ids = list(listing_map.keys())
 
     try:
@@ -1902,6 +1910,7 @@ async def video_roi(
             by_listing.append({
                 "listing_id": lid,
                 "title": info.get("title", "—"),
+                "image_url": info.get("image_url", ""),
                 "content_type": ct,
                 "impressions": imp,
                 "clicks": clk,
