@@ -13,7 +13,7 @@ install() {
     cp "$(realpath "$0")" "$SCRIPT_DEST"
     chmod +x "$SCRIPT_DEST"
 
-    REPO_DIR="$(dirname "$(dirname "$(realpath "$0")")")"
+    REPO_DIR="$(dirname "$(dirname "$(dirname "$(realpath "$0")")")")"
     cp "$REPO_DIR/deploy/systemd/redis-backup.service" /etc/systemd/system/
     cp "$REPO_DIR/deploy/systemd/redis-backup.timer"   /etc/systemd/system/
 
