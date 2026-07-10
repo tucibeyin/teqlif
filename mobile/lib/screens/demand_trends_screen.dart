@@ -3,6 +3,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
+import '../services/category_service.dart';
 
 class DemandTrendsScreen extends StatefulWidget {
   const DemandTrendsScreen({super.key});
@@ -15,11 +16,21 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _trends = [];
+  List<(String, String)>? _categories;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_categories == null) {
+      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
+          .then((cats) { if (mounted) setState(() => _categories = cats); });
+    }
   }
 
   Future<void> _load() async {
@@ -67,7 +78,7 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      ..._trends.map((t) => _TrendCard(trend: t, l: l)),
+                      ..._trends.map((t) => _TrendCard(trend: t, l: l, categoryLabels: _categories)),
                     ],
                   ),
                 ),
@@ -105,12 +116,17 @@ class _Empty extends StatelessWidget {
 class _TrendCard extends StatelessWidget {
   final Map<String, dynamic> trend;
   final AppLocalizations l;
+  final List<(String, String)>? categoryLabels;
 
-  const _TrendCard({required this.trend, required this.l});
+  const _TrendCard({required this.trend, required this.l, this.categoryLabels});
 
   @override
   Widget build(BuildContext context) {
-    final category   = trend['category'] as String? ?? '';
+    final categoryKey = trend['category'] as String? ?? '';
+    final category = categoryLabels?.firstWhere(
+          (p) => p.$1 == categoryKey,
+          orElse: () => (categoryKey, categoryKey),
+        ).$2 ?? categoryKey;
     final direction  = trend['direction'] as String? ?? 'stable';
     final pct        = (trend['pct_change_8w'] as num?)?.toStringAsFixed(1) ?? '0';
     final supplyGap  = trend['supply_gap'] as bool? ?? false;
