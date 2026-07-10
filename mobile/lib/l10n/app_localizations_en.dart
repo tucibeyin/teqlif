@@ -2587,6 +2587,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get notifSettingsBlastTitle => 'Bulk Audience Notifications';
+
+  @override
+  String get notifSettingsBlastDesc =>
+      'When off, push is suppressed; notification still appears in your list.';
+
+  @override
   String get retargetingCooldownLabel => 'Next blast in:';
 
   @override

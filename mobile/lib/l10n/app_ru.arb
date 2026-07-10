@@ -1540,6 +1540,8 @@
   "radarSuggestedCopied": "{price} ₺ скопировано в буфер обмена",
   "radarCopyBtn": "Копировать предложенную цену: {price} ₺",
   "retargetingBlastSent": "Уведомление отправлено {count} людям!",
+  "notifSettingsBlastTitle": "Массовые уведомления",
+  "notifSettingsBlastDesc": "При выключении push не придёт; уведомление останется в списке.",
   "retargetingCooldownLabel": "Следующая рассылка через:",
   "retargetingBlastCooldown": "Следующую рассылку для этого объявления можно отправить через 24 часа.",
   "retargetingDialogTitle": "Отправить уведомление?",

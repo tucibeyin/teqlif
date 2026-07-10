@@ -297,20 +297,29 @@ async def send_blast(
     if not target_user_ids:
         return {"error": "Bildirim atılabilecek aktif cihaz bulunamadı."}
 
-    # ── PostgreSQL: FCM tokenlar ──────────────────────────────────────────────
-    token_result = await db.execute(sql_text("""
-        SELECT fcm_token FROM users
+    # ── PostgreSQL: hedef kullanıcılar + FCM tokenlar ───────────────────────────
+    # Opt-out eden PRO kullanıcılar: in-app bildirim alır, push almaz.
+    recipient_result = await db.execute(sql_text("""
+        SELECT id, fcm_token,
+               (notification_prefs->>'receive_blast_notifications')::boolean AS receive_push
+        FROM users
         WHERE id = ANY(:ids)
-          AND fcm_token IS NOT NULL AND fcm_token != ''
           AND id NOT IN (
               SELECT follower_id FROM follows WHERE followed_id = :me
           )
         LIMIT :cap
     """), {"ids": target_user_ids, "me": current_user.id, "cap": actual_count_max})
-    fcm_tokens: list[str] = [r[0] for r in token_result.fetchall() if r[0]]
+    rows = recipient_result.fetchall()
+
+    recipient_ids: list[int] = [r[0] for r in rows]
+    # receive_push NULL (yeni kayıt, henüz pref set edilmemiş) → True kabul et
+    fcm_tokens: list[tuple[int, str]] = [
+        (r[0], r[1]) for r in rows
+        if r[1] and r[2] is not False
+    ]
 
     # GERÇEK (ACTUAL) ALICI SAYISI
-    actual_count = len(fcm_tokens)
+    actual_count = len(recipient_ids)
 
     if actual_count == 0:
         return {"error": "Bildirim atılabilecek aktif cihaz bulunamadı."}
@@ -357,23 +366,36 @@ async def send_blast(
     if free_used > 0:
         await _increment_blast(current_user.id, count=free_used, premium_since=current_user.premium_since)
 
-    # ── Firebase toplu push (fire-and-forget) ─────────────────────────────────
+    # ── In-app bildirim kayıtları (tüm alıcılar — push almayacaklar dahil) ─────
+    from app.models.notification import Notification
+    notif_title = "🔥 Aradığın ürün şu an satışta!"
+    notif_body  = f'"{body.title}" — Kaçırmadan incele!'
+    db.add_all([
+        Notification(
+            user_id=uid,
+            type="lead_blast",
+            title=notif_title,
+            body=notif_body,
+            related_id=body.listing_id,
+        )
+        for uid in recipient_ids
+    ])
+    await db.commit()
+
+    # ── Firebase toplu push (push almak isteyenler için) ──────────────────────
     from app.services.firebase_service import send_push, InvalidFCMTokenError
 
     async def _send_one(token: str, cid: int) -> None:
         try:
-            extra_data = {
-                "campaign_id": str(cid),
-            }
+            extra_data = {"campaign_id": str(cid)}
             if body.listing_id:
                 extra_data["listing_id"] = str(body.listing_id)
             if body.stream_id:
                 extra_data["stream_id"] = str(body.stream_id)
-
             await send_push(
                 token=token,
-                title="🔥 Aradığın ürün şu an satışta!",
-                body=f'"{body.title}" — Kaçırmadan incele!',
+                title=notif_title,
+                body=notif_body,
                 notif_type="lead_blast",
                 extra_data=extra_data,
             )
@@ -389,18 +411,17 @@ async def send_blast(
         await asyncio.gather(*[_send_one(t, campaign.id) for t in chunk])
         sent += len(chunk)
 
-    # Update sent count realistically
     await db.execute(
         sql_text("UPDATE mass_notification_campaigns SET sent_count = :sent WHERE id = :cid"),
-        {"sent": sent, "cid": campaign.id}
+        {"sent": actual_count, "cid": campaign.id}
     )
     await db.commit()
 
     return {
         "campaign_id": campaign.id,
-        "sent": sent,
+        "sent": actual_count,
         "spent": tuci_cost,
-        "message": f"{sent} kişiye bildirim gönderildi.",
+        "message": f"{actual_count} kişiye bildirim gönderildi.",
     }
 
 

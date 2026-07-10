@@ -1298,6 +1298,8 @@
       }
     }
   },
+  "notifSettingsBlastTitle": "Bulk Audience Notifications",
+  "notifSettingsBlastDesc": "When off, push is suppressed; notification still appears in your list.",
   "retargetingCooldownLabel": "Next blast in:",
   "retargetingBlastCooldown": "You can send the next broadcast for this listing in 24 hours.",
   "retargetingDialogTitle": "Send notification?",

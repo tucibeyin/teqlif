@@ -29,6 +29,7 @@ class _NotificationSettingsScreenState
     'new_listing': true,
     'new_bid': true,
     'outbid': true,
+    'receive_blast_notifications': true,
   };
 
   // Pro ayarları
@@ -269,10 +270,12 @@ class _NotificationSettingsScreenState
                       quietEnabled: _quietEnabled,
                       quietFrom: _quietFrom,
                       quietTo: _quietTo,
+                      receiveBlastNotifications: _prefs['receive_blast_notifications'] ?? true,
                       onBidThreshold: widget.isPremium ? _setBidThreshold : null,
                       onQuietEnabled: widget.isPremium ? _setQuietEnabled : null,
                       onPickFrom: widget.isPremium ? () => _pickTime(isFrom: true) : null,
                       onPickTo: widget.isPremium ? () => _pickTime(isFrom: false) : null,
+                      onBlastNotifChanged: widget.isPremium ? (v) => _toggle('receive_blast_notifications', v) : null,
                       onUpgradeTap: _showUpgradeSheet,
                     ),
                     const SizedBox(height: 24),
@@ -290,10 +293,12 @@ class _ProSection extends StatelessWidget {
   final bool quietEnabled;
   final TimeOfDay quietFrom;
   final TimeOfDay quietTo;
+  final bool receiveBlastNotifications;
   final ValueChanged<int>? onBidThreshold;
   final ValueChanged<bool>? onQuietEnabled;
   final VoidCallback? onPickFrom;
   final VoidCallback? onPickTo;
+  final ValueChanged<bool>? onBlastNotifChanged;
   final VoidCallback onUpgradeTap;
 
   static const _thresholds = [0, 100, 250, 500, 1000, 2500];
@@ -304,10 +309,12 @@ class _ProSection extends StatelessWidget {
     required this.quietEnabled,
     required this.quietFrom,
     required this.quietTo,
+    required this.receiveBlastNotifications,
     required this.onBidThreshold,
     required this.onQuietEnabled,
     required this.onPickFrom,
     required this.onPickTo,
+    required this.onBlastNotifChanged,
     required this.onUpgradeTap,
   });
 
@@ -425,6 +432,56 @@ class _ProSection extends StatelessWidget {
                       );
                     }).toList(),
                   ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Toplu kitle bildirimi toggle kartı
+          GestureDetector(
+            onTap: isPremium ? null : onUpgradeTap,
+            child: _proCard(
+              context,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.campaign_outlined,
+                    size: 20,
+                    color: isPremium
+                        ? (receiveBlastNotifications ? kPrimary : AppColors.iconColor(context))
+                        : AppColors.iconColor(context),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)!.notifSettingsBlastTitle,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                        Text(
+                          AppLocalizations.of(context)!.notifSettingsBlastDesc,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isPremium)
+                    Icon(Icons.lock_outline, size: 16, color: AppColors.textTertiary(context))
+                  else
+                    Switch(
+                      value: receiveBlastNotifications,
+                      activeThumbColor: kPrimary,
+                      onChanged: onBlastNotifChanged,
+                    ),
                 ],
               ),
             ),

@@ -1297,6 +1297,8 @@
       }
     }
   },
+  "notifSettingsBlastTitle": "Toplu Kitle Bildirimleri",
+  "notifSettingsBlastDesc": "Kapalıyken push bildirim gelmez; bildirim listesinde görünmeye devam eder.",
   "retargetingCooldownLabel": "Tekrar göndermek için:",
   "retargetingBlastCooldown": "Bu ilan için bir sonraki toplu duyuruyu 24 saat sonra gönderebilirsiniz.",
   "retargetingDialogTitle": "Bildirim gönderilsin mi?",

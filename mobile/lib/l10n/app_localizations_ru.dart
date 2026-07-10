@@ -2622,6 +2622,13 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get notifSettingsBlastTitle => 'Массовые уведомления';
+
+  @override
+  String get notifSettingsBlastDesc =>
+      'При выключении push не придёт; уведомление останется в списке.';
+
+  @override
   String get retargetingCooldownLabel => 'Следующая рассылка через:';
 
   @override

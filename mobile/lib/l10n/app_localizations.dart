@@ -4842,6 +4842,18 @@ abstract class AppLocalizations {
   /// **'{count} kişiye bildirim gönderildi!'**
   String retargetingBlastSent(int count);
 
+  /// No description provided for @notifSettingsBlastTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplu Kitle Bildirimleri'**
+  String get notifSettingsBlastTitle;
+
+  /// No description provided for @notifSettingsBlastDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kapalıyken push bildirim gelmez; bildirim listesinde görünmeye devam eder.'**
+  String get notifSettingsBlastDesc;
+
   /// No description provided for @retargetingCooldownLabel.
   ///
   /// In tr, this message translates to:

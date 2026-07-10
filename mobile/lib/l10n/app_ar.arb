@@ -1299,6 +1299,8 @@
       }
     }
   },
+  "notifSettingsBlastTitle": "إشعارات الجمهور المجمّعة",
+  "notifSettingsBlastDesc": "عند الإيقاف، لن يصلك تنبيه فوري؛ سيظهر الإشعار في قائمتك فقط.",
   "retargetingCooldownLabel": "الإرسال التالي خلال:",
   "retargetingBlastCooldown": "يمكنك إرسال الإشعار الجماعي التالي لهذا الإعلان بعد 24 ساعة.",
   "retargetingDialogTitle": "إرسال إشعار؟",

@@ -2566,6 +2566,13 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get notifSettingsBlastTitle => 'إشعارات الجمهور المجمّعة';
+
+  @override
+  String get notifSettingsBlastDesc =>
+      'عند الإيقاف، لن يصلك تنبيه فوري؛ سيظهر الإشعار في قائمتك فقط.';
+
+  @override
   String get retargetingCooldownLabel => 'الإرسال التالي خلال:';
 
   @override

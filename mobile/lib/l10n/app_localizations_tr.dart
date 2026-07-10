@@ -2589,6 +2589,13 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get notifSettingsBlastTitle => 'Toplu Kitle Bildirimleri';
+
+  @override
+  String get notifSettingsBlastDesc =>
+      'Kapalıyken push bildirim gelmez; bildirim listesinde görünmeye devam eder.';
+
+  @override
   String get retargetingCooldownLabel => 'Tekrar göndermek için:';
 
   @override
