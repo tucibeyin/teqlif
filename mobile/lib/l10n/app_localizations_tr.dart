@@ -3487,6 +3487,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get allCategories => 'Tüm Kategoriler';
 
   @override
+  String get filterAll => 'Tümü';
+
+  @override
   String get filterSelectDate => 'Tarih Aralığı Seç';
 
   @override

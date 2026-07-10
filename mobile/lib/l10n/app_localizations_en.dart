@@ -3482,6 +3482,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allCategories => 'All Categories';
 
   @override
+  String get filterAll => 'All';
+
+  @override
   String get filterSelectDate => 'Select Date Range';
 
   @override

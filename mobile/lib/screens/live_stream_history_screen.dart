@@ -608,7 +608,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _chip('Tümü', _categoryFilter == null, () => setState(() => _categoryFilter = null)),
+          _chip(AppLocalizations.of(context)!.filterAll, _categoryFilter == null, () => setState(() => _categoryFilter = null)),
           ...cats.map((c) => _chip(c.$2, _categoryFilter == c.$1,
               () => setState(() => _categoryFilter = _categoryFilter == c.$1 ? null : c.$1))),
         ],

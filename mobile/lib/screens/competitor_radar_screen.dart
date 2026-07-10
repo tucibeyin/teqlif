@@ -126,12 +126,13 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
   Widget _buildCategoryChips() {
     final cats = _categories;
     if (cats == null || cats.isEmpty) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context)!;
     return SizedBox(
       height: 34,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _chip('Tümü', _categoryFilter == null, () => setState(() => _categoryFilter = null)),
+          _chip(l.filterAll, _categoryFilter == null, () => setState(() => _categoryFilter = null)),
           ...cats.map((c) => _chip(c.$2, _categoryFilter == c.$1,
               () => setState(() => _categoryFilter = _categoryFilter == c.$1 ? null : c.$1))),
         ],

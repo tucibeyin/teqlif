@@ -3524,6 +3524,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get allCategories => 'Все категории';
 
   @override
+  String get filterAll => 'Все';
+
+  @override
   String get filterSelectDate => 'Выбрать диапазон дат';
 
   @override

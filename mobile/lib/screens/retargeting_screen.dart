@@ -46,6 +46,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   final TextEditingController _retargetSearchCtrl = TextEditingController();
   String _retargetQuery = '';
   String? _retargetCategoryFilter;
+  DateTimeRange? _retargetDateRange;
 
   // Ortak kategori listesi
   List<(String, String)>? _categories;
@@ -83,6 +84,16 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     }
     if (_retargetCategoryFilter != null) {
       result = result.where((l) => l['category'] == _retargetCategoryFilter).toList();
+    }
+    if (_retargetDateRange != null) {
+      final start = _retargetDateRange!.start;
+      final end = _retargetDateRange!.end.add(const Duration(days: 1));
+      result = result.where((item) {
+        final raw = item['created_at'] as String?;
+        if (raw == null) return false;
+        final dt = DateTime.tryParse(raw)?.toLocal();
+        return dt != null && !dt.isBefore(start) && dt.isBefore(end);
+      }).toList();
     }
     return result;
   }
@@ -281,7 +292,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  _catChip('Tümü', _reportCategoryFilter == null,
+                  _catChip(l.filterAll, _reportCategoryFilter == null,
                       () => setState(() => _reportCategoryFilter = null)),
                   ..._categories!.map((c) => _catChip(c.$2, _reportCategoryFilter == c.$1,
                       () => setState(() => _reportCategoryFilter = _reportCategoryFilter == c.$1 ? null : c.$1))),
@@ -1220,6 +1231,51 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             onChanged: (v) => setState(() => _retargetQuery = v.trim()),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: InkWell(
+            onTap: () async {
+              final picked = await showDateRangePicker(
+                context: context,
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+                initialDateRange: _retargetDateRange,
+                locale: Localizations.localeOf(context),
+              );
+              if (picked != null) setState(() => _retargetDateRange = picked);
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: _retargetDateRange != null ? const Color(0xFF14B8A6) : AppColors.border(context)),
+                borderRadius: BorderRadius.circular(8),
+                color: _retargetDateRange != null ? const Color(0xFF14B8A6).withValues(alpha: 0.08) : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined, size: 16,
+                      color: _retargetDateRange != null ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _retargetDateRange != null
+                          ? '${_fmtDate(_retargetDateRange!.start)} – ${_fmtDate(_retargetDateRange!.end)}'
+                          : l.filterSelectDate,
+                      style: TextStyle(fontSize: 13,
+                          color: _retargetDateRange != null ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
+                    ),
+                  ),
+                  if (_retargetDateRange != null)
+                    GestureDetector(
+                      onTap: () => setState(() => _retargetDateRange = null),
+                      child: const Icon(Icons.close, size: 16, color: Color(0xFF14B8A6)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
         if (_categories != null && _categories!.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -1228,7 +1284,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
-                  _catChip('Tümü', _retargetCategoryFilter == null,
+                  _catChip(l.filterAll, _retargetCategoryFilter == null,
                       () => setState(() => _retargetCategoryFilter = null)),
                   ..._categories!.map((c) => _catChip(c.$2, _retargetCategoryFilter == c.$1,
                       () => setState(() => _retargetCategoryFilter = _retargetCategoryFilter == c.$1 ? null : c.$1))),

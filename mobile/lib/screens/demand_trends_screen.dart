@@ -67,7 +67,7 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
         scrollDirection: Axis.horizontal,
         children: [
           _CategoryChip(
-            label: 'Tümü',
+            label: l.filterAll,
             selected: _selectedCategory == null,
             onTap: () => setState(() => _selectedCategory = null),
           ),

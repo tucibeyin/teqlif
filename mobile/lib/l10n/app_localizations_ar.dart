@@ -3458,6 +3458,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get allCategories => 'جميع الفئات';
 
   @override
+  String get filterAll => 'الكل';
+
+  @override
   String get filterSelectDate => 'اختر نطاق التاريخ';
 
   @override

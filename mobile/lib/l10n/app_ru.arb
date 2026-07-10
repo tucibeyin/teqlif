@@ -1794,6 +1794,7 @@
   "applyFilters": "Применить",
   "selectCity": "Выберите город",
   "allCategories": "Все категории",
+  "filterAll": "Все",
   "filterSelectDate": "Выбрать диапазон дат",
   "hintExampleEmail": "example@email.com",
   "competitorRadarTitle": "Радар цен конкурентов",

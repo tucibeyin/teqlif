@@ -1792,6 +1792,7 @@
   "applyFilters": "Uygula",
   "selectCity": "Şehir Seçin",
   "allCategories": "Tüm Kategoriler",
+  "filterAll": "Tümü",
   "filterSelectDate": "Tarih Aralığı Seç",
   "hintExampleEmail": "ornek@email.com",
   "competitorRadarTitle": "Rakip Fiyat Radarı",

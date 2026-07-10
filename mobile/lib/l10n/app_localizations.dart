@@ -6378,6 +6378,12 @@ abstract class AppLocalizations {
   /// **'Tüm Kategoriler'**
   String get allCategories;
 
+  /// No description provided for @filterAll.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tümü'**
+  String get filterAll;
+
   /// No description provided for @filterSelectDate.
   ///
   /// In tr, this message translates to:
