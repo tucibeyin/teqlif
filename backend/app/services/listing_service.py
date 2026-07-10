@@ -344,7 +344,7 @@ class ListingService:
         ]
 
     # ── Kendi İlanlarım ──────────────────────────────────────────────────────
-    async def get_my_listings(self, current_user: User, active: Optional[bool] = None, q: Optional[str] = None, category: Optional[str] = None, limit: int = 50, offset: int = 0, period: Optional[str] = None) -> list:
+    async def get_my_listings(self, current_user: User, active: Optional[bool] = None, q: Optional[str] = None, category: Optional[str] = None, limit: int = 50, offset: int = 0, start_date: Optional[str] = None, end_date: Optional[str] = None) -> list:
         query = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
@@ -356,15 +356,20 @@ class ListingService:
             query = query.where(Listing.category == category)
         if q:
             query = query.where(Listing.title.ilike(f"%{q}%"))
-        if period:
+        if start_date:
+            from datetime import datetime
+            try:
+                sd = datetime.strptime(start_date, '%Y-%m-%d')
+                query = query.where(Listing.created_at >= sd)
+            except ValueError:
+                pass
+        if end_date:
             from datetime import datetime, timedelta
-            now = datetime.utcnow()
-            if period == 'week':
-                query = query.where(Listing.created_at >= now - timedelta(days=7))
-            elif period == 'month':
-                query = query.where(Listing.created_at >= now - timedelta(days=30))
-            elif period == 'year':
-                query = query.where(Listing.created_at >= now - timedelta(days=365))
+            try:
+                ed = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+                query = query.where(Listing.created_at < ed)
+            except ValueError:
+                pass
 
         query = query.order_by(Listing.created_at.desc()).limit(limit).offset(offset)
         result = await self.db.execute(query)

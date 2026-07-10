@@ -64,13 +64,14 @@ async def get_my_listings(
     active: Optional[bool] = None,
     q: Optional[str] = None,
     category: Optional[str] = None,
-    period: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
     limit: int = 50,
     offset: int = 0,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ListingService(db).get_my_listings(current_user, active, q, category, limit, offset, period)
+    return await ListingService(db).get_my_listings(current_user, active, q, category, limit, offset, start_date, end_date)
 
 
 def _listing_key_builder(func, namespace="", *, request=None, response=None, args=None, kwargs=None):

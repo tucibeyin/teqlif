@@ -28,7 +28,7 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
 
   final TextEditingController _searchCtrl = TextEditingController();
   String _listingQuery = '';
-  String _periodFilter = '';
+  DateTimeRange? _dateRange;
   Timer? _searchDebounce;
 
   @override
@@ -43,7 +43,10 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
     if (token == null) return [];
     var url = '$kBaseUrl/listings/my?limit=20&offset=$offset&active=true';
     if (_listingQuery.isNotEmpty) url += '&q=${Uri.encodeComponent(_listingQuery)}';
-    if (_periodFilter.isNotEmpty) url += '&period=${Uri.encodeComponent(_periodFilter)}';
+    if (_dateRange != null) {
+      url += '&start_date=${_dateRange!.start.toIso8601String().substring(0, 10)}';
+      url += '&end_date=${_dateRange!.end.toIso8601String().substring(0, 10)}';
+    }
     final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'});
     if (resp.statusCode == 200) {
       return (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
@@ -51,15 +54,51 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
     return [];
   }
 
-  Widget _periodChip(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: FilterChip(
-        label: Text(label, style: const TextStyle(fontSize: 12)),
-        selected: value.isEmpty ? _periodFilter.isEmpty : _periodFilter == value,
-        onSelected: (_) => setState(() => _periodFilter = value),
-        selectedColor: kPrimary.withValues(alpha: 0.15),
-        checkmarkColor: kPrimary,
+  String _fmtDate(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+
+  Widget _buildDateRangePicker(AppLocalizations l) {
+    final hasRange = _dateRange != null;
+    return InkWell(
+      onTap: () async {
+        final picked = await showDateRangePicker(
+          context: context,
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+          initialDateRange: _dateRange,
+          locale: Localizations.localeOf(context),
+        );
+        if (picked != null) setState(() => _dateRange = picked);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
+          borderRadius: BorderRadius.circular(8),
+          color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 16,
+                color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                hasRange
+                    ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
+                    : l.filterSelectDate,
+                style: TextStyle(fontSize: 13,
+                    color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+              ),
+            ),
+            if (hasRange)
+              GestureDetector(
+                onTap: () => setState(() => _dateRange = null),
+                child: Icon(Icons.close, size: 16, color: kPrimary),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -125,21 +164,10 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
               },
             ),
           ),
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _periodChip(l.filterPeriodAll, ''),
-                _periodChip(l.filterPeriodWeek, 'week'),
-                _periodChip(l.filterPeriodMonth, 'month'),
-                _periodChip(l.filterPeriodYear, 'year'),
-              ],
-            ),
-          ),
+          _buildDateRangePicker(l),
           const SizedBox(height: 8),
           SwipePaginatedList<Map<String, dynamic>>(
-            key: ValueKey('$_listingQuery-$_periodFilter'),
+            key: ValueKey('$_listingQuery-${_dateRange?.start}-${_dateRange?.end}'),
             fetchPage: _fetchListingsPage,
             itemHeight: 62,
             maxVisible: 5,

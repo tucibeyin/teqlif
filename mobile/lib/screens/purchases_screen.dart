@@ -26,7 +26,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _searchQuery = '';
   String _categoryFilter = '';
-  String _periodFilter = '';
+  DateTimeRange? _dateRange;
 
   List<Map<String, dynamic>> get _filteredPurchases {
     var result = _purchases;
@@ -39,18 +39,14 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
     if (_categoryFilter.isNotEmpty) {
       result = result.where((item) => (item['category'] as String?) == _categoryFilter).toList();
     }
-    if (_periodFilter.isNotEmpty) {
-      final now = DateTime.now();
-      final cutoff = _periodFilter == 'week'
-          ? now.subtract(const Duration(days: 7))
-          : _periodFilter == 'month'
-              ? now.subtract(const Duration(days: 30))
-              : now.subtract(const Duration(days: 365));
+    if (_dateRange != null) {
+      final start = _dateRange!.start;
+      final end = _dateRange!.end.add(const Duration(days: 1));
       result = result.where((item) {
         final raw = item['ended_at'] as String?;
         if (raw == null) return false;
-        final dt = DateTime.tryParse(raw);
-        return dt != null && dt.isAfter(cutoff);
+        final dt = DateTime.tryParse(raw)?.toLocal();
+        return dt != null && !dt.isBefore(start) && dt.isBefore(end);
       }).toList();
     }
     return result;
@@ -173,33 +169,60 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
               ],
             ),
           ),
-        SizedBox(
-          height: 36,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            children: [
-              _periodChip(l.filterPeriodAll, ''),
-              _periodChip(l.filterPeriodWeek, 'week'),
-              _periodChip(l.filterPeriodMonth, 'month'),
-              _periodChip(l.filterPeriodYear, 'year'),
-            ],
-          ),
-        ),
+        _buildDateRangePicker(l),
         const SizedBox(height: 4),
       ],
     );
   }
 
-  Widget _periodChip(String label, String value) {
+  String _fmtDate(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+
+  Widget _buildDateRangePicker(AppLocalizations l) {
+    final hasRange = _dateRange != null;
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: FilterChip(
-        label: Text(label, style: const TextStyle(fontSize: 12)),
-        selected: value.isEmpty ? _periodFilter.isEmpty : _periodFilter == value,
-        onSelected: (_) => setState(() => _periodFilter = value),
-        selectedColor: kPrimary.withValues(alpha: 0.15),
-        checkmarkColor: kPrimary,
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      child: InkWell(
+        onTap: () async {
+          final picked = await showDateRangePicker(
+            context: context,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+            initialDateRange: _dateRange,
+            locale: Localizations.localeOf(context),
+          );
+          if (picked != null) setState(() => _dateRange = picked);
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
+            borderRadius: BorderRadius.circular(8),
+            color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_today_outlined, size: 16,
+                  color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  hasRange
+                      ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
+                      : l.filterSelectDate,
+                  style: TextStyle(fontSize: 13,
+                      color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+                ),
+              ),
+              if (hasRange)
+                GestureDetector(
+                  onTap: () => setState(() => _dateRange = null),
+                  child: Icon(Icons.close, size: 16, color: kPrimary),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -208,7 +231,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final filtered = _filteredPurchases;
-    final bool hasFilter = _searchQuery.isNotEmpty || _categoryFilter.isNotEmpty || _periodFilter.isNotEmpty;
+    final bool hasFilter = _searchQuery.isNotEmpty || _categoryFilter.isNotEmpty || _dateRange != null;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(

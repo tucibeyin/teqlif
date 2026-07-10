@@ -38,7 +38,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   Future<Map<String, dynamic>>? _reportFuture;
   final TextEditingController _reportSearchCtrl = TextEditingController();
   String _reportQuery = '';
-  String _periodFilter = '';
+  DateTimeRange? _dateRange;
 
   List<Map<String, dynamic>> get _filteredReportListings {
     var result = _reportListings;
@@ -47,18 +47,14 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         (l['title'] as String? ?? '').toLowerCase().contains(_reportQuery.toLowerCase())
       ).toList();
     }
-    if (_periodFilter.isNotEmpty) {
-      final now = DateTime.now();
-      final cutoff = _periodFilter == 'week'
-          ? now.subtract(const Duration(days: 7))
-          : _periodFilter == 'month'
-              ? now.subtract(const Duration(days: 30))
-              : now.subtract(const Duration(days: 365));
+    if (_dateRange != null) {
+      final start = _dateRange!.start;
+      final end = _dateRange!.end.add(const Duration(days: 1));
       result = result.where((item) {
         final raw = item['created_at'] as String?;
         if (raw == null) return false;
-        final dt = DateTime.tryParse(raw);
-        return dt != null && dt.isAfter(cutoff);
+        final dt = DateTime.tryParse(raw)?.toLocal();
+        return dt != null && !dt.isBefore(start) && dt.isBefore(end);
       }).toList();
     }
     return result;
@@ -155,21 +151,13 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   }
 
   // ── Rapor: İlan Kartu Karuseli ───────────────────────────────────────────
-  Widget _periodChip(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: FilterChip(
-        label: Text(label, style: const TextStyle(fontSize: 12)),
-        selected: value.isEmpty ? _periodFilter.isEmpty : _periodFilter == value,
-        onSelected: (_) => setState(() => _periodFilter = value),
-        selectedColor: const Color(0xFF14B8A6).withValues(alpha: 0.15),
-        checkmarkColor: const Color(0xFF14B8A6),
-      ),
-    );
-  }
+  String _fmtDate(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
 
   Widget _buildListingCarousel() {
+    final l = AppLocalizations.of(context)!;
     final filtered = _filteredReportListings;
+    final hasRange = _dateRange != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -178,7 +166,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           child: TextField(
             controller: _reportSearchCtrl,
             decoration: InputDecoration(
-              hintText: AppLocalizations.of(context)!.searchHintTextListing,
+              hintText: l.searchHintTextListing,
               prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _reportQuery.isNotEmpty
                   ? IconButton(
@@ -196,17 +184,49 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             onChanged: (v) => setState(() => _reportQuery = v),
           ),
         ),
-        SizedBox(
-          height: 36,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _periodChip(AppLocalizations.of(context)!.filterPeriodAll, ''),
-              _periodChip(AppLocalizations.of(context)!.filterPeriodWeek, 'week'),
-              _periodChip(AppLocalizations.of(context)!.filterPeriodMonth, 'month'),
-              _periodChip(AppLocalizations.of(context)!.filterPeriodYear, 'year'),
-            ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: InkWell(
+            onTap: () async {
+              final picked = await showDateRangePicker(
+                context: context,
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+                initialDateRange: _dateRange,
+                locale: Localizations.localeOf(context),
+              );
+              if (picked != null) setState(() => _dateRange = picked);
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: hasRange ? const Color(0xFF14B8A6) : AppColors.border(context)),
+                borderRadius: BorderRadius.circular(8),
+                color: hasRange ? const Color(0xFF14B8A6).withValues(alpha: 0.08) : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined, size: 16,
+                      color: hasRange ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      hasRange
+                          ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
+                          : l.filterSelectDate,
+                      style: TextStyle(fontSize: 13,
+                          color: hasRange ? const Color(0xFF14B8A6) : AppColors.textSecondary(context)),
+                    ),
+                  ),
+                  if (hasRange)
+                    GestureDetector(
+                      onTap: () => setState(() => _dateRange = null),
+                      child: const Icon(Icons.close, size: 16, color: Color(0xFF14B8A6)),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 8),
