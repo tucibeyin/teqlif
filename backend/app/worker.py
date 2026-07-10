@@ -1506,10 +1506,10 @@ async def compute_trending_categories_task(ctx: dict) -> None:
                 ch_rows = await ch.query("""
                     SELECT
                         item_id,
-                        countIf(event_type = 'view')                              AS views,
-                        countIf(event_type = 'bid_hesitation')                    AS hesitations,
-                        countDistinctIf(user_id, event_type = 'bid')              AS bids,
-                        date_diff('hour', min(timestamp), now())                  AS age_hours
+                        countIf(event_type = 'view')                                   AS views,
+                        countIf(event_type = 'bid_hesitation')                         AS hesitations,
+                        countDistinctIf(user_id, event_type = 'bid_placed')            AS bids,
+                        date_diff('hour', max(timestamp), now())                        AS hours_since_last
                     FROM user_events
                     WHERE item_type = 'listing'
                       AND timestamp >= now() - INTERVAL 48 HOUR
@@ -1517,12 +1517,12 @@ async def compute_trending_categories_task(ctx: dict) -> None:
                     HAVING (views + hesitations + bids) > 0
                 """)
                 ch_signals: dict[int, dict] = {}
-                for item_id, views, hesitations, bids, age_hours in ch_rows.result_rows:
+                for item_id, views, hesitations, bids, hours_since_last in ch_rows.result_rows:
                     ch_signals[int(item_id)] = {
                         "views": int(views),
                         "hesitations": int(hesitations),
                         "bids": int(bids),
-                        "age_hours": max(float(age_hours), 0.1),
+                        "hours_since_last": max(float(hours_since_last), 0.1),
                     }
 
                 if ch_signals:
@@ -1545,7 +1545,7 @@ async def compute_trending_categories_task(ctx: dict) -> None:
                         raw = s["views"] * 1 + like_map.get(lid, 0) * 2 + s["hesitations"] * 3 + s["bids"] * 5
                         if raw < 5:
                             continue
-                        scores[lid] = raw / math.pow(s["age_hours"] + 2, 1.5)
+                        scores[lid] = raw / math.pow(s["hours_since_last"] + 2, 1.5)
 
                     if scores:
                         vals = list(scores.values())

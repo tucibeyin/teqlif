@@ -45,6 +45,17 @@ async def main():
                 WHERE item_type = 'listing' AND timestamp >= now() - INTERVAL 48 HOUR
             """)
             print(f"  [ClickHouse] Unique listing sayısı: {r2.result_rows[0][0] if r2.result_rows else 0}")
+            r3 = await ch.query("""
+                SELECT item_id,
+                       countIf(event_type='view') AS v,
+                       countIf(event_type='bid_hesitation') AS h,
+                       countDistinctIf(user_id, event_type='bid_placed') AS b,
+                       date_diff('hour', max(timestamp), now()) AS hrs
+                FROM user_events
+                WHERE item_type='listing' AND timestamp >= now() - INTERVAL 48 HOUR
+                GROUP BY item_id ORDER BY (v + h*3 + b*5) DESC LIMIT 5
+            """)
+            print(f"  [ClickHouse] Top 5 ilan (id, views, hes, bids, hrs_since_last): {r3.result_rows}")
     except Exception as e:
         print(f"  [ClickHouse] Debug sorgusu başarısız: {e}")
 
