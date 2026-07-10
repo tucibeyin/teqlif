@@ -91,6 +91,7 @@ async def get_my_stream_history(
         out.append({
             "id": s.id,
             "title": s.title,
+            "category": s.category,
             "started_at": s.started_at,
             "ended_at": s.ended_at,
             "viewer_count": s.viewer_count,

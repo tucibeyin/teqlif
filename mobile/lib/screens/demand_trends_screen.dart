@@ -17,6 +17,7 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
   String? _error;
   List<Map<String, dynamic>> _trends = [];
   List<(String, String)>? _categories;
+  String? _selectedCategory;
 
   @override
   void initState() {
@@ -52,9 +53,39 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
     }
   }
 
+  List<Map<String, dynamic>> get _filteredTrends {
+    if (_selectedCategory == null) return _trends;
+    return _trends.where((t) => t['category'] == _selectedCategory).toList();
+  }
+
+  Widget _buildCategoryFilter(AppLocalizations l) {
+    final cats = _categories;
+    if (cats == null || cats.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _CategoryChip(
+            label: 'Tümü',
+            selected: _selectedCategory == null,
+            onTap: () => setState(() => _selectedCategory = null),
+          ),
+          ...cats.map((c) => _CategoryChip(
+            label: c.$2,
+            selected: _selectedCategory == c.$1,
+            onTap: () => setState(() =>
+              _selectedCategory = _selectedCategory == c.$1 ? null : c.$1),
+          )),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final filtered = _filteredTrends;
     return Scaffold(
       appBar: AppBar(
         title: Text(l.demandTrendsTitle),
@@ -72,16 +103,60 @@ class _DemandTrendsScreenState extends State<DemandTrendsScreen> {
                     children: [
                       Text(
                         l.demandTrendsSubtitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary(context),
-                        ),
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
                       ),
+                      const SizedBox(height: 10),
+                      _buildCategoryFilter(l),
                       const SizedBox(height: 12),
-                      ..._trends.map((t) => _TrendCard(trend: t, l: l, categoryLabels: _categories)),
+                      if (filtered.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 32),
+                            child: Text(l.demandTrendsEmptyLabel,
+                                style: TextStyle(color: AppColors.textSecondary(context))),
+                          ),
+                        )
+                      else
+                        ...filtered.map((t) => _TrendCard(trend: t, l: l, categoryLabels: _categories)),
                     ],
                   ),
                 ),
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _CategoryChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? kPrimary : AppColors.card(context),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? kPrimary : AppColors.border(context),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected ? Colors.white : AppColors.textPrimary(context),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

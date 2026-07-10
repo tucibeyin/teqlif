@@ -8,6 +8,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
+import '../services/category_service.dart';
 import '../services/storage_service.dart';
 
 class RetargetingScreen extends StatefulWidget {
@@ -38,6 +39,15 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   final TextEditingController _reportSearchCtrl = TextEditingController();
   String _reportQuery = '';
   DateTimeRange? _dateRange;
+  String? _reportCategoryFilter;
+
+  // Retargeting sekmesi filtreler
+  final TextEditingController _retargetSearchCtrl = TextEditingController();
+  String _retargetQuery = '';
+  String? _retargetCategoryFilter;
+
+  // Ortak kategori listesi
+  List<(String, String)>? _categories;
 
   List<Map<String, dynamic>> get _filteredReportListings {
     var result = _reportListings;
@@ -56,6 +66,23 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
         return dt != null && !dt.isBefore(start) && dt.isBefore(end);
       }).toList();
     }
+    if (_reportCategoryFilter != null) {
+      result = result.where((l) => l['category'] == _reportCategoryFilter).toList();
+    }
+    return result;
+  }
+
+  List<Map<String, dynamic>> get _filteredCampaignListings {
+    var result = _reportListings;
+    if (_retargetQuery.isNotEmpty) {
+      final q = _retargetQuery.toLowerCase();
+      result = result.where((l) =>
+        (l['title'] as String? ?? '').toLowerCase().contains(q)
+      ).toList();
+    }
+    if (_retargetCategoryFilter != null) {
+      result = result.where((l) => l['category'] == _retargetCategoryFilter).toList();
+    }
     return result;
   }
 
@@ -65,6 +92,15 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     _selectedReportListingId = widget.listingId;
     _reportFuture = AnalyticsService.getMassNotificationReport(listingId: _selectedReportListingId);
     _loadReportListings();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_categories == null) {
+      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
+          .then((cats) { if (mounted) setState(() => _categories = cats); });
+    }
   }
 
   Future<void> _loadReportListings() async {
@@ -152,6 +188,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   void dispose() {
     _countdownTimer?.cancel();
     _reportSearchCtrl.dispose();
+    _retargetSearchCtrl.dispose();
     super.dispose();
   }
 
@@ -234,6 +271,24 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             ),
           ),
         ),
+        if (_categories != null && _categories!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              height: 34,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _catChip('Tümü', _reportCategoryFilter == null,
+                      () => setState(() => _reportCategoryFilter = null)),
+                  ..._categories!.map((c) => _catChip(c.$2, _reportCategoryFilter == c.$1,
+                      () => setState(() => _reportCategoryFilter = _reportCategoryFilter == c.$1 ? null : c.$1))),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         SizedBox(
           height: 112,
@@ -1112,15 +1167,85 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     );
   }
 
+  Widget _catChip(String label, bool selected, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? kPrimary : AppColors.card(context),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: selected ? kPrimary : AppColors.border(context)),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? Colors.white : AppColors.textPrimary(context),
+              )),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCampaignListingCarousel() {
+    final l = AppLocalizations.of(context)!;
     if (_reportListings.isEmpty) return _emptyState();
-    return SizedBox(
-      height: 112,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _reportListings.length,
-        itemBuilder: (ctx, i) {
-          final item = _reportListings[i];
+    final filtered = _filteredCampaignListings;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: TextField(
+            controller: _retargetSearchCtrl,
+            decoration: InputDecoration(
+              hintText: l.searchHintTextListing,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _retargetQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () { _retargetSearchCtrl.clear(); setState(() => _retargetQuery = ''); },
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onChanged: (v) => setState(() => _retargetQuery = v.trim()),
+          ),
+        ),
+        if (_categories != null && _categories!.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: SizedBox(
+              height: 34,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _catChip('Tümü', _retargetCategoryFilter == null,
+                      () => setState(() => _retargetCategoryFilter = null)),
+                  ..._categories!.map((c) => _catChip(c.$2, _retargetCategoryFilter == c.$1,
+                      () => setState(() => _retargetCategoryFilter = _retargetCategoryFilter == c.$1 ? null : c.$1))),
+                ],
+              ),
+            ),
+          ),
+        ],
+        SizedBox(
+          height: 112,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filtered.isEmpty ? 1 : filtered.length,
+            itemBuilder: (ctx, i) {
+              if (filtered.isEmpty) {
+                return Center(child: Text('—', style: TextStyle(color: AppColors.textSecondary(context))));
+              }
+              final item = filtered[i];
           final isSelected = _selectedListing != null && item['id'] == _selectedListing!['id'];
           final imageUrls = item['image_urls'] as List? ?? [];
           final rawImg = imageUrls.isNotEmpty ? imageUrls.first as String? : item['image_url'] as String?;
@@ -1188,7 +1313,9 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
             ),
           );
         },
+        ),
       ),
+      ],
     );
   }
 

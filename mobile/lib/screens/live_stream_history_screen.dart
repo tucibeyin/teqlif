@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
+import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
+import '../services/category_service.dart';
 import '../services/storage_service.dart';
 import 'live_stream_analytics_screen.dart';
 
@@ -27,6 +29,35 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
   String? _cursor;
   final ScrollController _scrollController = ScrollController();
 
+  // Filters
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  String? _categoryFilter;
+  DateTimeRange? _dateRange;
+  List<(String, String)>? _categories;
+
+  List<dynamic> get _filtered {
+    var result = _streams;
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      result = result.where((s) => (s['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+    }
+    if (_categoryFilter != null) {
+      result = result.where((s) => s['category'] == _categoryFilter).toList();
+    }
+    if (_dateRange != null) {
+      final start = _dateRange!.start;
+      final end = _dateRange!.end.add(const Duration(days: 1));
+      result = result.where((s) {
+        final raw = s['started_at'] as String?;
+        if (raw == null) return false;
+        final dt = DateTime.tryParse(raw)?.toLocal();
+        return dt != null && !dt.isBefore(start) && dt.isBefore(end);
+      }).toList();
+    }
+    return result;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -41,8 +72,18 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_categories == null) {
+      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
+          .then((cats) { if (mounted) setState(() => _categories = cats); });
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -151,9 +192,40 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
         totalRev += (s['revenue'] as num? ?? 0);
       }
 
+      final filtered = _filtered;
+
       bodyContent = Column(
         children: [
-          const SizedBox(height: 16),
+          // ── Arama + tarih + kategori ─────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _searchCtrl,
+                  decoration: InputDecoration(
+                    hintText: l.searchHintTextListing,
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); },
+                          )
+                        : null,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onChanged: (v) => setState(() => _searchQuery = v.trim()),
+                ),
+                const SizedBox(height: 8),
+                _buildDateRangePicker(l),
+                const SizedBox(height: 8),
+                _buildCategoryChips(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           // Horizontal Carousel
           SizedBox(
             height: 100,
@@ -161,7 +233,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _streams.length + 1 + (_hasMore ? 1 : 0),
+              itemCount: filtered.length + 1 + (_hasMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index == 0) {
                   final isSelected = _selectedStreamId == null;
@@ -212,7 +284,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                   );
                 }
 
-                if (index == _streams.length + 1) {
+                if (index == filtered.length + 1) {
                   return Container(
                     width: 50,
                     alignment: Alignment.center,
@@ -224,7 +296,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                   );
                 }
 
-                final s = _streams[index - 1];
+                final s = filtered[index - 1];
                 final sid = s['id'] as int;
                 final isSelected = _selectedStreamId == sid;
                 final title = s['title'] as String? ?? 'Untitled';
@@ -316,9 +388,9 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                       Expanded(
                         child: ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _streams.length,
+                          itemCount: filtered.length,
                           itemBuilder: (context, index) {
-                            final s = _streams[index];
+                            final s = filtered[index];
                             final startedAtStr = s['started_at'] as String?;
                             final title = s['title'] as String? ?? 'Untitled';
                             final viewers = s['viewer_count'] as int? ?? 0;
@@ -476,6 +548,95 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
         ],
       ),
       body: bodyContent,
+    );
+  }
+
+  String _fmtDate(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+
+  Widget _buildDateRangePicker(AppLocalizations l) {
+    final hasRange = _dateRange != null;
+    return InkWell(
+      onTap: () async {
+        final picked = await showDateRangePicker(
+          context: context,
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+          initialDateRange: _dateRange,
+          locale: Localizations.localeOf(context),
+        );
+        if (picked != null) setState(() => _dateRange = picked);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
+          borderRadius: BorderRadius.circular(8),
+          color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 16,
+                color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                hasRange
+                    ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
+                    : l.filterSelectDate,
+                style: TextStyle(fontSize: 13,
+                    color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+              ),
+            ),
+            if (hasRange)
+              GestureDetector(
+                onTap: () => setState(() => _dateRange = null),
+                child: Icon(Icons.close, size: 16, color: kPrimary),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChips() {
+    final cats = _categories;
+    if (cats == null || cats.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 34,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _chip('Tümü', _categoryFilter == null, () => setState(() => _categoryFilter = null)),
+          ...cats.map((c) => _chip(c.$2, _categoryFilter == c.$1,
+              () => setState(() => _categoryFilter = _categoryFilter == c.$1 ? null : c.$1))),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String label, bool selected, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? kPrimary : AppColors.card(context),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: selected ? kPrimary : AppColors.border(context)),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? Colors.white : AppColors.textPrimary(context),
+              )),
+        ),
+      ),
     );
   }
 
