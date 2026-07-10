@@ -44,6 +44,7 @@ import 'sales_screen.dart';
 import '../services/share_service.dart';
 import '../services/wallet_service.dart';
 import 'faq_screen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -3587,134 +3588,82 @@ class _SocialLinksRow extends StatelessWidget {
 
   const _SocialLinksRow({required this.user, required this.userId});
 
+  // website_url is displayed separately above; excluded here
   static const _platforms = [
-    ('instagram_url', Color(0xFFE1306C)),
-    ('kick_url',      Color(0xFF53FC18)),
-    ('twitch_url',    Color(0xFF9146FF)),
-    ('facebook_url',  Color(0xFF1877F2)),
-    ('youtube_url',   Color(0xFFFF0000)),
-    ('tiktok_url',    Color(0xFF010101)),
-    ('website_url',   Color(0xFF0EA5E9)),
+    _SocialPlatform('instagram_url', FontAwesomeIcons.instagram,  Color(0xFFE1306C), 'instagram'),
+    _SocialPlatform('kick_url',      null,                        Color(0xFF53FC18), 'kick'),
+    _SocialPlatform('twitch_url',    FontAwesomeIcons.twitch,     Color(0xFF9146FF), 'twitch'),
+    _SocialPlatform('facebook_url',  FontAwesomeIcons.facebook,   Color(0xFF1877F2), 'facebook'),
+    _SocialPlatform('youtube_url',   FontAwesomeIcons.youtube,    Color(0xFFFF0000), 'youtube'),
+    _SocialPlatform('tiktok_url',    FontAwesomeIcons.tiktok,     Color(0xFF010101), 'tiktok'),
   ];
-
-  static const _urlPrefixes = {
-    'instagram_url': 'https://instagram.com/',
-    'kick_url':      'https://kick.com/',
-    'twitch_url':    'https://twitch.tv/',
-    'facebook_url':  'https://facebook.com/',
-    'youtube_url':   'https://youtube.com/@',
-    'tiktok_url':    'https://tiktok.com/@',
-  };
-
-  static const _shortLabels = {
-    'instagram_url': 'IG',
-    'kick_url':      'KICK',
-    'twitch_url':    'TV',
-    'facebook_url':  'FB',
-    'youtube_url':   'YT',
-    'tiktok_url':    'TT',
-  };
-
-  String _displayLabel(String field, String rawUrl) {
-    if (field == 'website_url') {
-      return Uri.tryParse(rawUrl.startsWith('http') ? rawUrl : 'https://$rawUrl')
-              ?.host.replaceFirst('www.', '') ?? rawUrl;
-    }
-    final prefix = _urlPrefixes[field];
-    if (prefix != null && rawUrl.startsWith(prefix)) {
-      return '@${rawUrl.substring(prefix.length)}';
-    }
-    final uri = Uri.tryParse(rawUrl.startsWith('http') ? rawUrl : 'https://$rawUrl');
-    final seg = uri?.pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => '');
-    return (seg != null && seg.isNotEmpty) ? '@${seg.replaceAll('@', '')}' : rawUrl;
-  }
-
-  String _platformKey(String field) {
-    switch (field) {
-      case 'instagram_url': return 'instagram';
-      case 'kick_url': return 'kick';
-      case 'twitch_url': return 'twitch';
-      case 'facebook_url': return 'facebook';
-      case 'youtube_url': return 'youtube';
-      case 'tiktok_url': return 'tiktok';
-      default: return 'website';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final links = _platforms
-        .where((p) => (user?[p.$1] as String?)?.isNotEmpty == true)
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final active = _platforms
+        .where((p) => (user?[p.field] as String?)?.isNotEmpty == true)
         .toList();
-    if (links.isEmpty) return const SizedBox.shrink();
+    if (active.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 10,
+      runSpacing: 10,
       alignment: WrapAlignment.center,
-      children: links.map((p) {
-        final (field, color) = p;
-        final raw = user![field] as String;
-        final username = _displayLabel(field, raw);
-        final shortLabel = _shortLabels[field];
-        final textColor = color == const Color(0xFF010101)
-            ? (Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.black)
-            : color;
-        return GestureDetector(
-          onTap: () async {
-            final uri = Uri.tryParse(raw.startsWith('http') ? raw : 'https://$raw');
-            if (uri != null && await canLaunchUrl(uri)) {
-              AnalyticsService.logInteraction(
-                itemId: userId ?? 0,
-                itemType: 'user',
-                interactionType: 'social_link_tap',
-                metadata: {'platform': _platformKey(field)},
-              );
-              launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (shortLabel != null) ...[
-                  Text(
-                    shortLabel,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  const SizedBox(width: 5),
-                  Container(width: 1, height: 11, color: color.withValues(alpha: 0.4)),
-                  const SizedBox(width: 5),
-                ],
-                Text(
-                  username,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
+      children: active.map((p) {
+        final raw = user![p.field] as String;
+        final iconColor = p.color == const Color(0xFF010101)
+            ? (isDark ? Colors.white : Colors.black)
+            : p.color;
+        return Tooltip(
+          message: raw,
+          child: GestureDetector(
+            onTap: () async {
+              final uri = Uri.tryParse(raw.startsWith('http') ? raw : 'https://$raw');
+              if (uri != null && await canLaunchUrl(uri)) {
+                AnalyticsService.logInteraction(
+                  itemId: userId ?? 0,
+                  itemType: 'user',
+                  interactionType: 'social_link_tap',
+                  metadata: {'platform': p.key},
+                );
+                launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: p.color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: p.color.withValues(alpha: 0.35), width: 1.2),
+              ),
+              child: Center(
+                child: p.faIcon != null
+                    ? FaIcon(p.faIcon!, color: iconColor, size: 16)
+                    : Text(
+                        p.key.substring(0, 1).toUpperCase(),
+                        style: TextStyle(
+                          color: iconColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+              ),
             ),
           ),
         );
       }).toList(),
     );
   }
+}
+
+class _SocialPlatform {
+  final String field;
+  final IconData? faIcon;
+  final Color color;
+  final String key;
+  const _SocialPlatform(this.field, this.faIcon, this.color, this.key);
 }
 
 class _ScoreBadge extends StatelessWidget {

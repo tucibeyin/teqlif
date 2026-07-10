@@ -51,6 +51,7 @@ dependencies:
   in_app_update: ^4.2.3
   audio_service: ^0.18.18
   audio_session: ^0.2.3
+  font_awesome_flutter: ^10.8.0
 
 dev_dependencies:
   flutter_test:
