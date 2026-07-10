@@ -49,6 +49,7 @@ async def main():
     async for key in redis.scan_iter("seller:badge:*"):
         badge_keys.append(key)
     trending = await redis.smembers("trending:categories")
+    trending_listings = await redis.smembers("trending:listings")
 
     print(f"\n{'─'*40}")
     print(f"Rozet sayısı   : {len(badge_keys)}")
@@ -56,6 +57,7 @@ async def main():
         v = await redis.get(k)
         print(f"  {k} → {v}")
     print(f"Trend kategoriler: {trending or '(yok)'}")
+    print(f"Trend ilanlar    : {len(trending_listings)} ilan {('→ ' + str({int(v) for v in trending_listings})) if trending_listings else '(yok)'}")
     print(f"{'─'*40}")
     print("Uygulamayı kapat-aç veya pull-to-refresh → badge'leri göreceksiniz")
 
