@@ -42,6 +42,9 @@ class HomeScreenState extends State<HomeScreen> {
   bool _recentExhausted = false;
   int _recentPage = 0;
 
+  // "Geri Bak" — tereddüt edilip teklif gönderilmeyen ilanlar
+  List<dynamic> _hesitatedListings = [];
+
   // Filtreli sonuçlar (filtre aktifken _recentListings'in yerine geçer)
   bool _isLoggedIn = false;
   bool _networkError = false;
@@ -153,7 +156,21 @@ class HomeScreenState extends State<HomeScreen> {
     } else {
       // Paralel yükleme: ForYou beklenmeden arka planda başlar
       await _loadRecent(token, bypassCache: bypassCache);
+      if (loggedIn) _loadHesitated(token!);
     }
+  }
+
+  Future<void> _loadHesitated(String token) async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/feed/hesitated'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 6));
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() => _hesitatedListings = data);
+      }
+    } catch (_) {}
   }
 
   // ── En Son Eklenenler (dikey grid, /api/listings) ─────────────────────────
@@ -772,6 +789,93 @@ class HomeScreenState extends State<HomeScreen> {
                   // NORMAL MOD: Sana Özel (yatay) + En Son (dikey grid)
                   // ══════════════════════════════════════════════════════════
                   if (!_hasFilter) ...[
+                    // ── Geri Bak shelf ────────────────────────────────────
+                    if (_hesitatedListings.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.history, size: 16, color: Colors.orange),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Geri Bak',
+                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '— teklif vermek üzereydins',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(
+                              height: 130,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                itemCount: _hesitatedListings.length,
+                                itemBuilder: (ctx, i) {
+                                  final item = _hesitatedListings[i];
+                                  final raw = item['image_url'] as String?;
+                                  final photo = raw != null ? imgUrl(raw) : null;
+                                  final price = item['price'] != null
+                                      ? '${(item['price'] as num).toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')} ₺'
+                                      : '';
+                                  return GestureDetector(
+                                    onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                                      builder: (_) => ListingDetailScreen(
+                                        listing: Map<String, dynamic>.from(item),
+                                      ),
+                                    )),
+                                    child: Container(
+                                      width: 100,
+                                      margin: const EdgeInsets.only(right: 8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(10),
+                                        color: AppColors.card(context),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          if (photo != null)
+                                            CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover)
+                                          else
+                                            Container(color: AppColors.surfaceVariant(context)),
+                                          if (price.isNotEmpty)
+                                            Positioned(
+                                              left: 0, right: 0, bottom: 0,
+                                              child: Container(
+                                                padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
+                                                decoration: const BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topCenter,
+                                                    end: Alignment.bottomCenter,
+                                                    colors: [Colors.transparent, Colors.black54],
+                                                  ),
+                                                ),
+                                                child: Text(price,
+                                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                                                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                        ),
+                      ),
                     // ── En Son Eklenenler ──────────────────────────────────
                     SliverToBoxAdapter(
                       child: Padding(

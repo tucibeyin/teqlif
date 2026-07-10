@@ -161,3 +161,67 @@ async def record_feed_signal(
         except Exception:
             pass
     await redis.setex(key, 1800, base64.b64encode(new_vec.tobytes()).decode())
+
+
+@router.get("/hesitated")
+async def get_hesitated_listings(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Son 7 günde kullanıcının teklif alanına fiyat yazıp göndermediği ilanlar.
+    Maksimum 10 ilan, en son tereddüt önce.
+    """
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        if ch is None:
+            return []
+
+        result = await ch.query(
+            """
+            SELECT item_id, MAX(timestamp) AS last_hes
+            FROM user_events
+            WHERE event_type = 'bid_hesitation'
+              AND item_type  = 'listing'
+              AND user_id    = %(uid)s
+              AND timestamp >= now() - INTERVAL 7 DAY
+            GROUP BY item_id
+            ORDER BY last_hes DESC
+            LIMIT 10
+            """,
+            parameters={"uid": current_user.id},
+        )
+        listing_ids = [int(r[0]) for r in result.result_rows if r[0]]
+    except Exception:
+        return []
+
+    if not listing_ids:
+        return []
+
+    from sqlalchemy import text as sql_text
+    rows = await db.execute(
+        sql_text("""
+            SELECT l.id, l.title, l.price, l.image_urls, l.image_url, l.status
+            FROM listings l
+            WHERE l.id = ANY(:ids)
+              AND l.status = 'active'
+        """),
+        {"ids": listing_ids},
+    )
+    listing_map = {r.id: r for r in rows.fetchall()}
+
+    listings = []
+    for lid in listing_ids:
+        r = listing_map.get(lid)
+        if r is None:
+            continue
+        imgs = r.image_urls or []
+        photo = imgs[0] if imgs else r.image_url
+        listings.append({
+            "id": r.id,
+            "title": r.title,
+            "price": float(r.price) if r.price is not None else None,
+            "image_url": photo,
+        })
+    return listings

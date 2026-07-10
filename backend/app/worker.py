@@ -1830,6 +1830,44 @@ async def invalidate_swipe_live_configs_task(ctx: dict) -> None:
         logger.warning("[Worker] invalidate_swipe_live_configs başarısız | %s", exc)
 
 
+# ── A3b: Sıcak İlan Anlık Satıcı Bildirimi ───────────────────────────────────
+
+async def notify_hot_listing_task(ctx: dict, listing_id: int, hesitation_count: int) -> None:
+    """
+    24 saat içinde 3. bid_hesitation event'i geldiğinde tetiklenir.
+    İlan sahibine "ilanın ilgi görüyor" push bildirimi gönderir.
+    _job_id deduplication sayesinde 24h içinde yalnızca bir kez çalışır.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from sqlalchemy import text as sql_text
+
+        async with AsyncSessionLocal() as db:
+            row = await db.execute(sql_text("""
+                SELECT l.title, u.fcm_token, u.id AS owner_id
+                FROM listings l
+                JOIN users u ON u.id = l.user_id
+                WHERE l.id = :lid AND l.status = 'active'
+            """), {"lid": listing_id})
+            r = row.fetchone()
+
+        if r is None or not r.fcm_token:
+            return
+
+        title = r.title or "İlanın"
+        from app.services.firebase_service import send_push
+        await send_push(
+            r.fcm_token,
+            title="🔥 İlanın ilgi görüyor!",
+            body=f'"{title}" için bugün {hesitation_count} kişi teklif vermek üzereydi. Fiyatını kontrol et.',
+            notif_type="hot_listing",
+            extra_data={"listing_id": str(listing_id)},
+        )
+        logger.info("[Worker] notify_hot_listing_task | listing=%d count=%d", listing_id, hesitation_count)
+    except Exception as exc:
+        logger.warning("[Worker] notify_hot_listing_task başarısız | listing=%d | %s", listing_id, exc)
+
+
 # ── A4: Fiyat Esnekliği Retargeting ──────────────────────────────────────────
 
 async def hesitation_retarget_task(ctx: dict) -> None:
@@ -2140,6 +2178,7 @@ class WorkerSettings:
         delayed_close_stream_task,
         send_telegram_notification_task,
         hesitation_retarget_task,
+        notify_hot_listing_task,
         compute_trust_scores_task,
         train_churn_model_task,
         compute_influence_scores_task,

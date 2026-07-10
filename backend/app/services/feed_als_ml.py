@@ -12,6 +12,7 @@ Confidence ağırlıkları:
   click                              → 1.0
   impression + dwell_time > 8000ms  → 0.7
   impression + dwell_time > 3000ms  → 0.4
+  bid_hesitation (user_events)       → 2.0  (fiyat yazdı ama göndermedi — güçlü sinyal)
   skip                               → 0.05  (negatif örnek, düşük ağırlık)
 """
 from __future__ import annotations
@@ -116,6 +117,26 @@ async def train_feed_als() -> None:
         logger.info("[FeedALS] Yetersiz veri (%d satır), eğitim atlanıyor", len(rows))
         return
 
+    # bid_hesitation sinyalleri user_events'ten ayrıca çekilir
+    hes_map: dict[tuple[int, int], int] = {}
+    try:
+        hes_result = await ch.query("""
+            SELECT user_id, item_id, count() AS cnt
+            FROM user_events
+            WHERE event_type = 'bid_hesitation'
+              AND item_type  = 'listing'
+              AND timestamp >= now() - INTERVAL 30 DAY
+              AND user_id IS NOT NULL
+            GROUP BY user_id, item_id
+        """)
+        for uid_s, lid_s, cnt in hes_result.result_rows:
+            try:
+                hes_map[(int(uid_s), int(lid_s))] = int(cnt)
+            except (ValueError, TypeError):
+                pass
+    except Exception as hes_exc:
+        logger.warning("[FeedALS] bid_hesitation sorgusu başarısız, atlanıyor: %s", hes_exc)
+
     # user_id ve listing_id ClickHouse'da String; int'e çevir
     valid_rows = []
     for uid_s, lid_s, clicks, long_dwells, short_dwells, skips in rows:
@@ -137,10 +158,12 @@ async def train_feed_als() -> None:
 
     data, row_idx, col_idx = [], [], []
     for uid, lid, clicks, long_dwells, short_dwells, skips in valid_rows:
+        hesitations = hes_map.get((uid, lid), 0)
         confidence = (
             1.0 * clicks
             + 0.7 * long_dwells
             + 0.4 * short_dwells
+            + 2.0 * hesitations
             + 0.05 * skips
         )
         confidence = max(confidence, 0.01)

@@ -152,6 +152,27 @@ async def track_interaction(
                     await pool.aclose()
                 except Exception as arq_exc:
                     logger.warning("[ANALYTICS] Cold start trigger başarısız: %s", arq_exc)
+
+        # Sıcak ilan spike dedektörü: 24 saat içinde 3. bid_hesitation → satıcıya bildirim
+        if payload.interaction_type == "bid_hesitation" and payload.item_type == "listing":
+            try:
+                spike_key = f"hes_spike:{payload.item_id}"
+                spike_count = await redis.incr(spike_key)
+                if spike_count == 1:
+                    await redis.expire(spike_key, 86400)  # 24h TTL
+                if spike_count == 3:
+                    from app.core.task_queue import get_pool as _get_pool
+                    _pool = _get_pool()
+                    if _pool:
+                        await _pool.enqueue_job(
+                            "notify_hot_listing_task",
+                            payload.item_id,
+                            spike_count,
+                            _job_id=f"hot_listing:{payload.item_id}",
+                        )
+            except Exception as spike_exc:
+                logger.warning("[ANALYTICS] Hesitation spike check başarısız: %s", spike_exc)
+
     except Exception as exc:
         logger.error("[ANALYTICS] Redis rpush başarısız: %s", exc)
 
@@ -1322,6 +1343,44 @@ async def pro_insights(
                     title=hot_leads[0]["title"], count=hot_leads[0]["hesitations_30d"]
                 ),
             })
+        # Tereddüt fiyat noktası: alıcıların yazdığı fiyat lisans fiyatının çok altındaysa somut öneri
+        try:
+            seller_lid_rows = await db.execute(sql_text(
+                "SELECT id, title, price FROM listings WHERE user_id = :uid AND status = 'active' LIMIT 20"
+            ), {"uid": uid})
+            seller_listings = {r.id: {"title": r.title, "price": float(r.price or 0)} for r in seller_lid_rows.fetchall()}
+            if seller_listings:
+                ids_str = ",".join(str(i) for i in seller_listings)
+                from app.database_clickhouse import get_clickhouse_client as _get_ch
+                ch2 = await _get_ch()
+                if ch2 is not None:
+                    hes_price_r = await ch2.query(f"""
+                        SELECT item_id, AVG(price_point) AS avg_pp, COUNT() AS cnt
+                        FROM user_events
+                        WHERE event_type = 'bid_hesitation'
+                          AND item_type  = 'listing'
+                          AND item_id IN ({ids_str})
+                          AND price_point > 0
+                          AND timestamp >= now() - INTERVAL 30 DAY
+                        GROUP BY item_id
+                        HAVING cnt >= 2
+                    """)
+                    for row in hes_price_r.result_rows:
+                        lid_h, avg_pp, _ = int(row[0]), float(row[1]), int(row[2])
+                        sl = seller_listings.get(lid_h)
+                        if sl and sl["price"] > 0 and avg_pp < sl["price"] * 0.85:
+                            suggested = int(round(avg_pp / 50) * 50) or int(avg_pp)
+                            tips.append({
+                                "icon": "💡", "type": "hesitation_price",
+                                "title": t.get("proTipHesPriceTitle", "Alıcı Fiyat Sinyali"),
+                                "body": t.get(
+                                    "proTipHesPriceBody",
+                                    '"{title}" için birden fazla kişi ≈{suggested} ₺ yazdı ama teklif göndermedi. Bu fiyata yaklaştırmak dönüşümü artırabilir.'
+                                ).format(title=sl["title"], suggested=suggested),
+                            })
+                            break
+        except Exception as hes_tip_exc:
+            logger.warning("[ProInsights] hesitation_price tip başarısız: %s", hes_tip_exc)
         # Yayın önerisi
         if peak_hours:
             best_hour = peak_hours[0]["label"]

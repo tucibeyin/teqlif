@@ -15,6 +15,7 @@ num_threads=2 — VPS CPU koruması.
 
 Confidence ağırlıkları:
   click                              → 1.0
+  bid_hesitation (user_events)       → 2.0  (fiyat yazdı ama göndermedi — güçlü sinyal)
   impression + dwell_time > 8000ms  → 0.7
   impression + dwell_time > 3000ms  → 0.4
   skip                               → 0.05
@@ -123,6 +124,25 @@ async def train_lightfm() -> None:
         logger.info("[HybridBPR] Yetersiz veri (%d satır), eğitim atlanıyor", len(rows))
         return
 
+    hes_map: dict[tuple[int, int], int] = {}
+    try:
+        hes_result = await ch.query("""
+            SELECT user_id, item_id, count() AS cnt
+            FROM user_events
+            WHERE event_type = 'bid_hesitation'
+              AND item_type  = 'listing'
+              AND timestamp >= now() - INTERVAL 30 DAY
+              AND user_id IS NOT NULL
+            GROUP BY user_id, item_id
+        """)
+        for uid_s, lid_s, cnt in hes_result.result_rows:
+            try:
+                hes_map[(int(uid_s), int(lid_s))] = int(cnt)
+            except (ValueError, TypeError):
+                pass
+    except Exception as hes_exc:
+        logger.warning("[HybridBPR] bid_hesitation sorgusu başarısız, atlanıyor: %s", hes_exc)
+
     valid_rows = []
     for uid_s, lid_s, clicks, long_dwells, short_dwells, skips in rows:
         try:
@@ -130,10 +150,12 @@ async def train_lightfm() -> None:
             lid = int(lid_s)
         except (ValueError, TypeError):
             continue
+        hesitations = hes_map.get((uid, lid), 0)
         conf = max(
             float(clicks) * 1.0
             + float(long_dwells) * 0.7
             + float(short_dwells) * 0.4
+            + float(hesitations) * 2.0
             + float(skips) * 0.05,
             0.01,
         )
