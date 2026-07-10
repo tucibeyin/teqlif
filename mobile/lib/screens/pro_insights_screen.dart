@@ -447,7 +447,7 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
   Widget _buildPriceIntelCarousel(List<Map<String, dynamic>> items, AppLocalizations l) {
     if (items.isEmpty) return const SizedBox.shrink();
     return SizedBox(
-      height: 140,
+      height: 160,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
@@ -894,37 +894,24 @@ class _PriceIntelCard extends StatelessWidget {
               ),
             ],
           ),
-          const Spacer(),
-          Row(
-            children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${NumberFormat('#,##0', 'tr_TR').format(yourPrice)} ₺',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sigColor),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(l.priceYours,
-                      style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
-                ]),
-              ),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                  Text('${NumberFormat('#,##0', 'tr_TR').format(marketAvg)} ₺',
-                      style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(l.priceMarketAvg,
-                      style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context)),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                ]),
-              ),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text('${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sigColor)),
-                  Text(l.priceDiff,
-                      style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
-                ]),
-              ),
-            ],
+          const SizedBox(height: 8),
+          _PriceRow(
+            label: l.priceYours,
+            value: '${NumberFormat('#,##0', 'tr_TR').format(yourPrice)} ₺',
+            valueColor: sigColor,
+            bold: true,
+          ),
+          const SizedBox(height: 3),
+          _PriceRow(
+            label: l.priceMarketAvg,
+            value: '${NumberFormat('#,##0', 'tr_TR').format(marketAvg)} ₺',
+          ),
+          const SizedBox(height: 3),
+          _PriceRow(
+            label: l.priceDiff,
+            value: '${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%',
+            valueColor: sigColor,
+            bold: true,
           ),
         ],
       ),
@@ -1056,6 +1043,32 @@ class _PriceIntelRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PriceRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool bold;
+  const _PriceRow({required this.label, required this.value, this.valueColor, this.bold = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+        Text(value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.normal,
+              color: valueColor ?? AppColors.textPrimary(context),
+            ),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+      ],
     );
   }
 }
