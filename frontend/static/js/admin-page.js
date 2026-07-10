@@ -114,11 +114,23 @@ async function loadDashboard() {
 }
 
 // ── KULLANICILAR ──────────────────────────────────────────────────────────────
-async function loadUsers() {
-    const res = await adminFetch('/api/admin-data/users/recent?limit=50');
+const USERS_PER_PAGE = 50;
+let _usersPage = 1;
+let _usersSearch = '';
+let _usersSearchTimer = null;
+
+async function loadUsers(page) {
+    if (page !== undefined) _usersPage = page;
+    const offset = (_usersPage - 1) * USERS_PER_PAGE;
+    const params = new URLSearchParams({ limit: USERS_PER_PAGE, offset });
+    if (_usersSearch) params.set('search', _usersSearch);
+    const res = await adminFetch('/api/admin-data/users/recent?' + params.toString());
     if (!res) return;
     const data = await res.json();
-    document.getElementById("user-table-body").innerHTML = data.map(u => {
+    const users = data.users || [];
+    const total = data.total || 0;
+
+    document.getElementById("user-table-body").innerHTML = users.map(u => {
         const statusPills = [];
         if (u.deleted_at) {
             statusPills.push('<span class="status-pill" style="background:#374151;color:#9ca3af;">🗑 Silindi</span>');
@@ -155,7 +167,23 @@ async function loadUsers() {
             </td>
         </tr>`;
     }).join("");
-    document.getElementById("search-users").value = "";
+
+    // Pagination
+    const totalPages = Math.max(1, Math.ceil(total / USERS_PER_PAGE));
+    const start = total === 0 ? 0 : offset + 1;
+    const end = Math.min(offset + USERS_PER_PAGE, total);
+    const pag = document.getElementById('users-pagination');
+    if (pag) {
+        pag.innerHTML = `
+            <span style="color:#94a3b8;font-size:0.85rem;">${start}–${end} / ${total} kullanıcı</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+                <button onclick="loadUsers(1)" ${_usersPage === 1 ? 'disabled' : ''} class="pag-btn">«</button>
+                <button onclick="loadUsers(${_usersPage - 1})" ${_usersPage <= 1 ? 'disabled' : ''} class="pag-btn">‹</button>
+                <span style="color:#e2e8f0;font-size:0.85rem;padding:0 8px;">${_usersPage} / ${totalPages}</span>
+                <button onclick="loadUsers(${_usersPage + 1})" ${_usersPage >= totalPages ? 'disabled' : ''} class="pag-btn">›</button>
+                <button onclick="loadUsers(${totalPages})" ${_usersPage === totalPages ? 'disabled' : ''} class="pag-btn">»</button>
+            </div>`;
+    }
 }
 
 function openModal(id, un, fn, email, act, shadow, isPro, plan) {
@@ -510,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Reload buttons
     document.getElementById('btnLoadDashboard')?.addEventListener('click', loadDashboard);
-    document.getElementById('btnLoadUsers')?.addEventListener('click', loadUsers);
+    document.getElementById('btnLoadUsers')?.addEventListener('click', () => { _usersPage = 1; loadUsers(); });
     document.getElementById('btnLoadTuci')?.addEventListener('click', loadTuci);
     document.getElementById('btnLoadCampaigns')?.addEventListener('click', loadCampaigns);
     document.getElementById('btnLoadStreams')?.addEventListener('click', loadStreams);
@@ -520,7 +548,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('btnLoadAnalytics')?.addEventListener('click', loadAnalytics);
 
     // Search
-    document.getElementById('search-users')?.addEventListener('keyup', () => filterTable('search-users', 'user-table-body'));
+    document.getElementById('search-users')?.addEventListener('input', e => {
+        clearTimeout(_usersSearchTimer);
+        _usersSearchTimer = setTimeout(() => { _usersSearch = e.target.value.trim(); loadUsers(1); }, 350);
+    });
     document.getElementById('search-tuci')?.addEventListener('keyup', () => filterTable('search-tuci', 'tuci-table-body'));
     document.getElementById('search-campaigns')?.addEventListener('keyup', () => filterTable('search-campaigns', 'campaign-table-body'));
     document.getElementById('search-streams')?.addEventListener('keyup', () => filterTable('search-streams', 'stream-table-body'));

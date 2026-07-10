@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func, cast, Date, text
 from typing import List, Optional
@@ -113,46 +113,67 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
 # 1. KULLANICI YÖNETİMİ
 # ==========================================
 @router.get("/users/recent")
-async def get_recent_users(limit: int = 50, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
-    result = await db.execute(select(User).where(User.deleted_at.is_(None)).order_by(desc(User.created_at)).limit(limit))
+async def get_recent_users(
+    limit: int = 50,
+    offset: int = 0,
+    search: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(check_admin_access),
+):
+    base_q = select(User).where(User.deleted_at.is_(None))
+    if search:
+        term = f"%{search}%"
+        base_q = base_q.where(
+            User.username.ilike(term) | User.email.ilike(term) | User.full_name.ilike(term)
+        )
+
+    total_res = await db.execute(select(func.count()).select_from(base_q.subquery()))
+    total = total_res.scalar() or 0
+
+    result = await db.execute(base_q.order_by(desc(User.created_at)).limit(limit).offset(offset))
     users = result.scalars().all()
 
-    # listing ve stream sayılarını batch ile çek
     user_ids = [u.id for u in users]
-    listing_counts_res = await db.execute(
-        select(Listing.user_id, func.count(Listing.id))
-        .where(Listing.user_id.in_(user_ids), Listing.is_deleted == False)  # noqa: E712
-        .group_by(Listing.user_id)
-    )
-    listing_counts = dict(listing_counts_res.all())
+    listing_counts: dict = {}
+    stream_counts: dict = {}
+    if user_ids:
+        listing_counts_res = await db.execute(
+            select(Listing.user_id, func.count(Listing.id))
+            .where(Listing.user_id.in_(user_ids), Listing.is_deleted == False)  # noqa: E712
+            .group_by(Listing.user_id)
+        )
+        listing_counts = dict(listing_counts_res.all())
 
-    stream_counts_res = await db.execute(
-        select(LiveStream.host_id, func.count(LiveStream.id))
-        .where(LiveStream.host_id.in_(user_ids))
-        .group_by(LiveStream.host_id)
-    )
-    stream_counts = dict(stream_counts_res.all())
+        stream_counts_res = await db.execute(
+            select(LiveStream.host_id, func.count(LiveStream.id))
+            .where(LiveStream.host_id.in_(user_ids))
+            .group_by(LiveStream.host_id)
+        )
+        stream_counts = dict(stream_counts_res.all())
 
-    return [
-        {
-            "id": u.id,
-            "username": u.username,
-            "email": u.email,
-            "full_name": u.full_name,
-            "is_active": u.is_active,
-            "is_verified": u.is_verified,
-            "is_premium": u.is_premium,
-            "plan_type": u.plan_type,
-            "is_shadowbanned": u.is_shadowbanned,
-            "deleted_at": u.deleted_at.isoformat() if u.deleted_at else None,
-            "tuci_balance": u.tuci_balance,
-            "fcm_token": bool(u.fcm_token),
-            "created_at": u.created_at,
-            "listing_count": listing_counts.get(u.id, 0),
-            "stream_count": stream_counts.get(u.id, 0),
-        }
-        for u in users
-    ]
+    return {
+        "total": total,
+        "users": [
+            {
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "full_name": u.full_name,
+                "is_active": u.is_active,
+                "is_verified": u.is_verified,
+                "is_premium": u.is_premium,
+                "plan_type": u.plan_type,
+                "is_shadowbanned": u.is_shadowbanned,
+                "deleted_at": u.deleted_at.isoformat() if u.deleted_at else None,
+                "tuci_balance": u.tuci_balance,
+                "fcm_token": bool(u.fcm_token),
+                "created_at": u.created_at,
+                "listing_count": listing_counts.get(u.id, 0),
+                "stream_count": stream_counts.get(u.id, 0),
+            }
+            for u in users
+        ],
+    }
 
 @router.patch("/users/{user_id}")
 async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):

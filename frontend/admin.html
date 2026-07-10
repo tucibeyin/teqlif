@@ -172,6 +172,24 @@
             font-weight: bold;
         }
 
+        .pag-btn {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 0.3rem;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            width: auto;
+        }
+        .pag-btn:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+        .pag-btn:not(:disabled):hover {
+            background: #334155;
+        }
+
         /* Dashboard KPI grid */
         .kpi-grid {
             display: grid;
@@ -327,6 +345,7 @@
                         <tbody id="user-table-body"></tbody>
                     </table>
                 </div>
+                <div id="users-pagination" style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;flex-shrink:0;"></div>
             </div>
 
             <!-- TUCi EKONOMİSİ -->
@@ -617,6 +636,6 @@
         </div>
     </div>
 
-    <script src="/static/js/admin-page.js?v=12"></script>
+    <script src="/static/js/admin-page.js?v=13"></script>
 </body>
 </html>
