@@ -183,11 +183,11 @@ class _ProInsightsScreenState extends State<ProInsightsScreen> {
       _showAll[key] == true ? total : total.clamp(0, _kMaxVisible);
 
   List<Widget> _buildPeakBars(List<Map<String, dynamic>> hours, AppLocalizations l) {
-    final maxCount = hours.map((h) => (h['count'] as int? ?? 0)).reduce((a, b) => a > b ? a : b);
+    final maxCount = hours.map((h) => (h['count'] as num?)?.toInt() ?? 0).reduce((a, b) => a > b ? a : b);
     return hours.asMap().entries.map((e) {
       final i = e.key;
       final h = e.value;
-      final count = h['count'] as int? ?? 0;
+      final count = (h['count'] as num?)?.toInt() ?? 0;
       final ratio = maxCount > 0 ? count / maxCount : 0.0;
       return _PeakHourBar(label: h['label'] as String, count: count, ratio: ratio, rank: i + 1, l: l);
     }).toList();
@@ -238,9 +238,9 @@ class _KpiGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final rev30 = (kpis['revenue_30d'] as num?)?.toDouble() ?? 0;
     final revGrowth = (kpis['revenue_growth_pct'] as num?)?.toDouble();
-    final sales30 = kpis['sales_30d'] as int? ?? 0;
-    final bids30 = kpis['bids_30d'] as int? ?? 0;
-    final activeL = kpis['active_listings'] as int? ?? 0;
+    final sales30 = (kpis['sales_30d'] as num?)?.toInt() ?? 0;
+    final bids30 = (kpis['bids_30d'] as num?)?.toInt() ?? 0;
+    final activeL = (kpis['active_listings'] as num?)?.toInt() ?? 0;
     final totalRev = (kpis['total_revenue'] as num?)?.toDouble() ?? 0;
 
     String growthStr = '';
@@ -353,10 +353,10 @@ class _FunnelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardBg = AppColors.card(context);
-    final views = funnel['views'] as int? ?? 0;
-    final hesitations = funnel['hesitations'] as int? ?? 0;
-    final bids = funnel['bids'] as int? ?? 0;
-    final sales = funnel['sales'] as int? ?? 0;
+    final views = (funnel['views'] as num?)?.toInt() ?? 0;
+    final hesitations = (funnel['hesitations'] as num?)?.toInt() ?? 0;
+    final bids = (funnel['bids'] as num?)?.toInt() ?? 0;
+    final sales = (funnel['sales'] as num?)?.toInt() ?? 0;
     final v2b = (funnel['view_to_bid_pct'] as num?)?.toDouble() ?? 0;
     final b2s = (funnel['bid_to_sale_pct'] as num?)?.toDouble() ?? 0;
     final maxVal = [views, hesitations, bids, sales].reduce((a, b) => a > b ? a : b).toDouble();
@@ -499,9 +499,9 @@ class _HotLeadRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final views = lead['views_30d'] as int? ?? 0;
-    final hes   = lead['hesitations_30d'] as int? ?? 0;
-    final heat  = lead['heat_score'] as int? ?? 0;
+    final views = (lead['views_30d'] as num?)?.toInt() ?? 0;
+    final hes   = (lead['hesitations_30d'] as num?)?.toInt() ?? 0;
+    final heat  = (lead['heat_score'] as num?)?.toInt() ?? 0;
     final price = (lead['price'] as num?)?.toDouble();
 
     return Container(
@@ -644,10 +644,10 @@ class _StreamStatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total   = stats['total_streams'] as int? ?? 0;
-    final s30     = stats['streams_30d'] as int? ?? 0;
+    final total   = (stats['total_streams'] as num?)?.toInt() ?? 0;
+    final s30     = (stats['streams_30d'] as num?)?.toInt() ?? 0;
     final avgV    = (stats['avg_viewers'] as num?)?.toDouble() ?? 0;
-    final peakV   = stats['peak_viewers'] as int? ?? 0;
+    final peakV   = (stats['peak_viewers'] as num?)?.toInt() ?? 0;
     final avgDur  = (stats['avg_duration_min'] as num?)?.toDouble() ?? 0;
     final best    = (stats['best_streams'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
@@ -738,9 +738,9 @@ class _BestStreamRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final medals = ['🥇', '🥈', '🥉'];
     final medal = rank <= 3 ? medals[rank - 1] : '#$rank';
-    final viewers = stream['viewers'] as int? ?? 0;
-    final bids = stream['bids'] as int? ?? 0;
-    final dur = stream['duration_min'] as int? ?? 0;
+    final viewers = (stream['viewers'] as num?)?.toInt() ?? 0;
+    final bids = (stream['bids'] as num?)?.toInt() ?? 0;
+    final dur = (stream['duration_min'] as num?)?.toInt() ?? 0;
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -850,7 +850,7 @@ class _ProMetricsCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(children: [
                 Expanded(child: Text(e['category'] as String? ?? '', style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)))),
-                Text(l.proSearchCount(e['search_count'] as int? ?? 0), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                Text(l.proSearchCount((e['search_count'] as num?)?.toInt() ?? 0), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
               ]),
             )),
           ],
