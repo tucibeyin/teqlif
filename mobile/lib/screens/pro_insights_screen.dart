@@ -831,26 +831,34 @@ class _PriceIntelCard extends StatelessWidget {
           ),
           const Spacer(),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(children: [
-                Text('${NumberFormat('#,##0', 'tr_TR').format(yourPrice)} ₺',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sigColor)),
-                Text(l.priceYours,
-                    style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
-              ]),
-              Column(children: [
-                Text('${NumberFormat('#,##0', 'tr_TR').format(marketAvg)} ₺',
-                    style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context))),
-                Text(l.priceMarketAvg,
-                    style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
-              ]),
-              Column(children: [
-                Text('${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sigColor)),
-                Text(l.priceDiff,
-                    style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
-              ]),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${NumberFormat('#,##0', 'tr_TR').format(yourPrice)} ₺',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sigColor),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(l.priceYours,
+                      style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
+                ]),
+              ),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                  Text('${NumberFormat('#,##0', 'tr_TR').format(marketAvg)} ₺',
+                      style: TextStyle(fontSize: 12, color: AppColors.textPrimary(context)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(l.priceMarketAvg,
+                      style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ]),
+              ),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text('${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: sigColor)),
+                  Text(l.priceDiff,
+                      style: TextStyle(fontSize: 9, color: AppColors.textSecondary(context))),
+                ]),
+              ),
             ],
           ),
         ],
