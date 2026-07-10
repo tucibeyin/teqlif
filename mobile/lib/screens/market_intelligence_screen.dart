@@ -140,68 +140,71 @@ class _MarketIntelligenceScreenState extends State<MarketIntelligenceScreen> {
           if (queries.isEmpty)
             _EmptyHint(text: l.marketNoSearchData)
           else
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.card(context),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                children: queries.take(10).toList().asMap().entries.map((e) {
-                  final i = e.key;
-                  final q = e.value;
+            SizedBox(
+              height: 110,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: queries.take(10).length,
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                itemBuilder: (context, i) {
+                  final q = queries[i];
                   final count = q['count'] as int? ?? 0;
-                  final isLast = i == queries.take(10).length - 1;
                   final fill = maxQCount > 0 ? count / maxQCount : 0.0;
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                        child: Row(
+                  final rankLabel = i < 3 ? ['🥇', '🥈', '🥉'][i] : '${i + 1}.';
+                  return Container(
+                    width: 148,
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.card(context),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border(context)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            SizedBox(
-                              width: 24,
-                              child: Text(
-                                i < 3 ? ['🥇', '🥈', '🥉'][i] : '${i + 1}.',
-                                style: TextStyle(fontSize: i < 3 ? 15 : 11,
-                                    color: AppColors.textSecondary(context)),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    q['query'] as String? ?? '—',
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary(context)),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(3),
-                                    child: LinearProgressIndicator(
-                                      value: fill,
-                                      backgroundColor: AppColors.border(context),
-                                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
-                                      minHeight: 3,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text('$count',
+                            Text(rankLabel,
                                 style: TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary(context))),
+                                    fontSize: i < 3 ? 15 : 11,
+                                    color: AppColors.textSecondary(context))),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text('$count',
+                                  style: const TextStyle(
+                                      fontSize: 11, fontWeight: FontWeight.w800,
+                                      color: Color(0xFFF59E0B))),
+                            ),
                           ],
                         ),
-                      ),
-                      if (!isLast) const Divider(height: 1),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          q['query'] as String? ?? '—',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary(context)),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const Spacer(),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: fill,
+                            backgroundColor: AppColors.border(context),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
+                            minHeight: 3,
+                          ),
+                        ),
+                      ],
+                    ),
                   );
-                }).toList(),
+                },
               ),
             ),
 
