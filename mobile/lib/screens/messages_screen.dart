@@ -761,7 +761,6 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   bool _sending = false;
   bool _error = false;
   bool _isOtherTyping = false;
-  bool _initialScrollDone = false;
   StreamSubscription<Map<String, dynamic>>? _wsSub;
   int? _myUserId;
   Timer? _typingDebounce;
@@ -787,7 +786,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   }
 
   Future<void> _loadMessages({bool bypassCache = false}) async {
-    if (mounted) setState(() { _loading = true; _error = false; _initialScrollDone = false; });
+    if (mounted) setState(() { _loading = true; _error = false; });
     try {
       // SWR: önce Hive cache (anlık), sonra API (taze)
       await for (final data in ApiService.get<List<Map<String, dynamic>>>(
@@ -826,7 +825,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
           }
         }
         setState(() { _messages = merged; _loading = false; });
-        _scrollToBottom();
+        _scrollToBottom(animate: false);
       }
     } catch (e) {
       if (mounted) setState(() { _loading = false; _error = true; });
@@ -909,15 +908,14 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   void _scrollToBottom({bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollCtrl.hasClients) return;
-      if (!animate || !_initialScrollDone) {
-        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
-        _initialScrollDone = true;
-      } else {
+      if (animate) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
+      } else {
+        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
       }
     });
   }
