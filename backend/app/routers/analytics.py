@@ -1607,6 +1607,7 @@ async def ingest_swipe_live_events(
 
 @router.get("/my-feed-stats")
 async def my_feed_stats(
+    request: Request,
     days: int = Query(default=7, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -1774,6 +1775,7 @@ async def track_search(
 
 @router.get("/video-roi")
 async def video_roi(
+    request: Request,
     days: int = Query(default=30, ge=1, le=90),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
