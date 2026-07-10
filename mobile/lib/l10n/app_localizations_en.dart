@@ -2587,6 +2587,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get retargetingCooldownLabel => 'Next blast in:';
+
+  @override
   String get retargetingBlastCooldown =>
       'You can send the next broadcast for this listing in 24 hours.';
 

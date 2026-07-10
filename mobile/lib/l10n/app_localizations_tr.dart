@@ -2589,6 +2589,9 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get retargetingCooldownLabel => 'Tekrar göndermek için:';
+
+  @override
   String get retargetingBlastCooldown =>
       'Bu ilan için bir sonraki toplu duyuruyu 24 saat sonra gönderebilirsiniz.';
 

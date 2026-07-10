@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -26,6 +27,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   bool _sent = false;
   int _sentCount = 0;
   int _blastCooldownSeconds = 0;
+  Timer? _countdownTimer;
 
   Future<List<Map<String, dynamic>>> _fetchListingsPage(int offset) async {
     final token = await StorageService.getToken();
@@ -55,12 +57,45 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
       AnalyticsService.getNotificationCooldown(listingId),
     ]);
     if (mounted) {
+      final cooldown = (results[1] as int?) ?? 0;
       setState(() {
         _audienceData = results[0] as Map<String, dynamic>?;
-        _blastCooldownSeconds = (results[1] as int?) ?? 0;
+        _blastCooldownSeconds = cooldown;
         _loadingAudience = false;
       });
+      if (cooldown > 0) _startCountdown();
     }
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) { _countdownTimer?.cancel(); return; }
+      setState(() {
+        if (_blastCooldownSeconds > 0) {
+          _blastCooldownSeconds--;
+        } else {
+          _countdownTimer?.cancel();
+          _sent = false;
+        }
+      });
+    });
+  }
+
+  String _formatCooldown(int seconds) {
+    final h = seconds ~/ 3600;
+    final m = (seconds % 3600) ~/ 60;
+    final s = seconds % 60;
+    if (h > 0) {
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _sendBlast() async {
@@ -164,6 +199,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
     if (result != null && result['error'] == null) {
       final sent = result['sent'] as int? ?? actualCount;
       setState(() { _sent = true; _sentCount = sent; _blastCooldownSeconds = 86400; });
+      _startCountdown();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.retargetingBlastSuccess),
@@ -683,38 +719,9 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: (_sent || _blastCooldownSeconds > 0)
-                      ? Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF22C55E).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.3)),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    AppLocalizations.of(context)!.retargetingBlastSent(_sentCount),
-                                    style: const TextStyle(
-                                      fontSize: 14, fontWeight: FontWeight.w700,
-                                      color: Color(0xFF22C55E),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                AppLocalizations.of(context)!.retargetingBlastCooldown,
-                                style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        )
+                      ? _sent
+                          ? _sentCard(l)
+                          : _cooldownCard(l)
                       : Column(
                           children: [
                             ElevatedButton.icon(
@@ -775,6 +782,79 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _sentCard(AppLocalizations l) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF22C55E).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF22C55E).withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                l.retargetingBlastSent(_sentCount),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF22C55E)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l.retargetingCooldownLabel,
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _formatCooldown(_blastCooldownSeconds),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF22C55E), fontFeatures: [FontFeature.tabularFigures()]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cooldownCard(AppLocalizations l) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.timer_outlined, color: Color(0xFFF59E0B), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                l.retargetingBlastCooldown,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFF59E0B)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l.retargetingCooldownLabel,
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _formatCooldown(_blastCooldownSeconds),
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFFF59E0B), fontFeatures: [FontFeature.tabularFigures()]),
+          ),
+        ],
+      ),
     );
   }
 

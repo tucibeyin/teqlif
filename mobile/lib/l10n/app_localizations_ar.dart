@@ -2566,6 +2566,9 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get retargetingCooldownLabel => 'الإرسال التالي خلال:';
+
+  @override
   String get retargetingBlastCooldown =>
       'يمكنك إرسال الإشعار الجماعي التالي لهذا الإعلان بعد 24 ساعة.';
 

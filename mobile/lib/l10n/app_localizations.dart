@@ -4842,6 +4842,12 @@ abstract class AppLocalizations {
   /// **'{count} kişiye bildirim gönderildi!'**
   String retargetingBlastSent(int count);
 
+  /// No description provided for @retargetingCooldownLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tekrar göndermek için:'**
+  String get retargetingCooldownLabel;
+
   /// No description provided for @retargetingBlastCooldown.
   ///
   /// In tr, this message translates to:

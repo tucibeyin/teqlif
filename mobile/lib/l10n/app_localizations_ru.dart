@@ -2622,6 +2622,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get retargetingCooldownLabel => 'Следующая рассылка через:';
+
+  @override
   String get retargetingBlastCooldown =>
       'Следующую рассылку для этого объявления можно отправить через 24 часа.';
 

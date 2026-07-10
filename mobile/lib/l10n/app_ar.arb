@@ -1299,6 +1299,7 @@
       }
     }
   },
+  "retargetingCooldownLabel": "الإرسال التالي خلال:",
   "retargetingBlastCooldown": "يمكنك إرسال الإشعار الجماعي التالي لهذا الإعلان بعد 24 ساعة.",
   "retargetingDialogTitle": "إرسال إشعار؟",
   "retargetingDialogBodyFree": "سيتم إرسال إشعار \"هل لا تزال مهتمًا؟\" إلى {count} شخص. لديك {credits} رصيد إشعار، سيُرسل مجانًا.",

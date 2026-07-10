@@ -1298,6 +1298,7 @@
       }
     }
   },
+  "retargetingCooldownLabel": "Next blast in:",
   "retargetingBlastCooldown": "You can send the next broadcast for this listing in 24 hours.",
   "retargetingDialogTitle": "Send notification?",
   "retargetingDialogBodyFree": "A \"Still interested?\" notification will be sent to {count} people. You have {credits} notification credits, sent for free.",
