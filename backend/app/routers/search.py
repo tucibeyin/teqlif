@@ -347,6 +347,20 @@ async def search_all(
         result = await db.execute(listing_q)
         listings = [_listing_dict(l, u) for l, u, _r in result.all()]
 
+    # Track search event for Category Demand Trends (only first page)
+    if offset == 0 and listings:
+        from app.database_clickhouse import buffer_search_event
+        from collections import Counter
+        cat_counts = Counter(l["category"] for l in listings if l.get("category"))
+        if cat_counts:
+            top_cat, _ = cat_counts.most_common(1)[0]
+            asyncio.ensure_future(buffer_search_event(
+                user_id=current_user_id,
+                query=q,
+                category=top_cat,
+                result_count=len(listings),
+            ))
+
     return {
         "users": users,
         "listings": listings,
