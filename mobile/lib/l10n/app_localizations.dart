@@ -6252,6 +6252,30 @@ abstract class AppLocalizations {
   /// **'Tüm Kategoriler'**
   String get allCategories;
 
+  /// No description provided for @filterPeriodAll.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm Zaman'**
+  String get filterPeriodAll;
+
+  /// No description provided for @filterPeriodWeek.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu Hafta'**
+  String get filterPeriodWeek;
+
+  /// No description provided for @filterPeriodMonth.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu Ay'**
+  String get filterPeriodMonth;
+
+  /// No description provided for @filterPeriodYear.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu Yıl'**
+  String get filterPeriodYear;
+
   /// No description provided for @hintExampleEmail.
   ///
   /// In tr, this message translates to:

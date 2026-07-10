@@ -188,7 +188,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
             title: l.proHubTabMarket,
             icon: Icons.public,
             iconColor: const Color(0xFFF59E0B),
-            initiallyExpanded: true,
+            initiallyExpanded: false,
             children: [
               _ToolCard(
                 icon: Icons.insights_outlined,

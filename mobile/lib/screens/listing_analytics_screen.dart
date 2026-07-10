@@ -38,6 +38,13 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   int _videoImp = 0;
   int _photoImp = 0;
 
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  List<_ListingMetric> get _filteredListings => _searchQuery.isEmpty
+      ? _listings
+      : _listings.where((m) => m.title.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +53,12 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
     } else {
       setState(() => _loading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Map<String, dynamic>? _fromCache<T>(Map<int, (DateTime, Map<String, dynamic>)> cache) {
@@ -129,10 +142,13 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
       );
     }).toList()..sort((a, b) => b.impressions.compareTo(a.impressions));
 
+    final seenIds = <String>{};
+    final deduped = merged.where((m) => seenIds.add(m.id)).toList();
+
     setState(() {
       _loading = false;
       _hasError = false;
-      _listings = merged;
+      _listings = deduped;
       _videoCtr = (roi?['video']?['ctr'] as num?)?.toDouble() ?? 0;
       _photoCtr = (roi?['photo']?['ctr'] as num?)?.toDouble() ?? 0;
       _videoImp = roi?['video']?['impressions'] as int? ?? 0;
@@ -223,7 +239,45 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
               _load();
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          if (_listings.isNotEmpty) ...[
+            TextField(
+              controller: _searchCtrl,
+              decoration: InputDecoration(
+                hintText: l.searchHintTextListing,
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() {
+                            _searchQuery = '';
+                            if (_selectedListingId != null &&
+                                !_filteredListings.any((m) => m.id == _selectedListingId)) {
+                              _selectedListingId = null;
+                            }
+                          });
+                        },
+                      )
+                    : null,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onChanged: (v) {
+                setState(() {
+                  _searchQuery = v;
+                  if (_selectedListingId != null &&
+                      !_filteredListings.any((m) => m.id == _selectedListingId)) {
+                    _selectedListingId = null;
+                  }
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
 
           if (_listings.isNotEmpty) ...[
             // Horizontal Carousel for Selection
@@ -231,7 +285,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
               height: 100,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: _listings.length + 1,
+                itemCount: _filteredListings.length + 1,
                 itemBuilder: (context, index) {
                   if (index == 0) {
                     final isSelected = _selectedListingId == null;
@@ -282,7 +336,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
                     );
                   }
 
-                  final metric = _listings[index - 1];
+                  final metric = _filteredListings[index - 1];
                   final isSelected = _selectedListingId == metric.id;
                   return GestureDetector(
                     onTap: () => setState(() => _selectedListingId = metric.id),

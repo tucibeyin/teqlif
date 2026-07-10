@@ -3419,6 +3419,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allCategories => 'All Categories';
 
   @override
+  String get filterPeriodAll => 'All Time';
+
+  @override
+  String get filterPeriodWeek => 'This Week';
+
+  @override
+  String get filterPeriodMonth => 'This Month';
+
+  @override
+  String get filterPeriodYear => 'This Year';
+
+  @override
   String get hintExampleEmail => 'example@email.com';
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../config/theme.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
@@ -35,6 +36,33 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   int? _selectedReportListingId;
   List<Map<String, dynamic>> _reportListings = [];
   Future<Map<String, dynamic>>? _reportFuture;
+  final TextEditingController _reportSearchCtrl = TextEditingController();
+  String _reportQuery = '';
+  String _periodFilter = '';
+
+  List<Map<String, dynamic>> get _filteredReportListings {
+    var result = _reportListings;
+    if (_reportQuery.isNotEmpty) {
+      result = result.where((l) =>
+        (l['title'] as String? ?? '').toLowerCase().contains(_reportQuery.toLowerCase())
+      ).toList();
+    }
+    if (_periodFilter.isNotEmpty) {
+      final now = DateTime.now();
+      final cutoff = _periodFilter == 'week'
+          ? now.subtract(const Duration(days: 7))
+          : _periodFilter == 'month'
+              ? now.subtract(const Duration(days: 30))
+              : now.subtract(const Duration(days: 365));
+      result = result.where((item) {
+        final raw = item['created_at'] as String?;
+        if (raw == null) return false;
+        final dt = DateTime.tryParse(raw);
+        return dt != null && dt.isAfter(cutoff);
+      }).toList();
+    }
+    return result;
+  }
 
   @override
   void initState() {
@@ -122,19 +150,74 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _reportSearchCtrl.dispose();
     super.dispose();
   }
 
   // ── Rapor: İlan Kartu Karuseli ───────────────────────────────────────────
+  Widget _periodChip(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: FilterChip(
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        selected: value.isEmpty ? _periodFilter.isEmpty : _periodFilter == value,
+        onSelected: (_) => setState(() => _periodFilter = value),
+        selectedColor: const Color(0xFF14B8A6).withValues(alpha: 0.15),
+        checkmarkColor: const Color(0xFF14B8A6),
+      ),
+    );
+  }
+
   Widget _buildListingCarousel() {
-    return SizedBox(
-      height: 112,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _reportListings.length + 1,
-        itemBuilder: (ctx, i) {
-          if (i == 0) {
+    final filtered = _filteredReportListings;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: TextField(
+            controller: _reportSearchCtrl,
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.searchHintTextListing,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _reportQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _reportSearchCtrl.clear();
+                        setState(() => _reportQuery = '');
+                      },
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onChanged: (v) => setState(() => _reportQuery = v),
+          ),
+        ),
+        SizedBox(
+          height: 36,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              _periodChip(AppLocalizations.of(context)!.filterPeriodAll, ''),
+              _periodChip(AppLocalizations.of(context)!.filterPeriodWeek, 'week'),
+              _periodChip(AppLocalizations.of(context)!.filterPeriodMonth, 'month'),
+              _periodChip(AppLocalizations.of(context)!.filterPeriodYear, 'year'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 112,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filtered.length + 1,
+            itemBuilder: (ctx, i) {
+              if (i == 0) {
             final sel = _selectedReportListingId == null;
             return GestureDetector(
               onTap: () => _selectReportListing(null),
@@ -159,7 +242,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               ),
             );
           }
-          final listing = _reportListings[i - 1];
+          final listing = filtered[i - 1];
           final lid = listing['id'] as int;
           final sel = _selectedReportListingId == lid;
           final imageUrls = listing['image_urls'] as List? ?? [];
@@ -210,8 +293,10 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
               ),
             ),
           );
-        },
-      ),
+            },
+          ),
+        ),
+      ],
     );
   }
 

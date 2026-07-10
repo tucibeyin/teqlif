@@ -23,6 +23,7 @@ import '../services/auth_service.dart';
 import '../services/cache_service.dart';
 import '../services/image_cache_manager.dart';
 import '../services/listing_service.dart';
+import '../services/category_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
@@ -2558,6 +2559,12 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
   int _offset = 0;
   final ScrollController _scrollController = ScrollController();
 
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _categoryFilter = '';
+  String _periodFilter = '';
+  List<(String, String)>? _categories;
+  Timer? _searchDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -2572,8 +2579,21 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_categories == null) {
+      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
+          .then((cats) {
+        if (mounted) setState(() => _categories = cats);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
+    _searchCtrl.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 
@@ -2593,8 +2613,14 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       final token = await StorageService.getToken();
       if (token == null) return;
       final activeParam = widget.active ? 'true' : 'false';
+      final q = _searchCtrl.text.trim();
+      final cat = _categoryFilter;
+      var listingsUrl = '$kBaseUrl/listings/my?active=$activeParam&limit=20&offset=$_offset';
+      if (q.isNotEmpty) listingsUrl += '&q=${Uri.encodeComponent(q)}';
+      if (cat.isNotEmpty) listingsUrl += '&category=${Uri.encodeComponent(cat)}';
+      if (_periodFilter.isNotEmpty) listingsUrl += '&period=${Uri.encodeComponent(_periodFilter)}';
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/my?active=$activeParam&limit=20&offset=$_offset'),
+        Uri.parse(listingsUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200 && mounted) {
@@ -2768,37 +2794,140 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     return '${buf.toString()} ₺';
   }
 
+  Widget _buildFilterBar(AppLocalizations l) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          child: TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: l.searchHintTextListing,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _searchCtrl.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        _load();
+                      },
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onChanged: (_) {
+              _searchDebounce?.cancel();
+              _searchDebounce = Timer(const Duration(milliseconds: 400), () => _load());
+            },
+          ),
+        ),
+        if (_categories != null && _categories!.isNotEmpty)
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(l.allCategories, style: const TextStyle(fontSize: 12)),
+                    selected: _categoryFilter.isEmpty,
+                    onSelected: (_) { setState(() => _categoryFilter = ''); _load(); },
+                    selectedColor: kPrimary.withValues(alpha: 0.15),
+                    checkmarkColor: kPrimary,
+                  ),
+                ),
+                ..._categories!.map((cat) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
+                    selected: _categoryFilter == cat.$1,
+                    onSelected: (_) {
+                      setState(() => _categoryFilter = _categoryFilter == cat.$1 ? '' : cat.$1);
+                      _load();
+                    },
+                    selectedColor: kPrimary.withValues(alpha: 0.15),
+                    checkmarkColor: kPrimary,
+                  ),
+                )),
+              ],
+            ),
+          ),
+        SizedBox(
+          height: 36,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [
+              _periodChip(l.filterPeriodAll, '', l),
+              _periodChip(l.filterPeriodWeek, 'week', l),
+              _periodChip(l.filterPeriodMonth, 'month', l),
+              _periodChip(l.filterPeriodYear, 'year', l),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  Widget _periodChip(String label, String value, AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: FilterChip(
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        selected: value.isEmpty ? _periodFilter.isEmpty : _periodFilter == value,
+        onSelected: (_) {
+          setState(() => _periodFilter = value);
+          _load();
+        },
+        selectedColor: kPrimary.withValues(alpha: 0.15),
+        checkmarkColor: kPrimary,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final bool hasFilter = _searchCtrl.text.isNotEmpty || _categoryFilter.isNotEmpty || _periodFilter.isNotEmpty;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.active ? 'Aktif İlanlarım' : 'Pasif İlanlarım')),
+      appBar: AppBar(title: Text(widget.active ? l.profileActiveListings : l.profilePassiveListings)),
       backgroundColor: AppColors.bg(context),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: kPrimary))
-          : _listings.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(widget.active ? Icons.list_alt_outlined : Icons.archive_outlined,
-                          size: 52, color: const Color(0xFFD1D5DB)),
-                      const SizedBox(height: 12),
-                      Text(
-                        widget.active ? 'Aktif ilan yok' : 'Pasif ilan yok',
-                        style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  color: kPrimary,
-                  onRefresh: () => _load(),
-                  child: ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _listings.length + (_hasMore ? 1 : 0),
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (ctx, i) {
+      body: Column(
+        children: [
+          _buildFilterBar(l),
+          Expanded(
+            child: _loading && _listings.isEmpty
+                ? const Center(child: CircularProgressIndicator(color: kPrimary))
+                : _listings.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(hasFilter ? Icons.search_off : (widget.active ? Icons.list_alt_outlined : Icons.archive_outlined),
+                                size: 52, color: const Color(0xFFD1D5DB)),
+                            const SizedBox(height: 12),
+                            Text(
+                              hasFilter ? l.searchNoResults : (widget.active ? l.emptyActiveListings : l.emptyPassiveListings),
+                              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        color: kPrimary,
+                        onRefresh: () => _load(),
+                        child: ListView.separated(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(12),
+                          itemCount: _listings.length + (_hasMore ? 1 : 0),
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          itemBuilder: (ctx, i) {
                       if (i == _listings.length) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 16),
@@ -2862,8 +2991,11 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                         ),
                       );
                     },
-                  ),
+                        ),
+                      ),
                 ),
+              ],
+            ),
     );
   }
 
@@ -2890,10 +3022,60 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   bool _loading = true;
   bool _hasError = false;
 
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  String _categoryFilter = '';
+  String _periodFilter = '';
+  List<(String, String)>? _categories;
+
+  List<dynamic> get _filteredListings {
+    var result = _listings;
+    if (_searchQuery.isNotEmpty) {
+      result = result.where((item) =>
+        (item['title'] as String? ?? '').toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
+    }
+    if (_categoryFilter.isNotEmpty) {
+      result = result.where((item) => (item['category'] as String?) == _categoryFilter).toList();
+    }
+    if (_periodFilter.isNotEmpty) {
+      final now = DateTime.now();
+      final cutoff = _periodFilter == 'week'
+          ? now.subtract(const Duration(days: 7))
+          : _periodFilter == 'month'
+              ? now.subtract(const Duration(days: 30))
+              : now.subtract(const Duration(days: 365));
+      result = result.where((item) {
+        final raw = item['created_at'] as String?;
+        if (raw == null) return false;
+        final dt = DateTime.tryParse(raw);
+        return dt != null && dt.isAfter(cutoff);
+      }).toList();
+    }
+    return result;
+  }
+
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_categories == null) {
+      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
+          .then((cats) {
+        if (mounted) setState(() => _categories = cats);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -2957,9 +3139,100 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
     return '${buf.toString()} ₺';
   }
 
+  Widget _buildFavFilterBar(AppLocalizations l) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          child: TextField(
+            controller: _searchCtrl,
+            decoration: InputDecoration(
+              hintText: l.searchHintTextListing,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onChanged: (v) => setState(() => _searchQuery = v),
+          ),
+        ),
+        if (_categories != null && _categories!.isNotEmpty)
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(l.allCategories, style: const TextStyle(fontSize: 12)),
+                    selected: _categoryFilter.isEmpty,
+                    onSelected: (_) => setState(() => _categoryFilter = ''),
+                    selectedColor: kPrimary.withValues(alpha: 0.15),
+                    checkmarkColor: kPrimary,
+                  ),
+                ),
+                ..._categories!.map((cat) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
+                    selected: _categoryFilter == cat.$1,
+                    onSelected: (_) => setState(() =>
+                        _categoryFilter = _categoryFilter == cat.$1 ? '' : cat.$1),
+                    selectedColor: kPrimary.withValues(alpha: 0.15),
+                    checkmarkColor: kPrimary,
+                  ),
+                )),
+              ],
+            ),
+          ),
+        SizedBox(
+          height: 36,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [
+              _favPeriodChip(l.filterPeriodAll, '', l),
+              _favPeriodChip(l.filterPeriodWeek, 'week', l),
+              _favPeriodChip(l.filterPeriodMonth, 'month', l),
+              _favPeriodChip(l.filterPeriodYear, 'year', l),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  Widget _favPeriodChip(String label, String value, AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: FilterChip(
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        selected: value.isEmpty ? _periodFilter.isEmpty : _periodFilter == value,
+        onSelected: (_) => setState(() => _periodFilter = value),
+        selectedColor: kPrimary.withValues(alpha: 0.15),
+        checkmarkColor: kPrimary,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final filtered = _filteredListings;
+    final bool hasFilter = _searchQuery.isNotEmpty || _categoryFilter.isNotEmpty || _periodFilter.isNotEmpty;
     return Scaffold(
       appBar: AppBar(title: Text(l.profileFavorites)),
       backgroundColor: AppColors.bg(context),
@@ -2982,15 +3255,23 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
               : Column(
                   children: [
                     if (_hasError) StaleDataBanner(onRetry: _load),
-                    Expanded(child: RefreshIndicator(
+                    _buildFavFilterBar(l),
+                    if (hasFilter && filtered.isEmpty)
+                      Expanded(
+                        child: Center(
+                          child: Text(l.searchNoResults,
+                              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+                        ),
+                      )
+                    else Expanded(child: RefreshIndicator(
                   color: kPrimary,
                   onRefresh: _load,
                   child: ListView.separated(
                     padding: const EdgeInsets.all(12),
-                    itemCount: _listings.length,
+                    itemCount: filtered.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (ctx, i) {
-                      final l = _listings[i];
+                      final l = filtered[i];
                       final imgs = l['image_urls'] as List? ?? [];
                       final rawImg = imgs.isNotEmpty ? imgs[0] as String : l['image_url'] as String?;
                       final imageUrl = rawImg != null ? imgUrl(rawImg) : null;

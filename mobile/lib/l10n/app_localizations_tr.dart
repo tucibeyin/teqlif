@@ -3424,6 +3424,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get allCategories => 'Tüm Kategoriler';
 
   @override
+  String get filterPeriodAll => 'Tüm Zaman';
+
+  @override
+  String get filterPeriodWeek => 'Bu Hafta';
+
+  @override
+  String get filterPeriodMonth => 'Bu Ay';
+
+  @override
+  String get filterPeriodYear => 'Bu Yıl';
+
+  @override
   String get hintExampleEmail => 'ornek@email.com';
 
   @override

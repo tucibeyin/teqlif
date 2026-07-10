@@ -344,7 +344,7 @@ class ListingService:
         ]
 
     # ── Kendi İlanlarım ──────────────────────────────────────────────────────
-    async def get_my_listings(self, current_user: User, active: Optional[bool] = None, q: Optional[str] = None, category: Optional[str] = None, limit: int = 50, offset: int = 0) -> list:
+    async def get_my_listings(self, current_user: User, active: Optional[bool] = None, q: Optional[str] = None, category: Optional[str] = None, limit: int = 50, offset: int = 0, period: Optional[str] = None) -> list:
         query = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
@@ -356,7 +356,16 @@ class ListingService:
             query = query.where(Listing.category == category)
         if q:
             query = query.where(Listing.title.ilike(f"%{q}%"))
-        
+        if period:
+            from datetime import datetime, timedelta
+            now = datetime.utcnow()
+            if period == 'week':
+                query = query.where(Listing.created_at >= now - timedelta(days=7))
+            elif period == 'month':
+                query = query.where(Listing.created_at >= now - timedelta(days=30))
+            elif period == 'year':
+                query = query.where(Listing.created_at >= now - timedelta(days=365))
+
         query = query.order_by(Listing.created_at.desc()).limit(limit).offset(offset)
         result = await self.db.execute(query)
         rows = result.all()

@@ -3395,6 +3395,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get allCategories => 'جميع الفئات';
 
   @override
+  String get filterPeriodAll => 'كل الأوقات';
+
+  @override
+  String get filterPeriodWeek => 'هذا الأسبوع';
+
+  @override
+  String get filterPeriodMonth => 'هذا الشهر';
+
+  @override
+  String get filterPeriodYear => 'هذا العام';
+
+  @override
   String get hintExampleEmail => 'example@email.com';
 
   @override

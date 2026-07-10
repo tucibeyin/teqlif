@@ -3461,6 +3461,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get allCategories => 'Все категории';
 
   @override
+  String get filterPeriodAll => 'За всё время';
+
+  @override
+  String get filterPeriodWeek => 'На этой неделе';
+
+  @override
+  String get filterPeriodMonth => 'В этом месяце';
+
+  @override
+  String get filterPeriodYear => 'В этом году';
+
+  @override
   String get hintExampleEmail => 'example@email.com';
 
   @override

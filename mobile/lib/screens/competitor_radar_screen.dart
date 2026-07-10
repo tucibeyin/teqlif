@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
+import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
 import '../services/storage_service.dart';
@@ -24,17 +26,42 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
   Map<String, dynamic>? _velocityData;
   bool _loadingData = false;
 
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _listingQuery = '';
+  String _periodFilter = '';
+  Timer? _searchDebounce;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
   Future<List<Map<String, dynamic>>> _fetchListingsPage(int offset) async {
     final token = await StorageService.getToken();
     if (token == null) return [];
-    final resp = await http.get(
-      Uri.parse('$kBaseUrl/listings/my?limit=20&offset=$offset&active=true'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    var url = '$kBaseUrl/listings/my?limit=20&offset=$offset&active=true';
+    if (_listingQuery.isNotEmpty) url += '&q=${Uri.encodeComponent(_listingQuery)}';
+    if (_periodFilter.isNotEmpty) url += '&period=${Uri.encodeComponent(_periodFilter)}';
+    final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'});
     if (resp.statusCode == 200) {
       return (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
     }
     return [];
+  }
+
+  Widget _periodChip(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: FilterChip(
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        selected: value.isEmpty ? _periodFilter.isEmpty : _periodFilter == value,
+        onSelected: (_) => setState(() => _periodFilter = value),
+        selectedColor: kPrimary.withValues(alpha: 0.15),
+        checkmarkColor: kPrimary,
+      ),
+    );
   }
 
   Future<void> _loadData() async {
@@ -70,7 +97,49 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
         physics: widget.isEmbedded ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TextField(
+              controller: _searchCtrl,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.searchHintTextListing,
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _listingQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _listingQuery = '');
+                        },
+                      )
+                    : null,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onChanged: (v) {
+                _searchDebounce?.cancel();
+                _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+                  setState(() => _listingQuery = v.trim());
+                });
+              },
+            ),
+          ),
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _periodChip(l.filterPeriodAll, ''),
+                _periodChip(l.filterPeriodWeek, 'week'),
+                _periodChip(l.filterPeriodMonth, 'month'),
+                _periodChip(l.filterPeriodYear, 'year'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           SwipePaginatedList<Map<String, dynamic>>(
+            key: ValueKey('$_listingQuery-$_periodFilter'),
             fetchPage: _fetchListingsPage,
             itemHeight: 62,
             maxVisible: 5,
