@@ -22,6 +22,7 @@ from .analytics import AnalyticsEvent, UserInteraction
 from .category import Category
 from .city import City
 from .tuci_transaction import TuciTransaction
+from .gift_event import GiftEvent
 from .referral import Referral
 from .search_alert import SearchAlert
 from .user_interest import UserInterest

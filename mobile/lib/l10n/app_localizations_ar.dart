@@ -1500,6 +1500,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get walletDetailGoStreamHost => 'ملف مضيف البث';
 
   @override
+  String get walletDetailGiftName => 'الهدية';
+
+  @override
+  String get walletDetailGiftSender => 'المُرسِل';
+
+  @override
+  String get walletDetailGiftReceiver => 'المُستقبِل';
+
+  @override
+  String get walletDetailGiftStream => 'البث';
+
+  @override
+  String get walletDetailGiftHostShare => 'ما وصل للمستقبل';
+
+  @override
+  String get walletDetailGoGiftSender => 'ملف المُرسِل';
+
+  @override
+  String get walletDetailGoGiftReceiver => 'ملف المُستقبِل';
+
+  @override
+  String get walletDetailGoGiftStream => 'الذهاب إلى تحليلات البث';
+
+  @override
   String get walletComingSoonLabel => 'شراء TUCi قريباً!';
 
   @override

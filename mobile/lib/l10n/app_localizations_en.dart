@@ -1513,6 +1513,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletDetailGoStreamHost => 'Stream Host Profile';
 
   @override
+  String get walletDetailGiftName => 'Gift';
+
+  @override
+  String get walletDetailGiftSender => 'Sender';
+
+  @override
+  String get walletDetailGiftReceiver => 'Recipient';
+
+  @override
+  String get walletDetailGiftStream => 'Stream';
+
+  @override
+  String get walletDetailGiftHostShare => 'Recipient Received';
+
+  @override
+  String get walletDetailGoGiftSender => 'Sender Profile';
+
+  @override
+  String get walletDetailGoGiftReceiver => 'Recipient Profile';
+
+  @override
+  String get walletDetailGoGiftStream => 'Go to Stream Analytics';
+
+  @override
   String get walletComingSoonLabel => 'TUCi Purchase Coming Soon!';
 
   @override

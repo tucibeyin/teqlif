@@ -3,13 +3,17 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, text as sql_text
 
+import json
+
 from app.database import get_db
 from app.models.user import User
 from app.models.tuci_transaction import TuciTransaction
 from app.models.listing import Listing
 from app.models.stream import LiveStream
+from app.models.gift_event import GiftEvent
 from app.services.chat_service import publish_chat
 from app.utils.auth import get_current_user
+from app.utils.redis_client import get_redis
 
 router = APIRouter(prefix="/api/wallet", tags=["wallet"])
 
@@ -129,6 +133,34 @@ async def get_transaction_detail(
                 "host_avatar": host.profile_image_thumb_url if host else None,
             }
 
+    elif txn.reference_type == "gift_event" and txn.reference_id:
+        gift_ev = await db.scalar(select(GiftEvent).where(GiftEvent.id == txn.reference_id))
+        if gift_ev:
+            sender   = await db.scalar(select(User).where(User.id == gift_ev.sender_id))
+            receiver = await db.scalar(select(User).where(User.id == gift_ev.receiver_id))
+            stream   = await db.scalar(select(LiveStream).where(LiveStream.id == gift_ev.stream_id))
+            detail["gift_event"] = {
+                "id": gift_ev.id,
+                "gift_name": gift_ev.gift_name,
+                "cost_tuci": gift_ev.cost_tuci,
+                "host_share": gift_ev.host_share,
+                "sent_at": gift_ev.sent_at.isoformat(),
+                "sender": {
+                    "id": gift_ev.sender_id,
+                    "username": sender.username if sender else None,
+                    "avatar": sender.profile_image_thumb_url if sender else None,
+                },
+                "receiver": {
+                    "id": gift_ev.receiver_id,
+                    "username": receiver.username if receiver else None,
+                    "avatar": receiver.profile_image_thumb_url if receiver else None,
+                },
+                "stream": {
+                    "id": gift_ev.stream_id,
+                    "title": stream.title if stream else None,
+                },
+            }
+
     return detail
 
 
@@ -155,6 +187,7 @@ async def send_gift(
     commission_rate = 0.95 if receiver.is_premium else 0.70
     host_share = int(body.cost * commission_rate)
 
+    # 1) Bakiye güncelle
     await db.execute(
         sql_text("UPDATE users SET tuci_balance = tuci_balance - :cost WHERE id = :uid"),
         {"cost": body.cost, "uid": current_user.id},
@@ -163,16 +196,58 @@ async def send_gift(
         sql_text("UPDATE users SET tuci_balance = tuci_balance + :share WHERE id = :uid"),
         {"share": host_share, "uid": receiver.id},
     )
-    db.add(TuciTransaction(user_id=current_user.id, amount=-body.cost,  transaction_type="send_gift",    reference_id=body.stream_id, reference_type="stream"))
-    db.add(TuciTransaction(user_id=receiver.id,    amount=host_share,   transaction_type="receive_gift", reference_id=body.stream_id, reference_type="stream"))
+
+    # 2) GiftEvent kaydı — tam audit trail
+    gift_ev = GiftEvent(
+        stream_id=body.stream_id,
+        sender_id=current_user.id,
+        receiver_id=receiver.id,
+        gift_name=body.gift_name,
+        cost_tuci=body.cost,
+        host_share=host_share,
+    )
+    db.add(gift_ev)
+    await db.flush()  # gift_ev.id'yi al
+
+    # 3) Her iki TuciTransaction aynı GiftEvent'e işaret eder
+    db.add(TuciTransaction(
+        user_id=current_user.id, amount=-body.cost,
+        transaction_type="send_gift",
+        reference_id=gift_ev.id, reference_type="gift_event",
+    ))
+    db.add(TuciTransaction(
+        user_id=receiver.id, amount=host_share,
+        transaction_type="receive_gift",
+        reference_id=gift_ev.id, reference_type="gift_event",
+    ))
     await db.commit()
 
+    # 4) WebSocket: anlık animasyon
     await publish_chat(body.stream_id, {
         "type": "gift",
         "sender": current_user.username,
         "gift_name": body.gift_name,
         "cost": body.cost,
     })
+
+    # 5) Redis event log: son 200 hediye, 24s TTL
+    try:
+        redis = await get_redis()
+        key = f"gift:log:{body.stream_id}"
+        payload = json.dumps({
+            "gift_event_id": gift_ev.id,
+            "gift_name": body.gift_name,
+            "cost_tuci": body.cost,
+            "host_share": host_share,
+            "sender": current_user.username,
+            "receiver": receiver.username,
+            "ts": gift_ev.sent_at.isoformat() if gift_ev.sent_at else None,
+        })
+        await redis.lpush(key, payload)
+        await redis.ltrim(key, 0, 199)
+        await redis.expire(key, 86400)
+    except Exception:
+        pass  # Redis hatası hediye işlemini durdurmasın
 
     await db.refresh(current_user)
     return {"ok": True, "new_balance": current_user.tuci_balance}

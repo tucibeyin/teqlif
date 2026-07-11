@@ -2946,6 +2946,54 @@ abstract class AppLocalizations {
   /// **'Yayın Sahibi Profili'**
   String get walletDetailGoStreamHost;
 
+  /// No description provided for @walletDetailGiftName.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hediye'**
+  String get walletDetailGiftName;
+
+  /// No description provided for @walletDetailGiftSender.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönderen'**
+  String get walletDetailGiftSender;
+
+  /// No description provided for @walletDetailGiftReceiver.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcı'**
+  String get walletDetailGiftReceiver;
+
+  /// No description provided for @walletDetailGiftStream.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın'**
+  String get walletDetailGiftStream;
+
+  /// No description provided for @walletDetailGiftHostShare.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcıya Geçen'**
+  String get walletDetailGiftHostShare;
+
+  /// No description provided for @walletDetailGoGiftSender.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönderici Profili'**
+  String get walletDetailGoGiftSender;
+
+  /// No description provided for @walletDetailGoGiftReceiver.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcı Profili'**
+  String get walletDetailGoGiftReceiver;
+
+  /// No description provided for @walletDetailGoGiftStream.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayın Analizine Git'**
+  String get walletDetailGoGiftStream;
+
   /// No description provided for @walletComingSoonLabel.
   ///
   /// In tr, this message translates to:

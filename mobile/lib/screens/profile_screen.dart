@@ -4124,8 +4124,9 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final l = widget.l;
-    final listing = _detail?['listing'] as Map<String, dynamic>?;
-    final stream = _detail?['stream'] as Map<String, dynamic>?;
+    final listing   = _detail?['listing']    as Map<String, dynamic>?;
+    final stream    = _detail?['stream']     as Map<String, dynamic>?;
+    final giftEvent = _detail?['gift_event'] as Map<String, dynamic>?;
     final imageUrl = listing?['image_url'] as String?;
     final hasImage = imageUrl != null && imageUrl.isNotEmpty;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -4296,7 +4297,7 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                       ),
                   ],
 
-                  // Stream info
+                  // Stream info (eski referans türü)
                   if (stream != null) ...[
                     const Divider(height: 24),
                     _DetailRow(
@@ -4325,12 +4326,109 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                         )),
                       ),
                   ],
+
+                  // Gift event info
+                  if (giftEvent != null) ...[
+                    const Divider(height: 24),
+                    _GiftNameBadge(giftName: giftEvent['gift_name'] as String? ?? '—'),
+                    const SizedBox(height: 12),
+                    _DetailRow(
+                      label: l.walletDetailGiftSender,
+                      value: (giftEvent['sender'] as Map?)?['username'] as String? ?? '—',
+                    ),
+                    _DetailRow(
+                      label: l.walletDetailGiftReceiver,
+                      value: (giftEvent['receiver'] as Map?)?['username'] as String? ?? '—',
+                    ),
+                    if ((giftEvent['stream'] as Map?)?['title'] != null)
+                      _DetailRow(
+                        label: l.walletDetailGiftStream,
+                        value: (giftEvent['stream'] as Map)['title'] as String,
+                      ),
+                    if (giftEvent['host_share'] != null && (giftEvent['host_share'] as int) > 0)
+                      _DetailRow(
+                        label: l.walletDetailGiftHostShare,
+                        value: '${giftEvent['host_share']} TUCi',
+                      ),
+                    const SizedBox(height: 12),
+                    if ((giftEvent['stream'] as Map?)?['id'] != null)
+                      _NavButton(
+                        icon: Icons.bar_chart_rounded,
+                        label: l.walletDetailGoGiftStream,
+                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                          builder: (_) => LiveStreamAnalyticsScreen(
+                            streamId: (giftEvent['stream'] as Map)['id'] as int,
+                          ),
+                        )),
+                      ),
+                    if ((giftEvent['sender'] as Map?)?['username'] != null)
+                      _NavButton(
+                        icon: Icons.person_rounded,
+                        label: l.walletDetailGoGiftSender,
+                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                          builder: (_) => PublicProfileScreen(
+                            username: (giftEvent['sender'] as Map)['username'] as String,
+                            userId: (giftEvent['sender'] as Map)['id'] as int?,
+                          ),
+                        )),
+                      ),
+                    if ((giftEvent['receiver'] as Map?)?['username'] != null)
+                      _NavButton(
+                        icon: Icons.person_rounded,
+                        label: l.walletDetailGoGiftReceiver,
+                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                          builder: (_) => PublicProfileScreen(
+                            username: (giftEvent['receiver'] as Map)['username'] as String,
+                            userId: (giftEvent['receiver'] as Map)['id'] as int?,
+                          ),
+                        )),
+                      ),
+                  ],
                 ],
               ),
             ),
 
             const SizedBox(height: 32),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GiftNameBadge extends StatelessWidget {
+  final String giftName;
+  const _GiftNameBadge({required this.giftName});
+
+  static const _giftEmojis = {
+    'rose': '🌹', 'heart': '❤️', 'fire': '🔥', 'star': '⭐',
+    'diamond': '💎', 'crown': '👑', 'rocket': '🚀', 'trophy': '🏆',
+    'money': '💰', 'clap': '👏', 'kiss': '💋', 'gift': '🎁',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final emoji = _giftEmojis[giftName.toLowerCase()] ?? '🎁';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEC4899).withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEC4899).withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Text(
+            giftName,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFFEC4899),
+            ),
+          ),
         ],
       ),
     );

@@ -1512,6 +1512,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get walletDetailGoStreamHost => 'Yayın Sahibi Profili';
 
   @override
+  String get walletDetailGiftName => 'Hediye';
+
+  @override
+  String get walletDetailGiftSender => 'Gönderen';
+
+  @override
+  String get walletDetailGiftReceiver => 'Alıcı';
+
+  @override
+  String get walletDetailGiftStream => 'Yayın';
+
+  @override
+  String get walletDetailGiftHostShare => 'Alıcıya Geçen';
+
+  @override
+  String get walletDetailGoGiftSender => 'Gönderici Profili';
+
+  @override
+  String get walletDetailGoGiftReceiver => 'Alıcı Profili';
+
+  @override
+  String get walletDetailGoGiftStream => 'Yayın Analizine Git';
+
+  @override
   String get walletComingSoonLabel => 'TUCi Satın Alma Yakında!';
 
   @override

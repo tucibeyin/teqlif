@@ -1532,6 +1532,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get walletDetailGoStreamHost => 'Профиль ведущего трансляции';
 
   @override
+  String get walletDetailGiftName => 'Подарок';
+
+  @override
+  String get walletDetailGiftSender => 'Отправитель';
+
+  @override
+  String get walletDetailGiftReceiver => 'Получатель';
+
+  @override
+  String get walletDetailGiftStream => 'Трансляция';
+
+  @override
+  String get walletDetailGiftHostShare => 'Получено получателем';
+
+  @override
+  String get walletDetailGoGiftSender => 'Профиль отправителя';
+
+  @override
+  String get walletDetailGoGiftReceiver => 'Профиль получателя';
+
+  @override
+  String get walletDetailGoGiftStream => 'Перейти к аналитике трансляции';
+
+  @override
   String get walletComingSoonLabel => 'Покупка TUCi скоро состоится!';
 
   @override
