@@ -21,44 +21,25 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "gift_events",
-        sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column(
-            "stream_id",
-            sa.Integer,
-            sa.ForeignKey("live_streams.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-        sa.Column(
-            "sender_id",
-            sa.Integer,
-            sa.ForeignKey("users.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-        sa.Column(
-            "receiver_id",
-            sa.Integer,
-            sa.ForeignKey("users.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-        sa.Column("gift_name", sa.String(50), nullable=False),
-        sa.Column("cost_tuci", sa.Integer, nullable=False),
-        sa.Column("host_share", sa.Integer, nullable=False),
-        sa.Column(
-            "sent_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
-    )
-    op.create_index("ix_gift_events_stream", "gift_events", ["stream_id", "sent_at"])
-    op.create_index("ix_gift_events_sender", "gift_events", ["sender_id"])
-    op.create_index("ix_gift_events_receiver", "gift_events", ["receiver_id"])
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS gift_events (
+            id         SERIAL PRIMARY KEY,
+            stream_id  INTEGER NOT NULL REFERENCES live_streams(id) ON DELETE CASCADE,
+            sender_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            gift_name  VARCHAR(50) NOT NULL,
+            cost_tuci  INTEGER NOT NULL,
+            host_share INTEGER NOT NULL,
+            sent_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+        )
+    """)
+    op.execute("CREATE INDEX IF NOT EXISTS ix_gift_events_stream   ON gift_events (stream_id, sent_at)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_gift_events_sender   ON gift_events (sender_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_gift_events_receiver ON gift_events (receiver_id)")
 
 
 def downgrade() -> None:
-    op.drop_index("ix_gift_events_receiver", table_name="gift_events")
-    op.drop_index("ix_gift_events_sender", table_name="gift_events")
-    op.drop_index("ix_gift_events_stream", table_name="gift_events")
-    op.drop_table("gift_events")
+    op.execute("DROP INDEX IF EXISTS ix_gift_events_receiver")
+    op.execute("DROP INDEX IF EXISTS ix_gift_events_sender")
+    op.execute("DROP INDEX IF EXISTS ix_gift_events_stream")
+    op.execute("DROP TABLE IF EXISTS gift_events")
