@@ -367,7 +367,11 @@ class _MessagesTabState extends State<_MessagesTab> {
           final conv = _conversations[i];
           final username = conv['username'] as String? ?? '';
           final fullName = conv['full_name'] as String? ?? username;
-          final lastMsg = conv['last_message'] as String? ?? '';
+          final l = AppLocalizations.of(context)!;
+          final lastMsg = _lastMsgPreview({
+            'content_type': conv['last_message_type'] ?? 'text',
+            'content': conv['last_message'] ?? '',
+          }, l);
           final lastAt = conv['last_at'] as String?;
           final unread = (conv['unread_count'] as int?) ?? 0;
           final otherId = (conv['user_id'] as int?) ?? 0;
