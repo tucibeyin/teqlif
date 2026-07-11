@@ -782,6 +782,16 @@
     }
   },
   "blastConfirmCostFree": "Ücretsiz hakkınızdan düşülür",
+  "blastInviteDialogTitle": "🎯 Kitleyi Davet Et",
+  "blastTargetAudience": "Hedef Kitle",
+  "blastNotificationLabel": "Bildirim",
+  "blastNotificationValue": "Push + Yayın linki",
+  "audienceReadyBuyersBanner": "{count} Hazır Alıcıya Bildirim Gönder!",
+  "@audienceReadyBuyersBanner": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "blastBtnFree": "{count} Hazır Alıcı — Bildirim Gönder (Ücretsiz)",
   "@blastBtnFree": {
     "placeholders": {
@@ -1844,6 +1854,7 @@
   "listingLowest": "En Düşük",
   "listingAverage": "Ortalama",
   "listingHighest": "En Yüksek",
+  "audienceCalculating": "Kitle hesaplanıyor...",
   "audienceCalcError": "Kitle hesaplanırken bir hata oluştu.",
   "audienceNoPotentialFound": "Şu an bu ilanla ilgilenebilecek yeni potansiyel alıcı bulunamadı.",
   "audienceMassSendSuccess": "Toplu Kitle Bildirimi başarıyla gönderildi! 🚀",

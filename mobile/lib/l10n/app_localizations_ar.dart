@@ -1796,6 +1796,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get blastConfirmCostFree => 'يُخصم من حصتك المجانية';
 
   @override
+  String get blastInviteDialogTitle => '🎯 ادعُ جمهورك';
+
+  @override
+  String get blastTargetAudience => 'الجمهور المستهدف';
+
+  @override
+  String get blastNotificationLabel => 'إشعار';
+
+  @override
+  String get blastNotificationValue => 'Push + رابط البث';
+
+  @override
+  String audienceReadyBuyersBanner(int count) {
+    return 'أرسل إشعاراً لـ $count مشترٍ جاهز!';
+  }
+
+  @override
   String blastBtnFree(int count) {
     return '$count مشترٍ جاهز — أرسل إشعاراً (مجاني)';
   }
@@ -3573,6 +3590,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listingHighest => 'الأعلى';
+
+  @override
+  String get audienceCalculating => 'جاري حساب الجمهور...';
 
   @override
   String get audienceCalcError => 'حدث خطأ أثناء حساب الجمهور.';

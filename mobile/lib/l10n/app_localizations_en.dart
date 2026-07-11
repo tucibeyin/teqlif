@@ -1811,6 +1811,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blastConfirmCostFree => 'Deducted from your free quota';
 
   @override
+  String get blastInviteDialogTitle => '🎯 Invite Your Audience';
+
+  @override
+  String get blastTargetAudience => 'Target Audience';
+
+  @override
+  String get blastNotificationLabel => 'Notification';
+
+  @override
+  String get blastNotificationValue => 'Push + Stream link';
+
+  @override
+  String audienceReadyBuyersBanner(int count) {
+    return 'Notify $count Ready Buyers!';
+  }
+
+  @override
   String blastBtnFree(int count) {
     return '$count Ready Buyers — Send Notification (Free)';
   }
@@ -3597,6 +3614,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listingHighest => 'Highest';
+
+  @override
+  String get audienceCalculating => 'Calculating audience...';
 
   @override
   String get audienceCalcError =>

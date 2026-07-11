@@ -3498,6 +3498,36 @@ abstract class AppLocalizations {
   /// **'Ücretsiz hakkınızdan düşülür'**
   String get blastConfirmCostFree;
 
+  /// No description provided for @blastInviteDialogTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎯 Kitleyi Davet Et'**
+  String get blastInviteDialogTitle;
+
+  /// No description provided for @blastTargetAudience.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef Kitle'**
+  String get blastTargetAudience;
+
+  /// No description provided for @blastNotificationLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bildirim'**
+  String get blastNotificationLabel;
+
+  /// No description provided for @blastNotificationValue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Push + Yayın linki'**
+  String get blastNotificationValue;
+
+  /// No description provided for @audienceReadyBuyersBanner.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} Hazır Alıcıya Bildirim Gönder!'**
+  String audienceReadyBuyersBanner(int count);
+
   /// No description provided for @blastBtnFree.
   ///
   /// In tr, this message translates to:
@@ -6599,6 +6629,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'En Yüksek'**
   String get listingHighest;
+
+  /// No description provided for @audienceCalculating.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kitle hesaplanıyor...'**
+  String get audienceCalculating;
 
   /// No description provided for @audienceCalcError.
   ///

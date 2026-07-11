@@ -783,6 +783,16 @@
     }
   },
   "blastConfirmCostFree": "Deducted from your free quota",
+  "blastInviteDialogTitle": "🎯 Invite Your Audience",
+  "blastTargetAudience": "Target Audience",
+  "blastNotificationLabel": "Notification",
+  "blastNotificationValue": "Push + Stream link",
+  "audienceReadyBuyersBanner": "Notify {count} Ready Buyers!",
+  "@audienceReadyBuyersBanner": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "blastBtnFree": "{count} Ready Buyers — Send Notification (Free)",
   "@blastBtnFree": {
     "placeholders": {
@@ -1845,6 +1855,7 @@
   "listingLowest": "Lowest",
   "listingAverage": "Average",
   "listingHighest": "Highest",
+  "audienceCalculating": "Calculating audience...",
   "audienceCalcError": "An error occurred while calculating the audience.",
   "audienceNoPotentialFound": "No new potential buyers found for this listing at the moment.",
   "audienceMassSendSuccess": "Mass Audience Notification sent successfully! 🚀",

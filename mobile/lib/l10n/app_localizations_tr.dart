@@ -1812,6 +1812,23 @@ class AppLocalizationsTr extends AppLocalizations {
   String get blastConfirmCostFree => 'Ücretsiz hakkınızdan düşülür';
 
   @override
+  String get blastInviteDialogTitle => '🎯 Kitleyi Davet Et';
+
+  @override
+  String get blastTargetAudience => 'Hedef Kitle';
+
+  @override
+  String get blastNotificationLabel => 'Bildirim';
+
+  @override
+  String get blastNotificationValue => 'Push + Yayın linki';
+
+  @override
+  String audienceReadyBuyersBanner(int count) {
+    return '$count Hazır Alıcıya Bildirim Gönder!';
+  }
+
+  @override
   String blastBtnFree(int count) {
     return '$count Hazır Alıcı — Bildirim Gönder (Ücretsiz)';
   }
@@ -3602,6 +3619,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listingHighest => 'En Yüksek';
+
+  @override
+  String get audienceCalculating => 'Kitle hesaplanıyor...';
 
   @override
   String get audienceCalcError => 'Kitle hesaplanırken bir hata oluştu.';

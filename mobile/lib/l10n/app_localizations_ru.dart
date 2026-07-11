@@ -1835,6 +1835,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String get blastConfirmCostFree => 'Вычитается из вашей бесплатной квоты';
 
   @override
+  String get blastInviteDialogTitle => '🎯 Пригласите свою аудиторию';
+
+  @override
+  String get blastTargetAudience => 'Целевая аудитория';
+
+  @override
+  String get blastNotificationLabel => 'Уведомление';
+
+  @override
+  String get blastNotificationValue => 'Push + ссылка на трансляцию';
+
+  @override
+  String audienceReadyBuyersBanner(int count) {
+    return 'Уведомить $count готовых покупателей!';
+  }
+
+  @override
   String blastBtnFree(int count) {
     return '$count Готовые покупатели — отправить уведомление (бесплатно)';
   }
@@ -3639,6 +3656,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get listingHighest => 'Высший';
+
+  @override
+  String get audienceCalculating => 'Расчёт аудитории...';
 
   @override
   String get audienceCalcError => 'Произошла ошибка при расчете аудитории.';

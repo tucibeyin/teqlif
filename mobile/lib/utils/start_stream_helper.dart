@@ -18,7 +18,13 @@ Future<void> showStartStreamDialog(
   BuildContext context, {
   VoidCallback? onStreamStarted,
 }) async {
-  final categories = await CategoryService.getCategories();
+  final locale = context.mounted
+      ? Localizations.localeOf(context).languageCode
+      : 'tr';
+  final categories = await CategoryService.getCategories(
+    locale: locale,
+    forStream: true,
+  );
   final token = await StorageService.getToken();
   if (!context.mounted) return;
   final l = AppLocalizations.of(context)!;
@@ -113,17 +119,17 @@ Future<void> showStartStreamDialog(
             ),
             if (audienceLoading) ...[
               const SizedBox(height: 12),
-              const Row(
+              Row(
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     width: 14,
                     height: 14,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
-                    'Kitle hesaplanıyor...',
-                    style: TextStyle(fontSize: 12),
+                    l.audienceCalculating,
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ],
               ),
@@ -179,7 +185,7 @@ Future<void> showStartStreamDialog(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '$audienceSize Hazır Alıcıya Bildirim Gönder!',
+                              l.audienceReadyBuyersBanner(audienceSize),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -335,9 +341,9 @@ Future<bool?> _showBlastConfirmDialog(
       final l = AppLocalizations.of(dlgCtx)!;
       return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
-        '🎯 Kitleyi Davet Et',
-        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+      title: Text(
+        l.blastInviteDialogTitle,
+        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -353,15 +359,15 @@ Future<bool?> _showBlastConfirmDialog(
               children: [
                 _InfoRow(
                   icon: Icons.people_alt_outlined,
-                  label: 'Hedef Kitle',
+                  label: l.blastTargetAudience,
                   value: '$audienceSize kişi',
                   color: kPrimary,
                 ),
                 const SizedBox(height: 10),
                 _InfoRow(
                   icon: Icons.notifications_active_outlined,
-                  label: 'Bildirim',
-                  value: 'Push + Yayın linki',
+                  label: l.blastNotificationLabel,
+                  value: l.blastNotificationValue,
                   color: const Color(0xFF3B82F6),
                 ),
                 const SizedBox(height: 10),

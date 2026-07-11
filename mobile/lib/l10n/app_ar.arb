@@ -782,6 +782,16 @@
     }
   },
   "blastConfirmCostFree": "يُخصم من حصتك المجانية",
+  "blastInviteDialogTitle": "🎯 ادعُ جمهورك",
+  "blastTargetAudience": "الجمهور المستهدف",
+  "blastNotificationLabel": "إشعار",
+  "blastNotificationValue": "Push + رابط البث",
+  "audienceReadyBuyersBanner": "أرسل إشعاراً لـ {count} مشترٍ جاهز!",
+  "@audienceReadyBuyersBanner": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "blastBtnFree": "{count} مشترٍ جاهز — أرسل إشعاراً (مجاني)",
   "@blastBtnFree": {
     "placeholders": {
@@ -1825,6 +1835,7 @@
   "listingLowest": "الأدنى",
   "listingAverage": "متوسط",
   "listingHighest": "الأعلى",
+  "audienceCalculating": "جاري حساب الجمهور...",
   "audienceCalcError": "حدث خطأ أثناء حساب الجمهور.",
   "audienceNoPotentialFound": "لم يتم العثور على مشترين محتملين جدد لهذه القائمة في الوقت الحالي.",
   "audienceMassSendSuccess": "تم إرسال إشعار الجمهور الجماعي بنجاح! 🚀",

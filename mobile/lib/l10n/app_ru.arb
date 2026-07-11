@@ -1323,6 +1323,16 @@
   "blastSubtitleFree": "Push-уведомление о начале трансляции • Бесплатно",
   "blastSubtitlePaid": "Push-уведомление о начале трансляции • {cost} TUCi",
   "blastConfirmCostFree": "Вычитается из вашей бесплатной квоты",
+  "blastInviteDialogTitle": "🎯 Пригласите свою аудиторию",
+  "blastTargetAudience": "Целевая аудитория",
+  "blastNotificationLabel": "Уведомление",
+  "blastNotificationValue": "Push + ссылка на трансляцию",
+  "audienceReadyBuyersBanner": "Уведомить {count} готовых покупателей!",
+  "@audienceReadyBuyersBanner": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "blastBtnFree": "{count} Готовые покупатели — отправить уведомление (бесплатно)",
   "blastBtnPaid": "{count} Готовые покупатели — отправить уведомление ({cost} TUCi)",
   "blastConfirmBodyFree": "{count} готовые покупатели будут уведомлены.\n\nДля этого будет использовано одно из ваших бесплатных уведомлений о трансляции.",
@@ -1846,6 +1856,7 @@
   "listingLowest": "Самый низкий",
   "listingAverage": "Среднее",
   "listingHighest": "Высший",
+  "audienceCalculating": "Расчёт аудитории...",
   "audienceCalcError": "Произошла ошибка при расчете аудитории.",
   "audienceNoPotentialFound": "На данный момент новых потенциальных покупателей для этого объявления не найдено.",
   "audienceMassSendSuccess": "Уведомление для массовой аудитории успешно отправлено! 🚀",
