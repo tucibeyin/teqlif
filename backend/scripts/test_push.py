@@ -36,7 +36,7 @@ async def main():
 
     os.environ.setdefault("ENVIRONMENT", "production")
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
     from app.database import AsyncSessionLocal
     from app.models.user import User
