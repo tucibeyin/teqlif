@@ -3033,6 +3033,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get suggestedStreamers => 'المذيعون المقترحون';
 
   @override
+  String get latestLiveStreams => 'أحدث البثوث المباشرة';
+
+  @override
+  String categoryStreams(String category) {
+    return 'بثوث $category';
+  }
+
+  @override
   String get listingsSelectedForYou => 'القوائم المختارة لك';
 
   @override

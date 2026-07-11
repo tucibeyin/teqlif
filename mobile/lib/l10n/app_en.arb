@@ -1657,6 +1657,13 @@
   "listingReactivateConfirm": "Activate",
   "proReactivationSection": "Listing Reactivation Credits",
   "suggestedStreamers": "Suggested Broadcasters",
+  "latestLiveStreams": "Latest Live Streams",
+  "categoryStreams": "{category} Streams",
+  "@categoryStreams": {
+    "placeholders": {
+      "category": { "type": "String" }
+    }
+  },
   "listingsSelectedForYou": "Listings Selected For You",
   "profileFaq": "Frequently Asked Questions",
   "faqCatAccount": "Account, Profile and Support",

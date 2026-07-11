@@ -1657,6 +1657,13 @@
   "listingReactivateConfirm": "تفعيل",
   "proReactivationSection": "أرصدة إعادة تفعيل الإعلان",
   "suggestedStreamers": "المذيعون المقترحون",
+  "latestLiveStreams": "أحدث البثوث المباشرة",
+  "categoryStreams": "بثوث {category}",
+  "@categoryStreams": {
+    "placeholders": {
+      "category": { "type": "String" }
+    }
+  },
   "listingsSelectedForYou": "القوائم المختارة لك",
   "profileFaq": "الأسئلة الشائعة",
   "faqCatAccount": "الحساب والملف الشخصي والدعم",

@@ -3055,6 +3055,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get suggestedStreamers => 'Suggested Broadcasters';
 
   @override
+  String get latestLiveStreams => 'Latest Live Streams';
+
+  @override
+  String categoryStreams(String category) {
+    return '$category Streams';
+  }
+
+  @override
   String get listingsSelectedForYou => 'Listings Selected For You';
 
   @override

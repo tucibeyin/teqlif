@@ -1656,6 +1656,13 @@
   "listingReactivateConfirm": "Aktif Yap",
   "proReactivationSection": "İlan Reaktivasyon Kredisi",
   "suggestedStreamers": "Önerilen Yayıncılar",
+  "latestLiveStreams": "En Son Canlı Yayınlar",
+  "categoryStreams": "{category} Yayınları",
+  "@categoryStreams": {
+    "placeholders": {
+      "category": { "type": "String" }
+    }
+  },
   "listingsSelectedForYou": "Sizin İçin Seçilen İlanlar",
   "profileFaq": "Sıkça Sorulan Sorular",
   "faqCatAccount": "Hesap İşlemleri, Profil ve Destek",

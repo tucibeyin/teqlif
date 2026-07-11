@@ -5628,6 +5628,18 @@ abstract class AppLocalizations {
   /// **'Önerilen Yayıncılar'**
   String get suggestedStreamers;
 
+  /// No description provided for @latestLiveStreams.
+  ///
+  /// In tr, this message translates to:
+  /// **'En Son Canlı Yayınlar'**
+  String get latestLiveStreams;
+
+  /// No description provided for @categoryStreams.
+  ///
+  /// In tr, this message translates to:
+  /// **'{category} Yayınları'**
+  String categoryStreams(String category);
+
   /// No description provided for @listingsSelectedForYou.
   ///
   /// In tr, this message translates to:

@@ -1679,6 +1679,13 @@
   "listingReactivateConfirm": "Активировать",
   "proReactivationSection": "Листинг кредитов на реактивацию",
   "suggestedStreamers": "Рекомендуемые вещатели",
+  "latestLiveStreams": "Последние прямые трансляции",
+  "categoryStreams": "Трансляции {category}",
+  "@categoryStreams": {
+    "placeholders": {
+      "category": { "type": "String" }
+    }
+  },
   "listingsSelectedForYou": "Объявления, выбранные для вас",
   "profileFaq": "Часто задаваемые вопросы",
   "faqCatAccount": "Учетная запись, профиль и поддержка",

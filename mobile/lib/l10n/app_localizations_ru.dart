@@ -3092,6 +3092,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get suggestedStreamers => 'Рекомендуемые вещатели';
 
   @override
+  String get latestLiveStreams => 'Последние прямые трансляции';
+
+  @override
+  String categoryStreams(String category) {
+    return 'Трансляции $category';
+  }
+
+  @override
   String get listingsSelectedForYou => 'Объявления, выбранные для вас';
 
   @override

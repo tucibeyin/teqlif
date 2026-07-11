@@ -3056,6 +3056,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get suggestedStreamers => 'Önerilen Yayıncılar';
 
   @override
+  String get latestLiveStreams => 'En Son Canlı Yayınlar';
+
+  @override
+  String categoryStreams(String category) {
+    return '$category Yayınları';
+  }
+
+  @override
   String get listingsSelectedForYou => 'Sizin İçin Seçilen İlanlar';
 
   @override

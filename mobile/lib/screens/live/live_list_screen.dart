@@ -29,17 +29,34 @@ class LiveListScreen extends ConsumerStatefulWidget {
   ConsumerState<LiveListScreen> createState() => LiveListScreenState();
 }
 
-const _kCatLabels = {
-  'sohbet': '🗣 Canlı Sohbet',
-  'elektronik': '📱 Elektronik',
-  'giyim': '👗 Giyim',
-  'ev': '🏠 Ev & Yaşam',
-  'vasita': '🚗 Vasıta',
-  'spor': '⚽ Spor',
-  'kitap': '📚 Kitap',
-  'emlak': '🏘️ Emlak',
-  'diger': '📦 Diğer',
+const _kCatEmoji = {
+  'sohbet': '🗣',
+  'elektronik': '📱',
+  'giyim': '👗',
+  'ev': '🏠',
+  'vasita': '🚗',
+  'spor': '⚽',
+  'kitap': '📚',
+  'emlak': '🏘️',
+  'diger': '📦',
 };
+
+String _catLabel(String key, AppLocalizations l) {
+  final name = switch (key) {
+    'sohbet'     => l.cat_sohbet,
+    'elektronik' => l.cat_elektronik,
+    'giyim'      => l.cat_giyim,
+    'ev'         => l.cat_ev,
+    'vasita'     => l.cat_vasita,
+    'spor'       => l.cat_spor,
+    'kitap'      => l.cat_kitap,
+    'emlak'      => l.cat_emlak,
+    'diger'      => l.cat_diger,
+    _            => key,
+  };
+  final emoji = _kCatEmoji[key];
+  return emoji != null ? '$emoji $name' : name;
+}
 
 class LiveListScreenState extends ConsumerState<LiveListScreen> {
   List<StreamOut> _streams = []; // tüm aktif yayınlar (En Son)
@@ -256,7 +273,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                   ...cats.map(
                     (c) => _CategoryChip(
                       key: Key('live_list_chip_$c'),
-                      label: _kCatLabels[c] ?? c,
+                      label: _catLabel(c, l),
                       active: _selectedCategory == c,
                       onTap: () => setState(() => _selectedCategory = c),
                     ),
@@ -302,16 +319,16 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               child: Row(
-                children: const [
-                  Icon(
+                children: [
+                  const Icon(
                     Icons.live_tv_rounded,
                     color: Color(0xFFEF4444),
                     size: 15,
                   ),
-                  SizedBox(width: 6),
+                  const SizedBox(width: 6),
                   Text(
-                    'Önerilen Yayıncılar',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    l.suggestedStreamers,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                 ],
               ),
@@ -407,8 +424,8 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                 const SizedBox(width: 6),
                 Text(
                   _selectedCategory != null
-                      ? '${_kCatLabels[_selectedCategory!] ?? _selectedCategory!} Yayınları'
-                      : 'En Son Canlı Yayınlar',
+                      ? l.categoryStreams(_catLabel(_selectedCategory!, l))
+                      : l.latestLiveStreams,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
@@ -440,12 +457,12 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             ),
           )
         else
-          ..._buildSectionedSlivers(cats, filtered),
+          ..._buildSectionedSlivers(cats, filtered, l),
       ],
     );
   }
 
-  List<Widget> _buildSectionedSlivers(List<String> cats, List<StreamOut> all) {
+  List<Widget> _buildSectionedSlivers(List<String> cats, List<StreamOut> all, AppLocalizations l) {
     final groups = {
       for (var c in cats) c: all.where((s) => s.category == c).toList(),
     };
@@ -456,7 +473,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
               child: Text(
-                _kCatLabels[c] ?? c,
+                _catLabel(c, l),
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
