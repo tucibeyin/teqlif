@@ -488,7 +488,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                                               CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                              '${rev.toStringAsFixed(0)} TUCi',
+                                              '${NumberFormat('#,##0', 'tr_TR').format(rev)} TUCi',
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.w800,
                                                 color: Color(0xFF22C55E),
