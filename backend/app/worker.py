@@ -108,12 +108,17 @@ async def send_push_notification_task(
     FCM üzerinden push bildirimi gönderir.
     Firebase SDK çağrısı bu task içinde yapılır; API endpoint'i bloklamaz.
     """
+    import sys
+    print(f"[WORKER-DEBUG] send_push_notification_task BAŞLADI | token={fcm_token[:12] if fcm_token else 'BOŞ'}… | type={notif_type}", flush=True, file=sys.stderr)
+    logger.warning("[WORKER-DEBUG] send_push_notification_task BAŞLADI | token=%s… | type=%s", fcm_token[:12] if fcm_token else "BOŞ", notif_type)
     if not fcm_token:
         logger.warning("[Worker] send_push_notification_task: fcm_token boş, atlanıyor")
         return
     try:
         from app.services.firebase_service import send_push, InvalidFCMTokenError
+        logger.warning("[WORKER-DEBUG] send_push ÇAĞRILIYOR | token=%s…", fcm_token[:12])
         await send_push(fcm_token, title, body, badge=badge, notif_type=notif_type, extra_data=extra_data, image_url=image_url)
+        logger.warning("[WORKER-DEBUG] send_push TAMAMLANDI | token=%s…", fcm_token[:12])
         logger.info("[Worker] Push bildirimi gönderildi | token=%s…", fcm_token[:12])
     except InvalidFCMTokenError:
         # Token geçersiz/silinmiş — DB'den temizle, retry yapma
