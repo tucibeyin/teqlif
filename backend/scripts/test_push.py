@@ -91,11 +91,13 @@ async def main():
 
     info("push_notification() çağrılıyor…")
     await push_notification(
-        receiver_id=receiver.id,
-        notif_type="message",
-        title=f"Test ({sender_username})",
-        body="push_notification() pipeline testi",
-        extra_data={"sender_id": str(sender.id), "sender_username": sender_username},
+        receiver.id,
+        {
+            "type": "message",
+            "body": f"[Diagnostik] {sender_username} → pipeline testi",
+            "sender_username": sender_username,
+        },
+        pref_key="messages",
     )
 
     await asyncio.sleep(0.5)
@@ -162,11 +164,14 @@ async def main():
 
     q_before = await redis.llen("arq:queue:default")
     await push_notif(
-        receiver_id=receiver.id,
-        notif_type="message",
-        title=f"{sender.full_name or sender_username}",
-        body=msg_content,
-        extra_data={"sender_id": str(sender.id), "message_id": str(msg.id)},
+        receiver.id,
+        {
+            "type": "message",
+            "body": msg_content,
+            "sender_username": sender_username,
+            "related_id": str(msg.id),
+        },
+        pref_key="messages",
     )
     await asyncio.sleep(0.5)
     q_after = await redis.llen("arq:queue:default")
