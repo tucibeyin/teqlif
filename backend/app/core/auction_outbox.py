@@ -28,6 +28,7 @@ Kullanım (auction_service.py'de):
 from __future__ import annotations
 
 import json
+import time
 
 from app.utils.redis_client import get_redis
 from app.core.logger import get_logger
@@ -63,15 +64,20 @@ async def outbox_publish(stream_id: int, payload: dict) -> None:
         logger.warning("[OUTBOX] Stream yazılamadı | stream_id=%s | %s", stream_id, exc)
 
 
-async def outbox_replay(stream_id: int, count: int = 20) -> list[dict]:
+async def outbox_replay(stream_id: int, count: int = 20, max_age_seconds: int = 30) -> list[dict]:
     """
-    Son `count` event'i en yeniden eskiye döner.
-    WebSocket bağlantısında catch-up için kullanılır.
+    Son `count` event'i en yeniden eskiye döner, yalnızca son `max_age_seconds` içindekiler.
+
+    max_age_seconds=30 → normal disconnect/reconnect (1-5s) replay alır;
+    server restart sonrası eski eventler (>30s) atlanır, client'ta tekrar gösterilmez.
     """
     try:
         redis = await get_redis()
         key = _stream_key(stream_id)
-        entries = await redis.xrevrange(key, count=count)
+        # Redis Stream ID formatı: {ms_timestamp}-{seq}
+        min_ms = int((time.time() - max_age_seconds) * 1000)
+        min_id = f"{min_ms}-0"
+        entries = await redis.xrevrange(key, min=min_id, count=count)
         return [json.loads(entry[1]["data"]) for entry in entries if "data" in entry[1]]
     except Exception as exc:
         logger.warning("[OUTBOX] Stream okunamadı | stream_id=%s | %s", stream_id, exc)

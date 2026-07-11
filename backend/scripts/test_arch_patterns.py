@@ -172,6 +172,19 @@ async def test_outbox():
     replayed_limited = await outbox_replay(test_stream_id, count=2)
     assert_true(len(replayed_limited) == 2, f"count=2 limiti çalışıyor ({len(replayed_limited)} event)")
 
+    # ── max_age_seconds filtresi: eski event replay edilmemeli ───────────────
+    info("max_age_seconds filtresi testi (server restart replay koruması)")
+    stale_stream_id = 99998
+    stale_key = _stream_key(stale_stream_id)
+    await redis.delete(stale_key)
+    # 2 dakika önceki timestamp ile sahte event ekle
+    old_ms = int((time.time() - 120) * 1000)
+    await redis.xadd(stale_key, {"data": json.dumps({"type": "state", "status": "ended"})},
+                     id=f"{old_ms}-0")
+    stale_replayed = await outbox_replay(stale_stream_id, count=10, max_age_seconds=30)
+    assert_true(stale_replayed == [], f"Eski event (120s) replay edilmedi (count={len(stale_replayed)})")
+    await redis.delete(stale_key)
+
     # ── Var olmayan stream → boş liste ───────────────────────────────────────
     empty = await outbox_replay(88888, count=5)
     assert_true(empty == [], f"Olmayan stream → boş liste döndü")
