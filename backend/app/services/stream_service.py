@@ -319,7 +319,7 @@ class StreamService:
         )
         pool = get_pool()
         if pool:
-            await pool.enqueue_job("send_smart_auction_alerts", stream.id)
+            await pool.enqueue_job("send_smart_auction_alerts", stream.id, _queue_name="critical")
         else:
             logger.warning("[STREAMS] ARQ pool yok — send_smart_auction_alerts kuyruğa alınamadı")
 

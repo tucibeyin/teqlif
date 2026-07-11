@@ -589,6 +589,7 @@ class ListingService:
                 "send_budget_match_notifications_task",
                 listing.id,
                 _defer_by=180,  # 3 dakika
+                _queue_name="critical",
             )
         except Exception as exc:
             logger.warning("[LISTINGS] budget_match enqueue başarısız | listing_id=%s | %s", listing.id, exc)

@@ -169,6 +169,7 @@ async def track_interaction(
                             payload.item_id,
                             spike_count,
                             _job_id=f"hot_listing:{payload.item_id}",
+                            _queue_name="critical",
                         )
             except Exception as spike_exc:
                 logger.warning("[ANALYTICS] Hesitation spike check başarısız: %s", spike_exc)

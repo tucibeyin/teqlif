@@ -177,6 +177,7 @@ async def push_notification(
                     notif.get("type"),
                     extra_data or None,
                     image_url,
+                    _queue_name="critical",
                 )
                 logger.info("[PUSH] ARQ kuyruğuna alındı | job_id=%s | user_id=%s", getattr(job, 'job_id', '?'), user_id)
             else:

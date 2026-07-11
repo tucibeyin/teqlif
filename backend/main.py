@@ -166,7 +166,7 @@ async def lifespan(app: FastAPI):
     _cache_redis = aioredis.from_url(settings.redis_url, decode_responses=False)
     FastAPICache.init(RedisBackend(_cache_redis), prefix="teqlif:cache")
     # ARQ Task Queue pool
-    arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+    arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url), default_queue_name="default")
     app.state.arq_pool = arq_pool
     set_pool(arq_pool)
     # Her worker'da Redis pub/sub dinleyicilerini başlat
