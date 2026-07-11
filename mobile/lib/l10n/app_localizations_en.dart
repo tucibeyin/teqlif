@@ -1193,6 +1193,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auctionBidBtn => 'Place Bid';
 
   @override
+  String auctionBidReceived(String amount) {
+    return '₺$amount bid received!';
+  }
+
+  @override
+  String get chatJoinedStream => 'joined the stream';
+
+  @override
   String get auctionMutedBtn => '🔇 You are muted';
 
   @override

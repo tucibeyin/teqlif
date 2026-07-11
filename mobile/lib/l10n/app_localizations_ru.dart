@@ -1208,6 +1208,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get auctionBidBtn => 'Разместить ставку';
 
   @override
+  String auctionBidReceived(String amount) {
+    return 'Ставка ₺$amount принята!';
+  }
+
+  @override
+  String get chatJoinedStream => 'присоединился к трансляции';
+
+  @override
   String get auctionMutedBtn => '🔇 У вас отключен звук';
 
   @override

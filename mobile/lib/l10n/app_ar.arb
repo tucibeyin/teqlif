@@ -494,6 +494,13 @@
   "auctionBuyNowRejectInline": "رفض",
   "auctionStartBtn": "▶ ابدأ",
   "auctionBidBtn": "قدّم عرضاً",
+  "auctionBidReceived": "تم استلام عرضك ₺{amount}!",
+  "@auctionBidReceived": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "chatJoinedStream": "انضم إلى البث",
   "auctionMutedBtn": "🔇 تم كتمك",
   "auctionBuyNowTitle": "⚡ اشتر الآن",
   "auctionBuyNowPrice": "سعر الشراء الفوري",

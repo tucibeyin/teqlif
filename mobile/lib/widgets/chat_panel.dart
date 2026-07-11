@@ -392,7 +392,7 @@ class ChatPanelState extends State<ChatPanel> {
               ChatMessage(
                 id: 'join_${DateTime.now().millisecondsSinceEpoch}',
                 username: uname,
-                content: 'yayına katıldı',
+                content: AppLocalizations.of(context)!.chatJoinedStream,
                 createdAt: DateTime.now(),
                 isSystem: true,
               ),

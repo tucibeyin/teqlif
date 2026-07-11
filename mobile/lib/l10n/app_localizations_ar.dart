@@ -1183,6 +1183,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get auctionBidBtn => 'قدّم عرضاً';
 
   @override
+  String auctionBidReceived(String amount) {
+    return 'تم استلام عرضك ₺$amount!';
+  }
+
+  @override
+  String get chatJoinedStream => 'انضم إلى البث';
+
+  @override
   String get auctionMutedBtn => '🔇 تم كتمك';
 
   @override

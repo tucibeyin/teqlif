@@ -1353,7 +1353,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     try {
       await AuctionService.placeBid(widget.streamId, amount);
       _customBidCtrl.clear();
-      _setMsg('₺${_fmt(amount)} teklifiniz alındı!');
+      _setMsg(AppLocalizations.of(context)!.auctionBidReceived(_fmt(amount)));
     } on AppException catch (e) {
       _handleBidError(e.message, messenger: messenger);
     } catch (e, st) {
@@ -1596,7 +1596,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    liveState.itemName ?? 'Teklif Ver',
+                    liveState.itemName ?? l.auctionBidBtn,
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -1640,8 +1640,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
           const SizedBox(height: 14),
           SwipeToBidButton(
             text: _selectedBid > 0
-                ? '${_fmt(_selectedBid.toDouble())} ₺ Teklif Ver'
-                : 'Teklif Ver',
+                ? '₺${_fmt(_selectedBid.toDouble())} ${l.auctionBidBtn}'
+                : l.auctionBidBtn,
             isLoading: _loading,
             isInvalid: _fraudDetected,
             itemId: liveState.listingId,
@@ -2078,12 +2078,13 @@ class _AuctionStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final (label, color, icon) = switch (state.status) {
-      'active'            => ('Aktif',   const Color(0xFF16A34A), Icons.circle),
-      'paused'            => ('Durdu',   const Color(0xFFF59E0B), Icons.pause_circle),
-      'ended'             => ('Bitti',   const Color(0xFFEF4444), Icons.stop_circle_outlined),
-      'buy_it_now_pending'=> ('Bekliyor',const Color(0xFFF97316), Icons.hourglass_top),
-      _                   => ('Bekleniyor', const Color(0xFF475569), Icons.radio_button_unchecked),
+      'active'             => (l.auctionStatusActive,  const Color(0xFF16A34A), Icons.circle),
+      'paused'             => (l.auctionStatusPaused,  const Color(0xFFF59E0B), Icons.pause_circle),
+      'ended'              => (l.auctionStatusEnded,   const Color(0xFFEF4444), Icons.stop_circle_outlined),
+      'buy_it_now_pending' => (l.auctionStatusPending, const Color(0xFFF97316), Icons.hourglass_top),
+      _                    => (l.auctionStatusIdle,    const Color(0xFF475569), Icons.radio_button_unchecked),
     };
 
     return Row(

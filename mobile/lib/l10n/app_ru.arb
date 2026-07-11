@@ -1121,6 +1121,13 @@
   "auctionBuyNowRejectInline": "Отклонить",
   "auctionStartBtn": "▶ Старт",
   "auctionBidBtn": "Разместить ставку",
+  "auctionBidReceived": "Ставка ₺{amount} принята!",
+  "@auctionBidReceived": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "chatJoinedStream": "присоединился к трансляции",
   "auctionMutedBtn": "🔇 У вас отключен звук",
   "auctionBuyNowTitle": "⚡ Купить сейчас",
   "auctionBuyNowPrice": "Купить сейчас Цена",

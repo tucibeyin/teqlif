@@ -495,6 +495,13 @@
   "auctionBuyNowRejectInline": "Reject",
   "auctionStartBtn": "▶ Start",
   "auctionBidBtn": "Place Bid",
+  "auctionBidReceived": "₺{amount} bid received!",
+  "@auctionBidReceived": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "chatJoinedStream": "joined the stream",
   "auctionMutedBtn": "🔇 You are muted",
   "auctionBuyNowTitle": "⚡ Buy Now",
   "auctionBuyNowPrice": "Buy Now Price",

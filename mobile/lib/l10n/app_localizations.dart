@@ -2346,6 +2346,18 @@ abstract class AppLocalizations {
   /// **'Teklif Ver'**
   String get auctionBidBtn;
 
+  /// No description provided for @auctionBidReceived.
+  ///
+  /// In tr, this message translates to:
+  /// **'₺{amount} teklifiniz alındı!'**
+  String auctionBidReceived(String amount);
+
+  /// No description provided for @chatJoinedStream.
+  ///
+  /// In tr, this message translates to:
+  /// **'yayına katıldı'**
+  String get chatJoinedStream;
+
   /// No description provided for @auctionMutedBtn.
   ///
   /// In tr, this message translates to:

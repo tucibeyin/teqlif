@@ -494,6 +494,13 @@
   "errorInsufficientBalance": "Bakiyeniz yetersiz. Lütfen bakiye yükleyin.",
   "auctionStartBtn": "▶ Başlat",
   "auctionBidBtn": "Teklif Ver",
+  "auctionBidReceived": "₺{amount} teklifiniz alındı!",
+  "@auctionBidReceived": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "chatJoinedStream": "yayına katıldı",
   "auctionMutedBtn": "🔇 Susturuldunuz",
   "auctionBuyNowTitle": "⚡ Hemen Al",
   "auctionBuyNowPrice": "Hemen Al Fiyatı",
