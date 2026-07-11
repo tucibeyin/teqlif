@@ -161,7 +161,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${NumberFormat('#,##0.##').format(revenue)} TUCi',
+                        '${NumberFormat('#,##0', 'tr_TR').format(revenue)} TUCi',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 36,
@@ -274,7 +274,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                     _MetricCard(
                       title: l.analyticsAvgBudget,
                       value: d['avg_budget'] != null
-                          ? '${d['avg_budget']} ₺'
+                          ? '${NumberFormat('#,##0', 'tr_TR').format((d['avg_budget'] as num).toDouble())} ₺'
                           : '-',
                       icon: Icons.account_balance_wallet,
                       color: Colors.green,
@@ -387,7 +387,7 @@ class _LiveStreamAnalyticsScreenState extends State<LiveStreamAnalyticsScreen> {
                   : 'Unsold',
             ),
             trailing: Text(
-              '${item['final_price'] ?? item['start_price']} TUCi',
+              '${NumberFormat('#,##0', 'tr_TR').format(((item['final_price'] ?? item['start_price']) as num).toDouble())} TUCi',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: sold ? Colors.green : AppColors.textSecondary(context),
