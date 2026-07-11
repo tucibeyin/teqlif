@@ -2497,7 +2497,6 @@ class WorkerSettings:
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
-    queue_name = "default"
 
     max_jobs = 20
     job_timeout = 300     # 5 dakika — bulk delete sorguları için artırıldı
@@ -2534,7 +2533,6 @@ class WorkerSettingsCritical:
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
-    queue_name = "critical"
 
     max_jobs = 30          # Push notification'lar hızlı işlenmeli
     job_timeout = 30       # 30sn — push gönderimi uzun sürmez
