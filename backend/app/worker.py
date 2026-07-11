@@ -2275,6 +2275,7 @@ async def notify_auction_losers_task(
     item_name: str,
     final_price: float | None,
     was_accepted: bool,
+    bidder_ids: list[int] | None = None,
 ) -> None:
     """
     Artırma sona erdiğinde (accept_bid / end_auction / accept_buy_it_now)
@@ -2284,16 +2285,17 @@ async def notify_auction_losers_task(
     was_accepted=False → artırma iptal edildi / teklif kabul edilmedi
     """
     try:
-        from sqlalchemy import select
-        from app.database import AsyncSessionLocal
-        from app.models.bid import Bid
         from app.routers.notifications import push_notification
 
-        async with AsyncSessionLocal() as db:
-            rows = await db.execute(
-                select(Bid.bidder_id).where(Bid.stream_id == stream_id).distinct()
-            )
-            bidder_ids = [r[0] for r in rows.fetchall()]
+        if bidder_ids is None:
+            from sqlalchemy import select
+            from app.database import AsyncSessionLocal
+            from app.models.bid import Bid
+            async with AsyncSessionLocal() as db:
+                rows = await db.execute(
+                    select(Bid.bidder_id).where(Bid.stream_id == stream_id).distinct()
+                )
+                bidder_ids = [r[0] for r in rows.fetchall()]
 
         losers = [bid for bid in bidder_ids if bid != winner_id]
         if not losers:

@@ -533,63 +533,69 @@ class AuctionService:
         final_price = float(data["current_bid"]) if data.get("current_bid") else float(data.get("start_price", 0))
         lid_str = data.get("listing_id", "")
 
-        auction = Auction(
-            stream_id=stream_id,
-            listing_id=int(lid_str) if lid_str else None,
-            item_name=data.get("item_name", ""),
-            start_price=float(data.get("start_price", 0)),
-            final_price=final_price if data.get("current_bidder_id") else None,
-            winner_id=int(winner_id_str) if winner_id_str else None,
-            winner_username=data.get("current_bidder_name") or None,
-            bid_count=int(data.get("bid_count", 0)),
-            status="completed",
-            ended_at=datetime.now(timezone.utc),
-            proof_image_url=proof_image_url,
-        )
-        self.db.add(auction)
-        
-        # Update Listing with last sold price
-        if lid_str and data.get("current_bidder_id"):
-            from sqlalchemy import update
-            from app.models.listing import Listing
-            await self.db.execute(
-                update(Listing).where(Listing.id == int(lid_str)).values(
-                    last_sold_price=final_price,
-                    last_start_price=float(data.get("start_price", 0))
-                )
-            )
-        try:
-            await self.db.commit()
-        except Exception as exc:
-            await self.db.rollback()
-            logger.error(
-                "[AÇIK ARTIRMA] end DB commit HATASI | stream_id=%s | %s",
-                stream_id, exc, exc_info=True,
-            )
-            capture_exception(exc)
-            raise DatabaseException("Açık artırma sonucu kaydedilemedi")
+        bid_count = int(data.get("bid_count", 0))
 
-        # Commit başarılı → şimdi Redis'i güncelle ve temizle
-        await redis.hset(key, "status", "ended")
+        if bid_count > 0:
+            auction = Auction(
+                stream_id=stream_id,
+                listing_id=int(lid_str) if lid_str else None,
+                item_name=data.get("item_name", ""),
+                start_price=float(data.get("start_price", 0)),
+                final_price=final_price if data.get("current_bidder_id") else None,
+                winner_id=int(winner_id_str) if winner_id_str else None,
+                winner_username=data.get("current_bidder_name") or None,
+                bid_count=bid_count,
+                status="completed",
+                ended_at=datetime.now(timezone.utc),
+                proof_image_url=proof_image_url,
+            )
+            self.db.add(auction)
+
+            if lid_str and data.get("current_bidder_id"):
+                from sqlalchemy import update
+                from app.models.listing import Listing
+                await self.db.execute(
+                    update(Listing).where(Listing.id == int(lid_str)).values(
+                        last_sold_price=final_price,
+                        last_start_price=float(data.get("start_price", 0))
+                    )
+                )
+            try:
+                await self.db.commit()
+            except Exception as exc:
+                await self.db.rollback()
+                logger.error(
+                    "[AÇIK ARTIRMA] end DB commit HATASI | stream_id=%s | %s",
+                    stream_id, exc, exc_info=True,
+                )
+                capture_exception(exc)
+                raise DatabaseException("Açık artırma sonucu kaydedilemedi")
+
+        # Kazananlar listesini Redis'ten al, ardından key'leri temizle
+        _bidder_set_key = f"auction:bidders:{stream_id}"
+        _raw_bidders = await redis.smembers(_bidder_set_key)
+        _bidder_ids = [int(x) for x in _raw_bidders] if _raw_bidders else []
+        await redis.delete(_bidder_set_key)
         await redis.delete(key)
 
-        from app.database_clickhouse import track_user_event
-        _host_id = user.id if user else None
-        _track_lid = int(lid_str) if lid_str else stream_id
-        _track_type = "listing" if lid_str else "stream"
-        asyncio.create_task(track_user_event(
-            event_type="auction_ended",
-            item_id=_track_lid,
-            item_type=_track_type,
-            user_id=_host_id,
-            price_point=final_price if data.get("current_bidder_id") else None,
-        ))
+        if bid_count > 0:
+            from app.database_clickhouse import track_user_event
+            _host_id = user.id if user else None
+            _track_lid = int(lid_str) if lid_str else stream_id
+            _track_type = "listing" if lid_str else "stream"
+            asyncio.create_task(track_user_event(
+                event_type="auction_ended",
+                item_id=_track_lid,
+                item_type=_track_type,
+                user_id=_host_id,
+                price_point=final_price if data.get("current_bidder_id") else None,
+            ))
 
         state = {
             "status": "ended",
             "winner_accepted": False,  # bitir/kes — kazanan onaylanmadı
             "item_name": data.get("item_name"),
-            "bid_count": int(data.get("bid_count", 0)),
+            "bid_count": bid_count,
             "current_bid": final_price if data.get("current_bidder_id") else None,
             "current_bidder": data.get("current_bidder_name") or None,
             "start_price": float(data.get("start_price", 0)),
@@ -603,7 +609,7 @@ class AuctionService:
         # Teklif verenlere artırma sona erdi bildirimi
         from app.core.task_queue import get_pool as _get_pool
         _pool = _get_pool()
-        if _pool and int(data.get("bid_count", 0)) > 0:
+        if _pool and bid_count > 0:
             await _pool.enqueue_job(
                 "notify_auction_losers_task",
                 stream_id,
@@ -611,6 +617,7 @@ class AuctionService:
                 data.get("item_name", ""),
                 final_price if data.get("current_bidder_id") else None,
                 False,
+                _bidder_ids,
                 _queue_name="critical",
             )
 
@@ -705,6 +712,8 @@ class AuctionService:
             )
             capture_exception(exc)
             raise DatabaseException("Teklif kaydedilemedi, lütfen tekrar deneyin")
+
+        await redis.sadd(f"auction:bidders:{stream_id}", str(user.id))
 
         # Redis atomik güncelle (re-validate + update)
         result = await redis.eval(
@@ -977,6 +986,10 @@ class AuctionService:
         except Exception as exc:
             logger.error("[HEMEN AL KABUL] Bildirim gönderilemedi | buyer_id=%s | %s", buyer_id, exc)
 
+        _bidder_set_key = f"auction:bidders:{stream_id}"
+        _raw_bidders = await redis.smembers(_bidder_set_key)
+        _bidder_ids = [int(x) for x in _raw_bidders] if _raw_bidders else []
+        await redis.delete(_bidder_set_key)
         await redis.delete(key)
 
         state = {
@@ -1010,6 +1023,7 @@ class AuctionService:
                     item_name,
                     bin_price,
                     True,
+                    _bidder_ids,
                     _queue_name="critical",
                 )
 
@@ -1203,8 +1217,11 @@ class AuctionService:
 
         winner_dm_content = dm_content + (f"\n📋 teqlif://auction/{auction.id}" if auction else "")
 
-        # Commit başarılı → şimdi Redis'i güncelle ve temizle
-        await redis.hset(key, "status", "ended")
+        # Commit başarılı → kazananlar listesini al, Redis key'leri temizle
+        _bidder_set_key = f"auction:bidders:{stream_id}"
+        _raw_bidders = await redis.smembers(_bidder_set_key)
+        _bidder_ids = [int(x) for x in _raw_bidders] if _raw_bidders else []
+        await redis.delete(_bidder_set_key)
         await redis.delete(key)
 
         # DM WS broadcast (satıcı→kazanan mesajı her iki tarafa bildir)
@@ -1327,6 +1344,7 @@ class AuctionService:
                 item_name,
                 final_price,
                 True,
+                _bidder_ids,
                 _queue_name="critical",
             )
 
