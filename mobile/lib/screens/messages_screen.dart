@@ -1074,21 +1074,18 @@ class _DirectChatScreenState extends State<DirectChatScreen>
 
   Future<void> _pickAndSendImage({required ImageSource source}) async {
     final l = AppLocalizations.of(context)!;
-    final perm = source == ImageSource.camera ? Permission.camera : Permission.photos;
-    final permStatus = await perm.status;
-    if (!permStatus.isGranted) {
-      if (permStatus.isPermanentlyDenied) {
-        await openAppSettings();
-        return;
-      }
-      final newStatus = await perm.request();
-      if (!newStatus.isGranted) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(source == ImageSource.camera ? l.attachCameraPermission : l.attachGalleryPermission)));
-        return;
-      }
-    }
+    // iOS permission dialog'unu native paket tetikler (stream/LiveKit gibi).
+    // Pre-check yapmak dialog'u bloke edebilir — null dönünce status'u kontrol et.
     final picked = await ImagePicker().pickImage(source: source, imageQuality: 85);
-    if (picked == null || !mounted) return;
+    if (!mounted) return;
+    if (picked == null) {
+      final perm = source == ImageSource.camera ? Permission.camera : Permission.photos;
+      final status = await perm.status;
+      if (status.isPermanentlyDenied) {
+        await openAppSettings();
+      }
+      return;
+    }
     final raw = await picked.readAsBytes();
     if (raw.length > 5 * 1024 * 1024) {
       if (!mounted) return;
@@ -1140,18 +1137,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
 
   Future<void> _startRecording() async {
     final l = AppLocalizations.of(context)!;
-    final micStatus = await Permission.microphone.status;
-    if (!micStatus.isGranted) {
-      if (micStatus.isPermanentlyDenied) {
-        await openAppSettings();
-        return;
-      }
-      final newStatus = await Permission.microphone.request();
-      if (!newStatus.isGranted) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.voicePermissionDenied)));
-        return;
-      }
-    }
+    // iOS permission dialog'unu record paketi tetikler — pre-check yapmıyoruz.
     try {
       final tmpDir = await getTemporaryDirectory();
       final path = '${tmpDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -1166,7 +1152,13 @@ class _DirectChatScreenState extends State<DirectChatScreen>
         }
       });
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.voiceRecordFailed)));
+      if (!mounted) return;
+      final micStatus = await Permission.microphone.status;
+      if (micStatus.isPermanentlyDenied) {
+        await openAppSettings();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.voiceRecordFailed)));
+      }
     }
   }
 
