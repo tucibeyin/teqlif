@@ -313,8 +313,8 @@ async def send_blast(
 
     recipient_ids: list[int] = [r[0] for r in rows]
     # receive_push NULL (yeni kayıt, henüz pref set edilmemiş) → True kabul et
-    fcm_tokens: list[tuple[int, str]] = [
-        (r[0], r[1]) for r in rows
+    fcm_tokens: list[str] = [
+        r[1] for r in rows
         if r[1] and r[2] is not False
     ]
 
