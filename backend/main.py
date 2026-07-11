@@ -16,6 +16,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.config import settings
 from app.logging_config import setup_logging
 from app.core.exceptions import AppException
+from app.core.idempotency import _IdempotencyReplay
 from app.core.logger import capture_exception
 from app.routers import auth, streams, webhooks, auction, chat, moderation, stories, onboarding
 from app.routers import search_alerts
@@ -219,6 +220,11 @@ app.middleware("http")(security_headers)
 
 
 # ── Global Exception Handlers ────────────────────────────────────────────────
+
+@app.exception_handler(_IdempotencyReplay)
+async def idempotency_replay_handler(request: Request, exc: _IdempotencyReplay):
+    return exc.response
+
 
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException):

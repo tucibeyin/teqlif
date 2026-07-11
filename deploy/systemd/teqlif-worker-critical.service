@@ -1,0 +1,17 @@
+[Unit]
+Description=Teqlif ARQ Critical Worker (Bulkhead — push notifications, outbid, loser cascade)
+After=network.target postgresql.service redis.service teqlif.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/teqlif.com/backend
+EnvironmentFile=/var/www/teqlif.com/backend/.env
+ExecStart=/var/www/teqlif.com/venv/bin/arq app.worker.WorkerSettingsCritical
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

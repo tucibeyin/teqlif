@@ -38,6 +38,7 @@ from app.core.exceptions import (
     BadRequestException,
     DatabaseException,
 )
+from app.core.saga import Saga, SagaError
 from app.core.logger import get_logger, capture_exception
 from app.core.ws_manager import ws_manager
 from app.constants import ws_types as WS
@@ -242,10 +243,13 @@ async def pubsub_listener():
 
 
 async def publish_auction(stream_id: int, payload: dict):
-    """Tüm worker'lara Redis pub/sub üzerinden yayınla."""
+    """Tüm worker'lara Redis pub/sub üzerinden yayınla + outbox stream'e yaz."""
+    from app.core.auction_outbox import outbox_publish
     redis = await get_redis()
     data = json.dumps({"_stream_id": stream_id, **payload})
     await redis.publish(_PUBSUB_CHANNEL, data)
+    # Outbox: reconnect'te replay için stream'e yaz (pub/sub'a paralel, bağımsız)
+    await outbox_publish(stream_id, {"type": WS.AUCTION_STATE, **payload})
     logger.info(
         "[PUBSUB] YAYINLANDI | stream_id=%s status=%s | bu_worker_ws=%s",
         stream_id, payload.get("status"), manager.conn_count(stream_id),
@@ -603,10 +607,11 @@ class AuctionService:
             await _pool.enqueue_job(
                 "notify_auction_losers_task",
                 stream_id,
-                None,  # kazanan yok (end_auction)
+                None,
                 data.get("item_name", ""),
                 final_price if data.get("current_bidder_id") else None,
                 False,
+                _queue_name="critical",
             )
 
         return state
@@ -752,6 +757,7 @@ class AuctionService:
                         stream_id,
                         prev_item_name,
                         float(data.amount),
+                        _queue_name="critical",
                     )
                 else:
                     asyncio.create_task(push_notification(
@@ -1004,6 +1010,7 @@ class AuctionService:
                     item_name,
                     bin_price,
                     True,
+                    _queue_name="critical",
                 )
 
         # Chat'e herkese görünür özet mesajı
@@ -1087,6 +1094,7 @@ class AuctionService:
         lid_str = data.get("listing_id", "")
         listing_id = int(lid_str) if lid_str else None
         item_name = data.get("item_name", "")
+        original_status = data.get("status", "active")  # kompanzasyon için
 
         listing_line = f"\n🔗 https://teqlif.com/ilan/{listing_id}" if listing_id else ""
         dm_content = (
@@ -1095,7 +1103,7 @@ class AuctionService:
             f"💰 Kazanan fiyat: {fmt_price(final_price)}"
             f"{listing_line}"
         )
-        
+
         listing: Listing | None = None
         if listing_id:
             listing_result = await self.db.execute(
@@ -1103,75 +1111,97 @@ class AuctionService:
             )
             listing = listing_result.scalar_one_or_none()
 
-        auction = Auction(
-            stream_id=stream_id,
-            listing_id=listing_id,
-            item_name=item_name,
-            start_price=float(data.get("start_price", 0)),
-            final_price=final_price,
-            winner_id=int(winner_id_str) if winner_id_str else None,
-            winner_username=winner_name,
-            bid_count=int(data.get("bid_count", 0)),
-            status="completed",
-            ended_at=datetime.now(timezone.utc),
-            proof_image_url=proof_image_url,
-        )
-        self.db.add(auction)
-        await self.db.flush()
+        # ── Saga: her adımda kompanzasyon tanımlı ────────────────────────────
+        saga = Saga("accept_bid")
+        auction: Auction | None = None
+        dm: DirectMessage | None = None
+        winner_user_id: int | None = None
+
+        async def _create_auction():
+            nonlocal auction
+            _a = Auction(
+                stream_id=stream_id,
+                listing_id=listing_id,
+                item_name=item_name,
+                start_price=float(data.get("start_price", 0)),
+                final_price=final_price,
+                winner_id=int(winner_id_str) if winner_id_str else None,
+                winner_username=winner_name,
+                bid_count=int(data.get("bid_count", 0)),
+                status="completed",
+                ended_at=datetime.now(timezone.utc),
+                proof_image_url=proof_image_url,
+            )
+            self.db.add(_a)
+            await self.db.flush()
+            auction = _a
+            return _a
+
+        async def _compensate_auction():
+            if auction and auction.id:
+                await self.db.delete(auction)
+                await self.db.flush()
+            # Redis state'i geri yükle
+            await redis.hset(key, "status", original_status)
+
+        await saga.step("create_auction", do=_create_auction, compensate=_compensate_auction)
 
         if listing:
-            listing.is_active = False
+            _prev_active = listing.is_active
+            async def _deactivate_listing():
+                listing.is_active = False
+            async def _reactivate_listing():
+                listing.is_active = _prev_active
+            await saga.step("deactivate_listing", do=_deactivate_listing, compensate=_reactivate_listing)
 
-        winner_user_id: int | None = None
-        dm: DirectMessage | None = None
-        winner_dm_content: str = ""
-        if winner_id_str:
+        async def _create_purchase_and_dm():
+            nonlocal winner_user_id, dm
+            if not winner_id_str:
+                return
             try:
-                winner_user_id = int(winner_id_str)
-
-                if listing_id:
-                    purchase = Purchase(
-                        buyer_id=winner_user_id,
-                        listing_id=listing_id,
-                        auction_id=auction.id,
-                        price=final_price,
-                        purchase_type="AUCTION_WIN",
-                    )
-                    self.db.add(purchase)
-
-                winner_dm_content = dm_content + f"\n📋 teqlif://auction/{auction.id}"
-                dm = DirectMessage(
-                    sender_id=user.id,
-                    receiver_id=winner_user_id,
-                    content=winner_dm_content,
-                )
-                # Kazananın preference_embedding'ini güçlendir (×20 ağırlık)
-                if listing_id:
-                    from app.models.analytics import UserInteraction
-                    self.db.add(UserInteraction(
-                        user_id=winner_user_id,
-                        item_id=listing_id,
-                        item_type="listing",
-                        interaction_type="auction_won",
-                    ))
-                self.db.add(dm)
+                _winner_user_id = int(winner_id_str)
             except ValueError:
-                logger.warning(
-                    "[ACCEPT] Geçersiz winner_id_str formatı, DM atlandı | stream_id=%s winner_id_str=%r",
-                    stream_id, winner_id_str,
+                return
+            winner_user_id = _winner_user_id
+            if listing_id:
+                purchase = Purchase(
+                    buyer_id=winner_user_id,
+                    listing_id=listing_id,
+                    auction_id=auction.id,
+                    price=final_price,
+                    purchase_type="AUCTION_WIN",
                 )
-                winner_user_id = None
+                self.db.add(purchase)
+            from app.models.analytics import UserInteraction
+            if listing_id:
+                self.db.add(UserInteraction(
+                    user_id=winner_user_id,
+                    item_id=listing_id,
+                    item_type="listing",
+                    interaction_type="auction_won",
+                ))
+            _winner_dm_content = dm_content + f"\n📋 teqlif://auction/{auction.id}"
+            _dm = DirectMessage(
+                sender_id=user.id,
+                receiver_id=winner_user_id,
+                content=_winner_dm_content,
+            )
+            self.db.add(_dm)
+            dm = _dm
+
+        await saga.step("create_purchase_dm", do=_create_purchase_and_dm, compensate=None)
 
         try:
             await self.db.commit()
         except Exception as exc:
             await self.db.rollback()
-            logger.error(
-                "[ACCEPT] DB commit HATASI | stream_id=%s | %s",
-                stream_id, exc, exc_info=True,
-            )
+            # Redis state'i geri yükle (DB commit başarısız oldu)
+            await redis.hset(key, "status", original_status)
+            logger.error("[ACCEPT] DB commit HATASI | stream_id=%s | %s", stream_id, exc, exc_info=True)
             capture_exception(exc)
             raise DatabaseException("Teklif kabul sonucu kaydedilemedi")
+
+        winner_dm_content = dm_content + (f"\n📋 teqlif://auction/{auction.id}" if auction else "")
 
         # Commit başarılı → şimdi Redis'i güncelle ve temizle
         await redis.hset(key, "status", "ended")
@@ -1297,6 +1327,7 @@ class AuctionService:
                 item_name,
                 final_price,
                 True,
+                _queue_name="critical",
             )
 
         return state

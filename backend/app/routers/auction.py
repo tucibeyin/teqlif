@@ -21,6 +21,8 @@ from app.utils.auth import get_current_user, decode_token
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
 from app.core.rate_limit import limiter, get_user_id_or_ip
+from app.core.idempotency import idempotency_key, store_idempotency_result
+from app.core.auction_outbox import outbox_replay
 from app.database_clickhouse import buffer_user_event
 from app.services.auction_service import (
     AuctionService,
@@ -105,6 +107,7 @@ async def place_bid(
     data: BidIn,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _idem=Depends(idempotency_key("bid", ttl=30)),
 ):
     bidder_ip = request.client.host if request.client else None
     result = await AuctionService(db).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
@@ -115,6 +118,7 @@ async def place_bid(
         user_id=current_user.id,
         price_point=data.amount,
     ))
+    await store_idempotency_result(request, result)
     return result
 
 
@@ -203,6 +207,14 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
             stream_id, state.get("status"),
         )
         await websocket.send_json({"type": WS.AUCTION_STATE, **state})
+
+        # Outbox replay: bağlantı kesintisinde kaçırılan son eventleri gönder
+        missed = await outbox_replay(stream_id, count=10)
+        for event in reversed(missed):  # eskiden yeniye sırayla
+            try:
+                await websocket.send_json({**event, "replayed": True})
+            except Exception:
+                break
 
         # Bağlantıyı açık tut; client'tan gelen ping mesajlarını yoksay
         while True:

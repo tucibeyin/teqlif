@@ -2470,8 +2470,41 @@ class WorkerSettings:
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
+    queue_name = "default"
 
     max_jobs = 20
     job_timeout = 300     # 5 dakika — bulk delete sorguları için artırıldı
     keep_result = 3600    # 1 saat — hata ayıklama için sonuçlar saklı tutulur
     max_tries = 3         # başarısız task'lar 3 kez yeniden denenir
+
+
+class WorkerSettingsCritical:
+    """
+    Bulkhead — Kritik görev worker'ı.
+
+    Sadece kullanıcıya doğrudan dokunan görevleri işler:
+    push bildirimleri, outbid, loser cascade.
+
+    Başlatmak için ayrı bir process:
+        arq app.worker.WorkerSettingsCritical
+
+    Systemd örneği: /etc/systemd/system/teqlif-worker-critical.service
+    """
+
+    functions = [
+        send_push_notification_task,
+        notify_outbid_task,
+        notify_auction_losers_task,
+        send_smart_auction_alerts,
+        send_budget_match_notifications_task,
+        send_telegram_notification_task,
+        notify_hot_listing_task,
+    ]
+
+    redis_settings = RedisSettings.from_dsn(settings.redis_url)
+    queue_name = "critical"
+
+    max_jobs = 30          # Push notification'lar hızlı işlenmeli
+    job_timeout = 30       # 30sn — push gönderimi uzun sürmez
+    keep_result = 600
+    max_tries = 5          # Kritik task'lar daha fazla retry

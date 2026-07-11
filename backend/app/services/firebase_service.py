@@ -1,6 +1,7 @@
 import asyncio
 
 from app.core.logger import get_logger, capture_exception
+from app.core.circuit_breaker import fcm_breaker, CircuitOpenError
 
 logger = get_logger(__name__)
 
@@ -44,8 +45,14 @@ async def send_push(
     if not token:
         logger.error("[FCM] send_push çağrıldı ama token boş")
         return
+    try:
+        await fcm_breaker.__aenter__()
+    except CircuitOpenError:
+        logger.warning("[FCM] Circuit açık — push atlandı | token=%s…", token[:12])
+        return
     app = _get_firebase_app()
     if app is None:
+        await fcm_breaker.__aexit__(Exception, Exception("no app"), None)
         logger.error("[FCM] Firebase app yok — push gönderilemiyor")
         return
     logger.info("[FCM] Push gönderiliyor | token=%s… | title=%r | type=%s | badge=%s", token[:12], title, notif_type, badge)
@@ -76,7 +83,9 @@ async def send_push(
             None, messaging.send, msg
         )
         logger.info("[FCM] Push başarılı | message_id=%s", result)
+        await fcm_breaker.__aexit__(None, None, None)
     except Exception as exc:
+        await fcm_breaker.__aexit__(type(exc), exc, None)
         # Token geçersiz/silinmiş → özel hata fırlat, worker DB'den temizler
         try:
             from firebase_admin import exceptions as fb_exceptions

@@ -21,6 +21,7 @@ from typing import Optional
 
 import clickhouse_connect
 from clickhouse_connect.driver.asyncclient import AsyncClient
+from app.core.circuit_breaker import clickhouse_breaker, CircuitOpenError
 
 logger = logging.getLogger(__name__)
 
@@ -127,16 +128,29 @@ SETTINGS index_granularity = 8192
 
 # ── Bağlantı ──────────────────────────────────────────────────────────────────
 
-async def get_clickhouse_client() -> AsyncClient:
-    """Singleton AsyncClient döndürür."""
+async def get_clickhouse_client() -> AsyncClient | None:
+    """Singleton AsyncClient döndürür. Circuit açıksa None döner."""
     global _client
+    try:
+        await clickhouse_breaker.__aenter__()
+    except CircuitOpenError:
+        logger.warning("[ClickHouse] Circuit açık — istek atlandı")
+        return None
     if _client is None:
-        _client = await clickhouse_connect.get_async_client(
-            host="localhost",
-            port=8123,
-            connect_timeout=5,
-            send_receive_timeout=30,
-        )
+        try:
+            _client = await clickhouse_connect.get_async_client(
+                host="localhost",
+                port=8123,
+                connect_timeout=5,
+                send_receive_timeout=30,
+            )
+            await clickhouse_breaker.__aexit__(None, None, None)
+        except Exception as exc:
+            await clickhouse_breaker.__aexit__(type(exc), exc, None)
+            logger.warning("[ClickHouse] Bağlantı kurulamadı | %s", exc)
+            return None
+    else:
+        await clickhouse_breaker.__aexit__(None, None, None)
     return _client
 
 

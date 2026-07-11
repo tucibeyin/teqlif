@@ -30,6 +30,7 @@ from app.services.like_service import LikeService
 from app.schemas.listing import ListingOfferCreate
 from app.core.task_queue import get_pool
 from app.core.rate_limit import limiter
+from app.core.read_cache import cache_get, cache_set, invalidate_cache
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
@@ -55,7 +56,18 @@ async def get_listings(
     current_user_id: Optional[int] = Depends(_optional_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ListingService(db).get_listings(user_id, category, location, q, current_user_id, limit, offset)
+    # CQRS cache-aside: kişiselleştirilmemiş (anonim) sorgular cache'lenir
+    # Giriş yapmış kullanıcıya özel sorgular (user_id filtresi) cache atlanır
+    use_cache = current_user_id is None and user_id is None
+    params = {"category": category, "location": location, "q": q, "limit": limit, "offset": offset}
+    if use_cache:
+        cached = await cache_get("listings:search", params)
+        if cached is not None:
+            return cached
+    result = await ListingService(db).get_listings(user_id, category, location, q, current_user_id, limit, offset)
+    if use_cache:
+        await cache_set("listings:search", params, result, ttl=30)
+    return result
 
 
 @router.get("/my")
@@ -120,6 +132,7 @@ async def create_listing(
     pool = get_pool()
     if pool:
         await pool.enqueue_job("generate_listing_embedding_task", result["id"])
+    await invalidate_cache("listings:search")
     return result
 
 
@@ -130,7 +143,9 @@ async def update_listing(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ListingService(db).update_listing(listing_id, payload, current_user)
+    result = await ListingService(db).update_listing(listing_id, payload, current_user)
+    await invalidate_cache("listings:search")
+    return result
 
 
 @router.get("/{listing_id}/reactivation-cost")
