@@ -65,6 +65,7 @@ from app.routers import admin_data
 from app.routers import feed
 from app.routers import ads
 from app.routers import client_log, config
+from app.routers import calls
 from prometheus_fastapi_instrumentator import Instrumentator
 
 logger = setup_logging()
@@ -383,6 +384,7 @@ app.include_router(client_log.router)
 app.include_router(config.router)
 app.include_router(onboarding.router)
 app.include_router(search_alerts.router)
+app.include_router(calls.router)
 
 
 # Frontend dosyalarını sun

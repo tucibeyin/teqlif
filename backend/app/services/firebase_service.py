@@ -61,18 +61,27 @@ async def send_push(
             if extra_data:
                 data.update(extra_data)
 
+            is_call = notif_type == "incoming_call"
             msg = messaging.Message(
-                notification=messaging.Notification(title=title, body=body, image=image_url),
+                # Calls: data-only so the Flutter background handler fires and
+                # shows our custom local notification with action buttons.
+                notification=None if is_call else messaging.Notification(title=title, body=body, image=image_url),
                 data=data,
                 token=token,
                 android=messaging.AndroidConfig(
                     priority="high",
-                    notification=messaging.AndroidNotification(image=image_url) if image_url else None,
+                    notification=None if is_call else (
+                        messaging.AndroidNotification(image=image_url) if image_url else None
+                    ),
                 ),
                 apns=messaging.APNSConfig(
                     headers={"apns-priority": "10"},
                     payload=messaging.APNSPayload(
-                        aps=messaging.Aps(sound="default", badge=badge)
+                        aps=messaging.Aps(
+                            content_available=True,
+                            sound=None if is_call else "default",
+                            badge=badge,
+                        )
                     ),
                 ),
             )

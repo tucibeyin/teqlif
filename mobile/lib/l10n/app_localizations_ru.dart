@@ -5093,4 +5093,60 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get removeFromFavoritesTooltip => 'Удалить из избранного';
+
+  @override
+  String get callVoiceCall => 'Голосовой звонок';
+
+  @override
+  String get callCalling => 'Звонок...';
+
+  @override
+  String get callConnecting => 'Подключение...';
+
+  @override
+  String get callConnected => 'Подключён';
+
+  @override
+  String get callEnded => 'Звонок завершён';
+
+  @override
+  String get callRejected => 'Звонок отклонён';
+
+  @override
+  String get callMissed => 'Пропущенный звонок';
+
+  @override
+  String get callNoAnswer => 'Нет ответа';
+
+  @override
+  String get callAccept => 'Принять';
+
+  @override
+  String get callDecline => 'Отклонить';
+
+  @override
+  String get callMute => 'Без звука';
+
+  @override
+  String get callUnmute => 'Включить звук';
+
+  @override
+  String get callSpeaker => 'Громкая связь';
+
+  @override
+  String get callIncomingTitle => 'Входящий звонок';
+
+  @override
+  String callIncomingBody(String username) {
+    return '@$username звонит';
+  }
+
+  @override
+  String get callNotifAccept => 'Ответить';
+
+  @override
+  String get callNotifDecline => 'Отклонить';
+
+  @override
+  String get callPermissionDenied => 'Требуется разрешение на микрофон';
 }

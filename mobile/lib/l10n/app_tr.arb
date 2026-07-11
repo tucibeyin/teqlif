@@ -2473,5 +2473,29 @@
   "defaultUserFallback": "Kullanıcı",
   "startLiveStreamOption": "Canlı Yayın Aç",
   "noResultsFound": "Sonuç bulunamadı",
-  "removeFromFavoritesTooltip": "Favoriden Çıkar"
+  "removeFromFavoritesTooltip": "Favoriden Çıkar",
+
+  "callVoiceCall": "Sesli Arama",
+  "callCalling": "Arıyor...",
+  "callConnecting": "Bağlanıyor...",
+  "callConnected": "Bağlandı",
+  "callEnded": "Arama Bitti",
+  "callRejected": "Arama Reddedildi",
+  "callMissed": "Cevapsız Arama",
+  "callNoAnswer": "Cevap Verilmedi",
+  "callAccept": "Kabul Et",
+  "callDecline": "Reddet",
+  "callMute": "Sessiz",
+  "callUnmute": "Sesi Aç",
+  "callSpeaker": "Hoparlör",
+  "callIncomingTitle": "Gelen Arama",
+  "callIncomingBody": "@{username} arıyor",
+  "@callIncomingBody": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "callNotifAccept": "Cevapla",
+  "callNotifDecline": "Reddet",
+  "callPermissionDenied": "Mikrofon izni gerekli"
 }

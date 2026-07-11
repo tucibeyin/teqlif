@@ -5045,4 +5045,60 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get removeFromFavoritesTooltip => 'Favoriden Çıkar';
+
+  @override
+  String get callVoiceCall => 'Sesli Arama';
+
+  @override
+  String get callCalling => 'Arıyor...';
+
+  @override
+  String get callConnecting => 'Bağlanıyor...';
+
+  @override
+  String get callConnected => 'Bağlandı';
+
+  @override
+  String get callEnded => 'Arama Bitti';
+
+  @override
+  String get callRejected => 'Arama Reddedildi';
+
+  @override
+  String get callMissed => 'Cevapsız Arama';
+
+  @override
+  String get callNoAnswer => 'Cevap Verilmedi';
+
+  @override
+  String get callAccept => 'Kabul Et';
+
+  @override
+  String get callDecline => 'Reddet';
+
+  @override
+  String get callMute => 'Sessiz';
+
+  @override
+  String get callUnmute => 'Sesi Aç';
+
+  @override
+  String get callSpeaker => 'Hoparlör';
+
+  @override
+  String get callIncomingTitle => 'Gelen Arama';
+
+  @override
+  String callIncomingBody(String username) {
+    return '@$username arıyor';
+  }
+
+  @override
+  String get callNotifAccept => 'Cevapla';
+
+  @override
+  String get callNotifDecline => 'Reddet';
+
+  @override
+  String get callPermissionDenied => 'Mikrofon izni gerekli';
 }

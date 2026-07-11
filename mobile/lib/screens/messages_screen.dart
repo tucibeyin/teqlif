@@ -39,6 +39,9 @@ import '../providers/pip_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../services/call_service.dart';
+import 'call_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -1591,6 +1594,23 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       appBar: AppBar(
         title: Text(widget.displayName),
         leading: const BackButton(),
+        actions: [
+          IconButton(
+            icon: const FaIcon(FontAwesomeIcons.phone, size: 20),
+            tooltip: l.callVoiceCall,
+            onPressed: () async {
+              await CallService.instance.startCall(
+                calleeId: widget.otherUserId,
+                calleeUsername: widget.otherHandle,
+                calleeAvatar: null,
+              );
+              if (!context.mounted) return;
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CallScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

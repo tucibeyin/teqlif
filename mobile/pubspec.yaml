@@ -57,6 +57,7 @@ dependencies:
   file_picker: ^8.3.6
   flutter_image_compress: ^2.3.0
   open_filex: ^4.3.4
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:

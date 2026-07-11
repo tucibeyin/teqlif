@@ -9089,6 +9089,114 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Favoriden Çıkar'**
   String get removeFromFavoritesTooltip;
+
+  /// No description provided for @callVoiceCall.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sesli Arama'**
+  String get callVoiceCall;
+
+  /// No description provided for @callCalling.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arıyor...'**
+  String get callCalling;
+
+  /// No description provided for @callConnecting.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bağlanıyor...'**
+  String get callConnecting;
+
+  /// No description provided for @callConnected.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bağlandı'**
+  String get callConnected;
+
+  /// No description provided for @callEnded.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arama Bitti'**
+  String get callEnded;
+
+  /// No description provided for @callRejected.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arama Reddedildi'**
+  String get callRejected;
+
+  /// No description provided for @callMissed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cevapsız Arama'**
+  String get callMissed;
+
+  /// No description provided for @callNoAnswer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cevap Verilmedi'**
+  String get callNoAnswer;
+
+  /// No description provided for @callAccept.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kabul Et'**
+  String get callAccept;
+
+  /// No description provided for @callDecline.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reddet'**
+  String get callDecline;
+
+  /// No description provided for @callMute.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sessiz'**
+  String get callMute;
+
+  /// No description provided for @callUnmute.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sesi Aç'**
+  String get callUnmute;
+
+  /// No description provided for @callSpeaker.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hoparlör'**
+  String get callSpeaker;
+
+  /// No description provided for @callIncomingTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gelen Arama'**
+  String get callIncomingTitle;
+
+  /// No description provided for @callIncomingBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} arıyor'**
+  String callIncomingBody(String username);
+
+  /// No description provided for @callNotifAccept.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cevapla'**
+  String get callNotifAccept;
+
+  /// No description provided for @callNotifDecline.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reddet'**
+  String get callNotifDecline;
+
+  /// No description provided for @callPermissionDenied.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mikrofon izni gerekli'**
+  String get callPermissionDenied;
 }
 
 class _AppLocalizationsDelegate

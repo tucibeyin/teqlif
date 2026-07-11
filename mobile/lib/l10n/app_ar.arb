@@ -2470,5 +2470,29 @@
   "defaultUserFallback": "مستخدم",
   "startLiveStreamOption": "بدء البث المباشر",
   "noResultsFound": "لا توجد نتائج",
-  "removeFromFavoritesTooltip": "إزالة من المفضلة"
+  "removeFromFavoritesTooltip": "إزالة من المفضلة",
+
+  "callVoiceCall": "مكالمة صوتية",
+  "callCalling": "جارٍ الاتصال...",
+  "callConnecting": "جارٍ الاتصال...",
+  "callConnected": "متصل",
+  "callEnded": "انتهت المكالمة",
+  "callRejected": "تم رفض المكالمة",
+  "callMissed": "مكالمة فائتة",
+  "callNoAnswer": "لا يوجد رد",
+  "callAccept": "قبول",
+  "callDecline": "رفض",
+  "callMute": "كتم",
+  "callUnmute": "تشغيل الصوت",
+  "callSpeaker": "مكبر الصوت",
+  "callIncomingTitle": "مكالمة واردة",
+  "callIncomingBody": "{username}@ يتصل بك",
+  "@callIncomingBody": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "callNotifAccept": "رد",
+  "callNotifDecline": "رفض",
+  "callPermissionDenied": "مطلوب إذن الميكروفون"
 }

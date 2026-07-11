@@ -2475,5 +2475,29 @@
   "defaultUserFallback": "Пользователь",
   "startLiveStreamOption": "Начать трансляцию",
   "noResultsFound": "Ничего не найдено",
-  "removeFromFavoritesTooltip": "Удалить из избранного"
+  "removeFromFavoritesTooltip": "Удалить из избранного",
+
+  "callVoiceCall": "Голосовой звонок",
+  "callCalling": "Звонок...",
+  "callConnecting": "Подключение...",
+  "callConnected": "Подключён",
+  "callEnded": "Звонок завершён",
+  "callRejected": "Звонок отклонён",
+  "callMissed": "Пропущенный звонок",
+  "callNoAnswer": "Нет ответа",
+  "callAccept": "Принять",
+  "callDecline": "Отклонить",
+  "callMute": "Без звука",
+  "callUnmute": "Включить звук",
+  "callSpeaker": "Громкая связь",
+  "callIncomingTitle": "Входящий звонок",
+  "callIncomingBody": "@{username} звонит",
+  "@callIncomingBody": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "callNotifAccept": "Ответить",
+  "callNotifDecline": "Отклонить",
+  "callPermissionDenied": "Требуется разрешение на микрофон"
 }

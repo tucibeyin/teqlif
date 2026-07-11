@@ -2510,5 +2510,29 @@
   "defaultUserFallback": "User",
   "startLiveStreamOption": "Start Live Stream",
   "noResultsFound": "No results found",
-  "removeFromFavoritesTooltip": "Remove from Favorites"
+  "removeFromFavoritesTooltip": "Remove from Favorites",
+
+  "callVoiceCall": "Voice Call",
+  "callCalling": "Calling...",
+  "callConnecting": "Connecting...",
+  "callConnected": "Connected",
+  "callEnded": "Call Ended",
+  "callRejected": "Call Declined",
+  "callMissed": "Missed Call",
+  "callNoAnswer": "No Answer",
+  "callAccept": "Accept",
+  "callDecline": "Decline",
+  "callMute": "Mute",
+  "callUnmute": "Unmute",
+  "callSpeaker": "Speaker",
+  "callIncomingTitle": "Incoming Call",
+  "callIncomingBody": "@{username} is calling",
+  "@callIncomingBody": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "callNotifAccept": "Answer",
+  "callNotifDecline": "Decline",
+  "callPermissionDenied": "Microphone permission required"
 }

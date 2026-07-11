@@ -13,6 +13,8 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../l10n/app_localizations.dart';
 import 'messages_screen.dart';
+import 'call_screen.dart';
+import '../services/call_service.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
@@ -535,6 +537,29 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           ),
                         ),
                       ),
+                      // ── Ara (sadece takip ediliyorsa) ────────────────────
+                      if (_isFollowing) ...[
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () async {
+                            final nav = Navigator.of(context);
+                            await CallService.instance.startCall(
+                              calleeId: userId,
+                              calleeUsername: widget.username,
+                              calleeAvatar: null,
+                            );
+                            nav.push(MaterialPageRoute(builder: (_) => const CallScreen()));
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(11),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant(context),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: FaIcon(FontAwesomeIcons.phone, size: 16, color: AppColors.textPrimary(context)),
+                          ),
+                        ),
+                      ],
                       const SizedBox(width: 10),
                       // ── Takip Et / Takip Ediliyor ──────────────────────
                       GestureDetector(

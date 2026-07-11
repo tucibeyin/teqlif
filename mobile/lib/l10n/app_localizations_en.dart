@@ -5043,4 +5043,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get removeFromFavoritesTooltip => 'Remove from Favorites';
+
+  @override
+  String get callVoiceCall => 'Voice Call';
+
+  @override
+  String get callCalling => 'Calling...';
+
+  @override
+  String get callConnecting => 'Connecting...';
+
+  @override
+  String get callConnected => 'Connected';
+
+  @override
+  String get callEnded => 'Call Ended';
+
+  @override
+  String get callRejected => 'Call Declined';
+
+  @override
+  String get callMissed => 'Missed Call';
+
+  @override
+  String get callNoAnswer => 'No Answer';
+
+  @override
+  String get callAccept => 'Accept';
+
+  @override
+  String get callDecline => 'Decline';
+
+  @override
+  String get callMute => 'Mute';
+
+  @override
+  String get callUnmute => 'Unmute';
+
+  @override
+  String get callSpeaker => 'Speaker';
+
+  @override
+  String get callIncomingTitle => 'Incoming Call';
+
+  @override
+  String callIncomingBody(String username) {
+    return '@$username is calling';
+  }
+
+  @override
+  String get callNotifAccept => 'Answer';
+
+  @override
+  String get callNotifDecline => 'Decline';
+
+  @override
+  String get callPermissionDenied => 'Microphone permission required';
 }

@@ -5015,4 +5015,60 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get removeFromFavoritesTooltip => 'إزالة من المفضلة';
+
+  @override
+  String get callVoiceCall => 'مكالمة صوتية';
+
+  @override
+  String get callCalling => 'جارٍ الاتصال...';
+
+  @override
+  String get callConnecting => 'جارٍ الاتصال...';
+
+  @override
+  String get callConnected => 'متصل';
+
+  @override
+  String get callEnded => 'انتهت المكالمة';
+
+  @override
+  String get callRejected => 'تم رفض المكالمة';
+
+  @override
+  String get callMissed => 'مكالمة فائتة';
+
+  @override
+  String get callNoAnswer => 'لا يوجد رد';
+
+  @override
+  String get callAccept => 'قبول';
+
+  @override
+  String get callDecline => 'رفض';
+
+  @override
+  String get callMute => 'كتم';
+
+  @override
+  String get callUnmute => 'تشغيل الصوت';
+
+  @override
+  String get callSpeaker => 'مكبر الصوت';
+
+  @override
+  String get callIncomingTitle => 'مكالمة واردة';
+
+  @override
+  String callIncomingBody(String username) {
+    return '$username@ يتصل بك';
+  }
+
+  @override
+  String get callNotifAccept => 'رد';
+
+  @override
+  String get callNotifDecline => 'رفض';
+
+  @override
+  String get callPermissionDenied => 'مطلوب إذن الميكروفون';
 }
