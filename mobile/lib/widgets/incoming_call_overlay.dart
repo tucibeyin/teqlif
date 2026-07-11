@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/call_service.dart';
 import '../services/push_notification_service.dart';
+import '../services/ws_service.dart';
 import '../screens/incoming_call_screen.dart';
 import '../screens/call_screen.dart';
 
@@ -17,11 +18,13 @@ class IncomingCallOverlay extends StatefulWidget {
 
 class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   StreamSubscription<Map<String, dynamic>>? _notifSub;
+  StreamSubscription<Map<String, dynamic>>? _wsSub;
 
   @override
   void initState() {
     super.initState();
     _notifSub = PushNotificationService.notificationStream.stream.listen(_onData);
+    _wsSub    = WsService.messageStream.stream.listen(_onData);
     CallService.instance.state.addListener(_onCallState);
     debugPrint('[Overlay] initState — mevcut status=${CallService.instance.state.value.status}');
 
@@ -45,9 +48,10 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     switch (type) {
       case 'incoming_call':
       case 'call_incoming':
-        // WS üzerinden gelen arama (foreground)
-        CallService.instance.onIncomingCall(data);
-        // _onCallState dinleyicisi status=ringing olunca ekranı açar
+        // FCM + WS'ten çift gelebilir; zaten ringing ise yok say
+        if (CallService.instance.state.value.status != CallStatus.ringing) {
+          CallService.instance.onIncomingCall(data);
+        }
 
       case 'incoming_call_notification_tap':
         // Yerel bildirime tıklandı ama AcceptAction değil
@@ -122,6 +126,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   @override
   void dispose() {
     _notifSub?.cancel();
+    _wsSub?.cancel();
     CallService.instance.state.removeListener(_onCallState);
     super.dispose();
   }
