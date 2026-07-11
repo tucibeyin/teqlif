@@ -273,17 +273,69 @@ async def main():
     except Exception as exc:
         err(f"Firebase HATA: {type(exc).__name__}: {exc}")
 
-    # ── 6. Worker Log ─────────────────────────────────────────────────────────
-    hdr("6. Son Worker Logları")
+    # ── 6. Worker Log (journalctl) ────────────────────────────────────────────
+    hdr("6. Son Worker Logları (journalctl)")
 
-    worker_log = sh("journalctl -u teqlif-worker --no-pager -n 20")
-    fcm_lines = [l for l in worker_log.splitlines() if any(k in l for k in ["[FCM]", "[Worker]", "Error", "error", "push"])]
+    worker_log = sh("journalctl -u teqlif-worker --no-pager -n 30")
+    fcm_lines = [l for l in worker_log.splitlines() if any(k in l for k in ["[FCM]", "[Worker]", "Error", "error", "push", "Push"])]
     if fcm_lines:
         for l in fcm_lines[-10:]:
             print(f"  {l}")
     else:
-        warn("Worker'da ilgili log bulunamadı")
-        info("Canlı izle: sudo journalctl -u teqlif-worker -f")
+        warn("Worker journalctl'de ilgili log bulunamadı (normal — WARNING+ filtreli)")
+
+    # ── 7. App log dosyası — [PUSH] kayıtları ────────────────────────────────
+    hdr("7. App Log Dosyası — [PUSH] ve [Worker] Kayıtları")
+
+    import json as _json
+    log_path = os.path.join(os.path.dirname(__file__), "..", "logs", "app.log")
+    info(f"Log dosyası: {log_path}")
+
+    def tail_file(path, n=200):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            return lines[-n:]
+        except Exception as e:
+            return [f"[HATA] {e}"]
+
+    push_lines = []
+    for raw in tail_file(log_path):
+        try:
+            d = _json.loads(raw)
+            msg = d.get("message", "")
+            if any(k in msg for k in ["[PUSH]", "[Worker]", "push_notification", "FCM"]):
+                ts = d.get("timestamp", "")
+                lvl = d.get("level", "")
+                push_lines.append(f"    {ts} [{lvl}] {msg}")
+        except Exception:
+            pass
+
+    if push_lines:
+        for l in push_lines[-20:]:
+            print(l)
+    else:
+        warn("app.log'da [PUSH]/[Worker]/FCM kaydı bulunamadı")
+        info("Web'den mesaj gönderdikten hemen sonra bu script'i tekrar çalıştır")
+
+    # worker.log'a bak
+    worker_log_path = os.path.join(os.path.dirname(__file__), "..", "logs", "worker.log")
+    worker_push_lines = []
+    for raw in tail_file(worker_log_path):
+        try:
+            d = _json.loads(raw)
+            msg = d.get("message", "")
+            if any(k in msg for k in ["[Worker]", "push", "FCM", "token"]):
+                ts = d.get("timestamp", "")
+                lvl = d.get("level", "")
+                worker_push_lines.append(f"    {ts} [{lvl}] {msg}")
+        except Exception:
+            pass
+
+    if worker_push_lines:
+        info("worker.log [Worker]/FCM kayıtları:")
+        for l in worker_push_lines[-10:]:
+            print(l)
 
     # ── Özet ──────────────────────────────────────────────────────────────────
     hdr("ÖZET")
