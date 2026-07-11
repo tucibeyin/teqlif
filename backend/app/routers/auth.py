@@ -1095,13 +1095,15 @@ async def save_fcm_token(
     db: AsyncSession = Depends(get_db),
 ):
     token = payload.get("token")
-    if token:
-        current_user.fcm_token = token
-        
-    # Her ihtimale karşı güncel dil bilgisini de kaydedelim
     lang = _detect_lang(request)
-    if current_user.locale != lang:
-        current_user.locale = lang
 
-    await db.commit()
+    values: dict = {}
+    if token:
+        values["fcm_token"] = token
+    if current_user.locale != lang:
+        values["locale"] = lang
+
+    if values:
+        await db.execute(sa_update(User).where(User.id == current_user.id).values(**values))
+        await db.commit()
     return {"ok": True}
