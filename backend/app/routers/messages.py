@@ -1,10 +1,15 @@
 from typing import List
 
 import asyncio
+import io
 import json
+import os
+import shutil
+import tempfile
+import uuid
 import redis
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, WebSocket, WebSocketDisconnect
 from app.core.rate_limit import limiter, get_user_id_or_ip
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func, or_, and_, delete
@@ -13,7 +18,7 @@ from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.message import DirectMessage
 from app.models.block import UserBlock
-from app.schemas.message import MessageOut, ConversationOut, SendMessageIn
+from app.schemas.message import MessageOut, ConversationOut, SendMessageIn, MediaContentType
 from app.schemas.notification import UnreadCountOut
 from app.utils.auth import get_current_user, decode_token
 from app.routers.notifications import push_notification
@@ -22,6 +27,15 @@ from app.core.exceptions import NotFoundException, BadRequestException, Forbidde
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
+from app.services import storage_service as storage
+from app.routers.upload import (
+    _detect_image_type,
+    _detect_video_type,
+    _make_thumbnail,
+    _get_video_duration,
+    _IMAGE_CONTENT_TYPES,
+)
+from PIL import Image
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/messages", tags=["messages"])
@@ -169,6 +183,7 @@ async def list_conversations(
                 username=other_user.username,
                 full_name=other_user.full_name,
                 last_message=msg.content,
+                last_message_type=msg.content_type,
                 last_at=msg.created_at,
                 unread_count=unread_map.get(other_id, 0),
             )
@@ -295,6 +310,12 @@ async def get_messages(
                 receiver_id=msg.receiver_id,
                 sender_username=sender.username if sender else "",
                 content=msg.content,
+                content_type=msg.content_type,
+                media_url=msg.media_url,
+                thumbnail_url=msg.thumbnail_url,
+                duration_secs=msg.duration_secs,
+                file_name=msg.file_name,
+                file_size=msg.file_size,
                 is_read=msg.is_read,
                 created_at=msg.created_at,
             )
@@ -351,6 +372,7 @@ async def send_message(
         receiver_id=msg.receiver_id,
         sender_username=current_user.username,
         content=msg.content,
+        content_type="text",
         is_read=msg.is_read,
         created_at=msg.created_at,
     )
@@ -362,6 +384,7 @@ async def send_message(
         "receiver_id": msg.receiver_id,
         "sender_username": current_user.username,
         "content": msg.content,
+        "content_type": "text",
         "is_read": msg.is_read,
         "created_at": msg.created_at.isoformat() if msg.created_at else None,
     }
@@ -394,6 +417,271 @@ async def send_message(
     )
 
     return out
+
+
+# ── Medya boyut ve MIME limitleri ─────────────────────────────────────────────
+_MAX_VOICE  = 512 * 1024           # 10s AAC ≈ 80KB; 512KB güvenli üst sınır
+_MAX_MEDIA  = 5 * 1024 * 1024     # görsel / dosya / video (client önceden sıkıştırır)
+
+_AUDIO_CONTENT_TYPES = {
+    "audio/aac", "audio/mp4", "audio/x-m4a",
+    "audio/mpeg", "audio/ogg", "audio/webm",
+}
+_FILE_CONTENT_TYPES = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain",
+}
+_VIDEO_MAX_SECS = 15
+
+
+def _detect_audio_type(data: bytes) -> str | None:
+    """Magic bytes ile ses formatını belirle."""
+    if len(data) >= 2 and data[0] == 0xFF and (data[1] & 0xF6) == 0xF0:
+        return "aac"                    # ADTS AAC (Android)
+    if data[:4] == b"OggS":
+        return "ogg"                    # OGG/Opus (Android)
+    if len(data) >= 12 and data[4:8] == b"ftyp":
+        return "m4a"                    # M4A / AAC-in-MP4 (iOS)
+    if len(data) >= 3 and data[:3] == b"ID3":
+        return "mp3"                    # MP3 with ID3 tag
+    return None
+
+
+def _msg_out(msg: DirectMessage, sender_username: str) -> MessageOut:
+    return MessageOut(
+        id=msg.id,
+        sender_id=msg.sender_id,
+        receiver_id=msg.receiver_id,
+        sender_username=sender_username,
+        content=msg.content,
+        content_type=msg.content_type,
+        media_url=msg.media_url,
+        thumbnail_url=msg.thumbnail_url,
+        duration_secs=msg.duration_secs,
+        file_name=msg.file_name,
+        file_size=msg.file_size,
+        is_read=msg.is_read,
+        created_at=msg.created_at,
+    )
+
+
+def _media_dm_payload(msg: DirectMessage, sender_username: str) -> dict:
+    return {
+        "type": "message",
+        "id": msg.id,
+        "sender_id": msg.sender_id,
+        "receiver_id": msg.receiver_id,
+        "sender_username": sender_username,
+        "content": msg.content,
+        "content_type": msg.content_type,
+        "media_url": msg.media_url,
+        "thumbnail_url": msg.thumbnail_url,
+        "duration_secs": msg.duration_secs,
+        "file_name": msg.file_name,
+        "file_size": msg.file_size,
+        "is_read": msg.is_read,
+        "created_at": msg.created_at.isoformat() if msg.created_at else None,
+    }
+
+
+@router.post("/upload", response_model=MessageOut)
+@limiter.limit("30/minute", key_func=get_user_id_or_ip)
+async def upload_media_message(
+    request: Request,
+    receiver_id: int = Form(...),
+    content_type_field: MediaContentType = Form(..., alias="content_type"),
+    duration_secs: int | None = Form(None),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    uid = current_user.id
+
+    # ── Alıcı ve engelleme kontrolü ───────────────────────────────────────────
+    recv_result = await db.execute(select(User).where(User.id == receiver_id))
+    receiver = recv_result.scalar_one_or_none()
+    if not receiver:
+        raise NotFoundException("Alıcı bulunamadı")
+    if receiver_id == uid:
+        raise BadRequestException("Kendinize mesaj gönderemezsiniz")
+
+    block_exists = await db.scalar(
+        select(UserBlock).where(
+            or_(
+                and_(UserBlock.blocker_id == uid, UserBlock.blocked_id == receiver_id),
+                and_(UserBlock.blocker_id == receiver_id, UserBlock.blocked_id == uid),
+            )
+        )
+    )
+    if block_exists:
+        raise ForbiddenException("Bu kullanıcıyla mesajlaşamazsınız")
+
+    data = await file.read()
+    file_size = len(data)
+
+    # ── Boyut kontrolü ────────────────────────────────────────────────────────
+    max_size = _MAX_VOICE if content_type_field == "voice" else _MAX_MEDIA
+    if file_size > max_size:
+        mb = max_size // (1024 * 1024)
+        raise BadRequestException(f"Dosya boyutu {mb} MB'ı geçemez" if mb >= 1 else "Ses dosyası çok büyük")
+
+    media_url: str
+    thumbnail_url: str | None = None
+    file_name: str | None = None
+    resolved_duration: int | None = duration_secs
+
+    # ── SES ───────────────────────────────────────────────────────────────────
+    if content_type_field == "voice":
+        audio_fmt = _detect_audio_type(data)
+        if audio_fmt is None:
+            # Content-type'a fallback yap — desteklenen listede mi?
+            client_ct = (file.content_type or "").lower()
+            if not any(client_ct.startswith(ct) for ct in _AUDIO_CONTENT_TYPES):
+                raise BadRequestException("Desteklenmeyen ses formatı")
+            audio_fmt = "aac"
+
+        ext_map = {"aac": "aac", "ogg": "ogg", "m4a": "m4a", "mp3": "mp3"}
+        ct_map = {"aac": "audio/aac", "ogg": "audio/ogg", "m4a": "audio/mp4", "mp3": "audio/mpeg"}
+        ext = ext_map.get(audio_fmt, "aac")
+        key = f"messages/voice/{uuid.uuid4().hex}.{ext}"
+        media_url = storage.upload_bytes(key, data, ct_map.get(audio_fmt, "audio/aac"))
+
+        if resolved_duration is not None:
+            resolved_duration = min(resolved_duration, 10)
+
+    # ── GÖRSEL ────────────────────────────────────────────────────────────────
+    elif content_type_field == "image":
+        img_ext = _detect_image_type(data)
+        if img_ext is None:
+            raise BadRequestException("Sadece JPEG, PNG veya WebP yüklenebilir")
+
+        key = f"messages/img/{uuid.uuid4().hex}.{img_ext}"
+        media_url = storage.upload_bytes(key, data, _IMAGE_CONTENT_TYPES[img_ext])
+
+        try:
+            thumb_data = _make_thumbnail(data, img_ext)
+            thumb_ext = "jpg" if img_ext != "png" else "png"
+            thumb_key = f"messages/img/{uuid.uuid4().hex}_thumb.{thumb_ext}"
+            thumbnail_url = storage.upload_bytes(
+                thumb_key, thumb_data,
+                "image/jpeg" if thumb_ext == "jpg" else "image/png",
+            )
+        except Exception as exc:
+            logger.warning("[DM UPLOAD] Thumbnail oluşturulamadı: %s", exc)
+
+    # ── VİDEO ─────────────────────────────────────────────────────────────────
+    elif content_type_field == "video":
+        vid_fmt = _detect_video_type(data)
+        if vid_fmt is None:
+            raise BadRequestException("Sadece MP4 veya WebM video yüklenebilir")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_path = os.path.join(tmp_dir, f"src_{uuid.uuid4().hex}.{vid_fmt}")
+            with open(src_path, "wb") as f:
+                f.write(data)
+
+            # Süre kontrolü
+            detected_dur = await _get_video_duration(src_path)
+            if detected_dur is not None and detected_dur > _VIDEO_MAX_SECS:
+                raise BadRequestException(f"Video {_VIDEO_MAX_SECS} saniyeyi geçemez")
+            if detected_dur is not None:
+                resolved_duration = int(detected_dur)
+
+            # Thumbnail (ffmpeg varsa)
+            thumb_local = None
+            if shutil.which("ffmpeg"):
+                thumb_path = os.path.join(tmp_dir, f"{uuid.uuid4().hex}_vthumb.jpg")
+                try:
+                    proc = await asyncio.create_subprocess_exec(
+                        "ffmpeg", "-y", "-i", src_path,
+                        "-ss", "0", "-frames:v", "1", "-q:v", "2",
+                        thumb_path,
+                        stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
+                    )
+                    await asyncio.wait_for(proc.communicate(), timeout=20)
+                    if os.path.exists(thumb_path):
+                        thumb_local = thumb_path
+                except Exception as exc:
+                    logger.warning("[DM UPLOAD] Video thumbnail hatası: %s", exc)
+
+            key = f"messages/vid/{uuid.uuid4().hex}.{vid_fmt}"
+            media_url = storage.upload_file(key, src_path, "video/mp4")
+
+            if thumb_local:
+                with open(thumb_local, "rb") as tf:
+                    thumb_bytes = tf.read()
+                thumb_key = f"messages/vid/{uuid.uuid4().hex}_thumb.jpg"
+                thumbnail_url = storage.upload_bytes(thumb_key, thumb_bytes, "image/jpeg")
+
+    # ── DOSYA ─────────────────────────────────────────────────────────────────
+    else:
+        client_ct = (file.content_type or "").lower()
+        if client_ct not in _FILE_CONTENT_TYPES:
+            # PDF magic bytes fallback
+            if not data[:4] == b"%PDF":
+                raise BadRequestException("Desteklenmeyen dosya türü")
+            client_ct = "application/pdf"
+
+        original_name = file.filename or f"dosya.{client_ct.split('/')[-1]}"
+        file_name = original_name[:255]
+        ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "bin"
+        key = f"messages/file/{uuid.uuid4().hex}.{ext}"
+        media_url = storage.upload_bytes(key, data, client_ct)
+
+    # ── DB kaydı ──────────────────────────────────────────────────────────────
+    msg = DirectMessage(
+        sender_id=uid,
+        receiver_id=receiver_id,
+        content="",
+        content_type=content_type_field,
+        media_url=media_url,
+        thumbnail_url=thumbnail_url,
+        duration_secs=resolved_duration,
+        file_name=file_name,
+        file_size=file_size,
+    )
+    db.add(msg)
+    await db.commit()
+    await db.refresh(msg)
+
+    # ── WS broadcast ──────────────────────────────────────────────────────────
+    payload = _media_dm_payload(msg, current_user.username)
+    await _broadcast_dm(receiver_id, payload)
+    await _broadcast_dm(uid, payload)
+
+    # ── Bildirim ──────────────────────────────────────────────────────────────
+    _notif_key_map = {
+        "voice": "notifMessageVoice",
+        "image": "notifMessageImage",
+        "video": "notifMessageVideo",
+        "file":  "notifMessageFile",
+    }
+    await push_notification(
+        receiver_id,
+        {
+            "type": "message",
+            "i18n": {
+                "title_key": "notifMessage",
+                "title_params": {"username": current_user.username},
+                "body_key": _notif_key_map[content_type_field],
+            },
+            "related_id": uid,
+            "sender_username": current_user.username,
+            "sender_image_url": current_user.profile_image_thumb_url,
+        },
+        pref_key="messages",
+    )
+
+    logger.info(
+        "[DM UPLOAD] Medya mesajı | sender=%s receiver=%s type=%s size=%d",
+        uid, receiver_id, content_type_field, file_size,
+    )
+    return _msg_out(msg, current_user.username)
 
 
 @router.websocket("/ws")

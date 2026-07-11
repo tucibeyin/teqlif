@@ -1344,6 +1344,150 @@ abstract class AppLocalizations {
   /// **'Kapat'**
   String get kbdDismiss;
 
+  /// No description provided for @kbdConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'Onayla'**
+  String get kbdConfirm;
+
+  /// No description provided for @kbdAmountHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tutar gir'**
+  String get kbdAmountHint;
+
+  /// No description provided for @voiceSwipeToCancel.
+  ///
+  /// In tr, this message translates to:
+  /// **'İptal için kaydır'**
+  String get voiceSwipeToCancel;
+
+  /// No description provided for @voicePermissionDenied.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mikrofon erişimi reddedildi. Ayarlar\'dan izin ver.'**
+  String get voicePermissionDenied;
+
+  /// No description provided for @voiceRecordFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kayıt başlatılamadı'**
+  String get voiceRecordFailed;
+
+  /// No description provided for @voiceMaxDuration.
+  ///
+  /// In tr, this message translates to:
+  /// **'Maksimum 10 saniye'**
+  String get voiceMaxDuration;
+
+  /// No description provided for @voiceSendFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ses mesajı gönderilemedi'**
+  String get voiceSendFailed;
+
+  /// No description provided for @voicePlayFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ses oynatılamadı'**
+  String get voicePlayFailed;
+
+  /// No description provided for @attachPickGallery.
+  ///
+  /// In tr, this message translates to:
+  /// **'Galeri'**
+  String get attachPickGallery;
+
+  /// No description provided for @attachPickCamera.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kamera'**
+  String get attachPickCamera;
+
+  /// No description provided for @attachPickFile.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dosya'**
+  String get attachPickFile;
+
+  /// No description provided for @attachFileTooLarge.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dosya 5 MB\'dan büyük olamaz'**
+  String get attachFileTooLarge;
+
+  /// No description provided for @attachTypeNotSupported.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu dosya türü desteklenmiyor'**
+  String get attachTypeNotSupported;
+
+  /// No description provided for @attachSendFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dosya gönderilemedi'**
+  String get attachSendFailed;
+
+  /// No description provided for @attachOpenFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dosya açılamadı'**
+  String get attachOpenFailed;
+
+  /// No description provided for @attachCameraPermission.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kamera erişimi reddedildi. Ayarlar\'dan izin ver.'**
+  String get attachCameraPermission;
+
+  /// No description provided for @attachGalleryPermission.
+  ///
+  /// In tr, this message translates to:
+  /// **'Galeri erişimi reddedildi. Ayarlar\'dan izin ver.'**
+  String get attachGalleryPermission;
+
+  /// No description provided for @attachUploading.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yükleniyor...'**
+  String get attachUploading;
+
+  /// No description provided for @errFileTooLarge.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dosya çok büyük (maks. 5 MB)'**
+  String get errFileTooLarge;
+
+  /// No description provided for @errUnsupportedType.
+  ///
+  /// In tr, this message translates to:
+  /// **'Desteklenmeyen dosya türü'**
+  String get errUnsupportedType;
+
+  /// No description provided for @errNetworkRetry.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bağlantı hatası. Tekrar dene.'**
+  String get errNetworkRetry;
+
+  /// No description provided for @liveStickerPicker.
+  ///
+  /// In tr, this message translates to:
+  /// **'Stickerlar'**
+  String get liveStickerPicker;
+
+  /// No description provided for @attachVideoTooLong.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video 15 saniyeden uzun olamaz'**
+  String get attachVideoTooLong;
+
+  /// No description provided for @attachVideoProcessing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video hazırlanıyor...'**
+  String get attachVideoProcessing;
+
   /// No description provided for @msgDeleteMessage.
   ///
   /// In tr, this message translates to:
@@ -7955,6 +8099,30 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'@{username} size mesaj gönderdi'**
   String notifMessage(String username);
+
+  /// No description provided for @notifMessageVoice.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎵 Ses mesajı'**
+  String get notifMessageVoice;
+
+  /// No description provided for @notifMessageImage.
+  ///
+  /// In tr, this message translates to:
+  /// **'📷 Fotoğraf'**
+  String get notifMessageImage;
+
+  /// No description provided for @notifMessageVideo.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎬 Video'**
+  String get notifMessageVideo;
+
+  /// No description provided for @notifMessageFile.
+  ///
+  /// In tr, this message translates to:
+  /// **'📎 Dosya'**
+  String get notifMessageFile;
 
   /// No description provided for @notifNewListing.
   ///

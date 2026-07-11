@@ -650,6 +650,81 @@ class AppLocalizationsTr extends AppLocalizations {
   String get kbdDismiss => 'Kapat';
 
   @override
+  String get kbdConfirm => 'Onayla';
+
+  @override
+  String get kbdAmountHint => 'Tutar gir';
+
+  @override
+  String get voiceSwipeToCancel => 'İptal için kaydır';
+
+  @override
+  String get voicePermissionDenied =>
+      'Mikrofon erişimi reddedildi. Ayarlar\'dan izin ver.';
+
+  @override
+  String get voiceRecordFailed => 'Kayıt başlatılamadı';
+
+  @override
+  String get voiceMaxDuration => 'Maksimum 10 saniye';
+
+  @override
+  String get voiceSendFailed => 'Ses mesajı gönderilemedi';
+
+  @override
+  String get voicePlayFailed => 'Ses oynatılamadı';
+
+  @override
+  String get attachPickGallery => 'Galeri';
+
+  @override
+  String get attachPickCamera => 'Kamera';
+
+  @override
+  String get attachPickFile => 'Dosya';
+
+  @override
+  String get attachFileTooLarge => 'Dosya 5 MB\'dan büyük olamaz';
+
+  @override
+  String get attachTypeNotSupported => 'Bu dosya türü desteklenmiyor';
+
+  @override
+  String get attachSendFailed => 'Dosya gönderilemedi';
+
+  @override
+  String get attachOpenFailed => 'Dosya açılamadı';
+
+  @override
+  String get attachCameraPermission =>
+      'Kamera erişimi reddedildi. Ayarlar\'dan izin ver.';
+
+  @override
+  String get attachGalleryPermission =>
+      'Galeri erişimi reddedildi. Ayarlar\'dan izin ver.';
+
+  @override
+  String get attachUploading => 'Yükleniyor...';
+
+  @override
+  String get errFileTooLarge => 'Dosya çok büyük (maks. 5 MB)';
+
+  @override
+  String get errUnsupportedType => 'Desteklenmeyen dosya türü';
+
+  @override
+  String get errNetworkRetry => 'Bağlantı hatası. Tekrar dene.';
+
+  @override
+  String get liveStickerPicker => 'Stickerlar';
+
+  @override
+  String get attachVideoTooLong => 'Video 15 saniyeden uzun olamaz';
+
+  @override
+  String get attachVideoProcessing => 'Video hazırlanıyor...';
+
+  @override
   String get msgDeleteMessage => 'Mesajı Sil';
 
   @override
@@ -4384,6 +4459,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String notifMessage(String username) {
     return '@$username size mesaj gönderdi';
   }
+
+  @override
+  String get notifMessageVoice => '🎵 Ses mesajı';
+
+  @override
+  String get notifMessageImage => '📷 Fotoğraf';
+
+  @override
+  String get notifMessageVideo => '🎬 Video';
+
+  @override
+  String get notifMessageFile => '📎 Dosya';
 
   @override
   String notifNewListing(String username) {

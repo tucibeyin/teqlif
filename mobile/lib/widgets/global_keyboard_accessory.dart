@@ -16,6 +16,7 @@ class GlobalKeyboardAccessory extends StatefulWidget {
 class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   TextEditingController? _activeController;
   bool _isObscure = false;
+  bool _isNumeric = false;
 
   final _accessoryBarKey = GlobalKey();
 
@@ -39,10 +40,16 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
                     _findEditableInContext(primaryFocus.context!);
 
       if (state != null) {
-        if (_activeController != state.widget.controller) {
+        final keyboardType = state.widget.keyboardType;
+        final isNumeric = keyboardType.index == TextInputType.number.index ||
+                          keyboardType.index == TextInputType.phone.index;
+
+        if (_activeController != state.widget.controller ||
+            _isNumeric != isNumeric) {
           setState(() {
             _activeController = state.widget.controller;
             _isObscure = state.widget.obscureText;
+            _isNumeric = isNumeric;
           });
         }
         return;
@@ -57,6 +64,7 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
       setState(() {
         _activeController = null;
         _isObscure = false;
+        _isNumeric = false;
       });
     }
   }
@@ -77,7 +85,6 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   Widget build(BuildContext context) {
     return Listener(
       onPointerDown: (event) {
-        // Accessory bar alanına yapılan tap'ı atla — klavye kapanmasın
         final barBox = _accessoryBarKey.currentContext?.findRenderObject() as RenderBox?;
         if (barBox != null) {
           final localPos = barBox.globalToLocal(event.position);
@@ -108,6 +115,7 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
               key: _accessoryBarKey,
               controller: _activeController!,
               isObscure: _isObscure,
+              isNumeric: _isNumeric,
             ),
         ],
       ),
@@ -118,11 +126,13 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
 class _AccessoryBar extends StatefulWidget {
   final TextEditingController controller;
   final bool isObscure;
+  final bool isNumeric;
 
   const _AccessoryBar({
     super.key,
     required this.controller,
     this.isObscure = false,
+    this.isNumeric = false,
   });
 
   @override
@@ -181,7 +191,6 @@ class _AccessoryBarState extends State<_AccessoryBar> {
     final text = widget.controller.text;
     if (text.isEmpty) return;
 
-    // Tap koordinatını scroll offset'e göre düzelt
     final scrollOffset = _scrollCtrl.hasClients ? _scrollCtrl.offset : 0.0;
     final adjustedPos = Offset(
       details.localPosition.dx + scrollOffset,
@@ -198,12 +207,15 @@ class _AccessoryBarState extends State<_AccessoryBar> {
     widget.controller.selection = TextSelection.collapsed(offset: pos.offset);
   }
 
+  void _dismiss() => FocusManager.instance.primaryFocus?.unfocus();
+
   @override
   Widget build(BuildContext context) {
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     if (keyboardHeight <= 0) return const SizedBox.shrink();
 
     final isDark = AppColors.isDark(context);
+    final l = AppLocalizations.of(context)!;
 
     return Positioned(
       bottom: keyboardHeight,
@@ -213,14 +225,14 @@ class _AccessoryBarState extends State<_AccessoryBar> {
         type: MaterialType.transparency,
         child: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.surface(context).withValues(alpha: isDark ? 0.7 : 0.85),
+                color: AppColors.surface(context).withValues(alpha: isDark ? 0.72 : 0.88),
                 border: Border(
                   top: BorderSide(
-                    color: AppColors.border(context).withValues(alpha: 0.5),
+                    color: AppColors.border(context).withValues(alpha: 0.4),
                     width: 0.5,
                   ),
                 ),
@@ -228,98 +240,153 @@ class _AccessoryBarState extends State<_AccessoryBar> {
               child: SafeArea(
                 top: false,
                 bottom: false,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: widget.isObscure
-                          ? const SizedBox.shrink()
-                          : GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTapDown: _onTapDown,
-                              child: SizedBox(
-                                height: 28,
-                                child: SingleChildScrollView(
-                                  controller: _scrollCtrl,
-                                  scrollDirection: Axis.horizontal,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  child: ValueListenableBuilder<TextEditingValue>(
-                                    valueListenable: widget.controller,
-                                    builder: (context, value, _) {
-                                      final isEmpty = value.text.isEmpty;
-
-                                      if (isEmpty) {
-                                        return Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Text(
-                                            AppLocalizations.of(context)!.kbdTypingHint,
-                                            style: _textStyle.copyWith(
-                                              fontStyle: FontStyle.italic,
-                                              color: AppColors.textTertiary(context),
-                                            ),
-                                          ),
-                                        );
-                                      }
-
-                                      final cursorPos = value.selection.baseOffset
-                                          .clamp(0, value.text.length);
-                                      final textBefore = value.text.substring(0, cursorPos);
-                                      final textAfter = value.text.substring(cursorPos);
-
-                                      return Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            textBefore,
-                                            style: _textStyle.copyWith(
-                                              color: AppColors.textPrimary(context),
-                                            ),
-                                          ),
-                                          Container(
-                                            width: 1.5,
-                                            height: 18,
-                                            color: kPrimary,
-                                          ),
-                                          Text(
-                                            textAfter,
-                                            style: _textStyle.copyWith(
-                                              color: AppColors.textPrimary(context),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ),
-                    const SizedBox(width: 12),
-                    TextButton(
-                      key: const Key('keyboard_accessory_btn_kapat'),
-                      onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: kPrimary,
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context)!.kbdDismiss,
-                        style: const TextStyle(
-                          decoration: TextDecoration.none,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                child: widget.isNumeric
+                    ? _buildNumericBar(context, l)
+                    : _buildTextBar(context, l),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  // ── Numeric bar: tutar/sayı girişi için (teklif, fiyat, miktar) ─────────────
+  Widget _buildNumericBar(BuildContext context, AppLocalizations l) {
+    return Row(
+      children: [
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: widget.controller,
+          builder: (context, value, _) {
+            final display = value.text.isEmpty ? l.kbdAmountHint : value.text;
+            final isEmpty = value.text.isEmpty;
+            return Expanded(
+              child: Text(
+                display,
+                style: _textStyle.copyWith(
+                  fontSize: 15,
+                  fontWeight: isEmpty ? FontWeight.w400 : FontWeight.w600,
+                  color: isEmpty
+                      ? AppColors.textTertiary(context)
+                      : AppColors.textPrimary(context),
+                  fontStyle: isEmpty ? FontStyle.italic : FontStyle.normal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          },
+        ),
+        const SizedBox(width: 12),
+        FilledButton(
+          onPressed: _dismiss,
+          style: FilledButton.styleFrom(
+            backgroundColor: kPrimary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              decoration: TextDecoration.none,
+            ),
+          ),
+          child: Text(l.kbdConfirm),
+        ),
+      ],
+    );
+  }
+
+  // ── Text bar: genel metin girişi için (profil, yorum, arama...) ─────────────
+  Widget _buildTextBar(BuildContext context, AppLocalizations l) {
+    return Row(
+      children: [
+        Expanded(
+          child: widget.isObscure
+              ? const SizedBox.shrink()
+              : GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: _onTapDown,
+                  child: SizedBox(
+                    height: 28,
+                    child: SingleChildScrollView(
+                      controller: _scrollCtrl,
+                      scrollDirection: Axis.horizontal,
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: widget.controller,
+                        builder: (context, value, _) {
+                          if (value.text.isEmpty) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                AppLocalizations.of(context)!.kbdTypingHint,
+                                style: _textStyle.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                  color: AppColors.textTertiary(context),
+                                ),
+                              ),
+                            );
+                          }
+
+                          final cursorPos = value.selection.baseOffset
+                              .clamp(0, value.text.length);
+                          final textBefore = value.text.substring(0, cursorPos);
+                          final textAfter = value.text.substring(cursorPos);
+
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                textBefore,
+                                style: _textStyle.copyWith(
+                                  color: AppColors.textPrimary(context),
+                                ),
+                              ),
+                              Container(
+                                width: 1.5,
+                                height: 18,
+                                color: kPrimary,
+                              ),
+                              Text(
+                                textAfter,
+                                style: _textStyle.copyWith(
+                                  color: AppColors.textPrimary(context),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+        const SizedBox(width: 12),
+        TextButton(
+          key: const Key('keyboard_accessory_btn_kapat'),
+          onPressed: _dismiss,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            foregroundColor: AppColors.textSecondary(context),
+          ),
+          child: Text(
+            l.kbdDismiss,
+            style: const TextStyle(
+              decoration: TextDecoration.none,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

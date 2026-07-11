@@ -78,11 +78,11 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Hesabınıza hızlı ve güvenli giriş yapmak için Face ID kullanılır</string>
 	<key>NSCameraUsageDescription</key>
-		<string>Canlı yayın ve ilan fotoğrafı için kameranıza erişim gerekiyor</string>
+		<string>Canlı yayın, ilan fotoğrafı ve mesajlaşma için kameranıza erişim gerekiyor</string>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>İlan fotoğrafı eklemek için fotoğraf kitaplığınıza erişim gerekiyor</string>
+		<string>İlan fotoğrafı eklemek ve mesajlarda görsel göndermek için fotoğraf kitaplığınıza erişim gerekiyor</string>
 		<key>NSMicrophoneUsageDescription</key>
-		<string>Canlı yayın için mikrofonunuza erişim gerekiyor</string>
+		<string>Canlı yayın ve sesli mesaj göndermek için mikrofonunuza erişim gerekiyor</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UILaunchStoryboardName</key>

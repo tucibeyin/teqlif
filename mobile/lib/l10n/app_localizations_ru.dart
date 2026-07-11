@@ -655,6 +655,81 @@ class AppLocalizationsRu extends AppLocalizations {
   String get kbdDismiss => 'Готово';
 
   @override
+  String get kbdConfirm => 'Подтвердить';
+
+  @override
+  String get kbdAmountHint => 'Введите сумму';
+
+  @override
+  String get voiceSwipeToCancel => 'Проведите для отмены';
+
+  @override
+  String get voicePermissionDenied =>
+      'Доступ к микрофону запрещён. Разрешите в настройках.';
+
+  @override
+  String get voiceRecordFailed => 'Не удалось начать запись';
+
+  @override
+  String get voiceMaxDuration => 'Максимум 10 секунд';
+
+  @override
+  String get voiceSendFailed => 'Не удалось отправить голосовое сообщение';
+
+  @override
+  String get voicePlayFailed => 'Не удалось воспроизвести аудио';
+
+  @override
+  String get attachPickGallery => 'Галерея';
+
+  @override
+  String get attachPickCamera => 'Камера';
+
+  @override
+  String get attachPickFile => 'Файл';
+
+  @override
+  String get attachFileTooLarge => 'Файл не может превышать 5 МБ';
+
+  @override
+  String get attachTypeNotSupported => 'Тип файла не поддерживается';
+
+  @override
+  String get attachSendFailed => 'Не удалось отправить файл';
+
+  @override
+  String get attachOpenFailed => 'Не удалось открыть файл';
+
+  @override
+  String get attachCameraPermission =>
+      'Доступ к камере запрещён. Разрешите в настройках.';
+
+  @override
+  String get attachGalleryPermission =>
+      'Доступ к галерее запрещён. Разрешите в настройках.';
+
+  @override
+  String get attachUploading => 'Загрузка...';
+
+  @override
+  String get errFileTooLarge => 'Файл слишком большой (макс. 5 МБ)';
+
+  @override
+  String get errUnsupportedType => 'Неподдерживаемый тип файла';
+
+  @override
+  String get errNetworkRetry => 'Ошибка соединения. Попробуйте снова.';
+
+  @override
+  String get liveStickerPicker => 'Стикеры';
+
+  @override
+  String get attachVideoTooLong => 'Видео не может превышать 15 секунд';
+
+  @override
+  String get attachVideoProcessing => 'Обработка видео...';
+
+  @override
   String get msgDeleteMessage => 'Удалить сообщение';
 
   @override
@@ -4430,6 +4505,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String notifMessage(String username) {
     return '@$username прислал(-а) вам сообщение';
   }
+
+  @override
+  String get notifMessageVoice => '🎵 Голосовое сообщение';
+
+  @override
+  String get notifMessageImage => '📷 Фото';
+
+  @override
+  String get notifMessageVideo => '🎬 Видео';
+
+  @override
+  String get notifMessageFile => '📎 Файл';
 
   @override
   String notifNewListing(String username) {

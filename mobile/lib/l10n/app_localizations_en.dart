@@ -649,6 +649,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kbdDismiss => 'Done';
 
   @override
+  String get kbdConfirm => 'Confirm';
+
+  @override
+  String get kbdAmountHint => 'Enter amount';
+
+  @override
+  String get voiceSwipeToCancel => 'Slide to cancel';
+
+  @override
+  String get voicePermissionDenied =>
+      'Microphone access denied. Allow it in Settings.';
+
+  @override
+  String get voiceRecordFailed => 'Failed to start recording';
+
+  @override
+  String get voiceMaxDuration => 'Maximum 10 seconds';
+
+  @override
+  String get voiceSendFailed => 'Failed to send voice message';
+
+  @override
+  String get voicePlayFailed => 'Failed to play audio';
+
+  @override
+  String get attachPickGallery => 'Gallery';
+
+  @override
+  String get attachPickCamera => 'Camera';
+
+  @override
+  String get attachPickFile => 'File';
+
+  @override
+  String get attachFileTooLarge => 'File cannot exceed 5 MB';
+
+  @override
+  String get attachTypeNotSupported => 'File type not supported';
+
+  @override
+  String get attachSendFailed => 'Failed to send file';
+
+  @override
+  String get attachOpenFailed => 'Failed to open file';
+
+  @override
+  String get attachCameraPermission =>
+      'Camera access denied. Allow it in Settings.';
+
+  @override
+  String get attachGalleryPermission =>
+      'Gallery access denied. Allow it in Settings.';
+
+  @override
+  String get attachUploading => 'Uploading...';
+
+  @override
+  String get errFileTooLarge => 'File too large (max 5 MB)';
+
+  @override
+  String get errUnsupportedType => 'Unsupported file type';
+
+  @override
+  String get errNetworkRetry => 'Connection error. Try again.';
+
+  @override
+  String get liveStickerPicker => 'Stickers';
+
+  @override
+  String get attachVideoTooLong => 'Video cannot exceed 15 seconds';
+
+  @override
+  String get attachVideoProcessing => 'Processing video...';
+
+  @override
   String get msgDeleteMessage => 'Delete Message';
 
   @override
@@ -4379,6 +4454,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String notifMessage(String username) {
     return '@$username sent you a message';
   }
+
+  @override
+  String get notifMessageVoice => '🎵 Voice message';
+
+  @override
+  String get notifMessageImage => '📷 Photo';
+
+  @override
+  String get notifMessageVideo => '🎬 Video';
+
+  @override
+  String get notifMessageFile => '📎 File';
 
   @override
   String notifNewListing(String username) {

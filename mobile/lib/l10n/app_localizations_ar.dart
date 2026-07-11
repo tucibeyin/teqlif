@@ -646,6 +646,81 @@ class AppLocalizationsAr extends AppLocalizations {
   String get kbdDismiss => 'تم';
 
   @override
+  String get kbdConfirm => 'تأكيد';
+
+  @override
+  String get kbdAmountHint => 'أدخل المبلغ';
+
+  @override
+  String get voiceSwipeToCancel => 'مرر للإلغاء';
+
+  @override
+  String get voicePermissionDenied =>
+      'تم رفض الوصول إلى الميكروفون. اسمح به في الإعدادات.';
+
+  @override
+  String get voiceRecordFailed => 'تعذّر بدء التسجيل';
+
+  @override
+  String get voiceMaxDuration => 'الحد الأقصى 10 ثوانٍ';
+
+  @override
+  String get voiceSendFailed => 'تعذّر إرسال الرسالة الصوتية';
+
+  @override
+  String get voicePlayFailed => 'تعذّر تشغيل الصوت';
+
+  @override
+  String get attachPickGallery => 'المعرض';
+
+  @override
+  String get attachPickCamera => 'الكاميرا';
+
+  @override
+  String get attachPickFile => 'ملف';
+
+  @override
+  String get attachFileTooLarge => 'لا يمكن أن يتجاوز الملف 5 ميغابايت';
+
+  @override
+  String get attachTypeNotSupported => 'نوع الملف غير مدعوم';
+
+  @override
+  String get attachSendFailed => 'تعذّر إرسال الملف';
+
+  @override
+  String get attachOpenFailed => 'تعذّر فتح الملف';
+
+  @override
+  String get attachCameraPermission =>
+      'تم رفض الوصول إلى الكاميرا. اسمح به في الإعدادات.';
+
+  @override
+  String get attachGalleryPermission =>
+      'تم رفض الوصول إلى المعرض. اسمح به في الإعدادات.';
+
+  @override
+  String get attachUploading => 'جارٍ التحميل...';
+
+  @override
+  String get errFileTooLarge => 'الملف كبير جداً (الحد الأقصى 5 ميغابايت)';
+
+  @override
+  String get errUnsupportedType => 'نوع الملف غير مدعوم';
+
+  @override
+  String get errNetworkRetry => 'خطأ في الاتصال. حاول مجدداً.';
+
+  @override
+  String get liveStickerPicker => 'الملصقات';
+
+  @override
+  String get attachVideoTooLong => 'لا يمكن أن يتجاوز الفيديو 15 ثانية';
+
+  @override
+  String get attachVideoProcessing => 'جارٍ معالجة الفيديو...';
+
+  @override
   String get msgDeleteMessage => 'حذف الرسالة';
 
   @override
@@ -4354,6 +4429,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String notifMessage(String username) {
     return 'أرسل @$username رسالة إليك';
   }
+
+  @override
+  String get notifMessageVoice => '🎵 رسالة صوتية';
+
+  @override
+  String get notifMessageImage => '📷 صورة';
+
+  @override
+  String get notifMessageVideo => '🎬 فيديو';
+
+  @override
+  String get notifMessageFile => '📎 ملف';
 
   @override
   String notifNewListing(String username) {
