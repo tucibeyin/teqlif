@@ -38,7 +38,7 @@ from datetime import timedelta
 # Backend modüllerini path'e ekle
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy import select, update as sa_update, func, text, and_, or_
+from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
@@ -49,7 +49,9 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# ── Modeller ────────────────────────────────────────────────────────────────
+# ── Uygulama config + modeller ───────────────────────────────────────────────
+
+from app.config import settings  # gerçek DATABASE_URL buradan geliyor
 
 import app.models.user
 import app.models.listing
@@ -194,11 +196,7 @@ async def backfill_mass_notifications(session: AsyncSession, dry_run: bool) -> d
 # ── Ana fonksiyon ────────────────────────────────────────────────────────────
 
 async def main(dry_run: bool):
-    db_url = os.environ.get(
-        "DATABASE_URL",
-        "postgresql+asyncpg://teqlif:teqlif@localhost:5432/teqlif",
-    )
-    engine = create_async_engine(db_url, echo=False)
+    engine = create_async_engine(settings.database_url, echo=False)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     mode = "DRY-RUN" if dry_run else "CANLI"
