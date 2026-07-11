@@ -93,52 +93,84 @@ async def main():
     set_pool(arq_pool)
     ok(f"ARQ pool başlatıldı → {app_settings.redis_url[:30]}…")
 
-    # ── 4. push_notification() — tam pipeline ────────────────────────────────
-    hdr("4. push_notification() — ARQ Pipeline Testi")
+    # ── 4a. ARQ Pool — doğrudan enqueue testi ────────────────────────────────
+    hdr("4a. ARQ Pool — doğrudan enqueue_job testi")
+
+    q0 = await redis.llen("arq:queue:default")
+    info(f"Kuyruk ÖNCE: {q0}")
+    job = await arq_pool.enqueue_job(
+        "send_push_notification_task",
+        receiver.fcm_token,
+        f"[ARQ Direct Test] {sender_username}",
+        "ARQ pool doğrudan enqueue testi",
+        None, "message",
+        {"sender_username": sender_username},
+        None,
+    )
+    await asyncio.sleep(0.3)
+    q1 = await redis.llen("arq:queue:default")
+    info(f"Kuyruk SONRA: {q1} (job_id={getattr(job, 'job_id', '?')})")
+    if q1 > q0 or job:
+        ok("ARQ pool çalışıyor — iş kuyruğa eklendi veya anında işlendi")
+        direct_arq_ok = True
+    else:
+        warn("ARQ pool enqueue başarısız olmuş olabilir")
+        direct_arq_ok = False
+
+    # ── 4b. push_notification() — tam pipeline ────────────────────────────────
+    hdr("4b. push_notification() — tam pipeline (bildirim tercihleri + ARQ)")
 
     from app.routers.notifications import push_notification
 
-    queued_before = await redis.llen("arq:queue:default")
-    info(f"ARQ kuyruk ÖNCE: {queued_before} iş")
+    # Kullanıcının bildirim tercihlerini kontrol et
+    from app.schemas.user import DEFAULT_NOTIF_PREFS
+    async with AsyncSessionLocal() as db:
+        u = await db.get(User, receiver.id)
+        prefs = u.notification_prefs or {}
+        merged = {**DEFAULT_NOTIF_PREFS, **prefs}
+    info(f"messages tercihi: {merged.get('messages', True)}")
+    info(f"quiet_hours_enabled: {merged.get('quiet_hours_enabled', False)}")
+    if not merged.get("messages", True):
+        err("'messages' bildirimleri KAPALI! push_notification() erken return edecek")
+    else:
+        ok("messages bildirimleri açık")
 
-    info("push_notification() çağrılıyor…")
-    await push_notification(
-        receiver.id,
-        {
-            "type": "message",
-            "body": f"[Diagnostik] {sender_username} → pipeline testi",
-            "sender_username": sender_username,
-        },
-        pref_key="messages",
-    )
+    q2 = await redis.llen("arq:queue:default")
+    info(f"Kuyruk ÖNCE: {q2}")
+    try:
+        await push_notification(
+            receiver.id,
+            {
+                "type": "message",
+                "body": f"[Diagnostik] {sender_username} → pipeline testi",
+                "sender_username": sender_username,
+            },
+            pref_key="messages",
+        )
+        ok("push_notification() tamamlandı (exception yok)")
+    except Exception as exc:
+        err(f"push_notification() hata fırlattı: {exc}")
 
-    # Worker çok hızlı işlerse kuyruğu birden fazla kez örnekle
     samples = []
     for _ in range(5):
         await asyncio.sleep(0.2)
         samples.append(await redis.llen("arq:queue:default"))
-    queued_after = samples[-1]
     peak = max(samples)
-    diff = queued_after - queued_before
-    info(f"ARQ kuyruk örnekleri: {samples} (zirve={peak})")
+    diff = peak - q2
+    info(f"Kuyruk örnekleri: {samples} (zirve={peak}, delta={diff:+d})")
 
-    if peak > queued_before:
-        ok(f"Kuyruğa iş eklendi (zirve={peak}) — worker işledi")
-        info("Worker logları: sudo journalctl -u teqlif-worker --no-pager | grep -E '\\[FCM\\]|\\[Worker\\]' | tail -5")
+    if peak > q2:
+        ok(f"push_notification() → ARQ kuyruğuna eklendi (worker işledi)")
     else:
-        warn("ARQ kuyruğuna iş EKLENMEDİ")
-        info("Son [PUSH] logları:")
+        warn("push_notification() → ARQ kuyruğuna iş eklenmedi")
         import subprocess
         r = subprocess.run(
-            ["journalctl", "-u", "teqlif", "--no-pager", "-n", "20"],
+            ["journalctl", "-u", "teqlif-worker", "--no-pager", "-n", "10"],
             capture_output=True, text=True
         )
-        push_lines = [l for l in r.stdout.splitlines() if "[PUSH]" in l]
-        if push_lines:
-            for l in push_lines[-5:]:
-                print(f"    {l}")
-        else:
-            warn("  journalctl'de [PUSH] log bulunamadı")
+        for line in r.stdout.splitlines()[-10:]:
+            if any(k in line for k in ["[FCM]", "[Worker]", "[PUSH]", "Error", "error"]):
+                print(f"    {line}")
 
     # ── 5. send_push() — doğrudan Firebase ───────────────────────────────────
     hdr("5. send_push() — Doğrudan Firebase (ARQ bypass)")
@@ -195,7 +227,7 @@ async def main():
             "type": "message",
             "body": msg_content,
             "sender_username": sender_username,
-            "related_id": str(msg.id),
+            "related_id": msg.id,
         },
         pref_key="messages",
     )
