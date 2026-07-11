@@ -1,18 +1,21 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import 'storage_service.dart';
+import 'call_service.dart';
 import '../config/api.dart';
 
 // ─── Action IDs ──────────────────────────────────────────────────────────────
 
-const _kActionAccept = 'call_accept';
+const _kActionAccept  = 'call_accept';
 const _kActionDecline = 'call_decline';
-const _kChannelCalls = 'incoming_calls';
-const _kCategoryCall = 'incoming_call_category';
+const _kChannelCalls  = 'incoming_calls';
+const _kCategoryCall  = 'incoming_call_category';
 
 // ─── Plugin singleton ─────────────────────────────────────────────────────────
 
@@ -22,33 +25,75 @@ final FlutterLocalNotificationsPlugin _flnp = FlutterLocalNotificationsPlugin();
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('[FCM][BG] type=${message.data['type']}');
+  debugPrint('[FCM][BG] mesaj geldi | type=${message.data['type']} | keys=${message.data.keys.toList()}');
 
   if (message.data['type'] == 'incoming_call') {
+    debugPrint('[FCM][BG] incoming_call işleniyor | call_id=${message.data['call_id']}');
+    // Flutter binding'i background isolate için başlat
+    WidgetsFlutterBinding.ensureInitialized();
     await _showCallNotification(
-      callId: message.data['call_id'] ?? '',
+      callId:         message.data['call_id']         ?? '',
       callerUsername: message.data['caller_username'] ?? '',
+      callerAvatar:   message.data['caller_avatar']   ?? '',
+      callerId:       message.data['caller_id']       ?? '',
+      roomName:       message.data['room_name']       ?? '',
+      livekitUrl:     message.data['livekit_url']     ?? '',
     );
+  } else {
+    debugPrint('[FCM][BG] arama dışı type, işlem yok');
   }
 }
 
-/// Show a local call notification with Accept/Decline action buttons.
+/// Yerel bildirim göster — background isolate veya foreground'dan çağrılabilir.
 Future<void> _showCallNotification({
   required String callId,
   required String callerUsername,
+  String callerAvatar = '',
+  String callerId     = '',
+  String roomName     = '',
+  String livekitUrl   = '',
 }) async {
+  debugPrint('[FLNP] _showCallNotification başlıyor | callId=$callId | caller=$callerUsername');
+
   const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const iosInit = DarwinInitializationSettings();
-  await _flnp.initialize(const InitializationSettings(android: androidInit, iOS: iosInit));
+  const iosInit     = DarwinInitializationSettings();
+  final initOk = await _flnp.initialize(
+    const InitializationSettings(android: androidInit, iOS: iosInit),
+  );
+  debugPrint('[FLNP] initialize sonucu: $initOk');
+
+  // Önce kanalı oluştur
+  const channel = AndroidNotificationChannel(
+    _kChannelCalls,
+    'Gelen Aramalar',
+    description: 'Sesli arama bildirimleri',
+    importance: Importance.max,
+    enableVibration: true,
+    playSound: true,
+  );
+  final androidPlugin = _flnp.resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>();
+  await androidPlugin?.createNotificationChannel(channel);
+  debugPrint('[FLNP] Android kanalı oluşturuldu');
+
+  // Payload olarak tüm call datasını JSON'a kodla
+  final payload = jsonEncode({
+    'call_id':         callId,
+    'caller_id':       callerId,
+    'caller_username': callerUsername,
+    'caller_avatar':   callerAvatar,
+    'room_name':       roomName,
+    'livekit_url':     livekitUrl,
+  });
 
   const androidDetails = AndroidNotificationDetails(
     _kChannelCalls,
     'Gelen Aramalar',
     channelDescription: 'Sesli arama bildirimleri',
-    importance: Importance.max,
-    priority: Priority.max,
-    fullScreenIntent: true,
-    category: AndroidNotificationCategory.call,
+    importance:         Importance.max,
+    priority:           Priority.max,
+    fullScreenIntent:   true,
+    category:           AndroidNotificationCategory.call,
     actions: [
       AndroidNotificationAction(
         _kActionDecline,
@@ -74,52 +119,66 @@ Future<void> _showCallNotification({
     callerUsername,
     'Sesli arama geliyor...',
     const NotificationDetails(android: androidDetails, iOS: iosDetails),
-    payload: callId,
+    payload: payload,
   );
+  debugPrint('[FLNP] Bildirim gösterildi | id=${callId.hashCode}');
 }
 
 // ─── Background notification action handler (separate isolate) ───────────────
 
 @pragma('vm:entry-point')
 Future<void> _backgroundNotifResponseHandler(NotificationResponse response) async {
-  final callId = response.payload;
-  if (callId == null || callId.isEmpty) return;
+  debugPrint('[FLNP][BG] action=${response.actionId} | payload=${response.payload}');
+
+  final raw = response.payload;
+  if (raw == null || raw.isEmpty) return;
+
+  Map<String, dynamic> data;
+  try {
+    data = jsonDecode(raw) as Map<String, dynamic>;
+  } catch (_) {
+    // Eski format: sadece callId string
+    data = {'call_id': raw};
+  }
+  final callId = data['call_id']?.toString() ?? '';
+  if (callId.isEmpty) return;
 
   if (response.actionId == _kActionDecline) {
-    // Reject call via API directly — no app state available here.
+    debugPrint('[FLNP][BG] Reddet aksiyonu — API çağrısı yapılıyor');
     try {
       final token = await StorageService.getToken();
       if (token != null) {
-        await http.post(
+        final r = await http.post(
           Uri.parse('$kBaseUrl/calls/$callId/reject'),
           headers: {'Authorization': 'Bearer $token'},
         );
+        debugPrint('[FLNP][BG] reject yanıtı: ${r.statusCode}');
+      } else {
+        debugPrint('[FLNP][BG] Token bulunamadı — reject yapılamadı');
       }
     } catch (e) {
-      debugPrint('[FCM][BG] Call reject failed: $e');
+      debugPrint('[FLNP][BG] reject hatası: $e');
     }
   }
-  // Accept action: app opens via showsUserInterface:true,
-  // IncomingCallOverlay handles it through notificationStream.
+  // Kabul Et aksiyonu veya normal tap: showsUserInterface:true ile app açılır.
+  // Foreground handler _onNotifResponse devralır.
 }
 
 // ─── PushNotificationService ──────────────────────────────────────────────────
 
 class PushNotificationService {
   static final _messaging = FirebaseMessaging.instance;
-  static bool _earlyDone = false;
-  static bool _fullDone = false;
+  static bool _earlyDone  = false;
+  static bool _fullDone   = false;
   static bool _tokenForcedRefreshed = false;
 
-  /// Gelen FCM mesaj verisini broadcast eden stream.
+  /// Gelen FCM + yerel bildirim verilerini broadcast eden stream.
   static final StreamController<Map<String, dynamic>> notificationStream =
       StreamController<Map<String, dynamic>>.broadcast();
 
-  /// Badge güncellenmesi gerektiğinde sinyal gönderir.
   static final StreamController<void> badgeRefreshNeeded =
       StreamController<void>.broadcast();
 
-  /// Cold-start: uygulama kapalıyken tıklanan bildirimin verisi.
   static Map<String, dynamic>? _pendingNavData;
 
   static Map<String, dynamic>? consumePendingNavigation() {
@@ -128,7 +187,7 @@ class PushNotificationService {
     return data;
   }
 
-  /// main() içinde çağrılmalı — background handler + foreground options.
+  /// main() içinde çağrılmalı — background handler + yerel bildirim kurulumu.
   static Future<void> initEarly() async {
     if (_earlyDone) return;
     _earlyDone = true;
@@ -137,12 +196,10 @@ class PushNotificationService {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     await _messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
+      alert: true, badge: true, sound: true,
     );
 
-    // ── flutter_local_notifications setup ──────────────────────────────────
+    // ── flutter_local_notifications kurulumu ─────────────────────────────────
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     final iosInit = DarwinInitializationSettings(
       notificationCategories: [
@@ -150,90 +207,114 @@ class PushNotificationService {
           _kCategoryCall,
           actions: [
             DarwinNotificationAction.plain(
-              _kActionDecline,
-              'Reddet',
+              _kActionDecline, 'Reddet',
               options: {DarwinNotificationActionOption.destructive},
             ),
-            DarwinNotificationAction.plain(
-              _kActionAccept,
-              'Kabul Et',
-            ),
+            DarwinNotificationAction.plain(_kActionAccept, 'Kabul Et'),
           ],
         ),
       ],
     );
     await _flnp.initialize(
       InitializationSettings(android: androidInit, iOS: iosInit),
-      onDidReceiveNotificationResponse: _onNotifResponse,
+      onDidReceiveNotificationResponse:           _onNotifResponse,
       onDidReceiveBackgroundNotificationResponse: _backgroundNotifResponseHandler,
     );
+    debugPrint('[FLNP] Ana izolat: initialize tamamlandı');
 
-    // Create Android notification channel for calls
+    // Android kanalı
     const callChannel = AndroidNotificationChannel(
-      _kChannelCalls,
-      'Gelen Aramalar',
+      _kChannelCalls, 'Gelen Aramalar',
       description: 'Sesli arama bildirimleri',
       importance: Importance.max,
     );
     final androidPlugin = _flnp.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(callChannel);
-    // ──────────────────────────────────────────────────────────────────────
+    debugPrint('[FLNP] Ana izolat: Android kanalı oluşturuldu');
+    // ─────────────────────────────────────────────────────────────────────────
 
+    // Foreground FCM
     FirebaseMessaging.onMessage.listen((msg) {
-      debugPrint('[FCM] Foreground mesaj | type=${msg.data['type']}');
-      final data = msg.data.isEmpty ? <String, dynamic>{} : Map<String, dynamic>.from(msg.data);
+      debugPrint('[FCM] Foreground | type=${msg.data['type']}');
+      final data = Map<String, dynamic>.from(msg.data);
       if (data['type'] == 'incoming_call') {
-        // Foreground call: directly route — no local notification needed
-        notificationStream.add(data);
-      } else {
-        notificationStream.add(data);
+        debugPrint('[FCM] Foreground incoming_call — stream\'e ekleniyor');
       }
+      notificationStream.add(data);
     });
 
+    // Background → tap
     FirebaseMessaging.onMessageOpenedApp.listen((msg) {
       debugPrint('[FCM] Background tap | type=${msg.data['type']}');
       notificationStream.add(Map<String, dynamic>.from(msg.data));
     });
 
+    // Killed state → FCM tap
     final initial = await _messaging.getInitialMessage();
     if (initial != null) {
-      debugPrint('[FCM] Cold-start tap | type=${initial.data['type']}');
+      debugPrint('[FCM] Cold-start FCM tap | type=${initial.data['type']} | data=${initial.data}');
       if (initial.data.isNotEmpty) {
         _pendingNavData = Map<String, dynamic>.from(initial.data);
         Future.microtask(() => notificationStream.add(_pendingNavData!));
       }
     } else {
-      debugPrint('[FCM] Cold-start: bildirim tıklaması yok');
+      debugPrint('[FCM] Cold-start: FCM tıklaması yok');
     }
 
-    // Check if app was opened by tapping local notification
+    // Killed state → yerel bildirim tap
     final launchDetails = await _flnp.getNotificationAppLaunchDetails();
+    debugPrint('[FLNP] launchDetails: didLaunch=${launchDetails?.didNotificationLaunchApp} '
+               '| actionId=${launchDetails?.notificationResponse?.actionId} '
+               '| payload=${launchDetails?.notificationResponse?.payload}');
     if (launchDetails?.didNotificationLaunchApp == true) {
-      final response = launchDetails!.notificationResponse;
-      if (response != null) {
-        Future.microtask(() => _onNotifResponse(response));
+      final resp = launchDetails!.notificationResponse;
+      if (resp != null) {
+        debugPrint('[FLNP] Yerel bildirim tıklamasıyla açıldı — _onNotifResponse çağrılıyor');
+        Future.microtask(() => _onNotifResponse(resp));
       }
     }
 
     debugPrint('[FCM] initEarly tamamlandı');
   }
 
-  /// Foreground or app-open notification response handler.
+  /// Foreground / app-open notification response handler.
   static void _onNotifResponse(NotificationResponse response) {
-    debugPrint('[FLNP] Notif response | actionId=${response.actionId} | payload=${response.payload}');
-    final callId = response.payload;
-    if (callId == null || callId.isEmpty) return;
+    debugPrint('[FLNP] _onNotifResponse | actionId=${response.actionId} | payload=${response.payload}');
+    final raw = response.payload;
+    if (raw == null || raw.isEmpty) return;
+
+    Map<String, dynamic> data;
+    try {
+      data = jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      data = {'call_id': raw};
+    }
+    final callId = data['call_id']?.toString() ?? '';
+    if (callId.isEmpty) {
+      debugPrint('[FLNP] Payload\'da call_id yok — işlem yok');
+      return;
+    }
+
+    debugPrint('[FLNP] call_id=$callId | action=${response.actionId}');
 
     if (response.actionId == _kActionDecline) {
-      // Decline in foreground — fire and forget
+      debugPrint('[FLNP] Reddet tıklandı — API çağrısı yapılıyor');
       _rejectCallById(callId);
     } else {
-      // Accept or direct tap: route to IncomingCallScreen via stream
-      notificationStream.add({
-        'type': 'incoming_call_notification_tap',
-        'call_id': callId,
+      // Kabul Et aksiyonu veya normal tap → CallService state'i kur + stream'e gönder
+      debugPrint('[FLNP] Kabul/tap — CallService.onIncomingCall çağrılıyor');
+      // State'i direkt kur; IncomingCallOverlay addPostFrameCallback ile alır
+      CallService.instance.onIncomingCall({
+        ...data,
+        'type': 'incoming_call',
       });
+      if (response.actionId == _kActionAccept) {
+        // Direkt kabul: stream üzerinden IncomingCallOverlay'e sinyal
+        debugPrint('[FLNP] Kabul Et aksiyonu — accept akışı başlatılıyor');
+        notificationStream.add({...data, 'type': 'incoming_call_auto_accept'});
+      }
+      // Normal tap: IncomingCallScreen açılsın
     }
   }
 
@@ -241,55 +322,46 @@ class PushNotificationService {
     try {
       final token = await StorageService.getToken();
       if (token != null) {
-        await http.post(
+        final r = await http.post(
           Uri.parse('$kBaseUrl/calls/$callId/reject'),
           headers: {'Authorization': 'Bearer $token'},
         );
+        debugPrint('[FLNP] reject yanıtı: ${r.statusCode}');
       }
     } catch (e) {
-      debugPrint('[FCM] Call reject failed: $e');
+      debugPrint('[FLNP] reject hatası: $e');
     }
   }
 
   /// Kullanıcı giriş yaptıktan sonra çağrılmalı.
-  /// İzin ister, FCM token alır ve backend'e kaydeder.
   static Future<void> initialize() async {
-    debugPrint('[FCM] initialize çağrıldı | earlyDone=$_earlyDone | fullDone=$_fullDone');
+    debugPrint('[FCM] initialize çağrıldı | fullDone=$_fullDone');
     await initEarly();
-    if (_fullDone) {
-      debugPrint('[FCM] initialize: zaten tamamlanmış, çıkılıyor');
-      return;
-    }
+    if (_fullDone) return;
     _fullDone = true;
 
     final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
+      alert: true, badge: true, sound: true,
     );
-
-    debugPrint('[FCM] İzin durumu: ${settings.authorizationStatus}');
+    debugPrint('[FCM] İzin: ${settings.authorizationStatus}');
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
-      _messaging.onTokenRefresh.listen((newToken) {
-        debugPrint('[FCM] Token yenilendi, backend güncelleniyor');
-        _sendTokenToBackend(newToken);
+      _messaging.onTokenRefresh.listen((t) {
+        debugPrint('[FCM] Token yenilendi');
+        _sendTokenToBackend(t);
       });
       await _registerToken();
-    } else {
-      debugPrint('[FCM] Push izni verilmedi: ${settings.authorizationStatus}');
     }
   }
 
-  /// Token yenileme — kullanıcı değiştiğinde veya uygulama güncellendiğinde.
   static Future<void> refreshToken() async {
-    debugPrint('[FCM] refreshToken çağrıldı');
+    debugPrint('[FCM] refreshToken');
     if (!_tokenForcedRefreshed) {
       _tokenForcedRefreshed = true;
       try {
         await _messaging.deleteToken();
-        debugPrint('[FCM] Eski token silindi — taze token alınacak');
+        debugPrint('[FCM] Eski token silindi');
       } catch (e) {
         debugPrint('[FCM] Token silinemedi: $e');
       }
@@ -301,23 +373,15 @@ class PushNotificationService {
     try {
       if (!kIsWeb) {
         try {
-          final apnsToken = await _messaging.getAPNSToken();
-          debugPrint('[FCM] APNS token: ${apnsToken != null ? "${apnsToken.substring(0, 12)}…" : "NULL"}');
-          if (apnsToken == null) {
-            debugPrint('[FCM] UYARI: APNS token null — iOS push çalışmayabilir!');
-          }
+          final apns = await _messaging.getAPNSToken();
+          debugPrint('[FCM] APNS: ${apns != null ? "${apns.substring(0, 12)}…" : "NULL"}');
         } catch (e) {
           debugPrint('[FCM] APNS token alınamadı: $e');
         }
       }
-
       final token = await _messaging.getToken();
       debugPrint('[FCM] FCM token: ${token != null ? "${token.substring(0, 20)}…" : "NULL"}');
-      if (token != null) {
-        await _sendTokenToBackend(token);
-      } else {
-        debugPrint('[FCM] HATA: FCM token null — push bildirimleri çalışmayacak!');
-      }
+      if (token != null) await _sendTokenToBackend(token);
     } catch (e) {
       debugPrint('[FCM] Token alınamadı: $e');
     }
@@ -325,11 +389,10 @@ class PushNotificationService {
 
   static Future<void> _sendTokenToBackend(String token) async {
     try {
-      debugPrint('[FCM] Token backend\'e gönderiliyor: ${token.substring(0, 20)}…');
       await AuthService.saveFcmToken(token);
       debugPrint('[FCM] Token backend\'e kaydedildi ✓');
     } catch (e) {
-      debugPrint('[FCM] Token backend\'e gönderilemedi: $e');
+      debugPrint('[FCM] Token gönderilemedi: $e');
     }
   }
 }

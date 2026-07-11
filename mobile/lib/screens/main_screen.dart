@@ -22,6 +22,7 @@ import 'live/swipe_live_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/offline_banner.dart';
 import '../widgets/incoming_call_overlay.dart';
+import '../services/call_service.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -299,15 +300,27 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         }
         break;
 
-      // ── Gelen arama — IncomingCallOverlay kendi stream'ini dinler ─────────
+      // ── Gelen arama ───────────────────────────────────────────────────────
       case 'incoming_call':
       case 'call_incoming':
+        // Cold-start fix: push_notification_service zaten CallService'i haberdar etti
+        // ama eğer FCM tap üzerinden geldiyse (pendingNavData) burada da kur.
+        debugPrint('[Nav] incoming_call alındı | call_id=${data['call_id']} | status=${CallService.instance.state.value.status}');
+        if (CallService.instance.state.value.status == CallStatus.idle &&
+            data['call_id'] != null) {
+          debugPrint('[Nav] CallService.onIncomingCall çağrılıyor (cold-start FCM tap)');
+          CallService.instance.onIncomingCall(data);
+        }
+        break;
+
       case 'call_accepted':
       case 'call_rejected':
       case 'call_ended':
       case 'call_missed':
       case 'incoming_call_notification_tap':
-        // Handled by IncomingCallOverlay — no navigation needed here.
+      case 'incoming_call_auto_accept':
+        // IncomingCallOverlay kendi stream'ini dinler.
+        debugPrint('[Nav] call event alındı: $type — IncomingCallOverlay devralacak');
         break;
 
       // ── new_bid: host HostStreamScreen'de zaten görüyor, nav gerekmez ───

@@ -6,7 +6,7 @@ import '../screens/incoming_call_screen.dart';
 import '../screens/call_screen.dart';
 
 /// Mount this widget once (in MainScreen) to listen for incoming call events
-/// from both the WS channel and FCM foreground messages.
+/// from both the WS channel and FCM foreground / local notification taps.
 class IncomingCallOverlay extends StatefulWidget {
   final Widget child;
   const IncomingCallOverlay({super.key, required this.child});
@@ -22,68 +22,101 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   void initState() {
     super.initState();
     _notifSub = PushNotificationService.notificationStream.stream.listen(_onData);
-
-    // Also react to CallService state changes triggered by WS inside ws_service
     CallService.instance.state.addListener(_onCallState);
+    debugPrint('[Overlay] initState — mevcut status=${CallService.instance.state.value.status}');
+
+    // Cold-start: CallService zaten ringing olabilir (push_notification_service veya
+    // main_screen._handleNotifNavigation tarafından kuruldu)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final status = CallService.instance.state.value.status;
+      debugPrint('[Overlay] postFrameCallback — status=$status');
+      if (status == CallStatus.ringing) {
+        debugPrint('[Overlay] Zaten ringing — IncomingCallScreen açılıyor');
+        _openIncomingScreen();
+      }
+    });
   }
 
   void _onData(Map<String, dynamic> data) {
     final type = data['type'] as String?;
-    if (type == 'incoming_call' || type == 'call_incoming') {
-      CallService.instance.onIncomingCall(data);
-      // _onCallState listener will open the screen when status becomes ringing
-    } else if (type == 'incoming_call_notification_tap') {
-      // User tapped local notification — show screen if still ringing
-      if (CallService.instance.state.value.status == CallStatus.ringing) {
-        _openIncomingScreen();
-      }
-    } else if (type == 'call_accepted') {
-      CallService.instance.onCallAccepted(data);
-      _openCallScreen();
-    } else if (type == 'call_rejected') {
-      CallService.instance.onCallRejected();
-    } else if (type == 'call_ended') {
-      CallService.instance.onCallEnded();
-    } else if (type == 'call_missed') {
-      CallService.instance.onCallMissed();
+    debugPrint('[Overlay] _onData type=$type');
+
+    switch (type) {
+      case 'incoming_call':
+      case 'call_incoming':
+        // WS üzerinden gelen arama (foreground)
+        CallService.instance.onIncomingCall(data);
+        // _onCallState dinleyicisi status=ringing olunca ekranı açar
+
+      case 'incoming_call_notification_tap':
+        // Yerel bildirime tıklandı ama AcceptAction değil
+        // CallService zaten _onNotifResponse'da kuruldu; sadece ekranı aç
+        debugPrint('[Overlay] notification_tap — status=${CallService.instance.state.value.status}');
+        if (CallService.instance.state.value.status == CallStatus.ringing) {
+          _openIncomingScreen();
+        }
+
+      case 'incoming_call_auto_accept':
+        // Bildirimden "Kabul Et" butonuna basıldı — direkt CallScreen'e geç
+        debugPrint('[Overlay] auto_accept — CallScreen açılıyor');
+        _openCallScreenAndAccept();
+
+      case 'call_accepted':
+        // Karşı taraf kabul etti (caller side)
+        CallService.instance.onCallAccepted(data);
+        _openCallScreen();
+
+      case 'call_rejected':
+        CallService.instance.onCallRejected();
+
+      case 'call_ended':
+        CallService.instance.onCallEnded();
+
+      case 'call_missed':
+        CallService.instance.onCallMissed();
+
+      default:
+        break;
     }
   }
 
   void _onCallState() {
     final status = CallService.instance.state.value.status;
+    debugPrint('[Overlay] _onCallState — status=$status');
     if (status == CallStatus.ringing) {
       _openIncomingScreen();
-    } else if (status == CallStatus.connecting &&
-        _isCallerSide()) {
-      _openCallScreen();
     }
   }
 
-  bool _isCallerSide() {
-    // If we started the call (status was calling before connecting), we are caller.
-    // We track this by whether the CallScreen is already open — simple heuristic:
-    // the call_screen opens itself via onCallAccepted, so nothing extra needed here.
-    return false;
-  }
-
   void _openIncomingScreen() {
-    final data = {
-      'caller_username': CallService.instance.state.value.otherUsername ?? '',
-      'caller_avatar': CallService.instance.state.value.otherAvatar ?? '',
-      'call_id': CallService.instance.state.value.callId,
-    };
+    if (!mounted) return;
+    debugPrint('[Overlay] _openIncomingScreen');
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => IncomingCallScreen(callData: data),
+        builder: (_) => IncomingCallScreen(callData: {
+          'caller_username': CallService.instance.state.value.otherUsername ?? '',
+          'caller_avatar':   CallService.instance.state.value.otherAvatar   ?? '',
+          'call_id':         CallService.instance.state.value.callId,
+        }),
       ),
     );
   }
 
   void _openCallScreen() {
+    if (!mounted) return;
+    debugPrint('[Overlay] _openCallScreen');
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const CallScreen()),
     );
+  }
+
+  Future<void> _openCallScreenAndAccept() async {
+    if (!mounted) return;
+    debugPrint('[Overlay] _openCallScreenAndAccept — önce acceptCall');
+    await CallService.instance.acceptCall();
+    if (mounted) _openCallScreen();
   }
 
   @override
