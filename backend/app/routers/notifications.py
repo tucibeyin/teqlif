@@ -83,11 +83,14 @@ async def push_notification(
     i18n = notif.get("i18n")
     if i18n:
         t = _get_t(user_locale)
+        logger.warning("[I18N-DEBUG] locale=%s | title_key=%s | body_key=%s | t_keys_count=%s",
+                       user_locale, i18n.get("title_key"), i18n.get("body_key"), len(t))
         notif = {k: v for k, v in notif.items() if k != "i18n"}  # strip meta
 
         def _fmt(key: str, params: dict) -> str:
             raw = t.get(key, "")
             if not raw:
+                logger.warning("[I18N-DEBUG] ANAHTAR BULUNAMADI | key=%s | locale=%s", key, user_locale)
                 return ""
             # Resolve cat_* param values to localized category labels
             resolved = {
@@ -105,6 +108,7 @@ async def push_notification(
             notif["title"] = _fmt(title_key, i18n.get("title_params") or {})
         if body_key:
             notif["body"] = _fmt(body_key, i18n.get("body_params") or {})
+        logger.warning("[I18N-DEBUG] Çeviri sonucu | title=%r | body=%r", notif.get("title"), notif.get("body"))
 
     async with AsyncSessionLocal() as db:
         n = Notification(
