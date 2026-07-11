@@ -377,29 +377,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       ),
     );
     if (ok != true) return;
-    
-    // Satış kanıtı popup'ı (eğer widget.captureProofImage sağlanmışsa)
-    String? proofUrl;
-    if (widget.captureProofImage != null) {
-      debugPrint('[DEBUG_PROOF] Calling _showProofCaptureDialog from _endAuction');
-      proofUrl = await _showProofCaptureDialog();
-      debugPrint('[DEBUG_PROOF] _showProofCaptureDialog returned: $proofUrl');
-      // Dialog dışına tıklanarak kapatılırsa iptal etmiş sayılır (barrierDismissible false ama önlem olarak)
-      if (proofUrl == null) {
-        debugPrint('[DEBUG_PROOF] User cancelled proof capture for _endAuction');
-        return; 
-      }
-      if (proofUrl.isEmpty) {
-        debugPrint('[DEBUG_PROOF] User skipped proof capture for _endAuction');
-        proofUrl = null;
-      }
-    } else {
-      debugPrint('[DEBUG_PROOF] widget.captureProofImage is null in _endAuction');
-    }
-
     try {
-      debugPrint('[DEBUG_PROOF] Calling AuctionService.endAuction with proofImageUrl: $proofUrl');
-      final newState = await AuctionService.endAuction(widget.streamId, proofImageUrl: proofUrl);
+      final newState = await AuctionService.endAuction(widget.streamId);
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
