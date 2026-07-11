@@ -45,54 +45,70 @@ async def send_push(
     if not token:
         logger.error("[FCM] send_push çağrıldı ama token boş")
         return
+
+    # Circuit breaker state logu — açıksa push atlanır
+    from app.utils.redis_client import get_redis
     try:
-        await fcm_breaker.__aenter__()
+        redis = await get_redis()
+        cb_state = await redis.get("cb:fcm:state") or "closed"
+        cb_failures = await redis.get("cb:fcm:failures") or "0"
+        logger.info("[FCM] Circuit breaker durumu: state=%s failures=%s", cb_state, cb_failures)
+        if cb_state == "open":
+            logger.error("[FCM] UYARI: Circuit breaker OPEN — push atlanacak! token=%s…", token[:12])
+    except Exception as cb_exc:
+        logger.warning("[FCM] Circuit breaker kontrol edilemedi: %s", cb_exc)
+
+    # context manager kullan — __aenter__/__aexit__ manuel değil
+    try:
+        async with fcm_breaker:
+            app = _get_firebase_app()
+            if app is None:
+                logger.error("[FCM] Firebase app yok — push gönderilemiyor")
+                raise RuntimeError("Firebase app not initialized")
+
+            logger.info(
+                "[FCM] Push gönderiliyor | token=%s… | title=%r | type=%s | badge=%s",
+                token[:12], title, notif_type, badge,
+            )
+
+            from firebase_admin import messaging
+            data: dict[str, str] = {}
+            if notif_type:
+                data["type"] = notif_type
+            if extra_data:
+                data.update(extra_data)
+
+            msg = messaging.Message(
+                notification=messaging.Notification(title=title, body=body, image=image_url),
+                data=data,
+                token=token,
+                android=messaging.AndroidConfig(
+                    priority="high",
+                    notification=messaging.AndroidNotification(image=image_url) if image_url else None,
+                ),
+                apns=messaging.APNSConfig(
+                    headers={"apns-priority": "10"},
+                    payload=messaging.APNSPayload(
+                        aps=messaging.Aps(sound="default", badge=badge)
+                    ),
+                ),
+            )
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, messaging.send, msg
+            )
+            logger.info("[FCM] Push başarılı | message_id=%s | token=%s…", result, token[:12])
+
     except CircuitOpenError:
         logger.warning("[FCM] Circuit açık — push atlandı | token=%s…", token[:12])
         return
-    app = _get_firebase_app()
-    if app is None:
-        await fcm_breaker.__aexit__(Exception, Exception("no app"), None)
-        logger.error("[FCM] Firebase app yok — push gönderilemiyor")
-        return
-    logger.info("[FCM] Push gönderiliyor | token=%s… | title=%r | type=%s | badge=%s", token[:12], title, notif_type, badge)
-    try:
-        from firebase_admin import messaging
-        # data payload: Flutter tarafı bu alanı okuyarak UI'ı anında günceller
-        data: dict[str, str] = {}
-        if notif_type:
-            data["type"] = notif_type
-        if extra_data:
-            data.update(extra_data)
-        msg = messaging.Message(
-            notification=messaging.Notification(title=title, body=body, image=image_url),
-            data=data,
-            token=token,
-            android=messaging.AndroidConfig(
-                priority="high",
-                notification=messaging.AndroidNotification(image=image_url) if image_url else None,
-            ),
-            apns=messaging.APNSConfig(
-                headers={"apns-priority": "10"},
-                payload=messaging.APNSPayload(
-                    aps=messaging.Aps(sound="default", badge=badge)
-                ),
-            ),
-        )
-        result = await asyncio.get_event_loop().run_in_executor(
-            None, messaging.send, msg
-        )
-        logger.info("[FCM] Push başarılı | message_id=%s", result)
-        await fcm_breaker.__aexit__(None, None, None)
     except Exception as exc:
-        await fcm_breaker.__aexit__(type(exc), exc, None)
         # Token geçersiz/silinmiş → özel hata fırlat, worker DB'den temizler
         try:
             from firebase_admin import exceptions as fb_exceptions
             if isinstance(exc, fb_exceptions.NotFoundError):
+                logger.warning("[FCM] Geçersiz token: %s…", token[:12])
                 raise InvalidFCMTokenError(token) from exc
-        except InvalidFCMTokenError:
-            raise
         except ImportError:
             pass
-        logger.error("[FCM] Push başarısız | %s", exc)
+        logger.error("[FCM] Push başarısız | token=%s… | hata=%s", token[:12], exc, exc_info=True)
+        raise

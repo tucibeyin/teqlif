@@ -49,6 +49,9 @@ async def push_notification(
     from app.schemas.user import DEFAULT_NOTIF_PREFS
     from app.utils.i18n import _get_t
 
+    notif_type = notif.get("type", "?")
+    logger.info("[PUSH] push_notification çağrıldı | user_id=%s | type=%s | pref_key=%s", user_id, notif_type, pref_key)
+
     suppress_push = False  # True → DB'ye yaz ama FCM/WS gönderme
     user_locale = "tr"
 
@@ -116,15 +119,20 @@ async def push_notification(
         await db.refresh(n)
 
     if suppress_push:
+        logger.info("[PUSH] Sessiz saat — push bastırıldı | user_id=%s", user_id)
         return
 
     # FCM push (always, regardless of WS connection)
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
-        logger.info("[FCM] Push kontrolü | user_id=%s | fcm_token=%s", user_id, "VAR" if user and user.fcm_token else "YOK")
+        if user is None:
+            logger.warning("[PUSH] Kullanıcı bulunamadı | user_id=%s", user_id)
+            return
+        has_token = bool(user.fcm_token)
+        logger.info("[PUSH] FCM token kontrol | user_id=%s | token=%s", user_id, f"{user.fcm_token[:20]}…" if has_token else "YOK")
         if user and user.fcm_token:
-            logger.info("[FCM] Token bulundu | user_id=%s | token=%s…", user_id, user.fcm_token[:12])
+            logger.info("[PUSH] FCM kuyruğa alınıyor | user_id=%s | token=%s… | type=%s", user_id, user.fcm_token[:12], notif_type)
             # Count total unread notifications + messages for iOS badge
             unread_notifs = await db.scalar(
                 select(func.count()).where(
@@ -160,7 +168,7 @@ async def push_notification(
             # FCM push kuyruğa alınır — push_notification bloklanmaz
             pool = get_pool()
             if pool:
-                await pool.enqueue_job(
+                job = await pool.enqueue_job(
                     "send_push_notification_task",
                     user.fcm_token,
                     notif.get("title", ""),
@@ -170,8 +178,10 @@ async def push_notification(
                     extra_data or None,
                     image_url,
                 )
+                logger.info("[PUSH] ARQ kuyruğuna alındı | job_id=%s | user_id=%s", getattr(job, 'job_id', '?'), user_id)
             else:
                 # Worker başlatılmamışsa (geliştirme ortamı) direkt gönder
+                logger.warning("[PUSH] ARQ pool yok — direkt gönderiliyor | user_id=%s", user_id)
                 await send_push(
                     user.fcm_token, notif.get("title", ""), notif.get("body"),
                     badge=badge, notif_type=notif.get("type"),

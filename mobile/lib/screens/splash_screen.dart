@@ -126,7 +126,12 @@ class _SplashScreenState extends State<SplashScreen> {
     );
 
     if (!mounted) return;
-    PushNotificationService.initialize();
+    // Token backend'e yazılmadan /home'a geçmeyelim — 3sn timeout ile bekle
+    await PushNotificationService.initialize().timeout(
+      const Duration(seconds: 3),
+      onTimeout: () => debugPrint('[FCM] initialize timeout — devam ediliyor'),
+    );
+    if (!mounted) return;
     Navigator.of(context).pushReplacementNamed('/home');
   }
 
