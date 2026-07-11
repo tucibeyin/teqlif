@@ -1401,14 +1401,50 @@ abstract class AppLocalizations {
   /// No description provided for @attachPickCamera.
   ///
   /// In tr, this message translates to:
-  /// **'Kamera'**
+  /// **'Fotoğraf Çek'**
   String get attachPickCamera;
+
+  /// No description provided for @attachPickVideo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video Seç'**
+  String get attachPickVideo;
+
+  /// No description provided for @attachRecordVideo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video Çek'**
+  String get attachRecordVideo;
 
   /// No description provided for @attachPickFile.
   ///
   /// In tr, this message translates to:
   /// **'Dosya'**
   String get attachPickFile;
+
+  /// No description provided for @msgLastPhoto.
+  ///
+  /// In tr, this message translates to:
+  /// **'📷 Fotoğraf'**
+  String get msgLastPhoto;
+
+  /// No description provided for @msgLastVideo.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎥 Video'**
+  String get msgLastVideo;
+
+  /// No description provided for @msgLastVoice.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎙 Ses mesajı'**
+  String get msgLastVoice;
+
+  /// No description provided for @msgLastFile.
+  ///
+  /// In tr, this message translates to:
+  /// **'📎 Dosya'**
+  String get msgLastFile;
 
   /// No description provided for @attachFileTooLarge.
   ///

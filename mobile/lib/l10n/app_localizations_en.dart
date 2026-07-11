@@ -677,10 +677,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get attachPickGallery => 'Gallery';
 
   @override
-  String get attachPickCamera => 'Camera';
+  String get attachPickCamera => 'Take Photo';
+
+  @override
+  String get attachPickVideo => 'Choose Video';
+
+  @override
+  String get attachRecordVideo => 'Record Video';
 
   @override
   String get attachPickFile => 'File';
+
+  @override
+  String get msgLastPhoto => '📷 Photo';
+
+  @override
+  String get msgLastVideo => '🎥 Video';
+
+  @override
+  String get msgLastVoice => '🎙 Voice message';
+
+  @override
+  String get msgLastFile => '📎 File';
 
   @override
   String get attachFileTooLarge => 'File cannot exceed 5 MB';

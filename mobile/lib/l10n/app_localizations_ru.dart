@@ -683,10 +683,28 @@ class AppLocalizationsRu extends AppLocalizations {
   String get attachPickGallery => 'Галерея';
 
   @override
-  String get attachPickCamera => 'Камера';
+  String get attachPickCamera => 'Сделать фото';
+
+  @override
+  String get attachPickVideo => 'Выбрать видео';
+
+  @override
+  String get attachRecordVideo => 'Записать видео';
 
   @override
   String get attachPickFile => 'Файл';
+
+  @override
+  String get msgLastPhoto => '📷 Фото';
+
+  @override
+  String get msgLastVideo => '🎥 Видео';
+
+  @override
+  String get msgLastVoice => '🎙 Голосовое сообщение';
+
+  @override
+  String get msgLastFile => '📎 Файл';
 
   @override
   String get attachFileTooLarge => 'Файл не может превышать 5 МБ';

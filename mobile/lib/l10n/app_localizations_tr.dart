@@ -678,10 +678,28 @@ class AppLocalizationsTr extends AppLocalizations {
   String get attachPickGallery => 'Galeri';
 
   @override
-  String get attachPickCamera => 'Kamera';
+  String get attachPickCamera => 'Fotoğraf Çek';
+
+  @override
+  String get attachPickVideo => 'Video Seç';
+
+  @override
+  String get attachRecordVideo => 'Video Çek';
 
   @override
   String get attachPickFile => 'Dosya';
+
+  @override
+  String get msgLastPhoto => '📷 Fotoğraf';
+
+  @override
+  String get msgLastVideo => '🎥 Video';
+
+  @override
+  String get msgLastVoice => '🎙 Ses mesajı';
+
+  @override
+  String get msgLastFile => '📎 Dosya';
 
   @override
   String get attachFileTooLarge => 'Dosya 5 MB\'dan büyük olamaz';

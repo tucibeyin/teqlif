@@ -674,10 +674,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get attachPickGallery => 'المعرض';
 
   @override
-  String get attachPickCamera => 'الكاميرا';
+  String get attachPickCamera => 'التقاط صورة';
+
+  @override
+  String get attachPickVideo => 'اختيار فيديو';
+
+  @override
+  String get attachRecordVideo => 'تسجيل فيديو';
 
   @override
   String get attachPickFile => 'ملف';
+
+  @override
+  String get msgLastPhoto => '📷 صورة';
+
+  @override
+  String get msgLastVideo => '🎥 فيديو';
+
+  @override
+  String get msgLastVoice => '🎙 رسالة صوتية';
+
+  @override
+  String get msgLastFile => '📎 ملف';
 
   @override
   String get attachFileTooLarge => 'لا يمكن أن يتجاوز الملف 5 ميغابايت';

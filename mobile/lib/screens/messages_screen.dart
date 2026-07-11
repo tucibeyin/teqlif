@@ -225,12 +225,26 @@ class _MessagesTabState extends State<_MessagesTab> {
 
   /// WS üzerinden gelen mesajı HTTP isteği atmadan anında listeye yansıtır.
   /// Bilinmeyen gönderici (yeni konuşma) varsa API'ya fallback yapar.
+  String _lastMsgPreview(Map<String, dynamic> data, AppLocalizations l) {
+    final ct = data['content_type'] as String? ?? 'text';
+    if (ct != 'text') {
+      return switch (ct) {
+        'image' => l.msgLastPhoto,
+        'video' => l.msgLastVideo,
+        'voice' => l.msgLastVoice,
+        'file'  => l.msgLastFile,
+        _       => l.msgLastFile,
+      };
+    }
+    return (data['content'] as String?) ?? '';
+  }
+
   void _updateConversationInMemory(Map<String, dynamic> data) {
     final senderId = data['sender_id'] as int?;
     final receiverId = data['receiver_id'] as int?;
-    final content = data['content'] as String?;
     final createdAt = data['created_at'] as String?;
     final otherId = senderId == _myUserId ? receiverId : senderId;
+    final l = AppLocalizations.of(context)!;
 
     if (otherId == null || _myUserId == null) {
       _load(silent: true);
@@ -246,7 +260,7 @@ class _MessagesTabState extends State<_MessagesTab> {
 
     final updated = List<dynamic>.from(_conversations);
     final conv = Map<String, dynamic>.from(updated[idx] as Map);
-    conv['last_message'] = content;
+    conv['last_message'] = _lastMsgPreview(data, l);
     conv['last_at'] = createdAt;
     if (senderId != _myUserId) {
       conv['unread_count'] = ((conv['unread_count'] as int?) ?? 0) + 1;
@@ -1094,10 +1108,20 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       if (!mounted) return;
       if (streamed.statusCode == 200 || streamed.statusCode == 201) {
         final msg = Map<String, dynamic>.from(jsonDecode(body) as Map);
-        setState(() => _messages.add(msg));
+        // WS broadcast ile aynı mesajın iki kez eklenmesini önle
+        final msgId = msg['id'];
+        if (msgId != null && !_messages.any((m) => m['id'] == msgId)) {
+          setState(() => _messages.add(msg));
+        }
         _scrollToBottom();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.attachSendFailed)));
+        String errMsg = l.attachSendFailed;
+        try {
+          final errBody = jsonDecode(body) as Map<String, dynamic>?;
+          final detail = errBody?['detail'] as String?;
+          if (detail != null && detail.isNotEmpty) errMsg = detail;
+        } catch (_) {}
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errMsg)));
       }
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.attachSendFailed)));
@@ -1129,8 +1153,13 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             ),
             ListTile(
               leading: const Icon(Icons.videocam_outlined),
-              title: Text(l.attachPickGallery),
-              onTap: () { Navigator.pop(ctx); _pickAndSendVideo(); },
+              title: Text(l.attachPickVideo),
+              onTap: () { Navigator.pop(ctx); _pickAndSendVideo(source: ImageSource.gallery); },
+            ),
+            ListTile(
+              leading: const Icon(Icons.video_camera_back_outlined),
+              title: Text(l.attachRecordVideo),
+              onTap: () { Navigator.pop(ctx); _pickAndSendVideo(source: ImageSource.camera); },
             ),
             ListTile(
               leading: const Icon(Icons.attach_file_outlined),
@@ -1168,9 +1197,9 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     await _uploadMedia(bytes: compressed, contentType: 'image', fileName: 'photo.jpg', mimeType: 'image/jpeg');
   }
 
-  Future<void> _pickAndSendVideo() async {
+  Future<void> _pickAndSendVideo({ImageSource source = ImageSource.gallery}) async {
     final l = AppLocalizations.of(context)!;
-    final picked = await ImagePicker().pickVideo(source: ImageSource.gallery, maxDuration: const Duration(seconds: 15));
+    final picked = await ImagePicker().pickVideo(source: source, maxDuration: const Duration(seconds: 15));
     if (picked == null || !mounted) return;
     final info = await VideoCompress.getMediaInfo(picked.path);
     if ((info.duration ?? 0) / 1000 > 15) {
@@ -1190,9 +1219,23 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     await _uploadMedia(bytes: bytes, contentType: 'video', fileName: 'video.mp4', mimeType: 'video/mp4', durationSecs: dur);
   }
 
+  static const _allowedFileExts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'];
+  static const _mimeMap = {
+    'pdf':  'application/pdf',
+    'doc':  'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls':  'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'txt':  'text/plain',
+  };
+
   Future<void> _pickAndSendFile() async {
     final l = AppLocalizations.of(context)!;
-    final result = await FilePicker.platform.pickFiles(withData: true);
+    final result = await FilePicker.platform.pickFiles(
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: _allowedFileExts,
+    );
     if (result == null || result.files.isEmpty || !mounted) return;
     final f = result.files.first;
     final bytes = f.bytes;
@@ -1201,7 +1244,8 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.attachFileTooLarge)));
       return;
     }
-    final mime = f.extension != null ? 'application/octet-stream' : 'application/octet-stream';
+    final ext = f.extension?.toLowerCase() ?? '';
+    final mime = _mimeMap[ext] ?? 'application/octet-stream';
     await _uploadMedia(bytes: bytes, contentType: 'file', fileName: f.name, mimeType: mime);
   }
 
