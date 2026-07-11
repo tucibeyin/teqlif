@@ -4347,16 +4347,36 @@ class _NavButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: onTap,
-          icon: Icon(icon, size: 16),
-          label: Text(label, style: const TextStyle(fontSize: 13)),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            alignment: Alignment.centerLeft,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Material(
+        color: AppColors.card(context),
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.border(context)),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: kPrimary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textTertiary(context)),
+              ],
+            ),
           ),
         ),
       ),
@@ -4380,7 +4400,7 @@ class _DetailRow extends StatelessWidget {
           SizedBox(
             width: 110,
             child: Text(label,
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
           ),
           Expanded(
             child: Row(
@@ -4388,20 +4408,23 @@ class _DetailRow extends StatelessWidget {
               children: [
                 Flexible(
                   child: Text(value,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary(context))),
                 ),
                 if (badge != null) ...[
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.15),
+                      color: const Color(0xFFF97316).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(badge!,
                         style: const TextStyle(
                             fontSize: 10,
-                            color: Colors.orange,
+                            color: Color(0xFFF97316),
                             fontWeight: FontWeight.w600)),
                   ),
                 ],
