@@ -47,29 +47,61 @@ async def push_notification(
 ) -> None:
     """Save notification to DB and push to all active WS connections for the user."""
     from app.schemas.user import DEFAULT_NOTIF_PREFS
+    from app.utils.i18n import _get_t
 
     suppress_push = False  # True → DB'ye yaz ama FCM/WS gönderme
+    user_locale = "tr"
 
-    if pref_key:
+    # Single DB query covers both pref check and locale resolution
+    if pref_key or "i18n" in notif:
         async with AsyncSessionLocal() as db:
             user = await db.get(User, user_id)
             if user:
-                prefs = user.notification_prefs or {}
-                merged = {**DEFAULT_NOTIF_PREFS, **prefs}
-                if not merged.get(pref_key, True):
-                    return
-                # Teklif eşiği: eşik altındaysa bildirimi tamamen atla (DB'ye de yazma)
-                if pref_key == "new_bid" and amount is not None:
-                    threshold = int(merged.get("bid_threshold_tl", 0))
-                    if threshold > 0 and amount < threshold:
+                user_locale = user.locale or "tr"
+                if pref_key:
+                    prefs = user.notification_prefs or {}
+                    merged = {**DEFAULT_NOTIF_PREFS, **prefs}
+                    if not merged.get(pref_key, True):
                         return
-                # Sessiz saatler: FCM push'u bastır, DB'ye yaz
-                if merged.get("quiet_hours_enabled", False):
-                    if _in_quiet_window(
-                        str(merged.get("quiet_from", "22:00")),
-                        str(merged.get("quiet_to", "08:00")),
-                    ):
-                        suppress_push = True
+                    # Teklif eşiği: eşik altındaysa bildirimi tamamen atla (DB'ye de yazma)
+                    if pref_key == "new_bid" and amount is not None:
+                        threshold = int(merged.get("bid_threshold_tl", 0))
+                        if threshold > 0 and amount < threshold:
+                            return
+                    # Sessiz saatler: FCM push'u bastır, DB'ye yaz
+                    if merged.get("quiet_hours_enabled", False):
+                        if _in_quiet_window(
+                            str(merged.get("quiet_from", "22:00")),
+                            str(merged.get("quiet_to", "08:00")),
+                        ):
+                            suppress_push = True
+
+    # i18n: translate title/body from ARB keys using recipient's locale
+    i18n = notif.get("i18n")
+    if i18n:
+        t = _get_t(user_locale)
+        notif = {k: v for k, v in notif.items() if k != "i18n"}  # strip meta
+
+        def _fmt(key: str, params: dict) -> str:
+            raw = t.get(key, "")
+            if not raw:
+                return ""
+            # Resolve cat_* param values to localized category labels
+            resolved = {
+                k: t.get(v, v) if isinstance(v, str) and v.startswith("cat_") else v
+                for k, v in params.items()
+            }
+            try:
+                return raw.format_map(resolved)
+            except (KeyError, ValueError):
+                return raw
+
+        title_key = i18n.get("title_key")
+        body_key  = i18n.get("body_key")
+        if title_key:
+            notif["title"] = _fmt(title_key, i18n.get("title_params") or {})
+        if body_key:
+            notif["body"] = _fmt(body_key, i18n.get("body_params") or {})
 
     async with AsyncSessionLocal() as db:
         n = Notification(

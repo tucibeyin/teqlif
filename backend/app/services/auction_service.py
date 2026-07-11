@@ -740,13 +740,19 @@ class AuctionService:
         )
 
         # Push bildirimler (arka planda, non-blocking)
+        _price_str = f"₺{data.amount:,.0f}".replace(",", ".")
         if stream and stream.host_id:
             asyncio.create_task(push_notification(
                 user_id=stream.host_id,
                 notif={
                     "type": "new_bid",
-                    "title": f"@{user.username} teklif verdi",
-                    "body": f"{prev_item_name} — ₺{data.amount:,.0f}" if prev_item_name else f"₺{data.amount:,.0f}",
+                    "i18n": {
+                        "title_key": "notifNewBid",
+                        "title_params": {"username": user.username},
+                        "body_key": "notifNewBidBody" if prev_item_name else "notifNewBidBodyNoItem",
+                        "body_params": ({"item": prev_item_name, "price": _price_str}
+                                        if prev_item_name else {"price": _price_str}),
+                    },
                     "related_id": stream_id,
                     "stream_id": stream_id,
                 },
@@ -773,8 +779,12 @@ class AuctionService:
                         user_id=prev_bidder_id,
                         notif={
                             "type": "outbid",
-                            "title": "Teklifiniz geçildi!",
-                            "body": f"{prev_item_name} — yeni teklif: ₺{data.amount:,.0f}" if prev_item_name else f"Yeni teklif: ₺{data.amount:,.0f}",
+                            "i18n": {
+                                "title_key": "notifOutbid",
+                                "body_key": "notifOutbidBody" if prev_item_name else "notifOutbidBodyNoItem",
+                                "body_params": ({"item": prev_item_name, "price": _price_str}
+                                                if prev_item_name else {"price": _price_str}),
+                            },
                             "related_id": stream_id,
                             "stream_id": stream_id,
                         },
@@ -972,8 +982,11 @@ class AuctionService:
                 buyer_id,
                 {
                     "type": "auction_won",
-                    "title": "🛒 Hemen Al tamamlandı!",
-                    "body": f"{item_name} — {fmt_price(bin_price)}",
+                    "i18n": {
+                        "title_key": "notifBuyItNow",
+                        "body_key": "notifBuyItNowBody",
+                        "body_params": {"item": item_name, "price": fmt_price(bin_price)},
+                    },
                     "related_id": listing_id or stream_id,
                     **({"listing_id": listing_id} if listing_id else {"stream_id": stream_id}),
                 },
@@ -1274,8 +1287,11 @@ class AuctionService:
                     winner_user_id,
                     {
                         "type": "auction_won",
-                        "title": "🏆 Teklifiniz kabul edildi!",
-                        "body": f"{item_name} — {fmt_price(final_price)}",
+                        "i18n": {
+                            "title_key": "notifAuctionWon",
+                            "body_key": "notifAuctionWonBody",
+                            "body_params": {"item": item_name, "price": fmt_price(final_price)},
+                        },
                         "related_id": listing_id or stream_id,
                         **({"listing_id": listing_id} if listing_id else {"stream_id": stream_id}),
                     },

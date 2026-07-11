@@ -198,6 +198,7 @@ async def _trigger_search_alerts(listing_id: int, category: Optional[str], price
             result = await db.execute(q.limit(200))
             alerts = result.scalars().all()
 
+        _cat_key = f"cat_{category}" if category else "cat_diger"
         import asyncio as _aio
         async def _send(a: SearchAlert) -> None:
             try:
@@ -205,8 +206,11 @@ async def _trigger_search_alerts(listing_id: int, category: Optional[str], price
                     user_id=a.user_id,
                     notif={
                         "type": "search_alert",
-                        "title": "Arama alarmı: yeni ilan",
-                        "body": f"{category or 'İlan'} kategorisinde yeni ürün eklendi",
+                        "i18n": {
+                            "title_key": "notifSearchAlert",
+                            "body_key": "notifSearchAlertBody",
+                            "body_params": {"category": _cat_key},
+                        },
                         "related_id": listing_id,
                     },
                     pref_key="search_alert",
@@ -554,7 +558,10 @@ class ListingService:
 
         notif_payload = {
             "type": "new_listing",
-            "title": f"@{current_user.username} yeni ilan ekledi",
+            "i18n": {
+                "title_key": "notifNewListing",
+                "title_params": {"username": current_user.username},
+            },
             "body": listing.title or None,
             "related_id": listing.id,
             "listing_id": listing.id,

@@ -4264,6 +4264,170 @@ class AppLocalizationsTr extends AppLocalizations {
       'İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek.';
 
   @override
+  String notifNewBid(String username) {
+    return '@$username teklif verdi';
+  }
+
+  @override
+  String notifNewBidBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String notifNewBidBodyNoItem(String price) {
+    return '$price';
+  }
+
+  @override
+  String get notifOutbid => 'Teklifiniz geçildi!';
+
+  @override
+  String notifOutbidBody(String item, String price) {
+    return '$item — yeni teklif: $price';
+  }
+
+  @override
+  String notifOutbidBodyNoItem(String price) {
+    return 'Yeni teklif: $price';
+  }
+
+  @override
+  String get notifAuctionWon => '🏆 Teklifiniz kabul edildi!';
+
+  @override
+  String notifAuctionWonBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String get notifBuyItNow => '🛒 Hemen Al tamamlandı!';
+
+  @override
+  String notifBuyItNowBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String get notifAuctionEnded => 'Artırma sona erdi';
+
+  @override
+  String notifAuctionEndedBody(String item, String price) {
+    return '$item — kazanan fiyat: $price';
+  }
+
+  @override
+  String notifAuctionEndedBodyNoItem(String price) {
+    return 'Kazanan fiyat: $price';
+  }
+
+  @override
+  String get notifAuctionCancelled => 'Artırma iptal edildi';
+
+  @override
+  String notifAuctionCancelledBody(String item) {
+    return '$item — teklif kabul edilmedi';
+  }
+
+  @override
+  String get notifAuctionCancelledBodyNoItem => 'Teklif kabul edilmedi';
+
+  @override
+  String notifStreamStarted(String username) {
+    return '@$username canlı yayın açtı';
+  }
+
+  @override
+  String notifFollow(String username) {
+    return '@$username seni takip etmeye başladı';
+  }
+
+  @override
+  String notifMessage(String username) {
+    return '@$username size mesaj gönderdi';
+  }
+
+  @override
+  String notifNewListing(String username) {
+    return '@$username yeni ilan ekledi';
+  }
+
+  @override
+  String get notifListingDeactivated => 'İlanınız Pasife Alındı';
+
+  @override
+  String notifListingDeactivatedBodySingle(String title) {
+    return '\"$title\" adlı ilanınız 30 günlük süreyi doldurdu ve pasife alındı.';
+  }
+
+  @override
+  String notifListingDeactivatedBodyMultiple(int count) {
+    return '$count ilanınız 30 günlük süreyi doldurdu ve pasife alındı.';
+  }
+
+  @override
+  String get notifListingDeleted => 'İlanınız Silindi';
+
+  @override
+  String notifListingDeletedBodySingle(String title) {
+    return '\"$title\" adlı ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.';
+  }
+
+  @override
+  String notifListingDeletedBodyMultiple(int count) {
+    return '$count ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.';
+  }
+
+  @override
+  String get notifListingRemoved => 'İlanınız kaldırıldı';
+
+  @override
+  String get notifListingRemovedBody =>
+      'İlanınız topluluk kurallarına aykırı görsel içerik barındırdığı için yayından kaldırıldı.';
+
+  @override
+  String get notifSearchAlert => 'Arama alarmı: yeni ilan';
+
+  @override
+  String notifSearchAlertBody(String category) {
+    return '$category kategorisinde yeni ürün eklendi';
+  }
+
+  @override
+  String get notifSmartAuctionAlert => 'Tam sana göre bir yayın başladı! 🎯';
+
+  @override
+  String get notifPriceDrop => 'Fiyat düştü! 🔥';
+
+  @override
+  String notifPriceDropBody(String item, String price) {
+    return 'Baktığın ilan indirime girdi.';
+  }
+
+  @override
+  String get notifBudgetMatch => 'Bütçene uygun yeni ilan! 💡';
+
+  @override
+  String notifBudgetMatchBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String get notifChurnAirdropSeller => 'İlanlarınız sizi bekliyor! 🛍️';
+
+  @override
+  String notifChurnBodySeller(int amount) {
+    return 'Hesabına $amount TUCi hediye yükledik. Yeni ilan aç, alıcılarla buluş!';
+  }
+
+  @override
+  String get notifChurnAirdropBuyer => 'Seni özledik! 🎁';
+
+  @override
+  String notifChurnBodyBuyer(int amount) {
+    return 'Hesabına $amount TUCi hediye yükledik, hemen canlı yayınlara göz at ve harca!';
+  }
+
+  @override
   String get cat_elektronik => 'Elektronik';
 
   @override
@@ -4455,9 +4619,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get notifPriceDropTitle => 'Fiyat düştü! 🔥';
-
-  @override
-  String get notifPriceDropBody => 'Baktığın ilan indirime girdi.';
 
   @override
   String get demandTrendsTitle => 'Kategori Talep Trendi';

@@ -160,7 +160,10 @@ async def notify_followers_task(
                     user_id=follower_id,
                     notif={
                         "type": "stream_started",
-                        "title": f"@{username} canlı yayın açtı",
+                        "i18n": {
+                            "title_key": "notifStreamStarted",
+                            "title_params": {"username": username},
+                        },
                         "body": stream_title or None,
                         "related_id": stream_id,
                         "stream_id": stream_id,

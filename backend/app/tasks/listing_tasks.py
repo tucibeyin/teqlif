@@ -159,19 +159,23 @@ async def _notify_deactivated(
     async def _notify(user_id: int) -> None:
         listings_data = user_listing_map.get(user_id, [])
         count = len(listings_data)
-        
-        notif = {
-            "type": "listing_deactivated",
-            "title": "İlanınız Pasife Alındı",
-        }
-        
+
+        notif: dict = {"type": "listing_deactivated"}
         if count == 1:
             listing_id, title = listings_data[0]
-            notif["body"] = f'"{title}" adlı ilanınız 30 günlük ücretsiz süreyi doldurdu ve pasife alındı.'
+            notif["i18n"] = {
+                "title_key": "notifListingDeactivated",
+                "body_key": "notifListingDeactivatedBodySingle",
+                "body_params": {"title": title},
+            }
             notif["related_id"] = listing_id
         else:
-            notif["body"] = f'{count} ilanınız 30 günlük ücretsiz süreyi doldurdu ve pasife alındı.'
-            
+            notif["i18n"] = {
+                "title_key": "notifListingDeactivated",
+                "body_key": "notifListingDeactivatedBodyMultiple",
+                "body_params": {"count": count},
+            }
+
         try:
             await push_notification(
                 user_id=user_id,
@@ -199,16 +203,23 @@ async def _notify_deleted(
         count = len(listings_data)
         if count == 1:
             _, title = listings_data[0]
-            body = f'"{title}" adlı ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.'
+            _i18n = {
+                "title_key": "notifListingDeleted",
+                "body_key": "notifListingDeletedBodySingle",
+                "body_params": {"title": title},
+            }
         else:
-            body = f'{count} ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.'
+            _i18n = {
+                "title_key": "notifListingDeleted",
+                "body_key": "notifListingDeletedBodyMultiple",
+                "body_params": {"count": count},
+            }
         try:
             await push_notification(
                 user_id=user_id,
                 notif={
                     "type": "listing_deleted",
-                    "title": "İlanınız Silindi",
-                    "body": body,
+                    "i18n": _i18n,
                 },
                 pref_key=None,
             )

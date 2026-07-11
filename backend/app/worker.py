@@ -1361,7 +1361,7 @@ async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
                     user_id=user_row.id,
                     notif={
                         "type": "smart_auction_alert",
-                        "title": "Tam sana göre bir yayın başladı! 🎯",
+                        "i18n": {"title_key": "notifSmartAuctionAlert"},
                         "body": notif_body,
                         "related_id": stream_id,
                         "stream_id": stream_id,       # FCM data: deep link için
@@ -1659,14 +1659,19 @@ async def send_budget_match_notifications_task(ctx: dict, listing_id: int) -> No
         from app.routers.notifications import push_notification
         import asyncio as _asyncio
 
-        title = "Bütçene uygun yeni ilan! 💡"
-        body = f"{title_val} — {price_val:.0f} ₺"
-
         async def _notify(uid: int) -> None:
             try:
                 await push_notification(
                     user_id=uid,
-                    notif={"type": "budget_match", "title": title, "body": body, "related_id": listing_id},
+                    notif={
+                        "type": "budget_match",
+                        "i18n": {
+                            "title_key": "notifBudgetMatch",
+                            "body_key": "notifBudgetMatchBody",
+                            "body_params": {"item": title_val, "price": f"{price_val:.0f} ₺"},
+                        },
+                        "related_id": listing_id,
+                    },
                     pref_key="budget_match",
                 )
             except Exception:
@@ -2038,8 +2043,14 @@ async def hesitation_retarget_task(ctx: dict) -> None:
                         user_id=uid,
                         notif={
                             "type": "price_drop_alert",
-                            "title": "Fiyat düştü! 🔥",
-                            "body": f"{listing['title']} — artık {int(current_price):,} TL".replace(",", "."),
+                            "i18n": {
+                                "title_key": "notifPriceDrop",
+                                "body_key": "notifPriceDropBody",
+                                "body_params": {
+                                    "item": listing["title"],
+                                    "price": f"{int(current_price):,} TL".replace(",", "."),
+                                },
+                            },
                             "related_id": lid,
                         },
                         pref_key="new_bid",
@@ -2246,12 +2257,17 @@ async def notify_outbid_task(
     """
     try:
         from app.routers.notifications import push_notification
+        _price_str = f"₺{new_amount:,.0f}".replace(",", ".")
         await push_notification(
             user_id=prev_bidder_id,
             notif={
                 "type": "outbid",
-                "title": "Teklifiniz geçildi!",
-                "body": f"{item_name} — yeni teklif: ₺{new_amount:,.0f}".replace(",", ".") if item_name else f"Yeni teklif: ₺{new_amount:,.0f}".replace(",", "."),
+                "i18n": {
+                    "title_key": "notifOutbid",
+                    "body_key": "notifOutbidBody" if item_name else "notifOutbidBodyNoItem",
+                    "body_params": ({"item": item_name, "price": _price_str}
+                                    if item_name else {"price": _price_str}),
+                },
                 "related_id": stream_id,
                 "stream_id": stream_id,
             },
@@ -2302,14 +2318,19 @@ async def notify_auction_losers_task(
             return
 
         if was_accepted and final_price is not None:
-            title = "Artırma sona erdi"
-            body = (
-                f"{item_name} — kazanan fiyat: ₺{final_price:,.0f}".replace(",", ".")
-                if item_name else f"Kazanan fiyat: ₺{final_price:,.0f}".replace(",", ".")
-            )
+            _price_str = f"₺{final_price:,.0f}".replace(",", ".")
+            _i18n = {
+                "title_key": "notifAuctionEnded",
+                "body_key": "notifAuctionEndedBody" if item_name else "notifAuctionEndedBodyNoItem",
+                "body_params": ({"item": item_name, "price": _price_str}
+                                if item_name else {"price": _price_str}),
+            }
         else:
-            title = "Artırma iptal edildi"
-            body = f"{item_name} — teklif kabul edilmedi" if item_name else "Teklif kabul edilmedi"
+            _i18n = {
+                "title_key": "notifAuctionCancelled",
+                "body_key": "notifAuctionCancelledBody" if item_name else "notifAuctionCancelledBodyNoItem",
+                "body_params": ({"item": item_name} if item_name else {}),
+            }
 
         for loser_id in losers:
             try:
@@ -2317,8 +2338,7 @@ async def notify_auction_losers_task(
                     user_id=loser_id,
                     notif={
                         "type": "auction_lost",
-                        "title": title,
-                        "body": body,
+                        "i18n": _i18n,
                         "related_id": stream_id,
                         "stream_id": stream_id,
                     },

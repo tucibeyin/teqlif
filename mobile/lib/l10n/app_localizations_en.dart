@@ -4259,6 +4259,171 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your listing and sales data look healthy. Custom tips will appear here as more data accumulates.';
 
   @override
+  String notifNewBid(String username) {
+    return '@$username placed a bid';
+  }
+
+  @override
+  String notifNewBidBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String notifNewBidBodyNoItem(String price) {
+    return '$price';
+  }
+
+  @override
+  String get notifOutbid => 'You\'ve been outbid!';
+
+  @override
+  String notifOutbidBody(String item, String price) {
+    return '$item — new bid: $price';
+  }
+
+  @override
+  String notifOutbidBodyNoItem(String price) {
+    return 'New bid: $price';
+  }
+
+  @override
+  String get notifAuctionWon => '🏆 Your bid was accepted!';
+
+  @override
+  String notifAuctionWonBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String get notifBuyItNow => '🛒 Buy It Now complete!';
+
+  @override
+  String notifBuyItNowBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String get notifAuctionEnded => 'Auction ended';
+
+  @override
+  String notifAuctionEndedBody(String item, String price) {
+    return '$item — winning price: $price';
+  }
+
+  @override
+  String notifAuctionEndedBodyNoItem(String price) {
+    return 'Winning price: $price';
+  }
+
+  @override
+  String get notifAuctionCancelled => 'Auction cancelled';
+
+  @override
+  String notifAuctionCancelledBody(String item) {
+    return '$item — no bid was accepted';
+  }
+
+  @override
+  String get notifAuctionCancelledBodyNoItem => 'No bid was accepted';
+
+  @override
+  String notifStreamStarted(String username) {
+    return '@$username started a live stream';
+  }
+
+  @override
+  String notifFollow(String username) {
+    return '@$username started following you';
+  }
+
+  @override
+  String notifMessage(String username) {
+    return '@$username sent you a message';
+  }
+
+  @override
+  String notifNewListing(String username) {
+    return '@$username added a new listing';
+  }
+
+  @override
+  String get notifListingDeactivated => 'Your Listing Was Deactivated';
+
+  @override
+  String notifListingDeactivatedBodySingle(String title) {
+    return 'Your listing \"$title\" reached its 30-day free period and has been deactivated.';
+  }
+
+  @override
+  String notifListingDeactivatedBodyMultiple(int count) {
+    return '$count of your listings reached their 30-day free period and have been deactivated.';
+  }
+
+  @override
+  String get notifListingDeleted => 'Your Listing Was Deleted';
+
+  @override
+  String notifListingDeletedBodySingle(String title) {
+    return 'Your listing \"$title\" has been removed. You can create a new listing to re-publish it.';
+  }
+
+  @override
+  String notifListingDeletedBodyMultiple(int count) {
+    return '$count of your listings have been removed. You can create new listings to re-publish them.';
+  }
+
+  @override
+  String get notifListingRemoved => 'Your Listing Was Removed';
+
+  @override
+  String get notifListingRemovedBody =>
+      'Your listing was removed because it contained content that violates community guidelines.';
+
+  @override
+  String get notifSearchAlert => 'Search alert: new listing';
+
+  @override
+  String notifSearchAlertBody(String category) {
+    return 'New item added in $category';
+  }
+
+  @override
+  String get notifSmartAuctionAlert => 'A stream just for you has started! 🎯';
+
+  @override
+  String get notifPriceDrop => 'Price dropped! 🔥';
+
+  @override
+  String notifPriceDropBody(String item, String price) {
+    return 'A listing you viewed just went on sale.';
+  }
+
+  @override
+  String get notifBudgetMatch => 'New listing within your budget! 💡';
+
+  @override
+  String notifBudgetMatchBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String get notifChurnAirdropSeller =>
+      'Your listings are waiting for you! 🛍️';
+
+  @override
+  String notifChurnBodySeller(int amount) {
+    return 'We\'ve added $amount TUCi to your account. Create a new listing and connect with buyers!';
+  }
+
+  @override
+  String get notifChurnAirdropBuyer => 'We\'ve missed you! 🎁';
+
+  @override
+  String notifChurnBodyBuyer(int amount) {
+    return 'We\'ve added $amount TUCi to your account. Browse live streams and spend it!';
+  }
+
+  @override
   String get cat_elektronik => 'Electronics';
 
   @override
@@ -4451,9 +4616,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notifPriceDropTitle => 'Price dropped! 🔥';
-
-  @override
-  String get notifPriceDropBody => 'A listing you viewed just went on sale.';
 
   @override
   String get demandTrendsTitle => 'Category Demand Trends';

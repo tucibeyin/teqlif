@@ -264,18 +264,11 @@ async def _send_airdrop_notifications(recipients: list[dict], is_seller: bool = 
     """Her alıcıya push bildirimi gönder (batch'ler hâlinde)."""
     from app.routers.notifications import push_notification
 
-    if is_seller:
-        notif_title = "İlanlarınız sizi bekliyor! 🛍️"
-        notif_body = (
-            f"Hesabına {_AIRDROP_AMOUNT} TUCi hediye yükledik. "
-            "Yeni ilan aç, alıcılarla buluş!"
-        )
-    else:
-        notif_title = "Seni özledik! 🎁"
-        notif_body = (
-            f"Hesabına {_AIRDROP_AMOUNT} TUCi hediye yükledik, "
-            "hemen canlı yayınlara göz at ve harca!"
-        )
+    _i18n = {
+        "title_key": "notifChurnAirdropSeller" if is_seller else "notifChurnAirdropBuyer",
+        "body_key": "notifChurnBodySeller" if is_seller else "notifChurnBodyBuyer",
+        "body_params": {"amount": _AIRDROP_AMOUNT},
+    }
 
     async def _notify(r: dict) -> None:
         try:
@@ -283,8 +276,7 @@ async def _send_airdrop_notifications(recipients: list[dict], is_seller: bool = 
                 user_id=r["user_id"],
                 notif={
                     "type": "churn_airdrop",
-                    "title": notif_title,
-                    "body": notif_body,
+                    "i18n": _i18n,
                 },
                 pref_key=None,  # Cüzdan kredisi — tercih filtresi atlanır
             )

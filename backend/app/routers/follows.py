@@ -58,7 +58,10 @@ async def follow_user(
         user_id=user_id,
         notif={
             "type": "follow",
-            "title": f"@{current_user.username} seni takip etmeye başladı",
+            "i18n": {
+                "title_key": "notifFollow",
+                "title_params": {"username": current_user.username},
+            },
             "body": current_user.username,
             "related_id": current_user.id,
             "sender_username": current_user.username,

@@ -381,7 +381,10 @@ async def send_message(
         data.receiver_id,
         {
             "type": "message",
-            "title": f"@{current_user.username} size mesaj gönderdi",
+            "i18n": {
+                "title_key": "notifMessage",
+                "title_params": {"username": current_user.username},
+            },
             "body": data.content[:100],
             "related_id": uid,
             "sender_username": current_user.username,

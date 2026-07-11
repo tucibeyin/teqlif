@@ -146,8 +146,10 @@ async def check_listing_nsfw(listing_id: int) -> None:
                 user_id=listing.user_id,
                 notif={
                     "type": "listing_removed",
-                    "title": "İlanınız kaldırıldı",
-                    "body": "İlanınız topluluk kurallarına aykırı görsel içerik barındırdığı için yayından kaldırıldı.",
+                    "i18n": {
+                        "title_key": "notifListingRemoved",
+                        "body_key": "notifListingRemovedBody",
+                    },
                     "related_id": listing_id,
                     "listing_id": listing_id,
                 },

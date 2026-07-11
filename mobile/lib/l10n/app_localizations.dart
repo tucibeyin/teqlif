@@ -7776,6 +7776,240 @@ abstract class AppLocalizations {
   /// **'İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek.'**
   String get proTipAllGoodBody;
 
+  /// No description provided for @notifNewBid.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} teklif verdi'**
+  String notifNewBid(String username);
+
+  /// No description provided for @notifNewBidBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'{item} — {price}'**
+  String notifNewBidBody(String item, String price);
+
+  /// No description provided for @notifNewBidBodyNoItem.
+  ///
+  /// In tr, this message translates to:
+  /// **'{price}'**
+  String notifNewBidBodyNoItem(String price);
+
+  /// No description provided for @notifOutbid.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklifiniz geçildi!'**
+  String get notifOutbid;
+
+  /// No description provided for @notifOutbidBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'{item} — yeni teklif: {price}'**
+  String notifOutbidBody(String item, String price);
+
+  /// No description provided for @notifOutbidBodyNoItem.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni teklif: {price}'**
+  String notifOutbidBodyNoItem(String price);
+
+  /// No description provided for @notifAuctionWon.
+  ///
+  /// In tr, this message translates to:
+  /// **'🏆 Teklifiniz kabul edildi!'**
+  String get notifAuctionWon;
+
+  /// No description provided for @notifAuctionWonBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'{item} — {price}'**
+  String notifAuctionWonBody(String item, String price);
+
+  /// No description provided for @notifBuyItNow.
+  ///
+  /// In tr, this message translates to:
+  /// **'🛒 Hemen Al tamamlandı!'**
+  String get notifBuyItNow;
+
+  /// No description provided for @notifBuyItNowBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'{item} — {price}'**
+  String notifBuyItNowBody(String item, String price);
+
+  /// No description provided for @notifAuctionEnded.
+  ///
+  /// In tr, this message translates to:
+  /// **'Artırma sona erdi'**
+  String get notifAuctionEnded;
+
+  /// No description provided for @notifAuctionEndedBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'{item} — kazanan fiyat: {price}'**
+  String notifAuctionEndedBody(String item, String price);
+
+  /// No description provided for @notifAuctionEndedBodyNoItem.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kazanan fiyat: {price}'**
+  String notifAuctionEndedBodyNoItem(String price);
+
+  /// No description provided for @notifAuctionCancelled.
+  ///
+  /// In tr, this message translates to:
+  /// **'Artırma iptal edildi'**
+  String get notifAuctionCancelled;
+
+  /// No description provided for @notifAuctionCancelledBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'{item} — teklif kabul edilmedi'**
+  String notifAuctionCancelledBody(String item);
+
+  /// No description provided for @notifAuctionCancelledBodyNoItem.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif kabul edilmedi'**
+  String get notifAuctionCancelledBodyNoItem;
+
+  /// No description provided for @notifStreamStarted.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} canlı yayın açtı'**
+  String notifStreamStarted(String username);
+
+  /// No description provided for @notifFollow.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} seni takip etmeye başladı'**
+  String notifFollow(String username);
+
+  /// No description provided for @notifMessage.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} size mesaj gönderdi'**
+  String notifMessage(String username);
+
+  /// No description provided for @notifNewListing.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} yeni ilan ekledi'**
+  String notifNewListing(String username);
+
+  /// No description provided for @notifListingDeactivated.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınız Pasife Alındı'**
+  String get notifListingDeactivated;
+
+  /// No description provided for @notifListingDeactivatedBodySingle.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"{title}\" adlı ilanınız 30 günlük süreyi doldurdu ve pasife alındı.'**
+  String notifListingDeactivatedBodySingle(String title);
+
+  /// No description provided for @notifListingDeactivatedBodyMultiple.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} ilanınız 30 günlük süreyi doldurdu ve pasife alındı.'**
+  String notifListingDeactivatedBodyMultiple(int count);
+
+  /// No description provided for @notifListingDeleted.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınız Silindi'**
+  String get notifListingDeleted;
+
+  /// No description provided for @notifListingDeletedBodySingle.
+  ///
+  /// In tr, this message translates to:
+  /// **'\"{title}\" adlı ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.'**
+  String notifListingDeletedBodySingle(String title);
+
+  /// No description provided for @notifListingDeletedBodyMultiple.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.'**
+  String notifListingDeletedBodyMultiple(int count);
+
+  /// No description provided for @notifListingRemoved.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınız kaldırıldı'**
+  String get notifListingRemoved;
+
+  /// No description provided for @notifListingRemovedBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanınız topluluk kurallarına aykırı görsel içerik barındırdığı için yayından kaldırıldı.'**
+  String get notifListingRemovedBody;
+
+  /// No description provided for @notifSearchAlert.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arama alarmı: yeni ilan'**
+  String get notifSearchAlert;
+
+  /// No description provided for @notifSearchAlertBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'{category} kategorisinde yeni ürün eklendi'**
+  String notifSearchAlertBody(String category);
+
+  /// No description provided for @notifSmartAuctionAlert.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tam sana göre bir yayın başladı! 🎯'**
+  String get notifSmartAuctionAlert;
+
+  /// No description provided for @notifPriceDrop.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fiyat düştü! 🔥'**
+  String get notifPriceDrop;
+
+  /// No description provided for @notifPriceDropBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Baktığın ilan indirime girdi.'**
+  String notifPriceDropBody(String item, String price);
+
+  /// No description provided for @notifBudgetMatch.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bütçene uygun yeni ilan! 💡'**
+  String get notifBudgetMatch;
+
+  /// No description provided for @notifBudgetMatchBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'{item} — {price}'**
+  String notifBudgetMatchBody(String item, String price);
+
+  /// No description provided for @notifChurnAirdropSeller.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlanlarınız sizi bekliyor! 🛍️'**
+  String get notifChurnAirdropSeller;
+
+  /// No description provided for @notifChurnBodySeller.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabına {amount} TUCi hediye yükledik. Yeni ilan aç, alıcılarla buluş!'**
+  String notifChurnBodySeller(int amount);
+
+  /// No description provided for @notifChurnAirdropBuyer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Seni özledik! 🎁'**
+  String get notifChurnAirdropBuyer;
+
+  /// No description provided for @notifChurnBodyBuyer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabına {amount} TUCi hediye yükledik, hemen canlı yayınlara göz at ve harca!'**
+  String notifChurnBodyBuyer(int amount);
+
   /// No description provided for @cat_elektronik.
   ///
   /// In tr, this message translates to:
@@ -8105,12 +8339,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Fiyat düştü! 🔥'**
   String get notifPriceDropTitle;
-
-  /// No description provided for @notifPriceDropBody.
-  ///
-  /// In tr, this message translates to:
-  /// **'Baktığın ilan indirime girdi.'**
-  String get notifPriceDropBody;
 
   /// No description provided for @demandTrendsTitle.
   ///

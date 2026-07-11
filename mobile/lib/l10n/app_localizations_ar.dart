@@ -4234,6 +4234,170 @@ class AppLocalizationsAr extends AppLocalizations {
       'بيانات إعلاناتك ومبيعاتك تبدو جيدة. ستظهر هنا نصائح مخصصة عند توفر المزيد من البيانات.';
 
   @override
+  String notifNewBid(String username) {
+    return 'قدّم @$username عرضاً';
+  }
+
+  @override
+  String notifNewBidBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String notifNewBidBodyNoItem(String price) {
+    return '$price';
+  }
+
+  @override
+  String get notifOutbid => 'تمّ تجاوز عرضك!';
+
+  @override
+  String notifOutbidBody(String item, String price) {
+    return '$item — عرض جديد: $price';
+  }
+
+  @override
+  String notifOutbidBodyNoItem(String price) {
+    return 'عرض جديد: $price';
+  }
+
+  @override
+  String get notifAuctionWon => '🏆 تمّ قبول عرضك!';
+
+  @override
+  String notifAuctionWonBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String get notifBuyItNow => '🛒 اكتمل الشراء الفوري!';
+
+  @override
+  String notifBuyItNowBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String get notifAuctionEnded => 'انتهى المزاد';
+
+  @override
+  String notifAuctionEndedBody(String item, String price) {
+    return '$item — السعر الفائز: $price';
+  }
+
+  @override
+  String notifAuctionEndedBodyNoItem(String price) {
+    return 'السعر الفائز: $price';
+  }
+
+  @override
+  String get notifAuctionCancelled => 'تمّ إلغاء المزاد';
+
+  @override
+  String notifAuctionCancelledBody(String item) {
+    return '$item — لم يُقبل أي عرض';
+  }
+
+  @override
+  String get notifAuctionCancelledBodyNoItem => 'لم يُقبل أي عرض';
+
+  @override
+  String notifStreamStarted(String username) {
+    return 'بدأ @$username بثاً مباشراً';
+  }
+
+  @override
+  String notifFollow(String username) {
+    return 'بدأ @$username بمتابعتك';
+  }
+
+  @override
+  String notifMessage(String username) {
+    return 'أرسل @$username رسالة إليك';
+  }
+
+  @override
+  String notifNewListing(String username) {
+    return 'أضاف @$username إعلاناً جديداً';
+  }
+
+  @override
+  String get notifListingDeactivated => 'تمّ إيقاف إعلانك';
+
+  @override
+  String notifListingDeactivatedBodySingle(String title) {
+    return 'وصل إعلانك \"$title\" إلى نهاية فترته المجانية البالغة 30 يوماً وتمّ إيقافه.';
+  }
+
+  @override
+  String notifListingDeactivatedBodyMultiple(int count) {
+    return 'وصل $count إعلان من إعلاناتك إلى نهاية فترتها المجانية وتمّ إيقافها.';
+  }
+
+  @override
+  String get notifListingDeleted => 'تمّت إزالة إعلانك';
+
+  @override
+  String notifListingDeletedBodySingle(String title) {
+    return 'تمّت إزالة إعلانك \"$title\" من المنصة. يمكنك إنشاء إعلان جديد لإعادة نشره.';
+  }
+
+  @override
+  String notifListingDeletedBodyMultiple(int count) {
+    return 'تمّت إزالة $count من إعلاناتك. يمكنك إنشاء إعلانات جديدة لإعادة نشرها.';
+  }
+
+  @override
+  String get notifListingRemoved => 'تمّت إزالة إعلانك';
+
+  @override
+  String get notifListingRemovedBody =>
+      'تمّت إزالة إعلانك لأنه يحتوي على محتوى يخالف إرشادات المجتمع.';
+
+  @override
+  String get notifSearchAlert => 'تنبيه البحث: إعلان جديد';
+
+  @override
+  String notifSearchAlertBody(String category) {
+    return 'تمّت إضافة منتج جديد في $category';
+  }
+
+  @override
+  String get notifSmartAuctionAlert => 'بدأ بث مناسب لك! 🎯';
+
+  @override
+  String get notifPriceDrop => 'انخفض السعر! 🔥';
+
+  @override
+  String notifPriceDropBody(String item, String price) {
+    return 'انخفض سعر إعلان شاهدته مؤخرًا.';
+  }
+
+  @override
+  String get notifBudgetMatch => 'إعلان جديد ضمن ميزانيتك! 💡';
+
+  @override
+  String notifBudgetMatchBody(String item, String price) {
+    return '$item — $price';
+  }
+
+  @override
+  String get notifChurnAirdropSeller => 'إعلاناتك تنتظرك! 🛍️';
+
+  @override
+  String notifChurnBodySeller(int amount) {
+    return 'أضفنا $amount TUCi إلى حسابك. أنشئ إعلاناً جديداً وتواصل مع المشترين!';
+  }
+
+  @override
+  String get notifChurnAirdropBuyer => 'اشتقنا إليك! 🎁';
+
+  @override
+  String notifChurnBodyBuyer(int amount) {
+    return 'أضفنا $amount TUCi إلى حسابك، تصفّح البثوث المباشرة وأنفقها!';
+  }
+
+  @override
   String get cat_elektronik => 'إلكترونيات';
 
   @override
@@ -4425,9 +4589,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get notifPriceDropTitle => 'انخفض السعر! 🔥';
-
-  @override
-  String get notifPriceDropBody => 'انخفض سعر إعلان شاهدته مؤخرًا.';
 
   @override
   String get demandTrendsTitle => 'اتجاه الطلب في الفئة';
