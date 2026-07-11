@@ -277,6 +277,50 @@ async def cleanup_hidden_messages_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: 3 Günden Eski Medya Mesajlarını Sil ────────────────────────────────
+
+async def cleanup_old_media_messages_task(ctx: dict) -> None:
+    """
+    Her gün 06:30'da çalışır; 3 günden eski medya mesajlarını (image/video/voice/file)
+    MinIO'dan ve DB'den siler.
+
+    text dışındaki tüm content_type'lar hedeflenir.
+    MinIO nesnesi yoksa (zaten silinmiş) sessizce geçilir.
+    """
+    from datetime import datetime, timedelta, timezone
+    from app.database import AsyncSessionLocal
+    from app.models.message import DirectMessage
+    from app.services import storage_service as storage
+    from sqlalchemy import select
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=3)
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(DirectMessage).where(
+                    DirectMessage.content_type != "text",
+                    DirectMessage.created_at < cutoff,
+                )
+            )
+            messages = result.scalars().all()
+
+            deleted_count = 0
+            for msg in messages:
+                if msg.media_url:
+                    storage.delete_object(storage.url_to_key(msg.media_url))
+                if msg.thumbnail_url:
+                    storage.delete_object(storage.url_to_key(msg.thumbnail_url))
+                await db.delete(msg)
+                deleted_count += 1
+
+            await db.commit()
+            logger.info("[Worker] Medya mesaj cleanup tamamlandı | silinen=%d", deleted_count)
+    except Exception as exc:
+        logger.error("[Worker] Medya mesaj cleanup başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Redis Interaction Kuyruğunu DB'ye Yaz ──────────────────────────────
 
 async def flush_interactions_to_db(ctx: dict) -> None:
@@ -2385,6 +2429,7 @@ class WorkerSettings:
         cleanup_old_analytics_task,
         cleanup_old_stream_likes_task,
         cleanup_hidden_messages_task,
+        cleanup_old_media_messages_task,
         compute_user_interests_task,
         cleanup_old_impressions_task,
         generate_listing_embedding_task,
@@ -2482,6 +2527,7 @@ class WorkerSettings:
         # Her 2 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
         # Her gün 06:00 — bid_hesitation → fiyat düşüş retarget bildirimi
+        cron(cleanup_old_media_messages_task, hour=6, minute=30),
         cron(hesitation_retarget_task, hour=6, minute=0),
         # Her gün 02:15 — çok sinyalli kullanıcı güven skoru (Redis cache)
         cron(compute_trust_scores_task, hour=2, minute=15),
