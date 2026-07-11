@@ -1875,7 +1875,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
             ] else ...[
               SwipePaginatedList<Map<String, dynamic>>(
                 fetchPage: _fetchPage,
-                itemHeight: 64, // 10 padding + 38 height + 10 padding + 6 margin
+                itemHeight: 60, // 8 padding + 38 height + 8 padding + 6 margin
                 maxVisible: 4,
                 emptyWidget: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -1889,7 +1889,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                     onTap: () => setState(() => _selectedListing = lItem),
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: isSelected ? kPrimary.withValues(alpha: 0.15) : const Color(0xFF0F172A),
                         borderRadius: BorderRadius.circular(10),
