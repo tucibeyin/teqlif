@@ -81,8 +81,20 @@ async def main():
         await redis.aclose()
         return
 
-    # ── 3. push_notification() — tam pipeline ────────────────────────────────
-    hdr("3. push_notification() — ARQ Pipeline Testi")
+    # ── 3. ARQ Pool — manuel başlat ──────────────────────────────────────────
+    hdr("3. ARQ Pool Başlatma")
+
+    from arq import create_pool
+    from arq.connections import RedisSettings
+    from app.config import settings as app_settings
+    from app.core.task_queue import set_pool
+
+    arq_pool = await create_pool(RedisSettings.from_dsn(app_settings.redis_url))
+    set_pool(arq_pool)
+    ok(f"ARQ pool başlatıldı → {app_settings.redis_url[:30]}…")
+
+    # ── 4. push_notification() — tam pipeline ────────────────────────────────
+    hdr("4. push_notification() — ARQ Pipeline Testi")
 
     from app.routers.notifications import push_notification
 
@@ -100,7 +112,7 @@ async def main():
         pref_key="messages",
     )
 
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(1.0)
     queued_after = await redis.llen("arq:queue:default")
     diff = queued_after - queued_before
     info(f"ARQ kuyruk SONRA: {queued_after} iş ({diff:+d})")
@@ -109,14 +121,11 @@ async def main():
         ok(f"Kuyruğa {diff} iş eklendi — worker işleyecek")
         info("Worker logları: sudo journalctl -u teqlif-worker -f | grep -E '\\[FCM\\]|\\[Worker\\]'")
     else:
-        warn("ARQ kuyruğuna iş EKLENMEDİ")
-        warn("  a) ARQ pool başlatılmamış (get_pool() → None)")
-        warn("  b) push_notification() erken return etti (token yok / bildirim tercihi kapalı)")
-        warn("  c) push_notification() exception yuttu")
+        warn("ARQ kuyruğuna iş EKLENMEDİ (veya worker anında işledi)")
         info("Uvicorn [PUSH] logu: sudo journalctl -u teqlif --no-pager | grep '\\[PUSH\\]'")
 
-    # ── 4. send_push() — doğrudan Firebase ───────────────────────────────────
-    hdr("4. send_push() — Doğrudan Firebase (ARQ bypass)")
+    # ── 5. send_push() — doğrudan Firebase ───────────────────────────────────
+    hdr("5. send_push() — Doğrudan Firebase (ARQ bypass)")
 
     from app.services.firebase_service import send_push, InvalidFCMTokenError
 
@@ -132,8 +141,9 @@ async def main():
         )
         elapsed = (time.monotonic() - t) * 1000
         ok(f"Firebase yanıt verdi ({elapsed:.0f}ms)")
-        ok("GELDİYSE → ARQ pipeline'da sorun var (3. adıma bak)")
-        ok("GELMEDİYSE → iOS/APNs veya cihaz bildirim ayarı sorunlu")
+        print(f"\n  {BLD}Bu bildirim cihaza GELDİ mi?{RST}")
+        print(f"  {GRN}EVET geldi{RST} → sorun ARQ pipeline'da (4. adımı incele)")
+        print(f"  {RED}HAYIR gelmedi{RST} → sorun iOS/APNs veya cihaz bildirim ayarında\n")
     except InvalidFCMTokenError:
         err("FCM TOKEN GEÇERSİZ veya SÜRESİ DOLMUŞ!")
         err(f"  Temizle: UPDATE users SET fcm_token=NULL WHERE username='{receiver_username}';")
@@ -142,16 +152,16 @@ async def main():
         err(f"FCM hatası: {type(exc).__name__}: {exc}")
         import traceback; traceback.print_exc()
 
-    # ── 5. Gerçek Mesaj — DB üzerinden ───────────────────────────────────────
-    hdr("5. Gerçek Mesaj (DB) + Bildirim Pipeline")
+    # ── 6. Gerçek Mesaj — DB üzerinden ───────────────────────────────────────
+    hdr("6. Gerçek Mesaj (DB) + Bildirim Pipeline")
 
-    from app.models.message import Message
+    from app.models.message import DirectMessage
     from app.routers.notifications import push_notification as push_notif  # noqa: F811
 
     msg_content = f"[TEST {int(time.time())}] Diagnostik mesajı"
 
     async with AsyncSessionLocal() as db:
-        msg = Message(
+        msg = DirectMessage(
             sender_id=sender.id,
             receiver_id=receiver.id,
             content=msg_content,
@@ -186,6 +196,7 @@ async def main():
     info("Uvicorn yeniden başlatma gerekirse: sudo systemctl restart teqlif")
     print()
 
+    await arq_pool.close()
     await redis.aclose()
 
 
