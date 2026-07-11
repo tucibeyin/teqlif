@@ -8205,7 +8205,7 @@ abstract class AppLocalizations {
   /// No description provided for @notifPriceDropBody.
   ///
   /// In tr, this message translates to:
-  /// **'Baktığın ilan indirime girdi.'**
+  /// **'{item} — artık {price}'**
   String notifPriceDropBody(String item, String price);
 
   /// No description provided for @notifBudgetMatch.
@@ -8567,12 +8567,6 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Hangi kategoriler yükseliyor? Arz açığı olan fırsatları keşfet.'**
   String get proToolDemandTrendsDesc;
-
-  /// No description provided for @notifPriceDropTitle.
-  ///
-  /// In tr, this message translates to:
-  /// **'Fiyat düştü! 🔥'**
-  String get notifPriceDropTitle;
 
   /// No description provided for @demandTrendsTitle.
   ///

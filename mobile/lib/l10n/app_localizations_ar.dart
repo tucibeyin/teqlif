@@ -4496,7 +4496,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String notifPriceDropBody(String item, String price) {
-    return 'انخفض سعر إعلان شاهدته مؤخرًا.';
+    return '$item — الآن $price';
   }
 
   @override
@@ -4712,9 +4712,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get proToolDemandTrendsDesc =>
       'أي الفئات في ارتفاع؟ اكتشف فرص فجوة العرض.';
-
-  @override
-  String get notifPriceDropTitle => 'انخفض السعر! 🔥';
 
   @override
   String get demandTrendsTitle => 'اتجاه الطلب في الفئة';

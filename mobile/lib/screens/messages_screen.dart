@@ -546,10 +546,82 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       'smart_auction_alert' => l.notifSmartAuctionAlert,
       'budget_match'        => l.notifBudgetMatch,
       'auction_won'         => l.notifAuctionWon,
+      'buy_it_now'          => l.notifBuyItNow,
       'listing_deactivated' => l.notifListingDeactivated,
       'listing_deleted'     => l.notifListingDeleted,
+      'listing_removed'     => l.notifListingRemoved,
+      'price_drop_alert'    => l.notifPriceDrop,
+      'search_alert'        => l.notifSearchAlert,
+      'auction_ended'       => l.notifAuctionEnded,
+      'auction_cancelled'   => l.notifAuctionCancelled,
+      'referral'            => l.notifReferralTitle,
       _                     => title,
     };
+  }
+
+  String? _localizeBody(String? type, String? body, AppLocalizations l) {
+    if (body == null || body.isEmpty) return body;
+    switch (type) {
+      case 'listing_removed':
+        return l.notifListingRemovedBody;
+      case 'listing_deactivated':
+        final qMatch = RegExp(r'"(.+?)"').firstMatch(body);
+        if (qMatch != null) return l.notifListingDeactivatedBodySingle(qMatch.group(1)!);
+        final nMatch = RegExp(r'^(\d+)').firstMatch(body);
+        if (nMatch != null) return l.notifListingDeactivatedBodyMultiple(int.parse(nMatch.group(1)!));
+        return body;
+      case 'listing_deleted':
+        final qMatch = RegExp(r'"(.+?)"').firstMatch(body);
+        if (qMatch != null) return l.notifListingDeletedBodySingle(qMatch.group(1)!);
+        final nMatch = RegExp(r'^(\d+)').firstMatch(body);
+        if (nMatch != null) return l.notifListingDeletedBodyMultiple(int.parse(nMatch.group(1)!));
+        return body;
+      case 'outbid':
+        if (body.contains(' — ')) {
+          final dash = body.lastIndexOf(' — ');
+          final item = body.substring(0, dash);
+          final rest = body.substring(dash + 3);
+          final colon = rest.lastIndexOf(': ');
+          final price = colon >= 0 ? rest.substring(colon + 2) : rest;
+          return l.notifOutbidBody(item, price);
+        } else {
+          final colon = body.lastIndexOf(': ');
+          if (colon >= 0) return l.notifOutbidBodyNoItem(body.substring(colon + 2));
+        }
+        return body;
+      case 'auction_ended':
+        if (body.contains(' — ')) {
+          final dash = body.lastIndexOf(' — ');
+          final item = body.substring(0, dash);
+          final rest = body.substring(dash + 3);
+          final colon = rest.lastIndexOf(': ');
+          final price = colon >= 0 ? rest.substring(colon + 2) : rest;
+          return l.notifAuctionEndedBody(item, price);
+        } else {
+          final colon = body.lastIndexOf(': ');
+          if (colon >= 0) return l.notifAuctionEndedBodyNoItem(body.substring(colon + 2));
+        }
+        return body;
+      case 'auction_cancelled':
+        if (body.contains(' — ')) {
+          final dash = body.lastIndexOf(' — ');
+          return l.notifAuctionCancelledBody(body.substring(0, dash));
+        }
+        return l.notifAuctionCancelledBodyNoItem;
+      case 'price_drop_alert':
+        if (body.contains(' — ')) {
+          final dash = body.lastIndexOf(' — ');
+          final item = body.substring(0, dash);
+          final rest = body.substring(dash + 3);
+          // "artık 750 ₺" or "now 750 ₺" — price starts at first digit
+          final priceMatch = RegExp(r'(\d[\d.,\s]*[^\s].*)$').firstMatch(rest);
+          final price = priceMatch != null ? priceMatch.group(1)!.trim() : rest;
+          return l.notifPriceDropBody(item, price);
+        }
+        return body;
+      default:
+        return body;
+    }
   }
 
   IconData _iconForType(String? type) {
@@ -699,7 +771,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
 
           final typeColor = _colorForType(type);
           // follow: body = username (navigasyon için), görüntüleme için kullanılmaz
-          final displayBody = type == 'follow' ? null : body;
+          final displayBody = type == 'follow' ? null : _localizeBody(type, body, l);
           final displayTitle = _localizeTitle(type, title, l);
           return ListTile(
             onTap: () {
@@ -1154,6 +1226,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     } catch (_) {
       if (!mounted) return;
       final micStatus = await Permission.microphone.status;
+      if (!mounted) return;
       if (micStatus.isPermanentlyDenied) {
         await openAppSettings();
       } else {

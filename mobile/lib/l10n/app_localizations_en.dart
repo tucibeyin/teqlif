@@ -4521,7 +4521,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String notifPriceDropBody(String item, String price) {
-    return 'A listing you viewed just went on sale.';
+    return '$item — now $price';
   }
 
   @override
@@ -4739,9 +4739,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get proToolDemandTrendsDesc =>
       'Which categories are rising? Discover supply gap opportunities.';
-
-  @override
-  String get notifPriceDropTitle => 'Price dropped! 🔥';
 
   @override
   String get demandTrendsTitle => 'Category Demand Trends';

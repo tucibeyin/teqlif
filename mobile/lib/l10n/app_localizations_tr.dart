@@ -4526,7 +4526,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String notifPriceDropBody(String item, String price) {
-    return 'Baktığın ilan indirime girdi.';
+    return '$item — artık $price';
   }
 
   @override
@@ -4742,9 +4742,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get proToolDemandTrendsDesc =>
       'Hangi kategoriler yükseliyor? Arz açığı olan fırsatları keşfet.';
-
-  @override
-  String get notifPriceDropTitle => 'Fiyat düştü! 🔥';
 
   @override
   String get demandTrendsTitle => 'Kategori Talep Trendi';
