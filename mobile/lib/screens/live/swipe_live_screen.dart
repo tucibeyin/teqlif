@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
@@ -1850,9 +1851,7 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
     if (price == null) return '—';
     final n = double.tryParse(price.toString());
     if (n == null) return price.toString();
-    return n == n.truncateToDouble()
-        ? n.truncate().toString()
-        : n.toStringAsFixed(2);
+    return NumberFormat('#,##0', 'tr_TR').format(n);
   }
 
   @override
