@@ -265,7 +265,7 @@ async def get_messages(
     if not other_user:
         raise NotFoundException("Kullanıcı bulunamadı")
 
-    # Fetch last 100 messages between the two users
+    # Fetch last 100 messages between the two users (newest first, then reverse for chronological order)
     result = await db.execute(
         select(DirectMessage)
         .where(
@@ -274,10 +274,10 @@ async def get_messages(
                 and_(DirectMessage.sender_id == other_user_id, DirectMessage.receiver_id == uid),
             )
         )
-        .order_by(DirectMessage.created_at.asc())
+        .order_by(DirectMessage.created_at.desc())
         .limit(100)
     )
-    messages = result.scalars().all()
+    messages = list(reversed(result.scalars().all()))
 
     # Mark received messages as read and notify the sender
     result_update = await db.execute(
