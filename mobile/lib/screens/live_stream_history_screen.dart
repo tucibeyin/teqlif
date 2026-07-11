@@ -365,7 +365,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                             Expanded(
                               child: _buildSummaryCard(
                                 l.analyticsRevenue,
-                                '${totalRev.toStringAsFixed(0)} TUCi',
+                                '${NumberFormat('#,##0', 'tr_TR').format(totalRev)} TUCi',
                                 Icons.monetization_on,
                                 const Color(0xFF22C55E),
                                 context,
