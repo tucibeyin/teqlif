@@ -818,9 +818,9 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
     final l = AppLocalizations.of(context)!;
     // (backendKey, localizedLabel, cost) — backendKey DB'ye yazılır, label UI'da gösterilir
     final gifts = [
-      ('🔥 Ateş',     l.giftNameFire,     10),
-      ('💎 Elmas',    l.giftNameDiamond,  50),
-      ('👑 Kral Tacı', l.giftNameCrown,  100),
+      ('fire',    l.giftNameFire,    10),
+      ('diamond', l.giftNameDiamond, 50),
+      ('crown',   l.giftNameCrown,  100),
     ];
 
     await showModalBottomSheet<void>(

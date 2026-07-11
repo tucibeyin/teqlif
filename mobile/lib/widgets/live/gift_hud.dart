@@ -46,10 +46,21 @@ class _GiftHudState extends State<GiftHud> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  String get _emoji => widget.giftName.split(' ').first;
+  static const _keyEmoji = {'fire': '🔥', 'diamond': '💎', 'crown': '👑'};
+
+  String get _emoji =>
+      _keyEmoji[widget.giftName] ?? widget.giftName.split(' ').first;
+
+  String _displayName(AppLocalizations l) => switch (widget.giftName) {
+        'fire'    => l.giftNameFire,
+        'diamond' => l.giftNameDiamond,
+        'crown'   => l.giftNameCrown,
+        _         => widget.giftName, // eski Türkçe keyler için geriye uyumlu
+      };
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Positioned(
       top: MediaQuery.of(context).padding.top + 72,
       left: 20,
@@ -87,7 +98,7 @@ class _GiftHudState extends State<GiftHud> with SingleTickerProviderStateMixin {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          AppLocalizations.of(context)!.giftSentHud(widget.sender),
+                          l.giftSentHud(widget.sender),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w800,
@@ -98,7 +109,7 @@ class _GiftHudState extends State<GiftHud> with SingleTickerProviderStateMixin {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${widget.giftName}  ·  ${NumberFormat('#,##0', 'tr_TR').format(widget.cost)} TUCi',
+                          '${_displayName(l)}  ·  ${NumberFormat('#,##0', 'tr_TR').format(widget.cost)} TUCi',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 12,
