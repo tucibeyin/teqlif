@@ -112,17 +112,33 @@ async def main():
         pref_key="messages",
     )
 
-    await asyncio.sleep(1.0)
-    queued_after = await redis.llen("arq:queue:default")
+    # Worker çok hızlı işlerse kuyruğu birden fazla kez örnekle
+    samples = []
+    for _ in range(5):
+        await asyncio.sleep(0.2)
+        samples.append(await redis.llen("arq:queue:default"))
+    queued_after = samples[-1]
+    peak = max(samples)
     diff = queued_after - queued_before
-    info(f"ARQ kuyruk SONRA: {queued_after} iş ({diff:+d})")
+    info(f"ARQ kuyruk örnekleri: {samples} (zirve={peak})")
 
-    if diff > 0:
-        ok(f"Kuyruğa {diff} iş eklendi — worker işleyecek")
-        info("Worker logları: sudo journalctl -u teqlif-worker -f | grep -E '\\[FCM\\]|\\[Worker\\]'")
+    if peak > queued_before:
+        ok(f"Kuyruğa iş eklendi (zirve={peak}) — worker işledi")
+        info("Worker logları: sudo journalctl -u teqlif-worker --no-pager | grep -E '\\[FCM\\]|\\[Worker\\]' | tail -5")
     else:
-        warn("ARQ kuyruğuna iş EKLENMEDİ (veya worker anında işledi)")
-        info("Uvicorn [PUSH] logu: sudo journalctl -u teqlif --no-pager | grep '\\[PUSH\\]'")
+        warn("ARQ kuyruğuna iş EKLENMEDİ")
+        info("Son [PUSH] logları:")
+        import subprocess
+        r = subprocess.run(
+            ["journalctl", "-u", "teqlif", "--no-pager", "-n", "20"],
+            capture_output=True, text=True
+        )
+        push_lines = [l for l in r.stdout.splitlines() if "[PUSH]" in l]
+        if push_lines:
+            for l in push_lines[-5:]:
+                print(f"    {l}")
+        else:
+            warn("  journalctl'de [PUSH] log bulunamadı")
 
     # ── 5. send_push() — doğrudan Firebase ───────────────────────────────────
     hdr("5. send_push() — Doğrudan Firebase (ARQ bypass)")
@@ -165,7 +181,7 @@ async def main():
             sender_id=sender.id,
             receiver_id=receiver.id,
             content=msg_content,
-            message_type="text",
+            content_type="text",
         )
         db.add(msg)
         await db.commit()
