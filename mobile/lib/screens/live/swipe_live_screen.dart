@@ -815,10 +815,12 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       interactionType: 'stream_gift_sheet_open',
     );
 
-    const gifts = [
-      ('🔥 Ateş', 10),
-      ('💎 Elmas', 50),
-      ('👑 Kral Tacı', 100),
+    final l = AppLocalizations.of(context)!;
+    // (backendKey, localizedLabel, cost) — backendKey DB'ye yazılır, label UI'da gösterilir
+    final gifts = [
+      ('🔥 Ateş',     l.giftNameFire,     10),
+      ('💎 Elmas',    l.giftNameDiamond,  50),
+      ('👑 Kral Tacı', l.giftNameCrown,  100),
     ];
 
     await showModalBottomSheet<void>(
@@ -1457,7 +1459,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
 class _GiftSheet extends StatefulWidget {
   final int streamId;
   final String receiverUsername;
-  final List<(String, int)> gifts;
+  final List<(String, String, int)> gifts; // (backendKey, localizedLabel, cost)
   final VoidCallback? onLoadBalanceRequired;
 
   const _GiftSheet({
@@ -1512,7 +1514,7 @@ class _GiftSheetState extends State<_GiftSheet> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['error'] as String? ?? 'Hata oluştu.'),
+            content: Text(result['error'] as String? ?? AppLocalizations.of(context)!.giftErrorGeneric),
             backgroundColor: Colors.red.shade700,
             duration: const Duration(seconds: 2),
           ),
@@ -1542,9 +1544,9 @@ class _GiftSheetState extends State<_GiftSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Text(
-            '🎁 Hediye Gönder',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.giftSheetTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
               fontSize: 16,
@@ -1593,13 +1595,13 @@ class _GiftSheetState extends State<_GiftSheet> {
           else
             Row(
               children: widget.gifts.map((g) {
-                final (name, cost) = g;
-                final emoji = name.split(' ').first;
+                final (backendKey, label, cost) = g;
+                final emoji = backendKey.split(' ').first;
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: GestureDetector(
-                      onTap: () => _send(name, cost),
+                      onTap: () => _send(backendKey, cost),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         decoration: BoxDecoration(
@@ -1616,7 +1618,7 @@ class _GiftSheetState extends State<_GiftSheet> {
                             Text(emoji, style: const TextStyle(fontSize: 32)),
                             const SizedBox(height: 6),
                             Text(
-                              name.contains(' ') ? name.substring(name.indexOf(' ') + 1) : name,
+                              label,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -1626,7 +1628,7 @@ class _GiftSheetState extends State<_GiftSheet> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '$cost TUCi',
+                              '${NumberFormat('#,##0', 'tr_TR').format(cost)} TUCi',
                               style: const TextStyle(
                                 color: Color(0xFFA78BFA),
                                 fontSize: 11,

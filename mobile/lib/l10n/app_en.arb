@@ -157,6 +157,17 @@
   "errorNetworkMessage": "Check your internet connection and try again.",
   "errorListingsLoad": "Failed to load listings",
   "errorVideoProcessing": "Failed to process video. Please try again.",
+  "giftSheetTitle": "🎁 Send Gift",
+  "giftNameFire": "Fire",
+  "giftNameDiamond": "Diamond",
+  "giftNameCrown": "Royal Crown",
+  "giftSentHud": "🎉 {sender} sent a gift!",
+  "@giftSentHud": {
+    "placeholders": {
+      "sender": { "type": "String" }
+    }
+  },
+  "giftErrorGeneric": "An error occurred.",
   "giftInsufficientBalance": "Insufficient balance. Purchase TUCi to send a gift.",
   "giftLoadBalanceButton": "Load Balance",
   "purchaseLoadError": "An error occurred while loading your purchases. Please check your internet connection and try again.",

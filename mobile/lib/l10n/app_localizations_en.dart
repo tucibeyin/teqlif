@@ -511,6 +511,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get msgListingPublished => 'Listing published!';
 
   @override
+  String get giftSheetTitle => '🎁 Send Gift';
+
+  @override
+  String get giftNameFire => 'Fire';
+
+  @override
+  String get giftNameDiamond => 'Diamond';
+
+  @override
+  String get giftNameCrown => 'Royal Crown';
+
+  @override
+  String giftSentHud(String sender) {
+    return '🎉 $sender sent a gift!';
+  }
+
+  @override
+  String get giftErrorGeneric => 'An error occurred.';
+
+  @override
   String get giftInsufficientBalance =>
       'Insufficient balance. Purchase TUCi to send a gift.';
 

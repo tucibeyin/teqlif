@@ -164,6 +164,17 @@
   "suggestedSellers": "Önerilen Satıcılar",
   "msgPasswordChanged": "Şifreniz başarıyla değiştirildi.",
   "msgListingPublished": "İlan yayına alındı!",
+  "giftSheetTitle": "🎁 Hediye Gönder",
+  "giftNameFire": "Ateş",
+  "giftNameDiamond": "Elmas",
+  "giftNameCrown": "Kral Tacı",
+  "giftSentHud": "🎉 {sender} hediye gönderdi!",
+  "@giftSentHud": {
+    "placeholders": {
+      "sender": { "type": "String" }
+    }
+  },
+  "giftErrorGeneric": "Hata oluştu.",
   "giftInsufficientBalance": "Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.",
   "giftLoadBalanceButton": "Bakiye Yükle",
   "purchaseLoadError": "Alışverişleriniz yüklenirken bir sorun oluştu. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.",

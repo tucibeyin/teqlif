@@ -517,6 +517,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get msgListingPublished => 'Объявление опубликовано!';
 
   @override
+  String get giftSheetTitle => '🎁 Отправить подарок';
+
+  @override
+  String get giftNameFire => 'Огонь';
+
+  @override
+  String get giftNameDiamond => 'Бриллиант';
+
+  @override
+  String get giftNameCrown => 'Королевская корона';
+
+  @override
+  String giftSentHud(String sender) {
+    return '🎉 $sender отправил подарок!';
+  }
+
+  @override
+  String get giftErrorGeneric => 'Произошла ошибка.';
+
+  @override
   String get giftInsufficientBalance =>
       'Недостаточный баланс. Купите TUCi, чтобы отправить подарок.';
 

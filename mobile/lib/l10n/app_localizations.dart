@@ -1086,6 +1086,42 @@ abstract class AppLocalizations {
   /// **'İlan yayına alındı!'**
   String get msgListingPublished;
 
+  /// No description provided for @giftSheetTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎁 Hediye Gönder'**
+  String get giftSheetTitle;
+
+  /// No description provided for @giftNameFire.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ateş'**
+  String get giftNameFire;
+
+  /// No description provided for @giftNameDiamond.
+  ///
+  /// In tr, this message translates to:
+  /// **'Elmas'**
+  String get giftNameDiamond;
+
+  /// No description provided for @giftNameCrown.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kral Tacı'**
+  String get giftNameCrown;
+
+  /// No description provided for @giftSentHud.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎉 {sender} hediye gönderdi!'**
+  String giftSentHud(String sender);
+
+  /// No description provided for @giftErrorGeneric.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hata oluştu.'**
+  String get giftErrorGeneric;
+
   /// No description provided for @giftInsufficientBalance.
   ///
   /// In tr, this message translates to:

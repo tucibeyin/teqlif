@@ -511,6 +511,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String get msgListingPublished => 'تم نشر الإعلان!';
 
   @override
+  String get giftSheetTitle => '🎁 إرسال هدية';
+
+  @override
+  String get giftNameFire => 'نار';
+
+  @override
+  String get giftNameDiamond => 'ماس';
+
+  @override
+  String get giftNameCrown => 'تاج ملكي';
+
+  @override
+  String giftSentHud(String sender) {
+    return '🎉 أرسل $sender هدية!';
+  }
+
+  @override
+  String get giftErrorGeneric => 'حدث خطأ.';
+
+  @override
   String get giftInsufficientBalance => 'رصيد غير كاف. شراء TUCi لإرسال هدية.';
 
   @override

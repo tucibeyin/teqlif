@@ -511,6 +511,26 @@ class AppLocalizationsTr extends AppLocalizations {
   String get msgListingPublished => 'İlan yayına alındı!';
 
   @override
+  String get giftSheetTitle => '🎁 Hediye Gönder';
+
+  @override
+  String get giftNameFire => 'Ateş';
+
+  @override
+  String get giftNameDiamond => 'Elmas';
+
+  @override
+  String get giftNameCrown => 'Kral Tacı';
+
+  @override
+  String giftSentHud(String sender) {
+    return '🎉 $sender hediye gönderdi!';
+  }
+
+  @override
+  String get giftErrorGeneric => 'Hata oluştu.';
+
+  @override
   String get giftInsufficientBalance =>
       'Bakiyeniz yetersiz. Hediye göndermek için TUCi satın alın.';
 

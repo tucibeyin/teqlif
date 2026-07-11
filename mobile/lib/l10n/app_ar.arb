@@ -155,6 +155,17 @@
   "errorConnection": "خطأ في الاتصال",
   "errorNetworkTitle": "لا يوجد اتصال",
   "errorNetworkMessage": "تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
+  "giftSheetTitle": "🎁 إرسال هدية",
+  "giftNameFire": "نار",
+  "giftNameDiamond": "ماس",
+  "giftNameCrown": "تاج ملكي",
+  "giftSentHud": "🎉 أرسل {sender} هدية!",
+  "@giftSentHud": {
+    "placeholders": {
+      "sender": { "type": "String" }
+    }
+  },
+  "giftErrorGeneric": "حدث خطأ.",
   "giftInsufficientBalance": "رصيد غير كاف. شراء TUCi لإرسال هدية.",
   "giftLoadBalanceButton": "شحن الرصيد",
   "purchaseLoadError": "حدث خطأ أثناء تحميل مشترياتك. يرجى التحقق من اتصالك بالإنترنت والمحاولة مرة أخرى.",

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../l10n/app_localizations.dart';
 
 class GiftHud extends StatefulWidget {
   final String sender;
@@ -85,7 +87,7 @@ class _GiftHudState extends State<GiftHud> with SingleTickerProviderStateMixin {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '🎉 ${widget.sender} hediye gönderdi!',
+                          AppLocalizations.of(context)!.giftSentHud(widget.sender),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w800,
@@ -96,7 +98,7 @@ class _GiftHudState extends State<GiftHud> with SingleTickerProviderStateMixin {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${widget.giftName}  ·  ${widget.cost} TUCi',
+                          '${widget.giftName}  ·  ${NumberFormat('#,##0', 'tr_TR').format(widget.cost)} TUCi',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 12,
