@@ -76,11 +76,55 @@ async def main():
         f"FCM token YOK (NULL)"
     )
 
-    # Nginx'ten son 5 fcm-token isteğini göster
-    info("Son fcm-token istekleri (nginx):")
-    lines = sh("grep 'fcm-token' /var/log/nginx/access.log | tail -5")
-    for l in lines.splitlines():
+    # FCM token'ı olan TÜM kullanıcıları göster (yanlış kullanıcıya kaydedildi mi?)
+    info("FCM token'ı olan kullanıcılar (tüm DB):")
+    async with AsyncSessionLocal() as db:
+        rows = (await db.execute(
+            select(User.username, User.fcm_token).where(User.fcm_token.isnot(None))
+        )).all()
+    if rows:
+        for r in rows:
+            print(f"    {r.username:20s} → {r.fcm_token[:35]}…")
+    else:
+        warn("    Hiçbir kullanıcının FCM token'ı yok")
+
+    # ── 1a. Nginx ve Uvicorn Ağ Logları ──────────────────────────────────────
+    hdr("1a. Ağ Logları — Nginx ve Uvicorn")
+
+    # Nginx log dosyaları
+    info("Nginx log dosyaları:")
+    nginx_files = sh("sudo ls -lh /var/log/nginx/ 2>/dev/null || ls -lh /var/log/nginx/ 2>/dev/null")
+    for l in nginx_files.splitlines():
         print(f"    {l}")
+
+    # Tüm nginx log dosyalarında fcm-token ara
+    info("Nginx — fcm-token (tüm log dosyaları):")
+    nginx_fcm = sh("sudo grep -r 'fcm-token' /var/log/nginx/ 2>/dev/null | tail -10")
+    if nginx_fcm:
+        for l in nginx_fcm.splitlines():
+            print(f"    {l}")
+    else:
+        warn("    Nginx loglarında fcm-token bulunamadı — istek nginx'e ulaşmıyor")
+
+    # Nginx — son 20 istek (tüm log dosyaları, en yeni)
+    info("Nginx — son istekler (tüm log dosyaları):")
+    nginx_all = sh("sudo find /var/log/nginx -name '*.log' -newer /var/log/nginx/error.log -exec tail -5 {} + 2>/dev/null | tail -20")
+    if not nginx_all:
+        nginx_all = sh("sudo tail -20 /var/log/nginx/access.log 2>/dev/null")
+    if nginx_all:
+        for l in nginx_all.splitlines():
+            print(f"    {l}")
+    else:
+        warn("    Nginx son istekler okunamadı")
+
+    # Uvicorn (systemd journal) — son auth istekleri
+    info("Uvicorn — son 20 istek (journalctl):")
+    uv_all = sh("journalctl -u teqlif --no-pager -n 30 2>/dev/null | grep 'INFO:' | tail -20")
+    if uv_all:
+        for l in uv_all.splitlines():
+            print(f"    {l}")
+    else:
+        warn("    Uvicorn log bulunamadı")
 
     # ── 1b. DB Yazma Testi ────────────────────────────────────────────────────
     hdr("1b. DB Yazma Testi — token doğrudan DB'ye kaydediliyor mu?")
