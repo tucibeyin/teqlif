@@ -34,6 +34,7 @@ class CallState {
   final Duration elapsed;
   final bool isMuted;
   final bool isSpeaker;
+  final bool permPermanentlyDenied;
 
   const CallState({
     this.status = CallStatus.idle,
@@ -47,6 +48,7 @@ class CallState {
     this.elapsed = Duration.zero,
     this.isMuted = false,
     this.isSpeaker = false,
+    this.permPermanentlyDenied = false,
   });
 
   CallState copyWith({
@@ -61,6 +63,7 @@ class CallState {
     Duration? elapsed,
     bool? isMuted,
     bool? isSpeaker,
+    bool? permPermanentlyDenied,
   }) => CallState(
     status: status ?? this.status,
     callId: callId ?? this.callId,
@@ -73,6 +76,7 @@ class CallState {
     elapsed: elapsed ?? this.elapsed,
     isMuted: isMuted ?? this.isMuted,
     isSpeaker: isSpeaker ?? this.isSpeaker,
+    permPermanentlyDenied: permPermanentlyDenied ?? this.permPermanentlyDenied,
   );
 }
 
@@ -118,8 +122,12 @@ class CallService {
     required String? calleeAvatar,
   }) async {
     final perm = await Permission.microphone.request();
+    debugPrint('[CallService] startCall mikrofon izni: $perm');
     if (!perm.isGranted) {
-      _setState(state.value.copyWith(status: CallStatus.permissionDenied));
+      _setState(state.value.copyWith(
+        status: CallStatus.permissionDenied,
+        permPermanentlyDenied: perm.isPermanentlyDenied,
+      ));
       return;
     }
 
@@ -180,8 +188,12 @@ class CallService {
     if (callId == null) return;
 
     final perm = await Permission.microphone.request();
+    debugPrint('[CallService] acceptCall mikrofon izni: $perm');
     if (!perm.isGranted) {
-      _setState(state.value.copyWith(status: CallStatus.permissionDenied));
+      _setState(state.value.copyWith(
+        status: CallStatus.permissionDenied,
+        permPermanentlyDenied: perm.isPermanentlyDenied,
+      ));
       return;
     }
 

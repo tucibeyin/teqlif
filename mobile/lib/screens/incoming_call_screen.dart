@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../l10n/app_localizations.dart';
 import '../config/api.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/call_service.dart';
 import 'call_screen.dart';
 
@@ -35,12 +36,38 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     CallService.instance.state.addListener(_onStateChange);
   }
 
-  void _onStateChange() {
+  Future<void> _onStateChange() async {
     final status = CallService.instance.state.value.status;
     if (status == CallStatus.ended ||
         status == CallStatus.idle ||
         status == CallStatus.missed) {
       if (mounted) Navigator.of(context).pop();
+    } else if (status == CallStatus.permissionDenied) {
+      if (mounted) {
+        final isPermanent = CallService.instance.state.value.permPermanentlyDenied;
+        CallService.instance.reset();
+        Navigator.of(context).pop();
+        if (isPermanent) {
+          // iOS kalıcı reddi: Settings'e yönlendir
+          await showDialog<void>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(AppLocalizations.of(ctx)!.callPermissionDenied),
+              content: const Text('Sesli arama için Ayarlar\'dan mikrofon iznini açmanız gerekiyor.'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await openAppSettings();
+                  },
+                  child: const Text('Ayarlar\'a Git'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
     }
   }
 
