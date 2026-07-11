@@ -104,6 +104,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       if (pendingNotif != null && (pendingNotif['type'] as String? ?? '').isNotEmpty) {
         _handleNotifNavigation(pendingNotif);
       }
+
+      // FCM token backup kayıt: login anında getToken() null dönmüş olabilir.
+      // 5 sn bekleyip tekrar dene — APNS/FCM SDK bu noktada hazır olur.
+      Future.delayed(const Duration(seconds: 5), PushNotificationService.refreshToken);
     });
   }
 

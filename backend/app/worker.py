@@ -2499,6 +2499,11 @@ class WorkerSettings:
     keep_result = 3600    # 1 saat — hata ayıklama için sonuçlar saklı tutulur
     max_tries = 3         # başarısız task'lar 3 kez yeniden denenir
 
+    @staticmethod
+    async def on_startup(ctx: dict) -> None:
+        from app.logging_config import setup_logging
+        setup_logging()
+
 
 class WorkerSettingsCritical:
     """
@@ -2530,3 +2535,8 @@ class WorkerSettingsCritical:
     job_timeout = 30       # 30sn — push gönderimi uzun sürmez
     keep_result = 600
     max_tries = 5          # Kritik task'lar daha fazla retry
+
+    @staticmethod
+    async def on_startup(ctx: dict) -> None:
+        from app.logging_config import setup_logging
+        setup_logging()

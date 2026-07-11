@@ -91,11 +91,13 @@ class PushNotificationService {
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
-      await _registerToken();
+      // onTokenRefresh'i _registerToken'dan ÖNCE kur: getToken() null dönerse
+      // Firebase token hazır olduğunda bu listener yakalar.
       _messaging.onTokenRefresh.listen((newToken) {
         debugPrint('[FCM] Token yenilendi, backend güncelleniyor');
         _sendTokenToBackend(newToken);
       });
+      await _registerToken();
     } else {
       debugPrint('[FCM] Push izni verilmedi: ${settings.authorizationStatus}');
     }
