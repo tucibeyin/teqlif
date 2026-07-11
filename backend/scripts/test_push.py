@@ -10,6 +10,9 @@ import sys
 import os
 import time
 
+# backend/ dizinini path'e ekle (scripts/ içinden çalıştırılınca app modülü bulunabilsin)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 # ── Renk kodları ──────────────────────────────────────────────────────────────
 GRN = "\033[92m"; RED = "\033[91m"; YLW = "\033[93m"
 BLU = "\033[94m"; MAG = "\033[95m"; CYN = "\033[96m"
