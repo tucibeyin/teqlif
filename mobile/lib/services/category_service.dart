@@ -80,5 +80,19 @@ class CategoryService {
     return _cache[locale]!;
   }
 
+  /// Kategori key'ini lokalize edilmiş label'a çevirir (senkron).
+  /// Cache doluysa cache'den, değilse statik fallback'ten döner.
+  static String labelFor(String key, {String locale = 'tr'}) {
+    if (key.isEmpty) return key;
+    final cached = _cache[locale];
+    if (cached != null) {
+      for (final p in cached) {
+        if (p.$1 == key) return p.$2;
+      }
+    }
+    final labels = _fallbackLabels[locale] ?? _fallbackLabels['tr']!;
+    return labels[key] ?? key;
+  }
+
   static void clearCache() => _cache.clear();
 }

@@ -38,6 +38,7 @@ import '../../services/feed_manager.dart';
 import '../../services/listing_video_manager.dart';
 import '../../services/stream_connection_manager.dart';
 import '../../services/push_notification_service.dart';
+import '../../services/category_service.dart';
 
 // ── SwipeLiveScreen ──────────────────────────────────────────────────────────
 
@@ -1859,7 +1860,9 @@ class _ListingVideoPageState extends State<_ListingVideoPage> {
     final listing = widget.listing;
     final title = listing['title']?.toString() ?? '';
     final price = listing['price'];
-    final category = listing['category']?.toString() ?? '';
+    final categoryKey = listing['category']?.toString() ?? '';
+    final locale = Localizations.localeOf(context).languageCode;
+    final category = CategoryService.labelFor(categoryKey, locale: locale);
     final location = listing['location']?.toString() ?? '';
     final username = (listing['user'] as Map<String, dynamic>?)?['username']?.toString() ?? '';
     final thumbUrl = listing['thumbnail_url']?.toString() ??
