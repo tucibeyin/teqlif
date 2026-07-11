@@ -567,9 +567,9 @@ class _StoryGroupItem extends StatelessWidget {
                           width: 1,
                         ),
                       ),
-                      child: const Text(
-                        'CANLI',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.liveBadgeLabel,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 7,
                           fontWeight: FontWeight.w800,

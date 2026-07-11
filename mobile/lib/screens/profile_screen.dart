@@ -307,7 +307,7 @@ class ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    final fullName = _user?['full_name'] ?? _user?['username'] ?? 'Kullanıcı';
+    final fullName = _user?['full_name'] ?? _user?['username'] ?? AppLocalizations.of(context)!.defaultUserFallback;
     final username = _user?['username'] ?? '';
     final email = _user?['email'] ?? '';
     final isVerified = _user?['is_verified'] == true;
@@ -377,9 +377,9 @@ class ProfileScreenState extends State<ProfileScreen> {
                         color: Colors.red, size: 18),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Canlı Yayın Aç',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  Text(
+                    AppLocalizations.of(context)!.startLiveStreamOption,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                 ],
               ),
@@ -811,26 +811,28 @@ class ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else if (_filteredListings.isEmpty)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 hasScrollBody: false,
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.search_off_rounded, size: 52, color: Color(0xFFD1D5DB)),
-                        SizedBox(height: 12),
-                        Text(
-                          'Sonuç bulunamadı',
-                          style: TextStyle(
-                            color: Color(0xFF6B7280),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
+                child: Builder(
+                  builder: (ctx) => Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.search_off_rounded, size: 52, color: Color(0xFFD1D5DB)),
+                          const SizedBox(height: 12),
+                          Text(
+                            AppLocalizations.of(ctx)!.noResultsFound,
+                            style: const TextStyle(
+                              color: Color(0xFF6B7280),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1134,9 +1136,9 @@ class _ListingGridItem extends StatelessWidget {
                   color: const Color(0xFF64748B),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text(
-                  'Pasif',
-                  style: TextStyle(
+                child: Text(
+                  AppLocalizations.of(context)!.badgePassive,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
@@ -3391,7 +3393,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                           isThreeLine: true,
                           trailing: IconButton(
                             icon: const Icon(Icons.favorite, color: Colors.red, size: 22),
-                            tooltip: 'Favoriden Çıkar',
+                            tooltip: AppLocalizations.of(ctx)!.removeFromFavoritesTooltip,
                             onPressed: () => _removeFavorite(l),
                           ),
                           onTap: () => Navigator.push(

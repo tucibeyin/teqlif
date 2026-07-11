@@ -624,7 +624,7 @@ class SearchScreenState extends State<SearchScreen> {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          'Akıllı Sonuçlar',
+                          l.searchSmartResultsLabel,
                           style: TextStyle(
                             color: kPrimary,
                             fontSize: 12,
@@ -709,7 +709,7 @@ class SearchScreenState extends State<SearchScreen> {
                   child: Row(
                     children: [
                       Text(
-                        'Tüm hesapları gör (${_userResults.length})',
+                        l.searchShowAllAccounts(_userResults.length),
                         style: TextStyle(
                           color: kPrimary,
                           fontSize: 13,
@@ -1175,7 +1175,7 @@ class SearchScreenState extends State<SearchScreen> {
                             const SizedBox(height: 12),
                             Text(
                               _isLoggedIn
-                                  ? 'Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!'
+                                  ? l.explorePersonalizedHint
                                   : l.searchNoContent,
                               textAlign: TextAlign.center,
                               style: const TextStyle(color: Color(0xFF6B7280)),
@@ -1415,6 +1415,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final imgs = widget.listing['image_urls'] as List? ?? [];
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
@@ -1560,10 +1561,10 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 color: Colors.red,
-                child: const Text(
-                  'Canlı Yayına Katıl →',
+                child: Text(
+                  l.joinLiveStreamBanner,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,

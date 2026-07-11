@@ -2446,5 +2446,34 @@
       "tier": { "type": "String" }
     }
   },
-  "whaleShowBestItems": "Время показать лучшие товары!"
+  "whaleShowBestItems": "Время показать лучшие товары!",
+
+  "badgePassive": "Неактивно",
+  "hesitatedSectionTitle": "Вернуться",
+  "hesitatedSectionSubtitle": "Вы собирались сделать ставку",
+  "searchSmartResultsLabel": "Умные результаты",
+  "searchShowAllAccounts": "Показать все аккаунты ({count})",
+  "@searchShowAllAccounts": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "explorePersonalizedHint": "Просмотрите несколько объявлений,\nГотовится персонализированный контент!",
+  "joinLiveStreamBanner": "Присоединиться к трансляции →",
+  "audienceCountPeople": "{count} чел.",
+  "@audienceCountPeople": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "audienceFreeSlots": "-{count} чел.",
+  "@audienceFreeSlots": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "defaultUserFallback": "Пользователь",
+  "startLiveStreamOption": "Начать трансляцию",
+  "noResultsFound": "Ничего не найдено",
+  "removeFromFavoritesTooltip": "Удалить из избранного"
 }

@@ -803,12 +803,12 @@ class HomeScreenState extends State<HomeScreen> {
                                   const Icon(Icons.history, size: 16, color: Colors.orange),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Geri Bak',
+                                    l.hesitatedSectionTitle,
                                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '— teklif vermek üzereydins',
+                                    '— ${l.hesitatedSectionSubtitle}',
                                     style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                                   ),
                                 ],

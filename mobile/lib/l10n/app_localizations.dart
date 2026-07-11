@@ -9011,6 +9011,84 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Kaliteli ürünleri çıkarma vakti!'**
   String get whaleShowBestItems;
+
+  /// No description provided for @badgePassive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pasif'**
+  String get badgePassive;
+
+  /// No description provided for @hesitatedSectionTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geri Bak'**
+  String get hesitatedSectionTitle;
+
+  /// No description provided for @hesitatedSectionSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif Vermek Üzereydin'**
+  String get hesitatedSectionSubtitle;
+
+  /// No description provided for @searchSmartResultsLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Akıllı Sonuçlar'**
+  String get searchSmartResultsLabel;
+
+  /// No description provided for @searchShowAllAccounts.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm hesapları gör ({count})'**
+  String searchShowAllAccounts(int count);
+
+  /// No description provided for @explorePersonalizedHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!'**
+  String get explorePersonalizedHint;
+
+  /// No description provided for @joinLiveStreamBanner.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı Yayına Katıl →'**
+  String get joinLiveStreamBanner;
+
+  /// No description provided for @audienceCountPeople.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} Kişi'**
+  String audienceCountPeople(int count);
+
+  /// No description provided for @audienceFreeSlots.
+  ///
+  /// In tr, this message translates to:
+  /// **'-{count} Kişi'**
+  String audienceFreeSlots(int count);
+
+  /// No description provided for @defaultUserFallback.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcı'**
+  String get defaultUserFallback;
+
+  /// No description provided for @startLiveStreamOption.
+  ///
+  /// In tr, this message translates to:
+  /// **'Canlı Yayın Aç'**
+  String get startLiveStreamOption;
+
+  /// No description provided for @noResultsFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sonuç bulunamadı'**
+  String get noResultsFound;
+
+  /// No description provided for @removeFromFavoritesTooltip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Favoriden Çıkar'**
+  String get removeFromFavoritesTooltip;
 }
 
 class _AppLocalizationsDelegate

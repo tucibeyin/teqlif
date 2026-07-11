@@ -5047,4 +5047,50 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get whaleShowBestItems => 'Время показать лучшие товары!';
+
+  @override
+  String get badgePassive => 'Неактивно';
+
+  @override
+  String get hesitatedSectionTitle => 'Вернуться';
+
+  @override
+  String get hesitatedSectionSubtitle => 'Вы собирались сделать ставку';
+
+  @override
+  String get searchSmartResultsLabel => 'Умные результаты';
+
+  @override
+  String searchShowAllAccounts(int count) {
+    return 'Показать все аккаунты ($count)';
+  }
+
+  @override
+  String get explorePersonalizedHint =>
+      'Просмотрите несколько объявлений,\nГотовится персонализированный контент!';
+
+  @override
+  String get joinLiveStreamBanner => 'Присоединиться к трансляции →';
+
+  @override
+  String audienceCountPeople(int count) {
+    return '$count чел.';
+  }
+
+  @override
+  String audienceFreeSlots(int count) {
+    return '-$count чел.';
+  }
+
+  @override
+  String get defaultUserFallback => 'Пользователь';
+
+  @override
+  String get startLiveStreamOption => 'Начать трансляцию';
+
+  @override
+  String get noResultsFound => 'Ничего не найдено';
+
+  @override
+  String get removeFromFavoritesTooltip => 'Удалить из избранного';
 }

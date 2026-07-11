@@ -2481,5 +2481,34 @@
       "tier": { "type": "String" }
     }
   },
-  "whaleShowBestItems": "Time to show your best items!"
+  "whaleShowBestItems": "Time to show your best items!",
+
+  "badgePassive": "Inactive",
+  "hesitatedSectionTitle": "Look Back",
+  "hesitatedSectionSubtitle": "You Were About to Bid",
+  "searchSmartResultsLabel": "Smart Results",
+  "searchShowAllAccounts": "See all accounts ({count})",
+  "@searchShowAllAccounts": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "explorePersonalizedHint": "Browse a few listings,\nPersonalized content is being prepared!",
+  "joinLiveStreamBanner": "Join Live Stream →",
+  "audienceCountPeople": "{count} People",
+  "@audienceCountPeople": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "audienceFreeSlots": "-{count} People",
+  "@audienceFreeSlots": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "defaultUserFallback": "User",
+  "startLiveStreamOption": "Start Live Stream",
+  "noResultsFound": "No results found",
+  "removeFromFavoritesTooltip": "Remove from Favorites"
 }

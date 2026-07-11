@@ -2441,5 +2441,34 @@
       "tier": { "type": "String" }
     }
   },
-  "whaleShowBestItems": "حان وقت عرض أفضل منتجاتك!"
+  "whaleShowBestItems": "حان وقت عرض أفضل منتجاتك!",
+
+  "badgePassive": "غير نشط",
+  "hesitatedSectionTitle": "انظر للخلف",
+  "hesitatedSectionSubtitle": "كنت على وشك تقديم عرض",
+  "searchSmartResultsLabel": "نتائج ذكية",
+  "searchShowAllAccounts": "عرض كل الحسابات ({count})",
+  "@searchShowAllAccounts": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "explorePersonalizedHint": "تصفح بعض الإعلانات،\nيتم تحضير المحتوى الخاص بك!",
+  "joinLiveStreamBanner": "انضم إلى البث المباشر →",
+  "audienceCountPeople": "{count} أشخاص",
+  "@audienceCountPeople": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "audienceFreeSlots": "-{count} أشخاص",
+  "@audienceFreeSlots": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "defaultUserFallback": "مستخدم",
+  "startLiveStreamOption": "بدء البث المباشر",
+  "noResultsFound": "لا توجد نتائج",
+  "removeFromFavoritesTooltip": "إزالة من المفضلة"
 }

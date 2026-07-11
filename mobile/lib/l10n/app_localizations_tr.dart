@@ -4999,4 +4999,50 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get whaleShowBestItems => 'Kaliteli ürünleri çıkarma vakti!';
+
+  @override
+  String get badgePassive => 'Pasif';
+
+  @override
+  String get hesitatedSectionTitle => 'Geri Bak';
+
+  @override
+  String get hesitatedSectionSubtitle => 'Teklif Vermek Üzereydin';
+
+  @override
+  String get searchSmartResultsLabel => 'Akıllı Sonuçlar';
+
+  @override
+  String searchShowAllAccounts(int count) {
+    return 'Tüm hesapları gör ($count)';
+  }
+
+  @override
+  String get explorePersonalizedHint =>
+      'Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!';
+
+  @override
+  String get joinLiveStreamBanner => 'Canlı Yayına Katıl →';
+
+  @override
+  String audienceCountPeople(int count) {
+    return '$count Kişi';
+  }
+
+  @override
+  String audienceFreeSlots(int count) {
+    return '-$count Kişi';
+  }
+
+  @override
+  String get defaultUserFallback => 'Kullanıcı';
+
+  @override
+  String get startLiveStreamOption => 'Canlı Yayın Aç';
+
+  @override
+  String get noResultsFound => 'Sonuç bulunamadı';
+
+  @override
+  String get removeFromFavoritesTooltip => 'Favoriden Çıkar';
 }

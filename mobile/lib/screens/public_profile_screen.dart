@@ -1537,9 +1537,9 @@ class _LiveAvatarRingState extends State<_LiveAvatarRing>
                     ),
                   ],
                 ),
-                child: const Text(
-                  '● CANLI',
-                  style: TextStyle(
+                child: Text(
+                  '● ${AppLocalizations.of(context)!.liveBadgeLabel}',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,

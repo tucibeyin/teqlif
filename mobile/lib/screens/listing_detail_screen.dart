@@ -644,10 +644,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return AppLocalizations.of(context)!.timeJustNow;
-    if (diff.inMinutes < 60) return '${diff.inMinutes} dk önce';
-    if (diff.inHours < 24) return '${diff.inHours} sa önce';
-    return '${diff.inDays} gün önce';
+    final l = AppLocalizations.of(context)!;
+    if (diff.inSeconds < 60) return l.timeJustNow;
+    if (diff.inMinutes < 60) return l.timeMinAgo(diff.inMinutes);
+    if (diff.inHours < 24) return l.timeHoursAgo(diff.inHours);
+    return l.timeDaysAgo(diff.inDays);
   }
 
   void _goToProfile() {
@@ -2550,7 +2551,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(AppLocalizations.of(context)!.audienceNotificationWillGoTo, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-                    Text('$actualCount Kişi', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(AppLocalizations.of(context)!.audienceCountPeople(actualCount), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -2558,7 +2559,7 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(AppLocalizations.of(context)!.audienceMonthlyFreeRights, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-                    Text('-$freeUsed Kişi', style: const TextStyle(color: Color(0xFF2DD4BF), fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(AppLocalizations.of(context)!.audienceFreeSlots(freeUsed), style: const TextStyle(color: Color(0xFF2DD4BF), fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),
                 const Padding(

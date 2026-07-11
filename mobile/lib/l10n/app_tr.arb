@@ -2444,5 +2444,34 @@
       "tier": { "type": "String" }
     }
   },
-  "whaleShowBestItems": "Kaliteli ürünleri çıkarma vakti!"
+  "whaleShowBestItems": "Kaliteli ürünleri çıkarma vakti!",
+
+  "badgePassive": "Pasif",
+  "hesitatedSectionTitle": "Geri Bak",
+  "hesitatedSectionSubtitle": "Teklif Vermek Üzereydin",
+  "searchSmartResultsLabel": "Akıllı Sonuçlar",
+  "searchShowAllAccounts": "Tüm hesapları gör ({count})",
+  "@searchShowAllAccounts": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "explorePersonalizedHint": "Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!",
+  "joinLiveStreamBanner": "Canlı Yayına Katıl →",
+  "audienceCountPeople": "{count} Kişi",
+  "@audienceCountPeople": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "audienceFreeSlots": "-{count} Kişi",
+  "@audienceFreeSlots": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "defaultUserFallback": "Kullanıcı",
+  "startLiveStreamOption": "Canlı Yayın Aç",
+  "noResultsFound": "Sonuç bulunamadı",
+  "removeFromFavoritesTooltip": "Favoriden Çıkar"
 }

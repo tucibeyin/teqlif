@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import '../../providers/pip_provider.dart';
@@ -83,9 +84,9 @@ class _PipVideoWidgetState extends ConsumerState<PipVideoWidget> {
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text(
-                    'CANLI',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context)!.liveBadgeLabel,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 8,
                       fontWeight: FontWeight.w800,

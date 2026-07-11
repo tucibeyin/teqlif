@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../l10n/app_localizations.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../config/api.dart'; // for imgUrl
@@ -93,9 +94,9 @@ class StreamerAvatarCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(color: AppColors.surface(context), width: 1),
                         ),
-                        child: const Text(
-                          'CANLI',
-                          style: TextStyle(
+                        child: Text(
+                          AppLocalizations.of(context)!.liveBadgeLabel,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 7,
                             fontWeight: FontWeight.w800,

@@ -4969,4 +4969,50 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get whaleShowBestItems => 'حان وقت عرض أفضل منتجاتك!';
+
+  @override
+  String get badgePassive => 'غير نشط';
+
+  @override
+  String get hesitatedSectionTitle => 'انظر للخلف';
+
+  @override
+  String get hesitatedSectionSubtitle => 'كنت على وشك تقديم عرض';
+
+  @override
+  String get searchSmartResultsLabel => 'نتائج ذكية';
+
+  @override
+  String searchShowAllAccounts(int count) {
+    return 'عرض كل الحسابات ($count)';
+  }
+
+  @override
+  String get explorePersonalizedHint =>
+      'تصفح بعض الإعلانات،\nيتم تحضير المحتوى الخاص بك!';
+
+  @override
+  String get joinLiveStreamBanner => 'انضم إلى البث المباشر →';
+
+  @override
+  String audienceCountPeople(int count) {
+    return '$count أشخاص';
+  }
+
+  @override
+  String audienceFreeSlots(int count) {
+    return '-$count أشخاص';
+  }
+
+  @override
+  String get defaultUserFallback => 'مستخدم';
+
+  @override
+  String get startLiveStreamOption => 'بدء البث المباشر';
+
+  @override
+  String get noResultsFound => 'لا توجد نتائج';
+
+  @override
+  String get removeFromFavoritesTooltip => 'إزالة من المفضلة';
 }

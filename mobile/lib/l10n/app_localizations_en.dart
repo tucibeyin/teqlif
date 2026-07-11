@@ -4997,4 +4997,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get whaleShowBestItems => 'Time to show your best items!';
+
+  @override
+  String get badgePassive => 'Inactive';
+
+  @override
+  String get hesitatedSectionTitle => 'Look Back';
+
+  @override
+  String get hesitatedSectionSubtitle => 'You Were About to Bid';
+
+  @override
+  String get searchSmartResultsLabel => 'Smart Results';
+
+  @override
+  String searchShowAllAccounts(int count) {
+    return 'See all accounts ($count)';
+  }
+
+  @override
+  String get explorePersonalizedHint =>
+      'Browse a few listings,\nPersonalized content is being prepared!';
+
+  @override
+  String get joinLiveStreamBanner => 'Join Live Stream →';
+
+  @override
+  String audienceCountPeople(int count) {
+    return '$count People';
+  }
+
+  @override
+  String audienceFreeSlots(int count) {
+    return '-$count People';
+  }
+
+  @override
+  String get defaultUserFallback => 'User';
+
+  @override
+  String get startLiveStreamOption => 'Start Live Stream';
+
+  @override
+  String get noResultsFound => 'No results found';
+
+  @override
+  String get removeFromFavoritesTooltip => 'Remove from Favorites';
 }
