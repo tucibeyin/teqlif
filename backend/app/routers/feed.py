@@ -202,10 +202,11 @@ async def get_hesitated_listings(
     from sqlalchemy import text as sql_text
     rows = await db.execute(
         sql_text("""
-            SELECT l.id, l.title, l.price, l.image_urls, l.image_url, l.status
+            SELECT l.id, l.title, l.price, l.image_urls, l.image_url
             FROM listings l
             WHERE l.id = ANY(:ids)
-              AND l.status = 'active'
+              AND l.is_active = true
+              AND l.is_deleted = false
         """),
         {"ids": listing_ids},
     )
