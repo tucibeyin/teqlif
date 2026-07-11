@@ -84,7 +84,7 @@ async def main():
     # ── 3. push_notification() — tam pipeline ────────────────────────────────
     hdr("3. push_notification() — ARQ Pipeline Testi")
 
-    from app.services.notification_service import push_notification
+    from app.routers.notifications import push_notification
 
     queued_before = await redis.llen("arq:queue:default")
     info(f"ARQ kuyruk ÖNCE: {queued_before} iş")
@@ -144,7 +144,7 @@ async def main():
     hdr("5. Gerçek Mesaj (DB) + Bildirim Pipeline")
 
     from app.models.message import Message
-    from app.services.notification_service import push_notification as push_notif
+    from app.routers.notifications import push_notification as push_notif  # noqa: F811
 
     msg_content = f"[TEST {int(time.time())}] Diagnostik mesajı"
 
