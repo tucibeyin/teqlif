@@ -9,11 +9,10 @@ import asyncio
 import sys
 import os
 import time
+import subprocess
 
-# backend/ dizinini path'e ekle (scripts/ içinden çalıştırılınca app modülü bulunabilsin)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-# ── Renk kodları ──────────────────────────────────────────────────────────────
 GRN = "\033[92m"; RED = "\033[91m"; YLW = "\033[93m"
 BLU = "\033[94m"; MAG = "\033[95m"; CYN = "\033[96m"
 RST = "\033[0m";  BLD = "\033[1m"
@@ -23,6 +22,9 @@ def err(msg):  print(f"  {RED}✗{RST} {msg}")
 def warn(msg): print(f"  {YLW}!{RST} {msg}")
 def info(msg): print(f"  {BLU}→{RST} {msg}")
 def hdr(msg):  print(f"\n{BLD}{CYN}{'─'*60}{RST}\n{BLD}{CYN}  {msg}{RST}\n{BLD}{CYN}{'─'*60}{RST}")
+def sh(cmd):
+    r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return r.stdout.strip()
 
 
 async def main():
@@ -30,6 +32,22 @@ async def main():
     receiver_username = sys.argv[2] if len(sys.argv) > 2 else "tucibeyin"
 
     print(f"\n{BLD}FCM Push Diagnostik{RST} — {MAG}{sender_username}{RST} → {MAG}{receiver_username}{RST}\n")
+
+    # ── 0. Backend Versiyon ───────────────────────────────────────────────────
+    hdr("0. Backend Versiyon ve Servis Durumu")
+
+    git_hash = sh("git -C /var/www/teqlif.com rev-parse --short HEAD")
+    info(f"Git commit   : {git_hash}")
+
+    svc_since = sh("systemctl show teqlif --property=ActiveEnterTimestamp --value")
+    info(f"teqlif since : {svc_since}")
+
+    # Fix commit hash
+    fix_hash = sh("git -C /var/www/teqlif.com log --oneline | grep 'fcm-token endpoint' | head -1")
+    if fix_hash:
+        ok(f"Fix commit   : {fix_hash[:60]}")
+    else:
+        warn("Fix commit bulunamadı — 'fcm-token endpoint' commit eksik olabilir")
 
     # ── 1. ENV + DB ───────────────────────────────────────────────────────────
     hdr("1. Veritabanı — Kullanıcı ve FCM Token Bilgileri")
@@ -40,7 +58,7 @@ async def main():
 
     from app.database import AsyncSessionLocal
     from app.models.user import User
-    from sqlalchemy import select
+    from sqlalchemy import select, update as sa_update, text
 
     async with AsyncSessionLocal() as db:
         sender   = (await db.execute(select(User).where(User.username == sender_username))).scalar_one_or_none()
@@ -53,13 +71,59 @@ async def main():
 
     ok(f"Gönderen  : {sender.username} (id={sender.id})")
     ok(f"Alıcı     : {receiver.username} (id={receiver.id})")
+    (ok if receiver.fcm_token else err)(
+        f"FCM token : {receiver.fcm_token[:40]}…" if receiver.fcm_token else
+        f"FCM token YOK (NULL)"
+    )
 
-    if receiver.fcm_token:
-        ok(f"FCM token : {receiver.fcm_token[:40]}…")
+    # Nginx'ten son 5 fcm-token isteğini göster
+    info("Son fcm-token istekleri (nginx):")
+    lines = sh("grep 'fcm-token' /var/log/nginx/access.log | tail -5")
+    for l in lines.splitlines():
+        print(f"    {l}")
+
+    # ── 1b. DB Yazma Testi ────────────────────────────────────────────────────
+    hdr("1b. DB Yazma Testi — token doğrudan DB'ye kaydediliyor mu?")
+
+    test_token = f"TEST_TOKEN_{int(time.time())}"
+    async with AsyncSessionLocal() as db:
+        await db.execute(sa_update(User).where(User.id == receiver.id).values(fcm_token=test_token))
+        await db.commit()
+
+    # Yeni session'da oku — gerçekten yazıldı mı?
+    async with AsyncSessionLocal() as db:
+        row = (await db.execute(select(User.fcm_token).where(User.id == receiver.id))).scalar_one()
+
+    if row == test_token:
+        ok(f"DB yazma çalışıyor (test token kaydedildi)")
     else:
-        err(f"FCM token YOK — '{receiver_username}' için DB'de fcm_token = NULL")
-        err("Alıcı uygulamayı açsın → splash screen token'ı otomatik kaydeder")
-        info("Kontrol: sudo journalctl -u teqlif --no-pager | grep fcm-token")
+        err(f"DB yazma BOZUK! Yazılan: {test_token[:20]}, Okunan: {str(row)[:20]}")
+        await (await __import__('app.utils.redis_client', fromlist=['get_redis']).get_redis()).aclose()
+        return
+
+    # Test token'ı temizle — gerçek token bekliyoruz
+    async with AsyncSessionLocal() as db:
+        await db.execute(sa_update(User).where(User.id == receiver.id).values(fcm_token=None))
+        await db.commit()
+    info("Test token temizlendi, alıcının gerçek token kaydı için uygulamayı aç/kapat")
+
+    # ── 1c. API Endpoint Kodu Doğrulaması ────────────────────────────────────
+    hdr("1c. /auth/fcm-token Endpoint Kodu — fix yüklü mü?")
+
+    endpoint_file = "/var/www/teqlif.com/backend/app/routers/auth.py"
+    endpoint_src = sh(f"grep -A 15 'def save_fcm_token' {endpoint_file}")
+    if "sa_update" in endpoint_src or "sa_update(User)" in endpoint_src:
+        ok("Fix yüklü — endpoint direkt UPDATE kullanıyor")
+    elif "current_user.fcm_token = token" in endpoint_src:
+        err("ESKİ KOD ÇALIŞIYOR — ORM assignment ile (token kaydedilmiyor)")
+        err("Servisi yeniden başlat: sudo systemctl restart teqlif")
+        info("Endpoint kodu:")
+        for l in endpoint_src.splitlines()[:10]:
+            print(f"    {l}")
+    else:
+        info("Endpoint kodu:")
+        for l in endpoint_src.splitlines()[:10]:
+            print(f"    {l}")
 
     # ── 2. Circuit Breaker ────────────────────────────────────────────────────
     hdr("2. Redis Circuit Breaker")
@@ -68,20 +132,21 @@ async def main():
     redis = await get_redis()
     cb_state    = (await redis.get("cb:fcm:state"))    or "closed"
     cb_failures = (await redis.get("cb:fcm:failures")) or "0"
+    (ok if cb_state != "open" else err)(f"Circuit breaker: {cb_state} (failures={cb_failures})")
 
-    if cb_state == "open":
-        err(f"Circuit breaker AÇIK! failures={cb_failures}")
-        err("Sıfırla: redis-cli del cb:fcm:state cb:fcm:failures cb:fcm:opened_at")
-    else:
-        ok(f"Circuit breaker: {cb_state} (failures={cb_failures})")
+    # FCM token tekrar oku
+    async with AsyncSessionLocal() as db:
+        receiver = (await db.execute(select(User).where(User.id == receiver.id))).scalar_one()
 
     if not receiver.fcm_token:
-        warn("\nFCM token olmadan push testi yapılamaz.")
-        warn("Lütfen önce alıcı uygulamayı aç ve tekrar çalıştır.")
+        warn("FCM token hâlâ NULL — uygulamayı aç/kapat, sonra tekrar çalıştır")
+        info("Servisin yeni kodu yükleyip yüklemediğini kontrol et: sudo systemctl status teqlif")
         await redis.aclose()
         return
 
-    # ── 3. ARQ Pool — manuel başlat ──────────────────────────────────────────
+    ok(f"FCM token alındı: {receiver.fcm_token[:35]}…")
+
+    # ── 3. ARQ Pool ───────────────────────────────────────────────────────────
     hdr("3. ARQ Pool Başlatma")
 
     from arq import create_pool
@@ -93,158 +158,95 @@ async def main():
     set_pool(arq_pool)
     ok(f"ARQ pool başlatıldı → {app_settings.redis_url[:30]}…")
 
-    # ── 4a. ARQ Pool — doğrudan enqueue testi ────────────────────────────────
-    hdr("4a. ARQ Pool — doğrudan enqueue_job testi")
+    # ── 4a. ARQ — doğrudan enqueue ────────────────────────────────────────────
+    hdr("4a. ARQ — doğrudan send_push_notification_task")
 
     q0 = await redis.llen("arq:queue:default")
-    info(f"Kuyruk ÖNCE: {q0}")
     job = await arq_pool.enqueue_job(
         "send_push_notification_task",
         receiver.fcm_token,
-        f"[ARQ Direct Test] {sender_username}",
-        "ARQ pool doğrudan enqueue testi",
+        f"[4a ARQ Test] {sender_username}",
+        "ARQ doğrudan enqueue testi",
         None, "message",
         {"sender_username": sender_username},
         None,
     )
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.5)
     q1 = await redis.llen("arq:queue:default")
-    info(f"Kuyruk SONRA: {q1} (job_id={getattr(job, 'job_id', '?')})")
-    if q1 > q0 or job:
-        ok("ARQ pool çalışıyor — iş kuyruğa eklendi veya anında işlendi")
-        direct_arq_ok = True
-    else:
-        warn("ARQ pool enqueue başarısız olmuş olabilir")
-        direct_arq_ok = False
+    ok(f"job_id={getattr(job, 'job_id', '?')} | kuyruk: {q0}→{q1}")
 
-    # ── 4b. push_notification() — tam pipeline ────────────────────────────────
-    hdr("4b. push_notification() — tam pipeline (bildirim tercihleri + ARQ)")
+    # ── 4b. push_notification() pipeline ─────────────────────────────────────
+    hdr("4b. push_notification() — tam pipeline")
 
     from app.routers.notifications import push_notification
-
-    # Kullanıcının bildirim tercihlerini kontrol et
     from app.schemas.user import DEFAULT_NOTIF_PREFS
+
     async with AsyncSessionLocal() as db:
         u = await db.get(User, receiver.id)
         prefs = u.notification_prefs or {}
         merged = {**DEFAULT_NOTIF_PREFS, **prefs}
-    info(f"messages tercihi: {merged.get('messages', True)}")
-    info(f"quiet_hours_enabled: {merged.get('quiet_hours_enabled', False)}")
-    if not merged.get("messages", True):
-        err("'messages' bildirimleri KAPALI! push_notification() erken return edecek")
-    else:
-        ok("messages bildirimleri açık")
+    info(f"messages: {merged.get('messages')}  quiet_hours: {merged.get('quiet_hours_enabled')}")
 
     q2 = await redis.llen("arq:queue:default")
-    info(f"Kuyruk ÖNCE: {q2}")
     try:
         await push_notification(
             receiver.id,
-            {
-                "type": "message",
-                "body": f"[Diagnostik] {sender_username} → pipeline testi",
-                "sender_username": sender_username,
-            },
+            {"type": "message", "body": f"[4b Test] {sender_username}", "sender_username": sender_username},
             pref_key="messages",
         )
-        ok("push_notification() tamamlandı (exception yok)")
+        ok("push_notification() tamamlandı")
     except Exception as exc:
-        err(f"push_notification() hata fırlattı: {exc}")
+        err(f"push_notification() HATA: {exc}")
 
-    samples = []
-    for _ in range(5):
-        await asyncio.sleep(0.2)
-        samples.append(await redis.llen("arq:queue:default"))
+    samples = [await redis.llen("arq:queue:default") for _ in range(5) if not await asyncio.sleep(0.2)]  # type: ignore[func-returns-value]
     peak = max(samples)
-    diff = peak - q2
-    info(f"Kuyruk örnekleri: {samples} (zirve={peak}, delta={diff:+d})")
+    (ok if peak > q2 else warn)(f"ARQ kuyruk: önce={q2} samples={samples} peak={peak}")
 
-    if peak > q2:
-        ok(f"push_notification() → ARQ kuyruğuna eklendi (worker işledi)")
-    else:
-        warn("push_notification() → ARQ kuyruğuna iş eklenmedi")
-        import subprocess
-        r = subprocess.run(
-            ["journalctl", "-u", "teqlif-worker", "--no-pager", "-n", "10"],
-            capture_output=True, text=True
-        )
-        for line in r.stdout.splitlines()[-10:]:
-            if any(k in line for k in ["[FCM]", "[Worker]", "[PUSH]", "Error", "error"]):
-                print(f"    {line}")
-
-    # ── 5. send_push() — doğrudan Firebase ───────────────────────────────────
-    hdr("5. send_push() — Doğrudan Firebase (ARQ bypass)")
+    # ── 5. Doğrudan Firebase ─────────────────────────────────────────────────
+    hdr("5. send_push() — Doğrudan Firebase")
 
     from app.services.firebase_service import send_push, InvalidFCMTokenError
 
-    info(f"send_push() çağrılıyor → token={receiver.fcm_token[:25]}…")
     t = time.monotonic()
     try:
         await send_push(
             token=receiver.fcm_token,
             title=f"🔔 Diagnostik ({sender_username})",
-            body="Bu bildirim doğrudan Firebase'e gönderildi (ARQ bypass)",
+            body="Test bildirimi — doğrudan Firebase",
             notif_type="message",
-            extra_data={"sender_id": str(sender.id), "sender_username": sender_username},
+            extra_data={"sender_username": sender_username},
         )
         elapsed = (time.monotonic() - t) * 1000
-        ok(f"Firebase yanıt verdi ({elapsed:.0f}ms)")
-        print(f"\n  {BLD}Bu bildirim cihaza GELDİ mi?{RST}")
-        print(f"  {GRN}EVET geldi{RST} → sorun ARQ pipeline'da (4. adımı incele)")
-        print(f"  {RED}HAYIR gelmedi{RST} → sorun iOS/APNs veya cihaz bildirim ayarında\n")
+        ok(f"Firebase kabul etti ({elapsed:.0f}ms)")
+        print(f"\n  {BLD}>>> Bu bildirim telefona GELDİ mi? <<<{RST}")
+        print(f"  {GRN}Evet{RST}: iOS/APNs çalışıyor, sorun ARQ pipeline'da")
+        print(f"  {RED}Hayır{RST}: iOS bildirim izni veya APNs ortam sorunu\n")
     except InvalidFCMTokenError:
-        err("FCM TOKEN GEÇERSİZ veya SÜRESİ DOLMUŞ!")
-        err(f"  Temizle: UPDATE users SET fcm_token=NULL WHERE username='{receiver_username}';")
-        err("  Sonra uygulamayı aç — yeni token otomatik kaydedilir")
+        err("FCM TOKEN GEÇERSİZ — yeni token kaydedilmeli (uygulamayı aç)")
     except Exception as exc:
-        err(f"FCM hatası: {type(exc).__name__}: {exc}")
-        import traceback; traceback.print_exc()
+        err(f"Firebase HATA: {type(exc).__name__}: {exc}")
 
-    # ── 6. Gerçek Mesaj — DB üzerinden ───────────────────────────────────────
-    hdr("6. Gerçek Mesaj (DB) + Bildirim Pipeline")
+    # ── 6. Worker Log ─────────────────────────────────────────────────────────
+    hdr("6. Son Worker Logları")
 
-    from app.models.message import DirectMessage
-    from app.routers.notifications import push_notification as push_notif  # noqa: F811
-
-    msg_content = f"[TEST {int(time.time())}] Diagnostik mesajı"
-
-    async with AsyncSessionLocal() as db:
-        msg = DirectMessage(
-            sender_id=sender.id,
-            receiver_id=receiver.id,
-            content=msg_content,
-            content_type="text",
-        )
-        db.add(msg)
-        await db.commit()
-        await db.refresh(msg)
-        ok(f"Mesaj DB'ye eklendi (id={msg.id}): {msg_content}")
-
-    q_before = await redis.llen("arq:queue:default")
-    await push_notif(
-        receiver.id,
-        {
-            "type": "message",
-            "body": msg_content,
-            "sender_username": sender_username,
-            "related_id": msg.id,
-        },
-        pref_key="messages",
-    )
-    await asyncio.sleep(0.5)
-    q_after = await redis.llen("arq:queue:default")
-    info(f"Mesaj bildirimi ARQ: {q_after - q_before:+d} iş")
+    worker_log = sh("journalctl -u teqlif-worker --no-pager -n 20")
+    fcm_lines = [l for l in worker_log.splitlines() if any(k in l for k in ["[FCM]", "[Worker]", "Error", "error", "push"])]
+    if fcm_lines:
+        for l in fcm_lines[-10:]:
+            print(f"  {l}")
+    else:
+        warn("Worker'da ilgili log bulunamadı")
+        info("Canlı izle: sudo journalctl -u teqlif-worker -f")
 
     # ── Özet ──────────────────────────────────────────────────────────────────
     hdr("ÖZET")
-    ok(f"FCM token: mevcut") if receiver.fcm_token else err("FCM token: YOK")
-    ok("Circuit breaker: kapalı") if cb_state != "open" else err(f"Circuit breaker: AÇIK")
-    ok(f"ARQ pipeline: +{diff} iş") if diff > 0 else warn("ARQ pipeline: iş eklenmedi")
+    ok(f"FCM token  : mevcut") if receiver.fcm_token else err("FCM token  : YOK")
+    (ok if cb_state != "open" else err)(f"CB         : {cb_state}")
     print()
-    info("Uvicorn yeniden başlatma gerekirse: sudo systemctl restart teqlif")
+    info("Servis yeniden başlatma: sudo systemctl restart teqlif")
     print()
 
-    await arq_pool.close()
+    await arq_pool.aclose()
     await redis.aclose()
 
 
