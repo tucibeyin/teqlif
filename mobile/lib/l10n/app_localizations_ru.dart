@@ -4165,6 +4165,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get timeNow => 'сейчас';
 
   @override
+  String timeMinAgo(int n) {
+    return '$n мин назад';
+  }
+
+  @override
+  String timeHoursAgo(int n) {
+    return '$n ч назад';
+  }
+
+  @override
+  String timeDaysAgo(int n) {
+    return '$n д назад';
+  }
+
+  @override
   String get radarExpensive => 'Дорого';
 
   @override

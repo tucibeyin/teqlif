@@ -4090,6 +4090,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get timeNow => 'الآن';
 
   @override
+  String timeMinAgo(int n) {
+    return 'قبل $n د';
+  }
+
+  @override
+  String timeHoursAgo(int n) {
+    return 'قبل $n س';
+  }
+
+  @override
+  String timeDaysAgo(int n) {
+    return 'قبل $n ي';
+  }
+
+  @override
   String get radarExpensive => 'غال';
 
   @override

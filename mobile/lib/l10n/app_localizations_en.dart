@@ -4115,6 +4115,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get timeNow => 'now';
 
   @override
+  String timeMinAgo(int n) {
+    return '${n}m ago';
+  }
+
+  @override
+  String timeHoursAgo(int n) {
+    return '${n}h ago';
+  }
+
+  @override
+  String timeDaysAgo(int n) {
+    return '${n}d ago';
+  }
+
+  @override
   String get radarExpensive => 'Expensive';
 
   @override

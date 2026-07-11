@@ -4120,6 +4120,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get timeNow => 'şimdi';
 
   @override
+  String timeMinAgo(int n) {
+    return '${n}d önce';
+  }
+
+  @override
+  String timeHoursAgo(int n) {
+    return '${n}s önce';
+  }
+
+  @override
+  String timeDaysAgo(int n) {
+    return '${n}g önce';
+  }
+
+  @override
   String get radarExpensive => 'Pahalı';
 
   @override

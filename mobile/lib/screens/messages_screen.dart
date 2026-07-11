@@ -290,12 +290,13 @@ class _MessagesTabState extends State<_MessagesTab> {
   String _timeAgo(String? isoStr) {
     if (isoStr == null) return '';
     try {
+      final l = AppLocalizations.of(context)!;
       final dt = DateTime.parse(isoStr).toLocal();
       final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) return AppLocalizations.of(context)!.timeNow;
-      if (diff.inMinutes < 60) return '${diff.inMinutes}d önce';
-      if (diff.inHours < 24) return '${diff.inHours}s önce';
-      return '${diff.inDays}g önce';
+      if (diff.inMinutes < 1) return l.timeNow;
+      if (diff.inMinutes < 60) return l.timeMinAgo(diff.inMinutes);
+      if (diff.inHours < 24) return l.timeHoursAgo(diff.inHours);
+      return l.timeDaysAgo(diff.inDays);
     } catch (_) {
       return '';
     }
@@ -509,12 +510,13 @@ class _NotificationsTabState extends State<_NotificationsTab> {
   String _timeAgo(String? isoStr) {
     if (isoStr == null) return '';
     try {
+      final l = AppLocalizations.of(context)!;
       final dt = DateTime.parse(isoStr).toLocal();
       final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 1) return AppLocalizations.of(context)!.timeNow;
-      if (diff.inMinutes < 60) return '${diff.inMinutes}d önce';
-      if (diff.inHours < 24) return '${diff.inHours}s önce';
-      return '${diff.inDays}g önce';
+      if (diff.inMinutes < 1) return l.timeNow;
+      if (diff.inMinutes < 60) return l.timeMinAgo(diff.inMinutes);
+      if (diff.inHours < 24) return l.timeHoursAgo(diff.inHours);
+      return l.timeDaysAgo(diff.inDays);
     } catch (_) {
       return '';
     }

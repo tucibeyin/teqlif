@@ -7548,6 +7548,24 @@ abstract class AppLocalizations {
   /// **'şimdi'**
   String get timeNow;
 
+  /// No description provided for @timeMinAgo.
+  ///
+  /// In tr, this message translates to:
+  /// **'{n}d önce'**
+  String timeMinAgo(int n);
+
+  /// No description provided for @timeHoursAgo.
+  ///
+  /// In tr, this message translates to:
+  /// **'{n}s önce'**
+  String timeHoursAgo(int n);
+
+  /// No description provided for @timeDaysAgo.
+  ///
+  /// In tr, this message translates to:
+  /// **'{n}g önce'**
+  String timeDaysAgo(int n);
+
   /// No description provided for @radarExpensive.
   ///
   /// In tr, this message translates to:
