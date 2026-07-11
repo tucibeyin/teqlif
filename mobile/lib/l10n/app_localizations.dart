@@ -1296,6 +1296,54 @@ abstract class AppLocalizations {
   /// **'📌 İlana Git'**
   String get msgGoToListing;
 
+  /// No description provided for @msgGoToAuctionDetail.
+  ///
+  /// In tr, this message translates to:
+  /// **'📋 Detaya Git →'**
+  String get msgGoToAuctionDetail;
+
+  /// No description provided for @msgTyping.
+  ///
+  /// In tr, this message translates to:
+  /// **'yazıyor...'**
+  String get msgTyping;
+
+  /// No description provided for @msgUserFallback.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcı'**
+  String get msgUserFallback;
+
+  /// No description provided for @msgItemFallback.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ürün'**
+  String get msgItemFallback;
+
+  /// No description provided for @msgContextPurchase.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alışveriş'**
+  String get msgContextPurchase;
+
+  /// No description provided for @msgContextSale.
+  ///
+  /// In tr, this message translates to:
+  /// **'Satış'**
+  String get msgContextSale;
+
+  /// No description provided for @kbdTypingHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yazılıyor...'**
+  String get kbdTypingHint;
+
+  /// No description provided for @kbdDismiss.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kapat'**
+  String get kbdDismiss;
+
   /// No description provided for @msgDeleteMessage.
   ///
   /// In tr, this message translates to:

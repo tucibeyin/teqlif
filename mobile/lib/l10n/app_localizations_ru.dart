@@ -631,6 +631,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get msgGoToListing => '📌 Перейти к объявлению';
 
   @override
+  String get msgGoToAuctionDetail => '📋 Перейти к деталям →';
+
+  @override
+  String get msgTyping => 'печатает...';
+
+  @override
+  String get msgUserFallback => 'Пользователь';
+
+  @override
+  String get msgItemFallback => 'Товар';
+
+  @override
+  String get msgContextPurchase => 'Покупка';
+
+  @override
+  String get msgContextSale => 'Продажа';
+
+  @override
+  String get kbdTypingHint => 'Печатает...';
+
+  @override
+  String get kbdDismiss => 'Готово';
+
+  @override
   String get msgDeleteMessage => 'Удалить сообщение';
 
   @override

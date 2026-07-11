@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../l10n/app_localizations.dart';
 
 class GlobalKeyboardAccessory extends StatefulWidget {
   final Widget child;
@@ -250,7 +251,7 @@ class _AccessoryBarState extends State<_AccessoryBar> {
                                         return Align(
                                           alignment: Alignment.centerLeft,
                                           child: Text(
-                                            'Yazılıyor...',
+                                            AppLocalizations.of(context)!.kbdTypingHint,
                                             style: _textStyle.copyWith(
                                               fontStyle: FontStyle.italic,
                                               color: AppColors.textTertiary(context),
@@ -303,9 +304,9 @@ class _AccessoryBarState extends State<_AccessoryBar> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         foregroundColor: kPrimary,
                       ),
-                      child: const Text(
-                        'Kapat',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.kbdDismiss,
+                        style: const TextStyle(
                           decoration: TextDecoration.none,
                           fontWeight: FontWeight.w700,
                           fontSize: 14,

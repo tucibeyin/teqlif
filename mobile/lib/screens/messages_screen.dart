@@ -607,10 +607,11 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       case 'message':
         if (relatedId != null) {
           final username = extractHandle(title);
+          final l = AppLocalizations.of(context)!;
           Navigator.push(context, MaterialPageRoute(
             builder: (_) => DirectChatScreen(
               otherUserId: relatedId,
-              displayName: username.isNotEmpty ? username : 'Kullanıcı',
+              displayName: username.isNotEmpty ? username : l.msgUserFallback,
               otherHandle: username,
             ),
           ));
@@ -1179,7 +1180,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                   const _TypingIndicator(),
                   const SizedBox(width: 8),
                   Text(
-                    'yazıyor...',
+                    l.msgTyping,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary(context),
@@ -1264,12 +1265,13 @@ class _ContextBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final item = purchase ?? sale!;
     final isPurchase = purchase != null;
-    final itemName = item['item_name'] as String? ?? 'Ürün';
+    final itemName = item['item_name'] as String? ?? l.msgItemFallback;
     final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
     final thumbnailUrl = item['thumbnail_url'] as String? ?? item['image_url'] as String?;
-    final label = isPurchase ? 'Alışveriş' : 'Satış';
+    final label = isPurchase ? l.msgContextPurchase : l.msgContextSale;
 
     return InkWell(
       onTap: () {
@@ -1461,7 +1463,7 @@ class _MessageText extends StatelessWidget {
         // Açık artırma detay linki
         final auctionId = int.parse(match.group(3)!);
         spans.add(TextSpan(
-          text: '📋 Detaya Git →',
+          text: l.msgGoToAuctionDetail,
           style: const TextStyle(
             color: auctionLinkColor,
             fontSize: 14.5,

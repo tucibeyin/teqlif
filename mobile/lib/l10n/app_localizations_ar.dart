@@ -622,6 +622,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get msgGoToListing => '📌 الانتقال إلى الإعلان';
 
   @override
+  String get msgGoToAuctionDetail => '📋 الانتقال إلى التفاصيل →';
+
+  @override
+  String get msgTyping => 'يكتب...';
+
+  @override
+  String get msgUserFallback => 'مستخدم';
+
+  @override
+  String get msgItemFallback => 'منتج';
+
+  @override
+  String get msgContextPurchase => 'مشتريات';
+
+  @override
+  String get msgContextSale => 'بيع';
+
+  @override
+  String get kbdTypingHint => 'الكتابة...';
+
+  @override
+  String get kbdDismiss => 'تم';
+
+  @override
   String get msgDeleteMessage => 'حذف الرسالة';
 
   @override

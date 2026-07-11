@@ -626,6 +626,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get msgGoToListing => '📌 İlana Git';
 
   @override
+  String get msgGoToAuctionDetail => '📋 Detaya Git →';
+
+  @override
+  String get msgTyping => 'yazıyor...';
+
+  @override
+  String get msgUserFallback => 'Kullanıcı';
+
+  @override
+  String get msgItemFallback => 'Ürün';
+
+  @override
+  String get msgContextPurchase => 'Alışveriş';
+
+  @override
+  String get msgContextSale => 'Satış';
+
+  @override
+  String get kbdTypingHint => 'Yazılıyor...';
+
+  @override
+  String get kbdDismiss => 'Kapat';
+
+  @override
   String get msgDeleteMessage => 'Mesajı Sil';
 
   @override

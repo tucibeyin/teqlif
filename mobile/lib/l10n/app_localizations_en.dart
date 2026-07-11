@@ -625,6 +625,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get msgGoToListing => '📌 Go to Listing';
 
   @override
+  String get msgGoToAuctionDetail => '📋 Go to Details →';
+
+  @override
+  String get msgTyping => 'typing...';
+
+  @override
+  String get msgUserFallback => 'User';
+
+  @override
+  String get msgItemFallback => 'Product';
+
+  @override
+  String get msgContextPurchase => 'Purchase';
+
+  @override
+  String get msgContextSale => 'Sale';
+
+  @override
+  String get kbdTypingHint => 'Typing...';
+
+  @override
+  String get kbdDismiss => 'Done';
+
+  @override
   String get msgDeleteMessage => 'Delete Message';
 
   @override
