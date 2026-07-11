@@ -595,6 +595,20 @@ class AuctionService:
             "[AÇIK ARTIRMA] BİTTİ | stream_id=%s winner=%s price=%s bid_count=%s",
             stream_id, state["current_bidder"], state["current_bid"], state["bid_count"],
         )
+
+        # Teklif verenlere artırma sona erdi bildirimi
+        from app.core.task_queue import get_pool as _get_pool
+        _pool = _get_pool()
+        if _pool and int(data.get("bid_count", 0)) > 0:
+            await _pool.enqueue_job(
+                "notify_auction_losers_task",
+                stream_id,
+                None,  # kazanan yok (end_auction)
+                data.get("item_name", ""),
+                final_price if data.get("current_bidder_id") else None,
+                False,
+            )
+
         return state
 
     # ── Teklif Ver ───────────────────────────────────────────────────────────
@@ -729,17 +743,28 @@ class AuctionService:
         if prev_bidder_id_str and prev_bidder_id_str != str(user.id):
             try:
                 prev_bidder_id = int(prev_bidder_id_str)
-                asyncio.create_task(push_notification(
-                    user_id=prev_bidder_id,
-                    notif={
-                        "type": "outbid",
-                        "title": "Teklifiniz geçildi!",
-                        "body": f"{prev_item_name} — yeni teklif: ₺{data.amount:,.0f}" if prev_item_name else f"Yeni teklif: ₺{data.amount:,.0f}",
-                        "related_id": stream_id,
-                        "stream_id": stream_id,
-                    },
-                    pref_key="outbid",
-                ))
+                from app.core.task_queue import get_pool as _get_pool
+                _pool = _get_pool()
+                if _pool:
+                    await _pool.enqueue_job(
+                        "notify_outbid_task",
+                        prev_bidder_id,
+                        stream_id,
+                        prev_item_name,
+                        float(data.amount),
+                    )
+                else:
+                    asyncio.create_task(push_notification(
+                        user_id=prev_bidder_id,
+                        notif={
+                            "type": "outbid",
+                            "title": "Teklifiniz geçildi!",
+                            "body": f"{prev_item_name} — yeni teklif: ₺{data.amount:,.0f}" if prev_item_name else f"Yeni teklif: ₺{data.amount:,.0f}",
+                            "related_id": stream_id,
+                            "stream_id": stream_id,
+                        },
+                        pref_key="outbid",
+                    ))
             except ValueError:
                 logger.warning(
                     "[TEKLİF] Geçersiz prev_bidder_id formatı, outbid bildirimi atlandı | stream_id=%s prev_bidder_id_str=%r",
@@ -966,6 +991,20 @@ class AuctionService:
             "price": bin_price,
             "item_name": item_name,
         })
+
+        # Teklif verip kaybedenlere bildirim (hemen al ile bitti)
+        if bid_count > 0:
+            from app.core.task_queue import get_pool as _get_pool
+            _pool = _get_pool()
+            if _pool:
+                await _pool.enqueue_job(
+                    "notify_auction_losers_task",
+                    stream_id,
+                    buyer_id,
+                    item_name,
+                    bin_price,
+                    True,
+                )
 
         # Chat'e herkese görünür özet mesajı
         chat_msg = {
@@ -1246,4 +1285,18 @@ class AuctionService:
             "[AÇIK ARTIRMA] TEKLİF KABUL EDİLDİ | stream_id=%s winner=%s price=%s",
             stream_id, winner_name, final_price,
         )
+
+        # Kaybedenlere bildirim (kazanan hariç tüm teklif verenler)
+        from app.core.task_queue import get_pool as _get_pool
+        _pool = _get_pool()
+        if _pool and int(data.get("bid_count", 0)) > 1:
+            await _pool.enqueue_job(
+                "notify_auction_losers_task",
+                stream_id,
+                winner_user_id,
+                item_name,
+                final_price,
+                True,
+            )
+
         return state

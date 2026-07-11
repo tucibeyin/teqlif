@@ -2230,6 +2230,118 @@ async def compute_influence_scores_task(ctx: dict) -> None:
         capture_exception(exc)
 
 
+# ── Task: Outbid Bildirimi (ARQ — durable) ───────────────────────────────────
+
+async def notify_outbid_task(
+    ctx: dict,
+    prev_bidder_id: int,
+    stream_id: int,
+    item_name: str,
+    new_amount: float,
+) -> None:
+    """
+    Teklifini geçilen kullanıcıya ARQ üzerinden bildirim gönderir.
+    asyncio.create_task yerine doğrudan ARQ job olarak enqueue edilir — process
+    restart'ında kaybolmaz.
+    """
+    try:
+        from app.routers.notifications import push_notification
+        await push_notification(
+            user_id=prev_bidder_id,
+            notif={
+                "type": "outbid",
+                "title": "Teklifiniz geçildi!",
+                "body": f"{item_name} — yeni teklif: ₺{new_amount:,.0f}".replace(",", ".") if item_name else f"Yeni teklif: ₺{new_amount:,.0f}".replace(",", "."),
+                "related_id": stream_id,
+                "stream_id": stream_id,
+            },
+            pref_key="outbid",
+        )
+    except Exception as exc:
+        logger.error(
+            "[Worker] notify_outbid_task başarısız | prev_bidder_id=%s stream_id=%s | %s",
+            prev_bidder_id, stream_id, exc, exc_info=True,
+        )
+        capture_exception(exc)
+        raise
+
+
+# ── Task: Artırma Kaybedenleri Bildirimi ─────────────────────────────────────
+
+async def notify_auction_losers_task(
+    ctx: dict,
+    stream_id: int,
+    winner_id: int | None,
+    item_name: str,
+    final_price: float | None,
+    was_accepted: bool,
+) -> None:
+    """
+    Artırma sona erdiğinde (accept_bid / end_auction / accept_buy_it_now)
+    teklif verip kaybeden tüm kullanıcılara bildirim gönderir.
+
+    was_accepted=True  → kazanan var, diğerleri kaybetti
+    was_accepted=False → artırma iptal edildi / teklif kabul edilmedi
+    """
+    try:
+        from sqlalchemy import select
+        from app.database import AsyncSessionLocal
+        from app.models.bid import Bid
+        from app.routers.notifications import push_notification
+
+        async with AsyncSessionLocal() as db:
+            rows = await db.execute(
+                select(Bid.bidder_id).where(Bid.stream_id == stream_id).distinct()
+            )
+            bidder_ids = [r[0] for r in rows.fetchall()]
+
+        losers = [bid for bid in bidder_ids if bid != winner_id]
+        if not losers:
+            return
+
+        if was_accepted and final_price is not None:
+            title = "Artırma sona erdi"
+            body = (
+                f"{item_name} — kazanan fiyat: ₺{final_price:,.0f}".replace(",", ".")
+                if item_name else f"Kazanan fiyat: ₺{final_price:,.0f}".replace(",", ".")
+            )
+        else:
+            title = "Artırma iptal edildi"
+            body = f"{item_name} — teklif kabul edilmedi" if item_name else "Teklif kabul edilmedi"
+
+        for loser_id in losers:
+            try:
+                await push_notification(
+                    user_id=loser_id,
+                    notif={
+                        "type": "auction_lost",
+                        "title": title,
+                        "body": body,
+                        "related_id": stream_id,
+                        "stream_id": stream_id,
+                    },
+                    pref_key="outbid",
+                )
+            except Exception as exc:
+                logger.warning(
+                    "[Worker] notify_auction_losers: user_id=%s bildirimi başarısız | %s",
+                    loser_id, exc,
+                )
+
+        logger.info(
+            "[Worker] notify_auction_losers_task tamamlandı | stream_id=%s loser_count=%s",
+            stream_id, len(losers),
+        )
+
+    except Exception as exc:
+        logger.error(
+            "[Worker] notify_auction_losers_task başarısız | stream_id=%s | %s",
+            stream_id, exc, exc_info=True,
+        )
+        capture_exception(exc)
+        raise
+
+
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
 class WorkerSettings:
@@ -2288,6 +2400,8 @@ class WorkerSettings:
         compute_trust_scores_task,
         train_churn_model_task,
         compute_influence_scores_task,
+        notify_outbid_task,
+        notify_auction_losers_task,
     ]
 
     cron_jobs = [
