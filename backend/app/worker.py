@@ -1316,7 +1316,7 @@ async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
                       AND u.id != :host_id
                       AND NOT EXISTS (
                           SELECT 1 FROM follows f 
-                          WHERE f.follower_id = u.id AND f.following_id = :host_id
+                          WHERE f.follower_id = u.id AND f.followed_id = :host_id
                       )
                       AND u.preference_embedding <=> CAST(:vec AS vector) < :threshold
                       {budget_clause}
@@ -1338,7 +1338,7 @@ async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
                       AND u.id != :host_id
                       AND NOT EXISTS (
                           SELECT 1 FROM follows f 
-                          WHERE f.follower_id = u.id AND f.following_id = :host_id
+                          WHERE f.follower_id = u.id AND f.followed_id = :host_id
                       )
                       {budget_clause}
                     ORDER BY ui.score DESC
