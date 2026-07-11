@@ -14,6 +14,7 @@ class PushNotificationService {
   static final _messaging = FirebaseMessaging.instance;
   static bool _earlyDone = false;
   static bool _fullDone = false;
+  static bool _tokenForcedRefreshed = false;
 
   /// Gelen FCM mesaj verisini broadcast eden stream.
   static final StreamController<Map<String, dynamic>> notificationStream =
@@ -105,8 +106,18 @@ class PushNotificationService {
 
   /// Token yenileme için — kullanıcı değiştiğinde veya uygulama güncellendiğinde
   /// initialize() zaten çalıştıysa bile token'ı zorla yeniden kaydet.
+  /// İlk çağrıda eski cache'deki token'ı siler → Firebase production APNS'ten taze token alır.
   static Future<void> refreshToken() async {
     debugPrint('[FCM] refreshToken çağrıldı');
+    if (!_tokenForcedRefreshed) {
+      _tokenForcedRefreshed = true;
+      try {
+        await _messaging.deleteToken();
+        debugPrint('[FCM] Eski token silindi — taze token alınacak');
+      } catch (e) {
+        debugPrint('[FCM] Token silinemedi: $e');
+      }
+    }
     await _registerToken();
   }
 
