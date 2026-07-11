@@ -179,6 +179,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _fullNameCtrl,
                       textCapitalization: TextCapitalization.words,
                       maxLength: 100,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                       decoration: InputDecoration(
                         labelText: l.fieldFullName,
                         counterText: '',
@@ -196,6 +198,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _usernameCtrl,
                       autocorrect: false,
                       maxLength: 50,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                       decoration: InputDecoration(
                         labelText: l.fieldUsername,
                         helperText: l.fieldUsernameSubtitle,
@@ -237,6 +241,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       maxLength: 255,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                       decoration: InputDecoration(
                         labelText: l.fieldEmail,
                         counterText: '',
@@ -279,6 +285,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       autocorrect: false,
                       textCapitalization: TextCapitalization.characters,
                       maxLength: 12,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                       decoration: InputDecoration(
                         labelText: 'Davet Kodu (isteğe bağlı)',
                         counterText: '',
@@ -307,6 +315,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                       validator: (v) {
                         if (v == null || v.isEmpty) return l.fieldPasswordHint;
                         if (v.length < 8) return l.validPasswordMin;
@@ -332,6 +341,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _submit(),
                       validator: (v) {
                         if (v == null || v.isEmpty) return l.fieldPasswordConfirmHint;
                         if (v != _passCtrl.text) return l.validPasswordMismatch;

@@ -134,6 +134,8 @@ class _VerifyScreenState extends State<VerifyScreen> {
                 fontWeight: FontWeight.w700,
                 letterSpacing: 12,
               ),
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _verify(),
               decoration: const InputDecoration(
                 hintText: '000000',
                 hintStyle: TextStyle(

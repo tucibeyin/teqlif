@@ -25,18 +25,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _identifierCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _passFocus = FocusNode();
   bool _loading = false;
   bool _obscure = true;
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   void dispose() {
     _identifierCtrl.dispose();
     _passCtrl.dispose();
+    _passFocus.dispose();
     super.dispose();
   }
 
@@ -156,6 +153,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               controller: _identifierCtrl,
                               keyboardType: TextInputType.visiblePassword,
                               autocorrect: false,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted: (_) => _passFocus.requestFocus(),
                               decoration: InputDecoration(labelText: l.fieldLoginIdentifier),
                               validator: (v) =>
                                   v == null || v.isEmpty ? l.fieldLoginIdentifierHint : null,
@@ -164,11 +163,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             TextFormField(
                               key: const Key('login_input_password'),
                               controller: _passCtrl,
+                              focusNode: _passFocus,
                               obscureText: _obscure,
                               enableSuggestions: false,
                               autocorrect: false,
                               smartDashesType: SmartDashesType.disabled,
                               smartQuotesType: SmartQuotesType.disabled,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _submit(),
                               decoration: InputDecoration(
                                 labelText: l.fieldPassword,
                                 suffixIcon: IconButton(
