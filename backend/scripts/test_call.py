@@ -162,10 +162,11 @@ async def _in_call(call_id: int, token: str, room: str):
     print(f"    Enter'a basınca görüşmeyi bitirir.\n")
 
     done = asyncio.Event()
+    loop = asyncio.get_event_loop()
 
     def _wait():
         input()
-        asyncio.get_event_loop().call_soon_threadsafe(done.set)
+        loop.call_soon_threadsafe(done.set)
 
     threading.Thread(target=_wait, daemon=True).start()
 

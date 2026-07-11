@@ -20,9 +20,8 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _onStateChange() {
-    // Pop when call is fully done and no longer active
     if (!CallService.instance.hasActiveCall && mounted) {
-      Navigator.of(context).maybePop();
+      Navigator.of(context).pop();
     }
   }
 

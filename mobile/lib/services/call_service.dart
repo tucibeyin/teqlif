@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:audio_session/audio_session.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../config/api.dart';
 import '../services/storage_service.dart';
@@ -121,16 +120,6 @@ class CallService {
     required String calleeUsername,
     required String? calleeAvatar,
   }) async {
-    final perm = await Permission.microphone.request();
-    debugPrint('[CallService] startCall mikrofon izni: $perm');
-    if (!perm.isGranted) {
-      _setState(state.value.copyWith(
-        status: CallStatus.permissionDenied,
-        permPermanentlyDenied: perm.isPermanentlyDenied,
-      ));
-      return;
-    }
-
     _setState(CallState(
       status: CallStatus.calling,
       otherUserId: calleeId,
@@ -186,16 +175,6 @@ class CallService {
   Future<void> acceptCall() async {
     final callId = state.value.callId;
     if (callId == null) return;
-
-    final perm = await Permission.microphone.request();
-    debugPrint('[CallService] acceptCall mikrofon izni: $perm');
-    if (!perm.isGranted) {
-      _setState(state.value.copyWith(
-        status: CallStatus.permissionDenied,
-        permPermanentlyDenied: perm.isPermanentlyDenied,
-      ));
-      return;
-    }
 
     _setState(state.value.copyWith(status: CallStatus.connecting));
     try {
