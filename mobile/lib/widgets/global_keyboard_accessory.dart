@@ -105,12 +105,12 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
                 top: MediaQuery.of(context).viewInsets.top,
                 right: MediaQuery.of(context).viewInsets.right,
                 bottom: MediaQuery.of(context).viewInsets.bottom +
-                    ((_activeController != null && MediaQuery.of(context).viewInsets.bottom > 0) ? 44.0 : 0.0),
+                    ((_activeController != null && _isNumeric && MediaQuery.of(context).viewInsets.bottom > 0) ? 44.0 : 0.0),
               ),
             ),
             child: widget.child,
           ),
-          if (_activeController != null)
+          if (_activeController != null && _isNumeric)
             _AccessoryBar(
               key: _accessoryBarKey,
               controller: _activeController!,

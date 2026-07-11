@@ -534,6 +534,24 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     }
   }
 
+  String _localizeTitle(String? type, String title, AppLocalizations l) {
+    final username = RegExp(r'^@(\w+)').firstMatch(title)?.group(1) ?? '';
+    return switch (type) {
+      'message'             => username.isNotEmpty ? l.notifMessage(username) : title,
+      'follow'              => username.isNotEmpty ? l.notifFollow(username) : title,
+      'stream_started'      => username.isNotEmpty ? l.notifStreamStarted(username) : title,
+      'new_bid'             => username.isNotEmpty ? l.notifNewBid(username) : title,
+      'new_listing'         => username.isNotEmpty ? l.notifNewListing(username) : title,
+      'outbid'              => l.notifOutbid,
+      'smart_auction_alert' => l.notifSmartAuctionAlert,
+      'budget_match'        => l.notifBudgetMatch,
+      'auction_won'         => l.notifAuctionWon,
+      'listing_deactivated' => l.notifListingDeactivated,
+      'listing_deleted'     => l.notifListingDeleted,
+      _                     => title,
+    };
+  }
+
   IconData _iconForType(String? type) {
     return switch (type) {
       'follow'              => Icons.person_add_rounded,
@@ -682,6 +700,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           final typeColor = _colorForType(type);
           // follow: body = username (navigasyon için), görüntüleme için kullanılmaz
           final displayBody = type == 'follow' ? null : body;
+          final displayTitle = _localizeTitle(type, title, l);
           return ListTile(
             onTap: () {
               setState(() => (_notifications[i] as Map<String, dynamic>)['is_read'] = true);
@@ -702,7 +721,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               ),
             ),
             title: Text(
-              title,
+              displayTitle,
               style: TextStyle(
                 fontWeight: isRead ? FontWeight.normal : FontWeight.w600,
                 fontSize: 14,
@@ -1056,9 +1075,14 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   Future<void> _pickAndSendImage({required ImageSource source}) async {
     final l = AppLocalizations.of(context)!;
     final perm = source == ImageSource.camera ? Permission.camera : Permission.photos;
-    if (await perm.isDenied) {
-      final status = await perm.request();
-      if (!status.isGranted) {
+    final permStatus = await perm.status;
+    if (!permStatus.isGranted) {
+      if (permStatus.isPermanentlyDenied) {
+        await openAppSettings();
+        return;
+      }
+      final newStatus = await perm.request();
+      if (!newStatus.isGranted) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(source == ImageSource.camera ? l.attachCameraPermission : l.attachGalleryPermission)));
         return;
       }
@@ -1116,9 +1140,14 @@ class _DirectChatScreenState extends State<DirectChatScreen>
 
   Future<void> _startRecording() async {
     final l = AppLocalizations.of(context)!;
-    if (await Permission.microphone.isDenied) {
-      final status = await Permission.microphone.request();
-      if (!status.isGranted) {
+    final micStatus = await Permission.microphone.status;
+    if (!micStatus.isGranted) {
+      if (micStatus.isPermanentlyDenied) {
+        await openAppSettings();
+        return;
+      }
+      final newStatus = await Permission.microphone.request();
+      if (!newStatus.isGranted) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.voicePermissionDenied)));
         return;
       }
