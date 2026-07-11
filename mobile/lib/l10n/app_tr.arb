@@ -2253,5 +2253,70 @@
   "notifBidThresholdTitle": "Teklif Eşiği",
   "notifBidThresholdDesc": "Sadece belirli tutarın üzerindeki teklifleri bildir",
   "notifQuietHoursTitle": "Sessiz Saatler",
-  "notifQuietHoursDesc": "Bu saatler arası bildirimleri ertele, sabah göster"
+  "notifQuietHoursDesc": "Bu saatler arası bildirimleri ertele, sabah göster",
+  "quickAuctionBtn": "Hızlı",
+  "quickAuctionItem": "Ürün {count}",
+  "@quickAuctionItem": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "quickAuctionStarted": "Açık artırma başlatıldı",
+  "phoneVerifyInvalidPhone": "Geçerli bir telefon numarası girin",
+  "phoneVerifyError": "Bir hata oluştu",
+  "phoneVerifyConnectionError": "Sunucuya bağlanılamadı",
+  "phoneVerifyEmailSentTitle": "E-posta Gönderildi",
+  "phoneVerifyEmailSentDesc": "Kayıtlı e-posta adresinize doğrulama bağlantısı gönderdik. Lütfen gelen kutunuzu kontrol edin.",
+  "phoneVerifyTitle": "Telefon Doğrulaması",
+  "phoneVerifyDesc": "Yüksek tutarlı teklifler için telefon doğrulaması gerekiyor. Numaranızı girin, e-posta ile doğrulayın.",
+  "btnRemovePin": "✕ Kaldır",
+  "blastSent": "🎯 {count} kişiye bildirim gönderildi!",
+  "@blastSent": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "blastStarted": "🎯 Bildirim kampanyası başlatıldı!",
+  "blastError": "Bildirim gönderilemedi.",
+  "blastSending": "Gönderiliyor…",
+  "hostRemoveFromStageBtn": "✕ Sahneden Al",
+  "hostViewersTitle": "👁 İzleyiciler ({count})",
+  "@hostViewersTitle": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "auctionGroupFallback": "Açık Artırma",
+  "hostMuteSuccess": "@{username} susturuldu",
+  "@hostMuteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostUnmuteSuccess": "Susturma kaldırıldı",
+  "hostPromoteSuccess": "@{username} moderatör yapıldı",
+  "@hostPromoteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostDemoteSuccess": "@{username} moderatörlükten alındı",
+  "@hostDemoteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostKickSuccess": "@{username} yayından atıldı",
+  "@hostKickSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "whaleInRoom": "{tier} Alıcı Odada",
+  "@whaleInRoom": {
+    "placeholders": {
+      "tier": { "type": "String" }
+    }
+  },
+  "whaleShowBestItems": "Kaliteli ürünleri çıkarma vakti!"
 }

@@ -189,8 +189,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         CacheService.clearData('user_wallet_data');
         final sent = result['sent'] as int? ?? _audienceSize;
         final msg = sent > 0
-            ? '🎯 $sent kişiye bildirim gönderildi!'
-            : '🎯 Bildirim kampanyası başlatıldı!';
+            ? l.blastSent(sent)
+            : l.blastStarted;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),
@@ -200,7 +200,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         );
         setState(() { _audienceSize = 0; _audienceCost = 0.0; });
       } else {
-        final errMsg = result?['error'] as String? ?? 'Bildirim gönderilemedi.';
+        final errMsg = result?['error'] as String? ?? l.blastError;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errMsg),
@@ -934,9 +934,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                 border:
                                     Border.all(color: Colors.white24),
                               ),
-                              child: const Text(
-                                '✕ Kaldır',
-                                style: TextStyle(
+                              child: Text(
+                                l.btnRemovePin,
+                                style: const TextStyle(
                                     color: Colors.white38,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w500),
@@ -985,8 +985,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: _blastSending
-                                  ? const [
-                                      SizedBox(
+                                  ? [
+                                      const SizedBox(
                                         width: 14,
                                         height: 14,
                                         child: CircularProgressIndicator(
@@ -994,10 +994,10 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                                           color: Colors.white54,
                                         ),
                                       ),
-                                      SizedBox(width: 8),
+                                      const SizedBox(width: 8),
                                       Text(
-                                        'Gönderiliyor…',
-                                        style: TextStyle(
+                                        l.blastSending,
+                                        style: const TextStyle(
                                           color: Colors.white54,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
@@ -1133,9 +1133,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                             color: const Color(0xDDEF4444),
                             padding: const EdgeInsets.symmetric(vertical: 5),
                             alignment: Alignment.center,
-                            child: const Text(
-                              '✕ Sahneden Al',
-                              style: TextStyle(
+                            child: Text(
+                              l.hostRemoveFromStageBtn,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
@@ -1245,7 +1245,7 @@ class _ViewersBottomSheet extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            '👁 İzleyiciler (${viewers.length})',
+            AppLocalizations.of(context)!.hostViewersTitle(viewers.length),
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
@@ -1479,7 +1479,7 @@ class _BidsOverlay extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           color: Colors.white.withValues(alpha: 0.04),
                           child: Text(
-                            g.title ?? 'Açık Artırma',
+                            g.title ?? AppLocalizations.of(context)!.auctionGroupFallback,
                             style: const TextStyle(
                               color: Color(0xFF06B6D4),
                               fontSize: 8.5,
@@ -1774,7 +1774,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
               loading: _loading,
               onTap: () => _act(
                 () => ModerationService.mute(widget.streamId, widget.username),
-                successMsg: '@${widget.username} susturuldu',
+                successMsg: AppLocalizations.of(context)!.hostMuteSuccess(widget.username),
                 onSuccess: () { widget.onMuted(); setState(() => _isMuted = true); },
               ),
             )
@@ -1786,7 +1786,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
               loading: _loading,
               onTap: () => _act(
                 () => ModerationService.unmute(widget.streamId, widget.username),
-                successMsg: 'Susturma kaldırıldı',
+                successMsg: AppLocalizations.of(context)!.hostUnmuteSuccess,
                 onSuccess: () { widget.onUnmuted(); setState(() => _isMuted = false); },
               ),
             ),
@@ -1801,7 +1801,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
               loading: _loading,
               onTap: () => _act(
                 () => ModerationService.promoteUser(widget.streamId, widget.username),
-                successMsg: '@${widget.username} moderatör yapıldı',
+                successMsg: AppLocalizations.of(context)!.hostPromoteSuccess(widget.username),
                 onSuccess: () {
                   widget.onPromoted();
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1823,7 +1823,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
               loading: _loading,
               onTap: () => _act(
                 () => ModerationService.demoteUser(widget.streamId, widget.username),
-                successMsg: '@${widget.username} moderatörlükten alındı',
+                successMsg: AppLocalizations.of(context)!.hostDemoteSuccess(widget.username),
                 onSuccess: () {
                   widget.onDemoted();
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1874,7 +1874,7 @@ class _ModerationSheetState extends State<_ModerationSheet> {
             loading: _loading,
             onTap: () => _act(
               () => ModerationService.kick(widget.streamId, widget.username),
-              successMsg: '@${widget.username} yayından atıldı',
+              successMsg: AppLocalizations.of(context)!.hostKickSuccess(widget.username),
             ),
           ),
           const SizedBox(height: 10),
@@ -2158,7 +2158,7 @@ class _WhaleHudState extends State<_WhaleHud>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '${widget.tier} Alıcı Odada',
+                          AppLocalizations.of(context)!.whaleInRoom(widget.tier),
                           style: const TextStyle(
                             color: Color(0xFF3B2A00),
                             fontSize: 11,
@@ -2176,9 +2176,9 @@ class _WhaleHudState extends State<_WhaleHud>
                           ),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'Kaliteli ürünleri çıkarma vakti!',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.whaleShowBestItems,
+                          style: const TextStyle(
                             color: Color(0xFF3B2A00),
                             fontSize: 11,
                           ),

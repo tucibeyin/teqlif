@@ -2255,5 +2255,70 @@
   "notifBidThresholdTitle": "Порог ставки",
   "notifBidThresholdDesc": "Уведомлять только о ставках выше определённой суммы",
   "notifQuietHoursTitle": "Тихие часы",
-  "notifQuietHoursDesc": "Откладывать уведомления на эти часы, показывать утром"
+  "notifQuietHoursDesc": "Откладывать уведомления на эти часы, показывать утром",
+  "quickAuctionBtn": "Быстро",
+  "quickAuctionItem": "Товар {count}",
+  "@quickAuctionItem": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "quickAuctionStarted": "Аукцион начат",
+  "phoneVerifyInvalidPhone": "Введите действительный номер телефона",
+  "phoneVerifyError": "Произошла ошибка",
+  "phoneVerifyConnectionError": "Не удалось подключиться к серверу",
+  "phoneVerifyEmailSentTitle": "Письмо отправлено",
+  "phoneVerifyEmailSentDesc": "Мы отправили ссылку для подтверждения на ваш зарегистрированный адрес электронной почты. Пожалуйста, проверьте входящие.",
+  "phoneVerifyTitle": "Подтверждение телефона",
+  "phoneVerifyDesc": "Подтверждение телефона требуется для крупных ставок. Введите номер и подтвердите через электронную почту.",
+  "btnRemovePin": "✕ Убрать",
+  "blastSent": "🎯 Уведомление отправлено {count} людям!",
+  "@blastSent": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "blastStarted": "🎯 Кампания уведомлений запущена!",
+  "blastError": "Не удалось отправить уведомление.",
+  "blastSending": "Отправка…",
+  "hostRemoveFromStageBtn": "✕ Убрать со сцены",
+  "hostViewersTitle": "👁 Зрители ({count})",
+  "@hostViewersTitle": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "auctionGroupFallback": "Аукцион",
+  "hostMuteSuccess": "@{username} заглушен",
+  "@hostMuteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostUnmuteSuccess": "Звук восстановлен",
+  "hostPromoteSuccess": "@{username} назначен модератором",
+  "@hostPromoteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostDemoteSuccess": "@{username} снят с модерации",
+  "@hostDemoteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostKickSuccess": "@{username} удалён из трансляции",
+  "@hostKickSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "whaleInRoom": "Покупатель {tier} в комнате",
+  "@whaleInRoom": {
+    "placeholders": {
+      "tier": { "type": "String" }
+    }
+  },
+  "whaleShowBestItems": "Время показать лучшие товары!"
 }

@@ -4573,4 +4573,97 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notifQuietHoursDesc =>
       'Delay notifications during these hours, show in the morning';
+
+  @override
+  String get quickAuctionBtn => 'Quick';
+
+  @override
+  String quickAuctionItem(int count) {
+    return 'Item $count';
+  }
+
+  @override
+  String get quickAuctionStarted => 'Auction started';
+
+  @override
+  String get phoneVerifyInvalidPhone => 'Enter a valid phone number';
+
+  @override
+  String get phoneVerifyError => 'An error occurred';
+
+  @override
+  String get phoneVerifyConnectionError => 'Could not connect to server';
+
+  @override
+  String get phoneVerifyEmailSentTitle => 'Email Sent';
+
+  @override
+  String get phoneVerifyEmailSentDesc =>
+      'We sent a verification link to your registered email address. Please check your inbox.';
+
+  @override
+  String get phoneVerifyTitle => 'Phone Verification';
+
+  @override
+  String get phoneVerifyDesc =>
+      'Phone verification is required for high-value bids. Enter your number and verify via email.';
+
+  @override
+  String get btnRemovePin => '✕ Remove';
+
+  @override
+  String blastSent(int count) {
+    return '🎯 Notification sent to $count people!';
+  }
+
+  @override
+  String get blastStarted => '🎯 Notification campaign started!';
+
+  @override
+  String get blastError => 'Failed to send notification.';
+
+  @override
+  String get blastSending => 'Sending…';
+
+  @override
+  String get hostRemoveFromStageBtn => '✕ Remove from Stage';
+
+  @override
+  String hostViewersTitle(int count) {
+    return '👁 Viewers ($count)';
+  }
+
+  @override
+  String get auctionGroupFallback => 'Auction';
+
+  @override
+  String hostMuteSuccess(String username) {
+    return '@$username muted';
+  }
+
+  @override
+  String get hostUnmuteSuccess => 'Mute removed';
+
+  @override
+  String hostPromoteSuccess(String username) {
+    return '@$username made moderator';
+  }
+
+  @override
+  String hostDemoteSuccess(String username) {
+    return '@$username removed as moderator';
+  }
+
+  @override
+  String hostKickSuccess(String username) {
+    return '@$username removed from stream';
+  }
+
+  @override
+  String whaleInRoom(String tier) {
+    return '$tier Buyer in Room';
+  }
+
+  @override
+  String get whaleShowBestItems => 'Time to show your best items!';
 }

@@ -4576,4 +4576,97 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get notifQuietHoursDesc =>
       'Bu saatler arası bildirimleri ertele, sabah göster';
+
+  @override
+  String get quickAuctionBtn => 'Hızlı';
+
+  @override
+  String quickAuctionItem(int count) {
+    return 'Ürün $count';
+  }
+
+  @override
+  String get quickAuctionStarted => 'Açık artırma başlatıldı';
+
+  @override
+  String get phoneVerifyInvalidPhone => 'Geçerli bir telefon numarası girin';
+
+  @override
+  String get phoneVerifyError => 'Bir hata oluştu';
+
+  @override
+  String get phoneVerifyConnectionError => 'Sunucuya bağlanılamadı';
+
+  @override
+  String get phoneVerifyEmailSentTitle => 'E-posta Gönderildi';
+
+  @override
+  String get phoneVerifyEmailSentDesc =>
+      'Kayıtlı e-posta adresinize doğrulama bağlantısı gönderdik. Lütfen gelen kutunuzu kontrol edin.';
+
+  @override
+  String get phoneVerifyTitle => 'Telefon Doğrulaması';
+
+  @override
+  String get phoneVerifyDesc =>
+      'Yüksek tutarlı teklifler için telefon doğrulaması gerekiyor. Numaranızı girin, e-posta ile doğrulayın.';
+
+  @override
+  String get btnRemovePin => '✕ Kaldır';
+
+  @override
+  String blastSent(int count) {
+    return '🎯 $count kişiye bildirim gönderildi!';
+  }
+
+  @override
+  String get blastStarted => '🎯 Bildirim kampanyası başlatıldı!';
+
+  @override
+  String get blastError => 'Bildirim gönderilemedi.';
+
+  @override
+  String get blastSending => 'Gönderiliyor…';
+
+  @override
+  String get hostRemoveFromStageBtn => '✕ Sahneden Al';
+
+  @override
+  String hostViewersTitle(int count) {
+    return '👁 İzleyiciler ($count)';
+  }
+
+  @override
+  String get auctionGroupFallback => 'Açık Artırma';
+
+  @override
+  String hostMuteSuccess(String username) {
+    return '@$username susturuldu';
+  }
+
+  @override
+  String get hostUnmuteSuccess => 'Susturma kaldırıldı';
+
+  @override
+  String hostPromoteSuccess(String username) {
+    return '@$username moderatör yapıldı';
+  }
+
+  @override
+  String hostDemoteSuccess(String username) {
+    return '@$username moderatörlükten alındı';
+  }
+
+  @override
+  String hostKickSuccess(String username) {
+    return '@$username yayından atıldı';
+  }
+
+  @override
+  String whaleInRoom(String tier) {
+    return '$tier Alıcı Odada';
+  }
+
+  @override
+  String get whaleShowBestItems => 'Kaliteli ürünleri çıkarma vakti!';
 }

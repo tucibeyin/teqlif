@@ -103,14 +103,15 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     if (_quickAuctionLoading) return;
     setState(() => _quickAuctionLoading = true);
     _quickAuctionCount++;
+    final l = AppLocalizations.of(context)!;
     try {
       final newState = await AuctionService.startAuction(
         widget.streamId,
-        itemName: 'Ürün $_quickAuctionCount',
+        itemName: l.quickAuctionItem(_quickAuctionCount),
         startPrice: 1.0,
       );
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
-      _setMsg('Açık artırma başlatıldı');
+      _setMsg(l.quickAuctionStarted);
     } catch (e) {
       _quickAuctionCount--;
       _setMsg(_cleanErr(e), error: true);
@@ -767,7 +768,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     final l = AppLocalizations.of(context)!;
     if (state.isIdle || state.isEnded) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
-        _pillIconBtn(Icons.bolt_rounded, 'Hızlı', _quickAuctionLoading ? Colors.orange.withAlpha(100) : Colors.orange, _quickAuctionLoading ? null : _startQuickAuction),
+        _pillIconBtn(Icons.bolt_rounded, l.quickAuctionBtn, _quickAuctionLoading ? Colors.orange.withAlpha(100) : Colors.orange, _quickAuctionLoading ? null : _startQuickAuction),
         const SizedBox(width: 6),
         _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog),
       ]);
@@ -2132,9 +2133,10 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
   }
 
   Future<void> _sendVerification() async {
+    final l = AppLocalizations.of(context)!;
     final phone = _phoneE164;
     if (phone == null || phone.length < 8) {
-      setState(() => _error = 'Geçerli bir telefon numarası girin');
+      setState(() => _error = l.phoneVerifyInvalidPhone);
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -2152,16 +2154,17 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
         setState(() { _sent = true; _loading = false; });
       } else {
         final msg = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String?
-            ?? 'Bir hata oluştu';
+            ?? l.phoneVerifyError;
         setState(() { _error = msg; _loading = false; });
       }
     } catch (_) {
-      setState(() { _error = 'Sunucuya bağlanılamadı'; _loading = false; });
+      setState(() { _error = l.phoneVerifyConnectionError; _loading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 32,
@@ -2190,15 +2193,15 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
           if (_sent) ...[
             const Icon(Icons.mark_email_read_outlined, color: Color(0xFF0D9488), size: 40),
             const SizedBox(height: 14),
-            const Text(
-              'E-posta Gönderildi',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+            Text(
+              l.phoneVerifyEmailSentTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Kayıtlı e-posta adresinize doğrulama bağlantısı gönderdik. Lütfen gelen kutunuzu kontrol edin.',
+            Text(
+              l.phoneVerifyEmailSentDesc,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.55),
+              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.55),
             ),
             const SizedBox(height: 28),
             SizedBox(
@@ -2211,19 +2214,19 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text(AppLocalizations.of(context)!.btnOk, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                child: Text(l.btnOk, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               ),
             ),
           ] else ...[
-            const Text(
-              'Telefon Doğrulaması',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+            Text(
+              l.phoneVerifyTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Yüksek tutarlı teklifler için telefon doğrulaması gerekiyor. Numaranızı girin, e-posta ile doğrulayın.',
+            Text(
+              l.phoneVerifyDesc,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.55),
+              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.55),
             ),
             const SizedBox(height: 24),
             PhoneInputField(
@@ -2248,14 +2251,14 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
                         height: 20, width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                       )
-                    : Text(AppLocalizations.of(context)!.auctionSendVerificationEmail,
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                    : Text(l.auctionSendVerificationEmail,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               ),
             ),
             const SizedBox(height: 10),
             TextButton(
               onPressed: widget.onClose,
-              child: Text(AppLocalizations.of(context)!.btnCancel, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+              child: Text(l.btnCancel, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
             ),
           ],
         ],

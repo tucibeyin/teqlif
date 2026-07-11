@@ -4625,4 +4625,97 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get notifQuietHoursDesc =>
       'Откладывать уведомления на эти часы, показывать утром';
+
+  @override
+  String get quickAuctionBtn => 'Быстро';
+
+  @override
+  String quickAuctionItem(int count) {
+    return 'Товар $count';
+  }
+
+  @override
+  String get quickAuctionStarted => 'Аукцион начат';
+
+  @override
+  String get phoneVerifyInvalidPhone => 'Введите действительный номер телефона';
+
+  @override
+  String get phoneVerifyError => 'Произошла ошибка';
+
+  @override
+  String get phoneVerifyConnectionError => 'Не удалось подключиться к серверу';
+
+  @override
+  String get phoneVerifyEmailSentTitle => 'Письмо отправлено';
+
+  @override
+  String get phoneVerifyEmailSentDesc =>
+      'Мы отправили ссылку для подтверждения на ваш зарегистрированный адрес электронной почты. Пожалуйста, проверьте входящие.';
+
+  @override
+  String get phoneVerifyTitle => 'Подтверждение телефона';
+
+  @override
+  String get phoneVerifyDesc =>
+      'Подтверждение телефона требуется для крупных ставок. Введите номер и подтвердите через электронную почту.';
+
+  @override
+  String get btnRemovePin => '✕ Убрать';
+
+  @override
+  String blastSent(int count) {
+    return '🎯 Уведомление отправлено $count людям!';
+  }
+
+  @override
+  String get blastStarted => '🎯 Кампания уведомлений запущена!';
+
+  @override
+  String get blastError => 'Не удалось отправить уведомление.';
+
+  @override
+  String get blastSending => 'Отправка…';
+
+  @override
+  String get hostRemoveFromStageBtn => '✕ Убрать со сцены';
+
+  @override
+  String hostViewersTitle(int count) {
+    return '👁 Зрители ($count)';
+  }
+
+  @override
+  String get auctionGroupFallback => 'Аукцион';
+
+  @override
+  String hostMuteSuccess(String username) {
+    return '@$username заглушен';
+  }
+
+  @override
+  String get hostUnmuteSuccess => 'Звук восстановлен';
+
+  @override
+  String hostPromoteSuccess(String username) {
+    return '@$username назначен модератором';
+  }
+
+  @override
+  String hostDemoteSuccess(String username) {
+    return '@$username снят с модерации';
+  }
+
+  @override
+  String hostKickSuccess(String username) {
+    return '@$username удалён из трансляции';
+  }
+
+  @override
+  String whaleInRoom(String tier) {
+    return 'Покупатель $tier в комнате';
+  }
+
+  @override
+  String get whaleShowBestItems => 'Время показать лучшие товары!';
 }

@@ -8321,6 +8321,156 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bu saatler arası bildirimleri ertele, sabah göster'**
   String get notifQuietHoursDesc;
+
+  /// No description provided for @quickAuctionBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hızlı'**
+  String get quickAuctionBtn;
+
+  /// No description provided for @quickAuctionItem.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ürün {count}'**
+  String quickAuctionItem(int count);
+
+  /// No description provided for @quickAuctionStarted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Açık artırma başlatıldı'**
+  String get quickAuctionStarted;
+
+  /// No description provided for @phoneVerifyInvalidPhone.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçerli bir telefon numarası girin'**
+  String get phoneVerifyInvalidPhone;
+
+  /// No description provided for @phoneVerifyError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bir hata oluştu'**
+  String get phoneVerifyError;
+
+  /// No description provided for @phoneVerifyConnectionError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sunucuya bağlanılamadı'**
+  String get phoneVerifyConnectionError;
+
+  /// No description provided for @phoneVerifyEmailSentTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'E-posta Gönderildi'**
+  String get phoneVerifyEmailSentTitle;
+
+  /// No description provided for @phoneVerifyEmailSentDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kayıtlı e-posta adresinize doğrulama bağlantısı gönderdik. Lütfen gelen kutunuzu kontrol edin.'**
+  String get phoneVerifyEmailSentDesc;
+
+  /// No description provided for @phoneVerifyTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Telefon Doğrulaması'**
+  String get phoneVerifyTitle;
+
+  /// No description provided for @phoneVerifyDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yüksek tutarlı teklifler için telefon doğrulaması gerekiyor. Numaranızı girin, e-posta ile doğrulayın.'**
+  String get phoneVerifyDesc;
+
+  /// No description provided for @btnRemovePin.
+  ///
+  /// In tr, this message translates to:
+  /// **'✕ Kaldır'**
+  String get btnRemovePin;
+
+  /// No description provided for @blastSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎯 {count} kişiye bildirim gönderildi!'**
+  String blastSent(int count);
+
+  /// No description provided for @blastStarted.
+  ///
+  /// In tr, this message translates to:
+  /// **'🎯 Bildirim kampanyası başlatıldı!'**
+  String get blastStarted;
+
+  /// No description provided for @blastError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bildirim gönderilemedi.'**
+  String get blastError;
+
+  /// No description provided for @blastSending.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönderiliyor…'**
+  String get blastSending;
+
+  /// No description provided for @hostRemoveFromStageBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'✕ Sahneden Al'**
+  String get hostRemoveFromStageBtn;
+
+  /// No description provided for @hostViewersTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'👁 İzleyiciler ({count})'**
+  String hostViewersTitle(int count);
+
+  /// No description provided for @auctionGroupFallback.
+  ///
+  /// In tr, this message translates to:
+  /// **'Açık Artırma'**
+  String get auctionGroupFallback;
+
+  /// No description provided for @hostMuteSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} susturuldu'**
+  String hostMuteSuccess(String username);
+
+  /// No description provided for @hostUnmuteSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Susturma kaldırıldı'**
+  String get hostUnmuteSuccess;
+
+  /// No description provided for @hostPromoteSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} moderatör yapıldı'**
+  String hostPromoteSuccess(String username);
+
+  /// No description provided for @hostDemoteSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} moderatörlükten alındı'**
+  String hostDemoteSuccess(String username);
+
+  /// No description provided for @hostKickSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} yayından atıldı'**
+  String hostKickSuccess(String username);
+
+  /// No description provided for @whaleInRoom.
+  ///
+  /// In tr, this message translates to:
+  /// **'{tier} Alıcı Odada'**
+  String whaleInRoom(String tier);
+
+  /// No description provided for @whaleShowBestItems.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kaliteli ürünleri çıkarma vakti!'**
+  String get whaleShowBestItems;
 }
 
 class _AppLocalizationsDelegate

@@ -2290,5 +2290,70 @@
   "notifBidThresholdTitle": "Bid Threshold",
   "notifBidThresholdDesc": "Only notify about bids above a certain amount",
   "notifQuietHoursTitle": "Quiet Hours",
-  "notifQuietHoursDesc": "Delay notifications during these hours, show in the morning"
+  "notifQuietHoursDesc": "Delay notifications during these hours, show in the morning",
+  "quickAuctionBtn": "Quick",
+  "quickAuctionItem": "Item {count}",
+  "@quickAuctionItem": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "quickAuctionStarted": "Auction started",
+  "phoneVerifyInvalidPhone": "Enter a valid phone number",
+  "phoneVerifyError": "An error occurred",
+  "phoneVerifyConnectionError": "Could not connect to server",
+  "phoneVerifyEmailSentTitle": "Email Sent",
+  "phoneVerifyEmailSentDesc": "We sent a verification link to your registered email address. Please check your inbox.",
+  "phoneVerifyTitle": "Phone Verification",
+  "phoneVerifyDesc": "Phone verification is required for high-value bids. Enter your number and verify via email.",
+  "btnRemovePin": "✕ Remove",
+  "blastSent": "🎯 Notification sent to {count} people!",
+  "@blastSent": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "blastStarted": "🎯 Notification campaign started!",
+  "blastError": "Failed to send notification.",
+  "blastSending": "Sending…",
+  "hostRemoveFromStageBtn": "✕ Remove from Stage",
+  "hostViewersTitle": "👁 Viewers ({count})",
+  "@hostViewersTitle": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "auctionGroupFallback": "Auction",
+  "hostMuteSuccess": "@{username} muted",
+  "@hostMuteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostUnmuteSuccess": "Mute removed",
+  "hostPromoteSuccess": "@{username} made moderator",
+  "@hostPromoteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostDemoteSuccess": "@{username} removed as moderator",
+  "@hostDemoteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostKickSuccess": "@{username} removed from stream",
+  "@hostKickSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "whaleInRoom": "{tier} Buyer in Room",
+  "@whaleInRoom": {
+    "placeholders": {
+      "tier": { "type": "String" }
+    }
+  },
+  "whaleShowBestItems": "Time to show your best items!"
 }

@@ -4546,4 +4546,97 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get notifQuietHoursDesc =>
       'تأجيل الإشعارات خلال هذه الساعات، وعرضها في الصباح';
+
+  @override
+  String get quickAuctionBtn => 'سريع';
+
+  @override
+  String quickAuctionItem(int count) {
+    return 'منتج $count';
+  }
+
+  @override
+  String get quickAuctionStarted => 'بدأ المزاد';
+
+  @override
+  String get phoneVerifyInvalidPhone => 'أدخل رقم هاتف صالح';
+
+  @override
+  String get phoneVerifyError => 'حدث خطأ';
+
+  @override
+  String get phoneVerifyConnectionError => 'تعذّر الاتصال بالخادم';
+
+  @override
+  String get phoneVerifyEmailSentTitle => 'تم إرسال البريد الإلكتروني';
+
+  @override
+  String get phoneVerifyEmailSentDesc =>
+      'أرسلنا رابط التحقق إلى بريدك الإلكتروني المسجل. يرجى مراجعة صندوق الوارد.';
+
+  @override
+  String get phoneVerifyTitle => 'التحقق من الهاتف';
+
+  @override
+  String get phoneVerifyDesc =>
+      'التحقق من الهاتف مطلوب للعروض ذات القيمة العالية. أدخل رقمك وتحقق عبر البريد الإلكتروني.';
+
+  @override
+  String get btnRemovePin => '✕ إزالة';
+
+  @override
+  String blastSent(int count) {
+    return '🎯 تم إرسال إشعار إلى $count شخص!';
+  }
+
+  @override
+  String get blastStarted => '🎯 تم بدء حملة الإشعارات!';
+
+  @override
+  String get blastError => 'فشل إرسال الإشعار.';
+
+  @override
+  String get blastSending => 'جارٍ الإرسال…';
+
+  @override
+  String get hostRemoveFromStageBtn => '✕ إزالة من المسرح';
+
+  @override
+  String hostViewersTitle(int count) {
+    return '👁 المشاهدون ($count)';
+  }
+
+  @override
+  String get auctionGroupFallback => 'مزاد';
+
+  @override
+  String hostMuteSuccess(String username) {
+    return 'تم كتم @$username';
+  }
+
+  @override
+  String get hostUnmuteSuccess => 'تم رفع الكتم';
+
+  @override
+  String hostPromoteSuccess(String username) {
+    return 'تم تعيين @$username مشرفاً';
+  }
+
+  @override
+  String hostDemoteSuccess(String username) {
+    return 'تمت إزالة @$username من المشرفين';
+  }
+
+  @override
+  String hostKickSuccess(String username) {
+    return 'تمت إزالة @$username من البث';
+  }
+
+  @override
+  String whaleInRoom(String tier) {
+    return 'مشتري $tier في الغرفة';
+  }
+
+  @override
+  String get whaleShowBestItems => 'حان وقت عرض أفضل منتجاتك!';
 }

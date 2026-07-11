@@ -2250,5 +2250,70 @@
   "notifBidThresholdTitle": "حد العرض",
   "notifBidThresholdDesc": "إشعار فقط بالعروض التي تتجاوز مبلغاً معيناً",
   "notifQuietHoursTitle": "الساعات الهادئة",
-  "notifQuietHoursDesc": "تأجيل الإشعارات خلال هذه الساعات، وعرضها في الصباح"
+  "notifQuietHoursDesc": "تأجيل الإشعارات خلال هذه الساعات، وعرضها في الصباح",
+  "quickAuctionBtn": "سريع",
+  "quickAuctionItem": "منتج {count}",
+  "@quickAuctionItem": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "quickAuctionStarted": "بدأ المزاد",
+  "phoneVerifyInvalidPhone": "أدخل رقم هاتف صالح",
+  "phoneVerifyError": "حدث خطأ",
+  "phoneVerifyConnectionError": "تعذّر الاتصال بالخادم",
+  "phoneVerifyEmailSentTitle": "تم إرسال البريد الإلكتروني",
+  "phoneVerifyEmailSentDesc": "أرسلنا رابط التحقق إلى بريدك الإلكتروني المسجل. يرجى مراجعة صندوق الوارد.",
+  "phoneVerifyTitle": "التحقق من الهاتف",
+  "phoneVerifyDesc": "التحقق من الهاتف مطلوب للعروض ذات القيمة العالية. أدخل رقمك وتحقق عبر البريد الإلكتروني.",
+  "btnRemovePin": "✕ إزالة",
+  "blastSent": "🎯 تم إرسال إشعار إلى {count} شخص!",
+  "@blastSent": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "blastStarted": "🎯 تم بدء حملة الإشعارات!",
+  "blastError": "فشل إرسال الإشعار.",
+  "blastSending": "جارٍ الإرسال…",
+  "hostRemoveFromStageBtn": "✕ إزالة من المسرح",
+  "hostViewersTitle": "👁 المشاهدون ({count})",
+  "@hostViewersTitle": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "auctionGroupFallback": "مزاد",
+  "hostMuteSuccess": "تم كتم @{username}",
+  "@hostMuteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostUnmuteSuccess": "تم رفع الكتم",
+  "hostPromoteSuccess": "تم تعيين @{username} مشرفاً",
+  "@hostPromoteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostDemoteSuccess": "تمت إزالة @{username} من المشرفين",
+  "@hostDemoteSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "hostKickSuccess": "تمت إزالة @{username} من البث",
+  "@hostKickSuccess": {
+    "placeholders": {
+      "username": { "type": "String" }
+    }
+  },
+  "whaleInRoom": "مشتري {tier} في الغرفة",
+  "@whaleInRoom": {
+    "placeholders": {
+      "tier": { "type": "String" }
+    }
+  },
+  "whaleShowBestItems": "حان وقت عرض أفضل منتجاتك!"
 }
