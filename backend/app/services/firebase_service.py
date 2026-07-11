@@ -46,13 +46,15 @@ async def send_push(
         logger.error("[FCM] send_push çağrıldı ama token boş")
         return
 
+    logger.warning("[FCM-DEBUG] send_push GİRİŞ | token=%s… | title=%r | type=%s", token[:12], title, notif_type)
+
     # Circuit breaker state logu — açıksa push atlanır
     from app.utils.redis_client import get_redis
     try:
         redis = await get_redis()
         cb_state = await redis.get("cb:fcm:state") or "closed"
         cb_failures = await redis.get("cb:fcm:failures") or "0"
-        logger.info("[FCM] Circuit breaker durumu: state=%s failures=%s", cb_state, cb_failures)
+        logger.warning("[FCM-DEBUG] Circuit breaker: state=%s failures=%s", cb_state, cb_failures)
         if cb_state == "open":
             logger.error("[FCM] UYARI: Circuit breaker OPEN — push atlanacak! token=%s…", token[:12])
     except Exception as cb_exc:
@@ -66,8 +68,8 @@ async def send_push(
                 logger.error("[FCM] Firebase app yok — push gönderilemiyor")
                 raise RuntimeError("Firebase app not initialized")
 
-            logger.info(
-                "[FCM] Push gönderiliyor | token=%s… | title=%r | type=%s | badge=%s",
+            logger.warning(
+                "[FCM-DEBUG] Push gönderiliyor | token=%s… | title=%r | type=%s | badge=%s",
                 token[:12], title, notif_type, badge,
             )
 
@@ -96,10 +98,10 @@ async def send_push(
             result = await asyncio.get_event_loop().run_in_executor(
                 None, messaging.send, msg
             )
-            logger.info("[FCM] Push başarılı | message_id=%s | token=%s…", result, token[:12])
+            logger.warning("[FCM-DEBUG] Push BAŞARILI | message_id=%s | token=%s…", result, token[:12])
 
     except CircuitOpenError:
-        logger.warning("[FCM] Circuit açık — push atlandı | token=%s…", token[:12])
+        logger.warning("[FCM-DEBUG] Circuit AÇIK — push atlandı | token=%s…", token[:12])
         return
     except Exception as exc:
         # Token geçersiz/silinmiş → özel hata fırlat, worker DB'den temizler
