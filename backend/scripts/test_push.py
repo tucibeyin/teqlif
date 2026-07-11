@@ -129,6 +129,7 @@ async def main():
     # ── 1b. DB Yazma Testi ────────────────────────────────────────────────────
     hdr("1b. DB Yazma Testi — token doğrudan DB'ye kaydediliyor mu?")
 
+    original_token = receiver.fcm_token
     test_token = f"TEST_TOKEN_{int(time.time())}"
     async with AsyncSessionLocal() as db:
         await db.execute(sa_update(User).where(User.id == receiver.id).values(fcm_token=test_token))
@@ -142,14 +143,16 @@ async def main():
         ok(f"DB yazma çalışıyor (test token kaydedildi)")
     else:
         err(f"DB yazma BOZUK! Yazılan: {test_token[:20]}, Okunan: {str(row)[:20]}")
-        await (await __import__('app.utils.redis_client', fromlist=['get_redis']).get_redis()).aclose()
         return
 
-    # Test token'ı temizle — gerçek token bekliyoruz
+    # Orijinal token'ı geri yaz
     async with AsyncSessionLocal() as db:
-        await db.execute(sa_update(User).where(User.id == receiver.id).values(fcm_token=None))
+        await db.execute(sa_update(User).where(User.id == receiver.id).values(fcm_token=original_token))
         await db.commit()
-    info("Test token temizlendi, alıcının gerçek token kaydı için uygulamayı aç/kapat")
+    if original_token:
+        ok(f"Orijinal token geri yüklendi: {original_token[:35]}…")
+    else:
+        info("Orijinal token zaten yoktu (NULL)")
 
     # ── 1c. API Endpoint Kodu Doğrulaması ────────────────────────────────────
     hdr("1c. /auth/fcm-token Endpoint Kodu — fix yüklü mü?")
