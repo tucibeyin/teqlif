@@ -407,12 +407,7 @@ class CallService {
     required String livekitUrl,
     required String token,
   }) async {
-    _room = Room(
-      roomOptions: const RoomOptions(
-        defaultVideoPublishOptions: VideoPublishOptions(simulcast: false),
-        defaultAudioPublishOptions: AudioPublishOptions(),
-      ),
-    );
+    _room = Room();
     try {
       debugPrint('[CallService] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
       await _room!.connect(livekitUrl, token);
