@@ -355,6 +355,9 @@ async def update_me(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if hasattr(data, 'locale') and data.locale is not None:
+        current_user.locale = data.locale.strip()
+
     if data.full_name is not None:
         data.full_name = data.full_name.strip()
         if len(data.full_name) < 2:

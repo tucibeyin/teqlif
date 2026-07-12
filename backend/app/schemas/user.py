@@ -70,6 +70,7 @@ class UserOut(BaseModel):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     username: Optional[str] = None
+    locale: Optional[str] = None
     profile_image_url: Optional[str] = None
     profile_image_thumb_url: Optional[str] = None
     bio: Optional[str] = None

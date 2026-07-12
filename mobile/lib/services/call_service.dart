@@ -257,6 +257,8 @@ class CallService {
   }
 
   void onCallRejected() {
+    FlutterRingtonePlayer().stop();
+    Vibration.cancel();
     _ringTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.rejected));
     Future.delayed(const Duration(seconds: 2), reset);
@@ -267,6 +269,8 @@ class CallService {
   }
 
   void onCallMissed() {
+    FlutterRingtonePlayer().stop();
+    Vibration.cancel();
     _setState(state.value.copyWith(status: CallStatus.missed));
     Future.delayed(const Duration(seconds: 2), reset);
   }
