@@ -133,8 +133,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     return Stack(
       children: [
         widget.child,
-        if (CallService.instance.state.value.status == CallStatus.ringing &&
-            !_isBarDismissed)
+        if (CallService.instance.state.value.status == CallStatus.ringing)
           Positioned(
             top: 0,
             left: 0,
@@ -145,24 +144,88 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
                   horizontal: 16.0,
                   vertical: 8.0,
                 ),
-                child: _IncomingCallBar(
-                  username:
-                      CallService.instance.state.value.otherUsername ?? '',
-                  avatarUrl: CallService.instance.state.value.otherAvatar,
-                  onTap: _openIncomingScreen,
-                  onAccept: _openCallScreenAndAccept,
-                  onReject: () {
-                    setState(() => _isBarDismissed = true);
-                    CallService.instance.rejectCall();
-                  },
-                  onDismiss: () {
-                    setState(() => _isBarDismissed = true);
-                  },
-                ),
+                child: _isBarDismissed
+                    ? _MinimizedCallBar(
+                        onRestore: () =>
+                            setState(() => _isBarDismissed = false),
+                      )
+                    : _IncomingCallBar(
+                        username:
+                            CallService.instance.state.value.otherUsername ??
+                            '',
+                        avatarUrl: CallService.instance.state.value.otherAvatar,
+                        onTap: _openIncomingScreen,
+                        onAccept: _openCallScreenAndAccept,
+                        onReject: () {
+                          setState(() => _isBarDismissed = true);
+                          CallService.instance.rejectCall();
+                        },
+                        onDismiss: () {
+                          setState(() => _isBarDismissed = true);
+                        },
+                      ),
               ),
             ),
           ),
       ],
+    );
+  }
+}
+
+class _MinimizedCallBar extends StatelessWidget {
+  final VoidCallback onRestore;
+
+  const _MinimizedCallBar({required this.onRestore});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+
+    return Dismissible(
+      key: const Key('minimized_call_bar'),
+      direction: DismissDirection.down,
+      onDismissed: (_) => onRestore(),
+      child: Material(
+        type: MaterialType.transparency,
+        child: GestureDetector(
+          onTap: onRestore,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF22C55E),
+              borderRadius: BorderRadius.circular(100),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.call, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  l.callIncomingTitle,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
