@@ -251,12 +251,14 @@ class _IncomingCallBar extends StatelessWidget {
                   _BarButton(
                     icon: Icons.call_end,
                     color: const Color(0xFFEF4444),
+                    label: l.callDecline,
                     onTap: onReject,
                   ),
                   const SizedBox(width: 8),
                   _BarButton(
                     icon: Icons.call,
                     color: const Color(0xFF22C55E),
+                    label: l.callAccept,
                     onTap: onAccept,
                   ),
                 ],
@@ -272,11 +274,13 @@ class _IncomingCallBar extends StatelessWidget {
 class _BarButton extends StatelessWidget {
   final IconData icon;
   final Color color;
+  final String label;
   final VoidCallback onTap;
 
   const _BarButton({
     required this.icon,
     required this.color,
+    required this.label,
     required this.onTap,
   });
 
@@ -285,13 +289,27 @@ class _BarButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 48,
-        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
+          color: color.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: color.withOpacity(0.5)),
         ),
-        child: Icon(icon, color: Colors.white, size: 24),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
