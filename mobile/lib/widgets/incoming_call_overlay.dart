@@ -13,7 +13,8 @@ import '../screens/call_screen.dart';
 
 class IncomingCallOverlay extends StatefulWidget {
   final Widget child;
-  const IncomingCallOverlay({super.key, required this.child});
+  final GlobalKey<NavigatorState>? navigatorKey;
+  const IncomingCallOverlay({super.key, required this.child, this.navigatorKey});
 
   @override
   State<IncomingCallOverlay> createState() => _IncomingCallOverlayState();
@@ -89,7 +90,8 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   void _openIncomingScreen() {
     if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).push(
+    final nav = widget.navigatorKey?.currentState ?? Navigator.of(context, rootNavigator: true);
+    nav.push(
       MaterialPageRoute(
         settings: const RouteSettings(name: '/incoming_call_screen'),
         fullscreenDialog: true,
@@ -109,7 +111,8 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     if (!mounted) return;
     if (CallService.instance.isCallScreenVisible.value) return;
     
-    Navigator.of(context, rootNavigator: true).push(
+    final nav = widget.navigatorKey?.currentState ?? Navigator.of(context, rootNavigator: true);
+    nav.push(
       MaterialPageRoute(
         settings: const RouteSettings(name: '/call_screen'),
         builder: (_) => const CallScreen(),
@@ -194,24 +197,26 @@ class _MinimizedCallBar extends StatelessWidget {
       onDismissed: (_) => onRestore(),
       child: Material(
         type: MaterialType.transparency,
-        child: GestureDetector(
-          onTap: onRestore,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF22C55E),
-              borderRadius: BorderRadius.circular(100),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+        child: Center(
+          child: GestureDetector(
+            onTap: onRestore,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF22C55E),
+                borderRadius: BorderRadius.circular(100),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                 const Icon(Icons.call, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
@@ -232,6 +237,7 @@ class _MinimizedCallBar extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

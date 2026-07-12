@@ -105,7 +105,9 @@ class CallState {
 }
 
 class CallService {
-  CallService._();
+  CallService._() {
+    _initAudio();
+  }
   static final CallService instance = CallService._();
 
   final ValueNotifier<CallState> state = ValueNotifier(const CallState());
@@ -118,7 +120,27 @@ class CallService {
   Timer? _elapsedTimer;
   Timer? _ringtoneLoopTimer; // For iOS ringtone looping
   
+  Timer? _hapticLoopTimer;
+  
   final AudioPlayer _audioPlayer = AudioPlayer();
+
+  Future<void> _initAudio() async {
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration(
+      avAudioSessionCategory: AVAudioSessionCategory.playback,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers | AVAudioSessionCategoryOptions.defaultToSpeaker,
+      avAudioSessionMode: AVAudioSessionMode.defaultMode,
+      avAudioSessionRouteSharingPolicy: AVAudioSessionRouteSharingPolicy.defaultPolicy,
+      avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
+      androidAudioAttributes: AndroidAudioAttributes(
+        contentType: AndroidAudioContentType.music,
+        usage: AndroidAudioUsage.media,
+        flags: AndroidAudioFlags.none,
+      ),
+      androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientMayDuck,
+      androidWillPauseWhenDucked: true,
+    ));
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -312,15 +334,22 @@ class CallService {
       looping: true,
     ); // Android handles looping natively
 
-    // iOS manual ringtone loop
+    // iOS manual ringtone & haptic loop
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       _ringtoneLoopTimer?.cancel();
       _ringtoneLoopTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
         FlutterRingtonePlayer().playRingtone();
       });
+
+      _hapticLoopTimer?.cancel();
+      _hapticLoopTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+        if (await Vibration.hasVibrator() == true) {
+          Vibration.vibrate();
+        }
+      });
     }
 
-    if (await Vibration.hasVibrator() == true) {
+    if (await Vibration.hasVibrator() == true && defaultTargetPlatform != TargetPlatform.iOS) {
       Vibration.vibrate(pattern: [2000, 500, 2000, 500], repeat: 0);
     }
   }
@@ -328,6 +357,8 @@ class CallService {
   void stopRingtoneAndVibration() {
     _ringtoneLoopTimer?.cancel();
     _ringtoneLoopTimer = null;
+    _hapticLoopTimer?.cancel();
+    _hapticLoopTimer = null;
     FlutterRingtonePlayer().stop();
     Vibration.cancel();
   }

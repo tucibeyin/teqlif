@@ -125,6 +125,7 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
         navigatorObservers: [AnalyticsRouteObserver(), _callRouteObserver],
         builder: (context, child) {
           return IncomingCallOverlay(
+            navigatorKey: TeqlifApp.navigatorKey,
             child: GlobalCallOverlay(
               navigatorKey: TeqlifApp.navigatorKey,
               child: GlobalKeyboardAccessory(child: child!),
