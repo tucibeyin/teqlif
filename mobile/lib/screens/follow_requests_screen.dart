@@ -65,7 +65,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
       );
       if (resp.statusCode == 200) {
         setState(() {
-          _requests.removeWhere((req) => req['follower']['id'] == followerId);
+          _requests.removeWhere((req) => req['id'] == followerId);
         });
       } else {
         if (mounted) {
@@ -112,11 +112,10 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                       itemCount: _requests.length,
                       separatorBuilder: (context, index) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
-                        final req = _requests[index];
-                        final user = req['follower'];
+                        final user = _requests[index];
                         final String username = user['username'];
                         final String fullName = user['full_name'];
-                        final String? avatarUrl = user['profile_image_url'];
+                        final String? avatarUrl = user['profile_image_thumb_url'];
 
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
