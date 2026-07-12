@@ -88,7 +88,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   Future<void> _decline() async {
     await CallService.instance.rejectCall();
-    if (mounted) Navigator.of(context).pop();
+    // _onStateChange listener will automatically pop the screen when state becomes idle
   }
 
   @override
