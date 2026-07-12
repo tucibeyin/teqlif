@@ -13,10 +13,10 @@ import '../services/storage_service.dart';
 
 enum CallStatus {
   idle,
-  calling,      // outgoing — waiting for answer
-  ringing,      // incoming — waiting for our action
-  connecting,   // accepted — joining LiveKit room
-  connected,    // in call
+  calling, // outgoing — waiting for answer
+  ringing, // incoming — waiting for our action
+  connecting, // accepted — joining LiveKit room
+  connected, // in call
   ended,
   rejected,
   missed,
@@ -85,17 +85,18 @@ class CallState {
   }) {
     return CallState(
       status: status ?? this.status,
-    callId: callId ?? this.callId,
-    roomName: roomName ?? this.roomName,
-    livekitUrl: livekitUrl ?? this.livekitUrl,
-    token: token ?? this.token,
-    otherUsername: otherUsername ?? this.otherUsername,
-    otherAvatar: otherAvatar ?? this.otherAvatar,
-    otherUserId: otherUserId ?? this.otherUserId,
+      callId: callId ?? this.callId,
+      roomName: roomName ?? this.roomName,
+      livekitUrl: livekitUrl ?? this.livekitUrl,
+      token: token ?? this.token,
+      otherUsername: otherUsername ?? this.otherUsername,
+      otherAvatar: otherAvatar ?? this.otherAvatar,
+      otherUserId: otherUserId ?? this.otherUserId,
       elapsed: elapsed ?? this.elapsed,
       isMuted: isMuted ?? this.isMuted,
       isSpeaker: isSpeaker ?? this.isSpeaker,
-      permPermanentlyDenied: permPermanentlyDenied ?? this.permPermanentlyDenied,
+      permPermanentlyDenied:
+          permPermanentlyDenied ?? this.permPermanentlyDenied,
       isPoorConnection: isPoorConnection ?? this.isPoorConnection,
     );
   }
@@ -111,7 +112,7 @@ class CallService {
   Room? _room;
   Function? _roomEventsSubscription;
   StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSubscription;
-  Timer? _ringTimer;   // 30s no-answer timeout
+  Timer? _ringTimer; // 30s no-answer timeout
   Timer? _elapsedTimer;
   Timer? _ringtoneLoopTimer; // For iOS ringtone looping
 
@@ -125,9 +126,10 @@ class CallService {
     };
   }
 
-
-
-  Future<Map<String, dynamic>> _post(String path, [Map<String, dynamic>? body]) async {
+  Future<Map<String, dynamic>> _post(
+    String path, [
+    Map<String, dynamic>? body,
+  ]) async {
     final resp = await http.post(
       Uri.parse('$kBaseUrl$path'),
       headers: await _authHeaders(),
@@ -162,28 +164,34 @@ class CallService {
   }) async {
     final permStatus = await Permission.microphone.request();
     if (permStatus != PermissionStatus.granted) {
-      _setState(state.value.copyWith(
-        status: CallStatus.permissionDenied,
-        permPermanentlyDenied: permStatus.isPermanentlyDenied,
-      ));
+      _setState(
+        state.value.copyWith(
+          status: CallStatus.permissionDenied,
+          permPermanentlyDenied: permStatus.isPermanentlyDenied,
+        ),
+      );
       return;
     }
 
-    _setState(CallState(
-      status: CallStatus.calling,
-      otherUserId: calleeId,
-      otherUsername: calleeUsername,
-      otherAvatar: calleeAvatar,
-    ));
+    _setState(
+      CallState(
+        status: CallStatus.calling,
+        otherUserId: calleeId,
+        otherUsername: calleeUsername,
+        otherAvatar: calleeAvatar,
+      ),
+    );
 
     try {
       final data = await _post('/calls/start', {'callee_id': calleeId});
-      _setState(state.value.copyWith(
-        callId: data['call_id'] as int,
-        roomName: data['room_name'] as String,
-        livekitUrl: data['livekit_url'] as String,
-        token: data['token'] as String,
-      ));
+      _setState(
+        state.value.copyWith(
+          callId: data['call_id'] as int,
+          roomName: data['room_name'] as String,
+          livekitUrl: data['livekit_url'] as String,
+          token: data['token'] as String,
+        ),
+      );
       _startRingTimer();
       await WakelockPlus.enable();
     } on CallApiException catch (e) {
@@ -208,7 +216,9 @@ class CallService {
       if (state.value.status == CallStatus.calling) {
         final callId = state.value.callId;
         if (callId != null) {
-          try { await _post('/calls/$callId/missed'); } catch (_) {}
+          try {
+            await _post('/calls/$callId/missed');
+          } catch (_) {}
         }
         _setState(state.value.copyWith(status: CallStatus.noAnswer));
         await Future.delayed(const Duration(seconds: 2));
@@ -220,15 +230,21 @@ class CallService {
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
   void onIncomingCall(Map<String, dynamic> data) async {
-    _setState(CallState(
-      status: CallStatus.ringing,
-      callId: data['call_id'] is int ? data['call_id'] : int.tryParse(data['call_id'].toString()),
-      roomName: data['room_name'] as String?,
-      livekitUrl: data['livekit_url'] as String?,
-      otherUserId: data['caller_id'] is int ? data['caller_id'] : int.tryParse(data['caller_id'].toString()),
-      otherUsername: data['caller_username'] as String?,
-      otherAvatar: data['caller_avatar'] as String?,
-    ));
+    _setState(
+      CallState(
+        status: CallStatus.ringing,
+        callId: data['call_id'] is int
+            ? data['call_id']
+            : int.tryParse(data['call_id'].toString()),
+        roomName: data['room_name'] as String?,
+        livekitUrl: data['livekit_url'] as String?,
+        otherUserId: data['caller_id'] is int
+            ? data['caller_id']
+            : int.tryParse(data['caller_id'].toString()),
+        otherUsername: data['caller_username'] as String?,
+        otherAvatar: data['caller_avatar'] as String?,
+      ),
+    );
 
     playNotification();
   }
@@ -239,8 +255,10 @@ class CallService {
 
   void startRingtoneAndVibration() async {
     // Play immediately
-    FlutterRingtonePlayer().playRingtone(looping: true); // Android handles looping natively
-    
+    FlutterRingtonePlayer().playRingtone(
+      looping: true,
+    ); // Android handles looping natively
+
     // iOS manual ringtone loop
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       _ringtoneLoopTimer?.cancel();
@@ -282,7 +300,9 @@ class CallService {
   Future<void> rejectCall() async {
     final callId = state.value.callId;
     if (callId != null) {
-      try { await _post('/calls/$callId/reject'); } catch (_) {}
+      try {
+        await _post('/calls/$callId/reject');
+      } catch (_) {}
     }
     reset();
   }
@@ -292,22 +312,27 @@ class CallService {
   Future<void> onCallAccepted(Map<String, dynamic> data) async {
     _ringTimer?.cancel();
     stopRingtoneAndVibration();
-    _setState(state.value.copyWith(
-      status: CallStatus.connecting,
-      token: data['token'] as String?,
-      livekitUrl: data['livekit_url'] as String?,
-      roomName: data['room_name'] as String?,
-    ));
+    _setState(
+      state.value.copyWith(
+        status: CallStatus.connecting,
+        token: data['token'] as String?,
+        livekitUrl: data['livekit_url'] as String?,
+        roomName: data['room_name'] as String?,
+      ),
+    );
     await _joinRoom(
       livekitUrl: data['livekit_url'] as String,
       token: data['token'] as String,
     );
   }
 
-  void onCallRejected() {
+  void onCallRejected() async {
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.rejected));
+    if (await Vibration.hasVibrator() == true) {
+      Vibration.vibrate(pattern: [200, 100, 200, 100, 200]);
+    }
     Future.delayed(const Duration(seconds: 2), reset);
   }
 
@@ -315,15 +340,21 @@ class CallService {
     _hangUpLocally(status: CallStatus.ended);
   }
 
-  void onCallMissed() {
+  void onCallMissed() async {
     stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.missed));
+    if (await Vibration.hasVibrator() == true) {
+      Vibration.vibrate(pattern: [200, 100, 200]);
+    }
     Future.delayed(const Duration(seconds: 2), reset);
   }
 
   // ── LiveKit Room ──────────────────────────────────────────────────────────
 
-  Future<void> _joinRoom({required String livekitUrl, required String token}) async {
+  Future<void> _joinRoom({
+    required String livekitUrl,
+    required String token,
+  }) async {
     _room = Room(
       roomOptions: const RoomOptions(
         defaultVideoPublishOptions: VideoPublishOptions(simulcast: false),
@@ -333,7 +364,12 @@ class CallService {
     try {
       await _room!.connect(livekitUrl, token);
       await _room!.localParticipant?.setMicrophoneEnabled(true);
-      _setState(state.value.copyWith(status: CallStatus.connected, elapsed: Duration.zero));
+      _setState(
+        state.value.copyWith(
+          status: CallStatus.connected,
+          elapsed: Duration.zero,
+        ),
+      );
       _startElapsedTimer();
       await WakelockPlus.enable();
 
@@ -357,7 +393,8 @@ class CallService {
       }
     } else if (event is ParticipantConnectionQualityUpdatedEvent) {
       if (event.participant == _room?.localParticipant) {
-        final isPoor = (event.connectionQuality == ConnectionQuality.poor ||
+        final isPoor =
+            (event.connectionQuality == ConnectionQuality.poor ||
             event.connectionQuality == ConnectionQuality.lost);
         if (state.value.isPoorConnection != isPoor) {
           _setState(state.value.copyWith(isPoorConnection: isPoor));
@@ -369,7 +406,9 @@ class CallService {
   Future<void> _setupAudioInterruptionListener() async {
     _audioInterruptionSubscription?.cancel();
     final session = await AudioSession.instance;
-    _audioInterruptionSubscription = session.interruptionEventStream.listen((event) {
+    _audioInterruptionSubscription = session.interruptionEventStream.listen((
+      event,
+    ) {
       if (event.begin) {
         // Interruption began (e.g. phone call came in)
         if (!state.value.isMuted) {
@@ -390,9 +429,11 @@ class CallService {
     _elapsedTimer?.cancel();
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.value.status == CallStatus.connected) {
-        _setState(state.value.copyWith(
-          elapsed: state.value.elapsed + const Duration(seconds: 1),
-        ));
+        _setState(
+          state.value.copyWith(
+            elapsed: state.value.elapsed + const Duration(seconds: 1),
+          ),
+        );
       }
     });
   }
@@ -408,19 +449,21 @@ class CallService {
   Future<void> setSpeaker(bool enabled) async {
     try {
       final session = await AudioSession.instance;
-      await session.configure(AudioSessionConfiguration(
-        avAudioSessionCategory: enabled
-            ? AVAudioSessionCategory.playback
-            : AVAudioSessionCategory.playAndRecord,
-        avAudioSessionCategoryOptions:
-            AVAudioSessionCategoryOptions.allowBluetooth,
-        androidAudioAttributes: AndroidAudioAttributes(
-          contentType: AndroidAudioContentType.speech,
-          usage: enabled
-              ? AndroidAudioUsage.media
-              : AndroidAudioUsage.voiceCommunication,
+      await session.configure(
+        AudioSessionConfiguration(
+          avAudioSessionCategory: enabled
+              ? AVAudioSessionCategory.playback
+              : AVAudioSessionCategory.playAndRecord,
+          avAudioSessionCategoryOptions:
+              AVAudioSessionCategoryOptions.allowBluetooth,
+          androidAudioAttributes: AndroidAudioAttributes(
+            contentType: AndroidAudioContentType.speech,
+            usage: enabled
+                ? AndroidAudioUsage.media
+                : AndroidAudioUsage.voiceCommunication,
+          ),
         ),
-      ));
+      );
     } catch (e) {
       debugPrint('[CallService] setSpeaker error: $e');
     }
@@ -430,7 +473,9 @@ class CallService {
   Future<void> endCall() async {
     final callId = state.value.callId;
     if (callId != null) {
-      try { await _post('/calls/$callId/end'); } catch (_) {}
+      try {
+        await _post('/calls/$callId/end');
+      } catch (_) {}
     }
     _hangUpLocally(status: CallStatus.ended);
   }

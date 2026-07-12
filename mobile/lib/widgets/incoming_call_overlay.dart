@@ -32,6 +32,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     );
     _wsSub = WsService.messageStream.stream.listen(_onData);
     CallService.instance.state.addListener(_onCallState);
+    CallService.instance.isCallScreenVisible.addListener(_onCallState);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -126,6 +127,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     _notifSub?.cancel();
     _wsSub?.cancel();
     CallService.instance.state.removeListener(_onCallState);
+    CallService.instance.isCallScreenVisible.removeListener(_onCallState);
     super.dispose();
   }
 
@@ -134,6 +136,8 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     return Stack(
       children: [
         widget.child,
+
+        // Ringing UI
         if (CallService.instance.state.value.status == CallStatus.ringing)
           Positioned(
             top: 0,
@@ -168,7 +172,114 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
               ),
             ),
           ),
+
+        // Active Call UI (Minimized)
+        if ((CallService.instance.state.value.status == CallStatus.connected ||
+                CallService.instance.state.value.status ==
+                    CallStatus.connecting) &&
+            !CallService.instance.isCallScreenVisible.value)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
+                child: _ActiveCallBar(onRestore: _openCallScreen),
+              ),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+class _ActiveCallBar extends StatelessWidget {
+  final VoidCallback onRestore;
+
+  const _ActiveCallBar({required this.onRestore});
+
+  String _formatElapsed(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: GestureDetector(
+        onTap: onRestore,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(
+              0xFF22C55E,
+            ), // WhatsApp-like green is universally good for both modes
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: AppColors.isDark(context) ? 0.3 : 0.15,
+                ),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Left: Icon + Timer
+              Row(
+                children: [
+                  const Icon(Icons.call, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  ValueListenableBuilder<CallState>(
+                    valueListenable: CallService.instance.state,
+                    builder: (context, cs, _) {
+                      return Text(
+                        cs.status == CallStatus.connecting
+                            ? AppLocalizations.of(context)!.callConnecting
+                            : _formatElapsed(cs.elapsed),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+
+              // Right: End Call Button
+              GestureDetector(
+                onTap: () => CallService.instance.endCall(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: const Icon(
+                    Icons.call_end,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
