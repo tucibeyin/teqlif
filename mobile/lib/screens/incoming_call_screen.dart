@@ -103,7 +103,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     final avatarUrl = avatarRaw.isNotEmpty ? imgUrl(avatarRaw) : null;
 
     return PopScope(
-      canPop: false,
+      canPop: !CallService.instance.hasActiveCall,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Stack(

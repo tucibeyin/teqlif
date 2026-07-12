@@ -63,7 +63,7 @@ class _CallScreenState extends State<CallScreen> {
         final username = cs.otherUsername ?? '';
 
         return PopScope(
-          canPop: false,
+          canPop: !CallService.instance.hasActiveCall,
           child: Scaffold(
             backgroundColor: Colors.black,
             body: Stack(
