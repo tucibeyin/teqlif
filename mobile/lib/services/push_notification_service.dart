@@ -10,6 +10,8 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import 'storage_service.dart';
 import 'call_service.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 
 // ─── Action IDs ──────────────────────────────────────────────────────────────
@@ -57,18 +59,27 @@ Future<void> _showCallNotification({
 }) async {
   debugPrint('[CallKit] _showCallNotification başlıyor | callId=$callId | caller=$callerUsername');
 
+  // Load language from shared prefs since we have no BuildContext
+  String langCode = 'tr';
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    langCode = prefs.getString('app_locale_language_code') ?? 'tr';
+  } catch (_) {}
+  
+  final l = lookupAppLocalizations(Locale(langCode));
+
   final params = CallKitParams(
     id: callId,
     nameCaller: callerUsername,
     appName: 'Teqlif',
     avatar: callerAvatar.isNotEmpty ? callerAvatar : 'https://i.pravatar.cc/100',
-    handle: 'Sesli Arama',
+    handle: l.callVoiceCall,
     type: 0,
     duration: 45000,
-    missedCallNotification: const NotificationParams(
+    missedCallNotification: NotificationParams(
       showNotification: true,
       isShowCallback: false,
-      subtitle: 'Cevapsız Arama',
+      subtitle: l.callMissed,
     ),
     extra: {
       'call_id': callId,
@@ -78,13 +89,13 @@ Future<void> _showCallNotification({
       'room_name': roomName,
       'livekit_url': livekitUrl,
     },
-    android: const AndroidParams(
+    android: AndroidParams(
       isCustomNotification: true,
       isShowLogo: false,
       backgroundColor: '#0A1628',
       actionColor: '#4CAF50',
-      textAccept: 'Kabul Et',
-      textDecline: 'Reddet',
+      textAccept: l.callNotifAccept,
+      textDecline: l.callNotifDecline,
     ),
     ios: const IOSParams(
       iconName: 'AppIcon',

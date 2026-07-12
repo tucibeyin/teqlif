@@ -70,11 +70,30 @@ async def _send_call_push(callee: User, caller: User, call_id: int, room_name: s
     if not callee.fcm_token:
         return
     from app.services.firebase_service import send_push
+    locale = getattr(callee, 'locale', 'tr') or 'tr'
+    
+    titles = {
+        "tr": f"{caller.username} sizi arıyor",
+        "en": f"{caller.username} is calling you",
+        "ru": f"{caller.username} звонит вам",
+        "ar": f"{caller.username} يتصل بك",
+    }
+    
+    bodies = {
+        "tr": "Gelen Sesli Arama",
+        "en": "Incoming Voice Call",
+        "ru": "Входящий голосовой вызов",
+        "ar": "مكالمة صوتية واردة",
+    }
+    
+    title = titles.get(locale, titles["tr"])
+    body = bodies.get(locale, bodies["tr"])
+
     try:
         await send_push(
             token=callee.fcm_token,
-            title=f"{caller.username} sizi arıyor",
-            body="Gelen Sesli Arama",
+            title=title,
+            body=body,
             badge=None,
             notif_type="incoming_call",
             extra_data={
