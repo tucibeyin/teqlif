@@ -69,20 +69,18 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
             context: context,
             builder: (ctx) => AlertDialog(
               title: Text(AppLocalizations.of(ctx)!.callPermissionDenied),
-              content: const Text(
-                'Sesli arama için Ayarlar\'dan mikrofon iznini açmanız gerekiyor.',
-              ),
+              content: Text(AppLocalizations.of(ctx)!.voicePermissionDenied),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('İptal'),
+                  child: Text(AppLocalizations.of(ctx)!.btnCancel),
                 ),
                 TextButton(
                   onPressed: () async {
                     Navigator.pop(ctx);
                     await openAppSettings();
                   },
-                  child: const Text('Ayarlar\'a Git'),
+                  child: Text(AppLocalizations.of(ctx)!.navSettings),
                 ),
               ],
             ),
