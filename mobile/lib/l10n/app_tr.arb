@@ -2759,6 +2759,16 @@
   "rejectRequest": "Sil",
   "thisAccountIsPrivate": "Bu hesap gizli",
   "thisAccountIsPrivateDesc": "Fotoğraf ve videolarını görmek için bu hesabı takip et.",
-  "notifFollowRequestTitle": "Yeni Takip İsteği",
-  "notifFollowAcceptedTitle": "Takip İsteği Onaylandı"
+  "notifFollowRequestTitle": "@{username} seni takip etmek istiyor",
+  "@notifFollowRequestTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifFollowAcceptedTitle": "@{username} takip isteğini onayladı",
+  "@notifFollowAcceptedTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  }
 }

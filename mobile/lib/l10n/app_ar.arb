@@ -2761,6 +2761,16 @@
   "rejectRequest": "حذف",
   "thisAccountIsPrivate": "هذا الحساب خاص",
   "thisAccountIsPrivateDesc": "تابع هذا الحساب لرؤية صوره ومقاطع الفيديو الخاصة به.",
-  "notifFollowRequestTitle": "طلب متابعة جديد",
-  "notifFollowAcceptedTitle": "تم قبول طلب المتابعة"
+  "notifFollowRequestTitle": "@{username} يريد متابعتك",
+  "@notifFollowRequestTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifFollowAcceptedTitle": "@{username} وافق على طلب المتابعة",
+  "@notifFollowAcceptedTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  }
 }

@@ -2761,6 +2761,16 @@
   "rejectRequest": "Удалить",
   "thisAccountIsPrivate": "Это закрытый аккаунт",
   "thisAccountIsPrivateDesc": "Подпишитесь, чтобы видеть фото и видео.",
-  "notifFollowRequestTitle": "Новый запрос на подписку",
-  "notifFollowAcceptedTitle": "Запрос на подписку принят"
+  "notifFollowRequestTitle": "@{username} хочет подписаться на вас",
+  "@notifFollowRequestTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifFollowAcceptedTitle": "@{username} принял ваш запрос",
+  "@notifFollowAcceptedTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  }
 }

@@ -5172,8 +5172,12 @@ class AppLocalizationsTr extends AppLocalizations {
       'Fotoğraf ve videolarını görmek için bu hesabı takip et.';
 
   @override
-  String get notifFollowRequestTitle => 'Yeni Takip İsteği';
+  String notifFollowRequestTitle(Object username) {
+    return '@$username seni takip etmek istiyor';
+  }
 
   @override
-  String get notifFollowAcceptedTitle => 'Takip İsteği Onaylandı';
+  String notifFollowAcceptedTitle(Object username) {
+    return '@$username takip isteğini onayladı';
+  }
 }

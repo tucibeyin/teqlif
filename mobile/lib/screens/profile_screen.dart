@@ -1209,6 +1209,26 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     _isPrivate = widget.user?['is_private'] == true;
     _loadBiometricState();
     _loadPremiumStatus();
+    _loadPendingRequests();
+  }
+
+  int _pendingRequestCount = 0;
+
+  Future<void> _loadPendingRequests() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/follows/requests'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        final List data = jsonDecode(resp.body);
+        if (mounted) {
+          setState(() => _pendingRequestCount = data.length);
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadBiometricState() async {
@@ -1928,10 +1948,27 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.person_add_outlined,
                 label: l.followRequests,
+                trailing: _pendingRequestCount > 0
+                    ? Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          _pendingRequestCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    : null,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const FollowRequestsScreen()),
-                ),
+                ).then((_) => _loadPendingRequests()),
               ),
               _SettingsTile(
                 icon: Icons.manage_accounts_outlined,

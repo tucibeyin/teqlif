@@ -2796,6 +2796,16 @@
   "rejectRequest": "Delete",
   "thisAccountIsPrivate": "This account is private",
   "thisAccountIsPrivateDesc": "Follow this account to see their photos and videos.",
-  "notifFollowRequestTitle": "New Follow Request",
-  "notifFollowAcceptedTitle": "Follow Request Accepted"
+  "notifFollowRequestTitle": "@{username} wants to follow you",
+  "@notifFollowRequestTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "notifFollowAcceptedTitle": "@{username} accepted your follow request",
+  "@notifFollowAcceptedTitle": {
+    "placeholders": {
+      "username": {}
+    }
+  }
 }

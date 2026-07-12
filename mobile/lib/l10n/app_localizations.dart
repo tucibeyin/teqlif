@@ -9327,14 +9327,14 @@ abstract class AppLocalizations {
   /// No description provided for @notifFollowRequestTitle.
   ///
   /// In tr, this message translates to:
-  /// **'Yeni Takip İsteği'**
-  String get notifFollowRequestTitle;
+  /// **'@{username} seni takip etmek istiyor'**
+  String notifFollowRequestTitle(Object username);
 
   /// No description provided for @notifFollowAcceptedTitle.
   ///
   /// In tr, this message translates to:
-  /// **'Takip İsteği Onaylandı'**
-  String get notifFollowAcceptedTitle;
+  /// **'@{username} takip isteğini onayladı'**
+  String notifFollowAcceptedTitle(Object username);
 }
 
 class _AppLocalizationsDelegate

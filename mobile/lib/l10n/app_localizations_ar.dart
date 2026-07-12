@@ -5142,8 +5142,12 @@ class AppLocalizationsAr extends AppLocalizations {
       'تابع هذا الحساب لرؤية صوره ومقاطع الفيديو الخاصة به.';
 
   @override
-  String get notifFollowRequestTitle => 'طلب متابعة جديد';
+  String notifFollowRequestTitle(Object username) {
+    return '@$username يريد متابعتك';
+  }
 
   @override
-  String get notifFollowAcceptedTitle => 'تم قبول طلب المتابعة';
+  String notifFollowAcceptedTitle(Object username) {
+    return '@$username وافق على طلب المتابعة';
+  }
 }

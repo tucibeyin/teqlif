@@ -5170,8 +5170,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Follow this account to see their photos and videos.';
 
   @override
-  String get notifFollowRequestTitle => 'New Follow Request';
+  String notifFollowRequestTitle(Object username) {
+    return '@$username wants to follow you';
+  }
 
   @override
-  String get notifFollowAcceptedTitle => 'Follow Request Accepted';
+  String notifFollowAcceptedTitle(Object username) {
+    return '@$username accepted your follow request';
+  }
 }

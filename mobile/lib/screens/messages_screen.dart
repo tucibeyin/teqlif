@@ -28,6 +28,7 @@ import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
 import 'public_profile_screen.dart';
+import 'follow_requests_screen.dart';
 import 'listing_detail_screen.dart';
 import 'purchase_detail_screen.dart';
 import 'sale_detail_screen.dart';
@@ -784,6 +785,13 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         RegExp(r'@(\w+)').firstMatch(t)?.group(1) ?? '';
 
     switch (type) {
+      case 'follow_request':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const FollowRequestsScreen()),
+        );
+        break;
+      case 'follow_accepted':
       case 'follow':
       case 'call_missed':
         final username =

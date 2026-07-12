@@ -5220,8 +5220,12 @@ class AppLocalizationsRu extends AppLocalizations {
       'Подпишитесь, чтобы видеть фото и видео.';
 
   @override
-  String get notifFollowRequestTitle => 'Новый запрос на подписку';
+  String notifFollowRequestTitle(Object username) {
+    return '@$username хочет подписаться на вас';
+  }
 
   @override
-  String get notifFollowAcceptedTitle => 'Запрос на подписку принят';
+  String notifFollowAcceptedTitle(Object username) {
+    return '@$username принял ваш запрос';
+  }
 }
