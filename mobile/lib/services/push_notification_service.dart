@@ -286,6 +286,7 @@ class PushNotificationService {
         debugPrint('[CallKit] Kabul Et tıklandı');
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         CallService.instance.onIncomingCall({...data, 'type': 'incoming_call'});
+        CallService.instance.acceptCall(); // Accept immediately in background
         notificationStream.add({...data, 'type': 'incoming_call_auto_accept'});
       } else if (event is CallEventActionCallDecline) {
         debugPrint('[CallKit] Reddet tıklandı');

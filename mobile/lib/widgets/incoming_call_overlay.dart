@@ -124,7 +124,6 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   Future<void> _openCallScreenAndAccept() async {
     if (!mounted) return;
     _openCallScreen();
-    await CallService.instance.acceptCall();
   }
 
   @override
