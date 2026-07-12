@@ -91,7 +91,7 @@ async def _create_user_and_send_code(
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
-    lang = _detect_lang(request)
+    lang = get_locale(request=request)
     await _send_verification_email(request, data.email, data.full_name, code, has_phone=bool(data.phone), lang=lang)
 
 
@@ -137,7 +137,7 @@ async def verify(request: Request, data: VerifyEmail, response: Response, db: As
         except Exception:
             pass  # Geçersiz/süresi dolmuş kod — doğrulamayı engelleme
 
-    lang = _detect_lang(request)
+    lang = get_locale(request=request)
     try:
         await request.app.state.arq_pool.enqueue_job(
             "send_welcome_email_task", user.email, user.full_name, bool(user.phone), lang,
@@ -216,7 +216,7 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
-    lang = data.lang if hasattr(data, 'lang') and data.lang else _detect_lang(request)
+    lang = data.lang if hasattr(data, 'lang') and data.lang else get_locale(request=request)
     await _send_verification_email(request, data.email, user.full_name, code, raise_on_failure=True, lang=lang)
     return {"message": _msg(request if "request" in locals() else None, locals().get("data"), "apiMsgCodeResent", "Kod tekrar gönderildi")}
 
@@ -235,7 +235,7 @@ async def forgot_password(request: Request, data: ForgotPassword, db: AsyncSessi
     redis = await get_redis()
     await redis.setex(f"reset_pwd:{data.email}", VERIFY_CODE_TTL, code)
     
-    lang = data.lang if hasattr(data, 'lang') and data.lang else _detect_lang(request)
+    lang = data.lang if hasattr(data, 'lang') and data.lang else get_locale(request=request)
     try:
         await send_reset_password_email(data.email, user.full_name, code, lang)
     except Exception as e:

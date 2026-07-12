@@ -83,8 +83,8 @@ async def apply_referral_code(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.routers.auth import _detect_lang
-    lang = _detect_lang(request)
+    from app.utils.i18n import get_locale
+    lang = get_locale(request=request)
     return await apply_referral(db, current_user, body.referral_code, lang)
 
 
