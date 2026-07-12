@@ -70,7 +70,9 @@ class _CallScreenState extends State<CallScreen> {
       debugPrint('[CallScreen] Proximity cancel sync error: $e');
     }
     CallService.instance.state.removeListener(_onStateChange);
-    CallService.instance.isCallScreenVisible.value = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      CallService.instance.isCallScreenVisible.value = false;
+    });
     super.dispose();
   }
 
