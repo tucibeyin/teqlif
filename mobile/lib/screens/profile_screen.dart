@@ -1250,7 +1250,18 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
-        await StorageService.saveUserInfo(data);
+        await StorageService.saveUserInfo(
+          id: data['id'] as int,
+          email: data['email'] as String,
+          username: data['username'] as String,
+          fullName: data['full_name'] as String,
+          isPremium: data['is_premium'] == true,
+          planType: data['plan_type'] as String?,
+          onboardingCompleted: data['onboarding_completed'] == true,
+          isVerified: data['is_verified'] == true,
+          phoneVerified: data['phone_verified'] == true,
+          isPrivate: data['is_private'] == true,
+        );
       } else {
         setState(() => _isPrivate = !val);
       }

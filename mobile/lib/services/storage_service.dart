@@ -83,6 +83,7 @@ class StorageService {
   static const _userOnboardingKey = 'teqlif_user_onboarding';
   static const _userIsVerifiedKey = 'teqlif_user_is_verified';
   static const _userPhoneVerifiedKey = 'teqlif_user_phone_verified';
+  static const _userPrivateKey = 'teqlif_is_private';
 
   static Future<void> saveToken(String token) async {
     await _secureStorage.write(key: _tokenKey, value: token);
@@ -110,6 +111,7 @@ class StorageService {
     bool? onboardingCompleted,
     bool? isVerified,
     bool? phoneVerified,
+    bool? isPrivate,
   }) async {
     final futures = <Future<void>>[
       _secureStorage.write(key: _userIdKey, value: id.toString()),
@@ -130,6 +132,9 @@ class StorageService {
     if (phoneVerified != null) {
       futures.add(_secureStorage.write(key: _userPhoneVerifiedKey, value: phoneVerified.toString()));
     }
+    if (isPrivate != null) {
+      futures.add(_secureStorage.write(key: _userPrivateKey, value: isPrivate.toString()));
+    }
     await Future.wait(futures);
   }
 
@@ -144,6 +149,7 @@ class StorageService {
     final onboardingCompleted = await _secureStorage.read(key: _userOnboardingKey);
     final isVerified = await _secureStorage.read(key: _userIsVerifiedKey);
     final phoneVerified = await _secureStorage.read(key: _userPhoneVerifiedKey);
+    final isPrivate = await _secureStorage.read(key: _userPrivateKey);
     return {
       'id': int.tryParse(id) ?? 0,
       'email': email ?? '',
@@ -154,6 +160,7 @@ class StorageService {
       'onboarding_completed': onboardingCompleted == 'true',
       'is_verified': isVerified == 'true',
       'phone_verified': phoneVerified == 'true',
+      'is_private': isPrivate == 'true',
     };
   }
 
