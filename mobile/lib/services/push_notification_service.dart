@@ -269,7 +269,7 @@ class PushNotificationService {
     }
 
     // CallKit Listener
-    FlutterCallkitIncoming.onEvent.listen((CallEvent? event) {
+    FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
       if (event == null) return;
       debugPrint('[CallKit] onEvent: ${event.eventName}');
       
@@ -285,6 +285,21 @@ class PushNotificationService {
         if (callId.isNotEmpty) _rejectCallById(callId);
       } else if (event is CallEventActionCallEnded || event is CallEventActionCallTimeout) {
         CallService.instance.reset();
+      } else if (event is CallEventActionDidUpdateDevicePushTokenVoip) {
+        try {
+          final voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
+          final shortVoip = (voipToken != null && voipToken.length >= 15) ? "${voipToken.substring(0, 15)}…" : voipToken;
+          debugPrint('[CallKit] VoIP Token Async Update: ${shortVoip ?? "NULL"}');
+          if (voipToken != null && voipToken.isNotEmpty) {
+            final fcmToken = await FirebaseMessaging.instance.getToken();
+            if (fcmToken != null) {
+              await AuthService.saveFcmToken(fcmToken, voipToken: voipToken);
+              debugPrint('[CallKit] Async VoIP Token backend\'e kaydedildi ✓');
+            }
+          }
+        } catch (e) {
+          debugPrint('[CallKit] Async VoIP Token error: $e');
+        }
       }
     });
 
