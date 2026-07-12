@@ -5068,6 +5068,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get callBusy => 'Aradığınız Kişi Meşgul';
 
   @override
+  String get callReconnecting => 'Yeniden Bağlanıyor...';
+
+  @override
+  String get poorConnection => 'Zayıf Bağlantı';
+
+  @override
   String get callMissed => 'Cevapsız Arama';
 
   @override

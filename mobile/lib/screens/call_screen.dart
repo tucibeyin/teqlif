@@ -133,12 +133,22 @@ class _CallScreenState extends State<CallScreen> {
                     const SizedBox(height: 10),
 
                     // Status / timer
-                    Text(
-                      _statusText(cs.status, l, cs.elapsed),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (cs.isPoorConnection && cs.status == CallStatus.connected)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Icon(Icons.signal_cellular_connected_no_internet_4_bar, color: Colors.orange, size: 18),
+                          ),
+                        Text(
+                          _statusText(cs.status, l, cs.elapsed),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
 
                     const Spacer(),
@@ -233,7 +243,8 @@ class _CallScreenState extends State<CallScreen> {
                               // End call button
                               if (cs.status == CallStatus.calling ||
                                   cs.status == CallStatus.connecting ||
-                                  cs.status == CallStatus.connected)
+                                  cs.status == CallStatus.connected ||
+                                  cs.status == CallStatus.reconnecting)
                                 GestureDetector(
                                   onTap: () => CallService.instance.endCall(),
                                   child: Container(
@@ -299,6 +310,7 @@ class _CallScreenState extends State<CallScreen> {
       CallStatus.missed => l.callMissed,
       CallStatus.noAnswer => l.callNoAnswer,
       CallStatus.busy => l.callBusy,
+      CallStatus.reconnecting => l.callReconnecting,
       _ => l.callConnecting,
     };
   }

@@ -5038,6 +5038,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get callBusy => 'الرقم مشغول';
 
   @override
+  String get callReconnecting => 'جارِ إعادة الاتصال...';
+
+  @override
+  String get poorConnection => 'اتصال ضعيف';
+
+  @override
   String get callMissed => 'مكالمة فائتة';
 
   @override

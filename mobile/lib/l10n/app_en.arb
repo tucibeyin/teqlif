@@ -2738,6 +2738,8 @@
   "callEnded": "Call Ended",
   "callRejected": "Call Declined",
   "callBusy": "User is Busy",
+  "callReconnecting": "Reconnecting...",
+  "poorConnection": "Poor Connection",
   "callMissed": "Missed Call",
   "callNoAnswer": "No Answer",
   "callAccept": "Accept",

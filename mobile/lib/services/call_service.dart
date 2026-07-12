@@ -23,6 +23,7 @@ enum CallStatus {
   noAnswer,
   permissionDenied,
   busy,
+  reconnecting,
 }
 
 class CallApiException implements Exception {
@@ -49,6 +50,7 @@ class CallState {
   final bool isMuted;
   final bool isSpeaker;
   final bool permPermanentlyDenied;
+  final bool isPoorConnection;
 
   const CallState({
     this.status = CallStatus.idle,
@@ -63,6 +65,7 @@ class CallState {
     this.isMuted = false,
     this.isSpeaker = false,
     this.permPermanentlyDenied = false,
+    this.isPoorConnection = false,
   });
 
   CallState copyWith({
@@ -78,8 +81,10 @@ class CallState {
     bool? isMuted,
     bool? isSpeaker,
     bool? permPermanentlyDenied,
-  }) => CallState(
-    status: status ?? this.status,
+    bool? isPoorConnection,
+  }) {
+    return CallState(
+      status: status ?? this.status,
     callId: callId ?? this.callId,
     roomName: roomName ?? this.roomName,
     livekitUrl: livekitUrl ?? this.livekitUrl,
@@ -87,11 +92,13 @@ class CallState {
     otherUsername: otherUsername ?? this.otherUsername,
     otherAvatar: otherAvatar ?? this.otherAvatar,
     otherUserId: otherUserId ?? this.otherUserId,
-    elapsed: elapsed ?? this.elapsed,
-    isMuted: isMuted ?? this.isMuted,
-    isSpeaker: isSpeaker ?? this.isSpeaker,
-    permPermanentlyDenied: permPermanentlyDenied ?? this.permPermanentlyDenied,
-  );
+      elapsed: elapsed ?? this.elapsed,
+      isMuted: isMuted ?? this.isMuted,
+      isSpeaker: isSpeaker ?? this.isSpeaker,
+      permPermanentlyDenied: permPermanentlyDenied ?? this.permPermanentlyDenied,
+      isPoorConnection: isPoorConnection ?? this.isPoorConnection,
+    );
+  }
 }
 
 class CallService {
@@ -102,6 +109,8 @@ class CallService {
   final isCallScreenVisible = ValueNotifier<bool>(false);
 
   Room? _room;
+  StreamSubscription<RoomEvent>? _roomEventsSubscription;
+  StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSubscription;
   Timer? _ringTimer;   // 30s no-answer timeout
   Timer? _elapsedTimer;
   Timer? _ringtoneLoopTimer; // For iOS ringtone looping
@@ -325,7 +334,8 @@ class CallService {
       _startElapsedTimer();
       await WakelockPlus.enable();
 
-      _room!.addListener(_onRoomEvent);
+      _roomEventsSubscription = _room!.events.listen(_onRoomEvent);
+      _setupAudioInterruptionListener();
     } catch (e) {
       debugPrint('[CallService] _joinRoom error: $e');
       _setState(state.value.copyWith(status: CallStatus.ended));
@@ -333,10 +343,43 @@ class CallService {
     }
   }
 
-  void _onRoomEvent() {
-    if (_room?.connectionState == ConnectionState.disconnected) {
+  void _onRoomEvent(RoomEvent event) {
+    if (event is RoomDisconnectedEvent) {
       _hangUpLocally(status: CallStatus.ended);
+    } else if (event is RoomReconnectingEvent) {
+      _setState(state.value.copyWith(status: CallStatus.reconnecting));
+    } else if (event is RoomReconnectedEvent) {
+      if (state.value.status == CallStatus.reconnecting) {
+        _setState(state.value.copyWith(status: CallStatus.connected));
+      }
+    } else if (event is ParticipantConnectionQualityUpdatedEvent) {
+      if (event.participant == _room?.localParticipant) {
+        final isPoor = (event.connectionQuality == ConnectionQuality.poor ||
+            event.connectionQuality == ConnectionQuality.lost);
+        if (state.value.isPoorConnection != isPoor) {
+          _setState(state.value.copyWith(isPoorConnection: isPoor));
+        }
+      }
     }
+  }
+
+  void _setupAudioInterruptionListener() {
+    _audioInterruptionSubscription?.cancel();
+    _audioInterruptionSubscription = AudioSession.instance.interruptionEventStream.listen((event) {
+      if (event.begin) {
+        // Interruption began (e.g. phone call came in)
+        if (!state.value.isMuted) {
+          _room?.localParticipant?.setMicrophoneEnabled(false);
+          _setState(state.value.copyWith(isMuted: true));
+        }
+      } else {
+        // Interruption ended
+        if (state.value.isMuted) {
+          _room?.localParticipant?.setMicrophoneEnabled(true);
+          _setState(state.value.copyWith(isMuted: false));
+        }
+      }
+    });
   }
 
   void _startElapsedTimer() {
@@ -401,8 +444,11 @@ class CallService {
   }
 
   Future<void> _disconnectRoom() async {
-    _room?.removeListener(_onRoomEvent);
-    await _room?.disconnect();
+    _ringtoneLoopTimer?.cancel();
+    _elapsedTimer?.cancel();
+    _roomEventsSubscription?.cancel();
+    _audioInterruptionSubscription?.cancel();
+    _room?.disconnect();
     _room?.dispose();
     _room = null;
   }

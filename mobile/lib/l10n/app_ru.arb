@@ -2703,6 +2703,8 @@
   "callEnded": "Звонок завершён",
   "callRejected": "Звонок отклонён",
   "callBusy": "Линия занята",
+  "callReconnecting": "Переподключение...",
+  "poorConnection": "Слабое соединение",
   "callMissed": "Пропущенный звонок",
   "callNoAnswer": "Нет ответа",
   "callAccept": "Принять",

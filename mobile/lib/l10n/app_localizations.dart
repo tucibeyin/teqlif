@@ -9132,6 +9132,18 @@ abstract class AppLocalizations {
   /// **'Aradığınız Kişi Meşgul'**
   String get callBusy;
 
+  /// No description provided for @callReconnecting.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeniden Bağlanıyor...'**
+  String get callReconnecting;
+
+  /// No description provided for @poorConnection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Zayıf Bağlantı'**
+  String get poorConnection;
+
   /// No description provided for @callMissed.
   ///
   /// In tr, this message translates to:

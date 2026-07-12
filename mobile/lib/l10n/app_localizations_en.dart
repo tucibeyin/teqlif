@@ -5066,6 +5066,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get callBusy => 'User is Busy';
 
   @override
+  String get callReconnecting => 'Reconnecting...';
+
+  @override
+  String get poorConnection => 'Poor Connection';
+
+  @override
   String get callMissed => 'Missed Call';
 
   @override

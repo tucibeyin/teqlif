@@ -2701,6 +2701,8 @@
   "callEnded": "Arama Bitti",
   "callRejected": "Arama Reddedildi",
   "callBusy": "Aradığınız Kişi Meşgul",
+  "callReconnecting": "Yeniden Bağlanıyor...",
+  "poorConnection": "Zayıf Bağlantı",
   "callMissed": "Cevapsız Arama",
   "callNoAnswer": "Cevap Verilmedi",
   "callAccept": "Kabul Et",

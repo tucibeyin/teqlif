@@ -2702,6 +2702,8 @@
   "callEnded": "انتهت المكالمة",
   "callRejected": "تم رفض المكالمة",
   "callBusy": "الرقم مشغول",
+  "callReconnecting": "جارِ إعادة الاتصال...",
+  "poorConnection": "اتصال ضعيف",
 
   "callMissed": "مكالمة فائتة",
   "callNoAnswer": "لا يوجد رد",
