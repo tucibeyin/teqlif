@@ -50,13 +50,14 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   List<(String, String)>? _allCategoryLabels;
 
   List<(String, String)> get _categories {
-    final keys = _listings
-        .map((l) => l['category'] as String?)
-        .whereType<String>()
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final keys =
+        _listings
+            .map((l) => l['category'] as String?)
+            .whereType<String>()
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     if (_allCategoryLabels == null) {
       return keys.map((k) => (k, k)).toList();
     }
@@ -76,7 +77,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      r = r.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+      r = r
+          .where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q))
+          .toList();
     }
     return r;
   }
@@ -91,8 +94,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_allCategoryLabels == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) {
+      CategoryService.getCategories(
+        locale: Localizations.localeOf(context).languageCode,
+      ).then((cats) {
         if (mounted) setState(() => _allCategoryLabels = cats);
       });
     }
@@ -173,7 +177,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         headers: headers,
       );
       if (resp.statusCode == 200 && mounted) {
-        setState(() => _ratingSummary = jsonDecode(resp.body) as Map<String, dynamic>);
+        setState(
+          () => _ratingSummary = jsonDecode(resp.body) as Map<String, dynamic>,
+        );
       }
     } catch (_) {}
   }
@@ -185,13 +191,21 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     try {
       final headers = await _authHeaders();
       if (_isFollowing) {
-        await http.delete(Uri.parse('$kBaseUrl/follows/$userId'), headers: headers);
+        await http.delete(
+          Uri.parse('$kBaseUrl/follows/$userId'),
+          headers: headers,
+        );
         setState(() => _isFollowing = false);
       } else {
-        await http.post(Uri.parse('$kBaseUrl/follows/$userId'), headers: headers);
+        await http.post(
+          Uri.parse('$kBaseUrl/follows/$userId'),
+          headers: headers,
+        );
         setState(() => _isFollowing = true);
       }
-      final fresh = await NotificationService.getUserByUsername(widget.username);
+      final fresh = await NotificationService.getUserByUsername(
+        widget.username,
+      );
       if (mounted && fresh != null) setState(() => _user = fresh);
     } catch (_) {
     } finally {
@@ -205,13 +219,17 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       final headers = await _authHeaders();
       if (_isBlocked) {
         await http.delete(
-          Uri.parse('$kBaseUrl/users/${Uri.encodeComponent(widget.username)}/block'),
+          Uri.parse(
+            '$kBaseUrl/users/${Uri.encodeComponent(widget.username)}/block',
+          ),
           headers: headers,
         );
         if (mounted) setState(() => _isBlocked = false);
       } else {
         await http.post(
-          Uri.parse('$kBaseUrl/users/${Uri.encodeComponent(widget.username)}/block'),
+          Uri.parse(
+            '$kBaseUrl/users/${Uri.encodeComponent(widget.username)}/block',
+          ),
           headers: headers,
         );
         if (mounted) setState(() => _isBlocked = true);
@@ -219,18 +237,18 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     } catch (_) {
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.pubProfileActionFailed)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.pubProfileActionFailed)));
       }
-    } finally {
-    }
+    } finally {}
   }
 
   void _showRatingForm() {
     if (_user == null) return;
     final userId = _user!['id'] as int;
-    final existingRating = _ratingSummary?['my_rating'] as Map<String, dynamic>?;
+    final existingRating =
+        _ratingSummary?['my_rating'] as Map<String, dynamic>?;
 
     showModalBottomSheet(
       context: context,
@@ -302,8 +320,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _user == null
-              ? Center(child: Text(l.pubProfileUserNotFound))
-              : _buildBody(),
+          ? Center(child: Text(l.pubProfileUserNotFound))
+          : _buildBody(),
     );
   }
 
@@ -331,11 +349,15 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 const SizedBox(height: 14),
                 Text(
                   fullName,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 // ── Verified / PRO badge'leri ──────────────────────────────
-                if (_user!['is_verified'] == true || _user!['is_premium'] == true)
+                if (_user!['is_verified'] == true ||
+                    _user!['is_premium'] == true)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Row(
@@ -343,7 +365,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       children: [
                         if (_user!['is_verified'] == true)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF2563EB),
                               borderRadius: BorderRadius.circular(20),
@@ -351,27 +376,56 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const FaIcon(FontAwesomeIcons.circleCheck, size: 12, color: Colors.white),
+                                const FaIcon(
+                                  FontAwesomeIcons.circleCheck,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
                                 const SizedBox(width: 4),
-                                Text(AppLocalizations.of(context)!.badgeVerified, style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                Text(
+                                  AppLocalizations.of(context)!.badgeVerified,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        if (_user!['is_verified'] == true && _user!['is_premium'] == true)
+                        if (_user!['is_verified'] == true &&
+                            _user!['is_premium'] == true)
                           const SizedBox(width: 6),
                         if (_user!['is_premium'] == true)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                              ),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const FaIcon(FontAwesomeIcons.crown, size: 10, color: Colors.white),
+                                const FaIcon(
+                                  FontAwesomeIcons.crown,
+                                  size: 10,
+                                  color: Colors.white,
+                                ),
                                 const SizedBox(width: 4),
-                                Text(AppLocalizations.of(context)!.pro, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                                Text(
+                                  AppLocalizations.of(context)!.pro,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -380,7 +434,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ),
                 Text(
                   '@${widget.username}',
-                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -407,7 +464,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      Expanded(child: _statCell(l.pubProfileStatListings, listingCount)),
+                      Expanded(
+                        child: _statCell(
+                          l.pubProfileStatListings,
+                          listingCount,
+                        ),
+                      ),
                       _divider(),
                       Expanded(
                         child: GestureDetector(
@@ -422,7 +484,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               ),
                             ),
                           ),
-                          child: _statCell(l.pubProfileStatFollowers, followerCount),
+                          child: _statCell(
+                            l.pubProfileStatFollowers,
+                            followerCount,
+                          ),
                         ),
                       ),
                       _divider(),
@@ -439,7 +504,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               ),
                             ),
                           ),
-                          child: _statCell(l.pubProfileStatFollowing, followingCount),
+                          child: _statCell(
+                            l.pubProfileStatFollowing,
+                            followingCount,
+                          ),
                         ),
                       ),
                     ],
@@ -469,7 +537,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         key: const Key('pub_profile_btn_islemler'),
                         tooltip: 'İşlemler',
                         position: PopupMenuPosition.under,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         onSelected: (value) {
                           switch (value) {
                             case 'rate':
@@ -482,25 +552,51 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           if (_isFollowing)
                             PopupMenuItem(
                               value: 'rate',
-                              child: Row(children: [
-                                Icon(hasMyRating ? Icons.star_rounded : Icons.star_outline_rounded, size: 18),
-                                const SizedBox(width: 10),
-                                Text(hasMyRating ? l.pubProfileUpdateRating : l.pubProfileGiveRating),
-                              ]),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    hasMyRating
+                                        ? Icons.star_rounded
+                                        : Icons.star_outline_rounded,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    hasMyRating
+                                        ? l.pubProfileUpdateRating
+                                        : l.pubProfileGiveRating,
+                                  ),
+                                ],
+                              ),
                             ),
                           const PopupMenuDivider(),
                           PopupMenuItem(
                             value: 'block',
-                            child: Row(children: [
-                              const Icon(Icons.block_outlined, size: 18, color: Color(0xFFEF4444)),
-                              const SizedBox(width: 10),
-                              Text(_isBlocked ? l.pubProfileUnblock : l.pubProfileBlock,
-                                  style: const TextStyle(color: Color(0xFFEF4444))),
-                            ]),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.block_outlined,
+                                  size: 18,
+                                  color: Color(0xFFEF4444),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  _isBlocked
+                                      ? l.pubProfileUnblock
+                                      : l.pubProfileBlock,
+                                  style: const TextStyle(
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 11,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.surfaceVariant(context),
                             borderRadius: BorderRadius.circular(10),
@@ -508,22 +604,36 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(AppLocalizations.of(context)!.titleActions, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary(context))),
+                              Text(
+                                AppLocalizations.of(context)!.titleActions,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: AppColors.textPrimary(context),
+                                ),
+                              ),
                               const SizedBox(width: 6),
-                              Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textPrimary(context)),
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 18,
+                                color: AppColors.textPrimary(context),
+                              ),
                             ],
                           ),
                         ),
                       ),
                       // ── Mesaj Gönder ────────────────────────────────────
                       GestureDetector(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => DirectChatScreen(
-                            otherUserId: userId,
-                            displayName: fullName,
-                            otherHandle: widget.username,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DirectChatScreen(
+                              otherUserId: userId,
+                              displayName: fullName,
+                              otherHandle: widget.username,
+                            ),
                           ),
-                        )),
+                        ),
                         child: Container(
                           padding: const EdgeInsets.all(11),
                           decoration: BoxDecoration(
@@ -533,7 +643,11 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.chat_bubble_outline, size: 18, color: AppColors.textPrimary(context)),
+                              Icon(
+                                Icons.chat_bubble_outline,
+                                size: 18,
+                                color: AppColors.textPrimary(context),
+                              ),
                             ],
                           ),
                         ),
@@ -543,16 +657,35 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         GestureDetector(
                           onTap: () async {
                             final nav = Navigator.of(context);
+                            if (CallService.instance.hasActiveCall) {
+                              nav.push(
+                                MaterialPageRoute(
+                                  settings: const RouteSettings(
+                                    name: '/call_screen',
+                                  ),
+                                  builder: (_) => const CallScreen(),
+                                  fullscreenDialog: true,
+                                ),
+                              );
+                              return;
+                            }
+
                             await CallService.instance.startCall(
                               calleeId: userId,
                               calleeUsername: widget.username,
-                              calleeAvatar: _profileData?['profile_image_thumb_url'] as String?,
+                              calleeAvatar:
+                                  _profileData?['profile_image_thumb_url']
+                                      as String?,
                             );
-                            nav.push(MaterialPageRoute(
-                              settings: const RouteSettings(name: '/call_screen'),
-                              builder: (_) => const CallScreen(),
-                              fullscreenDialog: true,
-                            ));
+                            nav.push(
+                              MaterialPageRoute(
+                                settings: const RouteSettings(
+                                  name: '/call_screen',
+                                ),
+                                builder: (_) => const CallScreen(),
+                                fullscreenDialog: true,
+                              ),
+                            );
                           },
                           child: Container(
                             padding: const EdgeInsets.all(11),
@@ -560,7 +693,11 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               color: AppColors.surfaceVariant(context),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(Icons.call, size: 18, color: AppColors.textPrimary(context)),
+                            child: Icon(
+                              Icons.call,
+                              size: 18,
+                              color: AppColors.textPrimary(context),
+                            ),
                           ),
                         ),
                       ],
@@ -569,31 +706,48 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         onTap: _followLoading ? null : _toggleFollow,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 11,
+                          ),
                           decoration: BoxDecoration(
-                            color: _isFollowing ? AppColors.surfaceVariant(context) : const Color(0xFF6366F1),
+                            color: _isFollowing
+                                ? AppColors.surfaceVariant(context)
+                                : const Color(0xFF6366F1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: _followLoading
                               ? const SizedBox(
-                                  width: 18, height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
                                 )
                               : Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      _isFollowing ? Icons.person_remove_outlined : Icons.person_add_outlined,
+                                      _isFollowing
+                                          ? Icons.person_remove_outlined
+                                          : Icons.person_add_outlined,
                                       size: 16,
-                                      color: _isFollowing ? AppColors.textPrimary(context) : Colors.white,
+                                      color: _isFollowing
+                                          ? AppColors.textPrimary(context)
+                                          : Colors.white,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      _isFollowing ? l.pubProfileFollowingLabel : l.pubProfileFollowLabel,
+                                      _isFollowing
+                                          ? l.pubProfileFollowingLabel
+                                          : l.pubProfileFollowLabel,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
-                                        color: _isFollowing ? AppColors.textPrimary(context) : Colors.white,
+                                        color: _isFollowing
+                                            ? AppColors.textPrimary(context)
+                                            : Colors.white,
                                       ),
                                     ),
                                   ],
@@ -610,7 +764,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     l.pubProfileListingsCount(_listings.length),
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -632,7 +789,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 _searchCtrl.clear();
                 setState(() => _searchQuery = '');
               },
-              onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
+              onCategorySelected: (cat) =>
+                  setState(() => _selectedCategory = cat),
             ),
           ),
 
@@ -645,7 +803,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 child: Text(
                   l.lblNoListingsYet,
                   style: TextStyle(
-                      color: AppColors.textTertiary(context), fontSize: 14),
+                    color: AppColors.textTertiary(context),
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
@@ -657,7 +817,11 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 padding: EdgeInsets.all(32),
                 child: Column(
                   children: [
-                    Icon(Icons.search_off_rounded, size: 48, color: Color(0xFFD1D5DB)),
+                    Icon(
+                      Icons.search_off_rounded,
+                      size: 48,
+                      color: Color(0xFFD1D5DB),
+                    ),
                     SizedBox(height: 10),
                     Text(
                       'Sonuç bulunamadı',
@@ -677,88 +841,94 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 crossAxisSpacing: 2,
                 mainAxisSpacing: 2,
               ),
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) {
-                  final listing = Map<String, dynamic>.from(_filteredListings[i]);
-                  final imgs = listing['image_urls'] as List? ?? [];
-                  final raw = imgs.isNotEmpty
-                      ? imgs[0] as String
-                      : listing['image_url'] as String?;
-                  final photo = raw != null ? imgUrl(raw) : null;
-                  final price = listing['price'];
-                  final priceStr = price != null
-                      ? () {
-                          final s = (price as num).toInt().toString();
-                          final buf = StringBuffer();
-                          for (int j = 0; j < s.length; j++) {
-                            if (j > 0 && (s.length - j) % 3 == 0) buf.write('.');
-                            buf.write(s[j]);
-                          }
-                          return '${buf.toString()} ₺';
-                        }()
-                      : '';
-                  return GestureDetector(
-                    key: Key('pub_profile_listing_${listing['id']}'),
-                    onTap: () => Navigator.push(
-                      ctx,
-                      MaterialPageRoute(
-                        builder: (_) => ListingDetailScreen(listing: listing),
-                      ),
+              delegate: SliverChildBuilderDelegate((ctx, i) {
+                final listing = Map<String, dynamic>.from(_filteredListings[i]);
+                final imgs = listing['image_urls'] as List? ?? [];
+                final raw = imgs.isNotEmpty
+                    ? imgs[0] as String
+                    : listing['image_url'] as String?;
+                final photo = raw != null ? imgUrl(raw) : null;
+                final price = listing['price'];
+                final priceStr = price != null
+                    ? () {
+                        final s = (price as num).toInt().toString();
+                        final buf = StringBuffer();
+                        for (int j = 0; j < s.length; j++) {
+                          if (j > 0 && (s.length - j) % 3 == 0) buf.write('.');
+                          buf.write(s[j]);
+                        }
+                        return '${buf.toString()} ₺';
+                      }()
+                    : '';
+                return GestureDetector(
+                  key: Key('pub_profile_listing_${listing['id']}'),
+                  onTap: () => Navigator.push(
+                    ctx,
+                    MaterialPageRoute(
+                      builder: (_) => ListingDetailScreen(listing: listing),
                     ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        photo != null
-                            ? CachedNetworkImage(
-                                imageUrl: photo,
-                                fit: BoxFit.cover,
-                                placeholder: (_, _) => const Center(
-                                    child: CircularProgressIndicator(strokeWidth: 2)),
-                                errorWidget: (c, _, _) => Container(
-                                  color: AppColors.surfaceVariant(c),
-                                  child: Icon(Icons.image_outlined,
-                                      size: 28, color: AppColors.border(c)),
-                                ),
-                              )
-                            : Builder(
-                                builder: (c) => Container(
-                                  color: AppColors.surfaceVariant(c),
-                                  child: Icon(Icons.image_outlined,
-                                      size: 28, color: AppColors.border(c)),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      photo != null
+                          ? CachedNetworkImage(
+                              imageUrl: photo,
+                              fit: BoxFit.cover,
+                              placeholder: (_, _) => const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
                                 ),
                               ),
-                        if (priceStr.isNotEmpty)
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
-                              decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [Colors.transparent, Colors.black54],
+                              errorWidget: (c, _, _) => Container(
+                                color: AppColors.surfaceVariant(c),
+                                child: Icon(
+                                  Icons.image_outlined,
+                                  size: 28,
+                                  color: AppColors.border(c),
                                 ),
                               ),
-                              child: Text(
-                                priceStr,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
+                            )
+                          : Builder(
+                              builder: (c) => Container(
+                                color: AppColors.surfaceVariant(c),
+                                child: Icon(
+                                  Icons.image_outlined,
+                                  size: 28,
+                                  color: AppColors.border(c),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                      if (priceStr.isNotEmpty)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black54],
+                              ),
+                            ),
+                            child: Text(
+                              priceStr,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                      ],
-                    ),
-                  );
-                },
-                childCount: _filteredListings.length,
-              ),
+                        ),
+                    ],
+                  ),
+                );
+              }, childCount: _filteredListings.length),
             ),
           ),
       ],
@@ -778,7 +948,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           ? Text(
               initial,
               style: const TextStyle(
-                  fontSize: 36, fontWeight: FontWeight.bold, color: kPrimary),
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: kPrimary,
+              ),
             )
           : null,
     );
@@ -836,24 +1009,30 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             Text(
               '${'★' * filled}${'☆' * (5 - filled)}',
               style: const TextStyle(
-                  color: _starColor, fontSize: 16, letterSpacing: 1),
+                color: _starColor,
+                fontSize: 16,
+                letterSpacing: 1,
+              ),
             ),
             const SizedBox(width: 6),
             Text(
               avg.toStringAsFixed(1),
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
             const SizedBox(width: 5),
             Text(
               l.ratingCount(count),
               style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary(context)),
+                fontSize: 12,
+                color: AppColors.textSecondary(context),
+              ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right,
-                size: 16, color: AppColors.textTertiary(context)),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: AppColors.textTertiary(context),
+            ),
           ],
         ),
       ),
@@ -863,7 +1042,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   Widget _buildTrustBadge(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final rawScore = _user?['trust_score'];
-    final rawRank  = _user?['influence_rank'];
+    final rawRank = _user?['influence_rank'];
     if (rawScore == null && rawRank == null) return const SizedBox.shrink();
 
     final badges = <Widget>[];
@@ -872,26 +1051,32 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       final score = (rawScore as num).toInt();
       final tsColor = score >= 70
           ? const Color(0xFF10B981)
-          : score >= 35 ? const Color(0xFF3B82F6) : const Color(0xFF9CA3AF);
-      badges.add(_ProfileBadge(
-        icon: FontAwesomeIcons.shieldHalved,
-        title: l.trustScoreLabel,
-        value: '$score / 100',
-        color: tsColor,
-        hint: l.trustScoreHint,
-      ));
+          : score >= 35
+          ? const Color(0xFF3B82F6)
+          : const Color(0xFF9CA3AF);
+      badges.add(
+        _ProfileBadge(
+          icon: FontAwesomeIcons.shieldHalved,
+          title: l.trustScoreLabel,
+          value: '$score / 100',
+          color: tsColor,
+          hint: l.trustScoreHint,
+        ),
+      );
     }
 
     if (rawRank != null) {
       final rank = (rawRank as num).toInt();
       if (rank > 0) {
-        badges.add(_ProfileBadge(
-          icon: FontAwesomeIcons.rankingStar,
-          title: l.influenceRankLabel,
-          value: '#$rank',
-          color: const Color(0xFF8B5CF6),
-          hint: l.influenceRankHint,
-        ));
+        badges.add(
+          _ProfileBadge(
+            icon: FontAwesomeIcons.rankingStar,
+            title: l.influenceRankLabel,
+            value: '#$rank',
+            color: const Color(0xFF8B5CF6),
+            hint: l.influenceRankHint,
+          ),
+        );
       }
     }
 
@@ -900,34 +1085,35 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Widget _statCell(String label, dynamic count) => Builder(
-        builder: (context) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Column(
-            children: [
-              Text(
-                '$count',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary(context)),
-              ),
-              const SizedBox(height: 2),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary(context))),
-            ],
+    builder: (context) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
           ),
-        ),
-      );
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _divider() => Builder(
-        builder: (context) => Container(
-          width: 1,
-          height: 36,
-          color: AppColors.border(context),
-        ),
-      );
+    builder: (context) =>
+        Container(width: 1, height: 36, color: AppColors.border(context)),
+  );
 
   Widget _actionButton({
     Key? key,
@@ -948,17 +1134,18 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             backgroundColor: primary
                 ? kPrimary
                 : danger
-                    ? const Color(0xFFFEF2F2)
-                    : AppColors.surfaceVariant(context),
+                ? const Color(0xFFFEF2F2)
+                : AppColors.surfaceVariant(context),
             foregroundColor: primary
                 ? Colors.white
                 : danger
-                    ? const Color(0xFFEF4444)
-                    : AppColors.textPrimary(context),
+                ? const Color(0xFFEF4444)
+                : AppColors.textPrimary(context),
             elevation: 0,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
           onPressed: onPressed,
         ),
@@ -995,7 +1182,14 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
 
   List<String> _getLabels(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return ['', l.ratingVeryBad, l.ratingBad, l.ratingMedium, l.ratingGood, l.ratingExcellent];
+    return [
+      '',
+      l.ratingVeryBad,
+      l.ratingBad,
+      l.ratingMedium,
+      l.ratingGood,
+      l.ratingExcellent,
+    ];
   }
 
   @override
@@ -1030,18 +1224,18 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
       } else {
         if (mounted) {
           final l = AppLocalizations.of(context)!;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l.ratingSaveFailed)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l.ratingSaveFailed)));
           setState(() => _saving = false);
         }
       }
     } catch (_) {
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.errorConnection)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.errorConnection)));
         setState(() => _saving = false);
       }
     }
@@ -1053,8 +1247,9 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
     final labels = _getLabels(context);
     final isUpdate = widget.existingScore != null;
     return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1102,8 +1297,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
             _selected > 0 ? labels[_selected] : l.ratingSelectStar,
             style: TextStyle(
               fontSize: 13,
-              fontWeight:
-                  _selected > 0 ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: _selected > 0 ? FontWeight.w600 : FontWeight.normal,
               color: _selected > 0
                   ? _starColor
                   : AppColors.textTertiary(context),
@@ -1121,7 +1315,9 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
               decoration: InputDecoration(
                 hintText: l.ratingCommentHint,
                 hintStyle: TextStyle(
-                    color: AppColors.textTertiary(context), fontSize: 14),
+                  color: AppColors.textTertiary(context),
+                  fontSize: 14,
+                ),
                 filled: true,
                 fillColor: AppColors.inputFill(context),
                 border: OutlineInputBorder(
@@ -1130,7 +1326,9 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
                 ),
                 contentPadding: const EdgeInsets.all(14),
                 counterStyle: TextStyle(
-                    color: AppColors.textTertiary(context), fontSize: 11),
+                  color: AppColors.textTertiary(context),
+                  fontSize: 11,
+                ),
               ),
             ),
           ),
@@ -1147,7 +1345,8 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       side: BorderSide(color: AppColors.border(context)),
                     ),
                     child: Text(l.btnCancel),
@@ -1165,17 +1364,22 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     child: _saving
                         ? const SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : Text(l.btnSave,
-                            style: const TextStyle(fontWeight: FontWeight.w700)),
+                        : Text(
+                            l.btnSave,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                   ),
                 ),
               ],
@@ -1237,7 +1441,9 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
   String _formatDate(String iso) {
     try {
       final d = DateTime.parse(iso).toLocal();
-      return DateFormat.yMMMd(AppLocalizations.of(context)!.localeName).format(d);
+      return DateFormat.yMMMd(
+        AppLocalizations.of(context)!.localeName,
+      ).format(d);
     } catch (_) {
       return '';
     }
@@ -1272,8 +1478,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
             child: Text(
               l.ratingReviews,
-              style: const TextStyle(
-                  fontSize: 17, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
           ),
 
@@ -1304,16 +1509,18 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                       Text(
                         '${'★' * filled}${'☆' * (5 - filled)}',
                         style: const TextStyle(
-                            color: _starColor,
-                            fontSize: 20,
-                            letterSpacing: 2),
+                          color: _starColor,
+                          fontSize: 20,
+                          letterSpacing: 2,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         l.ratingCount(count),
                         style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary(context)),
+                          fontSize: 13,
+                          color: AppColors.textSecondary(context),
+                        ),
                       ),
                     ],
                   ),
@@ -1328,126 +1535,123 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
           Expanded(
             child: _loading
                 ? const Center(
-                    child: CircularProgressIndicator(color: kPrimary))
+                    child: CircularProgressIndicator(color: kPrimary),
+                  )
                 : (_ratings == null || _ratings!.isEmpty)
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Text(
-                            l.pubProfileNoReview,
-                            style: TextStyle(
-                                color: AppColors.textTertiary(context)),
-                          ),
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        l.pubProfileNoReview,
+                        style: TextStyle(
+                          color: AppColors.textTertiary(context),
                         ),
-                      )
-                    : ListView.separated(
-                        controller: controller,
-                        itemCount: _ratings!.length,
-                        separatorBuilder: (_, _) =>
-                            Divider(height: 1, color: AppColors.divider(context)),
-                        itemBuilder: (_, i) {
-                          final r =
-                              _ratings![i] as Map<String, dynamic>;
-                          final rater =
-                              r['rater'] as Map<String, dynamic>;
-                          final raterName =
-                              (rater['full_name'] as String?) ??
-                                  (rater['username'] as String?) ??
-                                  '?';
-                          final raterInitial = raterName.isNotEmpty
-                              ? raterName[0].toUpperCase()
-                              : '?';
-                          final raterImg =
-                              rater['profile_image_url'] as String?;
-                          final score = r['score'] as int;
-                          final comment = r['comment'] as String?;
-                          final date = (r['updated_at'] as String?) ??
-                              (r['created_at'] as String?);
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    controller: controller,
+                    itemCount: _ratings!.length,
+                    separatorBuilder: (_, _) =>
+                        Divider(height: 1, color: AppColors.divider(context)),
+                    itemBuilder: (_, i) {
+                      final r = _ratings![i] as Map<String, dynamic>;
+                      final rater = r['rater'] as Map<String, dynamic>;
+                      final raterName =
+                          (rater['full_name'] as String?) ??
+                          (rater['username'] as String?) ??
+                          '?';
+                      final raterInitial = raterName.isNotEmpty
+                          ? raterName[0].toUpperCase()
+                          : '?';
+                      final raterImg = rater['profile_image_url'] as String?;
+                      final score = r['score'] as int;
+                      final comment = r['comment'] as String?;
+                      final date =
+                          (r['updated_at'] as String?) ??
+                          (r['created_at'] as String?);
 
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 12),
-                            child: Row(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                // Rater avatar
-                                CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor:
-                                      kPrimary.withValues(alpha: 0.12),
-                                  backgroundImage: raterImg != null
-                                      ? NetworkImage(imgUrl(raterImg))
-                                      : null,
-                                  child: raterImg == null
-                                      ? Text(
-                                          raterInitial,
-                                          style: const TextStyle(
-                                            color: kPrimary,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 14,
-                                          ),
-                                        )
-                                      : null,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              raterName,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 13,
-                                              ),
-                                              overflow:
-                                                  TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          Text(
-                                            '${'★' * score}${'☆' * (5 - score)}',
-                                            style: const TextStyle(
-                                                color: _starColor,
-                                                fontSize: 13),
-                                          ),
-                                        ],
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Rater avatar
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: kPrimary.withValues(alpha: 0.12),
+                              backgroundImage: raterImg != null
+                                  ? NetworkImage(imgUrl(raterImg))
+                                  : null,
+                              child: raterImg == null
+                                  ? Text(
+                                      raterInitial,
+                                      style: const TextStyle(
+                                        color: kPrimary,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
                                       ),
-                                      if (comment != null &&
-                                          comment.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          comment,
-                                          style: TextStyle(
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          raterName,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
                                             fontSize: 13,
-                                            color: AppColors.textSecondary(
-                                                context),
                                           ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                      ],
-                                      if (date != null) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _formatDate(date),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.textTertiary(
-                                                context),
-                                          ),
+                                      ),
+                                      Text(
+                                        '${'★' * score}${'☆' * (5 - score)}',
+                                        style: const TextStyle(
+                                          color: _starColor,
+                                          fontSize: 13,
                                         ),
-                                      ],
+                                      ),
                                     ],
                                   ),
-                                ),
-                              ],
+                                  if (comment != null &&
+                                      comment.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      comment,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.textSecondary(context),
+                                      ),
+                                    ),
+                                  ],
+                                  if (date != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _formatDate(date),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textTertiary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                      ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -1499,14 +1703,16 @@ class _LiveAvatarRingState extends State<_LiveAvatarRing>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFDD2A7B)
-                    .withValues(alpha: 0.15 + 0.35 * _glow.value),
+                color: const Color(
+                  0xFFDD2A7B,
+                ).withValues(alpha: 0.15 + 0.35 * _glow.value),
                 blurRadius: 8 + 14 * _glow.value,
                 spreadRadius: 1 + 3 * _glow.value,
               ),
               BoxShadow(
-                color: const Color(0xFFF58529)
-                    .withValues(alpha: 0.1 + 0.2 * _glow.value),
+                color: const Color(
+                  0xFFF58529,
+                ).withValues(alpha: 0.1 + 0.2 * _glow.value),
                 blurRadius: 12 + 16 * _glow.value,
                 spreadRadius: 0 + 2 * _glow.value,
               ),
@@ -1550,8 +1756,10 @@ class _LiveAvatarRingState extends State<_LiveAvatarRing>
             Positioned(
               bottom: -8,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 9, vertical: 2.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 2.5,
+                ),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
@@ -1590,13 +1798,43 @@ class _SocialLinksRow extends StatelessWidget {
   const _SocialLinksRow({required this.user, required this.userId});
 
   static const _platforms = [
-    _SocialPlatform('instagram_url', FontAwesomeIcons.instagram,  Color(0xFFE1306C), 'instagram'),
-    _SocialPlatform('kick_url',      null,                        Color(0xFF53FC18), 'kick'),
-    _SocialPlatform('twitch_url',    FontAwesomeIcons.twitch,     Color(0xFF9146FF), 'twitch'),
-    _SocialPlatform('facebook_url',  FontAwesomeIcons.facebook,   Color(0xFF1877F2), 'facebook'),
-    _SocialPlatform('youtube_url',   FontAwesomeIcons.youtube,    Color(0xFFFF0000), 'youtube'),
-    _SocialPlatform('tiktok_url',    FontAwesomeIcons.tiktok,     Color(0xFF010101), 'tiktok'),
-    _SocialPlatform('website_url',   FontAwesomeIcons.globe,      Color(0xFF0EA5E9), 'website'),
+    _SocialPlatform(
+      'instagram_url',
+      FontAwesomeIcons.instagram,
+      Color(0xFFE1306C),
+      'instagram',
+    ),
+    _SocialPlatform('kick_url', null, Color(0xFF53FC18), 'kick'),
+    _SocialPlatform(
+      'twitch_url',
+      FontAwesomeIcons.twitch,
+      Color(0xFF9146FF),
+      'twitch',
+    ),
+    _SocialPlatform(
+      'facebook_url',
+      FontAwesomeIcons.facebook,
+      Color(0xFF1877F2),
+      'facebook',
+    ),
+    _SocialPlatform(
+      'youtube_url',
+      FontAwesomeIcons.youtube,
+      Color(0xFFFF0000),
+      'youtube',
+    ),
+    _SocialPlatform(
+      'tiktok_url',
+      FontAwesomeIcons.tiktok,
+      Color(0xFF010101),
+      'tiktok',
+    ),
+    _SocialPlatform(
+      'website_url',
+      FontAwesomeIcons.globe,
+      Color(0xFF0EA5E9),
+      'website',
+    ),
   ];
 
   @override
@@ -1620,7 +1858,9 @@ class _SocialLinksRow extends StatelessWidget {
           message: raw,
           child: GestureDetector(
             onTap: () async {
-              final uri = Uri.tryParse(raw.startsWith('http') ? raw : 'https://$raw');
+              final uri = Uri.tryParse(
+                raw.startsWith('http') ? raw : 'https://$raw',
+              );
               if (uri != null && await canLaunchUrl(uri)) {
                 AnalyticsService.logInteraction(
                   itemId: userId ?? 0,
@@ -1637,7 +1877,10 @@ class _SocialLinksRow extends StatelessWidget {
               decoration: BoxDecoration(
                 color: p.color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: p.color.withValues(alpha: 0.35), width: 1.2),
+                border: Border.all(
+                  color: p.color.withValues(alpha: 0.35),
+                  width: 1.2,
+                ),
               ),
               child: Center(
                 child: p.faIcon != null
@@ -1714,12 +1957,20 @@ class _ProfileBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             value,
-            style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(width: 2),
           GestureDetector(
             onTap: () => _showInfo(context),
-            child: Icon(Icons.help_outline, size: 13, color: color.withValues(alpha: 0.60)),
+            child: Icon(
+              Icons.help_outline,
+              size: 13,
+              color: color.withValues(alpha: 0.60),
+            ),
           ),
         ],
       ),
