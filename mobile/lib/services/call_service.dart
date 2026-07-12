@@ -197,6 +197,11 @@ class CallService {
     required String calleeUsername,
     required String? calleeAvatar,
   }) async {
+    if (hasActiveCall) {
+      debugPrint('[CallService] Cannot start call: already in an active call.');
+      return;
+    }
+
     final permStatus = await Permission.microphone.request();
     if (permStatus != PermissionStatus.granted) {
       _setState(
@@ -265,6 +270,18 @@ class CallService {
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
   void onIncomingCall(Map<String, dynamic> data) async {
+    if (hasActiveCall) {
+      final incomingCallId = data['call_id'] is int
+          ? data['call_id']
+          : int.tryParse(data['call_id'].toString());
+      if (incomingCallId != null && incomingCallId != state.value.callId) {
+        try {
+          await _post('/calls/$incomingCallId/reject');
+        } catch (_) {}
+      }
+      return;
+    }
+
     _setState(
       CallState(
         status: CallStatus.ringing,
