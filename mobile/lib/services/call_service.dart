@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -408,6 +410,17 @@ class CallService {
     required String token,
   }) async {
     _room = Room();
+    
+    // Geçici olarak detaylı WebRTC loglamasını açıyoruz
+    try {
+      Logger.root.level = Level.FINE;
+      Logger.root.onRecord.listen((record) {
+        debugPrint('[LiveKit_Log] ${record.level.name}: ${record.message}');
+      });
+    } catch (e) {
+      // Eğer logger daha önce dinleniyorsa hata verebilir, yoksayıyoruz.
+    }
+
     try {
       debugPrint('[CallService] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
       await _room!.connect(livekitUrl, token);
