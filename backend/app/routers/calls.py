@@ -70,21 +70,24 @@ async def _send_call_push(callee: User, caller: User, call_id: int, room_name: s
     if not callee.fcm_token:
         return
     from app.services.firebase_service import send_push
-    await send_push(
-        token=callee.fcm_token,
-        title=caller.username,
-        body="",
-        badge=None,
-        notif_type="incoming_call",
-        extra_data={
-            "call_id": str(call_id),
-            "room_name": room_name,
-            "caller_id": str(caller.id),
-            "caller_username": caller.username,
-            "caller_avatar": caller.profile_image_thumb_url or "",
-            "livekit_url": settings.livekit_url,
-        },
-    )
+    try:
+        await send_push(
+            token=callee.fcm_token,
+            title=caller.username,
+            body="",
+            badge=None,
+            notif_type="incoming_call",
+            extra_data={
+                "call_id": str(call_id),
+                "room_name": room_name,
+                "caller_id": str(caller.id),
+                "caller_username": caller.username,
+                "caller_avatar": caller.profile_image_thumb_url or "",
+                "livekit_url": settings.livekit_url,
+            },
+        )
+    except Exception as exc:
+        logger.warning("[Calls] Call push bildirimi gönderilemedi: %s", exc)
 
 
 # ── POST /api/calls/start ─────────────────────────────────────────────────────
