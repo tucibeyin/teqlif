@@ -51,6 +51,8 @@ class GlobalCallOverlay extends StatelessWidget {
                       bottom: false,
                       child: GestureDetector(
                         onTap: () {
+                          if (CallService.instance.visibleCallScreensCount.value > 0) return;
+                          
                           final context = navigatorKey.currentContext;
                           if (context != null) {
                             Navigator.of(context).push(
