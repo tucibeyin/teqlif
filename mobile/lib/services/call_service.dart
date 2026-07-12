@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
@@ -558,6 +559,7 @@ class CallService {
     _elapsedTimer?.cancel();
     _disconnectRoom();
     WakelockPlus.disable();
+    FlutterCallkitIncoming.endAllCalls();
     _setState(state.value.copyWith(status: status));
     Future.delayed(const Duration(seconds: 2), reset);
   }
@@ -578,6 +580,7 @@ class CallService {
     _elapsedTimer?.cancel();
     _disconnectRoom();
     WakelockPlus.disable();
+    FlutterCallkitIncoming.endAllCalls();
     _setState(const CallState());
   }
 
