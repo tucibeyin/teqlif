@@ -107,6 +107,8 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   void _openCallScreen() {
     if (!mounted) return;
+    if (CallService.instance.isCallScreenVisible.value) return;
+    
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         settings: const RouteSettings(name: '/call_screen'),
@@ -118,8 +120,8 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   Future<void> _openCallScreenAndAccept() async {
     if (!mounted) return;
+    _openCallScreen();
     await CallService.instance.acceptCall();
-    if (mounted) _openCallScreen();
   }
 
   @override
