@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../l10n/app_localizations.dart';
 import '../config/api.dart';
+import '../config/app_colors.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/call_service.dart';
 import 'call_screen.dart';
@@ -36,7 +37,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
     // If the caller ends before we answer, pop automatically
     CallService.instance.state.addListener(_onStateChange);
-    
+
     // Start loud ringtone and haptic only when full screen is open
     CallService.instance.startRingtoneAndVibration();
   }
@@ -130,11 +131,15 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Blurred dark background
-          Container(color: const Color(0xFF0A1628)),
+          // Blurred background
+          Container(color: AppColors.bg(context)),
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(color: Colors.black.withValues(alpha: 0.55)),
+            child: Container(
+              color: AppColors.isDark(context)
+                  ? Colors.black.withValues(alpha: 0.55)
+                  : Colors.white.withValues(alpha: 0.55),
+            ),
           ),
 
           SafeArea(
@@ -145,8 +150,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                 // Title
                 Text(
                   l.callIncomingTitle,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.5,
@@ -164,7 +169,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: AppColors.isDark(context)
+                              ? Colors.white.withValues(alpha: 0.15)
+                              : Colors.black.withValues(alpha: 0.1),
                           blurRadius: 32,
                           spreadRadius: 8,
                         ),
@@ -189,8 +196,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                 // Username
                 Text(
                   '@$username',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
                     fontSize: 26,
                     fontWeight: FontWeight.w700,
                   ),
@@ -198,7 +205,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                 const SizedBox(height: 8),
                 Text(
                   l.callVoiceCall,
-                  style: const TextStyle(color: Colors.white60, fontSize: 15),
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 15,
+                  ),
                 ),
 
                 const Spacer(),
@@ -276,7 +286,7 @@ class _CallActionButton extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 13),
+          style: TextStyle(color: AppColors.textPrimary(context), fontSize: 13),
         ),
       ],
     );
@@ -290,12 +300,12 @@ class _InitialAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF1E3A5F),
+      color: AppColors.surfaceVariant(context),
       alignment: Alignment.center,
       child: Text(
         username.isNotEmpty ? username[0].toUpperCase() : '?',
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
           fontSize: 48,
           fontWeight: FontWeight.w700,
         ),

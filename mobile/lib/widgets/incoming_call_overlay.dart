@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../config/app_colors.dart';
 import '../services/call_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
@@ -199,16 +200,16 @@ class _IncomingCallBar extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: AppColors.surface(context),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.5),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
               ],
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              border: Border.all(color: AppColors.border(context)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -219,7 +220,7 @@ class _IncomingCallBar extends StatelessWidget {
                     // Avatar
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: const Color(0xFF334155),
+                      backgroundColor: AppColors.surfaceVariant(context),
                       backgroundImage:
                           avatarUrl != null && avatarUrl!.isNotEmpty
                           ? CachedNetworkImageProvider(avatarUrl!)
@@ -229,8 +230,8 @@ class _IncomingCallBar extends StatelessWidget {
                               username.isNotEmpty
                                   ? username[0].toUpperCase()
                                   : '?',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
                                 fontWeight: FontWeight.bold,
                               ),
                             )
@@ -246,8 +247,8 @@ class _IncomingCallBar extends StatelessWidget {
                         children: [
                           Text(
                             title,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: AppColors.textPrimary(context),
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                             ),
@@ -257,8 +258,8 @@ class _IncomingCallBar extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             l.callVoiceCall,
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: AppColors.textSecondary(context),
                               fontSize: 14,
                             ),
                           ),

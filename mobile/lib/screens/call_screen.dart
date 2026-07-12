@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
 import '../l10n/app_localizations.dart';
 import '../config/api.dart';
+import '../config/app_colors.dart';
 import '../services/call_service.dart';
 import 'messages_screen.dart';
 
@@ -80,11 +81,15 @@ class _CallScreenState extends State<CallScreen> {
               if (avatarUrl != null)
                 CachedNetworkImage(imageUrl: avatarUrl, fit: BoxFit.cover)
               else
-                Container(color: const Color(0xFF0A1628)),
+                Container(color: AppColors.bg(context)),
 
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                child: Container(color: Colors.black.withValues(alpha: 0.6)),
+                child: Container(
+                  color: AppColors.isDark(context)
+                      ? Colors.black.withValues(alpha: 0.6)
+                      : Colors.white.withValues(alpha: 0.6),
+                ),
               ),
 
               SafeArea(
@@ -100,7 +105,9 @@ class _CallScreenState extends State<CallScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.15),
+                            color: AppColors.isDark(context)
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : Colors.black.withValues(alpha: 0.1),
                             blurRadius: 32,
                             spreadRadius: 8,
                           ),
@@ -124,8 +131,8 @@ class _CallScreenState extends State<CallScreen> {
                     // Username
                     Text(
                       '@$username',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
                         fontSize: 26,
                         fontWeight: FontWeight.w700,
                       ),
@@ -136,15 +143,20 @@ class _CallScreenState extends State<CallScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        if (cs.isPoorConnection && cs.status == CallStatus.connected)
+                        if (cs.isPoorConnection &&
+                            cs.status == CallStatus.connected)
                           Padding(
                             padding: const EdgeInsets.only(right: 6),
-                            child: Icon(Icons.signal_cellular_connected_no_internet_4_bar, color: Colors.orange, size: 18),
+                            child: Icon(
+                              Icons.signal_cellular_connected_no_internet_4_bar,
+                              color: Colors.orange,
+                              size: 18,
+                            ),
                           ),
                         Text(
                           _statusText(cs.status, l, cs.elapsed),
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          style: TextStyle(
+                            color: AppColors.textSecondary(context),
                             fontSize: 16,
                           ),
                         ),
@@ -160,12 +172,19 @@ class _CallScreenState extends State<CallScreen> {
                         vertical: 32,
                       ),
                       padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
                         vertical: 24,
-                        horizontal: 16,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B).withValues(alpha: 0.7),
+                        color: AppColors.surface(context).withValues(
+                          alpha: AppColors.isDark(context) ? 0.25 : 0.8,
+                        ),
                         borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: AppColors.border(
+                            context,
+                          ).withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -179,16 +198,18 @@ class _CallScreenState extends State<CallScreen> {
                                       ? FontAwesomeIcons.microphoneSlash
                                       : FontAwesomeIcons.microphone,
                                   label: cs.isMuted ? l.callUnmute : l.callMute,
-                                  color: cs.isMuted
-                                      ? Colors.white24
-                                      : Colors.white.withValues(alpha: 0.12),
+                                  color: AppColors.isDark(context)
+                                      ? Colors.white.withValues(alpha: 0.2)
+                                      : Colors.black.withValues(alpha: 0.05),
                                   onTap: () =>
                                       CallService.instance.toggleMute(),
                                 ),
                                 _ControlButton(
                                   icon: FontAwesomeIcons.video,
                                   label: l.callVideo,
-                                  color: Colors.white.withValues(alpha: 0.05),
+                                  color: AppColors.isDark(context)
+                                      ? Colors.white.withValues(alpha: 0.2)
+                                      : Colors.black.withValues(alpha: 0.05),
                                   onTap: () {}, // Disabled for now
                                 ),
                                 _ControlButton(
@@ -198,7 +219,9 @@ class _CallScreenState extends State<CallScreen> {
                                       ? const Color(
                                           0xFF22C55E,
                                         ).withValues(alpha: 0.25)
-                                      : Colors.white.withValues(alpha: 0.12),
+                                      : AppColors.isDark(context)
+                                      ? Colors.white.withValues(alpha: 0.2)
+                                      : Colors.black.withValues(alpha: 0.05),
                                   onTap: () => CallService.instance.setSpeaker(
                                     !cs.isSpeaker,
                                   ),
@@ -216,7 +239,9 @@ class _CallScreenState extends State<CallScreen> {
                                 _ControlButton(
                                   icon: FontAwesomeIcons.message,
                                   label: l.callChat,
-                                  color: Colors.white.withValues(alpha: 0.12),
+                                  color: AppColors.isDark(context)
+                                      ? Colors.white.withValues(alpha: 0.2)
+                                      : Colors.black.withValues(alpha: 0.05),
                                   onTap: () {
                                     final id = cs.otherUserId;
                                     final username = cs.otherUsername ?? '';
@@ -276,7 +301,9 @@ class _CallScreenState extends State<CallScreen> {
                                 _ControlButton(
                                   icon: FontAwesomeIcons.userPlus,
                                   label: l.callAddPerson,
-                                  color: Colors.white.withValues(alpha: 0.12),
+                                  color: AppColors.isDark(context)
+                                      ? Colors.white.withValues(alpha: 0.2)
+                                      : Colors.black.withValues(alpha: 0.05),
                                   onTap: () {}, // Disabled
                                 )
                               else
@@ -339,12 +366,21 @@ class _ControlButton extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Center(child: FaIcon(icon, color: Colors.white, size: 22)),
+            child: Center(
+              child: FaIcon(
+                icon,
+                color: AppColors.textPrimary(context),
+                size: 22,
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             label,
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 13,
+            ),
           ),
         ],
       ),
@@ -359,13 +395,13 @@ class _Initials extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF1E3A5F),
+      color: AppColors.surfaceVariant(context),
       alignment: Alignment.center,
       child: Text(
         username.isNotEmpty ? username[0].toUpperCase() : '?',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 44,
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
+          fontSize: 48,
           fontWeight: FontWeight.w700,
         ),
       ),
