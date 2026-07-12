@@ -60,7 +60,11 @@ async def _delete_lk_room(room_name: str) -> None:
         ) as api:
             await api.room.delete_room(DeleteRoomRequest(room=room_name))
     except Exception as exc:
-        logger.warning("[Calls] LK room silinemedi | room=%s | %s", room_name, exc)
+        err_msg = str(exc).lower()
+        if "not_found" in err_msg or "does not exist" in err_msg:
+            logger.debug("[Calls] LK room silinirken atlandı (oda yok) | room=%s", room_name)
+        else:
+            logger.warning("[Calls] LK room silinemedi | room=%s | %s", room_name, exc)
 
 
 async def _ws_broadcast(user_id: int, payload: dict) -> None:
