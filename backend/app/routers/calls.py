@@ -52,9 +52,9 @@ async def _delete_lk_room(room_name: str) -> None:
     try:
         from livekit.api.room_service import RoomService, DeleteRoomRequest
         async with RoomService(
-            settings.livekit_api_base,
-            settings.livekit_api_key,
-            settings.livekit_api_secret,
+            url=settings.livekit_api_base,
+            api_key=settings.livekit_api_key,
+            api_secret=settings.livekit_api_secret,
         ) as svc:
             await svc.delete_room(DeleteRoomRequest(room=room_name))
     except Exception as exc:
