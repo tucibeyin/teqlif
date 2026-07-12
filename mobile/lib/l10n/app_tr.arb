@@ -2495,6 +2495,7 @@
       "username": { "type": "String" }
     }
   },
+  "callReturnToActive": "Aramaya dönmek için dokunun",
   "callNotifAccept": "Cevapla",
   "callNotifDecline": "Reddet",
   "callPermissionDenied": "Mikrofon izni gerekli"

@@ -21,6 +21,7 @@ import 'services/offline_queue_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/background_audio_handler.dart';
 import 'widgets/global_keyboard_accessory.dart';
+import 'widgets/global_call_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
@@ -80,6 +81,8 @@ void main() async {
 }
 
 class TeqlifApp extends ConsumerStatefulWidget {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   const TeqlifApp({super.key});
 
   @override
@@ -115,9 +118,13 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
         locale: locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        navigatorKey: TeqlifApp.navigatorKey,
         navigatorObservers: [AnalyticsRouteObserver()],
         builder: (context, child) {
-          return GlobalKeyboardAccessory(child: child!);
+          return GlobalCallOverlay(
+            navigatorKey: TeqlifApp.navigatorKey,
+            child: GlobalKeyboardAccessory(child: child!),
+          );
         },
         home: const SplashScreen(),
         routes: {

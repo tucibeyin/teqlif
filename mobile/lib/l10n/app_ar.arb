@@ -2492,6 +2492,7 @@
       "username": { "type": "String" }
     }
   },
+  "callReturnToActive": "اضغط للعودة إلى المكالمة",
   "callNotifAccept": "رد",
   "callNotifDecline": "رفض",
   "callPermissionDenied": "مطلوب إذن الميكروفون"

@@ -5064,6 +5064,9 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get callReturnToActive => 'اضغط للعودة إلى المكالمة';
+
+  @override
   String get callNotifAccept => 'رد';
 
   @override

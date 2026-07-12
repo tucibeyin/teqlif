@@ -9180,6 +9180,12 @@ abstract class AppLocalizations {
   /// **'@{username} arıyor'**
   String callIncomingBody(String username);
 
+  /// No description provided for @callReturnToActive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aramaya dönmek için dokunun'**
+  String get callReturnToActive;
+
   /// No description provided for @callNotifAccept.
   ///
   /// In tr, this message translates to:

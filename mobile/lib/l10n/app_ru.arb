@@ -2497,6 +2497,7 @@
       "username": { "type": "String" }
     }
   },
+  "callReturnToActive": "Нажмите, чтобы вернуться к звонку",
   "callNotifAccept": "Ответить",
   "callNotifDecline": "Отклонить",
   "callPermissionDenied": "Требуется разрешение на микрофон"

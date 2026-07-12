@@ -5142,6 +5142,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get callReturnToActive => 'Нажмите, чтобы вернуться к звонку';
+
+  @override
   String get callNotifAccept => 'Ответить';
 
   @override

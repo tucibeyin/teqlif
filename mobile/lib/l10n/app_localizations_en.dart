@@ -5092,6 +5092,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get callReturnToActive => 'Tap to return to call';
+
+  @override
   String get callNotifAccept => 'Answer';
 
   @override

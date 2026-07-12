@@ -2532,6 +2532,7 @@
       "username": { "type": "String" }
     }
   },
+  "callReturnToActive": "Tap to return to call",
   "callNotifAccept": "Answer",
   "callNotifDecline": "Decline",
   "callPermissionDenied": "Microphone permission required"

@@ -87,6 +87,7 @@ class CallService {
   static final CallService instance = CallService._();
 
   final ValueNotifier<CallState> state = ValueNotifier(const CallState());
+  final isCallScreenVisible = ValueNotifier<bool>(false);
 
   Room? _room;
   Timer? _ringTimer;   // 30s no-answer timeout

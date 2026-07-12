@@ -5094,6 +5094,9 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get callReturnToActive => 'Aramaya dönmek için dokunun';
+
+  @override
   String get callNotifAccept => 'Cevapla';
 
   @override
