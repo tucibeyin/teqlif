@@ -2768,5 +2768,18 @@
       }
     }
   },
-  "notifCallMissedBody": "Tried to reach you."
+  "notifCallMissedBody": "Tried to reach you.",
+  "callNotifTitle": "@{username} is calling you",
+  "@callNotifTitle": {
+    "description": "Incoming call push notification title",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "callNotifBody": "Incoming Voice Call",
+  "@callNotifBody": {
+    "description": "Incoming call push notification body"
+  }
 }

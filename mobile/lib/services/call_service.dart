@@ -257,8 +257,7 @@ class CallService {
   }
 
   void onCallRejected() {
-    FlutterRingtonePlayer().stop();
-    Vibration.cancel();
+    _stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.rejected));
     Future.delayed(const Duration(seconds: 2), reset);
@@ -269,8 +268,7 @@ class CallService {
   }
 
   void onCallMissed() {
-    FlutterRingtonePlayer().stop();
-    Vibration.cancel();
+    _stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.missed));
     Future.delayed(const Duration(seconds: 2), reset);
   }
@@ -357,8 +355,7 @@ class CallService {
   // ── Internal Cleanup ──────────────────────────────────────────────────────
 
   void _hangUpLocally({required CallStatus status}) {
-    FlutterRingtonePlayer().stop();
-    Vibration.cancel();
+    _stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
     _disconnectRoom();
@@ -375,8 +372,7 @@ class CallService {
   }
 
   void reset() {
-    FlutterRingtonePlayer().stop();
-    Vibration.cancel();
+    _stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
     _disconnectRoom();

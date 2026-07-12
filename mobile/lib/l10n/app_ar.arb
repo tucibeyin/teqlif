@@ -2732,5 +2732,18 @@
       }
     }
   },
-  "notifCallMissedBody": "حاول الاتصال بك."
+  "notifCallMissedBody": "حاول الاتصال بك.",
+  "callNotifTitle": "@{username} يتصل بك",
+  "@callNotifTitle": {
+    "description": "Incoming call push notification title",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "callNotifBody": "مكالمة صوتية واردة",
+  "@callNotifBody": {
+    "description": "Incoming call push notification body"
+  }
 }

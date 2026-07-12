@@ -2733,5 +2733,18 @@
       }
     }
   },
-  "notifCallMissedBody": "Пытался дозвониться до вас."
+  "notifCallMissedBody": "Пытался дозвониться до вас.",
+  "callNotifTitle": "@{username} звонит вам",
+  "@callNotifTitle": {
+    "description": "Incoming call push notification title",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "callNotifBody": "Входящий голосовой вызов",
+  "@callNotifBody": {
+    "description": "Incoming call push notification body"
+  }
 }

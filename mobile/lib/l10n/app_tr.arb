@@ -2731,5 +2731,18 @@
       }
     }
   },
-  "notifCallMissedBody": "Size ulaşmaya çalıştı."
+  "notifCallMissedBody": "Size ulaşmaya çalıştı.",
+  "callNotifTitle": "@{username} sizi arıyor",
+  "@callNotifTitle": {
+    "description": "Incoming call push notification title",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "callNotifBody": "Gelen Sesli Arama",
+  "@callNotifBody": {
+    "description": "Incoming call push notification body"
+  }
 }
