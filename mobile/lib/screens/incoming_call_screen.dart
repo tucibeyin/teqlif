@@ -28,9 +28,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.92, end: 1.08).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulse = Tween<double>(
+      begin: 0.92,
+      end: 1.08,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
     // If the caller ends before we answer, pop automatically
     CallService.instance.state.addListener(_onStateChange);
@@ -44,7 +45,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       if (mounted) Navigator.of(context).pop();
     } else if (status == CallStatus.permissionDenied) {
       if (mounted) {
-        final isPermanent = CallService.instance.state.value.permPermanentlyDenied;
+        final isPermanent =
+            CallService.instance.state.value.permPermanentlyDenied;
         CallService.instance.reset();
         Navigator.of(context).pop();
         if (isPermanent) {
@@ -53,9 +55,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
             context: context,
             builder: (ctx) => AlertDialog(
               title: Text(AppLocalizations.of(ctx)!.callPermissionDenied),
-              content: const Text('Sesli arama için Ayarlar\'dan mikrofon iznini açmanız gerekiyor.'),
+              content: const Text(
+                'Sesli arama için Ayarlar\'dan mikrofon iznini açmanız gerekiyor.',
+              ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('İptal'),
+                ),
                 TextButton(
                   onPressed: () async {
                     Navigator.pop(ctx);
@@ -102,114 +109,113 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     final avatarRaw = widget.callData['caller_avatar'] as String? ?? '';
     final avatarUrl = avatarRaw.isNotEmpty ? imgUrl(avatarRaw) : null;
 
-    return PopScope(
-      canPop: !CallService.instance.hasActiveCall,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Blurred dark background
-            Container(color: const Color(0xFF0A1628)),
-            BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(color: Colors.black.withValues(alpha: 0.55)),
-            ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Blurred dark background
+          Container(color: const Color(0xFF0A1628)),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(color: Colors.black.withValues(alpha: 0.55)),
+          ),
 
-            SafeArea(
-              child: Column(
-                children: [
-                  const SizedBox(height: 64),
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 64),
 
-                  // Title
-                  Text(
-                    l.callIncomingTitle,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
-                    ),
+                // Title
+                Text(
+                  l.callIncomingTitle,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
                   ),
-                  const SizedBox(height: 32),
+                ),
+                const SizedBox(height: 32),
 
-                  // Avatar with pulse
-                  ScaleTransition(
-                    scale: _pulse,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            blurRadius: 32,
-                            spreadRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: avatarUrl != null
-                            ? CachedNetworkImage(
-                                imageUrl: avatarUrl,
-                                fit: BoxFit.cover,
-                                placeholder: (_, _) => _InitialAvatar(username: username),
-                                errorWidget: (_, _, _) => _InitialAvatar(username: username),
-                              )
-                            : _InitialAvatar(username: username),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Username
-                  Text(
-                    '@$username',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l.callVoiceCall,
-                    style: const TextStyle(color: Colors.white60, fontSize: 15),
-                  ),
-
-                  const Spacer(),
-
-                  // Accept / Decline buttons
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 64),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Decline
-                        _CallActionButton(
-                          color: const Color(0xFFEF4444),
-                          icon: Icons.call_end,
-                          label: l.callDecline,
-                          onTap: _decline,
-                        ),
-
-                        // Accept
-                        _CallActionButton(
-                          color: const Color(0xFF22C55E),
-                          icon: Icons.call,
-                          label: l.callAccept,
-                          onTap: _accept,
+                // Avatar with pulse
+                ScaleTransition(
+                  scale: _pulse,
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          blurRadius: 32,
+                          spreadRadius: 8,
                         ),
                       ],
                     ),
+                    child: ClipOval(
+                      child: avatarUrl != null
+                          ? CachedNetworkImage(
+                              imageUrl: avatarUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, _) =>
+                                  _InitialAvatar(username: username),
+                              errorWidget: (_, _, _) =>
+                                  _InitialAvatar(username: username),
+                            )
+                          : _InitialAvatar(username: username),
+                    ),
                   ),
-                  const SizedBox(height: 56),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+
+                // Username
+                Text(
+                  '@$username',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.callVoiceCall,
+                  style: const TextStyle(color: Colors.white60, fontSize: 15),
+                ),
+
+                const Spacer(),
+
+                // Accept / Decline buttons
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 64),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Decline
+                      _CallActionButton(
+                        color: const Color(0xFFEF4444),
+                        icon: Icons.call_end,
+                        label: l.callDecline,
+                        onTap: _decline,
+                      ),
+
+                      // Accept
+                      _CallActionButton(
+                        color: const Color(0xFF22C55E),
+                        icon: Icons.call,
+                        label: l.callAccept,
+                        onTap: _accept,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 56),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -248,13 +254,14 @@ class _CallActionButton extends StatelessWidget {
                 ),
               ],
             ),
-            child: Center(
-              child: Icon(icon, color: Colors.white, size: 32),
-            ),
+            child: Center(child: Icon(icon, color: Colors.white, size: 32)),
           ),
         ),
         const SizedBox(height: 10),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
+        ),
       ],
     );
   }

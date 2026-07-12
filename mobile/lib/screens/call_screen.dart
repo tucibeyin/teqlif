@@ -62,10 +62,8 @@ class _CallScreenState extends State<CallScreen> {
             : null;
         final username = cs.otherUsername ?? '';
 
-        return PopScope(
-          canPop: !CallService.instance.hasActiveCall,
-          child: Scaffold(
-            backgroundColor: Colors.black,
+        return Scaffold(
+          backgroundColor: Colors.black,
             body: Stack(
               fit: StackFit.expand,
               children: [
@@ -248,10 +246,9 @@ class _CallScreenState extends State<CallScreen> {
                   ),
               ],
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
   }
 
   String _statusText(CallStatus s, AppLocalizations l, Duration elapsed) {
