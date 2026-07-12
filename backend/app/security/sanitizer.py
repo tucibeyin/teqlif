@@ -1,6 +1,7 @@
 # Input Sanitization Middleware for Routes
 # Adds protection to existing routes
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.security.validation import SQLInjectionProtection, SecureInputValidator
 from app.security.logging import SecurityLogger, RequestSanitizer
@@ -31,9 +32,9 @@ class InputSanitizationMiddleware(BaseHTTPMiddleware):
 
         # Check if IP is blocked
         if await is_ip_blocked(client_ip):
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Your IP has been temporarily blocked"
+                content={"success": False, "error": {"code": "FORBIDDEN", "message": "Your IP has been temporarily blocked"}}
             )
 
         # Redis rate limiter — 120 istek/dakika aşılırsa 24 saat auto-ban
@@ -46,12 +47,10 @@ class InputSanitizationMiddleware(BaseHTTPMiddleware):
             if count > _RL_LIMIT:
                 await redis.setex(f"blocked:{client_ip}", _RL_BAN_TTL, "1")
                 security_logger.injection_attempt(client_ip, f"rate_limit:{count}req/min")
-                raise HTTPException(
+                return JSONResponse(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Too many requests"
+                    content={"success": False, "error": {"code": "TOO_MANY_REQUESTS", "message": "Too many requests"}}
                 )
-        except HTTPException:
-            raise
         except Exception:
             pass  # Redis geçici olarak erişilemezse isteği geçir
 
@@ -59,9 +58,9 @@ class InputSanitizationMiddleware(BaseHTTPMiddleware):
         for key, value in request.query_params.items():
             if SQLInjectionProtection.has_sql(str(value)):
                 security_logger.injection_attempt(client_ip, str(value))
-                raise HTTPException(
+                return JSONResponse(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid input detected"
+                    content={"success": False, "error": {"code": "BAD_REQUEST", "message": "Invalid input detected"}}
                 )
 
         # Process request
