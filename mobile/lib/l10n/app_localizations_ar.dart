@@ -2931,6 +2931,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get errorGenericRetry => 'حدث خطأ، يرجى المحاولة مرة أخرى لاحقاً.';
 
   @override
+  String get errorFollowRequestsLoad => 'فشل في تحميل الطلبات';
+
+  @override
   String get verifyEmailTitle => 'التحقق من البريد الإلكتروني';
 
   @override

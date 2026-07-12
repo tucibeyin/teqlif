@@ -5502,6 +5502,12 @@ abstract class AppLocalizations {
   /// **'Bir hata oluştu, lütfen daha sonra tekrar deneyin.'**
   String get errorGenericRetry;
 
+  /// No description provided for @errorFollowRequestsLoad.
+  ///
+  /// In tr, this message translates to:
+  /// **'İstekler yüklenemedi'**
+  String get errorFollowRequestsLoad;
+
   /// No description provided for @verifyEmailTitle.
   ///
   /// In tr, this message translates to:

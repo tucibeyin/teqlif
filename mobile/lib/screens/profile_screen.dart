@@ -1264,9 +1264,19 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
         );
       } else {
         setState(() => _isPrivate = !val);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context)!.errorGenericRetry)),
+          );
+        }
       }
     } catch (_) {
       setState(() => _isPrivate = !val);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errNetworkRetry)),
+        );
+      }
     }
   }
 

@@ -2952,6 +2952,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorGenericRetry => 'An error occurred, please try again later.';
 
   @override
+  String get errorFollowRequestsLoad => 'Failed to load requests';
+
+  @override
   String get verifyEmailTitle => 'Email Verification';
 
   @override

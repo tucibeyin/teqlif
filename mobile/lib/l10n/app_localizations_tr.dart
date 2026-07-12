@@ -2955,6 +2955,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bir hata oluştu, lütfen daha sonra tekrar deneyin.';
 
   @override
+  String get errorFollowRequestsLoad => 'İstekler yüklenemedi';
+
+  @override
   String get verifyEmailTitle => 'E-posta Doğrulama';
 
   @override

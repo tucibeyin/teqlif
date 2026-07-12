@@ -1513,6 +1513,8 @@
   "retargetingNoListings": "Aktif ilanın bulunamadı.",
   "retargetingNoListingsDesc": "Retargeting için en az 1 aktif ilana ihtiyaç var.",
   "errorGenericRetry": "Bir hata oluştu, lütfen daha sonra tekrar deneyin.",
+  "errorFollowRequestsLoad": "İstekler yüklenemedi",
+
   "verifyEmailTitle": "E-posta Doğrulama",
   "btnVerify": "Doğrula",
   "btnResetPassword": "Şifreyi Sıfırla",

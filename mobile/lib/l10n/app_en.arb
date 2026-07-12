@@ -1514,6 +1514,8 @@
   "retargetingNoListings": "No active listings found.",
   "retargetingNoListingsDesc": "You need at least 1 active listing for retargeting.",
   "errorGenericRetry": "An error occurred, please try again later.",
+  "errorFollowRequestsLoad": "Failed to load requests",
+
   "verifyEmailTitle": "Email Verification",
   "btnVerify": "Verify",
   "btnResetPassword": "Reset Password",

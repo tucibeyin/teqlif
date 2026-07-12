@@ -44,13 +44,13 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
         });
       } else {
         setState(() {
-          _error = 'Failed to load requests';
+          _error = 'error_load';
           _loading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _error = e.toString();
+        _error = 'error_network';
         _loading = false;
       });
     }
@@ -76,7 +76,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Action failed. Please try again.')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.errorGenericRetry)),
           );
         }
       }
@@ -84,7 +84,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
       debugPrint('[FollowRequests] Network error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Network error. Please try again.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.errNetworkRetry)),
         );
       }
     }
@@ -103,7 +103,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!))
+              ? Center(child: Text(_error == 'error_load' ? l.errorFollowRequestsLoad : l.errNetworkRetry))
               : _requests.isEmpty
                   ? Center(
                       child: Text(

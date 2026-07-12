@@ -1671,6 +1671,8 @@
   "retargetingNoListings": "Активных объявлений не найдено.",
   "retargetingNoListingsDesc": "Для ретаргетинга вам нужен как минимум 1 активный листинг.",
   "errorGenericRetry": "Произошла ошибка, повторите попытку позже.",
+  "errorFollowRequestsLoad": "Не удалось загрузить запросы",
+
   "verifyEmailTitle": "Проверка электронной почты",
   "btnVerify": "Проверьте",
   "btnResetPassword": "Сбросить пароль",

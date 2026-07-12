@@ -2987,6 +2987,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorGenericRetry => 'Произошла ошибка, повторите попытку позже.';
 
   @override
+  String get errorFollowRequestsLoad => 'Не удалось загрузить запросы';
+
+  @override
   String get verifyEmailTitle => 'Проверка электронной почты';
 
   @override

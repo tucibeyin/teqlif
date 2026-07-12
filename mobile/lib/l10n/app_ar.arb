@@ -1515,6 +1515,8 @@
   "retargetingNoListings": "لم يتم العثور على إعلانات نشطة.",
   "retargetingNoListingsDesc": "تحتاج إلى إعلان نشط واحد على الأقل لإعادة الاستهداف.",
   "errorGenericRetry": "حدث خطأ، يرجى المحاولة مرة أخرى لاحقاً.",
+  "errorFollowRequestsLoad": "فشل في تحميل الطلبات",
+
   "verifyEmailTitle": "التحقق من البريد الإلكتروني",
   "btnVerify": "تحقق",
   "btnResetPassword": "إعادة تعيين كلمة المرور",
