@@ -2737,6 +2737,7 @@
   "callConnected": "Connected",
   "callEnded": "Call Ended",
   "callRejected": "Call Declined",
+  "callBusy": "User is Busy",
   "callMissed": "Missed Call",
   "callNoAnswer": "No Answer",
   "callAccept": "Accept",

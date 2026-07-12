@@ -5035,6 +5035,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get callRejected => 'تم رفض المكالمة';
 
   @override
+  String get callBusy => 'الرقم مشغول';
+
+  @override
   String get callMissed => 'مكالمة فائتة';
 
   @override

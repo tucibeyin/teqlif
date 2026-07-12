@@ -2702,6 +2702,7 @@
   "callConnected": "Подключён",
   "callEnded": "Звонок завершён",
   "callRejected": "Звонок отклонён",
+  "callBusy": "Линия занята",
   "callMissed": "Пропущенный звонок",
   "callNoAnswer": "Нет ответа",
   "callAccept": "Принять",

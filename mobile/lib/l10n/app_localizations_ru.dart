@@ -5113,6 +5113,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get callRejected => 'Звонок отклонён';
 
   @override
+  String get callBusy => 'Линия занята';
+
+  @override
   String get callMissed => 'Пропущенный звонок';
 
   @override

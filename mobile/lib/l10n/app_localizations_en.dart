@@ -5063,6 +5063,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get callRejected => 'Call Declined';
 
   @override
+  String get callBusy => 'User is Busy';
+
+  @override
   String get callMissed => 'Missed Call';
 
   @override

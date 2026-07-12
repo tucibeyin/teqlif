@@ -5065,6 +5065,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get callRejected => 'Arama Reddedildi';
 
   @override
+  String get callBusy => 'Aradığınız Kişi Meşgul';
+
+  @override
   String get callMissed => 'Cevapsız Arama';
 
   @override

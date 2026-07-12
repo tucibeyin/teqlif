@@ -2700,6 +2700,7 @@
   "callConnected": "Bağlandı",
   "callEnded": "Arama Bitti",
   "callRejected": "Arama Reddedildi",
+  "callBusy": "Aradığınız Kişi Meşgul",
   "callMissed": "Cevapsız Arama",
   "callNoAnswer": "Cevap Verilmedi",
   "callAccept": "Kabul Et",

@@ -22,6 +22,7 @@ enum CallStatus {
   missed,
   noAnswer,
   permissionDenied,
+  busy,
 }
 
 class CallState {
@@ -104,6 +105,17 @@ class CallService {
     };
   }
 
+class CallApiException implements Exception {
+  final int statusCode;
+  final String? code;
+  final String message;
+
+  CallApiException(this.statusCode, this.code, this.message);
+
+  @override
+  String toString() => 'CallApiException($statusCode): $code - $message';
+}
+
   Future<Map<String, dynamic>> _post(String path, [Map<String, dynamic>? body]) async {
     final resp = await http.post(
       Uri.parse('$kBaseUrl$path'),
@@ -111,7 +123,19 @@ class CallService {
       body: body != null ? jsonEncode(body) : null,
     );
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw Exception('Call API error ${resp.statusCode}: ${resp.body}');
+      try {
+        final json = jsonDecode(resp.body);
+        if (json['error'] != null) {
+          throw CallApiException(
+            resp.statusCode,
+            json['error']['code'],
+            json['error']['message'] ?? '',
+          );
+        }
+      } catch (e) {
+        if (e is CallApiException) rethrow;
+      }
+      throw CallApiException(resp.statusCode, null, resp.body);
     }
     return jsonDecode(resp.body) as Map<String, dynamic>;
   }
@@ -151,6 +175,14 @@ class CallService {
       ));
       _startRingTimer();
       await WakelockPlus.enable();
+    } on CallApiException catch (e) {
+      debugPrint('[CallService] startCall API error: ${e.code}');
+      if (e.code == 'USER_BUSY') {
+        _setState(state.value.copyWith(status: CallStatus.busy));
+        Future.delayed(const Duration(seconds: 2), reset);
+      } else {
+        _setState(state.value.copyWith(status: CallStatus.ended));
+      }
     } catch (e) {
       debugPrint('[CallService] startCall error: $e');
       _setState(state.value.copyWith(status: CallStatus.ended));
@@ -382,9 +414,5 @@ class CallService {
 
   bool get hasActiveCall =>
       state.value.status != CallStatus.idle &&
-      state.value.status != CallStatus.ended &&
-      state.value.status != CallStatus.rejected &&
-      state.value.status != CallStatus.missed &&
-      state.value.status != CallStatus.noAnswer &&
       state.value.status != CallStatus.permissionDenied;
 }

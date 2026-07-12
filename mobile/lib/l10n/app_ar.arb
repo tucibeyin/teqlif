@@ -2701,6 +2701,8 @@
   "callConnected": "متصل",
   "callEnded": "انتهت المكالمة",
   "callRejected": "تم رفض المكالمة",
+  "callBusy": "الرقم مشغول",
+
   "callMissed": "مكالمة فائتة",
   "callNoAnswer": "لا يوجد رد",
   "callAccept": "قبول",

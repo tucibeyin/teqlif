@@ -217,6 +217,41 @@ async def _in_call(call_id: int, token: str, room: str, ws: websockets.WebSocket
         print(f"   (end: {e})")
     print("✅  Bitti.\n")
 
+# ─── Mod 4: Meşgul Durumu Testi ────────────────────────────────────────────────
+async def busy_test_mode(caller_token: str, caller_name: str, callee_token: str, callee_id: int, callee_name: str):
+    print(f"\n📞  [Meşgul Testi] @{caller_name} → @{callee_name} aranıyor...")
+    
+    # 1. Start call
+    try:
+        d = api("POST", "/calls/start", caller_token, json={"callee_id": callee_id})
+    except Exception as e:
+        print(f"❌  Arama başlatılamadı: {e}")
+        return
+        
+    call_id = d["call_id"]
+    print(f"✅  Arama başlatıldı (call_id={call_id}). Şimdi {callee_name} olarak kabul ediliyor...")
+    
+    # 2. Accept call
+    time.sleep(1)
+    try:
+        api("POST", f"/calls/{call_id}/accept", callee_token)
+    except Exception as e:
+        print(f"❌  Arama kabul edilemedi: {e}")
+        return
+        
+    print(f"\n🟢  {caller_name} ve {callee_name} şu an görüşmede!")
+    print("    Şimdi telefonunuzdan 'teqlif' kullanıcısı ile bu iki hesaptan birini arayarak 'Meşgul' durumunu test edebilirsiniz.")
+    print("    [Enter] tuşuna basarak görüşmeyi sonlandırabilirsiniz...\n")
+    
+    input()
+    
+    print("\n🔴  Bitiriliyor...")
+    try:
+        api("POST", f"/calls/{call_id}/end", caller_token)
+    except Exception:
+        pass
+    print("✅  Bitti.\n")
+
 # ─── Ana menü ─────────────────────────────────────────────────────────────────
 
 def main():
@@ -227,7 +262,8 @@ def main():
     print("  1  Script telefonu arar   (2gbrain → teqlif)")
     print("  2  Telefon scripti arar   (teqlif → 2gbrain, manuel)")
     print("  3  Telefon arar, oto-kabul")
-    choice = input("\nSeçim [1/2/3]: ").strip()
+    print("  4  Meşgul testi           (2gbrain ↔ tucibeyin otomatik görüşür)")
+    choice = input("\nSeçim [1/2/3/4]: ").strip()
 
     print()
     ident = input("2gbrain email/kullanıcı adı [2gbrain]: ").strip() or "2gbrain"
@@ -253,6 +289,19 @@ def main():
 
     elif choice in ("2", "3"):
         asyncio.run(callee_mode(token, uname, auto=(choice == "3")))
+        
+    elif choice == "4":
+        ident2 = input("\nİkinci kullanıcı email/kullanıcı adı [tucibeyin]: ").strip() or "tucibeyin"
+        pwd2 = input("İkinci kullanıcı şifre: ").strip()
+        print("\nİkinci kullanıcıya giriş yapılıyor...")
+        try:
+            token2, uid2, uname2 = login(ident2, pwd2)
+        except Exception as e:
+            print(f"❌  {e}")
+            sys.exit(1)
+        print(f"✅  @{uname2} (id={uid2})\n")
+        
+        asyncio.run(busy_test_mode(token, uname, token2, uid2, uname2))
 
     else:
         print("Geçersiz seçim.")

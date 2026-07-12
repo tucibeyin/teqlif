@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.call import Call
@@ -23,6 +23,7 @@ from app.utils.auth import get_current_user
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
 from app.config import settings
+from app.core.exceptions import ConflictException
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/calls", tags=["calls"])
@@ -119,6 +120,16 @@ async def start_call(
     callee = await db.get(User, callee_id)
     if not callee:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Check if callee is already in an active call
+    active_call = await db.scalar(
+        select(Call).where(
+            or_(Call.caller_id == callee_id, Call.callee_id == callee_id),
+            Call.status.in_(["calling", "active", "connecting", "connected"])
+        )
+    )
+    if active_call:
+        raise ConflictException(message="User is busy", code="USER_BUSY")
 
     room_name = f"call_{current_user.id}_{callee_id}_{int(time.time())}"
     call = Call(caller_id=current_user.id, callee_id=callee_id, room_name=room_name, status="calling")

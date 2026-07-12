@@ -9126,6 +9126,12 @@ abstract class AppLocalizations {
   /// **'Arama Reddedildi'**
   String get callRejected;
 
+  /// No description provided for @callBusy.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aradığınız Kişi Meşgul'**
+  String get callBusy;
+
   /// No description provided for @callMissed.
   ///
   /// In tr, this message translates to:
