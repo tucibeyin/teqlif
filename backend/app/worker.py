@@ -1232,6 +1232,149 @@ async def auto_close_stream_if_host_absent_task(
         raise
 
 
+async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, callee_id: int) -> None:
+    """
+    POST /start ile başlayan ancak 35-40sn içinde 'accept', 'reject', 'end' 
+    olmayan aramaları (calling) timeout edip missed'e çeker.
+    Localized bildirim gönderir.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models.call import Call
+        from app.models.user import User
+        from app.models.notification import Notification
+        from sqlalchemy import select
+        from app.core.ws_manager import ws_manager
+        from datetime import datetime, timezone
+        from app.utils.i18n import _get_t, get_locale
+        from app.services.firebase_service import send_push
+
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(Call).where(Call.id == call_id))
+            call = result.scalar_one_or_none()
+
+            if not call or call.status != "calling":
+                return  # Zaten kabul edilmiş veya sonlanmış
+
+            logger.info("Arama zaman aşımına uğradı (Ghost Call Timeout). CallID: %d", call_id)
+            call.status = "missed"
+            call.ended_at = datetime.now(timezone.utc)
+            
+            # Kullanıcıları getir
+            caller = await db.get(User, caller_id)
+            callee = await db.get(User, callee_id)
+            
+            if caller and callee:
+                locale = get_locale(callee)
+                t = _get_t(locale)
+                
+                title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
+                body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
+                
+                try:
+                    title = title_raw.format_map({"username": caller.username})
+                    body = body_raw.format_map({"username": caller.username})
+                except (KeyError, ValueError):
+                    title = title_raw
+                    body = body_raw
+                
+                # DB'ye bildirim kaydet
+                n = Notification(
+                    user_id=callee.id,
+                    type="call_missed",
+                    title=title,
+                    body=body,
+                    related_id=caller.id
+                )
+                db.add(n)
+            
+            await db.commit()
+
+            # İki tarafa da missed event'i at
+            await ws_manager.send_personal_message(caller_id, {"type": "call_missed", "call_id": call_id})
+            await ws_manager.send_personal_message(callee_id, {"type": "call_missed", "call_id": call_id})
+            
+            # Push bildirimi at
+            if caller and callee and callee.fcm_token:
+                await send_push(
+                    token=callee.fcm_token,
+                    title=title,
+                    body=body,
+                    notif_type="call_missed",
+                    extra_data={"caller_username": caller.username, "related_id": str(caller.id)}
+                )
+
+    except Exception as exc:
+        logger.error(f"Error in delayed_call_timeout_task for CallID {call_id}: {exc}", exc_info=True)
+        from sentry_sdk import capture_exception
+        capture_exception(exc)
+        raise
+
+
+async def cleanup_ghost_calls_task(ctx: dict) -> None:
+    """
+    Cron Job (Her 15dk): Çok eski olan calling ve active çağrıları bulup temizler.
+    Sunucu kapanıp açıldığında vs kaybolan calling ve active call'ları toparlar.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models.call import Call
+        from sqlalchemy import select, or_
+        from datetime import datetime, timezone, timedelta
+        import aiohttp
+        from livekit.api.room_service import RoomService, ListRoomsRequest
+        from app.config import settings
+
+        now = datetime.now(timezone.utc)
+        calling_threshold = now - timedelta(minutes=5)
+        active_threshold = now - timedelta(hours=1)
+
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(Call).where(
+                    or_(
+                        (Call.status == "calling") & (Call.started_at < calling_threshold),
+                        (Call.status == "active") & (Call.started_at < active_threshold)
+                    )
+                )
+            )
+            ghost_calls = result.scalars().all()
+
+            if not ghost_calls:
+                return
+            
+            lk_rooms = []
+            try:
+                async with aiohttp.ClientSession() as session:
+                    svc = RoomService(
+                        session,
+                        settings.livekit_api_base,
+                        settings.livekit_api_key,
+                        settings.livekit_api_secret,
+                    )
+                    res = await svc.list_rooms(ListRoomsRequest())
+                    lk_rooms = [r.name for r in res.rooms]
+            except Exception as e:
+                logger.error("LiveKit list_rooms failed in cleanup_ghost_calls_task: %s", e)
+
+            for call in ghost_calls:
+                if call.status == "calling":
+                    logger.warning("Ghost call cleaned up: %d changed from calling to missed", call.id)
+                    call.status = "missed"
+                elif call.status == "active":
+                    if call.room_name not in lk_rooms:
+                        logger.warning("Ghost call cleaned up: %d changed from active to ended (no room)", call.id)
+                        call.status = "ended"
+                        call.ended_at = now
+            
+            await db.commit()
+
+    except Exception as exc:
+        logger.error(f"Error in cleanup_ghost_calls_task: {exc}", exc_info=True)
+        from sentry_sdk import capture_exception
+        capture_exception(exc)
+        raise
+
 async def delayed_close_stream_task(ctx: dict, room_name: str) -> None:
     """
     room_finished webhook'tan 60sn sonra oda hâlâ aktifse yayını kapatır (ARQ defer).
@@ -2461,6 +2604,8 @@ class WorkerSettings:
         cleanup_stale_streams_task,
         auto_close_stream_if_host_absent_task,
         delayed_close_stream_task,
+        delayed_call_timeout_task,
+        cleanup_ghost_calls_task,
         send_telegram_notification_task,
         hesitation_retarget_task,
         notify_hot_listing_task,
@@ -2490,6 +2635,8 @@ class WorkerSettings:
         cron(invalidate_swipe_live_configs_task, minute={5, 20, 35, 50}),
         # Her gün 05:00 — eski listing impressionlarını temizle
         cron(cleanup_old_impressions_task, hour=5, minute=0),
+        # Her 15 dakikada askıda kalan hayalet aramaları (ghost calls) temizle
+        cron(cleanup_ghost_calls_task, minute={0, 15, 30, 45}),
         # Her 5 dakikada Redis interaction kuyruğunu DB'ye yaz
         cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
         # Her 10 dakikada PostgreSQL → Redis kampanya bütçe senkronizasyonu

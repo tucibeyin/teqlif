@@ -43,7 +43,10 @@ async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
     logger.info("LiveKit webhook alındı | method=%s event=%s room=%s", request.method, event_type, room_name)
 
     if event_type == "room_finished" and room_name:
-        background_tasks.add_task(_delayed_close_stream, room_name)
+        if room_name.startswith("call_"):
+            background_tasks.add_task(_on_call_room_finished, room_name)
+        else:
+            background_tasks.add_task(_delayed_close_stream, room_name)
 
     # Host görüntüsü kesilince (internet kopukluğu vb.) 2 dk içinde geri dönmezse yayını kapat
     if room_name and event.participant:
@@ -57,6 +60,33 @@ async def livekit_webhook(request: Request, background_tasks: BackgroundTasks):
 
 
 _HOST_GRACE_SECONDS = 120  # 2 dakika bekleme süresi
+
+async def _on_call_room_finished(room_name: str) -> None:
+    """Ghost call cleanup from LiveKit webhook for calls."""
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models.call import Call
+        from sqlalchemy import select
+        from app.core.ws_manager import ws_manager
+        from datetime import datetime, timezone
+
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(Call).where(Call.room_name == room_name))
+            call = result.scalar_one_or_none()
+            if not call or call.status in ("ended", "missed", "rejected"):
+                return
+            
+            logger.info("Call %s closed via Webhook (room_finished)", room_name)
+            call.status = "ended"
+            call.ended_at = datetime.now(timezone.utc)
+            await db.commit()
+            
+            # Kalan katılımcıların UI'ı kapansın diye iki tarafa da ended atıyoruz
+            await ws_manager.send_personal_message(call.caller_id, {"type": "call_ended", "call_id": call.id})
+            await ws_manager.send_personal_message(call.callee_id, {"type": "call_ended", "call_id": call.id})
+            
+    except Exception as exc:
+        logger.error(f"Error closing ghost call {room_name} via webhook: {exc}", exc_info=True)
 
 
 async def _on_host_left(room_name: str, identity: str, disconnected_at: float) -> None:

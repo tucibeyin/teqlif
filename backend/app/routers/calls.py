@@ -9,7 +9,7 @@ Flow:
   POST /{id}/missed  → callee gets WS call_missed (caller-side 30s timeout)
 """
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,7 @@ from app.models.notification import Notification
 from app.utils.auth import get_current_user
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
+from app.core.task_queue import get_pool
 from app.config import settings
 from app.core.exceptions import AppException
 
@@ -156,6 +157,18 @@ async def start_call(
     await _ws_broadcast(callee_id, ws_payload)
     await _send_call_push(callee, current_user, call.id, room_name)
 
+    # Askıda kalan aramaları (Ghost calls) 35-40 sn sonra timeout'a çekmek için ARQ görevi ekle
+    pool = get_pool()
+    if pool:
+        await pool.enqueue_job(
+            "delayed_call_timeout_task",
+            call.id,
+            current_user.id,
+            callee_id,
+            _defer_by=timedelta(seconds=35),
+            _job_id=f"call_timeout_{call.id}"
+        )
+
     logger.info("[Calls] Arama başlatıldı | call_id=%d caller=%d callee=%d", call.id, current_user.id, callee_id)
     return {
         "call_id": call.id,
@@ -289,9 +302,24 @@ async def missed_call(
         call.status = "missed"
         call.ended_at = datetime.now(timezone.utc)
         
+        locale = get_locale(current_user) # callee user locale is actually what we need, but we don't have callee object here yet
+        callee = await db.get(User, call.callee_id)
+        if callee:
+            locale = get_locale(callee)
+            
+        t = _get_t(locale)
+        
+        title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
+        body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
+        
+        try:
+            title = title_raw.format_map({"username": current_user.username})
+            body = body_raw.format_map({"username": current_user.username})
+        except (KeyError, ValueError):
+            title = title_raw
+            body = body_raw
+            
         # Bildirim oluştur (sadece cevapsızlar için)
-        title = f"@{current_user.username}"
-        body = "Size ulaşmaya çalıştı." # The mobile app will overwrite this using localized strings, but we store a fallback here
         n = Notification(
             user_id=call.callee_id,
             type="call_missed",
