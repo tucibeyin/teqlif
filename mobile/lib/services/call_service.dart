@@ -414,7 +414,9 @@ class CallService {
       ),
     );
     try {
+      debugPrint('[CallService] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
       await _room!.connect(livekitUrl, token);
+      debugPrint('[CallService] _joinRoom SUCCESSFUL!');
       await _room!.localParticipant?.setMicrophoneEnabled(true);
       _setState(
         state.value.copyWith(
