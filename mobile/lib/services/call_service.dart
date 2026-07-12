@@ -419,6 +419,7 @@ class CallService {
       await _room!.connect(livekitUrl, token);
       debugPrint('[CallService] _joinRoom SUCCESSFUL!');
       await _room!.localParticipant?.setMicrophoneEnabled(true);
+      await Hardware.instance.setSpeakerphoneOn(false);
       _setState(
         state.value.copyWith(
           status: CallStatus.connected,
