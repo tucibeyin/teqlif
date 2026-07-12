@@ -504,28 +504,12 @@ class CallService {
 
   Future<void> setSpeaker(bool enabled) async {
     try {
-      final session = await AudioSession.instance;
-      await session.configure(
-        AudioSessionConfiguration(
-          avAudioSessionCategory: enabled
-              ? AVAudioSessionCategory.playback
-              : AVAudioSessionCategory.playAndRecord,
-          avAudioSessionCategoryOptions:
-              AVAudioSessionCategoryOptions.allowBluetooth,
-          androidAudioAttributes: AndroidAudioAttributes(
-            contentType: AndroidAudioContentType.speech,
-            usage: enabled
-                ? AndroidAudioUsage.media
-                : AndroidAudioUsage.voiceCommunication,
-          ),
-        ),
-      );
+      await Hardware.instance.setSpeakerphoneOn(enabled);
     } catch (e) {
       debugPrint('[CallService] setSpeaker error: $e');
     }
     _setState(state.value.copyWith(isSpeaker: enabled));
   }
-
   Future<void> endCall() async {
     final callId = state.value.callId;
     if (callId != null) {
