@@ -36,99 +36,125 @@ class GlobalCallOverlay extends StatelessWidget {
                 valueListenable: CallService.instance.state,
                 builder: (context, cs, _) {
                   if (cs.status != CallStatus.connected &&
-                      cs.status != CallStatus.calling &&
                       cs.status != CallStatus.connecting) {
                     return const SizedBox.shrink();
                   }
 
-                  final isConnecting = cs.status != CallStatus.connected;
-
                   return Positioned(
-                    top: MediaQuery.paddingOf(context).top + 8,
-                    left: 16,
-                    right: 16,
+                    top: 0,
+                    left: 0,
+                    right: 0,
                     child: SafeArea(
-                      bottom: false,
-                      child: GestureDetector(
-                        onTap: () {
-                          if (CallService.instance.isCallScreenVisible.value) return;
-                          
-                          final context = navigatorKey.currentContext;
-                          if (context != null) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                settings: const RouteSettings(name: '/call_screen'),
-                                builder: (_) => const CallScreen(),
-                                fullscreenDialog: true,
-                              ),
-                            );
-                          }
-                        },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
                         child: Material(
-                          color: Colors.transparent,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isConnecting ? const Color(0xFFF59E0B) : const Color(0xFF22C55E),
-                              borderRadius: BorderRadius.circular(100),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.phone_in_talk,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Builder(
-                                    builder: (innerContext) {
-                                      try {
-                                        final ctx = navigatorKey.currentContext ?? context;
-                                        final l = AppLocalizations.of(ctx);
-                                        return Text(
-                                          l?.callReturnToActive ?? 'Aramaya dönmek için dokunun',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        );
-                                      } catch (_) {
-                                        return const Text(
-                                          'Aramaya dönmek için dokunun',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 14,
-                                          ),
-                                        );
-                                      }
-                                    }
+                          type: MaterialType.transparency,
+                          child: GestureDetector(
+                            onTap: () {
+                              final ctx = navigatorKey.currentContext;
+                              if (ctx != null) {
+                                Navigator.of(ctx).push(
+                                  MaterialPageRoute(
+                                    settings: const RouteSettings(
+                                      name: '/call_screen',
+                                    ),
+                                    builder: (_) => const CallScreen(),
+                                    fullscreenDialog: true,
                                   ),
-                                ),
-                                if (!isConnecting) ...[
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    _formatElapsed(cs.elapsed),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                      fontFeatures: [FontFeature.tabularFigures()],
+                                );
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF22C55E),
+                                borderRadius: BorderRadius.circular(100),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // Left: Icon + Timer
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.call,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Builder(
+                                        builder: (innerContext) {
+                                          try {
+                                            final ctx =
+                                                navigatorKey.currentContext ??
+                                                context;
+                                            final l = AppLocalizations.of(ctx);
+                                            return Text(
+                                              cs.status == CallStatus.connecting
+                                                  ? (l?.callConnecting ??
+                                                        'Connecting...')
+                                                  : _formatElapsed(cs.elapsed),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            );
+                                          } catch (_) {
+                                            return Text(
+                                              cs.status == CallStatus.connecting
+                                                  ? 'Connecting...'
+                                                  : _formatElapsed(cs.elapsed),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+
+                                  // Right: End Call Button
+                                  GestureDetector(
+                                    onTap: () => CallService.instance.endCall(),
+                                    behavior: HitTestBehavior.opaque,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: BorderRadius.circular(
+                                          100,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.call_end,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
                                     ),
                                   ),
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         ),
