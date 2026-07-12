@@ -22,6 +22,7 @@ import 'services/push_notification_service.dart';
 import 'services/background_audio_handler.dart';
 import 'widgets/global_keyboard_accessory.dart';
 import 'widgets/global_call_overlay.dart';
+import 'widgets/incoming_call_overlay.dart';
 import 'utils/call_route_observer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -123,9 +124,11 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
         navigatorKey: TeqlifApp.navigatorKey,
         navigatorObservers: [AnalyticsRouteObserver(), _callRouteObserver],
         builder: (context, child) {
-          return GlobalCallOverlay(
-            navigatorKey: TeqlifApp.navigatorKey,
-            child: GlobalKeyboardAccessory(child: child!),
+          return IncomingCallOverlay(
+            child: GlobalCallOverlay(
+              navigatorKey: TeqlifApp.navigatorKey,
+              child: GlobalKeyboardAccessory(child: child!),
+            ),
           );
         },
         home: const SplashScreen(),

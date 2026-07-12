@@ -22,7 +22,7 @@ import 'live/live_list_screen.dart';
 import 'live/swipe_live_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/offline_banner.dart';
-import '../widgets/incoming_call_overlay.dart';
+
 import '../services/call_service.dart';
 
 class MainScreen extends StatefulWidget {
