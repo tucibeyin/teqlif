@@ -651,7 +651,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                                 if (ir != null && ir > 0) _ScoreBadge(
                                   icon: FontAwesomeIcons.rankingStar,
                                   title: l.influenceRankLabel,
-                                  value: '#$ir',
+                                  value: '$ir',
                                   hint: l.influenceRankHint,
                                   color: const Color(0xFF8B5CF6),
                                 ),

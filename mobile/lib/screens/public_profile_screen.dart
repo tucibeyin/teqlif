@@ -1121,7 +1121,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           _ProfileBadge(
             icon: FontAwesomeIcons.rankingStar,
             title: l.influenceRankLabel,
-            value: '#$rank',
+            value: '$rank',
             color: const Color(0xFF8B5CF6),
             hint: l.influenceRankHint,
           ),

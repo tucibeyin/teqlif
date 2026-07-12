@@ -2570,8 +2570,8 @@
   "trustScoreLow": "New Member",
   "trustScoreMedium": "Trusted",
   "trustScoreHigh": "Highly Trusted",
-  "influenceRankLabel": "Network Rank",
-  "influenceRankHint": "Influence ranking based on the follower network. The lower the number, the broader your reach. Updated weekly.",
+  "influenceRankLabel": "Influence Score",
+  "influenceRankHint": "Influence score based on the follower network. The higher the score, the broader your reach. Updated weekly.",
   "influenceRankValue": "Rank #{rank}",
   "@influenceRankValue": {
     "placeholders": {

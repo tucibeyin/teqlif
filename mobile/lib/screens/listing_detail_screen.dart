@@ -2274,7 +2274,7 @@ class _SellerTrustRow extends StatelessWidget {
           if (rank != null)
             _TrustChip(
               icon: FontAwesomeIcons.rankingStar,
-              value: '#$rank',
+              value: '$rank',
               hint: l.influenceRankHint,
               title: l.influenceRankLabel,
               color: const Color(0xFF8B5CF6),

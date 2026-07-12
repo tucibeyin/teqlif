@@ -2534,8 +2534,8 @@
   "trustScoreLow": "عضو جديد",
   "trustScoreMedium": "موثوق",
   "trustScoreHigh": "موثوق جداً",
-  "influenceRankLabel": "ترتيب الشبكة",
-  "influenceRankHint": "ترتيب التأثير بناءً على شبكة المتابعين. كلما كان الرقم أقل، كان نطاق وصولك أوسع. يتجدد أسبوعياً.",
+  "influenceRankLabel": "نقاط التأثير",
+  "influenceRankHint": "نقاط التأثير بناءً على شبكة المتابعين. كلما زادت النقاط، كان نطاق وصولك أوسع. يتجدد أسبوعياً.",
   "influenceRankValue": "المرتبة #{rank}",
   "@influenceRankValue": {
     "placeholders": {

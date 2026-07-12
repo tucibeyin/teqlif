@@ -2533,8 +2533,8 @@
   "trustScoreLow": "Yeni Üye",
   "trustScoreMedium": "Güvenilir",
   "trustScoreHigh": "Çok Güvenilir",
-  "influenceRankLabel": "Ağ Sıralaması",
-  "influenceRankHint": "Platformdaki takipçi ağına göre hesaplanan etki sıralaması. Ne kadar düşük numara, o kadar geniş erişim. Haftalık güncellenir.",
+  "influenceRankLabel": "Etki Skoru",
+  "influenceRankHint": "Platformdaki takipçi ağına göre hesaplanan etki skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.",
   "influenceRankValue": "#{rank}. sıra",
   "@influenceRankValue": {
     "placeholders": {
