@@ -2773,4 +2773,9 @@
       "username": {}
     }
   }
+  ,"errFollowSelf": "لا يمكنك متابعة نفسك",
+  "errUserNotFound": "المستخدم غير موجود",
+  "errAlreadyFollowing": "أنت تتابع بالفعل أو تم إرسال الطلب",
+  "errFollowRecordNotFound": "سجل المتابعة غير موجود",
+  "errFollowRequestNotFound": "طلب المتابعة غير موجود"
 }

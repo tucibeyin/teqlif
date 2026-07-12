@@ -4780,11 +4780,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get trustScoreHigh => 'موثوق جداً';
 
   @override
-  String get influenceRankLabel => 'ترتيب الشبكة';
+  String get influenceRankLabel => 'نقاط التأثير';
 
   @override
   String get influenceRankHint =>
-      'ترتيب التأثير بناءً على شبكة المتابعين. كلما كان الرقم أقل، كان نطاق وصولك أوسع. يتجدد أسبوعياً.';
+      'نقاط التأثير بناءً على شبكة المتابعين. كلما زادت النقاط، كان نطاق وصولك أوسع. يتجدد أسبوعياً.';
 
   @override
   String influenceRankValue(int rank) {
@@ -5149,4 +5149,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String notifFollowAcceptedTitle(Object username) {
     return '@$username وافق على طلب المتابعة';
   }
+
+  @override
+  String get errFollowSelf => 'لا يمكنك متابعة نفسك';
+
+  @override
+  String get errUserNotFound => 'المستخدم غير موجود';
+
+  @override
+  String get errAlreadyFollowing => 'أنت تتابع بالفعل أو تم إرسال الطلب';
+
+  @override
+  String get errFollowRecordNotFound => 'سجل المتابعة غير موجود';
+
+  @override
+  String get errFollowRequestNotFound => 'طلب المتابعة غير موجود';
 }

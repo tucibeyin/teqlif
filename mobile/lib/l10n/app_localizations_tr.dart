@@ -4811,11 +4811,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get trustScoreHigh => 'Çok Güvenilir';
 
   @override
-  String get influenceRankLabel => 'Ağ Sıralaması';
+  String get influenceRankLabel => 'Etki Skoru';
 
   @override
   String get influenceRankHint =>
-      'Platformdaki takipçi ağına göre hesaplanan etki sıralaması. Ne kadar düşük numara, o kadar geniş erişim. Haftalık güncellenir.';
+      'Platformdaki takipçi ağına göre hesaplanan etki skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.';
 
   @override
   String influenceRankValue(int rank) {
@@ -5180,4 +5180,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String notifFollowAcceptedTitle(Object username) {
     return '@$username takip isteğini onayladı';
   }
+
+  @override
+  String get errFollowSelf => 'Kendinizi takip edemezsiniz';
+
+  @override
+  String get errUserNotFound => 'Kullanıcı bulunamadı';
+
+  @override
+  String get errAlreadyFollowing =>
+      'Zaten takip ediyorsunuz veya istek gönderilmiş';
+
+  @override
+  String get errFollowRecordNotFound => 'Takip kaydı bulunamadı';
+
+  @override
+  String get errFollowRequestNotFound => 'Takip isteği bulunamadı';
 }

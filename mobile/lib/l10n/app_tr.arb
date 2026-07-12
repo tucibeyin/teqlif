@@ -2771,4 +2771,9 @@
       "username": {}
     }
   }
+  ,"errFollowSelf": "Kendinizi takip edemezsiniz",
+  "errUserNotFound": "Kullanıcı bulunamadı",
+  "errAlreadyFollowing": "Zaten takip ediyorsunuz veya istek gönderilmiş",
+  "errFollowRecordNotFound": "Takip kaydı bulunamadı",
+  "errFollowRequestNotFound": "Takip isteği bulunamadı"
 }

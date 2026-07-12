@@ -4808,11 +4808,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trustScoreHigh => 'Highly Trusted';
 
   @override
-  String get influenceRankLabel => 'Network Rank';
+  String get influenceRankLabel => 'Influence Score';
 
   @override
   String get influenceRankHint =>
-      'Influence ranking based on the follower network. The lower the number, the broader your reach. Updated weekly.';
+      'Influence score based on the follower network. The higher the score, the broader your reach. Updated weekly.';
 
   @override
   String influenceRankValue(int rank) {
@@ -5178,4 +5178,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String notifFollowAcceptedTitle(Object username) {
     return '@$username accepted your follow request';
   }
+
+  @override
+  String get errFollowSelf => 'You cannot follow yourself';
+
+  @override
+  String get errUserNotFound => 'User not found';
+
+  @override
+  String get errAlreadyFollowing => 'Already following or request sent';
+
+  @override
+  String get errFollowRecordNotFound => 'Follow record not found';
+
+  @override
+  String get errFollowRequestNotFound => 'Follow request not found';
 }

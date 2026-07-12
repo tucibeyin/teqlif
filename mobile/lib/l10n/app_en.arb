@@ -2808,4 +2808,9 @@
       "username": {}
     }
   }
+  ,"errFollowSelf": "You cannot follow yourself",
+  "errUserNotFound": "User not found",
+  "errAlreadyFollowing": "Already following or request sent",
+  "errFollowRecordNotFound": "Follow record not found",
+  "errFollowRequestNotFound": "Follow request not found"
 }

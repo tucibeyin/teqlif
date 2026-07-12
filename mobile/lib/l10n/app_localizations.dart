@@ -8697,13 +8697,13 @@ abstract class AppLocalizations {
   /// No description provided for @influenceRankLabel.
   ///
   /// In tr, this message translates to:
-  /// **'Ağ Sıralaması'**
+  /// **'Etki Skoru'**
   String get influenceRankLabel;
 
   /// No description provided for @influenceRankHint.
   ///
   /// In tr, this message translates to:
-  /// **'Platformdaki takipçi ağına göre hesaplanan etki sıralaması. Ne kadar düşük numara, o kadar geniş erişim. Haftalık güncellenir.'**
+  /// **'Platformdaki takipçi ağına göre hesaplanan etki skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.'**
   String get influenceRankHint;
 
   /// No description provided for @influenceRankValue.
@@ -9335,6 +9335,36 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'@{username} takip isteğini onayladı'**
   String notifFollowAcceptedTitle(Object username);
+
+  /// No description provided for @errFollowSelf.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kendinizi takip edemezsiniz'**
+  String get errFollowSelf;
+
+  /// No description provided for @errUserNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanıcı bulunamadı'**
+  String get errUserNotFound;
+
+  /// No description provided for @errAlreadyFollowing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Zaten takip ediyorsunuz veya istek gönderilmiş'**
+  String get errAlreadyFollowing;
+
+  /// No description provided for @errFollowRecordNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Takip kaydı bulunamadı'**
+  String get errFollowRecordNotFound;
+
+  /// No description provided for @errFollowRequestNotFound.
+  ///
+  /// In tr, this message translates to:
+  /// **'Takip isteği bulunamadı'**
+  String get errFollowRequestNotFound;
 }
 
 class _AppLocalizationsDelegate

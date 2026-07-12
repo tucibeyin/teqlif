@@ -2773,4 +2773,9 @@
       "username": {}
     }
   }
+  ,"errFollowSelf": "Вы не можете подписаться на себя",
+  "errUserNotFound": "Пользователь не найден",
+  "errAlreadyFollowing": "Вы уже подписаны или запрос отправлен",
+  "errFollowRecordNotFound": "Запись о подписке не найдена",
+  "errFollowRequestNotFound": "Запрос на подписку не найден"
 }

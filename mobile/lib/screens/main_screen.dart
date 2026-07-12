@@ -289,6 +289,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         break;
 
       // ── Profil bildirimi ─────────────────────────────────────────────────
+      case 'follow_accepted':
       case 'follow':
         final username = data['sender_username'] as String? ?? '';
         if (username.isNotEmpty) {

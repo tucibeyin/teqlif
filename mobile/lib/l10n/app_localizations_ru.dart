@@ -4858,11 +4858,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get trustScoreHigh => 'Очень надёжный';
 
   @override
-  String get influenceRankLabel => 'Рейтинг в сети';
+  String get influenceRankLabel => 'Оценка Влияния';
 
   @override
   String get influenceRankHint =>
-      'Рейтинг влияния на основе сети подписчиков. Чем меньше число, тем шире охват. Обновляется еженедельно.';
+      'Оценка влияния на основе сети подписчиков. Чем выше балл, тем шире ваш охват. Обновляется еженедельно.';
 
   @override
   String influenceRankValue(int rank) {
@@ -5228,4 +5228,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String notifFollowAcceptedTitle(Object username) {
     return '@$username принял ваш запрос';
   }
+
+  @override
+  String get errFollowSelf => 'Вы не можете подписаться на себя';
+
+  @override
+  String get errUserNotFound => 'Пользователь не найден';
+
+  @override
+  String get errAlreadyFollowing => 'Вы уже подписаны или запрос отправлен';
+
+  @override
+  String get errFollowRecordNotFound => 'Запись о подписке не найдена';
+
+  @override
+  String get errFollowRequestNotFound => 'Запрос на подписку не найден';
 }
