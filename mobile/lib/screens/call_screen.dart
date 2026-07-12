@@ -43,7 +43,13 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
-    _proximitySubscription.cancel();
+    try {
+      _proximitySubscription.cancel().catchError((e) {
+        debugPrint('[CallScreen] Proximity cancel error: $e');
+      });
+    } catch (e) {
+      debugPrint('[CallScreen] Proximity cancel sync error: $e');
+    }
     CallService.instance.state.removeListener(_onStateChange);
     super.dispose();
   }
