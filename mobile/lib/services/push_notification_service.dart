@@ -163,7 +163,6 @@ class PushNotificationService {
   static final _messaging = FirebaseMessaging.instance;
   static bool _earlyDone  = false;
   static bool _fullDone   = false;
-  static bool _tokenForcedRefreshed = false;
 
   /// Gelen FCM + yerel bildirim verilerini broadcast eden stream.
   static final StreamController<Map<String, dynamic>> notificationStream =
@@ -370,15 +369,6 @@ class PushNotificationService {
 
   static Future<void> refreshToken() async {
     debugPrint('[FCM] refreshToken');
-    if (!_tokenForcedRefreshed) {
-      _tokenForcedRefreshed = true;
-      try {
-        await _messaging.deleteToken();
-        debugPrint('[FCM] Eski token silindi');
-      } catch (e) {
-        debugPrint('[FCM] Token silinemedi: $e');
-      }
-    }
     await _registerToken();
   }
 
