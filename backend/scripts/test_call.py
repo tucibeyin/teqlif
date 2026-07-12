@@ -47,7 +47,11 @@ def login(identifier: str, password: str) -> tuple[str, int, str]:
 def api(method: str, path: str, token: str, **kwargs):
     h = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     r = httpx.request(method, f"{BASE}{path}", headers=h, timeout=10, **kwargs)
-    r.raise_for_status()
+    try:
+        r.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        print(f"API Error {r.status_code}: {r.text}")
+        raise e
     return r.json()
 
 
