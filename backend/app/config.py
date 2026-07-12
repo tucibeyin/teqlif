@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     minio_bucket: str = "teqlif"
     minio_secure: bool = False
 
+    # APNS VoIP Push Ayarları
+    apns_cert_path: str = ""
+    ios_bundle_id: str = "teqlif"
+    apns_use_sandbox: bool = False
+
     class Config:
         env_file = ".env"
 

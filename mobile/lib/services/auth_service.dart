@@ -212,12 +212,17 @@ class AuthService {
     await StorageService.clear();
   }
 
-  static Future<void> saveFcmToken(String token) async {
+  static Future<void> saveFcmToken(String token, {String? voipToken}) async {
+    final body = <String, dynamic>{'token': token};
+    if (voipToken != null) {
+      body['voip_token'] = voipToken;
+    }
+    
     await apiCall(
       () async => http.post(
         Uri.parse('$kBaseUrl/auth/fcm-token'),
         headers: await _headers(auth: true),
-        body: jsonEncode({'token': token}),
+        body: jsonEncode(body),
       ),
     );
   }

@@ -392,7 +392,17 @@ class PushNotificationService {
 
   static Future<void> _sendTokenToBackend(String token) async {
     try {
-      await AuthService.saveFcmToken(token);
+      String? voipToken;
+      if (Platform.isIOS) {
+        try {
+          voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
+          debugPrint('[CallKit] VoIP token alındı: ${voipToken != null ? "${voipToken.substring(0, 15)}…" : "NULL"}');
+        } catch (e) {
+          debugPrint('[CallKit] VoIP token alınamadı: $e');
+        }
+      }
+      
+      await AuthService.saveFcmToken(token, voipToken: voipToken);
       debugPrint('[FCM] Token backend\'e kaydedildi ✓');
     } catch (e) {
       debugPrint('[FCM] Token gönderilemedi: $e');

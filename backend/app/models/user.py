@@ -18,6 +18,7 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     fcm_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    voip_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     profile_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     profile_image_thumb_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notification_prefs: Mapped[dict | None] = mapped_column(JSON, nullable=True)
