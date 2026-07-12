@@ -59,10 +59,16 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
   Future<void> _handleAction(int followerId, String action) async {
     try {
       final token = await StorageService.getToken();
+      final uri = Uri.parse('$kBaseUrl/follows/$followerId/$action');
+      debugPrint('[FollowRequests] Action: $action on follower_id: $followerId | URI: $uri');
+      
       final resp = await http.post(
-        Uri.parse('$kBaseUrl/follows/requests/$followerId/$action'),
+        uri,
         headers: {'Authorization': 'Bearer $token'},
       );
+      
+      debugPrint('[FollowRequests] Response status: ${resp.statusCode} body: ${resp.body}');
+      
       if (resp.statusCode == 200) {
         setState(() {
           _requests.removeWhere((req) => req['id'] == followerId);
@@ -74,7 +80,8 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
           );
         }
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[FollowRequests] Network error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Network error. Please try again.')),
