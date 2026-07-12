@@ -11,7 +11,7 @@ from app.utils.redis_client import get_redis
 security_logger = SecurityLogger()
 
 _RL_WINDOW  = 60     # saniye
-_RL_LIMIT   = 120    # istek/pencere — aşınca auto-ban
+_RL_LIMIT   = 600    # istek/pencere — aşınca auto-ban (DDoS koruması)
 _RL_BAN_TTL = 900    # 15 dakika
 
 

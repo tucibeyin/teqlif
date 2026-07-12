@@ -19,7 +19,7 @@ class SecurityMiddleware:
     # Rate limiting decorators
     def auth_rate_limit(self):
         """Authentication endpoint için rate limiting"""
-        return self.shared_limiter.limit("3 per minute")
+        return self.shared_limiter.limit("10 per minute")
     
     def auction_rate_limit(self):
         """Açık artırma endpoint'leri için rate limiting"""
@@ -27,11 +27,11 @@ class SecurityMiddleware:
     
     def general_rate_limit(self):
         """Genel API endpoint'leri için rate limiting"""
-        return self.shared_limiter.limit("50 per minute")
+        return self.shared_limiter.limit("200 per minute")
     
     def upload_rate_limit(self):
         """File upload endpoint'leri için rate limiting"""
-        return self.shared_limiter.limit("5 per hour")
+        return self.shared_limiter.limit("50 per hour")
 
 # Security headers middleware
 _DEFAULT_CSP = (
@@ -112,9 +112,9 @@ class SuspiciousActivityDetector:
     
     def __init__(self):
         self.thresholds = {
-            "failed_logins": 5,  # Saatlik limit
+            "failed_logins": 10,  # Saatlik limit
             "auction_bids": 10,  # Dakikada
-            "upload_attempts": 20  # Saatlik
+            "upload_attempts": 50  # Saatlik
         }
     
     async def check_failed_login(self, ip_address: str, username: str):
@@ -126,7 +126,7 @@ class SuspiciousActivityDetector:
         await redis.expire(key, 3600)  # 1 saat
         
         if failed_count >= self.thresholds["failed_logins"]:
-            await block_suspicious_ip(ip_address, 60)
+            await block_suspicious_ip(ip_address, 15)
             
     async def check_auction_abuse(self, ip_address: str, user_id: int):
         """Açık artırma abuse tespiti"""
@@ -145,10 +145,10 @@ class SecurityConfig:
     
     # Rate limiting thresholds
     RATE_LIMITS = {
-        "login_attempts": {"limit": 3, "per": "minute"},
+        "login_attempts": {"limit": 10, "per": "minute"},
         "auction_bids": {"limit": 10, "per": "minute"},
-        "file_uploads": {"limit": 5, "per": "hour"},
-        "api_general": {"limit": 50, "per": "hour"},
+        "file_uploads": {"limit": 50, "per": "hour"},
+        "api_general": {"limit": 200, "per": "minute"},
         "admin_access": {"limit": 20, "per": "hour"}
     }
     
