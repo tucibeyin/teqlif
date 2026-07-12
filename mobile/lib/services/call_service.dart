@@ -105,9 +105,7 @@ class CallState {
 }
 
 class CallService {
-  CallService._() {
-    _initAudio();
-  }
+  CallService._();
   static final CallService instance = CallService._();
 
   final ValueNotifier<CallState> state = ValueNotifier(const CallState());
@@ -123,24 +121,6 @@ class CallService {
   Timer? _hapticLoopTimer;
   
   final AudioPlayer _audioPlayer = AudioPlayer();
-
-  Future<void> _initAudio() async {
-    final session = await AudioSession.instance;
-    await session.configure(AudioSessionConfiguration(
-      avAudioSessionCategory: AVAudioSessionCategory.playback,
-      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers | AVAudioSessionCategoryOptions.defaultToSpeaker,
-      avAudioSessionMode: AVAudioSessionMode.defaultMode,
-      avAudioSessionRouteSharingPolicy: AVAudioSessionRouteSharingPolicy.defaultPolicy,
-      avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
-      androidAudioAttributes: const AndroidAudioAttributes(
-        contentType: AndroidAudioContentType.music,
-        usage: AndroidAudioUsage.media,
-        flags: AndroidAudioFlags.none,
-      ),
-      androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientMayDuck,
-      androidWillPauseWhenDucked: true,
-    ));
-  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
