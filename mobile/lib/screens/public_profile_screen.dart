@@ -674,7 +674,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               calleeId: userId,
                               calleeUsername: widget.username,
                               calleeAvatar:
-                                  _profileData?['profile_image_thumb_url']
+                                  _user?['profile_image_thumb_url']
                                       as String?,
                             );
                             nav.push(
