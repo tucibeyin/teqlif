@@ -545,8 +545,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return IncomingCallOverlay(
-      child: Scaffold(
+    return Scaffold(
       body: Column(
         children: [
           const OfflineBanner(),
@@ -590,6 +589,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
-    ));
+    );
   }
 }
