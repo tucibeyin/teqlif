@@ -17,6 +17,7 @@ import 'profile_screen.dart';
 import 'messages_screen.dart';
 import 'public_profile_screen.dart';
 import 'search_screen.dart';
+import 'follow_requests_screen.dart';
 import 'live/live_list_screen.dart';
 import 'live/swipe_live_screen.dart';
 import '../l10n/app_localizations.dart';
@@ -295,6 +296,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         } else {
           _navigateToNotificationsTab();
         }
+        break;
+
+      case 'follow_request':
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const FollowRequestsScreen()),
+        );
         break;
 
       // ── Gelen arama ───────────────────────────────────────────────────────
