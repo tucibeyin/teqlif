@@ -431,7 +431,7 @@ class CallService {
       // Force iOS to use earpiece and playAndRecord category before LiveKit messes with it
       try {
         final session = await AudioSession.instance;
-        await session.configure(const AudioSessionConfiguration(
+        await session.configure(AudioSessionConfiguration(
           avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
           avAudioSessionMode: AVAudioSessionMode.voiceChat,
           avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
