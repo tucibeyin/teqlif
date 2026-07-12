@@ -79,8 +79,12 @@ async def send_push(
                     payload=messaging.APNSPayload(
                         aps=messaging.Aps(
                             content_available=True,
-                            sound=None if is_call else "default",
+                            sound="default",
                             badge=badge,
+                            alert=messaging.ApsAlert(
+                                title=title,
+                                body=body,
+                            ) if is_call else None,
                         )
                     ),
                 ),
