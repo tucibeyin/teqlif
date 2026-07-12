@@ -92,6 +92,7 @@ class CallService {
   Room? _room;
   Timer? _ringTimer;   // 30s no-answer timeout
   Timer? _elapsedTimer;
+  Timer? _ringtoneLoopTimer; // For iOS ringtone looping
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -184,13 +185,30 @@ class CallService {
       otherAvatar: data['caller_avatar'] as String?,
     ));
 
-    FlutterRingtonePlayer().playRingtone(looping: true);
+    _startRingtoneAndVibration();
+  }
+
+  void _startRingtoneAndVibration() async {
+    // Play immediately
+    FlutterRingtonePlayer().playRingtone(looping: true); // Android handles looping natively
+    
+    // iOS manual ringtone loop (AudioServices plays a short alert that stops)
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      _ringtoneLoopTimer?.cancel();
+      _ringtoneLoopTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+        FlutterRingtonePlayer().playRingtone();
+      });
+    }
+
     if (await Vibration.hasVibrator() == true) {
-      Vibration.vibrate(pattern: [500, 1000, 500, 1000], repeat: 1);
+      // Classic double-tap wait loop for battery efficiency
+      Vibration.vibrate(pattern: [1500, 300, 200, 300], repeat: 0);
     }
   }
 
   void _stopRingtoneAndVibration() {
+    _ringtoneLoopTimer?.cancel();
+    _ringtoneLoopTimer = null;
     FlutterRingtonePlayer().stop();
     Vibration.cancel();
   }
