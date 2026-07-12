@@ -358,6 +358,9 @@ async def update_me(
     if hasattr(data, 'locale') and data.locale is not None:
         current_user.locale = data.locale.strip()
 
+    if data.is_private is not None:
+        current_user.is_private = data.is_private
+
     if data.full_name is not None:
         data.full_name = data.full_name.strip()
         if len(data.full_name) < 2:

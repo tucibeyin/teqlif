@@ -38,7 +38,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   List<dynamic> _listings = [];
   bool _loading = true;
   bool _isOwnProfile = false;
-  bool _isFollowing = false;
+  String _followStatus = 'none';
+  bool _isPrivate = false;
   bool _followLoading = false;
   bool _isBlocked = false;
   Map<String, dynamic>? _ratingSummary;
@@ -122,7 +123,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     final isOwn = info != null && info['username'] == widget.username;
 
     List<dynamic> listings = [];
-    bool isFollowing = false;
+    String followStatus = 'none';
+    bool isPrivate = false;
     bool isBlocked = false;
 
     if (data != null) {
@@ -138,7 +140,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       } catch (_) {}
 
       if (!isOwn && info != null) {
-        isFollowing = (data['is_following'] as bool?) ?? false;
+        followStatus = (data['follow_status'] as String?) ?? 'none';
+        isPrivate = (data['is_private'] as bool?) ?? false;
         isBlocked = (data['is_blocked'] as bool?) ?? false;
       }
 
@@ -160,7 +163,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         _user = data;
         _listings = listings;
         _isOwnProfile = isOwn;
-        _isFollowing = isFollowing;
+        _followStatus = followStatus;
+        _isPrivate = isPrivate;
         _isBlocked = isBlocked;
         _loading = false;
       });
@@ -190,18 +194,21 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     setState(() => _followLoading = true);
     try {
       final headers = await _authHeaders();
-      if (_isFollowing) {
+      if (_followStatus != 'none') {
         await http.delete(
           Uri.parse('$kBaseUrl/follows/$userId'),
           headers: headers,
         );
-        setState(() => _isFollowing = false);
+        setState(() => _followStatus = 'none');
       } else {
-        await http.post(
+        final resp = await http.post(
           Uri.parse('$kBaseUrl/follows/$userId'),
           headers: headers,
         );
-        setState(() => _isFollowing = true);
+        if (resp.statusCode == 200) {
+           final body = jsonDecode(resp.body);
+           setState(() => _followStatus = body['status'] as String? ?? 'accepted');
+        }
       }
       final fresh = await NotificationService.getUserByUsername(
         widget.username,
@@ -549,7 +556,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           }
                         },
                         itemBuilder: (_) => [
-                          if (_isFollowing)
+                          if (_followStatus == 'accepted')
                             PopupMenuItem(
                               value: 'rate',
                               child: Row(
@@ -653,7 +660,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         ),
                       ),
                       // ── Ara (sadece takip ediliyorsa) ────────────────────
-                      if (_isFollowing) ...[
+                      if (_followStatus == 'accepted') ...[
                         GestureDetector(
                           onTap: () async {
                             final nav = Navigator.of(context);
@@ -711,7 +718,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             vertical: 11,
                           ),
                           decoration: BoxDecoration(
-                            color: _isFollowing
+                            color: _followStatus != 'none'
                                 ? AppColors.surfaceVariant(context)
                                 : const Color(0xFF6366F1),
                             borderRadius: BorderRadius.circular(10),
@@ -729,23 +736,27 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      _isFollowing
+                                      _followStatus == 'accepted'
                                           ? Icons.person_remove_outlined
-                                          : Icons.person_add_outlined,
+                                          : _followStatus == 'pending'
+                                              ? Icons.access_time
+                                              : Icons.person_add_outlined,
                                       size: 16,
-                                      color: _isFollowing
+                                      color: _followStatus != 'none'
                                           ? AppColors.textPrimary(context)
                                           : Colors.white,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      _isFollowing
+                                      _followStatus == 'accepted'
                                           ? l.pubProfileFollowingLabel
-                                          : l.pubProfileFollowLabel,
+                                          : _followStatus == 'pending'
+                                              ? l.requested
+                                              : l.pubProfileFollowLabel,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
-                                        color: _isFollowing
+                                        color: _followStatus != 'none'
                                             ? AppColors.textPrimary(context)
                                             : Colors.white,
                                       ),
@@ -777,7 +788,44 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         ),
 
         // ── Arama & Kategori filtresi ──
-        if (!_loading || _listings.isNotEmpty)
+        if (_isPrivate && _followStatus != 'accepted' && !_isOwnProfile)
+          SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.lock_outline,
+                      size: 48,
+                      color: AppColors.textTertiary(context),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l.thisAccountIsPrivate,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l.thisAccountIsPrivateDesc,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else ...[
+          if (!_loading || _listings.isNotEmpty)
           SliverToBoxAdapter(
             child: ListingFilter(
               searchCtrl: _searchCtrl,
@@ -931,6 +979,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               }, childCount: _filteredListings.length),
             ),
           ),
+        ],
       ],
     );
   }

@@ -134,10 +134,10 @@ class UserService:
                 )
             ),
             self.db.scalar(
-                select(func.count()).where(Follow.followed_id == user.id)
+                select(func.count()).where(Follow.followed_id == user.id, Follow.status == "accepted")
             ),
             self.db.scalar(
-                select(func.count()).where(Follow.follower_id == user.id)
+                select(func.count()).where(Follow.follower_id == user.id, Follow.status == "accepted")
             ),
             self.db.scalar(
                 select(LiveStream).where(
@@ -168,8 +168,14 @@ class UserService:
                     )
                 ),
             )
-            is_following = follow_chk is not None
+            if follow_chk:
+                is_following = True
+                follow_status = follow_chk.status
+            else:
+                follow_status = "none"
             is_blocked   = block_chk  is not None
+        else:
+            follow_status = "none"
 
         trust_score = None
         influence_rank = None
@@ -196,6 +202,8 @@ class UserService:
             "follower_count": follower_count,
             "following_count": following_count,
             "is_following": is_following,
+            "follow_status": follow_status,
+            "is_private": user.is_private,
             "is_blocked": is_blocked,
             "is_live": active_stream is not None,
             "active_stream_id": active_stream.id if active_stream else None,

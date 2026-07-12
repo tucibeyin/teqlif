@@ -5,6 +5,7 @@ class User {
   final String fullName;
   final bool isVerified;
   final String? locale;
+  final bool isPrivate;
   final String? phone;
   final bool phoneVerified;
   final String? profileImageUrl;
@@ -20,6 +21,7 @@ class User {
     required this.fullName,
     required this.isVerified,
     this.locale,
+    this.isPrivate = false,
     this.phone,
     this.phoneVerified = false,
     this.profileImageUrl,
@@ -37,6 +39,7 @@ class User {
       fullName: json['full_name'] as String,
       isVerified: json['is_verified'] as bool? ?? false,
       locale: json['locale'] as String?,
+      isPrivate: json['is_private'] as bool? ?? false,
       phone: json['phone'] as String?,
       phoneVerified: json['phone_verified'] as bool? ?? false,
       profileImageUrl: json['profile_image_url'] as String?,

@@ -2747,5 +2747,16 @@
   "callNotifBody": "Gelen Sesli Arama",
   "@callNotifBody": {
     "description": "Incoming call push notification body"
-  }
+  },
+  "privateAccount": "Gizli Hesap",
+  "privateAccountDesc": "Hesabınız gizliyken sizi sadece onayladığınız kişiler takip edebilir.",
+  "followRequests": "Takip İstekleri",
+  "noFollowRequests": "Bekleyen takip isteğiniz yok.",
+  "requested": "İstek Gönderildi",
+  "acceptRequest": "Onayla",
+  "rejectRequest": "Sil",
+  "thisAccountIsPrivate": "Bu hesap gizli",
+  "thisAccountIsPrivateDesc": "Fotoğraf ve videolarını görmek için bu hesabı takip et.",
+  "notifFollowRequestTitle": "Yeni Takip İsteği",
+  "notifFollowAcceptedTitle": "Takip İsteği Onaylandı"
 }

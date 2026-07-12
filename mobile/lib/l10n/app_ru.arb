@@ -2749,5 +2749,16 @@
   "callNotifBody": "Входящий голосовой вызов",
   "@callNotifBody": {
     "description": "Incoming call push notification body"
-  }
+  },
+  "privateAccount": "Закрытый аккаунт",
+  "privateAccountDesc": "Когда ваш аккаунт закрыт, только одобренные вами пользователи могут следить за вами.",
+  "followRequests": "Запросы на подписку",
+  "noFollowRequests": "Нет ожидающих запросов.",
+  "requested": "Запрошено",
+  "acceptRequest": "Принять",
+  "rejectRequest": "Удалить",
+  "thisAccountIsPrivate": "Это закрытый аккаунт",
+  "thisAccountIsPrivateDesc": "Подпишитесь, чтобы видеть фото и видео.",
+  "notifFollowRequestTitle": "Новый запрос на подписку",
+  "notifFollowAcceptedTitle": "Запрос на подписку принят"
 }

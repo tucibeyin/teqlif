@@ -5108,4 +5108,39 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get callNotifBody => 'مكالمة صوتية واردة';
+
+  @override
+  String get privateAccount => 'حساب خاص';
+
+  @override
+  String get privateAccountDesc =>
+      'عندما يكون حسابك خاصًا، يمكن فقط للأشخاص الذين توافق عليهم متابعتك.';
+
+  @override
+  String get followRequests => 'طلبات المتابعة';
+
+  @override
+  String get noFollowRequests => 'لا توجد طلبات متابعة معلقة.';
+
+  @override
+  String get requested => 'تم الطلب';
+
+  @override
+  String get acceptRequest => 'قبول';
+
+  @override
+  String get rejectRequest => 'حذف';
+
+  @override
+  String get thisAccountIsPrivate => 'هذا الحساب خاص';
+
+  @override
+  String get thisAccountIsPrivateDesc =>
+      'تابع هذا الحساب لرؤية صوره ومقاطع الفيديو الخاصة به.';
+
+  @override
+  String get notifFollowRequestTitle => 'طلب متابعة جديد';
+
+  @override
+  String get notifFollowAcceptedTitle => 'تم قبول طلب المتابعة';
 }

@@ -2749,5 +2749,16 @@
   "callNotifBody": "مكالمة صوتية واردة",
   "@callNotifBody": {
     "description": "Incoming call push notification body"
-  }
+  },
+  "privateAccount": "حساب خاص",
+  "privateAccountDesc": "عندما يكون حسابك خاصًا، يمكن فقط للأشخاص الذين توافق عليهم متابعتك.",
+  "followRequests": "طلبات المتابعة",
+  "noFollowRequests": "لا توجد طلبات متابعة معلقة.",
+  "requested": "تم الطلب",
+  "acceptRequest": "قبول",
+  "rejectRequest": "حذف",
+  "thisAccountIsPrivate": "هذا الحساب خاص",
+  "thisAccountIsPrivateDesc": "تابع هذا الحساب لرؤية صوره ومقاطع الفيديو الخاصة به.",
+  "notifFollowRequestTitle": "طلب متابعة جديد",
+  "notifFollowAcceptedTitle": "تم قبول طلب المتابعة"
 }

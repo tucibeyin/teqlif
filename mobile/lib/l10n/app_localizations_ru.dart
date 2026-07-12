@@ -5186,4 +5186,39 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get callNotifBody => 'Входящий голосовой вызов';
+
+  @override
+  String get privateAccount => 'Закрытый аккаунт';
+
+  @override
+  String get privateAccountDesc =>
+      'Когда ваш аккаунт закрыт, только одобренные вами пользователи могут следить за вами.';
+
+  @override
+  String get followRequests => 'Запросы на подписку';
+
+  @override
+  String get noFollowRequests => 'Нет ожидающих запросов.';
+
+  @override
+  String get requested => 'Запрошено';
+
+  @override
+  String get acceptRequest => 'Принять';
+
+  @override
+  String get rejectRequest => 'Удалить';
+
+  @override
+  String get thisAccountIsPrivate => 'Это закрытый аккаунт';
+
+  @override
+  String get thisAccountIsPrivateDesc =>
+      'Подпишитесь, чтобы видеть фото и видео.';
+
+  @override
+  String get notifFollowRequestTitle => 'Новый запрос на подписку';
+
+  @override
+  String get notifFollowAcceptedTitle => 'Запрос на подписку принят';
 }

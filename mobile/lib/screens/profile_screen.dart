@@ -43,6 +43,7 @@ import 'pro_hub_screen.dart';
 import 'notification_settings_screen.dart';
 import 'blocked_users_screen.dart';
 import 'account_info_screen.dart';
+import 'follow_requests_screen.dart';
 import 'purchases_screen.dart';
 import 'sales_screen.dart';
 import '../services/share_service.dart';
@@ -1198,12 +1199,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _biometricAvailable = false;
   // widget.user stale olabilir — StorageService'ten güncel değer okunur
   bool _isPremium = false;
+  bool _isPrivate = false;
 
   @override
   void initState() {
     super.initState();
     // widget.user'dan ön değer al (anlık gösterim için)
     _isPremium = widget.user?['is_premium'] == true;
+    _isPrivate = widget.user?['is_private'] == true;
     _loadBiometricState();
     _loadPremiumStatus();
   }
@@ -1225,7 +1228,34 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   Future<void> _loadPremiumStatus() async {
     final info = await StorageService.getUserInfo();
     if (mounted && info != null) {
-      setState(() => _isPremium = info['is_premium'] == true);
+      setState(() {
+         _isPremium = info['is_premium'] == true;
+         _isPrivate = info['is_private'] == true;
+      });
+    }
+  }
+
+  Future<void> _togglePrivateAccount(bool val) async {
+    setState(() => _isPrivate = val);
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.patch(
+        Uri.parse('$kBaseUrl/auth/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'is_private': val}),
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        await StorageService.saveUserInfo(data);
+      } else {
+        setState(() => _isPrivate = !val);
+      }
+    } catch (_) {
+      setState(() => _isPrivate = !val);
     }
   }
 
@@ -1875,6 +1905,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             title: l.profileAccountSection,
             items: [
               _SettingsTile(
+                icon: Icons.person_add_outlined,
+                label: l.followRequests,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FollowRequestsScreen()),
+                ),
+              ),
+              _SettingsTile(
                 icon: Icons.manage_accounts_outlined,
                 label: l.accountInfoMenuLabel,
                 onTap: () => Navigator.push(
@@ -1908,6 +1946,17 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     builder: (_) => const BlockedUsersScreen(),
                   ),
                 ),
+              ),
+              SwitchListTile(
+                secondary: Icon(Icons.lock_outline, color: AppColors.iconColor(context)),
+                title: Text(l.privateAccount, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
+                subtitle: Text(
+                  l.privateAccountDesc,
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                ),
+                value: _isPrivate,
+                activeThumbColor: kPrimary,
+                onChanged: _togglePrivateAccount,
               ),
               if (_biometricAvailable)
                 SwitchListTile(

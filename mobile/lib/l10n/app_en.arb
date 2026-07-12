@@ -2784,5 +2784,16 @@
   "callNotifBody": "Incoming Voice Call",
   "@callNotifBody": {
     "description": "Incoming call push notification body"
-  }
+  },
+  "privateAccount": "Private Account",
+  "privateAccountDesc": "When your account is private, only people you approve can follow you.",
+  "followRequests": "Follow Requests",
+  "noFollowRequests": "No pending follow requests.",
+  "requested": "Requested",
+  "acceptRequest": "Accept",
+  "rejectRequest": "Delete",
+  "thisAccountIsPrivate": "This account is private",
+  "thisAccountIsPrivateDesc": "Follow this account to see their photos and videos.",
+  "notifFollowRequestTitle": "New Follow Request",
+  "notifFollowAcceptedTitle": "Follow Request Accepted"
 }

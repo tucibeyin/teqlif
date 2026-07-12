@@ -5136,4 +5136,39 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get callNotifBody => 'Incoming Voice Call';
+
+  @override
+  String get privateAccount => 'Private Account';
+
+  @override
+  String get privateAccountDesc =>
+      'When your account is private, only people you approve can follow you.';
+
+  @override
+  String get followRequests => 'Follow Requests';
+
+  @override
+  String get noFollowRequests => 'No pending follow requests.';
+
+  @override
+  String get requested => 'Requested';
+
+  @override
+  String get acceptRequest => 'Accept';
+
+  @override
+  String get rejectRequest => 'Delete';
+
+  @override
+  String get thisAccountIsPrivate => 'This account is private';
+
+  @override
+  String get thisAccountIsPrivateDesc =>
+      'Follow this account to see their photos and videos.';
+
+  @override
+  String get notifFollowRequestTitle => 'New Follow Request';
+
+  @override
+  String get notifFollowAcceptedTitle => 'Follow Request Accepted';
 }

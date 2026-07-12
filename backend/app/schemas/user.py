@@ -48,6 +48,7 @@ class UserOut(BaseModel):
     is_active: bool
     is_verified: bool
     locale: Optional[str] = None
+    is_private: bool = False
     phone: Optional[str] = None
     phone_verified: bool = False
     profile_image_url: Optional[str] = None
@@ -83,6 +84,7 @@ class UserUpdate(BaseModel):
     youtube_url: Optional[str] = None
     tiktok_url: Optional[str] = None
     locale: Optional[str] = None
+    is_private: Optional[bool] = None
 
 
 class TokenOut(BaseModel):

@@ -9263,6 +9263,72 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Gelen Sesli Arama'**
   String get callNotifBody;
+
+  /// No description provided for @privateAccount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gizli Hesap'**
+  String get privateAccount;
+
+  /// No description provided for @privateAccountDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabınız gizliyken sizi sadece onayladığınız kişiler takip edebilir.'**
+  String get privateAccountDesc;
+
+  /// No description provided for @followRequests.
+  ///
+  /// In tr, this message translates to:
+  /// **'Takip İstekleri'**
+  String get followRequests;
+
+  /// No description provided for @noFollowRequests.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bekleyen takip isteğiniz yok.'**
+  String get noFollowRequests;
+
+  /// No description provided for @requested.
+  ///
+  /// In tr, this message translates to:
+  /// **'İstek Gönderildi'**
+  String get requested;
+
+  /// No description provided for @acceptRequest.
+  ///
+  /// In tr, this message translates to:
+  /// **'Onayla'**
+  String get acceptRequest;
+
+  /// No description provided for @rejectRequest.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sil'**
+  String get rejectRequest;
+
+  /// No description provided for @thisAccountIsPrivate.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu hesap gizli'**
+  String get thisAccountIsPrivate;
+
+  /// No description provided for @thisAccountIsPrivateDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fotoğraf ve videolarını görmek için bu hesabı takip et.'**
+  String get thisAccountIsPrivateDesc;
+
+  /// No description provided for @notifFollowRequestTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni Takip İsteği'**
+  String get notifFollowRequestTitle;
+
+  /// No description provided for @notifFollowAcceptedTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Takip İsteği Onaylandı'**
+  String get notifFollowAcceptedTitle;
 }
 
 class _AppLocalizationsDelegate

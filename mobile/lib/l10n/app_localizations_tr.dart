@@ -5138,4 +5138,39 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get callNotifBody => 'Gelen Sesli Arama';
+
+  @override
+  String get privateAccount => 'Gizli Hesap';
+
+  @override
+  String get privateAccountDesc =>
+      'Hesabınız gizliyken sizi sadece onayladığınız kişiler takip edebilir.';
+
+  @override
+  String get followRequests => 'Takip İstekleri';
+
+  @override
+  String get noFollowRequests => 'Bekleyen takip isteğiniz yok.';
+
+  @override
+  String get requested => 'İstek Gönderildi';
+
+  @override
+  String get acceptRequest => 'Onayla';
+
+  @override
+  String get rejectRequest => 'Sil';
+
+  @override
+  String get thisAccountIsPrivate => 'Bu hesap gizli';
+
+  @override
+  String get thisAccountIsPrivateDesc =>
+      'Fotoğraf ve videolarını görmek için bu hesabı takip et.';
+
+  @override
+  String get notifFollowRequestTitle => 'Yeni Takip İsteği';
+
+  @override
+  String get notifFollowAcceptedTitle => 'Takip İsteği Onaylandı';
 }
