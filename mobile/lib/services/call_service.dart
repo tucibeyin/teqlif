@@ -8,7 +8,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:vibration/vibration.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:audioplayers/audioplayers.dart' hide AVAudioSessionCategory, AVAudioSessionCategoryOptions;
 import '../config/api.dart';
 import '../services/storage_service.dart';
 
