@@ -10,7 +10,7 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import 'storage_service.dart';
 import 'call_service.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
 
