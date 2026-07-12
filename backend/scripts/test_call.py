@@ -93,7 +93,8 @@ async def caller_mode(token: str, me: str, callee_id: int, callee: str):
 
             msg = json.loads(raw)
             t   = msg.get("type", "")
-            print(f"\n   ← {t}")
+            
+            print(f"\n[WS LOG] {msg}")
 
             if t == "call_accepted":
                 print("✅  KABUL EDİLDİ!")
@@ -129,9 +130,9 @@ async def callee_mode(token: str, me: str, auto: bool):
             msg = json.loads(raw)
             t   = msg.get("type", "")
 
+            print(f"\n[WS LOG] {msg}")
+
             if t not in ("call_incoming", "incoming_call"):
-                if t:
-                    print(f"   ← {t}")
                 continue
 
             call_id = (msg.get("call_id")
@@ -191,6 +192,9 @@ async def _in_call(call_id: int, token: str, room: str, ws: websockets.WebSocket
                     res = recv_task.result()
                     msg = json.loads(res)
                     t = msg.get("type", "")
+                    
+                    print(f"\n[WS LOG] {msg}")
+                    
                     if t == "call_ended":
                         print("\n🔴  Karşı taraf aramayı sonlandırdı.")
                         done.set()

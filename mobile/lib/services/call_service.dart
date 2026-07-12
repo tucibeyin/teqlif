@@ -184,16 +184,22 @@ class CallService {
       otherAvatar: data['caller_avatar'] as String?,
     ));
 
-    FlutterRingtonePlayer().playRingtone();
+    FlutterRingtonePlayer().playRingtone(looping: true);
     if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(pattern: [500, 1000, 500, 1000], repeat: 1);
     }
+  }
+
+  void _stopRingtoneAndVibration() {
+    FlutterRingtonePlayer().stop();
+    Vibration.cancel();
   }
 
   Future<void> acceptCall() async {
     final callId = state.value.callId;
     if (callId == null) return;
 
+    _stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.connecting));
     try {
       final data = await _post('/calls/$callId/accept');
@@ -219,6 +225,7 @@ class CallService {
 
   Future<void> onCallAccepted(Map<String, dynamic> data) async {
     _ringTimer?.cancel();
+    _stopRingtoneAndVibration();
     _setState(state.value.copyWith(
       status: CallStatus.connecting,
       token: data['token'] as String?,
