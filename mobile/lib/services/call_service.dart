@@ -25,6 +25,17 @@ enum CallStatus {
   busy,
 }
 
+class CallApiException implements Exception {
+  final int statusCode;
+  final String? code;
+  final String message;
+
+  CallApiException(this.statusCode, this.code, this.message);
+
+  @override
+  String toString() => 'CallApiException($statusCode): $code - $message';
+}
+
 class CallState {
   final CallStatus status;
   final int? callId;
@@ -105,16 +116,7 @@ class CallService {
     };
   }
 
-class CallApiException implements Exception {
-  final int statusCode;
-  final String? code;
-  final String message;
 
-  CallApiException(this.statusCode, this.code, this.message);
-
-  @override
-  String toString() => 'CallApiException($statusCode): $code - $message';
-}
 
   Future<Map<String, dynamic>> _post(String path, [Map<String, dynamic>? body]) async {
     final resp = await http.post(
