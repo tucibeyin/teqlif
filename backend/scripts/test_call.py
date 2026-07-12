@@ -210,15 +210,16 @@ async def _in_call(call_id: int, token: str, room_name: str, ws: websockets.WebS
                     msg = json.loads(res)
                     t = msg.get("type", "")
                     
-                    print(f"\n[WS LOG] {msg}")
+                    print(f"\n[DEBUG_WS_RAW_LOG] Raw WS Message: {res}")
+                    print(f"[WS LOG] {msg}")
                     
                     if t == "call_ended":
                         print("\n🔴  Karşı taraf aramayı sonlandırdı.")
                         done.set()
                     else:
                         recv_task = asyncio.create_task(ws.recv())
-                except websockets.exceptions.ConnectionClosed:
-                    print("\n🔴  Websocket bağlantısı kapandı.")
+                except websockets.exceptions.ConnectionClosed as e:
+                    print(f"\n🔴  Websocket bağlantısı kapandı. Exception: {e}")
                     done.set()
                 except Exception as e:
                     print(f"\n🔴  WS Hatası: {e}")
