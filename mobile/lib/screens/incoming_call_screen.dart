@@ -36,6 +36,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
     // If the caller ends before we answer, pop automatically
     CallService.instance.state.addListener(_onStateChange);
+    
+    // Start loud ringtone and haptic only when full screen is open
+    CallService.instance.startRingtoneAndVibration();
   }
 
   Future<void> _onStateChange() async {
@@ -93,6 +96,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   @override
   void dispose() {
     _pulseCtrl.dispose();
+    CallService.instance.stopRingtoneAndVibration();
     CallService.instance.state.removeListener(_onStateChange);
     super.dispose();
   }

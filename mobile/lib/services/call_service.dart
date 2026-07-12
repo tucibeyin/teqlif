@@ -230,14 +230,18 @@ class CallService {
       otherAvatar: data['caller_avatar'] as String?,
     ));
 
-    _startRingtoneAndVibration();
+    playNotification();
   }
 
-  void _startRingtoneAndVibration() async {
+  void playNotification() {
+    FlutterRingtonePlayer().playNotification();
+  }
+
+  void startRingtoneAndVibration() async {
     // Play immediately
     FlutterRingtonePlayer().playRingtone(looping: true); // Android handles looping natively
     
-    // iOS manual ringtone loop (AudioServices plays a short alert that stops)
+    // iOS manual ringtone loop
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       _ringtoneLoopTimer?.cancel();
       _ringtoneLoopTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
@@ -246,12 +250,11 @@ class CallService {
     }
 
     if (await Vibration.hasVibrator() == true) {
-      // Classic double-tap wait loop for battery efficiency
-      Vibration.vibrate(pattern: [1500, 300, 200, 300], repeat: 0);
+      Vibration.vibrate(pattern: [2000, 500, 2000, 500], repeat: 0);
     }
   }
 
-  void _stopRingtoneAndVibration() {
+  void stopRingtoneAndVibration() {
     _ringtoneLoopTimer?.cancel();
     _ringtoneLoopTimer = null;
     FlutterRingtonePlayer().stop();
@@ -262,7 +265,7 @@ class CallService {
     final callId = state.value.callId;
     if (callId == null) return;
 
-    _stopRingtoneAndVibration();
+    stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.connecting));
     try {
       final data = await _post('/calls/$callId/accept');
@@ -288,7 +291,7 @@ class CallService {
 
   Future<void> onCallAccepted(Map<String, dynamic> data) async {
     _ringTimer?.cancel();
-    _stopRingtoneAndVibration();
+    stopRingtoneAndVibration();
     _setState(state.value.copyWith(
       status: CallStatus.connecting,
       token: data['token'] as String?,
@@ -302,7 +305,7 @@ class CallService {
   }
 
   void onCallRejected() {
-    _stopRingtoneAndVibration();
+    stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.rejected));
     Future.delayed(const Duration(seconds: 2), reset);
@@ -313,7 +316,7 @@ class CallService {
   }
 
   void onCallMissed() {
-    _stopRingtoneAndVibration();
+    stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.missed));
     Future.delayed(const Duration(seconds: 2), reset);
   }
@@ -435,7 +438,7 @@ class CallService {
   // ── Internal Cleanup ──────────────────────────────────────────────────────
 
   void _hangUpLocally({required CallStatus status}) {
-    _stopRingtoneAndVibration();
+    stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
     _disconnectRoom();
@@ -455,7 +458,7 @@ class CallService {
   }
 
   void reset() {
-    _stopRingtoneAndVibration();
+    stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
     _disconnectRoom();
