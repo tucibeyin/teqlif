@@ -427,10 +427,29 @@ class CallService {
     
     try {
       debugPrint('[CallService] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
+      
+      // Force iOS to use earpiece and playAndRecord category before LiveKit messes with it
+      try {
+        final session = await AudioSession.instance;
+        await session.configure(const AudioSessionConfiguration(
+          avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+          avAudioSessionMode: AVAudioSessionMode.voiceChat,
+          avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
+        ));
+        await Hardware.instance.setSpeakerphoneOn(false);
+      } catch (e) {
+        debugPrint('[CallService] AudioSession pre-config error: $e');
+      }
+
       await _room!.connect(livekitUrl, token);
       debugPrint('[CallService] _joinRoom SUCCESSFUL!');
+      
       await _room!.localParticipant?.setMicrophoneEnabled(true);
+      
+      // Re-assert speakerphone setting after publishing mic
+      await Future.delayed(const Duration(milliseconds: 500));
       await Hardware.instance.setSpeakerphoneOn(false);
+      
       _setState(
         state.value.copyWith(
           status: CallStatus.connected,
