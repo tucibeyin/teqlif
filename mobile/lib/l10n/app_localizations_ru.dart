@@ -5169,4 +5169,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get notifCallMissedBody => 'Пытался дозвониться до вас.';
+
+  @override
+  String callNotifTitle(String username) {
+    return '@$username звонит вам';
+  }
+
+  @override
+  String get callNotifBody => 'Входящий голосовой вызов';
 }

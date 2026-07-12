@@ -5121,4 +5121,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get notifCallMissedBody => 'Size ulaşmaya çalıştı.';
+
+  @override
+  String callNotifTitle(String username) {
+    return '@$username sizi arıyor';
+  }
+
+  @override
+  String get callNotifBody => 'Gelen Sesli Arama';
 }

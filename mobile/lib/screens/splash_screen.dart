@@ -18,6 +18,8 @@ import '../services/version_service.dart';
 import 'force_update_screen.dart';
 import '../widgets/soft_update_dialog.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/locale_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -181,6 +183,13 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<Map<String, dynamic>?> _fetchUser(String token) async {
     try {
       final user = await AuthService.me();
+      
+      // DB'deki locale bilgisini uygulama başlatılırken senkronize et
+      if (user.locale != null && user.locale!.isNotEmpty && mounted) {
+        ProviderScope.containerOf(context, listen: false)
+            .read(localeProvider.notifier)
+            .setLocaleLocally(Locale(user.locale!));
+      }
       
       // Profil bilgisini locale kaydet ki session güncel kalsın
       await StorageService.saveUserInfo(

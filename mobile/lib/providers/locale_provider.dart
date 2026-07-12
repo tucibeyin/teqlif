@@ -61,6 +61,17 @@ class LocaleNotifier extends StateNotifier<Locale> {
       }
     } catch (_) {}
   }
+
+  /// Dili sadece yerel state ve SharedPreferences üzerinde değiştirir (backend çağrısı yapmaz).
+  Future<void> setLocaleLocally(Locale locale) async {
+    state = locale;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kLocaleKey, locale.languageCode);
+    } catch (e, st) {
+      LoggerService.instance.captureException(e, stackTrace: st, tag: _tag, shouldCapture: false);
+    }
+  }
 }
 
 /// Uygulama genelinde erişilebilen dil provider'ı.

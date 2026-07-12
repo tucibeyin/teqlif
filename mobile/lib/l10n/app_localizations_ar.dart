@@ -5091,4 +5091,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get notifCallMissedBody => 'حاول الاتصال بك.';
+
+  @override
+  String callNotifTitle(String username) {
+    return '@$username يتصل بك';
+  }
+
+  @override
+  String get callNotifBody => 'مكالمة صوتية واردة';
 }

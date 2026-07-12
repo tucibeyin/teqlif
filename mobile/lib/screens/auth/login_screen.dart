@@ -45,6 +45,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         identifier: _identifierCtrl.text.trim(),
         password: _passCtrl.text,
       );
+      
+      // Giriş yapıldıktan sonra kullanıcının DB'deki locale bilgisini çek ve senkronize et
+      try {
+        final user = await AuthService.me();
+        if (user.locale != null && user.locale!.isNotEmpty && mounted) {
+          ref.read(localeProvider.notifier).setLocaleLocally(Locale(user.locale!));
+        }
+      } catch (_) {}
+
       PushNotificationService.initialize();
       if (!mounted) return;
       // Biyometrik henüz etkin değilse ve cihaz destekliyorsa teklif et

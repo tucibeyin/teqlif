@@ -9233,6 +9233,18 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Size ulaşmaya çalıştı.'**
   String get notifCallMissedBody;
+
+  /// Incoming call push notification title
+  ///
+  /// In tr, this message translates to:
+  /// **'@{username} sizi arıyor'**
+  String callNotifTitle(String username);
+
+  /// Incoming call push notification body
+  ///
+  /// In tr, this message translates to:
+  /// **'Gelen Sesli Arama'**
+  String get callNotifBody;
 }
 
 class _AppLocalizationsDelegate

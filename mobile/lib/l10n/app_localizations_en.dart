@@ -5119,4 +5119,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notifCallMissedBody => 'Tried to reach you.';
+
+  @override
+  String callNotifTitle(String username) {
+    return '@$username is calling you';
+  }
+
+  @override
+  String get callNotifBody => 'Incoming Voice Call';
 }

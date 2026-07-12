@@ -47,6 +47,7 @@ class UserOut(BaseModel):
     full_name: str
     is_active: bool
     is_verified: bool
+    locale: Optional[str] = None
     phone: Optional[str] = None
     phone_verified: bool = False
     profile_image_url: Optional[str] = None
