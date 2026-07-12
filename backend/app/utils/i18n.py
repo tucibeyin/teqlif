@@ -67,3 +67,11 @@ def get_locale(user=None, request=None, default: str = "tr") -> str:
         if loc and loc in _SUPPORTED:
             return loc
     return default
+
+def _msg(request, data, key: str, default: str) -> str:
+    lang = getattr(data, 'lang', None) if data else None
+    if not lang and request:
+        lang = get_locale(request=request)
+    if not lang:
+        lang = "tr"
+    return _get_t(lang).get(key, default)

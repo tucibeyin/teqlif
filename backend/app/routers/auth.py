@@ -12,7 +12,7 @@ from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS, ForgotPassword, ResetPassword
 from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, set_auth_cookies, clear_auth_cookies
 from app.utils.email import send_verification_code, send_phone_verification_email, send_reset_password_email
-from app.utils.i18n import _get_t
+from app.utils.i18n import _get_t, _msg
 from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException, ConflictException
 from app.core.logger import get_logger, capture_exception
@@ -31,24 +31,6 @@ _PHONE_VERIFY_TOKEN_TTL = 1800  # 30 dakika
 _SUPPORTED_LANGS = {"tr", "en", "ar"}
 
 
-
-def _msg(request, data, key: str, default: str) -> str:
-    lang = getattr(data, 'lang', None) if data else None
-    if not lang and request:
-        lang = _detect_lang(request)
-    if not lang:
-        lang = "tr"
-    return _get_t(lang).get(key, default)
-
-
-def _detect_lang(request: Request) -> str:
-    """Accept-Language header'ından desteklenen dili döner; bulunamazsa 'tr'."""
-    header = request.headers.get("accept-language", "")
-    for part in header.replace(",", ";").split(";"):
-        lang = part.strip()[:2].lower()
-        if lang in _SUPPORTED_LANGS:
-            return lang
-    return "tr"
 
 
 async def _send_verification_email(
