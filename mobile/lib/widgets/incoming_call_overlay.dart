@@ -112,7 +112,10 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     if (!mounted) return;
     debugPrint('[Overlay] _openCallScreen');
     Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => const CallScreen()),
+      MaterialPageRoute(
+        builder: (_) => const CallScreen(),
+        fullscreenDialog: true,
+      ),
     );
   }
 

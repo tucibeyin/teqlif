@@ -548,7 +548,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               calleeUsername: widget.username,
                               calleeAvatar: null,
                             );
-                            nav.push(MaterialPageRoute(builder: (_) => const CallScreen()));
+                            nav.push(MaterialPageRoute(
+                              builder: (_) => const CallScreen(),
+                              fullscreenDialog: true,
+                            ));
                           },
                           child: Container(
                             padding: const EdgeInsets.all(11),

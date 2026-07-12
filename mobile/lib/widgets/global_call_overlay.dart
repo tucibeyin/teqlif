@@ -27,10 +27,10 @@ class GlobalCallOverlay extends StatelessWidget {
       child: Stack(
         children: [
           child,
-          ValueListenableBuilder<bool>(
-            valueListenable: CallService.instance.isCallScreenVisible,
-            builder: (context, isVisible, _) {
-              if (isVisible) return const SizedBox.shrink();
+          ValueListenableBuilder<int>(
+            valueListenable: CallService.instance.visibleCallScreensCount,
+            builder: (context, count, _) {
+              if (count > 0) return const SizedBox.shrink();
 
               return ValueListenableBuilder<CallState>(
                 valueListenable: CallService.instance.state,
@@ -54,7 +54,10 @@ class GlobalCallOverlay extends StatelessWidget {
                           final context = navigatorKey.currentContext;
                           if (context != null) {
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const CallScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const CallScreen(),
+                                fullscreenDialog: true,
+                              ),
                             );
                           }
                         },

@@ -24,6 +24,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   @override
   void initState() {
     super.initState();
+    CallService.instance.visibleCallScreensCount.value++;
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -73,6 +74,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   @override
   void dispose() {
+    CallService.instance.visibleCallScreensCount.value--;
     _pulseCtrl.dispose();
     CallService.instance.state.removeListener(_onStateChange);
     super.dispose();
@@ -82,7 +84,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     await CallService.instance.acceptCall();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const CallScreen()),
+      MaterialPageRoute(
+        builder: (_) => const CallScreen(),
+        fullscreenDialog: true,
+      ),
     );
   }
 

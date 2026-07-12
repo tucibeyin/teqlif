@@ -22,7 +22,7 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
-    CallService.instance.isCallScreenVisible.value = true;
+    CallService.instance.visibleCallScreensCount.value++;
     CallService.instance.state.addListener(_onStateChange);
     _proximitySubscription = ProximitySensor.events.listen((int event) {
       if (mounted) {
@@ -41,7 +41,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
-    CallService.instance.isCallScreenVisible.value = false;
+    CallService.instance.visibleCallScreensCount.value--;
     _proximitySubscription.cancel();
     CallService.instance.state.removeListener(_onStateChange);
     super.dispose();
