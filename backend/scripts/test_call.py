@@ -162,10 +162,23 @@ async def callee_mode(token: str, me: str, auto: bool):
 
 # ─── Aktif görüşme ────────────────────────────────────────────────────────────
 
-async def _in_call(call_id: int, token: str, room: str, ws: websockets.WebSocketClientProtocol):
-    print(f"\n🟢  Görüşme aktif — room={room}")
-    print(f"    Enter'a basınca görüşmeyi bitirir.\n")
-
+async def _in_call(call_id: int, token: str, room_name: str, ws: websockets.WebSocketClientProtocol):
+    print(f"\n🟢  Görüşme aktif — room={room_name}")
+    print("    Enter'a basınca görüşmeyi bitirir.\n")
+    
+    t0 = time.time()
+    
+    # Send ping every 30s to prevent Nginx timeout
+    async def ping_loop():
+        while True:
+            await asyncio.sleep(30)
+            try:
+                await ws.send(json.dumps({"type": "ping"}))
+            except Exception:
+                break
+                
+    ping_task = asyncio.create_task(ping_loop())
+    
     done = asyncio.Event()
     loop = asyncio.get_event_loop()
 
@@ -213,6 +226,8 @@ async def _in_call(call_id: int, token: str, room: str, ws: websockets.WebSocket
                     
         except asyncio.TimeoutError:
             pass
+            
+    ping_task.cancel()
 
     print("\n🔴  Bitiriliyor...")
     try:

@@ -101,7 +101,7 @@ async def _send_call_push(callee: User, caller: User, call_id: int, room_name: s
                 "room_name": room_name,
                 "caller_id": str(caller.id),
                 "caller_username": caller.username,
-                "caller_avatar": caller.profile_image_thumb_url or "",
+                "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
                 "livekit_url": settings.livekit_url,
             },
         )
@@ -150,7 +150,7 @@ async def start_call(
         "room_name": room_name,
         "caller_id": current_user.id,
         "caller_username": current_user.username,
-        "caller_avatar": current_user.profile_image_thumb_url or "",
+        "caller_avatar": current_user.profile_image_thumb_url or current_user.profile_image_url or "",
         "livekit_url": settings.livekit_url,
     }
     await _ws_broadcast(callee_id, ws_payload)

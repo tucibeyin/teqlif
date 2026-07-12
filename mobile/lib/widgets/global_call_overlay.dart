@@ -56,6 +56,8 @@ class GlobalCallOverlay extends StatelessWidget {
                             onTap: () {
                               final ctx = navigatorKey.currentContext;
                               if (ctx != null) {
+                                if (CallService.instance.isCallScreenVisible.value) return;
+                                CallService.instance.isCallScreenVisible.value = true;
                                 Navigator.of(ctx).push(
                                   MaterialPageRoute(
                                     settings: const RouteSettings(
