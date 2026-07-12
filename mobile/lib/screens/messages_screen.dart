@@ -380,13 +380,20 @@ class _MessagesTabState extends State<_MessagesTab> {
           final otherId = (conv['user_id'] as int?) ?? 0;
           final initial = (fullName.isNotEmpty ? fullName[0] : '?').toUpperCase();
 
+          final otherAvatarUrl = conv['profile_image_thumb_url'] as String?;
+
           return ListTile(
             leading: CircleAvatar(
               backgroundColor: kPrimary.withValues(alpha: 0.15),
-              child: Text(
-                initial,
-                style: const TextStyle(color: kPrimary, fontWeight: FontWeight.bold),
-              ),
+              backgroundImage: otherAvatarUrl != null && otherAvatarUrl.isNotEmpty
+                  ? CachedNetworkImageProvider(imgUrl(otherAvatarUrl))
+                  : null,
+              child: otherAvatarUrl == null || otherAvatarUrl.isEmpty
+                  ? Text(
+                      initial,
+                      style: const TextStyle(color: kPrimary, fontWeight: FontWeight.bold),
+                    )
+                  : null,
             ),
             title: Row(
               children: [
@@ -440,6 +447,7 @@ class _MessagesTabState extends State<_MessagesTab> {
                     otherUserId: otherId,
                     displayName: fullName,
                     otherHandle: username,
+                    otherAvatarUrl: otherAvatarUrl,
                   ),
                 ),
               ).then((_) {
@@ -868,6 +876,7 @@ class DirectChatScreen extends StatefulWidget {
   final int otherUserId;
   final String displayName;
   final String otherHandle;
+  final String? otherAvatarUrl;
   final int? listingId;
   final Map<String, dynamic>? contextPurchase;
   final Map<String, dynamic>? contextSale;
@@ -877,6 +886,7 @@ class DirectChatScreen extends StatefulWidget {
     required this.otherUserId,
     required this.displayName,
     required this.otherHandle,
+    this.otherAvatarUrl,
     this.listingId,
     this.contextPurchase,
     this.contextSale,
@@ -1608,7 +1618,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
               await CallService.instance.startCall(
                 calleeId: widget.otherUserId,
                 calleeUsername: widget.otherHandle,
-                calleeAvatar: null,
+                calleeAvatar: widget.otherAvatarUrl,
               );
               if (!context.mounted) return;
               Navigator.of(context).push(

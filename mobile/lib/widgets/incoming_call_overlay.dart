@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../services/call_service.dart';
 import '../services/push_notification_service.dart';
@@ -286,7 +287,7 @@ class _IncomingCallBar extends StatelessWidget {
                       backgroundColor: AppColors.surfaceVariant(context),
                       backgroundImage:
                           avatarUrl != null && avatarUrl!.isNotEmpty
-                          ? CachedNetworkImageProvider(avatarUrl!)
+                          ? CachedNetworkImageProvider(imgUrl(avatarUrl))
                           : null,
                       child: avatarUrl == null || avatarUrl!.isEmpty
                           ? Text(

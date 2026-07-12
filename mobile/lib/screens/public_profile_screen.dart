@@ -546,7 +546,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             await CallService.instance.startCall(
                               calleeId: userId,
                               calleeUsername: widget.username,
-                              calleeAvatar: null,
+                              calleeAvatar: _profileData?['profile_image_thumb_url'] as String?,
                             );
                             nav.push(MaterialPageRoute(
                               settings: const RouteSettings(name: '/call_screen'),
