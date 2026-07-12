@@ -73,8 +73,8 @@ async def _send_call_push(callee: User, caller: User, call_id: int, room_name: s
     try:
         await send_push(
             token=callee.fcm_token,
-            title=caller.username,
-            body="",
+            title=f"{caller.username} sizi arıyor",
+            body="Gelen Sesli Arama",
             badge=None,
             notif_type="incoming_call",
             extra_data={
