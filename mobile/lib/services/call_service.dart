@@ -109,7 +109,7 @@ class CallService {
   final isCallScreenVisible = ValueNotifier<bool>(false);
 
   Room? _room;
-  StreamSubscription<RoomEvent>? _roomEventsSubscription;
+  Function? _roomEventsSubscription;
   StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSubscription;
   Timer? _ringTimer;   // 30s no-answer timeout
   Timer? _elapsedTimer;
@@ -335,7 +335,7 @@ class CallService {
       await WakelockPlus.enable();
 
       _roomEventsSubscription = _room!.events.listen(_onRoomEvent);
-      _setupAudioInterruptionListener();
+      await _setupAudioInterruptionListener();
     } catch (e) {
       debugPrint('[CallService] _joinRoom error: $e');
       _setState(state.value.copyWith(status: CallStatus.ended));
@@ -363,9 +363,10 @@ class CallService {
     }
   }
 
-  void _setupAudioInterruptionListener() {
+  Future<void> _setupAudioInterruptionListener() async {
     _audioInterruptionSubscription?.cancel();
-    _audioInterruptionSubscription = AudioSession.instance.interruptionEventStream.listen((event) {
+    final session = await AudioSession.instance;
+    _audioInterruptionSubscription = session.interruptionEventStream.listen((event) {
       if (event.begin) {
         // Interruption began (e.g. phone call came in)
         if (!state.value.isMuted) {
@@ -446,7 +447,7 @@ class CallService {
   Future<void> _disconnectRoom() async {
     _ringtoneLoopTimer?.cancel();
     _elapsedTimer?.cancel();
-    _roomEventsSubscription?.cancel();
+    _roomEventsSubscription?.call();
     _audioInterruptionSubscription?.cancel();
     _room?.disconnect();
     _room?.dispose();
