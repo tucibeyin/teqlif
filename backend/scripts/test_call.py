@@ -187,13 +187,22 @@ async def _in_call(call_id: int, token: str, room: str, ws: websockets.WebSocket
             )
             
             if recv_task in done_or_recv:
-                msg = json.loads(recv_task.result())
-                t = msg.get("type", "")
-                if t == "call_ended":
-                    print("\n🔴  Karşı taraf aramayı sonlandırdı.")
+                try:
+                    res = recv_task.result()
+                    msg = json.loads(res)
+                    t = msg.get("type", "")
+                    if t == "call_ended":
+                        print("\n🔴  Karşı taraf aramayı sonlandırdı.")
+                        done.set()
+                    else:
+                        recv_task = asyncio.create_task(ws.recv())
+                except websockets.exceptions.ConnectionClosed:
+                    print("\n🔴  Websocket bağlantısı kapandı.")
                     done.set()
-                recv_task = asyncio.create_task(ws.recv())
-                
+                except Exception as e:
+                    print(f"\n🔴  WS Hatası: {e}")
+                    done.set()
+                    
         except asyncio.TimeoutError:
             pass
 
