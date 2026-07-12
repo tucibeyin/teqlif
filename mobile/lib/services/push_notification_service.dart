@@ -294,7 +294,10 @@ class PushNotificationService {
         final callId = data['call_id']?.toString() ?? '';
         if (callId.isNotEmpty) _rejectCallById(callId);
       } else if (event is CallEventActionCallEnded || event is CallEventActionCallTimeout) {
-        final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
+        CallKitParams? params;
+        if (event is CallEventActionCallEnded) params = event.callKitParams;
+        
+        final data = Map<String, dynamic>.from(params?.extra ?? {});
         final callIdStr = data['call_id']?.toString() ?? '';
 
         if (CallService.instance.state.value.callId != null) {
