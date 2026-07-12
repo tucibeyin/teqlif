@@ -49,6 +49,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
+String _formatToUuid(String id) {
+  // CallKit iOS'te id'nin kesinlikle geçerli bir UUID (8-4-4-4-12) formatında olmasını ister.
+  // Veritabanındaki integer/string call_id'yi bu formata uyduruyoruz.
+  final padded = id.padLeft(32, '0');
+  return '${padded.substring(0, 8)}-${padded.substring(8, 12)}-${padded.substring(12, 16)}-${padded.substring(16, 20)}-${padded.substring(20, 32)}';
+}
+
 /// Yerel bildirim göster — background isolate veya foreground'dan çağrılabilir.
 Future<void> _showCallNotification({
   required String callId,
@@ -69,8 +76,10 @@ Future<void> _showCallNotification({
   
   final l = lookupAppLocalizations(Locale(langCode));
 
+  final callUuid = _formatToUuid(callId);
+
   final params = CallKitParams(
-    id: callId,
+    id: callUuid,
     nameCaller: callerUsername,
     appName: 'Teqlif',
     avatar: callerAvatar.isNotEmpty ? callerAvatar : 'https://i.pravatar.cc/100',
