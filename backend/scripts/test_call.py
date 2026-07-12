@@ -97,7 +97,7 @@ async def caller_mode(token: str, me: str, callee_id: int, callee: str):
 
             if t == "call_accepted":
                 print("✅  KABUL EDİLDİ!")
-                await _in_call(call_id, token, room_name)
+                await _in_call(call_id, token, room_name, ws)
                 return
             elif t in ("call_rejected",):
                 print("❌  Reddedildi.")
@@ -152,12 +152,12 @@ async def callee_mode(token: str, me: str, auto: bool):
 
             r = api("POST", f"/calls/{call_id}/accept", token)
             print(f"✅  Kabul!  room={r.get('room_name')}")
-            await _in_call(call_id, token, r.get("room_name", ""))
+            await _in_call(call_id, token, r.get("room_name", ""), ws)
             return
 
 # ─── Aktif görüşme ────────────────────────────────────────────────────────────
 
-async def _in_call(call_id: int, token: str, room: str):
+async def _in_call(call_id: int, token: str, room: str, ws: websockets.WebSocketClientProtocol):
     print(f"\n🟢  Görüşme aktif — room={room}")
     print(f"    Enter'a basınca görüşmeyi bitirir.\n")
 
@@ -171,11 +171,29 @@ async def _in_call(call_id: int, token: str, room: str):
     threading.Thread(target=_wait, daemon=True).start()
 
     t0 = time.time()
+    
+    recv_task = asyncio.create_task(ws.recv())
+    done_task = asyncio.create_task(done.wait())
+    
     while not done.is_set():
         m, s = divmod(int(time.time() - t0), 60)
         print(f"\r   📞  {m:02d}:{s:02d}  [Enter]=bitir", end="", flush=True)
+        
         try:
-            await asyncio.wait_for(asyncio.shield(done.wait()), timeout=1.0)
+            done_or_recv, pending = await asyncio.wait(
+                [done_task, recv_task],
+                timeout=1.0,
+                return_when=asyncio.FIRST_COMPLETED
+            )
+            
+            if recv_task in done_or_recv:
+                msg = json.loads(recv_task.result())
+                t = msg.get("type", "")
+                if t == "call_ended":
+                    print("\n🔴  Karşı taraf aramayı sonlandırdı.")
+                    done.set()
+                recv_task = asyncio.create_task(ws.recv())
+                
         except asyncio.TimeoutError:
             pass
 
