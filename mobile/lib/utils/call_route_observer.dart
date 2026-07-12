@@ -4,10 +4,11 @@ import '../services/call_service.dart';
 class CallRouteObserver extends NavigatorObserver {
   void _updateCallScreenVisibility(Route<dynamic>? route) {
     if (route == null) return;
-    
     if (route is! ModalRoute) return;
 
     final name = route.settings.name;
+    if (name == null) return;
+
     final isVisible = (name == '/call_screen' || name == '/incoming_call_screen');
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
