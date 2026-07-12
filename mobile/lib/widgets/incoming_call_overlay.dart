@@ -135,7 +135,6 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[DEBUG_UI] IncomingCallOverlay build() - status=${CallService.instance.state.value.status.name}');
     return Stack(
       children: [
         widget.child,

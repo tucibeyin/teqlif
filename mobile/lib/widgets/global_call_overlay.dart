@@ -30,13 +30,11 @@ class GlobalCallOverlay extends StatelessWidget {
           ValueListenableBuilder<bool>(
             valueListenable: CallService.instance.isCallScreenVisible,
             builder: (context, isVisible, _) {
-              debugPrint('[DEBUG_UI] GlobalCallOverlay evaluated isVisible=$isVisible');
               if (isVisible) return const SizedBox.shrink();
 
               return ValueListenableBuilder<CallState>(
                 valueListenable: CallService.instance.state,
                 builder: (context, cs, _) {
-                  debugPrint('[DEBUG_UI] GlobalCallOverlay evaluated status=${cs.status.name}');
                   if (cs.status != CallStatus.connected &&
                       cs.status != CallStatus.connecting) {
                     return const SizedBox.shrink();

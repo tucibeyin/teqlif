@@ -3,7 +3,6 @@ import '../services/call_service.dart';
 
 class CallRouteObserver extends NavigatorObserver {
   void _updateCallScreenVisibility(Route<dynamic>? route) {
-    debugPrint('[DEBUG_UI] CallRouteObserver: didPush/Pop/Replace triggered. Route=$route, name=${route?.settings.name}');
     if (route == null) return;
     if (route is! ModalRoute) return;
 
@@ -11,10 +10,8 @@ class CallRouteObserver extends NavigatorObserver {
     if (name == null) return;
 
     final isVisible = (name == '/call_screen' || name == '/incoming_call_screen');
-    debugPrint('[DEBUG_UI] CallRouteObserver: name=$name -> evaluated isVisible=$isVisible');
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint('[DEBUG_UI] CallRouteObserver post-frame: updating isCallScreenVisible.value = $isVisible (was ${CallService.instance.isCallScreenVisible.value})');
       if (CallService.instance.isCallScreenVisible.value != isVisible) {
         CallService.instance.isCallScreenVisible.value = isVisible;
       }
