@@ -184,10 +184,12 @@ class CallService {
         Future.delayed(const Duration(seconds: 2), reset);
       } else {
         _setState(state.value.copyWith(status: CallStatus.ended));
+        Future.delayed(const Duration(seconds: 2), reset);
       }
     } catch (e) {
       debugPrint('[CallService] startCall error: $e');
       _setState(state.value.copyWith(status: CallStatus.ended));
+      Future.delayed(const Duration(seconds: 2), reset);
     }
   }
 

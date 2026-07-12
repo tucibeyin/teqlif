@@ -23,7 +23,7 @@ from app.utils.auth import get_current_user
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
 from app.config import settings
-from app.core.exceptions import ConflictException
+from app.core.exceptions import AppException
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/calls", tags=["calls"])
@@ -129,7 +129,7 @@ async def start_call(
         )
     )
     if active_call:
-        raise ConflictException(message="User is busy", code="USER_BUSY")
+        raise AppException(status_code=409, message="User is busy", code="USER_BUSY")
 
     room_name = f"call_{current_user.id}_{callee_id}_{int(time.time())}"
     call = Call(caller_id=current_user.id, callee_id=callee_id, room_name=room_name, status="calling")
