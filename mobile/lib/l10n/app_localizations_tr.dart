@@ -5169,7 +5169,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get thisAccountIsPrivateDesc =>
-      'Fotoğraf ve videolarını görmek için bu hesabı takip et.';
+      'İlanlarını görmek için bu hesabı takip et.';
 
   @override
   String notifFollowRequestTitle(Object username) {

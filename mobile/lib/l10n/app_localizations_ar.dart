@@ -5138,8 +5138,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get thisAccountIsPrivate => 'هذا الحساب خاص';
 
   @override
-  String get thisAccountIsPrivateDesc =>
-      'تابع هذا الحساب لرؤية صوره ومقاطع الفيديو الخاصة به.';
+  String get thisAccountIsPrivateDesc => 'تابع هذا الحساب لرؤية إعلاناته.';
 
   @override
   String notifFollowRequestTitle(Object username) {

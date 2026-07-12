@@ -2760,7 +2760,7 @@
   "acceptRequest": "Принять",
   "rejectRequest": "Удалить",
   "thisAccountIsPrivate": "Это закрытый аккаунт",
-  "thisAccountIsPrivateDesc": "Подпишитесь, чтобы видеть фото и видео.",
+  "thisAccountIsPrivateDesc": "Подпишитесь на этот аккаунт, чтобы видеть его объявления.",
   "notifFollowRequestTitle": "@{username} хочет подписаться на вас",
   "@notifFollowRequestTitle": {
     "placeholders": {

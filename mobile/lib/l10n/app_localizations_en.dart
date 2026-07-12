@@ -5167,7 +5167,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get thisAccountIsPrivateDesc =>
-      'Follow this account to see their photos and videos.';
+      'Follow this account to see their listings.';
 
   @override
   String notifFollowRequestTitle(Object username) {

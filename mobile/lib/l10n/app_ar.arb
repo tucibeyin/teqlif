@@ -2760,7 +2760,7 @@
   "acceptRequest": "قبول",
   "rejectRequest": "حذف",
   "thisAccountIsPrivate": "هذا الحساب خاص",
-  "thisAccountIsPrivateDesc": "تابع هذا الحساب لرؤية صوره ومقاطع الفيديو الخاصة به.",
+  "thisAccountIsPrivateDesc": "تابع هذا الحساب لرؤية إعلاناته.",
   "notifFollowRequestTitle": "@{username} يريد متابعتك",
   "@notifFollowRequestTitle": {
     "placeholders": {

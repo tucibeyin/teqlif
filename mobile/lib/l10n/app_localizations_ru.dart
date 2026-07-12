@@ -5217,7 +5217,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get thisAccountIsPrivateDesc =>
-      'Подпишитесь, чтобы видеть фото и видео.';
+      'Подпишитесь на этот аккаунт, чтобы видеть его объявления.';
 
   @override
   String notifFollowRequestTitle(Object username) {

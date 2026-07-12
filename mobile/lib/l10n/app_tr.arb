@@ -2758,7 +2758,7 @@
   "acceptRequest": "Onayla",
   "rejectRequest": "Sil",
   "thisAccountIsPrivate": "Bu hesap gizli",
-  "thisAccountIsPrivateDesc": "Fotoğraf ve videolarını görmek için bu hesabı takip et.",
+  "thisAccountIsPrivateDesc": "İlanlarını görmek için bu hesabı takip et.",
   "notifFollowRequestTitle": "@{username} seni takip etmek istiyor",
   "@notifFollowRequestTitle": {
     "placeholders": {

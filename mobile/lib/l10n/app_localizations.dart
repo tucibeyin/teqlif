@@ -9321,7 +9321,7 @@ abstract class AppLocalizations {
   /// No description provided for @thisAccountIsPrivateDesc.
   ///
   /// In tr, this message translates to:
-  /// **'Fotoğraf ve videolarını görmek için bu hesabı takip et.'**
+  /// **'İlanlarını görmek için bu hesabı takip et.'**
   String get thisAccountIsPrivateDesc;
 
   /// No description provided for @notifFollowRequestTitle.

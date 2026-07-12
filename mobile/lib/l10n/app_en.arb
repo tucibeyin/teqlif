@@ -2795,7 +2795,7 @@
   "acceptRequest": "Accept",
   "rejectRequest": "Delete",
   "thisAccountIsPrivate": "This account is private",
-  "thisAccountIsPrivateDesc": "Follow this account to see their photos and videos.",
+  "thisAccountIsPrivateDesc": "Follow this account to see their listings.",
   "notifFollowRequestTitle": "@{username} wants to follow you",
   "@notifFollowRequestTitle": {
     "placeholders": {
