@@ -52,13 +52,13 @@ def _make_livekit_token(room_name: str, user: User) -> str:
 
 async def _delete_lk_room(room_name: str) -> None:
     try:
-        from livekit.api.room_service import RoomService, DeleteRoomRequest
-        async with RoomService(
+        from livekit.api import LiveKitAPI, DeleteRoomRequest
+        async with LiveKitAPI(
             url=settings.livekit_api_base,
             api_key=settings.livekit_api_key,
             api_secret=settings.livekit_api_secret,
-        ) as svc:
-            await svc.delete_room(DeleteRoomRequest(room=room_name))
+        ) as api:
+            await api.room.delete_room(DeleteRoomRequest(room=room_name))
     except Exception as exc:
         logger.warning("[Calls] LK room silinemedi | room=%s | %s", room_name, exc)
 
