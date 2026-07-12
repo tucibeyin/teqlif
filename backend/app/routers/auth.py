@@ -1083,15 +1083,19 @@ async def save_fcm_token(
     db: AsyncSession = Depends(get_db),
 ):
     token = payload.get("token")
+    voip_token = payload.get("voip_token")
     lang = get_locale(request=request)
 
     values: dict = {}
     if token:
         values["fcm_token"] = token
+    if voip_token:
+        values["voip_token"] = voip_token
     if current_user.locale != lang:
         values["locale"] = lang
 
     if values:
+        logger.info(f"[Auth] Updating tokens for user {current_user.id}: FCM={'Yes' if token else 'No'}, VoIP={'Yes' if voip_token else 'No'}, Locale={lang}")
         await db.execute(sa_update(User).where(User.id == current_user.id).values(**values))
         await db.commit()
     return {"ok": True}

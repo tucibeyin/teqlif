@@ -73,10 +73,10 @@ async def _ws_broadcast(user_id: int, payload: dict) -> None:
 
 
 async def _send_call_push(callee: User, caller: User, call_id: int, room_name: str) -> None:
-    """Send FCM push to callee so they see incoming call even when app is backgrounded."""
-    if not callee.fcm_token:
+    """Send VoIP push for iOS if available, otherwise fallback to FCM push."""
+    if not callee.fcm_token and not callee.voip_token:
         return
-    from app.services.firebase_service import send_push
+        
     locale = get_locale(callee)
     t = _get_t(locale)
     
@@ -89,25 +89,55 @@ async def _send_call_push(callee: User, caller: User, call_id: int, room_name: s
     except (KeyError, ValueError):
         title = title_raw
         body = body_raw
+        
+    extra_data = {
+        "call_id": str(call_id),
+        "room_name": room_name,
+        "caller_id": str(caller.id),
+        "caller_username": caller.username,
+        "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
+        "livekit_url": settings.livekit_url,
+    }
     
-    try:
-        await send_push(
-            token=callee.fcm_token,
-            title=title,
-            body=body,
-            badge=None,
-            notif_type="incoming_call",
-            extra_data={
-                "call_id": str(call_id),
-                "room_name": room_name,
-                "caller_id": str(caller.id),
-                "caller_username": caller.username,
-                "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
-                "livekit_url": settings.livekit_url,
-            },
-        )
-    except Exception as exc:
-        logger.warning("[Calls] Call push bildirimi gönderilemedi: %s", exc)
+    # VoIP Push önceliği (iOS cihazlar için)
+    if callee.voip_token:
+        logger.info(f"[Calls] Callee {callee.id} has voip_token, attempting APNs VoIP push.")
+        from app.services.apns_service import send_voip_push
+        try:
+            # VoIP payload
+            payload = {
+                "aps": {
+                    "alert": {"title": title, "body": body},
+                    "sound": "default",
+                    "content-available": 1,
+                },
+                **extra_data
+            }
+            logger.debug(f"[Calls] VoIP Payload: {payload}")
+            success = await send_voip_push(callee.voip_token, payload)
+            if success:
+                logger.info(f"[Calls] VoIP push successful for {callee.id}, skipping FCM.")
+                return # Eğer VoIP başarılıysa, FCM atmaya gerek yok.
+            else:
+                logger.warning(f"[Calls] VoIP push failed for {callee.id}, will fallback to FCM.")
+        except Exception as exc:
+            logger.warning("[Calls] VoIP push exception, FCM denenecek: %s", exc)
+
+    # Fallback: Android veya VoIP başarısız olursa FCM at
+    if callee.fcm_token:
+        logger.info(f"[Calls] Falling back to FCM push for callee {callee.id}.")
+        from app.services.firebase_service import send_push
+        try:
+            await send_push(
+                token=callee.fcm_token,
+                title=title,
+                body=body,
+                badge=None,
+                notif_type="incoming_call",
+                extra_data=extra_data,
+            )
+        except Exception as exc:
+            logger.warning("[Calls] Call push bildirimi gönderilemedi: %s", exc)
 
 
 # ── POST /api/calls/start ─────────────────────────────────────────────────────
