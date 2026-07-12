@@ -118,6 +118,7 @@ class CallService {
   Timer? _ringTimer; // 30s no-answer timeout
   Timer? _elapsedTimer;
   Timer? _ringtoneLoopTimer; // For iOS ringtone looping
+  Timer? _resetTimer; // To prevent delayed reset overwriting new calls
   
   Timer? _hapticLoopTimer;
   
@@ -201,6 +202,7 @@ class CallService {
     required String calleeUsername,
     required String? calleeAvatar,
   }) async {
+    _resetTimer?.cancel();
     if (hasActiveCall) {
       debugPrint('[CallService] Cannot start call: already in an active call.');
       return;
@@ -242,15 +244,15 @@ class CallService {
       debugPrint('[CallService] startCall API error: ${e.code}');
       if (e.code == 'USER_BUSY') {
         _setState(state.value.copyWith(status: CallStatus.busy));
-        Future.delayed(const Duration(seconds: 2), reset);
+        _scheduleReset();
       } else {
         _setState(state.value.copyWith(status: CallStatus.ended));
-        Future.delayed(const Duration(seconds: 2), reset);
+        _scheduleReset();
       }
     } catch (e) {
       debugPrint('[CallService] startCall error: $e');
       _setState(state.value.copyWith(status: CallStatus.ended));
-      Future.delayed(const Duration(seconds: 2), reset);
+      _scheduleReset();
     }
   }
 
@@ -274,6 +276,7 @@ class CallService {
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
   void onIncomingCall(Map<String, dynamic> data) async {
+    _resetTimer?.cancel();
     if (hasActiveCall) {
       final incomingCallId = data['call_id'] is int
           ? data['call_id']
@@ -347,7 +350,9 @@ class CallService {
   Future<void> acceptCall() async {
     final callId = state.value.callId;
     if (callId == null) return;
+    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) return;
 
+    _resetTimer?.cancel();
     stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.connecting));
     try {
@@ -363,6 +368,7 @@ class CallService {
   }
 
   Future<void> rejectCall() async {
+    if (state.value.status == CallStatus.ended || state.value.status == CallStatus.rejected) return;
     final callId = state.value.callId;
     if (callId != null) {
       try {
@@ -387,6 +393,9 @@ class CallService {
       return;
     }
     
+    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) return;
+    
+    _resetTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.connecting));
     
     await _joinRoom(
@@ -396,13 +405,14 @@ class CallService {
   }
 
   void onCallRejected() async {
+    if (state.value.status == CallStatus.rejected) return;
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.rejected));
     if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(pattern: [200, 100, 200, 100, 200]);
     }
-    Future.delayed(const Duration(seconds: 2), reset);
+    _scheduleReset();
   }
 
   void onCallEnded() {
@@ -410,12 +420,13 @@ class CallService {
   }
 
   void onCallMissed() async {
+    if (state.value.status == CallStatus.missed) return;
     stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.missed));
     if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(pattern: [200, 100, 200]);
     }
-    Future.delayed(const Duration(seconds: 2), reset);
+    _scheduleReset();
   }
 
   // ── LiveKit Room ──────────────────────────────────────────────────────────
@@ -542,6 +553,7 @@ class CallService {
     _setState(state.value.copyWith(isSpeaker: enabled));
   }
   Future<void> endCall() async {
+    if (state.value.status == CallStatus.ended || state.value.status == CallStatus.idle) return;
     final callId = state.value.callId;
     if (callId != null) {
       try {
@@ -554,6 +566,7 @@ class CallService {
   // ── Internal Cleanup ──────────────────────────────────────────────────────
 
   void _hangUpLocally({required CallStatus status}) {
+    if (state.value.status == status) return;
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
@@ -561,7 +574,7 @@ class CallService {
     WakelockPlus.disable();
     FlutterCallkitIncoming.endAllCalls();
     _setState(state.value.copyWith(status: status));
-    Future.delayed(const Duration(seconds: 2), reset);
+    _scheduleReset();
   }
 
   Future<void> _disconnectRoom() async {
@@ -575,6 +588,7 @@ class CallService {
   }
 
   void reset() {
+    _resetTimer?.cancel();
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
@@ -584,7 +598,15 @@ class CallService {
     _setState(const CallState());
   }
 
+  void _scheduleReset() {
+    _resetTimer?.cancel();
+    _resetTimer = Timer(const Duration(seconds: 2), reset);
+  }
+
   bool get hasActiveCall =>
-      state.value.status != CallStatus.idle &&
-      state.value.status != CallStatus.permissionDenied;
+      state.value.status == CallStatus.calling ||
+      state.value.status == CallStatus.ringing ||
+      state.value.status == CallStatus.connecting ||
+      state.value.status == CallStatus.connected ||
+      state.value.status == CallStatus.reconnecting;
 }
