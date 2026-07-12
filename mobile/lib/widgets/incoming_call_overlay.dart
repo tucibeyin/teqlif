@@ -25,8 +25,10 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   @override
   void initState() {
     super.initState();
-    _notifSub = PushNotificationService.notificationStream.stream.listen(_onData);
-    _wsSub    = WsService.messageStream.stream.listen(_onData);
+    _notifSub = PushNotificationService.notificationStream.stream.listen(
+      _onData,
+    );
+    _wsSub = WsService.messageStream.stream.listen(_onData);
     CallService.instance.state.addListener(_onCallState);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -74,12 +76,12 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   }
 
   void _onCallState() {
-    // If state changes to anything other than ringing, reset dismiss state
+    // Check if the state is ringing to determine if the bar should show.
+    // We always call setState to rebuild so the bar can hide when rejected/missed.
     if (CallService.instance.state.value.status != CallStatus.ringing) {
-      if (_isBarDismissed) setState(() => _isBarDismissed = false);
-    } else {
-      setState(() {}); // trigger rebuild for the bar
+      _isBarDismissed = false;
     }
+    setState(() {}); // trigger rebuild for the bar
   }
 
   void _openIncomingScreen() {
@@ -88,11 +90,14 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
       MaterialPageRoute(
         settings: const RouteSettings(name: '/incoming_call_screen'),
         fullscreenDialog: true,
-        builder: (_) => IncomingCallScreen(callData: {
-          'caller_username': CallService.instance.state.value.otherUsername ?? '',
-          'caller_avatar':   CallService.instance.state.value.otherAvatar   ?? '',
-          'call_id':         CallService.instance.state.value.callId,
-        }),
+        builder: (_) => IncomingCallScreen(
+          callData: {
+            'caller_username':
+                CallService.instance.state.value.otherUsername ?? '',
+            'caller_avatar': CallService.instance.state.value.otherAvatar ?? '',
+            'call_id': CallService.instance.state.value.callId,
+          },
+        ),
       ),
     );
   }
@@ -127,16 +132,21 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     return Stack(
       children: [
         widget.child,
-        if (CallService.instance.state.value.status == CallStatus.ringing && !_isBarDismissed)
+        if (CallService.instance.state.value.status == CallStatus.ringing &&
+            !_isBarDismissed)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: _IncomingCallBar(
-                  username: CallService.instance.state.value.otherUsername ?? '',
+                  username:
+                      CallService.instance.state.value.otherUsername ?? '',
                   avatarUrl: CallService.instance.state.value.otherAvatar,
                   onTap: _openIncomingScreen,
                   onAccept: _openCallScreenAndAccept,
@@ -182,88 +192,107 @@ class _IncomingCallBar extends StatelessWidget {
       key: const Key('incoming_call_bar'),
       direction: DismissDirection.up,
       onDismissed: (_) => onDismiss(),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
-            borderRadius: BorderRadius.circular(100),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-            ],
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: Row(
-            children: [
-              // Avatar
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: const Color(0xFF334155),
-                backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
-                    ? CachedNetworkImageProvider(avatarUrl!)
-                    : null,
-                child: avatarUrl == null || avatarUrl!.isEmpty
-                    ? Text(
-                        username.isNotEmpty ? username[0].toUpperCase() : '?',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              
-              // Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+      child: Material(
+        type: MaterialType.transparency,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top part: Avatar and Info
+                Row(
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    // Avatar
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: const Color(0xFF334155),
+                      backgroundImage:
+                          avatarUrl != null && avatarUrl!.isNotEmpty
+                          ? CachedNetworkImageProvider(avatarUrl!)
+                          : null,
+                      child: avatarUrl == null || avatarUrl!.isEmpty
+                          ? Text(
+                              username.isNotEmpty
+                                  ? username[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l.callVoiceCall,
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 13,
+                    const SizedBox(width: 12),
+
+                    // Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l.callVoiceCall,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              
-              // Actions
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _BarButton(
-                    icon: Icons.call_end,
-                    color: const Color(0xFFEF4444),
-                    label: l.callDecline,
-                    onTap: onReject,
-                  ),
-                  const SizedBox(width: 8),
-                  _BarButton(
-                    icon: Icons.call,
-                    color: const Color(0xFF22C55E),
-                    label: l.callAccept,
-                    onTap: onAccept,
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 16),
+
+                // Bottom part: Actions
+                Row(
+                  children: [
+                    Expanded(
+                      child: _BarButton(
+                        icon: Icons.call_end,
+                        color: const Color(0xFFEF4444),
+                        label: l.callDecline,
+                        onTap: onReject,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _BarButton(
+                        icon: Icons.call,
+                        color: const Color(0xFF22C55E),
+                        label: l.callAccept,
+                        onTap: onAccept,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -289,23 +318,23 @@ class _BarButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withOpacity(0.5)),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: 6),
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
+                fontSize: 15,
               ),
             ),
           ],
