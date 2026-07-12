@@ -29,17 +29,17 @@ def set_private(username, token, is_private):
     })
     assert resp.status_code == 200, f"Hesap gizliliği değiştirilemedi: {resp.text}"
 
-def unfollow(username, token, target_username):
+def unfollow(username, token, target_username, target_id):
     print(f"[{username}] -> [{target_username}] Takipten çıkılıyor...")
-    resp = requests.delete(f"{BASE_URL}/follows/{target_username}", headers=get_headers(token))
+    resp = requests.delete(f"{BASE_URL}/follows/{target_id}", headers=get_headers(token))
     if resp.status_code in [200, 404]:
         print(f"[{username}] -> [{target_username}] Takipten çıkıldı veya zaten takip edilmiyor.")
     else:
         print(f"Takipten çıkılamadı: {resp.text}")
 
-def follow(username, token, target_username):
+def follow(username, token, target_username, target_id):
     print(f"[{username}] -> [{target_username}] Takip et butonuna basılıyor...")
-    resp = requests.post(f"{BASE_URL}/follows/{target_username}", headers=get_headers(token))
+    resp = requests.post(f"{BASE_URL}/follows/{target_id}", headers=get_headers(token))
     if resp.status_code == 200:
         print(f"[{username}] İstek başarıyla gönderildi.")
     elif resp.status_code == 400:
@@ -88,10 +88,11 @@ def main():
     teqlif_profile = check_profile("tesbih", tesbih_token, "teqlif")
     teqlif_id = teqlif_profile["id"]
     tesbih_profile = check_profile("teqlif", teqlif_token, "tesbih")
+    tesbih_id = tesbih_profile["id"]
     
     # Ortamı Temizle
-    unfollow("teqlif", teqlif_token, "tesbih")
-    unfollow("tesbih", tesbih_token, "teqlif")
+    unfollow("teqlif", teqlif_token, "tesbih", tesbih_id)
+    unfollow("tesbih", tesbih_token, "teqlif", teqlif_id)
 
     print("\n=======================================================")
     print(" SENARYO 1: GİZLİ HESABA TAKİP İSTEĞİ GÖNDERME VE KABUL")
@@ -101,7 +102,7 @@ def main():
     time.sleep(1)
 
     # Teqlif, Tesbih'i takip etmeye çalışır
-    follow("teqlif", teqlif_token, "tesbih")
+    follow("teqlif", teqlif_token, "tesbih", tesbih_id)
     
     # Teqlif profili kontrol eder
     profile = check_profile("teqlif", teqlif_token, "tesbih")
@@ -124,14 +125,14 @@ def main():
     print(" SENARYO 2: AÇIK HESABA DİREKT TAKİP (ANINDA ONAY)")
     print("=======================================================")
     
-    unfollow("teqlif", teqlif_token, "tesbih")
+    unfollow("teqlif", teqlif_token, "tesbih", tesbih_id)
     time.sleep(1)
     
     set_private("tesbih", tesbih_token, False)
     time.sleep(1)
 
     # Teqlif, Tesbih'i takip etmeye çalışır
-    follow("teqlif", teqlif_token, "tesbih")
+    follow("teqlif", teqlif_token, "tesbih", tesbih_id)
     
     # Teqlif profili kontrol eder
     profile = check_profile("teqlif", teqlif_token, "tesbih")
