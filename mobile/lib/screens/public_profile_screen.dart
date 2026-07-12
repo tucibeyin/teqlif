@@ -459,8 +459,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ),
                   ),
                 ] else if (userId != 0) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 10,
                     children: [
                       // ── İşlemler ──────────────────────────────────────
                       PopupMenuButton<String>(
@@ -513,7 +515,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
                       // ── Mesaj Gönder ────────────────────────────────────
                       GestureDetector(
                         onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -539,7 +540,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       ),
                       // ── Ara (sadece takip ediliyorsa) ────────────────────
                       if (_isFollowing) ...[
-                        const SizedBox(width: 10),
                         GestureDetector(
                           onTap: () async {
                             final nav = Navigator.of(context);
@@ -560,7 +560,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           ),
                         ),
                       ],
-                      const SizedBox(width: 10),
                       // ── Takip Et / Takip Ediliyor ──────────────────────
                       GestureDetector(
                         onTap: _followLoading ? null : _toggleFollow,
