@@ -182,20 +182,18 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Decline — ahize aşağı (kırmızı)
+                        // Decline
                         _CallActionButton(
                           color: const Color(0xFFEF4444),
-                          icon: FontAwesomeIcons.phone,
-                          rotation: 5 * 3.14159 / 4, // 225° — aşağı
+                          icon: Icons.call_end,
                           label: l.callDecline,
                           onTap: _decline,
                         ),
 
-                        // Accept — ahize yukarı (yeşil)
+                        // Accept
                         _CallActionButton(
                           color: const Color(0xFF22C55E),
-                          icon: FontAwesomeIcons.phone,
-                          rotation: 0,
+                          icon: Icons.call,
                           label: l.callAccept,
                           onTap: _accept,
                         ),
@@ -216,14 +214,12 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 class _CallActionButton extends StatelessWidget {
   final Color color;
   final IconData icon;
-  final double rotation;
   final String label;
   final VoidCallback onTap;
 
   const _CallActionButton({
     required this.color,
     required this.icon,
-    this.rotation = 0.0,
     required this.label,
     required this.onTap,
   });
@@ -249,10 +245,7 @@ class _CallActionButton extends StatelessWidget {
               ],
             ),
             child: Center(
-              child: Transform.rotate(
-                angle: rotation,
-                child: FaIcon(icon, color: Colors.white, size: 28),
-              ),
+              child: Icon(icon, color: Colors.white, size: 32),
             ),
           ),
         ),

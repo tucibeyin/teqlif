@@ -1596,7 +1596,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
         leading: const BackButton(),
         actions: [
           IconButton(
-            icon: const FaIcon(FontAwesomeIcons.phone, size: 20),
+            icon: const Icon(Icons.call, size: 22),
             tooltip: l.callVoiceCall,
             onPressed: () async {
               await CallService.instance.startCall(

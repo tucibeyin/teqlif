@@ -212,13 +212,10 @@ class _CallScreenState extends State<CallScreen> {
                                         ],
                                       ),
                                       child: Center(
-                                        child: Transform.rotate(
-                                          angle: 5 * 3.14159 / 4,
-                                          child: const FaIcon(
-                                            FontAwesomeIcons.phone,
-                                            color: Colors.white,
-                                            size: 28,
-                                          ),
+                                        child: Icon(
+                                          Icons.call_end,
+                                          color: Colors.white,
+                                          size: 32,
                                         ),
                                       ),
                                     ),

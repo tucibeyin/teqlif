@@ -556,7 +556,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               color: AppColors.surfaceVariant(context),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: FaIcon(FontAwesomeIcons.phone, size: 16, color: AppColors.textPrimary(context)),
+                            child: Icon(Icons.call, size: 18, color: AppColors.textPrimary(context)),
                           ),
                         ),
                       ],
