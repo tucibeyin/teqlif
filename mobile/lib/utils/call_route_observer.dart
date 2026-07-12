@@ -10,9 +10,11 @@ class CallRouteObserver extends NavigatorObserver {
     final name = route.settings.name;
     final isVisible = (name == '/call_screen' || name == '/incoming_call_screen');
     
-    if (CallService.instance.isCallScreenVisible.value != isVisible) {
-      CallService.instance.isCallScreenVisible.value = isVisible;
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (CallService.instance.isCallScreenVisible.value != isVisible) {
+        CallService.instance.isCallScreenVisible.value = isVisible;
+      }
+    });
   }
 
   @override
