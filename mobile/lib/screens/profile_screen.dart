@@ -2007,10 +2007,30 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               SwitchListTile(
                 secondary: Icon(Icons.lock_outline, color: AppColors.iconColor(context)),
-                title: Text(l.privateAccount, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
-                subtitle: Text(
-                  l.privateAccountDesc,
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                title: Row(
+                  children: [
+                    Text(l.privateAccount, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        showDialog<void>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            backgroundColor: AppColors.surface(context),
+                            title: Text(l.privateAccount, style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
+                            content: Text(l.privateAccountDesc, style: TextStyle(color: AppColors.textSecondary(context))),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text(l.btnOk, style: const TextStyle(color: kPrimary)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: Icon(Icons.help_outline, size: 16, color: AppColors.iconColor(context)),
+                    ),
+                  ],
                 ),
                 value: _isPrivate,
                 activeThumbColor: kPrimary,
