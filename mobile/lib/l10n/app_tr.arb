@@ -171,7 +171,9 @@
   "giftSentHud": "🎉 {sender} hediye gönderdi!",
   "@giftSentHud": {
     "placeholders": {
-      "sender": { "type": "String" }
+      "sender": {
+        "type": "String"
+      }
     }
   },
   "giftErrorGeneric": "Hata oluştu.",
@@ -535,7 +537,9 @@
   "auctionBidReceived": "₺{amount} teklifiniz alındı!",
   "@auctionBidReceived": {
     "placeholders": {
-      "amount": { "type": "String" }
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "chatJoinedStream": "yayına katıldı",
@@ -679,7 +683,9 @@
   "walletSeeAllTxns": "Tümünü gör ({n} işlem)",
   "@walletSeeAllTxns": {
     "placeholders": {
-      "n": { "type": "int" }
+      "n": {
+        "type": "int"
+      }
     }
   },
   "walletAllTxnsTitle": "Tüm İşlemler",
@@ -827,7 +833,9 @@
   "audienceReadyBuyersBanner": "{count} Hazır Alıcıya Bildirim Gönder!",
   "@audienceReadyBuyersBanner": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "blastBtnFree": "{count} Hazır Alıcı — Bildirim Gönder (Ücretsiz)",
@@ -1708,7 +1716,9 @@
   "categoryStreams": "{category} Yayınları",
   "@categoryStreams": {
     "placeholders": {
-      "category": { "type": "String" }
+      "category": {
+        "type": "String"
+      }
     }
   },
   "listingsSelectedForYou": "Sizin İçin Seçilen İlanlar",
@@ -2088,11 +2098,29 @@
   "timeJustNow": "Az önce",
   "timeNow": "şimdi",
   "timeMinAgo": "{n}d önce",
-  "@timeMinAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeMinAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "timeHoursAgo": "{n}s önce",
-  "@timeHoursAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "timeDaysAgo": "{n}g önce",
-  "@timeDaysAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "radarExpensive": "Pahalı",
   "radarAffordable": "Uygun fiyatlı",
   "radarExpensivePrice": "Pahalı fiyatlı",
@@ -2107,20 +2135,28 @@
   "massNotifCooldownHours": "{hours}s {min}dk sonra gönderilebilir",
   "@massNotifCooldownHours": {
     "placeholders": {
-      "hours": {"type": "int"},
-      "min": {"type": "int"}
+      "hours": {
+        "type": "int"
+      },
+      "min": {
+        "type": "int"
+      }
     }
   },
   "massNotifCooldownMinutes": "{min}dk sonra gönderilebilir",
   "@massNotifCooldownMinutes": {
     "placeholders": {
-      "min": {"type": "int"}
+      "min": {
+        "type": "int"
+      }
     }
   },
   "massNotifCooldownSeconds": "{sec}sn sonra gönderilebilir",
   "@massNotifCooldownSeconds": {
     "placeholders": {
-      "sec": {"type": "int"}
+      "sec": {
+        "type": "int"
+      }
     }
   },
   "massNotifPerListingInfo": "Her ilan için 24 saatte bir toplu bildirim gönderilebilir.",
@@ -2168,71 +2204,230 @@
   "proTipAllGoodTitle": "Her Şey Yolunda",
   "proTipAllGoodBody": "İlan ve satış verilerin sağlıklı görünüyor. Daha fazla veri biriktiğinde özel öneriler burada belirecek.",
   "notifNewBid": "@{username} teklif verdi",
-  "@notifNewBid": { "placeholders": { "username": { "type": "String" } } },
+  "@notifNewBid": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifNewBidBody": "{item} — {price}",
-  "@notifNewBidBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifNewBidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifNewBidBodyNoItem": "{price}",
-  "@notifNewBidBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifNewBidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifOutbid": "Teklifiniz geçildi!",
   "notifOutbidBody": "{item} — yeni teklif: {price}",
-  "@notifOutbidBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifOutbidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifOutbidBodyNoItem": "Yeni teklif: {price}",
-  "@notifOutbidBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifOutbidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionWon": "🏆 Teklifiniz kabul edildi!",
   "notifAuctionWonBody": "{item} — {price}",
-  "@notifAuctionWonBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifAuctionWonBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifBuyItNow": "🛒 Hemen Al tamamlandı!",
   "notifBuyItNowBody": "{item} — {price}",
-  "@notifBuyItNowBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifBuyItNowBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionEnded": "Artırma sona erdi",
   "notifAuctionEndedBody": "{item} — kazanan fiyat: {price}",
-  "@notifAuctionEndedBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifAuctionEndedBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionEndedBodyNoItem": "Kazanan fiyat: {price}",
-  "@notifAuctionEndedBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifAuctionEndedBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionCancelled": "Artırma iptal edildi",
   "notifAuctionCancelledBody": "{item} — teklif kabul edilmedi",
-  "@notifAuctionCancelledBody": { "placeholders": { "item": { "type": "String" } } },
+  "@notifAuctionCancelledBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionCancelledBodyNoItem": "Teklif kabul edilmedi",
   "notifStreamStarted": "@{username} canlı yayın açtı",
-  "@notifStreamStarted": { "placeholders": { "username": { "type": "String" } } },
+  "@notifStreamStarted": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifFollow": "@{username} seni takip etmeye başladı",
-  "@notifFollow": { "placeholders": { "username": { "type": "String" } } },
+  "@notifFollow": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessage": "@{username} size mesaj gönderdi",
-  "@notifMessage": { "placeholders": { "username": { "type": "String" } } },
+  "@notifMessage": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessageVoice": "🎵 Ses mesajı",
   "notifMessageImage": "📷 Fotoğraf",
   "notifMessageVideo": "🎬 Video",
   "notifMessageFile": "📎 Dosya",
   "notifNewListing": "@{username} yeni ilan ekledi",
-  "@notifNewListing": { "placeholders": { "username": { "type": "String" } } },
+  "@notifNewListing": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeactivated": "İlanınız Pasife Alındı",
   "notifListingDeactivatedBodySingle": "\"{title}\" adlı ilanınız 30 günlük süreyi doldurdu ve pasife alındı.",
-  "@notifListingDeactivatedBodySingle": { "placeholders": { "title": { "type": "String" } } },
+  "@notifListingDeactivatedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeactivatedBodyMultiple": "{count} ilanınız 30 günlük süreyi doldurdu ve pasife alındı.",
-  "@notifListingDeactivatedBodyMultiple": { "placeholders": { "count": { "type": "int" } } },
+  "@notifListingDeactivatedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifListingDeleted": "İlanınız Silindi",
   "notifListingDeletedBodySingle": "\"{title}\" adlı ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.",
-  "@notifListingDeletedBodySingle": { "placeholders": { "title": { "type": "String" } } },
+  "@notifListingDeletedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeletedBodyMultiple": "{count} ilanınız sistemden kaldırıldı. Yeniden yayınlamak için yeni ilan oluşturabilirsiniz.",
-  "@notifListingDeletedBodyMultiple": { "placeholders": { "count": { "type": "int" } } },
+  "@notifListingDeletedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifListingRemoved": "İlanınız kaldırıldı",
   "notifListingRemovedBody": "İlanınız topluluk kurallarına aykırı görsel içerik barındırdığı için yayından kaldırıldı.",
   "notifSearchAlert": "Arama alarmı: yeni ilan",
   "notifSearchAlertBody": "{category} kategorisinde yeni ürün eklendi",
-  "@notifSearchAlertBody": { "placeholders": { "category": { "type": "String" } } },
+  "@notifSearchAlertBody": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
   "notifSmartAuctionAlert": "Tam sana göre bir yayın başladı! 🎯",
   "notifPriceDrop": "Fiyat düştü! 🔥",
   "notifPriceDropBody": "{item} — artık {price}",
-  "@notifPriceDropBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifPriceDropBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifBudgetMatch": "Bütçene uygun yeni ilan! 💡",
   "notifBudgetMatchBody": "{item} — {price}",
-  "@notifBudgetMatchBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifBudgetMatchBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifChurnAirdropSeller": "İlanlarınız sizi bekliyor! 🛍️",
   "notifChurnBodySeller": "Hesabına {amount} TUCi hediye yükledik. Yeni ilan aç, alıcılarla buluş!",
-  "@notifChurnBodySeller": { "placeholders": { "amount": { "type": "int" } } },
+  "@notifChurnBodySeller": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "notifChurnAirdropBuyer": "Seni özledik! 🎁",
   "notifChurnBodyBuyer": "Hesabına {amount} TUCi hediye yükledik, hemen canlı yayınlara göz at ve harca!",
-  "@notifChurnBodyBuyer": { "placeholders": { "amount": { "type": "int" } } },
+  "@notifChurnBodyBuyer": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "cat_elektronik": "Elektronik",
   "cat_giyim": "Giyim & Moda",
   "cat_ev": "Ev & Yaşam",
@@ -2289,29 +2484,32 @@
   "aiAdviceSimilarCount": "{count} benzer ürün satış verisi analiz edildi",
   "@aiAdviceSimilarCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "aiAdviceSameCategory": "{count} aynı kategori",
   "@aiAdviceSameCategory": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "aiAdviceCityBased": "şehir bazlı",
   "aiAdviceMarketClose": "Ortalama piyasa kapanışı: {price} ₺.",
   "@aiAdviceMarketClose": {
     "placeholders": {
-      "price": { "type": "String" }
+      "price": {
+        "type": "String"
+      }
     }
   },
   "aiAdviceBimodal": "Bu ürün grubunda iki farklı piyasa fiyatı (Bimodal) tespit edildi. Ürününüzün varyasyonuna veya garantisine göre fiyat farklılaşabilir.",
   "aiAdviceNoData": "Henüz yeterli benzer ürün verisi bulunamadı. Platforma eklendikçe tahminler daha isabetli hale gelecek. Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz.",
-
   "proToolDemandTrendsTitle": "Kategori Talep Trendi",
   "proToolDemandTrendsDesc": "Hangi kategoriler yükseliyor? Arz açığı olan fırsatları keşfet.",
-
-
   "demandTrendsTitle": "Kategori Talep Trendi",
   "demandTrendsSubtitle": "Son 8 haftanın arama verisi",
   "demandTrendsUpLabel": "Yükselen",
@@ -2322,26 +2520,27 @@
   "demandTrendsChangeLabel": "%{pct} değişim (8 hafta)",
   "@demandTrendsChangeLabel": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "demandTrendsEmptyLabel": "Henüz yeterli arama verisi yok.",
-
   "trustScoreLabel": "Güven Skoru",
   "trustScoreHint": "0–100 arası platform güvenilirlik puanı. Açık artırma tamamlama oranı, kazanma geçmişi, ilan kalitesi, hesap yaşı ve teklif tutarlılığından hesaplanır. Her gece güncellenir.",
   "trustScoreLow": "Yeni Üye",
   "trustScoreMedium": "Güvenilir",
   "trustScoreHigh": "Çok Güvenilir",
-
   "influenceRankLabel": "Ağ Sıralaması",
   "influenceRankHint": "Platformdaki takipçi ağına göre hesaplanan etki sıralaması. Ne kadar düşük numara, o kadar geniş erişim. Haftalık güncellenir.",
   "influenceRankValue": "#{rank}. sıra",
   "@influenceRankValue": {
     "placeholders": {
-      "rank": { "type": "int" }
+      "rank": {
+        "type": "int"
+      }
     }
   },
-
   "radarNoActiveListing": "Aktif ilanın bulunamadı.",
   "radarNeedActiveListing": "Rakip radarı için en az 1 aktif ilana ihtiyaç var.",
   "radarNoPriceSet": "Bu ilana fiyat girilmemiş.",
@@ -2384,7 +2583,9 @@
   "quickAuctionItem": "Ürün {count}",
   "@quickAuctionItem": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "quickAuctionStarted": "Açık artırma başlatıldı",
@@ -2399,7 +2600,9 @@
   "blastSent": "🎯 {count} kişiye bildirim gönderildi!",
   "@blastSent": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "blastStarted": "🎯 Bildirim kampanyası başlatıldı!",
@@ -2409,43 +2612,54 @@
   "hostViewersTitle": "👁 İzleyiciler ({count})",
   "@hostViewersTitle": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "auctionGroupFallback": "Açık Artırma",
   "hostMuteSuccess": "@{username} susturuldu",
   "@hostMuteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostUnmuteSuccess": "Susturma kaldırıldı",
   "hostPromoteSuccess": "@{username} moderatör yapıldı",
   "@hostPromoteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostDemoteSuccess": "@{username} moderatörlükten alındı",
   "@hostDemoteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostKickSuccess": "@{username} yayından atıldı",
   "@hostKickSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "whaleInRoom": "{tier} Alıcı Odada",
   "@whaleInRoom": {
     "placeholders": {
-      "tier": { "type": "String" }
+      "tier": {
+        "type": "String"
+      }
     }
   },
   "whaleShowBestItems": "Kaliteli ürünleri çıkarma vakti!",
-
   "badgePassive": "Pasif",
   "hesitatedSectionTitle": "Geri Bak",
   "hesitatedSectionSubtitle": "Teklif Vermek Üzereydin",
@@ -2453,7 +2667,9 @@
   "searchShowAllAccounts": "Tüm hesapları gör ({count})",
   "@searchShowAllAccounts": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "explorePersonalizedHint": "Birkaç ilan incele,\nSana Özel içerik hazırlanıyor!",
@@ -2461,20 +2677,23 @@
   "audienceCountPeople": "{count} Kişi",
   "@audienceCountPeople": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "audienceFreeSlots": "-{count} Kişi",
   "@audienceFreeSlots": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "defaultUserFallback": "Kullanıcı",
   "startLiveStreamOption": "Canlı Yayın Aç",
   "noResultsFound": "Sonuç bulunamadı",
   "removeFromFavoritesTooltip": "Favoriden Çıkar",
-
   "callVoiceCall": "Sesli Arama",
   "callCalling": "Arıyor...",
   "callConnecting": "Bağlanıyor...",
@@ -2492,11 +2711,16 @@
   "callIncomingBody": "@{username} arıyor",
   "@callIncomingBody": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "callReturnToActive": "Aramaya dönmek için dokunun",
   "callNotifAccept": "Cevapla",
   "callNotifDecline": "Reddet",
-  "callPermissionDenied": "Mikrofon izni gerekli"
+  "callPermissionDenied": "Mikrofon izni gerekli",
+  "callVideo": "Video",
+  "callChat": "Sohbet",
+  "callAddPerson": "Ekle"
 }

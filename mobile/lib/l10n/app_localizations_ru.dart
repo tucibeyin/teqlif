@@ -5131,7 +5131,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get callUnmute => 'Включить звук';
 
   @override
-  String get callSpeaker => 'Громкая связь';
+  String get callSpeaker => 'Динамик';
 
   @override
   String get callIncomingTitle => 'Входящий звонок';
@@ -5152,4 +5152,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get callPermissionDenied => 'Требуется разрешение на микрофон';
+
+  @override
+  String get callVideo => 'Видео';
+
+  @override
+  String get callChat => 'Чат';
+
+  @override
+  String get callAddPerson => 'Добавить';
 }

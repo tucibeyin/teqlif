@@ -9203,6 +9203,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Mikrofon izni gerekli'**
   String get callPermissionDenied;
+
+  /// No description provided for @callVideo.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video'**
+  String get callVideo;
+
+  /// No description provided for @callChat.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sohbet'**
+  String get callChat;
+
+  /// No description provided for @callAddPerson.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ekle'**
+  String get callAddPerson;
 }
 
 class _AppLocalizationsDelegate

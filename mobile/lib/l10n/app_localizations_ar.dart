@@ -5074,4 +5074,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get callPermissionDenied => 'مطلوب إذن الميكروفون';
+
+  @override
+  String get callVideo => 'فيديو';
+
+  @override
+  String get callChat => 'دردشة';
+
+  @override
+  String get callAddPerson => 'إضافة';
 }

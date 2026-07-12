@@ -1607,6 +1607,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
               if (!context.mounted) return;
               Navigator.of(context).push(
                 MaterialPageRoute(
+                  settings: const RouteSettings(name: '/call_screen'),
                   builder: (_) => const CallScreen(),
                   fullscreenDialog: true,
                 ),

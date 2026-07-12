@@ -22,6 +22,7 @@ import 'services/push_notification_service.dart';
 import 'services/background_audio_handler.dart';
 import 'widgets/global_keyboard_accessory.dart';
 import 'widgets/global_call_overlay.dart';
+import 'utils/call_route_observer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
@@ -91,6 +92,7 @@ class TeqlifApp extends ConsumerStatefulWidget {
 
 class _TeqlifAppState extends ConsumerState<TeqlifApp> {
   final _lifecycleObserver = AnalyticsLifecycleObserver();
+  final _callRouteObserver = CallRouteObserver();
 
   @override
   void initState() {
@@ -119,7 +121,7 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         navigatorKey: TeqlifApp.navigatorKey,
-        navigatorObservers: [AnalyticsRouteObserver()],
+        navigatorObservers: [AnalyticsRouteObserver(), _callRouteObserver],
         builder: (context, child) {
           return GlobalCallOverlay(
             navigatorKey: TeqlifApp.navigatorKey,

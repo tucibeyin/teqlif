@@ -27,10 +27,10 @@ class GlobalCallOverlay extends StatelessWidget {
       child: Stack(
         children: [
           child,
-          ValueListenableBuilder<int>(
-            valueListenable: CallService.instance.visibleCallScreensCount,
-            builder: (context, count, _) {
-              if (count > 0) return const SizedBox.shrink();
+          ValueListenableBuilder<bool>(
+            valueListenable: CallService.instance.isCallScreenVisible,
+            builder: (context, isVisible, _) {
+              if (isVisible) return const SizedBox.shrink();
 
               return ValueListenableBuilder<CallState>(
                 valueListenable: CallService.instance.state,
@@ -51,12 +51,13 @@ class GlobalCallOverlay extends StatelessWidget {
                       bottom: false,
                       child: GestureDetector(
                         onTap: () {
-                          if (CallService.instance.visibleCallScreensCount.value > 0) return;
+                          if (CallService.instance.isCallScreenVisible.value) return;
                           
                           final context = navigatorKey.currentContext;
                           if (context != null) {
                             Navigator.of(context).push(
                               MaterialPageRoute(
+                                settings: const RouteSettings(name: '/call_screen'),
                                 builder: (_) => const CallScreen(),
                                 fullscreenDialog: true,
                               ),

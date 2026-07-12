@@ -5102,4 +5102,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get callPermissionDenied => 'Microphone permission required';
+
+  @override
+  String get callVideo => 'Video';
+
+  @override
+  String get callChat => 'Chat';
+
+  @override
+  String get callAddPerson => 'Add';
 }

@@ -98,6 +98,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     debugPrint('[Overlay] _openIncomingScreen');
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
+        settings: const RouteSettings(name: '/incoming_call_screen'),
         fullscreenDialog: true,
         builder: (_) => IncomingCallScreen(callData: {
           'caller_username': CallService.instance.state.value.otherUsername ?? '',
@@ -113,6 +114,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     debugPrint('[Overlay] _openCallScreen');
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
+        settings: const RouteSettings(name: '/call_screen'),
         builder: (_) => const CallScreen(),
         fullscreenDialog: true,
       ),

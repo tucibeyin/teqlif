@@ -162,7 +162,9 @@
   "giftSentHud": "🎉 أرسل {sender} هدية!",
   "@giftSentHud": {
     "placeholders": {
-      "sender": { "type": "String" }
+      "sender": {
+        "type": "String"
+      }
     }
   },
   "giftErrorGeneric": "حدث خطأ.",
@@ -535,7 +537,9 @@
   "auctionBidReceived": "تم استلام عرضك ₺{amount}!",
   "@auctionBidReceived": {
     "placeholders": {
-      "amount": { "type": "String" }
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "chatJoinedStream": "انضم إلى البث",
@@ -679,7 +683,9 @@
   "walletSeeAllTxns": "عرض جميع {n} معاملة",
   "@walletSeeAllTxns": {
     "placeholders": {
-      "n": { "type": "int" }
+      "n": {
+        "type": "int"
+      }
     }
   },
   "walletAllTxnsTitle": "جميع المعاملات",
@@ -827,7 +833,9 @@
   "audienceReadyBuyersBanner": "أرسل إشعاراً لـ {count} مشترٍ جاهز!",
   "@audienceReadyBuyersBanner": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "blastBtnFree": "{count} مشترٍ جاهز — أرسل إشعاراً (مجاني)",
@@ -1709,7 +1717,9 @@
   "categoryStreams": "بثوث {category}",
   "@categoryStreams": {
     "placeholders": {
-      "category": { "type": "String" }
+      "category": {
+        "type": "String"
+      }
     }
   },
   "listingsSelectedForYou": "القوائم المختارة لك",
@@ -2069,11 +2079,29 @@
   "timeJustNow": "الآن فقط",
   "timeNow": "الآن",
   "timeMinAgo": "قبل {n} د",
-  "@timeMinAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeMinAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "timeHoursAgo": "قبل {n} س",
-  "@timeHoursAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "timeDaysAgo": "قبل {n} ي",
-  "@timeDaysAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "radarExpensive": "غال",
   "radarAffordable": "بأسعار معقولة",
   "radarExpensivePrice": "سعر باهظ",
@@ -2088,20 +2116,28 @@
   "massNotifCooldownHours": "متاح خلال {hours}س {min}د",
   "@massNotifCooldownHours": {
     "placeholders": {
-      "hours": {"type": "int"},
-      "min": {"type": "int"}
+      "hours": {
+        "type": "int"
+      },
+      "min": {
+        "type": "int"
+      }
     }
   },
   "massNotifCooldownMinutes": "متاح خلال {min}د",
   "@massNotifCooldownMinutes": {
     "placeholders": {
-      "min": {"type": "int"}
+      "min": {
+        "type": "int"
+      }
     }
   },
   "massNotifCooldownSeconds": "متاح خلال {sec}ث",
   "@massNotifCooldownSeconds": {
     "placeholders": {
-      "sec": {"type": "int"}
+      "sec": {
+        "type": "int"
+      }
     }
   },
   "massNotifPerListingInfo": "يمكن إرسال إشعار جماعي مرة واحدة كل 24 ساعة لكل إعلان.",
@@ -2149,71 +2185,230 @@
   "proTipAllGoodTitle": "كل شيء على ما يرام",
   "proTipAllGoodBody": "بيانات إعلاناتك ومبيعاتك تبدو جيدة. ستظهر هنا نصائح مخصصة عند توفر المزيد من البيانات.",
   "notifNewBid": "قدّم @{username} عرضاً",
-  "@notifNewBid": { "placeholders": { "username": { "type": "String" } } },
+  "@notifNewBid": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifNewBidBody": "{item} — {price}",
-  "@notifNewBidBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifNewBidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifNewBidBodyNoItem": "{price}",
-  "@notifNewBidBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifNewBidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifOutbid": "تمّ تجاوز عرضك!",
   "notifOutbidBody": "{item} — عرض جديد: {price}",
-  "@notifOutbidBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifOutbidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifOutbidBodyNoItem": "عرض جديد: {price}",
-  "@notifOutbidBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifOutbidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionWon": "🏆 تمّ قبول عرضك!",
   "notifAuctionWonBody": "{item} — {price}",
-  "@notifAuctionWonBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifAuctionWonBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifBuyItNow": "🛒 اكتمل الشراء الفوري!",
   "notifBuyItNowBody": "{item} — {price}",
-  "@notifBuyItNowBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifBuyItNowBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionEnded": "انتهى المزاد",
   "notifAuctionEndedBody": "{item} — السعر الفائز: {price}",
-  "@notifAuctionEndedBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifAuctionEndedBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionEndedBodyNoItem": "السعر الفائز: {price}",
-  "@notifAuctionEndedBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifAuctionEndedBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionCancelled": "تمّ إلغاء المزاد",
   "notifAuctionCancelledBody": "{item} — لم يُقبل أي عرض",
-  "@notifAuctionCancelledBody": { "placeholders": { "item": { "type": "String" } } },
+  "@notifAuctionCancelledBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionCancelledBodyNoItem": "لم يُقبل أي عرض",
   "notifStreamStarted": "بدأ @{username} بثاً مباشراً",
-  "@notifStreamStarted": { "placeholders": { "username": { "type": "String" } } },
+  "@notifStreamStarted": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifFollow": "بدأ @{username} بمتابعتك",
-  "@notifFollow": { "placeholders": { "username": { "type": "String" } } },
+  "@notifFollow": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessage": "أرسل @{username} رسالة إليك",
-  "@notifMessage": { "placeholders": { "username": { "type": "String" } } },
+  "@notifMessage": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessageVoice": "🎵 رسالة صوتية",
   "notifMessageImage": "📷 صورة",
   "notifMessageVideo": "🎬 فيديو",
   "notifMessageFile": "📎 ملف",
   "notifNewListing": "أضاف @{username} إعلاناً جديداً",
-  "@notifNewListing": { "placeholders": { "username": { "type": "String" } } },
+  "@notifNewListing": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeactivated": "تمّ إيقاف إعلانك",
   "notifListingDeactivatedBodySingle": "وصل إعلانك \"{title}\" إلى نهاية فترته المجانية البالغة 30 يوماً وتمّ إيقافه.",
-  "@notifListingDeactivatedBodySingle": { "placeholders": { "title": { "type": "String" } } },
+  "@notifListingDeactivatedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeactivatedBodyMultiple": "وصل {count} إعلان من إعلاناتك إلى نهاية فترتها المجانية وتمّ إيقافها.",
-  "@notifListingDeactivatedBodyMultiple": { "placeholders": { "count": { "type": "int" } } },
+  "@notifListingDeactivatedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifListingDeleted": "تمّت إزالة إعلانك",
   "notifListingDeletedBodySingle": "تمّت إزالة إعلانك \"{title}\" من المنصة. يمكنك إنشاء إعلان جديد لإعادة نشره.",
-  "@notifListingDeletedBodySingle": { "placeholders": { "title": { "type": "String" } } },
+  "@notifListingDeletedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeletedBodyMultiple": "تمّت إزالة {count} من إعلاناتك. يمكنك إنشاء إعلانات جديدة لإعادة نشرها.",
-  "@notifListingDeletedBodyMultiple": { "placeholders": { "count": { "type": "int" } } },
+  "@notifListingDeletedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifListingRemoved": "تمّت إزالة إعلانك",
   "notifListingRemovedBody": "تمّت إزالة إعلانك لأنه يحتوي على محتوى يخالف إرشادات المجتمع.",
   "notifSearchAlert": "تنبيه البحث: إعلان جديد",
   "notifSearchAlertBody": "تمّت إضافة منتج جديد في {category}",
-  "@notifSearchAlertBody": { "placeholders": { "category": { "type": "String" } } },
+  "@notifSearchAlertBody": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
   "notifSmartAuctionAlert": "بدأ بث مناسب لك! 🎯",
   "notifPriceDrop": "انخفض السعر! 🔥",
   "notifPriceDropBody": "{item} — الآن {price}",
-  "@notifPriceDropBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifPriceDropBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifBudgetMatch": "إعلان جديد ضمن ميزانيتك! 💡",
   "notifBudgetMatchBody": "{item} — {price}",
-  "@notifBudgetMatchBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifBudgetMatchBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifChurnAirdropSeller": "إعلاناتك تنتظرك! 🛍️",
   "notifChurnBodySeller": "أضفنا {amount} TUCi إلى حسابك. أنشئ إعلاناً جديداً وتواصل مع المشترين!",
-  "@notifChurnBodySeller": { "placeholders": { "amount": { "type": "int" } } },
+  "@notifChurnBodySeller": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "notifChurnAirdropBuyer": "اشتقنا إليك! 🎁",
   "notifChurnBodyBuyer": "أضفنا {amount} TUCi إلى حسابك، تصفّح البثوث المباشرة وأنفقها!",
-  "@notifChurnBodyBuyer": { "placeholders": { "amount": { "type": "int" } } },
+  "@notifChurnBodyBuyer": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "cat_elektronik": "إلكترونيات",
   "cat_giyim": "ملابس وموضة",
   "cat_ev": "المنزل والمعيشة",
@@ -2270,20 +2465,26 @@
   "aiAdviceSimilarCount": "تم تحليل {count} منتج مشابه",
   "@aiAdviceSimilarCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "aiAdviceSameCategory": "{count} من نفس الفئة",
   "@aiAdviceSameCategory": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "aiAdviceCityBased": "حسب المدينة",
   "aiAdviceMarketClose": "متوسط سعر الإغلاق: {price} ₺.",
   "@aiAdviceMarketClose": {
     "placeholders": {
-      "price": { "type": "String" }
+      "price": {
+        "type": "String"
+      }
     }
   },
   "aiAdviceBimodal": "تم اكتشاف مستويين مختلفين للسعر (ثنائي النمط) في هذه المجموعة. قد يتفاوت السعر بحسب نوع المنتج أو الضمان.",
@@ -2293,22 +2494,23 @@
   "listingBlastDialogBody": "تم العثور على {count} مشترٍ محتمل قد يهتم بإعلانك. هل تريد إرسال إشعار فوري لهم؟",
   "@listingBlastDialogBody": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "listingBlastCost": "التكلفة: {cost} TUCi",
   "@listingBlastCost": {
     "placeholders": {
-      "cost": { "type": "int" }
+      "cost": {
+        "type": "int"
+      }
     }
   },
   "listingVideoComplete": "اكتمل الفيديو",
   "audienceTotalViewers": "إجمالي المشاهدين",
-
   "proToolDemandTrendsTitle": "اتجاه طلب الفئات",
   "proToolDemandTrendsDesc": "أي الفئات في ارتفاع؟ اكتشف فرص فجوة العرض.",
-
-
   "demandTrendsTitle": "اتجاه الطلب في الفئة",
   "demandTrendsSubtitle": "بيانات البحث لآخر 8 أسابيع",
   "demandTrendsUpLabel": "متصاعد",
@@ -2319,26 +2521,27 @@
   "demandTrendsChangeLabel": "تغيير {pct}٪ (8 أسابيع)",
   "@demandTrendsChangeLabel": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "demandTrendsEmptyLabel": "لا توجد بيانات بحث كافية بعد.",
-
   "trustScoreLabel": "درجة الثقة",
   "trustScoreHint": "نقاط مصداقية من 0 إلى 100. تُحسب من معدل إتمام المزادات وتاريخ الفوز وجودة الإعلانات وعمر الحساب. يتجدد يومياً.",
   "trustScoreLow": "عضو جديد",
   "trustScoreMedium": "موثوق",
   "trustScoreHigh": "موثوق جداً",
-
   "influenceRankLabel": "ترتيب الشبكة",
   "influenceRankHint": "ترتيب التأثير بناءً على شبكة المتابعين. كلما كان الرقم أقل، كان نطاق وصولك أوسع. يتجدد أسبوعياً.",
   "influenceRankValue": "المرتبة #{rank}",
   "@influenceRankValue": {
     "placeholders": {
-      "rank": { "type": "int" }
+      "rank": {
+        "type": "int"
+      }
     }
   },
-
   "radarNoActiveListing": "لم يتم العثور على قوائم نشطة.",
   "radarNeedActiveListing": "يلزم وجود قائمة نشطة واحدة على الأقل لرادار المنافسين.",
   "radarNoPriceSet": "لم يتم تحديد سعر لهذا الإعلان.",
@@ -2381,7 +2584,9 @@
   "quickAuctionItem": "منتج {count}",
   "@quickAuctionItem": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "quickAuctionStarted": "بدأ المزاد",
@@ -2396,7 +2601,9 @@
   "blastSent": "🎯 تم إرسال إشعار إلى {count} شخص!",
   "@blastSent": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "blastStarted": "🎯 تم بدء حملة الإشعارات!",
@@ -2406,43 +2613,54 @@
   "hostViewersTitle": "👁 المشاهدون ({count})",
   "@hostViewersTitle": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "auctionGroupFallback": "مزاد",
   "hostMuteSuccess": "تم كتم @{username}",
   "@hostMuteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostUnmuteSuccess": "تم رفع الكتم",
   "hostPromoteSuccess": "تم تعيين @{username} مشرفاً",
   "@hostPromoteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostDemoteSuccess": "تمت إزالة @{username} من المشرفين",
   "@hostDemoteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostKickSuccess": "تمت إزالة @{username} من البث",
   "@hostKickSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "whaleInRoom": "مشتري {tier} في الغرفة",
   "@whaleInRoom": {
     "placeholders": {
-      "tier": { "type": "String" }
+      "tier": {
+        "type": "String"
+      }
     }
   },
   "whaleShowBestItems": "حان وقت عرض أفضل منتجاتك!",
-
   "badgePassive": "غير نشط",
   "hesitatedSectionTitle": "انظر للخلف",
   "hesitatedSectionSubtitle": "كنت على وشك تقديم عرض",
@@ -2450,7 +2668,9 @@
   "searchShowAllAccounts": "عرض كل الحسابات ({count})",
   "@searchShowAllAccounts": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "explorePersonalizedHint": "تصفح بعض الإعلانات،\nيتم تحضير المحتوى الخاص بك!",
@@ -2458,20 +2678,23 @@
   "audienceCountPeople": "{count} أشخاص",
   "@audienceCountPeople": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "audienceFreeSlots": "-{count} أشخاص",
   "@audienceFreeSlots": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "defaultUserFallback": "مستخدم",
   "startLiveStreamOption": "بدء البث المباشر",
   "noResultsFound": "لا توجد نتائج",
   "removeFromFavoritesTooltip": "إزالة من المفضلة",
-
   "callVoiceCall": "مكالمة صوتية",
   "callCalling": "جارٍ الاتصال...",
   "callConnecting": "جارٍ الاتصال...",
@@ -2489,11 +2712,16 @@
   "callIncomingBody": "{username}@ يتصل بك",
   "@callIncomingBody": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "callReturnToActive": "اضغط للعودة إلى المكالمة",
   "callNotifAccept": "رد",
   "callNotifDecline": "رفض",
-  "callPermissionDenied": "مطلوب إذن الميكروفون"
+  "callPermissionDenied": "مطلوب إذن الميكروفون",
+  "callVideo": "فيديو",
+  "callChat": "دردشة",
+  "callAddPerson": "إضافة"
 }

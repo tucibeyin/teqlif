@@ -905,7 +905,9 @@
   "giftSentHud": "🎉 {sender} отправил подарок!",
   "@giftSentHud": {
     "placeholders": {
-      "sender": { "type": "String" }
+      "sender": {
+        "type": "String"
+      }
     }
   },
   "giftErrorGeneric": "Произошла ошибка.",
@@ -1162,7 +1164,9 @@
   "auctionBidReceived": "Ставка ₺{amount} принята!",
   "@auctionBidReceived": {
     "placeholders": {
-      "amount": { "type": "String" }
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "chatJoinedStream": "присоединился к трансляции",
@@ -1261,7 +1265,9 @@
   "walletSeeAllTxns": "Показать все {n} транзакции",
   "@walletSeeAllTxns": {
     "placeholders": {
-      "n": { "type": "int" }
+      "n": {
+        "type": "int"
+      }
     }
   },
   "walletAllTxnsTitle": "Все транзакции",
@@ -1368,7 +1374,9 @@
   "audienceReadyBuyersBanner": "Уведомить {count} готовых покупателей!",
   "@audienceReadyBuyersBanner": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "blastBtnFree": "{count} Готовые покупатели — отправить уведомление (бесплатно)",
@@ -1731,7 +1739,9 @@
   "categoryStreams": "Трансляции {category}",
   "@categoryStreams": {
     "placeholders": {
-      "category": { "type": "String" }
+      "category": {
+        "type": "String"
+      }
     }
   },
   "listingsSelectedForYou": "Объявления, выбранные для вас",
@@ -2090,11 +2100,29 @@
   "timeJustNow": "Только что",
   "timeNow": "сейчас",
   "timeMinAgo": "{n} мин назад",
-  "@timeMinAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeMinAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "timeHoursAgo": "{n} ч назад",
-  "@timeHoursAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "timeDaysAgo": "{n} д назад",
-  "@timeDaysAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "radarExpensive": "Дорого",
   "radarAffordable": "Доступно",
   "radarExpensivePrice": "Дорогая цена",
@@ -2109,20 +2137,28 @@
   "massNotifCooldownHours": "Доступно через {hours}ч {min}м",
   "@massNotifCooldownHours": {
     "placeholders": {
-      "hours": {"type": "int"},
-      "min": {"type": "int"}
+      "hours": {
+        "type": "int"
+      },
+      "min": {
+        "type": "int"
+      }
     }
   },
   "massNotifCooldownMinutes": "Доступно через {min}м",
   "@massNotifCooldownMinutes": {
     "placeholders": {
-      "min": {"type": "int"}
+      "min": {
+        "type": "int"
+      }
     }
   },
   "massNotifCooldownSeconds": "Доступно через {sec}с",
   "@massNotifCooldownSeconds": {
     "placeholders": {
-      "sec": {"type": "int"}
+      "sec": {
+        "type": "int"
+      }
     }
   },
   "massNotifPerListingInfo": "Массовое уведомление можно отправлять раз в 24 часа для каждого объявления.",
@@ -2170,71 +2206,230 @@
   "proTipAllGoodTitle": "Всё в порядке",
   "proTipAllGoodBody": "Ваши данные об объявлениях и продажах выглядят здоровыми. Пользовательские советы появятся здесь по мере накопления данных.",
   "notifNewBid": "@{username} сделал(-а) ставку",
-  "@notifNewBid": { "placeholders": { "username": { "type": "String" } } },
+  "@notifNewBid": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifNewBidBody": "{item} — {price}",
-  "@notifNewBidBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifNewBidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifNewBidBodyNoItem": "{price}",
-  "@notifNewBidBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifNewBidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifOutbid": "Вашу ставку перебили!",
   "notifOutbidBody": "{item} — новая ставка: {price}",
-  "@notifOutbidBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifOutbidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifOutbidBodyNoItem": "Новая ставка: {price}",
-  "@notifOutbidBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifOutbidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionWon": "🏆 Ваша ставка принята!",
   "notifAuctionWonBody": "{item} — {price}",
-  "@notifAuctionWonBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifAuctionWonBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifBuyItNow": "🛒 Покупка завершена!",
   "notifBuyItNowBody": "{item} — {price}",
-  "@notifBuyItNowBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifBuyItNowBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionEnded": "Аукцион завершён",
   "notifAuctionEndedBody": "{item} — цена победителя: {price}",
-  "@notifAuctionEndedBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifAuctionEndedBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionEndedBodyNoItem": "Цена победителя: {price}",
-  "@notifAuctionEndedBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifAuctionEndedBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionCancelled": "Аукцион отменён",
   "notifAuctionCancelledBody": "{item} — ставка не принята",
-  "@notifAuctionCancelledBody": { "placeholders": { "item": { "type": "String" } } },
+  "@notifAuctionCancelledBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionCancelledBodyNoItem": "Ставка не принята",
   "notifStreamStarted": "@{username} начал(-а) прямой эфир",
-  "@notifStreamStarted": { "placeholders": { "username": { "type": "String" } } },
+  "@notifStreamStarted": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifFollow": "@{username} начал(-а) подписываться на вас",
-  "@notifFollow": { "placeholders": { "username": { "type": "String" } } },
+  "@notifFollow": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessage": "@{username} прислал(-а) вам сообщение",
-  "@notifMessage": { "placeholders": { "username": { "type": "String" } } },
+  "@notifMessage": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessageVoice": "🎵 Голосовое сообщение",
   "notifMessageImage": "📷 Фото",
   "notifMessageVideo": "🎬 Видео",
   "notifMessageFile": "📎 Файл",
   "notifNewListing": "@{username} добавил(-а) новое объявление",
-  "@notifNewListing": { "placeholders": { "username": { "type": "String" } } },
+  "@notifNewListing": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeactivated": "Ваше объявление деактивировано",
   "notifListingDeactivatedBodySingle": "Ваше объявление \"{title}\" достигло 30-дневного бесплатного срока и было деактивировано.",
-  "@notifListingDeactivatedBodySingle": { "placeholders": { "title": { "type": "String" } } },
+  "@notifListingDeactivatedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeactivatedBodyMultiple": "{count} ваших объявлений достигли 30-дневного срока и были деактивированы.",
-  "@notifListingDeactivatedBodyMultiple": { "placeholders": { "count": { "type": "int" } } },
+  "@notifListingDeactivatedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifListingDeleted": "Ваше объявление удалено",
   "notifListingDeletedBodySingle": "Ваше объявление \"{title}\" удалено с платформы. Вы можете создать новое объявление.",
-  "@notifListingDeletedBodySingle": { "placeholders": { "title": { "type": "String" } } },
+  "@notifListingDeletedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeletedBodyMultiple": "{count} ваших объявлений удалены с платформы. Вы можете создать новые объявления.",
-  "@notifListingDeletedBodyMultiple": { "placeholders": { "count": { "type": "int" } } },
+  "@notifListingDeletedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifListingRemoved": "Ваше объявление удалено",
   "notifListingRemovedBody": "Ваше объявление удалено, так как содержит контент, нарушающий правила сообщества.",
   "notifSearchAlert": "Уведомление поиска: новое объявление",
   "notifSearchAlertBody": "Новый товар добавлен в категории {category}",
-  "@notifSearchAlertBody": { "placeholders": { "category": { "type": "String" } } },
+  "@notifSearchAlertBody": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
   "notifSmartAuctionAlert": "Начался стрим специально для вас! 🎯",
   "notifPriceDrop": "Цена снизилась! 🔥",
   "notifPriceDropBody": "{item} — теперь {price}",
-  "@notifPriceDropBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifPriceDropBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifBudgetMatch": "Новое объявление в рамках вашего бюджета! 💡",
   "notifBudgetMatchBody": "{item} — {price}",
-  "@notifBudgetMatchBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifBudgetMatchBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifChurnAirdropSeller": "Ваши объявления ждут вас! 🛍️",
   "notifChurnBodySeller": "Мы начислили {amount} TUCi на ваш счёт. Создайте объявление и найдите покупателей!",
-  "@notifChurnBodySeller": { "placeholders": { "amount": { "type": "int" } } },
+  "@notifChurnBodySeller": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "notifChurnAirdropBuyer": "Мы скучали по вам! 🎁",
   "notifChurnBodyBuyer": "Мы начислили {amount} TUCi на ваш счёт. Просмотрите прямые эфиры и потратьте их!",
-  "@notifChurnBodyBuyer": { "placeholders": { "amount": { "type": "int" } } },
+  "@notifChurnBodyBuyer": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "cat_elektronik": "Электроника",
   "cat_giyim": "Одежда и мода",
   "cat_ev": "Дом и быт",
@@ -2291,29 +2486,32 @@
   "aiAdviceSimilarCount": "Проанализировано {count} похожих товаров",
   "@aiAdviceSimilarCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "aiAdviceSameCategory": "{count} той же категории",
   "@aiAdviceSameCategory": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "aiAdviceCityBased": "по городу",
   "aiAdviceMarketClose": "Средняя цена закрытия: {price} ₺.",
   "@aiAdviceMarketClose": {
     "placeholders": {
-      "price": { "type": "String" }
+      "price": {
+        "type": "String"
+      }
     }
   },
   "aiAdviceBimodal": "В этой группе товаров обнаружены два ценовых уровня (бимодальный). Цена может варьироваться в зависимости от варианта товара или гарантии.",
   "aiAdviceNoData": "Пока недостаточно данных о похожих товарах. По мере добавления объявлений прогнозы станут точнее. Изучите рынок для определения цены.",
-
   "proToolDemandTrendsTitle": "Тренды спроса по категориям",
   "proToolDemandTrendsDesc": "Какие категории растут? Найди возможности с дефицитом предложения.",
-
-
   "demandTrendsTitle": "Тренды спроса по категориям",
   "demandTrendsSubtitle": "Данные поиска за последние 8 недель",
   "demandTrendsUpLabel": "Растёт",
@@ -2324,26 +2522,27 @@
   "demandTrendsChangeLabel": "{pct}% изменение (8 нед.)",
   "@demandTrendsChangeLabel": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "demandTrendsEmptyLabel": "Пока недостаточно данных поиска.",
-
   "trustScoreLabel": "Рейтинг доверия",
   "trustScoreHint": "Рейтинг надёжности от 0 до 100. Рассчитывается на основе выполнения аукционов, истории побед, качества объявлений, возраста аккаунта и стабильности ставок. Обновляется ежедневно.",
   "trustScoreLow": "Новый участник",
   "trustScoreMedium": "Надёжный",
   "trustScoreHigh": "Очень надёжный",
-
   "influenceRankLabel": "Рейтинг в сети",
   "influenceRankHint": "Рейтинг влияния на основе сети подписчиков. Чем меньше число, тем шире охват. Обновляется еженедельно.",
   "influenceRankValue": "Место #{rank}",
   "@influenceRankValue": {
     "placeholders": {
-      "rank": { "type": "int" }
+      "rank": {
+        "type": "int"
+      }
     }
   },
-
   "radarNoActiveListing": "Активные объявления не найдены.",
   "radarNeedActiveListing": "Для радара конкурентов требуется минимум 1 активное объявление.",
   "radarNoPriceSet": "Цена для этого объявления не установлена.",
@@ -2386,7 +2585,9 @@
   "quickAuctionItem": "Товар {count}",
   "@quickAuctionItem": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "quickAuctionStarted": "Аукцион начат",
@@ -2401,7 +2602,9 @@
   "blastSent": "🎯 Уведомление отправлено {count} людям!",
   "@blastSent": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "blastStarted": "🎯 Кампания уведомлений запущена!",
@@ -2411,43 +2614,54 @@
   "hostViewersTitle": "👁 Зрители ({count})",
   "@hostViewersTitle": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "auctionGroupFallback": "Аукцион",
   "hostMuteSuccess": "@{username} заглушен",
   "@hostMuteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostUnmuteSuccess": "Звук восстановлен",
   "hostPromoteSuccess": "@{username} назначен модератором",
   "@hostPromoteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostDemoteSuccess": "@{username} снят с модерации",
   "@hostDemoteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostKickSuccess": "@{username} удалён из трансляции",
   "@hostKickSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "whaleInRoom": "Покупатель {tier} в комнате",
   "@whaleInRoom": {
     "placeholders": {
-      "tier": { "type": "String" }
+      "tier": {
+        "type": "String"
+      }
     }
   },
   "whaleShowBestItems": "Время показать лучшие товары!",
-
   "badgePassive": "Неактивно",
   "hesitatedSectionTitle": "Вернуться",
   "hesitatedSectionSubtitle": "Вы собирались сделать ставку",
@@ -2455,7 +2669,9 @@
   "searchShowAllAccounts": "Показать все аккаунты ({count})",
   "@searchShowAllAccounts": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "explorePersonalizedHint": "Просмотрите несколько объявлений,\nГотовится персонализированный контент!",
@@ -2463,20 +2679,23 @@
   "audienceCountPeople": "{count} чел.",
   "@audienceCountPeople": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "audienceFreeSlots": "-{count} чел.",
   "@audienceFreeSlots": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "defaultUserFallback": "Пользователь",
   "startLiveStreamOption": "Начать трансляцию",
   "noResultsFound": "Ничего не найдено",
   "removeFromFavoritesTooltip": "Удалить из избранного",
-
   "callVoiceCall": "Голосовой звонок",
   "callCalling": "Звонок...",
   "callConnecting": "Подключение...",
@@ -2489,16 +2708,21 @@
   "callDecline": "Отклонить",
   "callMute": "Без звука",
   "callUnmute": "Включить звук",
-  "callSpeaker": "Громкая связь",
+  "callSpeaker": "Динамик",
   "callIncomingTitle": "Входящий звонок",
   "callIncomingBody": "@{username} звонит",
   "@callIncomingBody": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "callReturnToActive": "Нажмите, чтобы вернуться к звонку",
   "callNotifAccept": "Ответить",
   "callNotifDecline": "Отклонить",
-  "callPermissionDenied": "Требуется разрешение на микрофон"
+  "callPermissionDenied": "Требуется разрешение на микрофон",
+  "callVideo": "Видео",
+  "callChat": "Чат",
+  "callAddPerson": "Добавить"
 }

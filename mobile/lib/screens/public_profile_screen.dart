@@ -549,6 +549,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               calleeAvatar: null,
                             );
                             nav.push(MaterialPageRoute(
+                              settings: const RouteSettings(name: '/call_screen'),
                               builder: (_) => const CallScreen(),
                               fullscreenDialog: true,
                             ));

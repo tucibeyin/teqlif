@@ -164,7 +164,9 @@
   "giftSentHud": "🎉 {sender} sent a gift!",
   "@giftSentHud": {
     "placeholders": {
-      "sender": { "type": "String" }
+      "sender": {
+        "type": "String"
+      }
     }
   },
   "giftErrorGeneric": "An error occurred.",
@@ -536,7 +538,9 @@
   "auctionBidReceived": "₺{amount} bid received!",
   "@auctionBidReceived": {
     "placeholders": {
-      "amount": { "type": "String" }
+      "amount": {
+        "type": "String"
+      }
     }
   },
   "chatJoinedStream": "joined the stream",
@@ -680,7 +684,9 @@
   "walletSeeAllTxns": "See all {n} transactions",
   "@walletSeeAllTxns": {
     "placeholders": {
-      "n": { "type": "int" }
+      "n": {
+        "type": "int"
+      }
     }
   },
   "walletAllTxnsTitle": "All Transactions",
@@ -828,7 +834,9 @@
   "audienceReadyBuyersBanner": "Notify {count} Ready Buyers!",
   "@audienceReadyBuyersBanner": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "blastBtnFree": "{count} Ready Buyers — Send Notification (Free)",
@@ -1709,7 +1717,9 @@
   "categoryStreams": "{category} Streams",
   "@categoryStreams": {
     "placeholders": {
-      "category": { "type": "String" }
+      "category": {
+        "type": "String"
+      }
     }
   },
   "listingsSelectedForYou": "Listings Selected For You",
@@ -2089,11 +2099,29 @@
   "timeJustNow": "Just now",
   "timeNow": "now",
   "timeMinAgo": "{n}m ago",
-  "@timeMinAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeMinAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "timeHoursAgo": "{n}h ago",
-  "@timeHoursAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "timeDaysAgo": "{n}d ago",
-  "@timeDaysAgo": { "placeholders": { "n": { "type": "int" } } },
+  "@timeDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "radarExpensive": "Expensive",
   "radarAffordable": "Affordable",
   "radarExpensivePrice": "Expensive price",
@@ -2108,20 +2136,28 @@
   "massNotifCooldownHours": "Available in {hours}h {min}m",
   "@massNotifCooldownHours": {
     "placeholders": {
-      "hours": {"type": "int"},
-      "min": {"type": "int"}
+      "hours": {
+        "type": "int"
+      },
+      "min": {
+        "type": "int"
+      }
     }
   },
   "massNotifCooldownMinutes": "Available in {min}m",
   "@massNotifCooldownMinutes": {
     "placeholders": {
-      "min": {"type": "int"}
+      "min": {
+        "type": "int"
+      }
     }
   },
   "massNotifCooldownSeconds": "Available in {sec}s",
   "@massNotifCooldownSeconds": {
     "placeholders": {
-      "sec": {"type": "int"}
+      "sec": {
+        "type": "int"
+      }
     }
   },
   "massNotifPerListingInfo": "A mass notification can be sent once every 24 hours per listing.",
@@ -2169,71 +2205,230 @@
   "proTipAllGoodTitle": "Everything is Good",
   "proTipAllGoodBody": "Your listing and sales data look healthy. Custom tips will appear here as more data accumulates.",
   "notifNewBid": "@{username} placed a bid",
-  "@notifNewBid": { "placeholders": { "username": { "type": "String" } } },
+  "@notifNewBid": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifNewBidBody": "{item} — {price}",
-  "@notifNewBidBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifNewBidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifNewBidBodyNoItem": "{price}",
-  "@notifNewBidBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifNewBidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifOutbid": "You've been outbid!",
   "notifOutbidBody": "{item} — new bid: {price}",
-  "@notifOutbidBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifOutbidBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifOutbidBodyNoItem": "New bid: {price}",
-  "@notifOutbidBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifOutbidBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionWon": "🏆 Your bid was accepted!",
   "notifAuctionWonBody": "{item} — {price}",
-  "@notifAuctionWonBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifAuctionWonBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifBuyItNow": "🛒 Buy It Now complete!",
   "notifBuyItNowBody": "{item} — {price}",
-  "@notifBuyItNowBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifBuyItNowBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionEnded": "Auction ended",
   "notifAuctionEndedBody": "{item} — winning price: {price}",
-  "@notifAuctionEndedBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifAuctionEndedBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionEndedBodyNoItem": "Winning price: {price}",
-  "@notifAuctionEndedBodyNoItem": { "placeholders": { "price": { "type": "String" } } },
+  "@notifAuctionEndedBodyNoItem": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionCancelled": "Auction cancelled",
   "notifAuctionCancelledBody": "{item} — no bid was accepted",
-  "@notifAuctionCancelledBody": { "placeholders": { "item": { "type": "String" } } },
+  "@notifAuctionCancelledBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
   "notifAuctionCancelledBodyNoItem": "No bid was accepted",
   "notifStreamStarted": "@{username} started a live stream",
-  "@notifStreamStarted": { "placeholders": { "username": { "type": "String" } } },
+  "@notifStreamStarted": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifFollow": "@{username} started following you",
-  "@notifFollow": { "placeholders": { "username": { "type": "String" } } },
+  "@notifFollow": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessage": "@{username} sent you a message",
-  "@notifMessage": { "placeholders": { "username": { "type": "String" } } },
+  "@notifMessage": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifMessageVoice": "🎵 Voice message",
   "notifMessageImage": "📷 Photo",
   "notifMessageVideo": "🎬 Video",
   "notifMessageFile": "📎 File",
   "notifNewListing": "@{username} added a new listing",
-  "@notifNewListing": { "placeholders": { "username": { "type": "String" } } },
+  "@notifNewListing": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeactivated": "Your Listing Was Deactivated",
   "notifListingDeactivatedBodySingle": "Your listing \"{title}\" reached its 30-day free period and has been deactivated.",
-  "@notifListingDeactivatedBodySingle": { "placeholders": { "title": { "type": "String" } } },
+  "@notifListingDeactivatedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeactivatedBodyMultiple": "{count} of your listings reached their 30-day free period and have been deactivated.",
-  "@notifListingDeactivatedBodyMultiple": { "placeholders": { "count": { "type": "int" } } },
+  "@notifListingDeactivatedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifListingDeleted": "Your Listing Was Deleted",
   "notifListingDeletedBodySingle": "Your listing \"{title}\" has been removed. You can create a new listing to re-publish it.",
-  "@notifListingDeletedBodySingle": { "placeholders": { "title": { "type": "String" } } },
+  "@notifListingDeletedBodySingle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "notifListingDeletedBodyMultiple": "{count} of your listings have been removed. You can create new listings to re-publish them.",
-  "@notifListingDeletedBodyMultiple": { "placeholders": { "count": { "type": "int" } } },
+  "@notifListingDeletedBodyMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifListingRemoved": "Your Listing Was Removed",
   "notifListingRemovedBody": "Your listing was removed because it contained content that violates community guidelines.",
   "notifSearchAlert": "Search alert: new listing",
   "notifSearchAlertBody": "New item added in {category}",
-  "@notifSearchAlertBody": { "placeholders": { "category": { "type": "String" } } },
+  "@notifSearchAlertBody": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
   "notifSmartAuctionAlert": "A stream just for you has started! 🎯",
   "notifPriceDrop": "Price dropped! 🔥",
   "notifPriceDropBody": "{item} — now {price}",
-  "@notifPriceDropBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifPriceDropBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifBudgetMatch": "New listing within your budget! 💡",
   "notifBudgetMatchBody": "{item} — {price}",
-  "@notifBudgetMatchBody": { "placeholders": { "item": { "type": "String" }, "price": { "type": "String" } } },
+  "@notifBudgetMatchBody": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "notifChurnAirdropSeller": "Your listings are waiting for you! 🛍️",
   "notifChurnBodySeller": "We've added {amount} TUCi to your account. Create a new listing and connect with buyers!",
-  "@notifChurnBodySeller": { "placeholders": { "amount": { "type": "int" } } },
+  "@notifChurnBodySeller": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "notifChurnAirdropBuyer": "We've missed you! 🎁",
   "notifChurnBodyBuyer": "We've added {amount} TUCi to your account. Browse live streams and spend it!",
-  "@notifChurnBodyBuyer": { "placeholders": { "amount": { "type": "int" } } },
+  "@notifChurnBodyBuyer": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
   "cat_elektronik": "Electronics",
   "cat_giyim": "Clothing & Fashion",
   "cat_ev": "Home & Living",
@@ -2326,29 +2521,32 @@
   "aiAdviceSimilarCount": "{count} similar products analyzed",
   "@aiAdviceSimilarCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "aiAdviceSameCategory": "{count} same category",
   "@aiAdviceSameCategory": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "aiAdviceCityBased": "city-based",
   "aiAdviceMarketClose": "Average market close: {price} ₺.",
   "@aiAdviceMarketClose": {
     "placeholders": {
-      "price": { "type": "String" }
+      "price": {
+        "type": "String"
+      }
     }
   },
   "aiAdviceBimodal": "Two distinct market price levels (Bimodal) detected in this product group. Price may vary based on product variant or warranty.",
   "aiAdviceNoData": "Not enough similar product data found yet. Estimates will improve as more listings are added to the platform. Research the market to set your price.",
-
   "proToolDemandTrendsTitle": "Category Demand Trends",
   "proToolDemandTrendsDesc": "Which categories are rising? Discover supply gap opportunities.",
-
-
   "demandTrendsTitle": "Category Demand Trends",
   "demandTrendsSubtitle": "Last 8 weeks of search data",
   "demandTrendsUpLabel": "Rising",
@@ -2359,26 +2557,27 @@
   "demandTrendsChangeLabel": "{pct}% change (8 weeks)",
   "@demandTrendsChangeLabel": {
     "placeholders": {
-      "pct": { "type": "String" }
+      "pct": {
+        "type": "String"
+      }
     }
   },
   "demandTrendsEmptyLabel": "Not enough search data yet.",
-
   "trustScoreLabel": "Trust Score",
   "trustScoreHint": "A 0–100 credibility score. Calculated from auction completion rate, win history, listing quality, account age, and bid consistency. Updated nightly.",
   "trustScoreLow": "New Member",
   "trustScoreMedium": "Trusted",
   "trustScoreHigh": "Highly Trusted",
-
   "influenceRankLabel": "Network Rank",
   "influenceRankHint": "Influence ranking based on the follower network. The lower the number, the broader your reach. Updated weekly.",
   "influenceRankValue": "Rank #{rank}",
   "@influenceRankValue": {
     "placeholders": {
-      "rank": { "type": "int" }
+      "rank": {
+        "type": "int"
+      }
     }
   },
-
   "radarNoActiveListing": "No active listings found.",
   "radarNeedActiveListing": "At least 1 active listing is required for Competitor Radar.",
   "radarNoPriceSet": "This listing has no price set.",
@@ -2421,7 +2620,9 @@
   "quickAuctionItem": "Item {count}",
   "@quickAuctionItem": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "quickAuctionStarted": "Auction started",
@@ -2436,7 +2637,9 @@
   "blastSent": "🎯 Notification sent to {count} people!",
   "@blastSent": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "blastStarted": "🎯 Notification campaign started!",
@@ -2446,43 +2649,54 @@
   "hostViewersTitle": "👁 Viewers ({count})",
   "@hostViewersTitle": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "auctionGroupFallback": "Auction",
   "hostMuteSuccess": "@{username} muted",
   "@hostMuteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostUnmuteSuccess": "Mute removed",
   "hostPromoteSuccess": "@{username} made moderator",
   "@hostPromoteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostDemoteSuccess": "@{username} removed as moderator",
   "@hostDemoteSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "hostKickSuccess": "@{username} removed from stream",
   "@hostKickSuccess": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "whaleInRoom": "{tier} Buyer in Room",
   "@whaleInRoom": {
     "placeholders": {
-      "tier": { "type": "String" }
+      "tier": {
+        "type": "String"
+      }
     }
   },
   "whaleShowBestItems": "Time to show your best items!",
-
   "badgePassive": "Inactive",
   "hesitatedSectionTitle": "Look Back",
   "hesitatedSectionSubtitle": "You Were About to Bid",
@@ -2490,7 +2704,9 @@
   "searchShowAllAccounts": "See all accounts ({count})",
   "@searchShowAllAccounts": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "explorePersonalizedHint": "Browse a few listings,\nPersonalized content is being prepared!",
@@ -2498,20 +2714,23 @@
   "audienceCountPeople": "{count} People",
   "@audienceCountPeople": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "audienceFreeSlots": "-{count} People",
   "@audienceFreeSlots": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "defaultUserFallback": "User",
   "startLiveStreamOption": "Start Live Stream",
   "noResultsFound": "No results found",
   "removeFromFavoritesTooltip": "Remove from Favorites",
-
   "callVoiceCall": "Voice Call",
   "callCalling": "Calling...",
   "callConnecting": "Connecting...",
@@ -2529,11 +2748,16 @@
   "callIncomingBody": "@{username} is calling",
   "@callIncomingBody": {
     "placeholders": {
-      "username": { "type": "String" }
+      "username": {
+        "type": "String"
+      }
     }
   },
   "callReturnToActive": "Tap to return to call",
   "callNotifAccept": "Answer",
   "callNotifDecline": "Decline",
-  "callPermissionDenied": "Microphone permission required"
+  "callPermissionDenied": "Microphone permission required",
+  "callVideo": "Video",
+  "callChat": "Chat",
+  "callAddPerson": "Add"
 }

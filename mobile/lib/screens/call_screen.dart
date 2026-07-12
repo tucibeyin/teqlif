@@ -22,7 +22,6 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
-    CallService.instance.visibleCallScreensCount.value++;
     CallService.instance.state.addListener(_onStateChange);
     _proximitySubscription = ProximitySensor.events.listen((int event) {
       if (mounted) {
@@ -41,7 +40,6 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
-    CallService.instance.visibleCallScreensCount.value--;
     _proximitySubscription.cancel();
     CallService.instance.state.removeListener(_onStateChange);
     super.dispose();
@@ -105,7 +103,7 @@ class _CallScreenState extends State<CallScreen> {
                           ],
                         ),
                         child: ClipOval(
-                          child: avatarUrl != null
+                          child: avatarUrl != null && avatarUrl.isNotEmpty
                               ? CachedNetworkImage(
                                   imageUrl: avatarUrl,
                                   fit: BoxFit.cover,
@@ -163,7 +161,7 @@ class _CallScreenState extends State<CallScreen> {
                                   ),
                                   _ControlButton(
                                     icon: FontAwesomeIcons.video,
-                                    label: 'Video',
+                                    label: l.callVideo,
                                     color: Colors.white.withValues(alpha: 0.05),
                                     onTap: () {}, // Disabled for now
                                   ),
@@ -187,7 +185,7 @@ class _CallScreenState extends State<CallScreen> {
                                 if (cs.status == CallStatus.connected)
                                   _ControlButton(
                                     icon: FontAwesomeIcons.message,
-                                    label: 'Sohbet',
+                                    label: l.callChat,
                                     color: Colors.white.withValues(alpha: 0.12),
                                     onTap: () => Navigator.pop(context), // Go back to chat
                                   )
@@ -226,7 +224,7 @@ class _CallScreenState extends State<CallScreen> {
                                 if (cs.status == CallStatus.connected)
                                   _ControlButton(
                                     icon: FontAwesomeIcons.userPlus,
-                                    label: 'Ekle',
+                                    label: l.callAddPerson,
                                     color: Colors.white.withValues(alpha: 0.12),
                                     onTap: () {}, // Disabled
                                   )

@@ -5104,4 +5104,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get callPermissionDenied => 'Mikrofon izni gerekli';
+
+  @override
+  String get callVideo => 'Video';
+
+  @override
+  String get callChat => 'Sohbet';
+
+  @override
+  String get callAddPerson => 'Ekle';
 }
