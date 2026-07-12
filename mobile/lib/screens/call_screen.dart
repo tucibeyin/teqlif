@@ -7,6 +7,7 @@ import 'package:proximity_sensor/proximity_sensor.dart';
 import '../l10n/app_localizations.dart';
 import '../config/api.dart';
 import '../services/call_service.dart';
+import 'messages_screen.dart';
 
 class CallScreen extends StatefulWidget {
   const CallScreen({super.key});
@@ -66,191 +67,220 @@ class _CallScreenState extends State<CallScreen> {
 
         return Scaffold(
           backgroundColor: Colors.black,
-            body: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Background
-                if (avatarUrl != null)
-                  CachedNetworkImage(
-                    imageUrl: avatarUrl,
-                    fit: BoxFit.cover,
-                  )
-                else
-                  Container(color: const Color(0xFF0A1628)),
-                
-                BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                  child: Container(color: Colors.black.withValues(alpha: 0.6)),
-                ),
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background
+              if (avatarUrl != null)
+                CachedNetworkImage(imageUrl: avatarUrl, fit: BoxFit.cover)
+              else
+                Container(color: const Color(0xFF0A1628)),
 
-                SafeArea(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 64),
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                child: Container(color: Colors.black.withValues(alpha: 0.6)),
+              ),
 
-                      // Avatar
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              blurRadius: 32,
-                              spreadRadius: 8,
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: avatarUrl != null && avatarUrl.isNotEmpty
-                              ? CachedNetworkImage(
-                                  imageUrl: avatarUrl,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, _) => _Initials(username: username),
-                                  errorWidget: (_, _, _) => _Initials(username: username),
-                                )
-                              : _Initials(username: username),
-                        ),
+              SafeArea(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 64),
+
+                    // Avatar
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            blurRadius: 32,
+                            spreadRadius: 8,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-
-                      // Username
-                      Text(
-                        '@$username',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: ClipOval(
+                        child: avatarUrl != null && avatarUrl.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: avatarUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, _) =>
+                                    _Initials(username: username),
+                                errorWidget: (_, _, _) =>
+                                    _Initials(username: username),
+                              )
+                            : _Initials(username: username),
                       ),
-                      const SizedBox(height: 10),
+                    ),
+                    const SizedBox(height: 24),
 
-                      // Status / timer
-                      Text(
-                        _statusText(cs.status, l, cs.elapsed),
-                        style: const TextStyle(color: Colors.white70, fontSize: 16),
+                    // Username
+                    Text(
+                      '@$username',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
                       ),
+                    ),
+                    const SizedBox(height: 10),
 
-                      const Spacer(),
+                    // Status / timer
+                    Text(
+                      _statusText(cs.status, l, cs.elapsed),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
 
-                      // Bottom Controls Panel
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B).withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(32),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (cs.status == CallStatus.connected) ...[
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _ControlButton(
-                                    icon: cs.isMuted
-                                        ? FontAwesomeIcons.microphoneSlash
-                                        : FontAwesomeIcons.microphone,
-                                    label: cs.isMuted ? l.callUnmute : l.callMute,
-                                    color: cs.isMuted
-                                        ? Colors.white24
-                                        : Colors.white.withValues(alpha: 0.12),
-                                    onTap: () => CallService.instance.toggleMute(),
-                                  ),
-                                  _ControlButton(
-                                    icon: FontAwesomeIcons.video,
-                                    label: l.callVideo,
-                                    color: Colors.white.withValues(alpha: 0.05),
-                                    onTap: () {}, // Disabled for now
-                                  ),
-                                  _ControlButton(
-                                    icon: FontAwesomeIcons.volumeHigh,
-                                    label: l.callSpeaker,
-                                    color: cs.isSpeaker
-                                        ? const Color(0xFF22C55E).withValues(alpha: 0.25)
-                                        : Colors.white.withValues(alpha: 0.12),
-                                    onTap: () => CallService.instance.setSpeaker(!cs.isSpeaker),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 24),
-                            ],
+                    const Spacer(),
 
-                            // End call button row
+                    // Bottom Controls Panel
+                    Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 32,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 24,
+                        horizontal: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B).withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(32),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (cs.status == CallStatus.connected) ...[
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
-                                if (cs.status == CallStatus.connected)
-                                  _ControlButton(
-                                    icon: FontAwesomeIcons.message,
-                                    label: l.callChat,
-                                    color: Colors.white.withValues(alpha: 0.12),
-                                    onTap: () => Navigator.pop(context), // Go back to chat
-                                  )
-                                else
-                                  const SizedBox(width: 60), // Placeholder to keep center alignment
+                                _ControlButton(
+                                  icon: cs.isMuted
+                                      ? FontAwesomeIcons.microphoneSlash
+                                      : FontAwesomeIcons.microphone,
+                                  label: cs.isMuted ? l.callUnmute : l.callMute,
+                                  color: cs.isMuted
+                                      ? Colors.white24
+                                      : Colors.white.withValues(alpha: 0.12),
+                                  onTap: () =>
+                                      CallService.instance.toggleMute(),
+                                ),
+                                _ControlButton(
+                                  icon: FontAwesomeIcons.video,
+                                  label: l.callVideo,
+                                  color: Colors.white.withValues(alpha: 0.05),
+                                  onTap: () {}, // Disabled for now
+                                ),
+                                _ControlButton(
+                                  icon: FontAwesomeIcons.volumeHigh,
+                                  label: l.callSpeaker,
+                                  color: cs.isSpeaker
+                                      ? const Color(
+                                          0xFF22C55E,
+                                        ).withValues(alpha: 0.25)
+                                      : Colors.white.withValues(alpha: 0.12),
+                                  onTap: () => CallService.instance.setSpeaker(
+                                    !cs.isSpeaker,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                          ],
 
-                                // End call button
-                                if (cs.status == CallStatus.calling ||
-                                    cs.status == CallStatus.connecting ||
-                                    cs.status == CallStatus.connected)
-                                  GestureDetector(
-                                    onTap: () => CallService.instance.endCall(),
-                                    child: Container(
-                                      width: 72,
-                                      height: 72,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFEF4444),
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(0xFFEF4444).withValues(alpha: 0.45),
-                                            blurRadius: 16,
+                          // End call button row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              if (cs.status == CallStatus.connected)
+                                _ControlButton(
+                                  icon: FontAwesomeIcons.message,
+                                  label: l.callChat,
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  onTap: () {
+                                    final id = cs.otherUserId;
+                                    final username = cs.otherUsername ?? '';
+                                    if (id != null) {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => DirectChatScreen(
+                                            otherUserId: id,
+                                            displayName: '@$username',
+                                            otherHandle: username,
                                           ),
-                                        ],
-                                      ),
-                                      child: Center(
-                                        child: Icon(
-                                          Icons.call_end,
-                                          color: Colors.white,
-                                          size: 32,
                                         ),
+                                      );
+                                    } else {
+                                      Navigator.pop(context);
+                                    }
+                                  },
+                                )
+                              else
+                                const SizedBox(
+                                  width: 60,
+                                ), // Placeholder to keep center alignment
+                              // End call button
+                              if (cs.status == CallStatus.calling ||
+                                  cs.status == CallStatus.connecting ||
+                                  cs.status == CallStatus.connected)
+                                GestureDetector(
+                                  onTap: () => CallService.instance.endCall(),
+                                  child: Container(
+                                    width: 72,
+                                    height: 72,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFFEF4444,
+                                          ).withValues(alpha: 0.45),
+                                          blurRadius: 16,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.call_end,
+                                        color: Colors.white,
+                                        size: 32,
                                       ),
                                     ),
                                   ),
+                                ),
 
-                                if (cs.status == CallStatus.connected)
-                                  _ControlButton(
-                                    icon: FontAwesomeIcons.userPlus,
-                                    label: l.callAddPerson,
-                                    color: Colors.white.withValues(alpha: 0.12),
-                                    onTap: () {}, // Disabled
-                                  )
-                                else
-                                  const SizedBox(width: 60), // Placeholder
-                              ],
-                            ),
-                          ],
-                        ),
+                              if (cs.status == CallStatus.connected)
+                                _ControlButton(
+                                  icon: FontAwesomeIcons.userPlus,
+                                  label: l.callAddPerson,
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  onTap: () {}, // Disabled
+                                )
+                              else
+                                const SizedBox(width: 60), // Placeholder
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-
-                // Proximity black overlay
-                if (_isNear)
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black,
                     ),
-                  ),
-              ],
-            ),
-          );
-        },
-      );
+                  ],
+                ),
+              ),
+
+              // Proximity black overlay
+              if (_isNear)
+                Positioned.fill(child: Container(color: Colors.black)),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   String _statusText(CallStatus s, AppLocalizations l, Duration elapsed) {
@@ -293,7 +323,10 @@ class _ControlButton extends StatelessWidget {
             child: Center(child: FaIcon(icon, color: Colors.white, size: 22)),
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
         ],
       ),
     );
