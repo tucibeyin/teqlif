@@ -17,6 +17,7 @@ class CallScreen extends StatefulWidget {
 
 class _CallScreenState extends State<CallScreen> {
   bool _isNear = false;
+  bool _hasPopped = false;
   late StreamSubscription<int> _proximitySubscription;
 
   @override
@@ -33,7 +34,8 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _onStateChange() {
-    if (!CallService.instance.hasActiveCall && mounted) {
+    if (!CallService.instance.hasActiveCall && mounted && !_hasPopped) {
+      _hasPopped = true;
       Navigator.of(context).pop();
     }
   }

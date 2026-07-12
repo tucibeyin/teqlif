@@ -20,6 +20,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseCtrl;
   late Animation<double> _pulse;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -39,10 +40,23 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   Future<void> _onStateChange() async {
     final status = CallService.instance.state.value.status;
+
+    if (_hasNavigated || !mounted) return;
+
     if (status == CallStatus.ended ||
         status == CallStatus.idle ||
         status == CallStatus.missed) {
-      if (mounted) Navigator.of(context).pop();
+      _hasNavigated = true;
+      Navigator.of(context).pop();
+    } else if (status == CallStatus.connecting) {
+      _hasNavigated = true;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          settings: const RouteSettings(name: '/call_screen'),
+          builder: (_) => const CallScreen(),
+          fullscreenDialog: true,
+        ),
+      );
     } else if (status == CallStatus.permissionDenied) {
       if (mounted) {
         final isPermanent =
