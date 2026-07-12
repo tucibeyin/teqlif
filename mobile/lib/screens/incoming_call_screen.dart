@@ -223,7 +223,7 @@ class _CallActionButton extends StatelessWidget {
   const _CallActionButton({
     required this.color,
     required this.icon,
-    required this.rotation,
+    this.rotation = 0.0,
     required this.label,
     required this.onTap,
   });

@@ -5,6 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:audio_session/audio_session.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:vibration/vibration.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../config/api.dart';
 import '../services/storage_service.dart';
 
@@ -120,6 +123,15 @@ class CallService {
     required String calleeUsername,
     required String? calleeAvatar,
   }) async {
+    final permStatus = await Permission.microphone.request();
+    if (permStatus != PermissionStatus.granted) {
+      _setState(state.value.copyWith(
+        status: CallStatus.permissionDenied,
+        permPermanentlyDenied: permStatus.isPermanentlyDenied,
+      ));
+      return;
+    }
+
     _setState(CallState(
       status: CallStatus.calling,
       otherUserId: calleeId,
@@ -145,7 +157,7 @@ class CallService {
 
   void _startRingTimer() {
     _ringTimer?.cancel();
-    _ringTimer = Timer(const Duration(seconds: 30), () async {
+    _ringTimer = Timer(const Duration(seconds: 45), () async {
       if (state.value.status == CallStatus.calling) {
         final callId = state.value.callId;
         if (callId != null) {
@@ -160,7 +172,7 @@ class CallService {
 
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
-  void onIncomingCall(Map<String, dynamic> data) {
+  void onIncomingCall(Map<String, dynamic> data) async {
     _setState(CallState(
       status: CallStatus.ringing,
       callId: data['call_id'] is int ? data['call_id'] : int.tryParse(data['call_id'].toString()),
@@ -170,6 +182,11 @@ class CallService {
       otherUsername: data['caller_username'] as String?,
       otherAvatar: data['caller_avatar'] as String?,
     ));
+
+    FlutterRingtonePlayer().playRingtone();
+    if (await Vibration.hasVibrator() ?? false) {
+      Vibration.vibrate(pattern: [500, 1000, 500, 1000], repeat: 1);
+    }
   }
 
   Future<void> acceptCall() async {
@@ -310,6 +327,8 @@ class CallService {
   // ── Internal Cleanup ──────────────────────────────────────────────────────
 
   void _hangUpLocally({required CallStatus status}) {
+    FlutterRingtonePlayer().stop();
+    Vibration.cancel();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
     _disconnectRoom();
@@ -326,6 +345,8 @@ class CallService {
   }
 
   void reset() {
+    FlutterRingtonePlayer().stop();
+    Vibration.cancel();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
     _disconnectRoom();

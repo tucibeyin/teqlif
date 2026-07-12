@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
+import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import 'storage_service.dart';
@@ -53,75 +55,55 @@ Future<void> _showCallNotification({
   String roomName     = '',
   String livekitUrl   = '',
 }) async {
-  debugPrint('[FLNP] _showCallNotification başlıyor | callId=$callId | caller=$callerUsername');
+  debugPrint('[CallKit] _showCallNotification başlıyor | callId=$callId | caller=$callerUsername');
 
-  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const iosInit     = DarwinInitializationSettings();
-  final initOk = await _flnp.initialize(
-    const InitializationSettings(android: androidInit, iOS: iosInit),
-  );
-  debugPrint('[FLNP] initialize sonucu: $initOk');
-
-  // Önce kanalı oluştur
-  const channel = AndroidNotificationChannel(
-    _kChannelCalls,
-    'Gelen Aramalar',
-    description: 'Sesli arama bildirimleri',
-    importance: Importance.max,
-    enableVibration: true,
-    playSound: true,
-  );
-  final androidPlugin = _flnp.resolvePlatformSpecificImplementation<
-      AndroidFlutterLocalNotificationsPlugin>();
-  await androidPlugin?.createNotificationChannel(channel);
-  debugPrint('[FLNP] Android kanalı oluşturuldu');
-
-  // Payload olarak tüm call datasını JSON'a kodla
-  final payload = jsonEncode({
-    'call_id':         callId,
-    'caller_id':       callerId,
-    'caller_username': callerUsername,
-    'caller_avatar':   callerAvatar,
-    'room_name':       roomName,
-    'livekit_url':     livekitUrl,
-  });
-
-  const androidDetails = AndroidNotificationDetails(
-    _kChannelCalls,
-    'Gelen Aramalar',
-    channelDescription: 'Sesli arama bildirimleri',
-    importance:         Importance.max,
-    priority:           Priority.max,
-    fullScreenIntent:   true,
-    category:           AndroidNotificationCategory.call,
-    actions: [
-      AndroidNotificationAction(
-        _kActionDecline,
-        'Reddet',
-        showsUserInterface: false,
-        cancelNotification: true,
-      ),
-      AndroidNotificationAction(
-        _kActionAccept,
-        'Kabul Et',
-        showsUserInterface: true,
-        cancelNotification: true,
-      ),
-    ],
+  final params = CallKitParams(
+    id: callId,
+    nameCaller: callerUsername,
+    appName: 'Teqlif',
+    avatar: callerAvatar.isNotEmpty ? callerAvatar : 'https://i.pravatar.cc/100',
+    handle: 'Sesli Arama',
+    type: 0,
+    duration: 45000,
+    textAccept: 'Kabul Et',
+    textDecline: 'Reddet',
+    missedCallNotification: const NotificationParams(
+      showNotification: true,
+      isShowCallback: false,
+      subtitle: 'Cevapsız Arama',
+    ),
+    extra: {
+      'call_id': callId,
+      'caller_id': callerId,
+      'caller_username': callerUsername,
+      'caller_avatar': callerAvatar,
+      'room_name': roomName,
+      'livekit_url': livekitUrl,
+    },
+    android: const AndroidParams(
+      isCustomNotification: true,
+      isShowLogo: false,
+      backgroundColor: '#0A1628',
+      actionColor: '#4CAF50',
+    ),
+    ios: const IOSParams(
+      iconName: 'AppIcon',
+      handleType: '',
+      supportsVideo: false,
+      maximumCallGroups: 1,
+      maximumCallsPerCallGroup: 1,
+      audioSessionMode: 'default',
+      audioSessionActive: true,
+      audioSessionPreferredSampleRate: 44100.0,
+      audioSessionPreferredIOBufferDuration: 0.005,
+      supportsDTMF: true,
+      supportsHolding: true,
+      supportsGrouping: false,
+      supportsUngrouping: false,
+    ),
   );
 
-  const iosDetails = DarwinNotificationDetails(
-    categoryIdentifier: _kCategoryCall,
-  );
-
-  await _flnp.show(
-    callId.hashCode,
-    callerUsername,
-    'Sesli arama geliyor...',
-    const NotificationDetails(android: androidDetails, iOS: iosDetails),
-    payload: payload,
-  );
-  debugPrint('[FLNP] Bildirim gösterildi | id=${callId.hashCode}');
+  await FlutterCallkitIncoming.showCallkitIncoming(params);
 }
 
 // ─── Background notification action handler (separate isolate) ───────────────
@@ -274,6 +256,32 @@ class PushNotificationService {
         Future.microtask(() => _onNotifResponse(resp));
       }
     }
+
+    // CallKit Listener
+    FlutterCallkitIncoming.onEvent.listen((CallEvent? event) {
+      if (event == null) return;
+      debugPrint('[CallKit] onEvent: ${event.event}');
+      final data = Map<String, dynamic>.from(event.body['extra'] ?? {});
+      final callId = data['call_id']?.toString() ?? '';
+      
+      switch (event.event) {
+        case Event.actionCallAccept:
+          debugPrint('[CallKit] Kabul Et tıklandı');
+          CallService.instance.onIncomingCall({...data, 'type': 'incoming_call'});
+          notificationStream.add({...data, 'type': 'incoming_call_auto_accept'});
+          break;
+        case Event.actionCallDecline:
+          debugPrint('[CallKit] Reddet tıklandı');
+          if (callId.isNotEmpty) _rejectCallById(callId);
+          break;
+        case Event.actionCallEnded:
+        case Event.actionCallTimeout:
+          CallService.instance.reset();
+          break;
+        default:
+          break;
+      }
+    });
 
     debugPrint('[FCM] initEarly tamamlandı');
   }
