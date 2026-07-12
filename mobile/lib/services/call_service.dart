@@ -366,17 +366,21 @@ class CallService {
   Future<void> onCallAccepted(Map<String, dynamic> data) async {
     _ringTimer?.cancel();
     stopRingtoneAndVibration();
-    _setState(
-      state.value.copyWith(
-        status: CallStatus.connecting,
-        token: data['token'] as String?,
-        livekitUrl: data['livekit_url'] as String?,
-        roomName: data['room_name'] as String?,
-      ),
-    );
+    
+    final currentUrl = state.value.livekitUrl;
+    final currentToken = state.value.token;
+    
+    if (currentUrl == null || currentToken == null) {
+      debugPrint('[CallService] Cannot join room: token or url is null.');
+      _setState(state.value.copyWith(status: CallStatus.ended));
+      return;
+    }
+    
+    _setState(state.value.copyWith(status: CallStatus.connecting));
+    
     await _joinRoom(
-      livekitUrl: data['livekit_url'] as String,
-      token: data['token'] as String,
+      livekitUrl: currentUrl,
+      token: currentToken,
     );
   }
 

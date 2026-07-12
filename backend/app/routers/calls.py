@@ -188,9 +188,7 @@ async def accept_call(
         "type": "call_accepted",
         "call_id": call.id,
         "room_name": call.room_name,
-        "livekit_url": settings.livekit_url,
-        "token": token,
-    })
+    });
 
     logger.info("[Calls] Arama kabul edildi | call_id=%d", call_id)
     return {
