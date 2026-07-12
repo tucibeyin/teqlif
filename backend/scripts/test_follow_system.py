@@ -194,7 +194,7 @@ def main():
     reject_request("tesbih", tesbih_token, teqlif_id)
     profile = check_profile("teqlif", teqlif_token, "tesbih")
     assert profile.get("is_following") == False, "İstek reddedildiği için False olmalı!"
-    assert profile.get("follow_status") == None, "İstek silindiği için None olmalı!"
+    assert profile.get("follow_status") == "none", "İstek silindiği için 'none' olmalı!"
 
 
     print("\n=======================================================")
