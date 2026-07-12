@@ -65,8 +65,6 @@ Future<void> _showCallNotification({
     handle: 'Sesli Arama',
     type: 0,
     duration: 45000,
-    textAccept: 'Kabul Et',
-    textDecline: 'Reddet',
     missedCallNotification: const NotificationParams(
       showNotification: true,
       isShowCallback: false,
@@ -85,6 +83,8 @@ Future<void> _showCallNotification({
       isShowLogo: false,
       backgroundColor: '#0A1628',
       actionColor: '#4CAF50',
+      textAccept: 'Kabul Et',
+      textDecline: 'Reddet',
     ),
     ios: const IOSParams(
       iconName: 'AppIcon',
@@ -260,26 +260,20 @@ class PushNotificationService {
     // CallKit Listener
     FlutterCallkitIncoming.onEvent.listen((CallEvent? event) {
       if (event == null) return;
-      debugPrint('[CallKit] onEvent: ${event.event}');
-      final data = Map<String, dynamic>.from(event.body['extra'] ?? {});
-      final callId = data['call_id']?.toString() ?? '';
+      debugPrint('[CallKit] onEvent: ${event.eventName}');
       
-      switch (event.event) {
-        case Event.actionCallAccept:
-          debugPrint('[CallKit] Kabul Et tıklandı');
-          CallService.instance.onIncomingCall({...data, 'type': 'incoming_call'});
-          notificationStream.add({...data, 'type': 'incoming_call_auto_accept'});
-          break;
-        case Event.actionCallDecline:
-          debugPrint('[CallKit] Reddet tıklandı');
-          if (callId.isNotEmpty) _rejectCallById(callId);
-          break;
-        case Event.actionCallEnded:
-        case Event.actionCallTimeout:
-          CallService.instance.reset();
-          break;
-        default:
-          break;
+      if (event is CallEventActionCallAccept) {
+        debugPrint('[CallKit] Kabul Et tıklandı');
+        final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
+        CallService.instance.onIncomingCall({...data, 'type': 'incoming_call'});
+        notificationStream.add({...data, 'type': 'incoming_call_auto_accept'});
+      } else if (event is CallEventActionCallDecline) {
+        debugPrint('[CallKit] Reddet tıklandı');
+        final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
+        final callId = data['call_id']?.toString() ?? '';
+        if (callId.isNotEmpty) _rejectCallById(callId);
+      } else if (event is CallEventActionCallEnded || event is CallEventActionCallTimeout) {
+        CallService.instance.reset();
       }
     });
 

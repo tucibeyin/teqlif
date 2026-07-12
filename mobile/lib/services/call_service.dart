@@ -184,7 +184,7 @@ class CallService {
     ));
 
     FlutterRingtonePlayer().playRingtone();
-    if (await Vibration.hasVibrator() ?? false) {
+    if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(pattern: [500, 1000, 500, 1000], repeat: 1);
     }
   }
