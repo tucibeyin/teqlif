@@ -397,7 +397,8 @@ class PushNotificationService {
       if (Platform.isIOS) {
         try {
           voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
-          debugPrint('[CallKit] VoIP token alındı: ${voipToken != null ? "${voipToken.substring(0, 15)}…" : "NULL"}');
+          final shortVoip = (voipToken != null && voipToken.length >= 15) ? "${voipToken.substring(0, 15)}…" : voipToken;
+          debugPrint('[CallKit] VoIP token alındı: ${shortVoip ?? "NULL"}');
         } catch (e) {
           debugPrint('[CallKit] VoIP token alınamadı: $e');
         }
