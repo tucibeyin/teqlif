@@ -294,7 +294,17 @@ class PushNotificationService {
         final callId = data['call_id']?.toString() ?? '';
         if (callId.isNotEmpty) _rejectCallById(callId);
       } else if (event is CallEventActionCallEnded || event is CallEventActionCallTimeout) {
-        CallService.instance.reset();
+        final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
+        final callIdStr = data['call_id']?.toString() ?? '';
+
+        if (CallService.instance.state.value.callId != null) {
+          CallService.instance.endCall();
+        } else if (callIdStr.isNotEmpty) {
+          _endCallById(callIdStr);
+          CallService.instance.reset();
+        } else {
+          CallService.instance.reset();
+        }
       } else if (event is CallEventActionDidUpdateDevicePushTokenVoip) {
         try {
           final voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
@@ -368,6 +378,21 @@ class PushNotificationService {
       }
     } catch (e) {
       debugPrint('[FLNP] reject hatası: $e');
+    }
+  }
+
+  static Future<void> _endCallById(String callId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token != null) {
+        final r = await http.post(
+          Uri.parse('$kBaseUrl/calls/$callId/end'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        debugPrint('[FLNP] end yanıtı: ${r.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('[FLNP] end hatası: $e');
     }
   }
 
