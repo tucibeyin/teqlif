@@ -241,28 +241,24 @@ async def end_call(
 # ── POST /api/calls/{id}/missed ───────────────────────────────────────────────
 
 
+from app.utils.i18n import _get_t, get_locale
+
 async def _send_missed_call_push(callee: User, caller: User) -> None:
     if not callee.fcm_token:
         return
     from app.services.firebase_service import send_push
-    locale = getattr(callee, 'locale', 'tr') or 'tr'
+    locale = get_locale(callee)
+    t = _get_t(locale)
     
-    titles = {
-        "tr": "Cevapsız Arama",
-        "en": "Missed Call",
-        "ru": "Пропущенный вызов",
-        "ar": "مكالمة فائتة",
-    }
+    title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
+    body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
     
-    bodies = {
-        "tr": f"@{caller.username} size ulaşmaya çalıştı.",
-        "en": f"@{caller.username} tried to reach you.",
-        "ru": f"@{caller.username} пытался дозвониться до вас.",
-        "ar": f"حاول @{caller.username} الاتصال بك.",
-    }
-    
-    title = titles.get(locale, titles["tr"])
-    body = bodies.get(locale, bodies["tr"])
+    try:
+        title = title_raw.format_map({"username": caller.username})
+        body = body_raw.format_map({"username": caller.username})
+    except (KeyError, ValueError):
+        title = title_raw
+        body = body_raw
     
     await send_push(
         token=callee.fcm_token,
