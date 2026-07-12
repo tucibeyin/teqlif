@@ -646,6 +646,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     return switch (type) {
       'message' => username.isNotEmpty ? l.notifMessage(username) : title,
       'follow' => username.isNotEmpty ? l.notifFollow(username) : title,
+      'follow_request' => username.isNotEmpty ? l.notifFollowRequestTitle(username) : title,
+      'follow_accepted' => username.isNotEmpty ? l.notifFollowAcceptedTitle(username) : title,
       'stream_started' =>
         username.isNotEmpty ? l.notifStreamStarted(username) : title,
       'new_bid' => username.isNotEmpty ? l.notifNewBid(username) : title,
