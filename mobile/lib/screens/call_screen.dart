@@ -25,7 +25,11 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
-    CallService.instance.isCallScreenVisible.value = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        CallService.instance.isCallScreenVisible.value = true;
+      }
+    });
     CallService.instance.state.addListener(_onStateChange);
     _proximitySubscription = ProximitySensor.events.listen((int event) {
       if (mounted) {
