@@ -95,6 +95,7 @@ flutter:
   assets:
     - assets/icon.png
     - assets/splash.png
+    - assets/sounds/
 
 sentry:
   upload_debug_symbols: true

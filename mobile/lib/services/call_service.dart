@@ -8,6 +8,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:vibration/vibration.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../config/api.dart';
 import '../services/storage_service.dart';
 
@@ -115,6 +116,8 @@ class CallService {
   Timer? _ringTimer; // 30s no-answer timeout
   Timer? _elapsedTimer;
   Timer? _ringtoneLoopTimer; // For iOS ringtone looping
+  
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -153,7 +156,39 @@ class CallService {
     return jsonDecode(resp.body) as Map<String, dynamic>;
   }
 
-  void _setState(CallState s) => state.value = s;
+  void _setState(CallState s) {
+    final oldStatus = state.value.status;
+    final oldPoor = state.value.isPoorConnection;
+    state.value = s;
+    
+    if (oldStatus != s.status) {
+      _handleStatusChange(oldStatus, s.status);
+    }
+    
+    if (!oldPoor && s.isPoorConnection && s.status == CallStatus.connected) {
+      _audioPlayer.setReleaseMode(ReleaseMode.release);
+      _audioPlayer.play(AssetSource('sounds/weak.wav'));
+    }
+  }
+
+  void _handleStatusChange(CallStatus oldStatus, CallStatus newStatus) {
+    if (newStatus == CallStatus.calling) {
+      _audioPlayer.setReleaseMode(ReleaseMode.loop);
+      _audioPlayer.play(AssetSource('sounds/ringing.wav'));
+    } else if (newStatus == CallStatus.busy || newStatus == CallStatus.rejected) {
+      _audioPlayer.setReleaseMode(ReleaseMode.release);
+      _audioPlayer.play(AssetSource('sounds/busy.wav'));
+    } else if (newStatus == CallStatus.ended) {
+      if (oldStatus == CallStatus.connected || oldStatus == CallStatus.connecting) {
+        _audioPlayer.setReleaseMode(ReleaseMode.release);
+        _audioPlayer.play(AssetSource('sounds/ended.wav'));
+      } else {
+        _audioPlayer.stop();
+      }
+    } else if (newStatus == CallStatus.connected || newStatus == CallStatus.idle) {
+      _audioPlayer.stop();
+    }
+  }
 
   // ── Outgoing Call ─────────────────────────────────────────────────────────
 
