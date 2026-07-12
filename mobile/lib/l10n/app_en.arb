@@ -2759,5 +2759,14 @@
   "callPermissionDenied": "Microphone permission required",
   "callVideo": "Video",
   "callChat": "Chat",
-  "callAddPerson": "Add"
+  "callAddPerson": "Add",
+  "notifCallMissed": "Missed Call: @{username}",
+  "@notifCallMissed": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCallMissedBody": "Tried to reach you."
 }

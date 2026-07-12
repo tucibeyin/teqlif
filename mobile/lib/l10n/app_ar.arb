@@ -2723,5 +2723,14 @@
   "callPermissionDenied": "مطلوب إذن الميكروفون",
   "callVideo": "فيديو",
   "callChat": "دردشة",
-  "callAddPerson": "إضافة"
+  "callAddPerson": "إضافة",
+  "notifCallMissed": "مكالمة فائتة: @{username}",
+  "@notifCallMissed": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCallMissedBody": "حاول الاتصال بك."
 }

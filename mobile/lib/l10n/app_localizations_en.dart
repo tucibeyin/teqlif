@@ -5111,4 +5111,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get callAddPerson => 'Add';
+
+  @override
+  String notifCallMissed(String username) {
+    return 'Missed Call: @$username';
+  }
+
+  @override
+  String get notifCallMissedBody => 'Tried to reach you.';
 }

@@ -568,6 +568,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       'budget_match'        => l.notifBudgetMatch,
       'auction_won'         => l.notifAuctionWon,
       'buy_it_now'          => l.notifBuyItNow,
+      'call_missed'         => username.isNotEmpty ? l.notifCallMissed(username) : title,
       'listing_deactivated' => l.notifListingDeactivated,
       'listing_deleted'     => l.notifListingDeleted,
       'listing_removed'     => l.notifListingRemoved,
@@ -640,6 +641,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           return l.notifPriceDropBody(item, price);
         }
         return body;
+      case 'call_missed':
+        return l.notifCallMissedBody;
       default:
         return body;
     }
@@ -656,6 +659,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       'smart_auction_alert' => Icons.bolt_rounded,
       'listing_deactivated' => Icons.pause_circle_rounded,
       'listing_deleted'     => Icons.delete_outline_rounded,
+      'call_missed'         => Icons.phone_missed_rounded,
       _                     => Icons.notifications_rounded,
     };
   }
@@ -669,6 +673,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       'auction_won'         => const Color(0xFF16A34A),
       'message'             => const Color(0xFF0EA5E9),
       'smart_auction_alert' => const Color(0xFF8B5CF6),
+      'call_missed'         => const Color(0xFFEF4444),
       _                     => kPrimary,
     };
   }
@@ -684,6 +689,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
 
     switch (type) {
       case 'follow':
+      case 'call_missed':
         final username = (body != null && body.isNotEmpty && !body.contains(' '))
             ? body
             : extractHandle(title);

@@ -9221,6 +9221,18 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Ekle'**
   String get callAddPerson;
+
+  /// No description provided for @notifCallMissed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cevapsız Arama: @{username}'**
+  String notifCallMissed(String username);
+
+  /// No description provided for @notifCallMissedBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Size ulaşmaya çalıştı.'**
+  String get notifCallMissedBody;
 }
 
 class _AppLocalizationsDelegate

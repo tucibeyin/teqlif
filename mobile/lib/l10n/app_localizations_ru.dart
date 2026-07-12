@@ -5161,4 +5161,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get callAddPerson => 'Добавить';
+
+  @override
+  String notifCallMissed(String username) {
+    return 'Пропущенный вызов: @$username';
+  }
+
+  @override
+  String get notifCallMissedBody => 'Пытался дозвониться до вас.';
 }

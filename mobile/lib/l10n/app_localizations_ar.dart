@@ -5083,4 +5083,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get callAddPerson => 'إضافة';
+
+  @override
+  String notifCallMissed(String username) {
+    return 'مكالمة فائتة: @$username';
+  }
+
+  @override
+  String get notifCallMissedBody => 'حاول الاتصال بك.';
 }

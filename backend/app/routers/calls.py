@@ -18,6 +18,7 @@ from sqlalchemy import select
 from app.database import get_db, AsyncSessionLocal
 from app.models.call import Call
 from app.models.user import User
+from app.models.notification import Notification
 from app.utils.auth import get_current_user
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
@@ -239,6 +240,38 @@ async def end_call(
 
 # ── POST /api/calls/{id}/missed ───────────────────────────────────────────────
 
+
+async def _send_missed_call_push(callee: User, caller: User) -> None:
+    if not callee.fcm_token:
+        return
+    from app.services.firebase_service import send_push
+    locale = getattr(callee, 'locale', 'tr') or 'tr'
+    
+    titles = {
+        "tr": "Cevapsız Arama",
+        "en": "Missed Call",
+        "ru": "Пропущенный вызов",
+        "ar": "مكالمة فائتة",
+    }
+    
+    bodies = {
+        "tr": f"@{caller.username} size ulaşmaya çalıştı.",
+        "en": f"@{caller.username} tried to reach you.",
+        "ru": f"@{caller.username} пытался дозвониться до вас.",
+        "ar": f"حاول @{caller.username} الاتصال بك.",
+    }
+    
+    title = titles.get(locale, titles["tr"])
+    body = bodies.get(locale, bodies["tr"])
+    
+    await send_push(
+        token=callee.fcm_token,
+        title=title,
+        body=body,
+        notif_type="call_missed",
+        extra_data={"caller_username": caller.username, "related_id": str(caller.id)}
+    )
+
 @router.post("/{call_id}/missed")
 async def missed_call(
     call_id: int,
@@ -252,9 +285,27 @@ async def missed_call(
     if call.status == "calling":
         call.status = "missed"
         call.ended_at = datetime.now(timezone.utc)
+        
+        # Bildirim oluştur (sadece cevapsızlar için)
+        title = f"@{current_user.username}"
+        body = "Size ulaşmaya çalıştı." # The mobile app will overwrite this using localized strings, but we store a fallback here
+        n = Notification(
+            user_id=call.callee_id,
+            type="call_missed",
+            title=title,
+            body=body,
+            related_id=current_user.id
+        )
+        db.add(n)
+        
+        callee = await db.get(User, call.callee_id)
+        
         await db.commit()
         await _ws_broadcast(call.callee_id, {"type": "call_missed", "call_id": call.id})
         await _delete_lk_room(call.room_name)
+        
+        if callee:
+            await _send_missed_call_push(callee, current_user)
 
     logger.info("[Calls] Cevapsız arama | call_id=%d", call_id)
     return {"ok": True}

@@ -2724,5 +2724,14 @@
   "callPermissionDenied": "Требуется разрешение на микрофон",
   "callVideo": "Видео",
   "callChat": "Чат",
-  "callAddPerson": "Добавить"
+  "callAddPerson": "Добавить",
+  "notifCallMissed": "Пропущенный вызов: @{username}",
+  "@notifCallMissed": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCallMissedBody": "Пытался дозвониться до вас."
 }

@@ -314,6 +314,18 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       case 'call_rejected':
       case 'call_ended':
       case 'call_missed':
+        final username = data['caller_username'] as String?;
+        if (username != null && username.isNotEmpty) {
+          debugPrint('[Nav] call_missed tıklandı — Profil ekranı: $username');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PublicProfileScreen(username: username),
+            ),
+          );
+        }
+        break;
+
       case 'incoming_call_notification_tap':
       case 'incoming_call_auto_accept':
         // IncomingCallOverlay kendi stream'ini dinler.

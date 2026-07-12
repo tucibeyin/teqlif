@@ -5113,4 +5113,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get callAddPerson => 'Ekle';
+
+  @override
+  String notifCallMissed(String username) {
+    return 'Cevapsız Arama: @$username';
+  }
+
+  @override
+  String get notifCallMissedBody => 'Size ulaşmaya çalıştı.';
 }
