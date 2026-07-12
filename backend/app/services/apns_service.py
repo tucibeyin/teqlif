@@ -1,5 +1,5 @@
 import json
-from aioapns import APNs, NotificationRequest
+from aioapns import APNs, NotificationRequest, PushType
 from app.config import settings
 from app.core.logger import get_logger
 
@@ -42,8 +42,8 @@ async def send_voip_push(token: str, payload: dict) -> bool:
         request = NotificationRequest(
             device_token=token,
             message=payload,
-            topic=topic,
-            push_type="voip"
+            apns_topic=topic,
+            push_type=PushType.VOIP
         )
         
         response = await client.send_notification(request)
