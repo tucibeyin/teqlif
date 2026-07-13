@@ -2779,5 +2779,8 @@
   "errFollowRequestNotFound": "Takip isteği bulunamadı",
   "badgeVerifiedHint": "Bu kullanıcının e-mail adresi ve telefon numarası doğrulanmıştır.",
   "badgeProHintPrefix": "Bu kullanıcı ayrıcalıklı ",
-  "badgeProHintSuffix": " kullanıcısıdır."
+  "badgeProHintSuffix": " kullanıcısıdır.",
+  "settingsMyRatings": "Değerlendirmelerim",
+  "tabRatingsReceived": "Bana Verilenler",
+  "tabRatingsGiven": "Benim Verdiklerim"
 }

@@ -5210,4 +5210,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get badgeProHintSuffix => ' member.';
+
+  @override
+  String get settingsMyRatings => 'My Ratings';
+
+  @override
+  String get tabRatingsReceived => 'Received Ratings';
+
+  @override
+  String get tabRatingsGiven => 'Given Ratings';
 }

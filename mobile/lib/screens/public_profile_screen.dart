@@ -1112,7 +1112,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             ),
             const SizedBox(width: 5),
             Text(
-              l.ratingCount(count),
+              '($count)',
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary(context),

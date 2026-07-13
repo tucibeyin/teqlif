@@ -28,6 +28,8 @@ import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import '../utils/error_helper.dart';
+
+import 'my_ratings_screen.dart';
 import '../utils/start_stream_helper.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
@@ -1205,9 +1207,28 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     _loadBiometricState();
     _loadPremiumStatus();
     _loadPendingRequests();
+    _loadUnreadRatings();
   }
 
   int _pendingRequestCount = 0;
+  int _unreadRatingCount = 0;
+
+  Future<void> _loadUnreadRatings() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/ratings/me/unread-count'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        if (mounted) {
+          setState(() => _unreadRatingCount = data['unread_count'] ?? 0);
+        }
+      }
+    } catch (_) {}
+  }
 
   Future<void> _loadPendingRequests() async {
     try {
@@ -1940,6 +1961,35 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           _SettingsSection(
             title: l.profileAccountSection,
             items: [
+              _SettingsTile(
+                icon: Icons.star_outline,
+                label: l.settingsMyRatings,
+                trailing: _unreadRatingCount > 0
+                    ? Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          _unreadRatingCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    : null,
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyRatingsScreen()),
+                  );
+                  // Dönüşte rozeti temizle/güncelle
+                  _loadUnreadRatings();
+                },
+              ),
               _SettingsTile(
                 icon: Icons.person_add_outlined,
                 label: l.followRequests,

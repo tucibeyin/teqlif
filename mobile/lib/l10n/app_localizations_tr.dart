@@ -5213,4 +5213,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get badgeProHintSuffix => ' kullanıcısıdır.';
+
+  @override
+  String get settingsMyRatings => 'Değerlendirmelerim';
+
+  @override
+  String get tabRatingsReceived => 'Bana Verilenler';
+
+  @override
+  String get tabRatingsGiven => 'Benim Verdiklerim';
 }

@@ -2816,5 +2816,8 @@
   "errFollowRequestNotFound": "Follow request not found",
   "badgeVerifiedHint": "This user's email address and phone number are verified.",
   "badgeProHintPrefix": "This user is an exclusive ",
-  "badgeProHintSuffix": " member."
+  "badgeProHintSuffix": " member.",
+  "settingsMyRatings": "My Ratings",
+  "tabRatingsReceived": "Received Ratings",
+  "tabRatingsGiven": "Given Ratings"
 }

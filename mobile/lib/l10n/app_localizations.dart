@@ -9395,6 +9395,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **' kullanıcısıdır.'**
   String get badgeProHintSuffix;
+
+  /// No description provided for @settingsMyRatings.
+  ///
+  /// In tr, this message translates to:
+  /// **'Değerlendirmelerim'**
+  String get settingsMyRatings;
+
+  /// No description provided for @tabRatingsReceived.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bana Verilenler'**
+  String get tabRatingsReceived;
+
+  /// No description provided for @tabRatingsGiven.
+  ///
+  /// In tr, this message translates to:
+  /// **'Benim Verdiklerim'**
+  String get tabRatingsGiven;
 }
 
 class _AppLocalizationsDelegate

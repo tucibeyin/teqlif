@@ -5181,4 +5181,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get badgeProHintSuffix => ' حصري.';
+
+  @override
+  String get settingsMyRatings => 'تقييماتي';
+
+  @override
+  String get tabRatingsReceived => 'التقييمات المستلمة';
+
+  @override
+  String get tabRatingsGiven => 'التقييمات المقدمة';
 }

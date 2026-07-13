@@ -2780,5 +2780,8 @@
   "errFollowRequestNotFound": "طلب المتابعة غير موجود",
   "badgeVerifiedHint": "تم التحقق من عنوان البريد الإلكتروني ورقم الهاتف لهذا المستخدم.",
   "badgeProHintPrefix": "هذا المستخدم هو عضو ",
-  "badgeProHintSuffix": " حصري."
+  "badgeProHintSuffix": " حصري.",
+  "settingsMyRatings": "تقييماتي",
+  "tabRatingsReceived": "التقييمات المستلمة",
+  "tabRatingsGiven": "التقييمات المقدمة"
 }

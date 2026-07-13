@@ -5261,4 +5261,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get badgeProHintSuffix => '.';
+
+  @override
+  String get settingsMyRatings => 'Мои отзывы';
+
+  @override
+  String get tabRatingsReceived => 'Полученные отзывы';
+
+  @override
+  String get tabRatingsGiven => 'Оставленные отзывы';
 }

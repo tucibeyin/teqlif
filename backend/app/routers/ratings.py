@@ -29,6 +29,95 @@ async def _optional_user(
     return result.scalar_one_or_none()
 
 
+@router.get("/me/unread-count")
+async def get_unread_count(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Giriş yapan kullanıcının okumadığı değerlendirmelerin sayısını döndürür."""
+    count = await db.scalar(
+        select(func.count(Rating.id))
+        .where(Rating.rated_id == current_user.id, Rating.is_read == False)
+    )
+    return {"unread_count": count or 0}
+
+
+@router.patch("/me/mark-read")
+async def mark_read(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kullanıcının okumadığı tüm değerlendirmeleri okundu olarak işaretler."""
+    ratings = await db.scalars(
+        select(Rating).where(Rating.rated_id == current_user.id, Rating.is_read == False)
+    )
+    for r in ratings:
+        r.is_read = True
+    await db.commit()
+    return {"ok": True}
+
+
+@router.get("/me/received")
+async def get_my_received_ratings(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kullanıcının aldığı değerlendirmeleri (puanlayan kişinin detaylarıyla) listeler."""
+    rows = await db.execute(
+        select(Rating, User)
+        .join(User, User.id == Rating.rater_id)
+        .where(Rating.rated_id == current_user.id)
+        .order_by(Rating.created_at.desc())
+    )
+    return [
+        {
+            "id": r.id,
+            "score": r.score,
+            "comment": r.comment,
+            "is_read": r.is_read,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            "rater": {
+                "id": u.id,
+                "username": u.username,
+                "full_name": u.full_name,
+                "profile_image_url": u.profile_image_url,
+            },
+        }
+        for r, u in rows.all()
+    ]
+
+
+@router.get("/me/given")
+async def get_my_given_ratings(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kullanıcının başkalarına verdiği değerlendirmeleri (puanlanan kişinin detaylarıyla) listeler."""
+    rows = await db.execute(
+        select(Rating, User)
+        .join(User, User.id == Rating.rated_id)
+        .where(Rating.rater_id == current_user.id)
+        .order_by(Rating.created_at.desc())
+    )
+    return [
+        {
+            "id": r.id,
+            "score": r.score,
+            "comment": r.comment,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            "rated": {
+                "id": u.id,
+                "username": u.username,
+                "full_name": u.full_name,
+                "profile_image_url": u.profile_image_url,
+            },
+        }
+        for r, u in rows.all()
+    ]
+
+
 @router.post("/{user_id}")
 async def upsert_rating(
     user_id: int,

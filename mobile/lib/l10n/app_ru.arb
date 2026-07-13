@@ -2781,5 +2781,8 @@
   "errFollowRequestNotFound": "Запрос на подписку не найден",
   "badgeVerifiedHint": "Адрес электронной почты и номер телефона этого пользователя подтверждены.",
   "badgeProHintPrefix": "Этот пользователь является эксклюзивным участником ",
-  "badgeProHintSuffix": "."
+  "badgeProHintSuffix": ".",
+  "settingsMyRatings": "Мои отзывы",
+  "tabRatingsReceived": "Полученные отзывы",
+  "tabRatingsGiven": "Оставленные отзывы"
 }

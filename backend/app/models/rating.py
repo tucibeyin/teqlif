@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Integer, ForeignKey, DateTime, UniqueConstraint, func
+from sqlalchemy import String, Integer, ForeignKey, DateTime, UniqueConstraint, func, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
@@ -13,5 +13,6 @@ class Rating(Base):
     rated_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     score: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-5
     comment: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
