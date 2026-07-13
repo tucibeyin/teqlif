@@ -36,6 +36,8 @@ void main() async {
       options.dsn = 'https://d9535262385699cee49c13cc02add8f2@o4511052861538304.ingest.us.sentry.io/4511053904478208';
       // Üretim ortamı için performansı artırmak adına oranı düşürebilirsiniz (örn: 0.2)
       options.tracesSampleRate = 1.0;
+      options.debug = false;
+      options.diagnosticLevel = SentryLevel.fatal;
     },
     appRunner: () async {
       // ensureInitialized ve runApp aynı (Sentry) zone'unda çalışır
