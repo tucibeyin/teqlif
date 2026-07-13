@@ -189,10 +189,28 @@ class CallService {
 
   void _handleStatusChange(CallStatus oldStatus, CallStatus newStatus) {
     if (newStatus == CallStatus.calling) {
-      _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      AudioSession.instance.then((session) async {
+        try {
+          await session.configure(const AudioSessionConfiguration(
+            avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+            avAudioSessionMode: AVAudioSessionMode.voiceChat,
+            avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
+            androidAudioAttributes: AndroidAudioAttributes(
+              contentType: AndroidAudioContentType.speech,
+              flags: AndroidAudioFlags.none,
+              usage: AndroidAudioUsage.voiceCommunication,
+            ),
+            androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+            androidWillPauseWhenDucked: true,
+          ));
+          await Hardware.instance.setSpeakerphoneOn(false);
+        } catch (e) {
+          debugPrint('[LIVE_SCREEN_CALL] AudioSession prep error: \$e');
+        }
+        
+        _audioPlayer.setReleaseMode(ReleaseMode.loop);
         if (state.value.status == CallStatus.calling) {
-          debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] _handleStatusChange: AUDIO PLAYER ringing.wav PLAY STARTED');
+          debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] _handleStatusChange: AUDIO PLAYER ringing.wav PLAY STARTED (EARPIECE)');
           _audioPlayer.play(AssetSource('sounds/ringing.wav'));
         }
       });
