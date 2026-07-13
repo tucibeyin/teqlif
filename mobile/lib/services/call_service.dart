@@ -423,6 +423,12 @@ class CallService {
         }
       }
       if (data == null) throw Exception('Accept data is null');
+      
+      if (Platform.isIOS) {
+        debugPrint('[CALL_FLOW] [CallService] Waiting 1.5s for iOS CallKit to activate AVAudioSession...');
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+
       await _joinRoom(
         livekitUrl: data['livekit_url'] as String,
         token: data['token'] as String,
