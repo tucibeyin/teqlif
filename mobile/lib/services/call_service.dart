@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:audio_session/audio_session.dart';
@@ -188,7 +189,11 @@ class CallService {
   void _handleStatusChange(CallStatus oldStatus, CallStatus newStatus) {
     if (newStatus == CallStatus.calling) {
       _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      _audioPlayer.play(AssetSource('sounds/ringing.wav'));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (state.value.status == CallStatus.calling) {
+          _audioPlayer.play(AssetSource('sounds/ringing.wav'));
+        }
+      });
     } else if (newStatus == CallStatus.busy || newStatus == CallStatus.rejected) {
       _audioPlayer.setReleaseMode(ReleaseMode.release);
       _audioPlayer.play(AssetSource('sounds/busy.wav'));
@@ -347,33 +352,41 @@ class CallService {
   }
 
   void playNotification() {
-    FlutterRingtonePlayer().playNotification();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (state.value.status == CallStatus.ringing) {
+        FlutterRingtonePlayer().playNotification();
+      }
+    });
   }
 
   void startRingtoneAndVibration() async {
-    // Play immediately
-    FlutterRingtonePlayer().playRingtone(
-      looping: true,
-    ); // Android handles looping natively
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (state.value.status != CallStatus.ringing) return;
+      
+      // Play immediately
+      FlutterRingtonePlayer().playRingtone(
+        looping: true,
+      ); // Android handles looping natively
 
-    // iOS manual ringtone & haptic loop
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      _ringtoneLoopTimer?.cancel();
-      _ringtoneLoopTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-        FlutterRingtonePlayer().playRingtone();
-      });
+      // iOS manual ringtone & haptic loop
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        _ringtoneLoopTimer?.cancel();
+        _ringtoneLoopTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+          FlutterRingtonePlayer().playRingtone();
+        });
 
-      _hapticLoopTimer?.cancel();
-      _hapticLoopTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-        if (await Vibration.hasVibrator() == true) {
-          Vibration.vibrate();
-        }
-      });
-    }
+        _hapticLoopTimer?.cancel();
+        _hapticLoopTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+          if (await Vibration.hasVibrator() == true) {
+            Vibration.vibrate();
+          }
+        });
+      }
 
-    if (await Vibration.hasVibrator() == true && defaultTargetPlatform != TargetPlatform.iOS) {
-      Vibration.vibrate(pattern: [2000, 500, 2000, 500], repeat: 0);
-    }
+      if (await Vibration.hasVibrator() == true && defaultTargetPlatform != TargetPlatform.iOS) {
+        Vibration.vibrate(pattern: [2000, 500, 2000, 500], repeat: 0);
+      }
+    });
   }
 
   void stopRingtoneAndVibration() {
@@ -521,6 +534,22 @@ class CallService {
     try {
       debugPrint('[LIVE_SCREEN_CALL] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
       
+      // We must fulfill CallKit BEFORE enabling the microphone and connecting on iOS!
+      // This prevents the AudioSession from defaulting to SoloAmbient (Speaker) and jumping to VoiceChat.
+      if (Platform.isIOS && state.value.callId != null && state.value.status == CallStatus.connecting) {
+        final uuid = formatToUuid(state.value.callId!.toString());
+        const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((e) {
+          debugPrint('[CallService] ERROR invoking fulfillAccept: $e');
+        });
+        // Give CallKit a moment to fully activate the audio session
+        await Future.delayed(const Duration(milliseconds: 500));
+      } else if (Platform.isAndroid && state.value.callId != null && state.value.status == CallStatus.connecting) {
+        final uuid = formatToUuid(state.value.callId!.toString());
+        FlutterCallkitIncoming.setCallConnected(uuid).catchError((e) {
+          debugPrint('[CallService] ERROR invoking setCallConnected: $e');
+        });
+      }
+
       // Force iOS to use earpiece and playAndRecord category before LiveKit messes with it
       try {
         final session = await AudioSession.instance;
@@ -536,21 +565,6 @@ class CallService {
 
       await _room!.connect(livekitUrl, token, roomOptions: const RoomOptions(defaultAudioOutputOptions: AudioOutputOptions(speakerOn: false)));
       debugPrint('[LIVE_SCREEN_CALL] _joinRoom SUCCESSFUL!');
-      
-      // We must fulfill CallKit BEFORE enabling the microphone on iOS!
-      if (Platform.isIOS && state.value.callId != null) {
-        final uuid = formatToUuid(state.value.callId!.toString());
-        const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((e) {
-          debugPrint('[CallService] ERROR invoking fulfillAccept: $e');
-        });
-        // Give CallKit a moment to fully activate the audio session
-        await Future.delayed(const Duration(milliseconds: 800));
-      } else if (Platform.isAndroid && state.value.callId != null) {
-        final uuid = formatToUuid(state.value.callId!.toString());
-        FlutterCallkitIncoming.setCallConnected(uuid).catchError((e) {
-          debugPrint('[CallService] ERROR invoking setCallConnected: $e');
-        });
-      }
 
       await _room!.localParticipant?.setMicrophoneEnabled(true);
       
