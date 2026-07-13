@@ -3,6 +3,8 @@ import UIKit
 import UserNotifications
 import PushKit
 import flutter_callkit_incoming
+import CallKit
+import AVFAudio
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate, CallkitIncomingAppDelegate {
