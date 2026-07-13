@@ -191,6 +191,7 @@ class CallService {
       _audioPlayer.setReleaseMode(ReleaseMode.loop);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (state.value.status == CallStatus.calling) {
+          debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] _handleStatusChange: AUDIO PLAYER ringing.wav PLAY STARTED');
           _audioPlayer.play(AssetSource('sounds/ringing.wav'));
         }
       });
@@ -217,6 +218,7 @@ class CallService {
     required String calleeUsername,
     required String? calleeAvatar,
   }) async {
+    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startCall function ENTERED');
     _resetTimer?.cancel();
     if (hasActiveCall) {
       debugPrint('[CallService] Cannot start call: already in an active call.');
@@ -244,7 +246,9 @@ class CallService {
     );
 
     try {
+      debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startCall: Calling HTTP POST /calls/start');
       final data = await _post('/calls/start', {'callee_id': calleeId});
+      debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startCall: HTTP POST SUCCESS');
       _setState(
         state.value.copyWith(
           callId: data['call_id'] as int,
@@ -257,10 +261,12 @@ class CallService {
       await WakelockPlus.enable();
       
       // WhatsApp-like Pre-Connection: Arayan kişi beklemeden LiveKit'e bağlanır.
+      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] startCall: About to AWAIT _joinRoom for Pre-Connection');
       await _joinRoom(
         livekitUrl: data['livekit_url'] as String,
         token: data['token'] as String,
       );
+      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] startCall: AWAIT _joinRoom FINISHED');
     } on AppException catch (e) {
       debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] startCall catch (AppException) triggered: ${e.code}');
       if (e.code == 'USER_BUSY') {

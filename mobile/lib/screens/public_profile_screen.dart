@@ -722,6 +722,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       if (_followStatus == 'accepted') ...[
                         GestureDetector(
                           onTap: () async {
+                            debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] public_profile_screen CALL BUTTON CLICKED');
                             final nav = Navigator.of(context);
                             if (CallService.instance.hasActiveCall) {
                               nav.push(
@@ -743,6 +744,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                                   _user?['profile_image_thumb_url']
                                       as String?,
                             );
+                            debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] public_profile_screen startCall await finished, executing nav.push');
                             nav.push(
                               MaterialPageRoute(
                                 settings: const RouteSettings(

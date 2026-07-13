@@ -25,6 +25,7 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] call_screen.dart initState ENTERED (Screen Mounted)');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         CallService.instance.isCallScreenVisible.value = true;
@@ -85,6 +86,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] call_screen.dart build() FIRED (Screen Rendering)');
     final l = AppLocalizations.of(context)!;
     return ValueListenableBuilder<CallState>(
       valueListenable: CallService.instance.state,

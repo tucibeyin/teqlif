@@ -2023,6 +2023,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             icon: const Icon(Icons.call, size: 22),
             tooltip: l.callVoiceCall,
             onPressed: () async {
+              debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] messages_screen CALL BUTTON CLICKED');
               if (CallService.instance.hasActiveCall) {
                 if (!context.mounted) return;
                 Navigator.of(context).push(
@@ -2040,6 +2041,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                 calleeUsername: widget.otherHandle,
                 calleeAvatar: widget.otherAvatarUrl,
               );
+              debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] messages_screen startCall await finished, executing nav.push');
               if (!context.mounted) return;
               Navigator.of(context).push(
                 MaterialPageRoute(
