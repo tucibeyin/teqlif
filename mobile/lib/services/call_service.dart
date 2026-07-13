@@ -191,7 +191,7 @@ class CallService {
     if (newStatus == CallStatus.calling) {
       AudioSession.instance.then((session) async {
         try {
-          await session.configure(const AudioSessionConfiguration(
+          await session.configure(AudioSessionConfiguration(
             avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
             avAudioSessionMode: AVAudioSessionMode.voiceChat,
             avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
