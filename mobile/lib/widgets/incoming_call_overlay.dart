@@ -112,6 +112,11 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
       return;
     }
     
+    if (CallService.instance.preventCallScreenAutoOpen.value) {
+      debugPrint('[SWIPE_LIVE_CALL] preventCallScreenAutoOpen is true, bypassing CallScreen auto-open');
+      return;
+    }
+    
     final nav = widget.navigatorKey?.currentState ?? Navigator.of(context, rootNavigator: true);
     nav.push(
       MaterialPageRoute(

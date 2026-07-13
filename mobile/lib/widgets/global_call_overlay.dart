@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/call_service.dart';
 import '../screens/call_screen.dart';
 import '../l10n/app_localizations.dart';
+import '../config/api.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class GlobalCallOverlay extends StatelessWidget {
   final Widget child;
@@ -89,40 +91,97 @@ class GlobalCallOverlay extends StatelessWidget {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    // Timer / Connecting Text
-                                    Builder(
-                                      builder: (innerContext) {
-                                        try {
-                                          final ctx =
-                                              navigatorKey.currentContext ??
-                                              context;
-                                          final l = AppLocalizations.of(ctx);
-                                          return Text(
-                                            cs.status == CallStatus.connecting
-                                                ? (l?.callConnecting ??
-                                                      'Connecting...')
-                                                : _formatElapsed(cs.elapsed),
+                                    // Avatar
+                                    if (cs.otherAvatar != null) ...[
+                                      CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: Colors.white24,
+                                        backgroundImage: cs.otherAvatar!.isNotEmpty
+                                            ? CachedNetworkImageProvider(imgUrl(cs.otherAvatar!))
+                                            : null,
+                                        child: cs.otherAvatar!.isEmpty && cs.otherUsername != null
+                                            ? Text(
+                                                cs.otherUsername!.substring(0, 1).toUpperCase(),
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              )
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    // Name and Timer Column
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (cs.otherUsername != null)
+                                          Text(
+                                            cs.otherUsername!,
                                             style: const TextStyle(
                                               color: Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
                                             ),
-                                          );
-                                        } catch (_) {
-                                          return Text(
-                                            cs.status == CallStatus.connecting
-                                                ? 'Connecting...'
-                                                : _formatElapsed(cs.elapsed),
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
-                                            ),
-                                          );
-                                        }
-                                      },
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        Builder(
+                                          builder: (innerContext) {
+                                            try {
+                                              final ctx = navigatorKey.currentContext ?? context;
+                                              final l = AppLocalizations.of(ctx);
+                                              return Text(
+                                                cs.status == CallStatus.connecting
+                                                    ? (l?.callConnecting ?? 'Connecting...')
+                                                    : _formatElapsed(cs.elapsed),
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontWeight: FontWeight.w500,
+                                                  fontSize: 11,
+                                                ),
+                                              );
+                                            } catch (_) {
+                                              return Text(
+                                                cs.status == CallStatus.connecting
+                                                    ? 'Connecting...'
+                                                    : _formatElapsed(cs.elapsed),
+                                                style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontWeight: FontWeight.w500,
+                                                  fontSize: 11,
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(width: 16),
+                                    
+                                    // Speaker Toggle Button
+                                    GestureDetector(
+                                      onTap: () {
+                                        CallService.instance.setSpeaker(!cs.isSpeaker);
+                                      },
+                                      behavior: HitTestBehavior.opaque,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: cs.isSpeaker ? Colors.white : Colors.white24,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          cs.isSpeaker ? Icons.volume_up : Icons.volume_down,
+                                          color: cs.isSpeaker ? Colors.black87 : Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+
                                     // End Call Button
                                     GestureDetector(
                                       onTap: () {

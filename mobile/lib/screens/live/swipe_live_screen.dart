@@ -127,6 +127,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   @override
   void initState() {
     super.initState();
+    CallService.instance.preventCallScreenAutoOpen.value = true;
     activeScreenCount++;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
@@ -236,6 +237,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   @override
   void dispose() {
+    CallService.instance.preventCallScreenAutoOpen.value = false;
     globalIsLiveTabVisible.removeListener(_onVisibilityChanged);
     CallService.instance.state.removeListener(_onCallStateChanged);
     activeScreenCount--;

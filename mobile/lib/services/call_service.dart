@@ -113,6 +113,7 @@ class CallService {
 
   final ValueNotifier<CallState> state = ValueNotifier(const CallState());
   final isCallScreenVisible = ValueNotifier<bool>(false);
+  final preventCallScreenAutoOpen = ValueNotifier<bool>(false);
 
   Room? _room;
   Function? _roomEventsSubscription;
