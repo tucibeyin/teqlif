@@ -439,34 +439,17 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         ),
                       ),
                     if (_user?['influence_rank'] != null && (_user!['influence_rank'] as int) > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant(context),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            FaIcon(
-                              FontAwesomeIcons.rankingStar,
-                              size: 10,
-                              color: AppColors.textSecondary(context),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${_user!['influence_rank']}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary(context),
-                              ),
-                            ),
-                          ],
-                        ),
+                      _ProfileBadge(
+                        icon: FontAwesomeIcons.rankingStar,
+                        title: AppLocalizations.of(context)!.influenceRankLabel,
+                        value: '${_user!['influence_rank']}',
+                        color: const Color(0xFF8B5CF6),
+                        hint: AppLocalizations.of(context)!.influenceRankHint,
                       ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                _SocialLinksRow(user: _user, userId: userId),
                 const SizedBox(height: 12),
 
                 // Rating badge
@@ -774,8 +757,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     ],
                   ),
                 ],
-                const SizedBox(height: 16),
-                _SocialLinksRow(user: _user, userId: userId),
                 const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -1120,20 +1101,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       );
     }
 
-    if (rawRank != null) {
-      final rank = (rawRank as num).toInt();
-      if (rank > 0) {
-        badges.add(
-          _ProfileBadge(
-            icon: FontAwesomeIcons.rankingStar,
-            title: l.influenceRankLabel,
-            value: '$rank',
-            color: const Color(0xFF8B5CF6),
-            hint: l.influenceRankHint,
-          ),
-        );
-      }
-    }
+    // Rank score moved to the top header
 
     if (badges.isEmpty) return const SizedBox.shrink();
     return Wrap(spacing: 6, runSpacing: 4, children: badges);

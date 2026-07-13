@@ -608,31 +608,12 @@ class ProfileScreenState extends State<ProfileScreen> {
                             ],
                             if (_user?['influence_rank'] != null && (_user!['influence_rank'] as int) > 0) ...[
                               const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceVariant(context),
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    FaIcon(
-                                      FontAwesomeIcons.rankingStar,
-                                      size: 10,
-                                      color: AppColors.textSecondary(context),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${_user!['influence_rank']}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              _ScoreBadge(
+                                icon: FontAwesomeIcons.rankingStar,
+                                title: AppLocalizations.of(context)!.influenceRankLabel,
+                                value: '${_user!['influence_rank']}',
+                                hint: AppLocalizations.of(context)!.influenceRankHint,
+                                color: const Color(0xFF8B5CF6),
                               ),
                             ],
                           ],
