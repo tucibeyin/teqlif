@@ -75,7 +75,7 @@ class WsService {
   /// WS üzerinden JSON mesajı gönderir (typing event gibi).
   static void sendJson(Map<String, dynamic> data) {
     try {
-      debugPrint('[CALL_FLOW] [WS] Sending message: $data');
+      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [WS] Sending message: $data');
       _channel?.sink.add(jsonEncode(data));
     } catch (_) {}
   }
@@ -144,7 +144,7 @@ class WsService {
           if (raw is! String) return;
           if (raw == 'pong') return;
           try {
-            debugPrint('[CALL_FLOW] [WS] Received message: $raw');
+            debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [WS] Received message: $raw');
             final data = jsonDecode(raw) as Map<String, dynamic>;
             messageStream.add(data);
           } catch (_) {}

@@ -107,10 +107,10 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   }
 
   void _openCallScreen() {
-    debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay _openCallScreen tapped');
+    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [UI] IncomingCallOverlay _openCallScreen tapped');
     if (!mounted) return;
     if (CallService.instance.isCallScreenVisible.value) {
-      debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay _openCallScreen aborted - already visible');
+      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [UI] IncomingCallOverlay _openCallScreen aborted - already visible');
       return;
     }
     
@@ -125,7 +125,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   }
 
   Future<void> _openCallScreenAndAccept() async {
-    debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay _openCallScreenAndAccept (ACCEPT) tapped');
+    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [UI] IncomingCallOverlay _openCallScreenAndAccept (ACCEPT) tapped');
     if (!mounted) return;
     CallService.instance.acceptCall();
     _openCallScreen();
@@ -171,12 +171,12 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
                         onTap: _openIncomingScreen,
                         onAccept: _openCallScreenAndAccept,
                         onReject: () {
-                          debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay REJECT tapped');
+                          debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [UI] IncomingCallOverlay REJECT tapped');
                           setState(() => _isBarDismissed = true);
                           CallService.instance.rejectCall();
                         },
                         onDismiss: () {
-                          debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay DISMISSED (swipe up)');
+                          debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [UI] IncomingCallOverlay DISMISSED (swipe up)');
                           setState(() => _isBarDismissed = true);
                         },
                       ),
@@ -201,7 +201,7 @@ class _MinimizedCallBar extends StatelessWidget {
       key: const Key('minimized_call_bar'),
       direction: DismissDirection.down,
       onDismissed: (_) {
-        debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay MinimizedCallBar swipe-down to restore');
+        debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [UI] IncomingCallOverlay MinimizedCallBar swipe-down to restore');
         onRestore();
       },
       child: Material(
@@ -209,7 +209,7 @@ class _MinimizedCallBar extends StatelessWidget {
         child: Center(
           child: GestureDetector(
             onTap: () {
-              debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay MinimizedCallBar tapped to restore');
+              debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [UI] IncomingCallOverlay MinimizedCallBar tapped to restore');
               onRestore();
             },
             child: Container(
