@@ -191,10 +191,16 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       
       if (!_isCallActive) {
         // Çağrı bittiğinde LiveKit'in kendi ses yapılandırmalarını tamamlamasını bekliyoruz.
-        // Hemen çağırırsak LiveKit bizim speaker zorlamamızı eziyor (override).
-        Future.delayed(const Duration(milliseconds: 1000), () {
+        // Asenkron gecikmeler değişebildiği için, garantilemek adına çift deneme (1.5s ve 3.5s) yapıyoruz.
+        Future.delayed(const Duration(milliseconds: 1500), () {
           if (!mounted) return;
-          debugPrint('[SWIPE_LIVE_CALL] Forcing speaker ON to restore live stream audio routing');
+          debugPrint('[SWIPE_LIVE_CALL] Forcing speaker ON (1st pass)');
+          Hardware.instance.setSpeakerphoneOn(true).catchError((_) {});
+        });
+        
+        Future.delayed(const Duration(milliseconds: 3500), () {
+          if (!mounted) return;
+          debugPrint('[SWIPE_LIVE_CALL] Forcing speaker ON (2nd pass)');
           Hardware.instance.setSpeakerphoneOn(true).catchError((_) {});
         });
       }
