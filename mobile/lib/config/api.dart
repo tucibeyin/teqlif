@@ -132,13 +132,18 @@ Future<Map<String, dynamic>> apiCall(
     if (response.statusCode >= 400) {
       // 401 → refresh dene, bir kez retry yap
       if (response.statusCode == 401 && !retried) {
-        debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] 401 Unauthorized received for ${response.request?.url}. Attempting token refresh...');
-        final refreshed = await _tryRefreshOnce();
-        debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] Token refresh result: $refreshed');
-        if (refreshed) return apiCall(request, retried: true);
-        // Her iki token da geçersiz → global logout sinyali
-        debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] Token refresh failed. Triggering global logout.');
-        AuthService.authFailedStream.add(null);
+        final urlStr = response.request?.url.toString() ?? '';
+        final isAuthEndpoint = urlStr.contains('/api/auth/login') || urlStr.contains('/api/auth/register');
+        
+        if (!isAuthEndpoint) {
+          debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] 401 Unauthorized received for ${response.request?.url}. Attempting token refresh...');
+          final refreshed = await _tryRefreshOnce();
+          debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] Token refresh result: $refreshed');
+          if (refreshed) return apiCall(request, retried: true);
+          // Her iki token da geçersiz → global logout sinyali
+          debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] Token refresh failed. Triggering global logout.');
+          AuthService.authFailedStream.add(null);
+        }
       }
       _parseErrorBody(body, response.statusCode);
     }
@@ -181,10 +186,15 @@ Future<List<dynamic>> apiCallList(
     }
 
     if (response.statusCode == 401 && !retried) {
-      final refreshed = await _tryRefreshOnce();
-      if (refreshed) return apiCallList(request, retried: true);
-      // Her iki token da geçersiz → global logout sinyali
-      AuthService.authFailedStream.add(null);
+      final urlStr = response.request?.url.toString() ?? '';
+      final isAuthEndpoint = urlStr.contains('/api/auth/login') || urlStr.contains('/api/auth/register');
+      
+      if (!isAuthEndpoint) {
+        final refreshed = await _tryRefreshOnce();
+        if (refreshed) return apiCallList(request, retried: true);
+        // Her iki token da geçersiz → global logout sinyali
+        AuthService.authFailedStream.add(null);
+      }
     }
 
     if (response.statusCode >= 400) {
