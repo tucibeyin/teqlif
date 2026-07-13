@@ -159,6 +159,7 @@ class CallService {
   }
 
   void _setState(CallState s) {
+    debugPrint('[LIVE_SCREEN_CALL] CallState changed to: ${s.status}');
     final oldStatus = state.value.status;
     final oldPoor = state.value.isPoorConnection;
     state.value = s;
@@ -275,6 +276,7 @@ class CallService {
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
   Future<void> onIncomingCall(Map<String, dynamic> data) async {
+    debugPrint('[LIVE_SCREEN_CALL] onIncomingCall received. data=$data');
     _resetTimer?.cancel();
     
     final incomingCallId = data['call_id'] is int
@@ -364,6 +366,7 @@ class CallService {
   }
 
   Future<void> acceptCall() async {
+    debugPrint('[LIVE_SCREEN_CALL] acceptCall triggered. Current status: ${state.value.status}');
     if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
       return;
     }
@@ -393,6 +396,7 @@ class CallService {
     }
 
     _setState(state.value.copyWith(status: CallStatus.connecting));
+    debugPrint('[LIVE_SCREEN_CALL] Calling POST /calls/$callId/accept');
     try {
       Map<String, dynamic>? data;
       int retryCount = 0;
@@ -408,11 +412,13 @@ class CallService {
       }
       if (data == null) throw Exception('Accept data is null');
 
+      debugPrint('[LIVE_SCREEN_CALL] Accept SUCCESS. Joining room...');
       await _joinRoom(
         livekitUrl: data['livekit_url'] as String,
         token: data['token'] as String,
       );
     } catch (e, stack) {
+      debugPrint('[LIVE_SCREEN_CALL] acceptCall ERROR: $e');
       _hangUpLocally(status: CallStatus.ended);
     }
   }
@@ -488,7 +494,7 @@ class CallService {
     _room = Room();
     
     try {
-      debugPrint('[CallService] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
+      debugPrint('[LIVE_SCREEN_CALL] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
       
       // Force iOS to use earpiece and playAndRecord category before LiveKit messes with it
       try {
@@ -504,7 +510,7 @@ class CallService {
       }
 
       await _room!.connect(livekitUrl, token, roomOptions: const RoomOptions(defaultAudioOutputOptions: AudioOutputOptions(speakerOn: false)));
-      debugPrint('[CallService] _joinRoom SUCCESSFUL!');
+      debugPrint('[LIVE_SCREEN_CALL] _joinRoom SUCCESSFUL!');
       
       // We must fulfill CallKit BEFORE enabling the microphone on iOS!
       if (Platform.isIOS && state.value.callId != null) {
@@ -538,10 +544,13 @@ class CallService {
       await WakelockPlus.enable();
 
       _roomEventsSubscription = _room!.events.listen(_onRoomEvent);
+      
+      _setState(state.value.copyWith(status: CallStatus.connected));
+      debugPrint('[LIVE_SCREEN_CALL] Call is now CONNECTED.');
       await _setupAudioInterruptionListener();
     } catch (e) {
-      debugPrint('[CallService] _joinRoom error: $e');
-      _setState(state.value.copyWith(status: CallStatus.ended));
+      debugPrint('[LIVE_SCREEN_CALL] _joinRoom EXCEPTION: $e');
+      _hangUpLocally(status: CallStatus.ended);
       await _disconnectRoom();
     }
   }
@@ -654,6 +663,7 @@ class CallService {
   }
 
   void _hangUpLocally({required CallStatus status}) {
+    debugPrint('[LIVE_SCREEN_CALL] _hangUpLocally called with status: $status');
     if (state.value.status == status) return;
     stopRingtoneAndVibration();
     _ringTimer?.cancel();

@@ -17,6 +17,7 @@ import '../../services/cache_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/wallet_service.dart';
+import '../../services/call_service.dart';
 import '../../widgets/live/gift_hud.dart';
 import '../main_screen.dart';
 import '../../widgets/live/hype_meter_widget.dart';
@@ -116,6 +117,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   Timer? _streamCheckTimer;
   StreamSubscription<Map<String, dynamic>>? _notifSub;
   bool _isRefreshingLive = false;
+  bool _isCallActive = false;
 
   VoidCallback? _pipAction;
 
@@ -167,6 +169,18 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     });
 
     globalIsLiveTabVisible.addListener(_onVisibilityChanged);
+    CallService.instance.state.addListener(_onCallStateChanged);
+  }
+
+  void _onCallStateChanged() {
+    final status = CallService.instance.state.value.status;
+    final isCallActive = status == CallStatus.connecting || status == CallStatus.connected;
+    
+    if (_isCallActive != isCallActive) {
+      _isCallActive = isCallActive;
+      debugPrint('[LIVE_SCREEN_CALL] SwipeLiveScreen call state changed. isCallActive: $_isCallActive');
+      _updateViewportConnections();
+    }
   }
 
   void _onVisibilityChanged() {
@@ -216,6 +230,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   @override
   void dispose() {
     globalIsLiveTabVisible.removeListener(_onVisibilityChanged);
+    CallService.instance.state.removeListener(_onCallStateChanged);
     activeScreenCount--;
     _notifSub?.cancel();
     _streamCheckTimer?.cancel();
@@ -325,7 +340,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   }
 
   void _updateViewportConnections() {
-    if (!globalIsLiveTabVisible.value) {
+    if (!globalIsLiveTabVisible.value || _isCallActive) {
+      debugPrint('[LIVE_SCREEN_CALL] Forcing clearViewport. Tab visible: ${globalIsLiveTabVisible.value}, Call Active: $_isCallActive');
       _connectionManager.clearViewport();
       return;
     }
