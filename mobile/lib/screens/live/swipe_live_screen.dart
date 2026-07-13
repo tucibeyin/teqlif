@@ -47,11 +47,13 @@ import '../../services/category_service.dart';
 class SwipeLiveScreen extends StatefulWidget {
   final List<StreamOut> streams;
   final int initialIndex;
+  final bool isStandalone;
 
   const SwipeLiveScreen({
     super.key,
     required this.streams,
     required this.initialIndex,
+    this.isStandalone = false,
   });
 
   /// Tek bir yayına doğrudan streamId ile katılmak için kullanılır.
@@ -70,6 +72,7 @@ class SwipeLiveScreen extends StatefulWidget {
         ),
       ],
       initialIndex: 0,
+      isStandalone: true,
     );
   }
 
@@ -340,7 +343,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   }
 
   void _updateViewportConnections() {
-    if (!globalIsLiveTabVisible.value) {
+    if (!widget.isStandalone && !globalIsLiveTabVisible.value) {
       debugPrint('[LIVE_SCREEN_CALL] Forcing clearViewport. Tab visible: ${globalIsLiveTabVisible.value}');
       _connectionManager.clearViewport();
       return;
