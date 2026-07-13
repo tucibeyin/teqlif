@@ -1516,7 +1516,6 @@
   "retargetingNoListingsDesc": "Retargeting için en az 1 aktif ilana ihtiyaç var.",
   "errorGenericRetry": "Bir hata oluştu, lütfen daha sonra tekrar deneyin.",
   "errorFollowRequestsLoad": "İstekler yüklenemedi",
-
   "verifyEmailTitle": "E-posta Doğrulama",
   "btnVerify": "Doğrula",
   "btnResetPassword": "Şifreyi Sıfırla",
@@ -2772,10 +2771,13 @@
     "placeholders": {
       "username": {}
     }
-  }
-  ,"errFollowSelf": "Kendinizi takip edemezsiniz",
+  },
+  "errFollowSelf": "Kendinizi takip edemezsiniz",
   "errUserNotFound": "Kullanıcı bulunamadı",
   "errAlreadyFollowing": "Zaten takip ediyorsunuz veya istek gönderilmiş",
   "errFollowRecordNotFound": "Takip kaydı bulunamadı",
-  "errFollowRequestNotFound": "Takip isteği bulunamadı"
+  "errFollowRequestNotFound": "Takip isteği bulunamadı",
+  "badgeVerifiedHint": "Bu kullanıcının e-mail adresi ve telefon numarası doğrulanmıştır.",
+  "badgeProHintPrefix": "Bu kullanıcı ayrıcalıklı ",
+  "badgeProHintSuffix": " kullanıcısıdır."
 }

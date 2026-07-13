@@ -5250,4 +5250,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errFollowRequestNotFound => 'Запрос на подписку не найден';
+
+  @override
+  String get badgeVerifiedHint =>
+      'Адрес электронной почты и номер телефона этого пользователя подтверждены.';
+
+  @override
+  String get badgeProHintPrefix =>
+      'Этот пользователь является эксклюзивным участником ';
+
+  @override
+  String get badgeProHintSuffix => '.';
 }

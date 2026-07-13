@@ -1517,7 +1517,6 @@
   "retargetingNoListingsDesc": "You need at least 1 active listing for retargeting.",
   "errorGenericRetry": "An error occurred, please try again later.",
   "errorFollowRequestsLoad": "Failed to load requests",
-
   "verifyEmailTitle": "Email Verification",
   "btnVerify": "Verify",
   "btnResetPassword": "Reset Password",
@@ -2809,10 +2808,13 @@
     "placeholders": {
       "username": {}
     }
-  }
-  ,"errFollowSelf": "You cannot follow yourself",
+  },
+  "errFollowSelf": "You cannot follow yourself",
   "errUserNotFound": "User not found",
   "errAlreadyFollowing": "Already following or request sent",
   "errFollowRecordNotFound": "Follow record not found",
-  "errFollowRequestNotFound": "Follow request not found"
+  "errFollowRequestNotFound": "Follow request not found",
+  "badgeVerifiedHint": "This user's email address and phone number are verified.",
+  "badgeProHintPrefix": "This user is an exclusive ",
+  "badgeProHintSuffix": " member."
 }

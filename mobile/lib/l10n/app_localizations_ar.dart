@@ -5171,4 +5171,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get errFollowRequestNotFound => 'طلب المتابعة غير موجود';
+
+  @override
+  String get badgeVerifiedHint =>
+      'تم التحقق من عنوان البريد الإلكتروني ورقم الهاتف لهذا المستخدم.';
+
+  @override
+  String get badgeProHintPrefix => 'هذا المستخدم هو عضو ';
+
+  @override
+  String get badgeProHintSuffix => ' حصري.';
 }

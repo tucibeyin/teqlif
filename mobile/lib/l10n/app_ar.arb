@@ -1518,7 +1518,6 @@
   "retargetingNoListingsDesc": "تحتاج إلى إعلان نشط واحد على الأقل لإعادة الاستهداف.",
   "errorGenericRetry": "حدث خطأ، يرجى المحاولة مرة أخرى لاحقاً.",
   "errorFollowRequestsLoad": "فشل في تحميل الطلبات",
-
   "verifyEmailTitle": "التحقق من البريد الإلكتروني",
   "btnVerify": "تحقق",
   "btnResetPassword": "إعادة تعيين كلمة المرور",
@@ -2708,7 +2707,6 @@
   "callBusy": "الرقم مشغول",
   "callReconnecting": "جارِ إعادة الاتصال...",
   "poorConnection": "اتصال ضعيف",
-
   "callMissed": "مكالمة فائتة",
   "callNoAnswer": "لا يوجد رد",
   "callAccept": "قبول",
@@ -2774,10 +2772,13 @@
     "placeholders": {
       "username": {}
     }
-  }
-  ,"errFollowSelf": "لا يمكنك متابعة نفسك",
+  },
+  "errFollowSelf": "لا يمكنك متابعة نفسك",
   "errUserNotFound": "المستخدم غير موجود",
   "errAlreadyFollowing": "أنت تتابع بالفعل أو تم إرسال الطلب",
   "errFollowRecordNotFound": "سجل المتابعة غير موجود",
-  "errFollowRequestNotFound": "طلب المتابعة غير موجود"
+  "errFollowRequestNotFound": "طلب المتابعة غير موجود",
+  "badgeVerifiedHint": "تم التحقق من عنوان البريد الإلكتروني ورقم الهاتف لهذا المستخدم.",
+  "badgeProHintPrefix": "هذا المستخدم هو عضو ",
+  "badgeProHintSuffix": " حصري."
 }

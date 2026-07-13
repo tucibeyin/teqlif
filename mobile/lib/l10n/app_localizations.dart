@@ -9377,6 +9377,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Takip isteği bulunamadı'**
   String get errFollowRequestNotFound;
+
+  /// No description provided for @badgeVerifiedHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kullanıcının e-mail adresi ve telefon numarası doğrulanmıştır.'**
+  String get badgeVerifiedHint;
+
+  /// No description provided for @badgeProHintPrefix.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kullanıcı ayrıcalıklı '**
+  String get badgeProHintPrefix;
+
+  /// No description provided for @badgeProHintSuffix.
+  ///
+  /// In tr, this message translates to:
+  /// **' kullanıcısıdır.'**
+  String get badgeProHintSuffix;
 }
 
 class _AppLocalizationsDelegate

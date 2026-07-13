@@ -1674,7 +1674,6 @@
   "retargetingNoListingsDesc": "Для ретаргетинга вам нужен как минимум 1 активный листинг.",
   "errorGenericRetry": "Произошла ошибка, повторите попытку позже.",
   "errorFollowRequestsLoad": "Не удалось загрузить запросы",
-
   "verifyEmailTitle": "Проверка электронной почты",
   "btnVerify": "Проверьте",
   "btnResetPassword": "Сбросить пароль",
@@ -2774,10 +2773,13 @@
     "placeholders": {
       "username": {}
     }
-  }
-  ,"errFollowSelf": "Вы не можете подписаться на себя",
+  },
+  "errFollowSelf": "Вы не можете подписаться на себя",
   "errUserNotFound": "Пользователь не найден",
   "errAlreadyFollowing": "Вы уже подписаны или запрос отправлен",
   "errFollowRecordNotFound": "Запись о подписке не найдена",
-  "errFollowRequestNotFound": "Запрос на подписку не найден"
+  "errFollowRequestNotFound": "Запрос на подписку не найден",
+  "badgeVerifiedHint": "Адрес электронной почты и номер телефона этого пользователя подтверждены.",
+  "badgeProHintPrefix": "Этот пользователь является эксклюзивным участником ",
+  "badgeProHintSuffix": "."
 }

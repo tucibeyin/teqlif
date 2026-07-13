@@ -5200,4 +5200,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errFollowRequestNotFound => 'Follow request not found';
+
+  @override
+  String get badgeVerifiedHint =>
+      'This user\'s email address and phone number are verified.';
+
+  @override
+  String get badgeProHintPrefix => 'This user is an exclusive ';
+
+  @override
+  String get badgeProHintSuffix => ' member.';
 }

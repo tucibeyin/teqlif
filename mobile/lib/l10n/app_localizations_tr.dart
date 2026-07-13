@@ -5203,4 +5203,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get errFollowRequestNotFound => 'Takip isteği bulunamadı';
+
+  @override
+  String get badgeVerifiedHint =>
+      'Bu kullanıcının e-mail adresi ve telefon numarası doğrulanmıştır.';
+
+  @override
+  String get badgeProHintPrefix => 'Bu kullanıcı ayrıcalıklı ';
+
+  @override
+  String get badgeProHintSuffix => ' kullanıcısıdır.';
 }

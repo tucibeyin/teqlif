@@ -491,19 +491,47 @@ class ProfileScreenState extends State<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Avatar
-                        _buildAvatar(
-                          imageUrl: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
-                              ? _buildImageUrl(_user!['profile_image_url'] as String)
-                              : null,
-                          radius: 40,
-                          fallback: Text(
-                                  initial,
-                                  style: const TextStyle(
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.w700,
-                                    color: kPrimary,
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            _buildAvatar(
+                              imageUrl: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
+                                  ? _buildImageUrl(_user!['profile_image_url'] as String)
+                                  : null,
+                              radius: 40,
+                              fallback: Text(
+                                initial,
+                                style: const TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w700,
+                                  color: kPrimary,
+                                ),
+                              ),
+                            ),
+                            if (_user?['is_premium'] == true)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                                    ),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.surface(context),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: const FaIcon(
+                                    FontAwesomeIcons.crown,
+                                    size: 12,
+                                    color: Colors.white,
                                   ),
                                 ),
+                              ),
+                          ],
                         ),
                         const SizedBox(width: 20),
                         // İstatistikler
@@ -571,41 +599,6 @@ class ProfileScreenState extends State<ProfileScreen> {
                                 fontSize: 14,
                               ),
                             ),
-                            if (_user?['is_premium'] == true) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF0369A1), Color(0xFF0EA5E9)],
-                                  ),
-                                  borderRadius: BorderRadius.circular(5),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF0EA5E9).withValues(alpha: 0.35),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    FaIcon(FontAwesomeIcons.crown, size: 8, color: Colors.white),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'PRO',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
                             if (_user?['influence_rank'] != null && (_user!['influence_rank'] as int) > 0) ...[
                               const SizedBox(width: 6),
                               _ScoreBadge(
