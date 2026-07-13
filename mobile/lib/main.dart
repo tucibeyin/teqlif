@@ -52,6 +52,20 @@ void main() async {
         return true; // hatayı "işlendi" olarak işaretle, uygulama çökmez
       };
 
+      // Filtrelenmiş log yapısı: FCM, CallKit, FLNP (VoIP vb.) harici logları sustur
+      final originalDebugPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) {
+          final isAllowed = message.contains('[FCM]') ||
+              message.contains('[CallKit]') ||
+              message.contains('[FLNP]') ||
+              message.contains('VoIP');
+          if (isAllowed) {
+            originalDebugPrint(message, wrapWidth: wrapWidth);
+          }
+        }
+      };
+
       // iOS'ta Keychain uygulama silinse de korunur; SharedPreferences silinir.
       // Fresh install tespiti: SharedPreferences'ta flag yoksa → stale Keychain'i temizle.
       final prefs = await SharedPreferences.getInstance();
