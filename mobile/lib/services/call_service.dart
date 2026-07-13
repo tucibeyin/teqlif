@@ -602,7 +602,18 @@ class CallService {
     final callId = state.value.callId;
     if (callId != null) {
       try {
-        await _post('/calls/$callId/end');
+        int retryCount = 0;
+        while (retryCount < 4) {
+          try {
+            await _post('/calls/$callId/end');
+            break;
+          } catch (e) {
+            retryCount++;
+            debugPrint('[CALL_FLOW] [CallService] endCall POST failed (Attempt $retryCount/4): $e');
+            if (retryCount >= 4) break;
+            await Future.delayed(Duration(milliseconds: 500 * retryCount));
+          }
+        }
       } catch (_) {}
     }
     _hangUpLocally(status: CallStatus.ended);
