@@ -5219,4 +5219,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tabRatingsGiven => 'Given Ratings';
+
+  @override
+  String get tabFollowRequestsReceived => 'Received Requests';
+
+  @override
+  String get tabFollowRequestsSent => 'Sent Requests';
+
+  @override
+  String get withdrawRequest => 'Withdraw';
 }

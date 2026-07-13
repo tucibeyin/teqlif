@@ -51,6 +51,29 @@ async def get_follow_requests(
     ]
 
 
+@router.get("/requests/sent")
+async def get_sent_follow_requests(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    rows = await db.execute(
+        select(User)
+        .join(Follow, Follow.followed_id == User.id)
+        .where(Follow.follower_id == current_user.id, Follow.status == "pending", User.is_active == True)
+        .order_by(Follow.created_at.desc())
+    )
+    users = rows.scalars().all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "full_name": u.full_name,
+            "profile_image_thumb_url": u.profile_image_thumb_url,
+        }
+        for u in users
+    ]
+
+
 @router.post("/{user_id}")
 async def follow_user(
     user_id: int,

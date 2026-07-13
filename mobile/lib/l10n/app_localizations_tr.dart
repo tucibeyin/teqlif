@@ -5222,4 +5222,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tabRatingsGiven => 'Benim Verdiklerim';
+
+  @override
+  String get tabFollowRequestsReceived => 'Gelen İstekler';
+
+  @override
+  String get tabFollowRequestsSent => 'Gönderdiklerim';
+
+  @override
+  String get withdrawRequest => 'Geri Al';
 }

@@ -2783,5 +2783,8 @@
   "badgeProHintSuffix": " حصري.",
   "settingsMyRatings": "تقييماتي",
   "tabRatingsReceived": "التقييمات المستلمة",
-  "tabRatingsGiven": "التقييمات المقدمة"
+  "tabRatingsGiven": "التقييمات المقدمة",
+  "tabFollowRequestsReceived": "الطلبات المستلمة",
+  "tabFollowRequestsSent": "الطلبات المرسلة",
+  "withdrawRequest": "سحب"
 }

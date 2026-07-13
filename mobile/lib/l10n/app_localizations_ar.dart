@@ -5190,4 +5190,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get tabRatingsGiven => 'التقييمات المقدمة';
+
+  @override
+  String get tabFollowRequestsReceived => 'الطلبات المستلمة';
+
+  @override
+  String get tabFollowRequestsSent => 'الطلبات المرسلة';
+
+  @override
+  String get withdrawRequest => 'سحب';
 }

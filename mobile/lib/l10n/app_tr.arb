@@ -2782,5 +2782,8 @@
   "badgeProHintSuffix": " kullanıcısıdır.",
   "settingsMyRatings": "Değerlendirmelerim",
   "tabRatingsReceived": "Bana Verilenler",
-  "tabRatingsGiven": "Benim Verdiklerim"
+  "tabRatingsGiven": "Benim Verdiklerim",
+  "tabFollowRequestsReceived": "Gelen İstekler",
+  "tabFollowRequestsSent": "Gönderdiklerim",
+  "withdrawRequest": "Geri Al"
 }

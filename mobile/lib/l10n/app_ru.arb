@@ -2784,5 +2784,8 @@
   "badgeProHintSuffix": ".",
   "settingsMyRatings": "Мои отзывы",
   "tabRatingsReceived": "Полученные отзывы",
-  "tabRatingsGiven": "Оставленные отзывы"
+  "tabRatingsGiven": "Оставленные отзывы",
+  "tabFollowRequestsReceived": "Полученные запросы",
+  "tabFollowRequestsSent": "Отправленные запросы",
+  "withdrawRequest": "Отменить"
 }

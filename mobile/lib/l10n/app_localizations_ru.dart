@@ -5270,4 +5270,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tabRatingsGiven => 'Оставленные отзывы';
+
+  @override
+  String get tabFollowRequestsReceived => 'Полученные запросы';
+
+  @override
+  String get tabFollowRequestsSent => 'Отправленные запросы';
+
+  @override
+  String get withdrawRequest => 'Отменить';
 }

@@ -2819,5 +2819,8 @@
   "badgeProHintSuffix": " member.",
   "settingsMyRatings": "My Ratings",
   "tabRatingsReceived": "Received Ratings",
-  "tabRatingsGiven": "Given Ratings"
+  "tabRatingsGiven": "Given Ratings",
+  "tabFollowRequestsReceived": "Received Requests",
+  "tabFollowRequestsSent": "Sent Requests",
+  "withdrawRequest": "Withdraw"
 }

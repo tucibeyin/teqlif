@@ -9413,6 +9413,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Benim Verdiklerim'**
   String get tabRatingsGiven;
+
+  /// No description provided for @tabFollowRequestsReceived.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gelen İstekler'**
+  String get tabFollowRequestsReceived;
+
+  /// No description provided for @tabFollowRequestsSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönderdiklerim'**
+  String get tabFollowRequestsSent;
+
+  /// No description provided for @withdrawRequest.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geri Al'**
+  String get withdrawRequest;
 }
 
 class _AppLocalizationsDelegate
