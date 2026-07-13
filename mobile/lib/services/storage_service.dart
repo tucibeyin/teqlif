@@ -8,6 +8,7 @@ class StorageService {
   // Token ve kimlik bilgileri için güvenli depolama (Keystore/Keychain)
   static final _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
   // ── Kasa (Cache) key sabitleri ────────────────────────────────────────────
@@ -96,14 +97,12 @@ class StorageService {
   static Future<void> saveRefreshToken(String token) async {
     print('[CALL_FLOW] [Storage] saveRefreshToken = ${token.substring(0, 5)}...');
     await _secureStorage.write(key: _refreshTokenKey, value: token);
-    await _secureStorage.write(key: _refreshTokenKey, value: token);
   }
 
   static Future<String?> getRefreshToken() async {
     final rt = await _secureStorage.read(key: _refreshTokenKey);
-    print('[CALL_FLOW] [Storage] getRefreshToken = ${rt?.substring(0, 5)}...');
+    print('[CALL_FLOW] [Storage] getRefreshToken = ${rt == null ? "null" : rt.substring(0, 5)}...');
     return rt;
-    return _secureStorage.read(key: _refreshTokenKey);
   }
 
   static Future<void> saveUserInfo({
