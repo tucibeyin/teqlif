@@ -99,6 +99,7 @@ Future<Map<String, dynamic>> apiCall(
 }) async {
   try {
     final response = await request();
+    debugPrint('[CALL_FLOW] [API] ${response.request?.method} ${response.request?.url} -> Status: ${response.statusCode}');
 
     // 429 → Retry-After kadar bekle, bir kez yeniden dene
     if (response.statusCode == 429 && !retried429) {
@@ -133,6 +134,7 @@ Future<Map<String, dynamic>> apiCall(
     rethrow;
   } catch (e, stack) {
     // Ağ hatası (timeout, DNS, VPS tamamen kapalı, vb.)
+    debugPrint('[CALL_FLOW] [API] NETWORK ERROR: $e');
     LoggerService.instance.captureException(
       e,
       stackTrace: stack,
@@ -156,6 +158,7 @@ Future<List<dynamic>> apiCallList(
 }) async {
   try {
     final response = await request();
+    debugPrint('[CALL_FLOW] [API_LIST] ${response.request?.method} ${response.request?.url} -> Status: ${response.statusCode}');
 
     // 429 → Retry-After kadar bekle, bir kez yeniden dene
     if (response.statusCode == 429 && !retried429) {
@@ -194,6 +197,7 @@ Future<List<dynamic>> apiCallList(
   } on AppException {
     rethrow;
   } catch (e, stack) {
+    debugPrint('[CALL_FLOW] [API_LIST] NETWORK ERROR: $e');
     LoggerService.instance.captureException(
       e,
       stackTrace: stack,

@@ -243,16 +243,16 @@ class CallService {
       _startRingTimer();
       await WakelockPlus.enable();
     } on CallApiException catch (e) {
-      debugPrint('[CallService] startCall API error: ${e.code}');
-      if (e.code == 'USER_BUSY') {
+      debugPrint('[CALL_FLOW] [CallService] startCall API error: $e');
+      if (e is CallApiException && e.code == 'USER_BUSY') {
         _setState(state.value.copyWith(status: CallStatus.busy));
         _scheduleReset();
       } else {
         _setState(state.value.copyWith(status: CallStatus.ended));
         _scheduleReset();
       }
-    } catch (e) {
-      debugPrint('[CallService] startCall error: $e');
+    } catch (e, stack) {
+      debugPrint('[CALL_FLOW] [CallService] startCall error: $e\n$stack');
       _setState(state.value.copyWith(status: CallStatus.ended));
       _scheduleReset();
     }
@@ -371,8 +371,8 @@ class CallService {
         livekitUrl: data['livekit_url'] as String,
         token: data['token'] as String,
       );
-    } catch (e) {
-      debugPrint('[CallService] acceptCall error: $e');
+    } catch (e, stack) {
+      debugPrint('[CALL_FLOW] [CallService] acceptCall error: $e\n$stack');
       _setState(state.value.copyWith(status: CallStatus.ended));
     }
   }
