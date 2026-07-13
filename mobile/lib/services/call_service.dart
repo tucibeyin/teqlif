@@ -301,6 +301,7 @@ class CallService {
 
   Future<void> onIncomingCall(Map<String, dynamic> data) async {
     debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] onIncomingCall received. data=$data');
+    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] onIncomingCall Explicit Check: livekitUrl=${data['livekit_url']}, calleeToken=${data['callee_token'] != null ? "EXISTS" : "MISSING"}');
     _resetTimer?.cancel();
     
     final incomingCallId = data['call_id'] is int
@@ -430,14 +431,19 @@ class CallService {
 
     _setState(state.value.copyWith(status: CallStatus.connecting));
     
+    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] acceptCall Pre-Connection Check: livekitUrl=${state.value.livekitUrl != null ? "EXISTS" : "NULL"}, calleeToken=${state.value.calleeToken != null ? "EXISTS" : "NULL"}');
+    
     // WhatsApp-like Pre-Connection: Aranan kişi beklemeden LiveKit'e bağlanır.
     if (state.value.livekitUrl != null && state.value.calleeToken != null) {
+      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Executing _joinRoom for Callee pre-connection');
       _joinRoom(
         livekitUrl: state.value.livekitUrl!,
         token: state.value.calleeToken!,
       ).catchError((e) {
-        debugPrint('[CallService] Pre-connection error: $e');
+        debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Pre-connection error: $e');
       });
+    } else {
+      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] SKIPPED _joinRoom for Callee because URL or Token is NULL!');
     }
 
     debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Calling POST /calls/$callId/accept');
