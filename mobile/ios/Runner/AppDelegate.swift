@@ -23,26 +23,29 @@ import AVFAudio
     voipRegistry.delegate = self
     voipRegistry.desiredPushTypes = [PKPushType.voIP]
 
-    let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
-    let callkitChannel = FlutterMethodChannel(name: "com.teqlif/callkit",
-                                              binaryMessenger: controller.binaryMessenger)
-    callkitChannel.setMethodCallHandler({ [weak self]
-      (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
-      if call.method == "fulfillAccept" {
-          if let args = call.arguments as? [String: Any],
-             let uuid = args["uuid"] as? String {
-              self?.pendingAcceptActions[uuid]?.fulfill()
-              self?.pendingAcceptActions.removeValue(forKey: uuid)
-              result(true)
-          } else {
-              result(false)
-          }
-      } else {
-          result(FlutterMethodNotImplemented)
-      }
-    })
+    let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    if let controller = window?.rootViewController as? FlutterViewController {
+        let callkitChannel = FlutterMethodChannel(name: "com.teqlif/callkit",
+                                                  binaryMessenger: controller.binaryMessenger)
+        callkitChannel.setMethodCallHandler({ [weak self]
+          (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+          if call.method == "fulfillAccept" {
+              if let args = call.arguments as? [String: Any],
+                 let uuid = args["uuid"] as? String {
+                  self?.pendingAcceptActions[uuid]?.fulfill()
+                  self?.pendingAcceptActions.removeValue(forKey: uuid)
+                  result(true)
+              } else {
+                  result(false)
+              }
+          } else {
+              result(FlutterMethodNotImplemented)
+          }
+        })
+    }
+
+    return result
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
