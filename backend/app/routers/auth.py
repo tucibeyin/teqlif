@@ -1075,27 +1075,55 @@ def _phone_verify_html(title: str, body: str, color: str, success: bool) -> str:
 </html>"""
 
 
-@router.post("/fcm-token")
+@router.post("/device-tokens")
+async def save_device_tokens(
+    request: Request,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    FCM ve/veya VoIP token güncellemesi.
+    iOS'ta PKPushRegistry delegate'i her iki token'ı da bu endpoint'e göndermelidir.
+    voip_token alanı payload'da mevcutsa güncellenir; None gönderilirse silinir.
+    """
+    token = payload.get("token")
+    voip_token_sent = "voip_token" in payload
+    voip_token = payload.get("voip_token")  # None ise explicit silme isteği
+    lang = get_locale(request=request)
+
+    values: dict = {}
+    if token:
+        values["fcm_token"] = token
+    if voip_token_sent:
+        # Explicit None gönderilirse DB'den siliyoruz; dolu değer ise güncelliyoruz
+        values["voip_token"] = voip_token or None
+    if current_user.locale != lang:
+        values["locale"] = lang
+
+    if not token and not voip_token_sent:
+        logger.warning(
+            f"[Auth] /device-tokens called for user {current_user.id} but no token fields provided."
+        )
+
+    if values:
+        logger.info(
+            f"[Auth] Updating tokens for user {current_user.id}: "
+            f"FCM={'Yes' if token else 'No'}, "
+            f"VoIP={'Clear' if voip_token_sent and not voip_token else ('Yes' if voip_token else 'No')}, "
+            f"Locale={lang}"
+        )
+        await db.execute(sa_update(User).where(User.id == current_user.id).values(**values))
+        await db.commit()
+    return {"ok": True}
+
+
+@router.post("/fcm-token", deprecated=True)
 async def save_fcm_token(
     request: Request,
     payload: dict,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    token = payload.get("token")
-    voip_token = payload.get("voip_token")
-    lang = get_locale(request=request)
-
-    values: dict = {}
-    if token:
-        values["fcm_token"] = token
-    if voip_token:
-        values["voip_token"] = voip_token
-    if current_user.locale != lang:
-        values["locale"] = lang
-
-    if values:
-        logger.info(f"[Auth] Updating tokens for user {current_user.id}: FCM={'Yes' if token else 'No'}, VoIP={'Yes' if voip_token else 'No'}, Locale={lang}")
-        await db.execute(sa_update(User).where(User.id == current_user.id).values(**values))
-        await db.commit()
-    return {"ok": True}
+    """Deprecated: /api/auth/device-tokens kullanın."""
+    return await save_device_tokens(request=request, payload=payload, current_user=current_user, db=db)

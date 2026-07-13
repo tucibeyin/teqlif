@@ -211,15 +211,18 @@ class AuthService {
     await StorageService.clear();
   }
 
-  static Future<void> saveFcmToken(String token, {String? voipToken}) async {
-    final body = <String, dynamic>{'token': token};
-    if (voipToken != null) {
-      body['voip_token'] = voipToken;
-    }
-    
+  /// FCM ve/veya VoIP token'ı backend'e kaydeder.
+  /// En az biri non-null olmalıdır; ikisi de null ise istek atılmaz.
+  static Future<void> saveDeviceTokens({String? fcmToken, String? voipToken}) async {
+    final body = <String, dynamic>{};
+    if (fcmToken != null) body['token'] = fcmToken;
+    if (voipToken != null) body['voip_token'] = voipToken;
+
+    if (body.isEmpty) return; // Gönderilebilecek bir şey yok
+
     await apiCall(
       () async => http.post(
-        Uri.parse('$kBaseUrl/auth/fcm-token'),
+        Uri.parse('$kBaseUrl/auth/device-tokens'),
         headers: await _headers(auth: true),
         body: jsonEncode(body),
       ),

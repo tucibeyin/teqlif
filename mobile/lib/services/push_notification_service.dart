@@ -348,11 +348,10 @@ class PushNotificationService {
           final shortVoip = (voipToken != null && voipToken.length >= 15) ? "${voipToken.substring(0, 15)}…" : voipToken;
           debugPrint('[CallKit] VoIP Token Async Update: ${shortVoip ?? "NULL"}');
           if (voipToken != null && voipToken.isNotEmpty) {
+            // FCM token olmasa bile VoIP token'ı kaydet — önceden kayboluyordu
             final fcmToken = await FirebaseMessaging.instance.getToken();
-            if (fcmToken != null) {
-              await AuthService.saveFcmToken(fcmToken, voipToken: voipToken);
-              debugPrint('[CallKit] Async VoIP Token backend\'e kaydedildi ✓');
-            }
+            await AuthService.saveDeviceTokens(fcmToken: fcmToken, voipToken: voipToken);
+            debugPrint('[CallKit] Async VoIP Token backend\'e kaydedildi ✓');
           }
         } catch (e) {
           debugPrint('[CallKit] Async VoIP Token error: $e');
@@ -490,8 +489,8 @@ class PushNotificationService {
           debugPrint('[CallKit] VoIP token alınamadı: $e');
         }
       }
-      
-      await AuthService.saveFcmToken(token, voipToken: voipToken);
+
+      await AuthService.saveDeviceTokens(fcmToken: token, voipToken: voipToken);
       debugPrint('[FCM] Token backend\'e kaydedildi ✓');
     } catch (e) {
       debugPrint('[FCM] Token gönderilemedi: $e');

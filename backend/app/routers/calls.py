@@ -87,24 +87,30 @@ async def _ws_broadcast(user_id: int, payload: dict) -> None:
     await ws_manager.publish(_DM_CHANNEL, f"dm:{user_id}", payload)
 
 
-async def _send_call_push(callee: User, caller: User, call_id: int, room_name: str) -> None:
+async def _send_call_push(
+    callee: User,
+    caller: User,
+    call_id: int,
+    room_name: str,
+    db: AsyncSession,
+) -> None:
     """Send VoIP push for iOS if available, otherwise fallback to FCM push."""
     if not callee.fcm_token and not callee.voip_token:
         return
-        
+
     locale = get_locale(callee)
     t = _get_t(locale)
-    
+
     title_raw = t.get("callNotifTitle", "@{username} sizi arıyor")
     body_raw = t.get("callNotifBody", "Gelen Sesli Arama")
-    
+
     try:
         title = title_raw.format_map({"username": caller.username})
         body = body_raw.format_map({"username": caller.username})
     except (KeyError, ValueError):
         title = title_raw
         body = body_raw
-        
+
     extra_data = {
         "call_id": str(call_id),
         "room_name": room_name,
@@ -113,26 +119,29 @@ async def _send_call_push(callee: User, caller: User, call_id: int, room_name: s
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
         "livekit_url": settings.livekit_url,
     }
-    
+
     # VoIP Push önceliği (iOS cihazlar için)
     if callee.voip_token:
         logger.info(f"[Calls] Callee {callee.id} has voip_token, attempting APNs VoIP push.")
         from app.services.apns_service import send_voip_push
         try:
-            # VoIP payload
+            # VoIP payload: Apple, VoIP push'larda aps.alert/sound'u ignore eder.
+            # Tüm data top-level'da, aps sadece content-available sinyali için.
             payload = {
-                "aps": {
-                    "alert": {"title": title, "body": body},
-                    "sound": "default",
-                    "content-available": 1,
-                },
-                **extra_data
+                "aps": {"content-available": 1},
+                **extra_data,
             }
             logger.debug(f"[Calls] VoIP Payload: {payload}")
-            success = await send_voip_push(callee.voip_token, payload)
+            success, bad_token = await send_voip_push(callee.voip_token, payload)
+            if bad_token:
+                # Apple'ın önerisi: geçersiz token'ı DB'den temizle.
+                # Kullanıcı uygulamayı açtığında iOS yeni token üretir ve backend'e gönderir.
+                logger.warning(f"[Calls] VoIP token for user {callee.id} is invalid, clearing from DB.")
+                callee.voip_token = None
+                await db.commit()
             if success:
                 logger.info(f"[Calls] VoIP push successful for {callee.id}, skipping FCM.")
-                return # Eğer VoIP başarılıysa, FCM atmaya gerek yok.
+                return  # Eğer VoIP başarılıysa, FCM atmaya gerek yok.
             else:
                 logger.warning(f"[Calls] VoIP push failed for {callee.id}, will fallback to FCM.")
         except Exception as exc:
@@ -200,7 +209,7 @@ async def start_call(
         "livekit_url": settings.livekit_url,
     }
     await _ws_broadcast(callee_id, ws_payload)
-    await _send_call_push(callee, current_user, call.id, room_name)
+    await _send_call_push(callee, current_user, call.id, room_name, db)
 
     # Askıda kalan aramaları (Ghost calls) 35-40 sn sonra timeout'a çekmek için ARQ görevi ekle
     pool = get_pool()
