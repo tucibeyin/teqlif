@@ -191,6 +191,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       
       if (!_isCallActive) {
         // Çağrı bittiğinde, yayının sesinin her halükarda speaker'dan gelmesini garantiye alıyoruz
+        debugPrint('[SWIPE_LIVE_CALL] Forcing speaker ON to restore live stream audio routing');
         Hardware.instance.setSpeakerphoneOn(true).catchError((_) {});
       }
     }
