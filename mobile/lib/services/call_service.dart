@@ -350,6 +350,18 @@ class CallService {
 
     _resetTimer?.cancel();
     stopRingtoneAndVibration();
+    final permStatus = await Permission.microphone.request();
+    if (permStatus != PermissionStatus.granted) {
+      _setState(
+        state.value.copyWith(
+          status: CallStatus.permissionDenied,
+          permPermanentlyDenied: permStatus.isPermanentlyDenied,
+        ),
+      );
+      _hangUpLocally(status: CallStatus.ended);
+      return;
+    }
+
     _setState(state.value.copyWith(status: CallStatus.connecting));
     try {
       final data = await _post('/calls/$callId/accept');
