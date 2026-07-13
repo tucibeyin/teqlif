@@ -74,8 +74,8 @@ class GlobalCallOverlay extends StatelessWidget {
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                                  horizontal: 16,
+                                  vertical: 10,
                                 ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF22C55E),
@@ -94,7 +94,7 @@ class GlobalCallOverlay extends StatelessWidget {
                                     // Avatar
                                     if (cs.otherAvatar != null) ...[
                                       CircleAvatar(
-                                        radius: 14,
+                                        radius: 18,
                                         backgroundColor: Colors.white24,
                                         backgroundImage: cs.otherAvatar!.isNotEmpty
                                             ? CachedNetworkImageProvider(imgUrl(cs.otherAvatar!))
@@ -104,13 +104,13 @@ class GlobalCallOverlay extends StatelessWidget {
                                                 cs.otherUsername!.substring(0, 1).toUpperCase(),
                                                 style: const TextStyle(
                                                   color: Colors.white,
-                                                  fontSize: 12,
+                                                  fontSize: 14,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               )
                                             : null,
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 12),
                                     ],
                                     // Name and Timer Column
                                     Column(
@@ -123,7 +123,7 @@ class GlobalCallOverlay extends StatelessWidget {
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 12,
+                                              fontSize: 14,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -140,7 +140,7 @@ class GlobalCallOverlay extends StatelessWidget {
                                                 style: const TextStyle(
                                                   color: Colors.white70,
                                                   fontWeight: FontWeight.w500,
-                                                  fontSize: 11,
+                                                  fontSize: 13,
                                                 ),
                                               );
                                             } catch (_) {
@@ -151,7 +151,7 @@ class GlobalCallOverlay extends StatelessWidget {
                                                 style: const TextStyle(
                                                   color: Colors.white70,
                                                   fontWeight: FontWeight.w500,
-                                                  fontSize: 11,
+                                                  fontSize: 13,
                                                 ),
                                               );
                                             }
@@ -159,7 +159,7 @@ class GlobalCallOverlay extends StatelessWidget {
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(width: 16),
+                                    const SizedBox(width: 20),
                                     
                                     // Speaker Toggle Button
                                     GestureDetector(
@@ -168,7 +168,7 @@ class GlobalCallOverlay extends StatelessWidget {
                                       },
                                       behavior: HitTestBehavior.opaque,
                                       child: Container(
-                                        padding: const EdgeInsets.all(6),
+                                        padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
                                           color: cs.isSpeaker ? Colors.white : Colors.white24,
                                           shape: BoxShape.circle,
@@ -176,11 +176,11 @@ class GlobalCallOverlay extends StatelessWidget {
                                         child: Icon(
                                           cs.isSpeaker ? Icons.volume_up : Icons.volume_down,
                                           color: cs.isSpeaker ? Colors.black87 : Colors.white,
-                                          size: 16,
+                                          size: 20,
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 12),
 
                                     // End Call Button
                                     GestureDetector(
@@ -189,7 +189,7 @@ class GlobalCallOverlay extends StatelessWidget {
                                       },
                                       behavior: HitTestBehavior.opaque,
                                       child: Container(
-                                        padding: const EdgeInsets.all(6),
+                                        padding: const EdgeInsets.all(8),
                                         decoration: const BoxDecoration(
                                           color: Colors.red,
                                           shape: BoxShape.circle,
@@ -197,7 +197,7 @@ class GlobalCallOverlay extends StatelessWidget {
                                         child: const Icon(
                                           Icons.call_end,
                                           color: Colors.white,
-                                          size: 16,
+                                          size: 20,
                                         ),
                                       ),
                                     ),
