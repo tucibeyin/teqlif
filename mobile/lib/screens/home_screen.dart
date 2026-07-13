@@ -22,7 +22,6 @@ import 'auth/category_onboarding_screen.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 
-import '../core/app_exception.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
@@ -157,7 +156,7 @@ class HomeScreenState extends State<HomeScreen> {
     } else {
       // Paralel yükleme: ForYou beklenmeden arka planda başlar
       await _loadRecent(token, bypassCache: bypassCache);
-      if (loggedIn) _loadHesitated(token!);
+      if (loggedIn) _loadHesitated(token);
     }
   }
 

@@ -63,6 +63,7 @@ dependencies:
   vibration: ^3.2.0
   proximity_sensor: ^1.4.0
 
+  flutter_cache_manager: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

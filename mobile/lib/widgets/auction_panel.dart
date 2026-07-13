@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -89,7 +90,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   void _setMsg(String msg, {bool error = false}) {
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     setState(() {
       _msg = msg;
       _msgError = error;
@@ -569,7 +570,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       final resp = await http.get(Uri.parse('$kBaseUrl/listings/$id'));
       if (resp.statusCode != 200 || !mounted) return;
       final listing = jsonDecode(resp.body) as Map<String, dynamic>;
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       if (context.mounted) _openListingSheet(context, listing);
     } catch (_) {}
   }
@@ -995,7 +996,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Future<void> _showBuyItNowRequestDialog(String buyerUsername, AuctionState state) async {
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     final l = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
       context: context,
@@ -1297,7 +1298,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       final state = ref.read(auctionProvider(widget.streamId));
       final base = (state.currentBid ?? state.startPrice ?? 0).toInt();
       setState(() => _selectedBid = generateNextBids(base, 1).first);
@@ -1318,7 +1319,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   }
 
   void _setMsg(String msg, {bool error = false}) {
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     setState(() {
       _msg = msg;
       _msgError = error;
@@ -1347,7 +1348,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   }
 
   void _handleBidError(String message, {ScaffoldMessengerState? messenger}) {
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     final sm = messenger ?? ScaffoldMessenger.of(context);
 
     // Shill Bidding: "Aynı ağ üzerinden..." → 3s kırmızı buton + SnackBar
@@ -1385,13 +1386,13 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   }
 
   Future<void> _showPhoneVerificationSheet() async {
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     String? existingPhone;
     try {
       final user = await AuthService.me();
       if (!user.phoneVerified) existingPhone = user.phone;
     } catch (_) {}
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E293B),

@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously
 import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -103,7 +104,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     if (_videoUrl != null) {
       _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(imgUrl(_videoUrl!)));
       _videoCtrl!.initialize().then((_) {
-        if (!mounted) return;
+        if (!mounted || !context.mounted) return;
         _chewieCtrl = ChewieController(
           videoPlayerController: _videoCtrl!,
           autoPlay: widget.listing['is_highlight'] == true,
@@ -131,7 +132,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   Future<void> _loadMyId() async {
     final info = await StorageService.getUserInfo();
     final token = await StorageService.getToken();
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
 
     // Token varlığını hemen form gösterimi için kaydet
     if (token != null && !_isLoggedIn) {
@@ -158,7 +159,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       } catch (_) {}
     }
 
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     setState(() => _myUserId = userId);
     if (token != null && _myUserId != null) {
       final listingUserId = (widget.listing['user'] as Map?)?['id'];
@@ -179,7 +180,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
   Future<void> _loadNotificationCooldown(int listingId) async {
     final secs = await AnalyticsService.getNotificationCooldown(listingId);
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     setState(() {
       _cooldownLoading = false;
       _cooldownSeconds = secs > 0 ? secs : 0;
@@ -190,7 +191,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   void _startCooldownTimer() {
     _cooldownTimer?.cancel();
     _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) { _cooldownTimer?.cancel(); return; }
+      if (!mounted || !context.mounted) { _cooldownTimer?.cancel(); return; }
       setState(() {
         if (_cooldownSeconds > 0) {
           _cooldownSeconds--;
@@ -277,7 +278,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           headers: {'Authorization': 'Bearer $token'},
         );
       }
-      if (mounted) {
+      if (mounted && context.mounted) {
         setState(() {
           _likesCount = newCount;
           _isLiked = newLiked;
@@ -295,7 +296,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     } catch (_) {
       widget.listing['likes_count'] = prevCount;
       widget.listing['is_liked'] = prevLiked;
-      if (mounted) {
+      if (mounted && context.mounted) {
         setState(() {
           _isLiked = prevLiked;
           _likesCount = prevCount;
@@ -315,12 +316,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     setState(() => _heartVisible = true);
     try {
       await _heartAnimCtrl!.forward();
     } catch (_) {}
-    if (mounted) setState(() => _heartVisible = false);
+    if (mounted && context.mounted) setState(() => _heartVisible = false);
     _heartAnimCtrl?.dispose();
     _heartAnimCtrl = null;
   }
@@ -355,7 +356,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           Uri.parse('$kBaseUrl/favorites/$id'),
           headers: {'Authorization': 'Bearer $token'},
         );
-        if (mounted) {
+        if (mounted && context.mounted) {
           setState(() { _isFavorited = false; _isLiked = false; });
           if (id != null) AnalyticsService.logInteraction(itemId: id, itemType: 'listing', interactionType: 'listing_unfavorite', pricePoint: pricePoint);
         }
@@ -364,7 +365,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           Uri.parse('$kBaseUrl/favorites/$id'),
           headers: {'Authorization': 'Bearer $token'},
         );
-        if (mounted) {
+        if (mounted && context.mounted) {
           setState(() { _isFavorited = true; _isLiked = true; });
           if (id != null) AnalyticsService.logInteraction(itemId: id, itemType: 'listing', interactionType: 'listing_favorite', pricePoint: pricePoint);
         }
@@ -373,12 +374,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   Future<void> _toggleActive() async {
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     final l  = AppLocalizations.of(context)!;
     final id = widget.listing['id'] as int;
 
     final costData = await ListingService.getReactivationCost(id);
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
 
     final isPremium    = costData?['is_premium']    as bool? ?? false;
     final remaining    = costData?['free_remaining'] as int?  ?? 0;
@@ -578,10 +579,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     final id = widget.listing['id'] as int;
     try {
       final offers = await ListingService.getOffers(id);
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       _offersNotifier.value = offers;
     } finally {
-      if (mounted) setState(() => _offersLoading = false);
+      if (mounted && context.mounted) setState(() => _offersLoading = false);
     }
   }
 
@@ -616,7 +617,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     try {
       final id = widget.listing['id'] as int;
       await ListingService.placeOffer(id, amount);
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       _offerCtrl.clear();
       _offerFieldTouched = false;
       _offerTypedAmount = null;
@@ -630,15 +631,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         SnackBar(content: Text(l.offerSuccess)),
       );
       final offers = await ListingService.getOffers(id);
-      if (mounted) _offersNotifier.value = offers;
+      if (mounted && context.mounted) _offersNotifier.value = offers;
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg.isNotEmpty ? msg : l.offerError)),
       );
     } finally {
-      if (mounted) setState(() => _offerSubmitting = false);
+      if (mounted && context.mounted) setState(() => _offerSubmitting = false);
     }
   }
 
@@ -760,7 +761,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         Uri.parse('$kBaseUrl/listings/$id'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       if (resp.statusCode == 200) {
         nav.pop(true);
       } else {
@@ -768,7 +769,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         messenger.showSnackBar(SnackBar(content: Text(detail)));
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && context.mounted) {
         messenger.showSnackBar(SnackBar(content: Text(connErr)));
       }
     }
@@ -789,22 +790,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
 
-  Future<void> _sendMassNotification(BuildContext ctx) async {
+  Future<void> _sendMassNotification(BuildContext context) async {
     setState(() => _massNotificationSending = true);
     final listingId = widget.listing['id'] as int;
 
     // Hedef kitle büyüklüğünü çek
     final est = await AnalyticsService.estimateAudienceForListing(listingId);
-    if (est == null || !mounted) {
+    if (est == null || !mounted || !context.mounted) {
       setState(() => _massNotificationSending = false);
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceCalcError)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceCalcError)));
       return;
     }
 
     final maxAudience = est['audience_size'] as int? ?? 0;
     if (maxAudience == 0) {
+      if (!mounted || !context.mounted) return;
       setState(() => _massNotificationSending = false);
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceNoPotentialFound)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceNoPotentialFound)));
       return;
     }
 
@@ -815,7 +817,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
     // Onay penceresi (Akıllı Modal)
     final result = await showDialog<Map<String, int>>(
-      context: ctx,
+      context: context,
       builder: (_) => _MassNotificationDialog(
         maxAudience: maxAudience,
         creditsLeft: creditsLeft,
@@ -824,7 +826,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       ),
     );
 
-    if (result == null || !mounted) return;
+    if (result == null || !mounted || !context.mounted) return;
 
     setState(() => _massNotificationSending = true);
     final apiResult = await AnalyticsService.sendMassNotificationForListing(
@@ -832,28 +834,28 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       estimatedCost: result['cost']!,
       recipientCount: result['count']!,
     );
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     setState(() => _massNotificationSending = false);
 
     if (apiResult != null && apiResult['cooldown'] == true) {
       final secs = (apiResult['seconds_remaining'] as num?)?.toInt() ?? 86400;
       setState(() => _cooldownSeconds = secs);
       _startCooldownTimer();
-      ScaffoldMessenger.of(ctx).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_formatCooldown(secs))),
       );
     } else if (apiResult != null && apiResult.containsKey('error')) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(apiResult['error'] as String)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiResult['error'] as String)));
     } else if (apiResult != null) {
       CacheService.clearData('user_wallet_data');
       setState(() => _cooldownSeconds = 86400);
       _startCooldownTimer();
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(AppLocalizations.of(context)!.audienceMassSendSuccess),
         backgroundColor: const Color(0xFF14B8A6),
       ));
     } else {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceMassSendError)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceMassSendError)));
     }
   }
 
@@ -870,7 +872,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
 
   Future<void> _boostListing(BuildContext ctx) async {
-    final boostMessenger = ScaffoldMessenger.of(ctx);
+    final boostMessenger = ScaffoldMessenger.of(context);
     final l = AppLocalizations.of(ctx)!;
     // Önce boost kredi durumunu çek
     int remaining = 0;
@@ -904,7 +906,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       }
     } catch (_) {}
 
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
 
     // Pro değilse bilgilendir
     if (!isPro) {
@@ -918,9 +920,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     // Ücretli veya ücretsiz boost dialog'ını göster
     final bool isFreeMode = remaining > 0;
 
-    // ignore: use_build_context_synchronously
-    showDialog<void>(
-      context: ctx,
+        showDialog<void>(
+      context: context,
       builder: (dlgCtx) {
         final dl = AppLocalizations.of(dlgCtx)!;
         
@@ -939,7 +940,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 'cpc_bid': 1,
               }),
             );
-            if (!mounted) return;
+            if (!mounted || !context.mounted) return;
             Navigator.pop(dlgCtx);
             final ll = AppLocalizations.of(ctx)!;
             if (resp.statusCode == 201) {
@@ -951,23 +952,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 widget.listing['campaign_id'] = _campaignId;
                 widget.listing['is_sponsored'] = true;
               });
-              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid),
                 backgroundColor: const Color(0xFFF97316),
               ));
             } else {
               final body = jsonDecode(resp.body) as Map<String, dynamic>;
               final msg = body['detail'] ?? ll.boostErrorDefault;
-              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(msg.toString()),
                 backgroundColor: resp.statusCode == 402 ? const Color(0xFFDC2626) : null,
               ));
             }
           } catch (_) {
-            if (mounted) {
+            if (mounted && context.mounted) {
               final ll = AppLocalizations.of(ctx)!;
               Navigator.pop(dlgCtx);
-              ScaffoldMessenger.of(ctx).showSnackBar(
+              ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(ll.boostErrorConnection)),
               );
             }
@@ -1137,7 +1138,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                   ),
                   onPressed: () async {
                     if (selectedReason == null) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(l.listingReportSelectRequired)),
                       );
                       return;
@@ -1167,7 +1168,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode({'listing_id': id, 'reason': reason}),
       );
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       final l = AppLocalizations.of(context)!;
       if (resp.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1178,7 +1179,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && context.mounted) {
         final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l.errorConnection)),
@@ -2366,7 +2367,7 @@ class _ListingDeepLinkLoaderState extends State<ListingDeepLinkLoader> {
         Uri.parse('$kBaseUrl/listings/${widget.listingId}'),
         headers: headers,
       );
-      if (!mounted) return;
+      if (!mounted || !context.mounted) return;
       if (resp.statusCode == 200) {
         final listing = jsonDecode(resp.body) as Map<String, dynamic>;
         Navigator.of(context).pushReplacement(
@@ -2376,7 +2377,7 @@ class _ListingDeepLinkLoaderState extends State<ListingDeepLinkLoader> {
         Navigator.of(context).pop();
       }
     } catch (_) {
-      if (mounted) Navigator.of(context).pop();
+      if (mounted && context.mounted) Navigator.of(context).pop();
     }
   }
 

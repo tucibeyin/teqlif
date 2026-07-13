@@ -2708,7 +2708,7 @@ class _MyListingsScreen extends StatefulWidget {
 }
 
 class _MyListingsScreenState extends State<_MyListingsScreen> {
-  List<dynamic> _listings = [];
+  final List<dynamic> _listings = [];
   bool _loading = true;
   bool _isLoadingMore = false;
   bool _hasMore = true;
@@ -2797,10 +2797,12 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     } catch (e) {
       LoggerService.instance.warning('MyListingsScreen', 'İlanlar yüklenemedi: $e');
     } finally {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _loading = false;
         _isLoadingMore = false;
       });
+      }
     }
   }
 
@@ -4325,11 +4327,11 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     height: 160,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
+                    placeholder: (_, _) => Container(
                       height: 160,
                       color: isDark ? Colors.grey[800] : Colors.grey[200],
                     ),
-                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                    errorWidget: (_, _, _) => const SizedBox.shrink(),
                   ),
                 ),
               ),

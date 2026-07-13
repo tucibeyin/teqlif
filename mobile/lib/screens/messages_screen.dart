@@ -40,7 +40,6 @@ import '../providers/pip_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../services/call_service.dart';
 import 'call_screen.dart';
 
@@ -216,12 +215,13 @@ class _MessagesTabState extends State<_MessagesTab> {
     try {
       final data = await NotificationService.getConversations();
       await StorageService.cacheData(StorageService.cacheMessages, data);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _conversations = data;
           _loading = false;
           _hasError = false;
         });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -610,12 +610,13 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       final data = await NotificationService.getNotifications();
       // ── C: Başarı → kasa güncelle, UI yenile ──────────────────────────
       await StorageService.cacheData(StorageService.cacheNotifications, data);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _notifications = data;
           _loading = false;
           _notifHasError = false;
         });
+      }
     } catch (e) {
       // ── D: Hata → kasa doluysa yut, boşsa boş ekran göster ───────────
       if (cached == null && mounted) {
@@ -679,21 +680,25 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         return l.notifListingRemovedBody;
       case 'listing_deactivated':
         final qMatch = RegExp(r'"(.+?)"').firstMatch(body);
-        if (qMatch != null)
+        if (qMatch != null) {
           return l.notifListingDeactivatedBodySingle(qMatch.group(1)!);
+        }
         final nMatch = RegExp(r'^(\d+)').firstMatch(body);
-        if (nMatch != null)
+        if (nMatch != null) {
           return l.notifListingDeactivatedBodyMultiple(
             int.parse(nMatch.group(1)!),
           );
+        }
         return body;
       case 'listing_deleted':
         final qMatch = RegExp(r'"(.+?)"').firstMatch(body);
-        if (qMatch != null)
+        if (qMatch != null) {
           return l.notifListingDeletedBodySingle(qMatch.group(1)!);
+        }
         final nMatch = RegExp(r'^(\d+)').firstMatch(body);
-        if (nMatch != null)
+        if (nMatch != null) {
           return l.notifListingDeletedBodyMultiple(int.parse(nMatch.group(1)!));
+        }
         return body;
       case 'outbid':
         if (body.contains(' — ')) {
@@ -705,8 +710,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           return l.notifOutbidBody(item, price);
         } else {
           final colon = body.lastIndexOf(': ');
-          if (colon >= 0)
+          if (colon >= 0) {
             return l.notifOutbidBodyNoItem(body.substring(colon + 2));
+          }
         }
         return body;
       case 'auction_ended':
@@ -719,8 +725,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
           return l.notifAuctionEndedBody(item, price);
         } else {
           final colon = body.lastIndexOf(': ');
-          if (colon >= 0)
+          if (colon >= 0) {
             return l.notifAuctionEndedBodyNoItem(body.substring(colon + 2));
+          }
         }
         return body;
       case 'auction_cancelled':
@@ -1074,12 +1081,13 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       if (mounted) setState(() => _playDuration = d);
     });
     _audioCompleteSub = _audioPlayer.onPlayerComplete.listen((_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _audioPlaying = false;
           _playingMsgId = null;
           _playPosition = Duration.zero;
         });
+      }
     });
     _initScreen();
   }
@@ -1097,11 +1105,12 @@ class _DirectChatScreenState extends State<DirectChatScreen>
   }
 
   Future<void> _loadMessages({bool bypassCache = false}) async {
-    if (mounted)
+    if (mounted) {
       setState(() {
         _loading = true;
         _error = false;
       });
+    }
     try {
       // SWR: önce Hive cache (anlık), sonra API (taze)
       await for (final data in ApiService.get<List<Map<String, dynamic>>>(
@@ -1148,11 +1157,12 @@ class _DirectChatScreenState extends State<DirectChatScreen>
         _scrollToBottom(animate: false);
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
           _error = true;
         });
+      }
     }
   }
 
@@ -1194,8 +1204,9 @@ class _DirectChatScreenState extends State<DirectChatScreen>
 
       if (type == 'message_deleted') {
         final id = data['id'];
-        if (mounted)
+        if (mounted) {
           setState(() => _messages.removeWhere((m) => m['id'] == id));
+        }
         return;
       }
 
@@ -1277,8 +1288,9 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             contentType: MediaType.parse(mimeType),
           ),
         );
-      if (durationSecs != null)
+      if (durationSecs != null) {
         req.fields['duration_secs'] = durationSecs.toString();
+      }
       final streamed = await req.send();
       final body = await streamed.stream.bytesToString();
       if (!mounted) return;
@@ -1297,16 +1309,18 @@ class _DirectChatScreenState extends State<DirectChatScreen>
           final detail = errBody?['detail'] as String?;
           if (detail != null && detail.isNotEmpty) errMsg = detail;
         } catch (_) {}
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(errMsg)));
+        }
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l.attachSendFailed)));
+      }
     } finally {
       if (mounted) setState(() => _uploadingMedia = false);
     }
@@ -1601,10 +1615,11 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       await _audioPlayer.play(UrlSource(imgUrl(url)));
       if (mounted) setState(() => _audioPlaying = true);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l.voicePlayFailed)));
+      }
     }
   }
 
@@ -1620,10 +1635,11 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       await file.writeAsBytes(response.bodyBytes);
       await OpenFilex.open(file.path);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l.attachOpenFailed)));
+      }
     }
   }
 
@@ -1648,8 +1664,9 @@ class _DirectChatScreenState extends State<DirectChatScreen>
           children: [
             GestureDetector(
               onTap: () {
-                if (mediaUrl != null)
+                if (mediaUrl != null) {
                   _toggleVoicePlayback(msgId, mediaUrl, dur);
+                }
               },
               child: Container(
                 padding: const EdgeInsets.all(8),
@@ -1699,13 +1716,14 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       case 'image':
         return GestureDetector(
           onTap: () {
-            if (mediaUrl != null)
+            if (mediaUrl != null) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => _FullScreenImagePage(url: imgUrl(mediaUrl)),
                 ),
               );
+            }
           },
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
@@ -1727,13 +1745,14 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       case 'video':
         return GestureDetector(
           onTap: () {
-            if (mediaUrl != null)
+            if (mediaUrl != null) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => _FullScreenVideoPage(url: imgUrl(mediaUrl)),
                 ),
               );
+            }
           },
           child: Stack(
             alignment: Alignment.center,
@@ -2778,10 +2797,11 @@ class _FullScreenVideoPageState extends State<_FullScreenVideoPage> {
     super.initState();
     _vCtrl = VideoPlayerController.networkUrl(Uri.parse(widget.url))
       ..initialize().then((_) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _initialized = true;
           });
+        }
         _vCtrl.play();
         setState(() => _playing = true);
       });

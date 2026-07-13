@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
-import '../../core/app_exception.dart';
 import '../../models/stream.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/storage_service.dart';

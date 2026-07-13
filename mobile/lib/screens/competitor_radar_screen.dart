@@ -353,8 +353,8 @@ class _CompetitorRadarScreenState extends State<CompetitorRadarScreen> {
                         ? CachedNetworkImage(
                             imageUrl: imageUrl,
                             fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(color: AppColors.border(context)),
-                            errorWidget: (_, __, ___) => Container(
+                            placeholder: (_, _) => Container(color: AppColors.border(context)),
+                            errorWidget: (_, _, _) => Container(
                               color: AppColors.border(context),
                               child: Icon(Icons.image_not_supported_outlined,
                                   color: AppColors.textSecondary(context)),
@@ -689,7 +689,7 @@ class _VelocitySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final category = data['category'] as String? ?? '—';
+    // category isn't used
     final totalSold = data['total_sold_90d'] as int? ?? 0;
     final avgDays = (data['avg_days_to_sell'] as num?)?.toDouble();
     final minDays = (data['min_days_to_sell'] as num?)?.toDouble();

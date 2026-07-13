@@ -357,7 +357,7 @@ class AnalyticsService {
         'price_point': ?pricePoint,
         'metadata': ?metadata,
         // JWT expire olsa bile user_id kaybolmasın diye body'ye de yaz
-        if (myUserId != null) 'user_id': myUserId,
+        'user_id': ?myUserId,
       };
       http
           .post(Uri.parse('$kBaseUrl/analytics/interaction'),

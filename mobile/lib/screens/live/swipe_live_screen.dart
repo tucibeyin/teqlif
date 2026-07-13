@@ -1595,9 +1595,9 @@ class _GiftSheetState extends State<_GiftSheet> {
           else
             Row(
               children: widget.gifts.map((g) {
-                const _keyEmoji = {'fire': '🔥', 'diamond': '💎', 'crown': '👑'};
+                const keyEmoji = {'fire': '🔥', 'diamond': '💎', 'crown': '👑'};
                 final (backendKey, label, cost) = g;
-                final emoji = _keyEmoji[backendKey] ?? '🎁';
+                final emoji = keyEmoji[backendKey] ?? '🎁';
                 return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),

@@ -921,61 +921,6 @@ class _PriceIntelCard extends StatelessWidget {
 
 // ── Sıcak Talep (eski dikey satır - geriye dönük uyumluluk için) ─────────────
 
-class _HotLeadRow extends StatelessWidget {
-  final Map<String, dynamic> lead;
-  final AppLocalizations l;
-  final List<(String, String)>? categoryLabels;
-  const _HotLeadRow({required this.lead, required this.l, this.categoryLabels});
-
-  @override
-  Widget build(BuildContext context) {
-    final views = (lead['views_30d'] as num?)?.toInt() ?? 0;
-    final hes   = (lead['hesitations_30d'] as num?)?.toInt() ?? 0;
-    final heat  = (lead['heat_score'] as num?)?.toInt() ?? 0;
-    final price = (lead['price'] as num?)?.toDouble();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.card(context),
-        borderRadius: BorderRadius.circular(12),
-        border: heat > 10 ? Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)) : null,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 6, height: 40,
-            decoration: BoxDecoration(
-              color: heat > 15 ? const Color(0xFFEF4444) : heat > 5 ? const Color(0xFFF59E0B) : const Color(0xFF22C55E),
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(lead['title'] as String? ?? '', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text('${categoryLabels?.firstWhere((p) => p.$1 == lead['category'], orElse: () => (lead['category'] as String? ?? '', lead['category'] as String? ?? '')).$2 ?? lead['category']}  •  ${price != null ? '${NumberFormat('#,##0', 'tr_TR').format(price)} ₺' : '—'}',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context))),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _Chip(l.hotLeadViewed(views), const Color(0xFF3B82F6)),
-              const SizedBox(height: 4),
-              _Chip(l.hotLeadHesitated(hes), const Color(0xFFF59E0B)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _Chip extends StatelessWidget {
   final String label;
@@ -994,58 +939,6 @@ class _Chip extends StatelessWidget {
 
 // ── Fiyat Zekası ─────────────────────────────────────────────────────────────
 
-class _PriceIntelRow extends StatelessWidget {
-  final Map<String, dynamic> item;
-  final AppLocalizations l;
-  final List<(String, String)>? categoryLabels;
-  const _PriceIntelRow({required this.item, required this.l, this.categoryLabels});
-
-  @override
-  Widget build(BuildContext context) {
-    final yourPrice  = (item['your_price'] as num?)?.toDouble() ?? 0;
-    final marketAvg  = (item['market_avg'] as num?)?.toDouble() ?? 0;
-    final diffPct    = (item['diff_pct'] as num?)?.toDouble() ?? 0;
-    final signal     = item['signal'] as String? ?? 'uygun';
-
-    final sigColor = signal == 'pahalı' ? const Color(0xFFEF4444)
-        : signal == 'ucuz' ? const Color(0xFF22C55E)
-        : const Color(0xFF3B82F6);
-    final sigLabel = signal == 'pahalı' ? l.priceSignalExpensive
-        : signal == 'ucuz' ? l.priceSignalCheap
-        : l.priceSignalFair;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.card(context), borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(child: Text(item['title'] as String? ?? '', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary(context)), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: sigColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                child: Text(sigLabel, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: sigColor)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(child: _PriceBox(label: l.priceYours, value: '${NumberFormat('#,##0', 'tr_TR').format(yourPrice)} ₺', color: sigColor)),
-              const SizedBox(width: 10),
-              Expanded(child: _PriceBox(label: l.priceMarketAvg, value: '${NumberFormat('#,##0', 'tr_TR').format(marketAvg)} ₺', color: AppColors.textSecondary(context))),
-              const SizedBox(width: 10),
-              Expanded(child: _PriceBox(label: l.priceDiff, value: '${diffPct >= 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%', color: sigColor)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _PriceRow extends StatelessWidget {
   final String label;
@@ -1073,22 +966,6 @@ class _PriceRow extends StatelessWidget {
   }
 }
 
-class _PriceBox extends StatelessWidget {
-  final String label, value;
-  final Color color;
-  const _PriceBox({required this.label, required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color)),
-        const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context)), textAlign: TextAlign.center),
-      ],
-    );
-  }
-}
 
 // ── Yayın Performansı ─────────────────────────────────────────────────────────
 

@@ -20,7 +20,7 @@ class LiveStreamHistoryScreen extends StatefulWidget {
 }
 
 class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
-  List<dynamic> _streams = [];
+  final List<dynamic> _streams = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _hasMore = true;
@@ -418,7 +418,7 @@ class _LiveStreamHistoryScreenState extends State<LiveStreamHistoryScreen> {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
+                                    color: Colors.black.withValues(alpha: 0.05),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),

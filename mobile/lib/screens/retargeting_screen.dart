@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
-import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
@@ -357,7 +356,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                   children: [
                     imageUrl != null
                       ? Image.network(imageUrl, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(color: AppColors.border(context)))
+                          errorBuilder: (_, _, _) => Container(color: AppColors.border(context)))
                       : Container(color: AppColors.border(context),
                           child: Icon(Icons.image_not_supported_outlined, color: AppColors.textSecondary(context))),
                     Positioned(
@@ -1333,7 +1332,7 @@ class _RetargetingScreenState extends State<RetargetingScreen> {
                   children: [
                     imageUrl != null
                         ? Image.network(imageUrl, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(color: AppColors.border(context)))
+                            errorBuilder: (_, _, _) => Container(color: AppColors.border(context)))
                         : Container(
                             color: AppColors.border(context),
                             child: Icon(Icons.image_not_supported_outlined,
