@@ -45,6 +45,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       callerId:       message.data['caller_id']       ?? '',
       roomName:       message.data['room_name']       ?? '',
       livekitUrl:     message.data['livekit_url']     ?? '',
+      calleeToken:    message.data['callee_token']    ?? '',
     );
   } else if (message.data['type'] == 'call_ended' || message.data['type'] == 'call_missed' || message.data['type'] == 'call_rejected') {
     debugPrint('[FCM][BG] Call cancelled by caller (${message.data['type']}). Ending CallKit.');
@@ -75,6 +76,7 @@ Future<void> _showCallNotification({
   String callerId     = '',
   String roomName     = '',
   String livekitUrl   = '',
+  String calleeToken  = '',
 }) async {
   debugPrint('[CallKit] _showCallNotification başlıyor | callId=$callId | caller=$callerUsername');
 
@@ -109,6 +111,7 @@ Future<void> _showCallNotification({
       'caller_avatar': callerAvatar,
       'room_name': roomName,
       'livekit_url': livekitUrl,
+      'callee_token': calleeToken,
     },
     android: AndroidParams(
       isCustomNotification: true,
