@@ -58,7 +58,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
         }
         break;
       case 'incoming_call_auto_accept':
-        _openCallScreenAndAccept();
+        _openCallScreen(); // CallKit or FCM already invoked acceptCall()
         break;
       case 'call_accepted':
         CallService.instance.onCallAccepted(data);
