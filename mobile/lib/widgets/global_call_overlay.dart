@@ -56,6 +56,7 @@ class GlobalCallOverlay extends StatelessWidget {
                             type: MaterialType.transparency,
                             child: GestureDetector(
                               onTap: () {
+                                debugPrint('[CALL_FLOW] [UI] GlobalCallOverlay body tapped. Returning to CallScreen.');
                                 final ctx = navigatorKey.currentContext;
                                 if (ctx != null) {
                                   if (CallService.instance.isCallScreenVisible.value) return;
@@ -126,7 +127,10 @@ class GlobalCallOverlay extends StatelessWidget {
                                     const SizedBox(width: 16),
                                     // End Call Button
                                     GestureDetector(
-                                      onTap: () => CallService.instance.endCall(),
+                                      onTap: () {
+                                        debugPrint('[CALL_FLOW] [UI] GlobalCallOverlay END CALL button tapped.');
+                                        CallService.instance.endCall();
+                                      },
                                       behavior: HitTestBehavior.opaque,
                                       child: Container(
                                         padding: const EdgeInsets.all(6),

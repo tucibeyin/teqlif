@@ -165,6 +165,7 @@ class CallService {
     final oldStatus = state.value.status;
     final oldPoor = state.value.isPoorConnection;
     state.value = s;
+    debugPrint('[CALL_FLOW] [State] Transition: $oldStatus -> ${s.status}');
     
     if (oldStatus != s.status) {
       _handleStatusChange(oldStatus, s.status);
@@ -202,9 +203,11 @@ class CallService {
     required String calleeUsername,
     required String? calleeAvatar,
   }) async {
+    debugPrint('[CALL_FLOW] [CallService] startCall invoked for calleeId=$calleeId');
     _resetTimer?.cancel();
     if (hasActiveCall) {
       debugPrint('[CallService] Cannot start call: already in an active call.');
+      debugPrint('[CALL_FLOW] [CallService] startCall aborted - already active.');
       return;
     }
 
@@ -276,6 +279,7 @@ class CallService {
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
   void onIncomingCall(Map<String, dynamic> data) async {
+    debugPrint('[CALL_FLOW] [CallService] onIncomingCall received data: $data');
     _resetTimer?.cancel();
     if (hasActiveCall) {
       final incomingCallId = data['call_id'] is int
@@ -348,9 +352,16 @@ class CallService {
   }
 
   Future<void> acceptCall() async {
+    debugPrint('[CALL_FLOW] [CallService] acceptCall invoked');
     final callId = state.value.callId;
-    if (callId == null) return;
-    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) return;
+    if (callId == null) {
+      debugPrint('[CALL_FLOW] [CallService] acceptCall aborted - callId is null');
+      return;
+    }
+    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
+      debugPrint('[CALL_FLOW] [CallService] acceptCall aborted - already connecting/connected');
+      return;
+    }
 
     _resetTimer?.cancel();
     stopRingtoneAndVibration();
@@ -368,6 +379,7 @@ class CallService {
   }
 
   Future<void> rejectCall() async {
+    debugPrint('[CALL_FLOW] [CallService] rejectCall invoked');
     if (state.value.status == CallStatus.ended || state.value.status == CallStatus.rejected) return;
     final callId = state.value.callId;
     if (callId != null) {
@@ -439,6 +451,7 @@ class CallService {
     
     try {
       debugPrint('[CallService] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
+      debugPrint('[CALL_FLOW] [LiveKit] _joinRoom starting...');
       
       // Force iOS to use earpiece and playAndRecord category before LiveKit messes with it
       try {
@@ -451,10 +464,12 @@ class CallService {
         await Hardware.instance.setSpeakerphoneOn(false);
       } catch (e) {
         debugPrint('[CallService] AudioSession pre-config error: $e');
+        debugPrint('[CALL_FLOW] [LiveKit] AudioSession pre-config error: $e');
       }
 
       await _room!.connect(livekitUrl, token);
       debugPrint('[CallService] _joinRoom SUCCESSFUL!');
+      debugPrint('[CALL_FLOW] [LiveKit] _joinRoom SUCCESSFUL!');
       
       await _room!.localParticipant?.setMicrophoneEnabled(true);
       
@@ -553,7 +568,11 @@ class CallService {
     _setState(state.value.copyWith(isSpeaker: enabled));
   }
   Future<void> endCall() async {
-    if (state.value.status == CallStatus.ended || state.value.status == CallStatus.idle) return;
+    debugPrint('[CALL_FLOW] [CallService] endCall invoked');
+    if (state.value.status == CallStatus.ended || state.value.status == CallStatus.idle) {
+      debugPrint('[CALL_FLOW] [CallService] endCall aborted - already idle/ended');
+      return;
+    }
     final callId = state.value.callId;
     if (callId != null) {
       try {
@@ -588,6 +607,7 @@ class CallService {
   }
 
   void reset() {
+    debugPrint('[CALL_FLOW] [CallService] reset() called - cleaning up all states');
     _resetTimer?.cancel();
     stopRingtoneAndVibration();
     _ringTimer?.cancel();

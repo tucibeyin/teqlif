@@ -31,6 +31,7 @@ final FlutterLocalNotificationsPlugin _flnp = FlutterLocalNotificationsPlugin();
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM][BG] mesaj geldi | type=${message.data['type']} | keys=${message.data.keys.toList()}');
+  debugPrint('[CALL_FLOW] [FCM] Background push received. Data: ${message.data}');
 
   if (message.data['type'] == 'incoming_call') {
     debugPrint('[FCM][BG] incoming_call işleniyor | call_id=${message.data['call_id']}');
@@ -66,6 +67,7 @@ Future<void> _showCallNotification({
   String livekitUrl   = '',
 }) async {
   debugPrint('[CallKit] _showCallNotification başlıyor | callId=$callId | caller=$callerUsername');
+  debugPrint('[CALL_FLOW] [CallKit] Native ringing initiated for callId=$callId');
 
   // Load language from shared prefs since we have no BuildContext
   String langCode = 'tr';
@@ -281,19 +283,22 @@ class PushNotificationService {
     FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
       if (event == null) return;
       debugPrint('[CallKit] onEvent: ${event.eventName}');
+      debugPrint('[CALL_FLOW] [CallKit] Native event received: ${event.eventName}');
       
       if (event is CallEventActionCallAccept) {
         debugPrint('[CallKit] Kabul Et tıklandı');
+        debugPrint('[CALL_FLOW] [CallKit] Action: ACCEPT. Extracting callKitParams...');
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         CallService.instance.onIncomingCall({...data, 'type': 'incoming_call'});
         CallService.instance.acceptCall(); // Accept immediately in background
         notificationStream.add({...data, 'type': 'incoming_call_auto_accept'});
       } else if (event is CallEventActionCallDecline) {
-        debugPrint('[CallKit] Reddet tıklandı');
+        debugPrint('[CALL_FLOW] [CallKit] Action: DECLINE. Rejecting...');
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         final callId = data['call_id']?.toString() ?? '';
         if (callId.isNotEmpty) _rejectCallById(callId);
       } else if (event is CallEventActionCallEnded || event is CallEventActionCallTimeout) {
+        debugPrint('[CALL_FLOW] [CallKit] Action: ENDED/TIMEOUT. Cleaning up...');
         CallKitParams? params;
         if (event is CallEventActionCallEnded) params = event.callKitParams;
         
@@ -309,6 +314,7 @@ class PushNotificationService {
           CallService.instance.reset();
         }
       } else if (event is CallEventActionDidUpdateDevicePushTokenVoip) {
+        debugPrint('[CALL_FLOW] [CallKit] Action: VoIP Token Updated natively.');
         try {
           final voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
           final shortVoip = (voipToken != null && voipToken.length >= 15) ? "${voipToken.substring(0, 15)}…" : voipToken;
@@ -427,17 +433,20 @@ class PushNotificationService {
   }
 
   static Future<void> _registerToken() async {
+    debugPrint('[CALL_FLOW] [FCM] Requesting APNS/FCM tokens...');
     try {
       if (!kIsWeb) {
         try {
           final apns = await _messaging.getAPNSToken();
           debugPrint('[FCM] APNS: ${apns != null ? "${apns.substring(0, 12)}…" : "NULL"}');
+          debugPrint('[CALL_FLOW] [FCM] APNS Token Received: ${apns != null ? "YES" : "NO"}');
         } catch (e) {
           debugPrint('[FCM] APNS token alınamadı: $e');
         }
       }
       final token = await _messaging.getToken();
       debugPrint('[FCM] FCM token: ${token != null ? "${token.substring(0, 20)}…" : "NULL"}');
+      debugPrint('[CALL_FLOW] [FCM] FCM Token Received: ${token != null ? "YES" : "NO"}');
       if (token != null) await _sendTokenToBackend(token);
     } catch (e) {
       debugPrint('[FCM] Token alınamadı: $e');
@@ -445,6 +454,7 @@ class PushNotificationService {
   }
 
   static Future<void> _sendTokenToBackend(String token) async {
+    debugPrint('[CALL_FLOW] [Backend] Sending tokens to backend...');
     try {
       String? voipToken;
       if (Platform.isIOS) {
@@ -452,6 +462,7 @@ class PushNotificationService {
           voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
           final shortVoip = (voipToken != null && voipToken.length >= 15) ? "${voipToken.substring(0, 15)}…" : voipToken;
           debugPrint('[CallKit] VoIP token alındı: ${shortVoip ?? "NULL"}');
+          debugPrint('[CALL_FLOW] [VoIP] Token extracted: ${voipToken != null ? "YES" : "NO"}');
         } catch (e) {
           debugPrint('[CallKit] VoIP token alınamadı: $e');
         }

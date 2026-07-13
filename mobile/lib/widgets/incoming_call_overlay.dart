@@ -108,8 +108,12 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   }
 
   void _openCallScreen() {
+    debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay _openCallScreen tapped');
     if (!mounted) return;
-    if (CallService.instance.isCallScreenVisible.value) return;
+    if (CallService.instance.isCallScreenVisible.value) {
+      debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay _openCallScreen aborted - already visible');
+      return;
+    }
     
     final nav = widget.navigatorKey?.currentState ?? Navigator.of(context, rootNavigator: true);
     nav.push(
@@ -122,6 +126,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   }
 
   Future<void> _openCallScreenAndAccept() async {
+    debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay _openCallScreenAndAccept (ACCEPT) tapped');
     if (!mounted) return;
     _openCallScreen();
   }
@@ -166,10 +171,12 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
                         onTap: _openIncomingScreen,
                         onAccept: _openCallScreenAndAccept,
                         onReject: () {
+                          debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay REJECT tapped');
                           setState(() => _isBarDismissed = true);
                           CallService.instance.rejectCall();
                         },
                         onDismiss: () {
+                          debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay DISMISSED (swipe up)');
                           setState(() => _isBarDismissed = true);
                         },
                       ),
@@ -193,12 +200,18 @@ class _MinimizedCallBar extends StatelessWidget {
     return Dismissible(
       key: const Key('minimized_call_bar'),
       direction: DismissDirection.down,
-      onDismissed: (_) => onRestore(),
+      onDismissed: (_) {
+        debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay MinimizedCallBar swipe-down to restore');
+        onRestore();
+      },
       child: Material(
         type: MaterialType.transparency,
         child: Center(
           child: GestureDetector(
-            onTap: onRestore,
+            onTap: () {
+              debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay MinimizedCallBar tapped to restore');
+              onRestore();
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(

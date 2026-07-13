@@ -59,7 +59,8 @@ void main() async {
           final isAllowed = message.contains('[FCM]') ||
               message.contains('[CallKit]') ||
               message.contains('[FLNP]') ||
-              message.contains('VoIP');
+              message.contains('VoIP') ||
+              message.contains('[CALL_FLOW]');
           if (isAllowed) {
             originalDebugPrint(message, wrapWidth: wrapWidth);
           }
