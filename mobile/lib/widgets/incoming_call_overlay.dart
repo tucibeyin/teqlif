@@ -127,6 +127,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   Future<void> _openCallScreenAndAccept() async {
     debugPrint('[CALL_FLOW] [UI] IncomingCallOverlay _openCallScreenAndAccept (ACCEPT) tapped');
     if (!mounted) return;
+    CallService.instance.acceptCall();
     _openCallScreen();
   }
 
