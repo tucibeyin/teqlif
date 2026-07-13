@@ -178,11 +178,7 @@ class CallService {
       }
     } else if (newStatus == CallStatus.connected || newStatus == CallStatus.idle) {
       _audioPlayer.stop();
-      if (newStatus == CallStatus.connected) {
-        Future.delayed(const Duration(milliseconds: 1000), () {
-          setSpeaker(false);
-        });
-      }
+
     }
   }
 
@@ -364,6 +360,12 @@ class CallService {
         ),
       );
       _hangUpLocally(status: CallStatus.ended);
+      try {
+        await PushNotificationService.showWarningNotification(
+          'Mikrofon İzni Gerekli',
+          'Aramalara cevap verebilmek için cihaz ayarlarından mikrofon izni vermelisiniz.',
+        );
+      } catch (_) {}
       return;
     }
 
@@ -470,7 +472,7 @@ class CallService {
         debugPrint('[CALL_FLOW] [LiveKit] AudioSession pre-config error: $e');
       }
 
-      await _room!.connect(livekitUrl, token);
+      await _room!.connect(livekitUrl, token, roomOptions: const RoomOptions(defaultAudioOutputOptions: AudioOutputOptions(speakerOn: false)));
       debugPrint('[CallService] _joinRoom SUCCESSFUL!');
       debugPrint('[CALL_FLOW] [LiveKit] _joinRoom SUCCESSFUL!');
       
