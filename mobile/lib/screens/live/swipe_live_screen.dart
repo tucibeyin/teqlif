@@ -186,7 +186,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     
     if (_isCallActive != isCallActive) {
       _isCallActive = isCallActive;
-      debugPrint('[LIVE_SCREEN_CALL] SwipeLiveScreen call state changed. isCallActive: $_isCallActive');
+      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] SwipeLiveScreen call state changed. isCallActive: $_isCallActive');
       _connectionManager.setCallActive(_isCallActive);
     }
   }
@@ -350,7 +350,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   void _updateViewportConnections() {
     if (!widget.isStandalone && !globalIsLiveTabVisible.value) {
-      debugPrint('[LIVE_SCREEN_CALL] Forcing clearViewport. Tab visible: ${globalIsLiveTabVisible.value}');
+      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Forcing clearViewport. Tab visible: ${globalIsLiveTabVisible.value}');
       _connectionManager.clearViewport();
       return;
     }
@@ -1378,7 +1378,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                       if (!mounted || _isSelfCoHost) return;
                       if (targetUsername == _myUsername) {
                         if (CallService.instance.hasActiveCall) {
-                          debugPrint('[LIVE_SCREEN_CALL] User invited to co-host but has active call. Auto-rejecting locally.');
+                          debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] User invited to co-host but has active call. Auto-rejecting locally.');
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('@$hostUsername sizi sahneye davet etti, ancak görüşmede olduğunuz için otomatik reddedildi.'),
