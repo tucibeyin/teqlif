@@ -60,6 +60,17 @@ class StreamConnectionManager with WidgetsBindingObserver {
   // Her stream için bağımsız bir lock
   final Set<int> _connectionLocks = {};
   
+  bool _isCallActive = false;
+  
+  void setCallActive(bool active) {
+    if (_isCallActive == active) return;
+    _isCallActive = active;
+    debugPrint('[StreamConnectionManager] setCallActive: $_isCallActive');
+    for (final session in _sessions.values) {
+      _applyTrackSubscriptions(session);
+    }
+  }
+
   int _currentActiveStreamId = -1;
   bool _isBackground = false;
 
@@ -245,7 +256,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
     
     // Arka planda (Background) video indirme (Veri tasarrufu)
     final wantVideo = (!_isBackground) && (session.state == SessionState.prefetched || session.state == SessionState.active);
-    final wantAudio = session.state == SessionState.active;
+    final wantAudio = session.state == SessionState.active && !_isCallActive;
     
     for (final p in session.room!.remoteParticipants.values) {
       for (final pub in p.videoTrackPublications) {

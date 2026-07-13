@@ -179,7 +179,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
     if (_isCallActive != isCallActive) {
       _isCallActive = isCallActive;
       debugPrint('[LIVE_SCREEN_CALL] SwipeLiveScreen call state changed. isCallActive: $_isCallActive');
-      _updateViewportConnections();
+      _connectionManager.setCallActive(_isCallActive);
     }
   }
 
@@ -340,8 +340,8 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   }
 
   void _updateViewportConnections() {
-    if (!globalIsLiveTabVisible.value || _isCallActive) {
-      debugPrint('[LIVE_SCREEN_CALL] Forcing clearViewport. Tab visible: ${globalIsLiveTabVisible.value}, Call Active: $_isCallActive');
+    if (!globalIsLiveTabVisible.value) {
+      debugPrint('[LIVE_SCREEN_CALL] Forcing clearViewport. Tab visible: ${globalIsLiveTabVisible.value}');
       _connectionManager.clearViewport();
       return;
     }
