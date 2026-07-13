@@ -26,27 +26,7 @@ const _kCategoryCall  = 'incoming_call_category';
 
 final FlutterLocalNotificationsPlugin _flnp = FlutterLocalNotificationsPlugin();
 
-  static Future<void> showWarningNotification() async {
-    final prefs = await SharedPreferences.getInstance();
-    final langCode = prefs.getString('language') ?? 'tr';
-    final l = lookupAppLocalizations(Locale(langCode));
 
-    const androidDetails = AndroidNotificationDetails(
-      'general_alerts',
-      'Genel Bildirimler',
-      channelDescription: 'Uygulama uyarı ve bilgilendirmeleri',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const iosDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
-    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
-    await _flnp.show(
-      DateTime.now().millisecond,
-      l.micPermissionRequiredTitle,
-      l.micPermissionRequiredBody,
-      details,
-    );
-  }
 
 // ─── Background FCM handler (separate isolate) ────────────────────────────────
 
@@ -203,6 +183,27 @@ Future<void> _backgroundNotifResponseHandler(NotificationResponse response) asyn
 // ─── PushNotificationService ──────────────────────────────────────────────────
 
 class PushNotificationService {
+  static Future<void> showWarningNotification() async {
+    final prefs = await SharedPreferences.getInstance();
+    final langCode = prefs.getString('language') ?? 'tr';
+    final l = lookupAppLocalizations(Locale(langCode));
+
+    const androidDetails = AndroidNotificationDetails(
+      'general_alerts',
+      'Genel Bildirimler',
+      channelDescription: 'Uygulama uyarı ve bilgilendirmeleri',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
+    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    await _flnp.show(
+      DateTime.now().millisecond,
+      l.micPermissionRequiredTitle,
+      l.micPermissionRequiredBody,
+      details,
+    );
+  }
   static final _messaging = FirebaseMessaging.instance;
   static bool _earlyDone  = false;
   static bool _fullDone   = false;
