@@ -109,6 +109,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         _handleNotifNavigation(pendingNotif);
       }
 
+      // Proactively request microphone permission on app launch
+      Permission.microphone.request();
     });
   }
 
