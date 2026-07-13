@@ -86,7 +86,7 @@ async def send_push(
                             alert=messaging.ApsAlert(
                                 title=title,
                                 body=body,
-                            ) if (is_call and not is_silent) else None,
+                            ) if (not is_call and not is_silent) else None,
                         )
                     ),
                 ),

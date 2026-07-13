@@ -265,15 +265,25 @@ class CallService {
     });
   }
 
+  // Ghost call protection
+  int? _lastEndedCallId;
+
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
   void onIncomingCall(Map<String, dynamic> data) async {
     debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] onIncomingCall received data: $data');
     _resetTimer?.cancel();
+    
+    final incomingCallId = data['call_id'] is int
+        ? data['call_id']
+        : int.tryParse(data['call_id'].toString());
+
+    if (incomingCallId != null && incomingCallId == _lastEndedCallId) {
+      debugPrint('[CALL_FLOW] [CallService] onIncomingCall aborted - ghost call (already ended)');
+      return;
+    }
+
     if (hasActiveCall) {
-      final incomingCallId = data['call_id'] is int
-          ? data['call_id']
-          : int.tryParse(data['call_id'].toString());
       if (incomingCallId != null && incomingCallId != state.value.callId) {
         try {
           await _post('/calls/$incomingCallId/reject');
@@ -660,6 +670,11 @@ class CallService {
     _disconnectRoom();
     WakelockPlus.disable();
     FlutterCallkitIncoming.endAllCalls();
+    
+    if (state.value.callId != null) {
+      _lastEndedCallId = state.value.callId;
+    }
+    
     _setState(const CallState());
   }
 
