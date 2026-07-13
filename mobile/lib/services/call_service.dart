@@ -423,11 +423,6 @@ class CallService {
         }
       }
       if (data == null) throw Exception('Accept data is null');
-      
-      if (Platform.isIOS) {
-        debugPrint('[CALL_FLOW] [CallService] Waiting 1.5s for iOS CallKit to activate AVAudioSession...');
-        await Future.delayed(const Duration(milliseconds: 1500));
-      }
 
       await _joinRoom(
         livekitUrl: data['livekit_url'] as String,
@@ -532,6 +527,21 @@ class CallService {
       debugPrint('[CallService] _joinRoom SUCCESSFUL!');
       debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [LiveKit] _joinRoom SUCCESSFUL!');
       
+      // We must fulfill CallKit BEFORE enabling the microphone on iOS!
+      if (Platform.isIOS && state.value.callId != null) {
+        final uuid = formatToUuid(state.value.callId!.toString());
+        const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((e) {
+          debugPrint('[CallService] ERROR invoking fulfillAccept: $e');
+        });
+        // Give CallKit a moment to fully activate the audio session
+        await Future.delayed(const Duration(milliseconds: 800));
+      } else if (Platform.isAndroid && state.value.callId != null) {
+        final uuid = formatToUuid(state.value.callId!.toString());
+        FlutterCallkitIncoming.setCallConnected(uuid).catchError((e) {
+          debugPrint('[CallService] ERROR invoking setCallConnected: $e');
+        });
+      }
+
       await _room!.localParticipant?.setMicrophoneEnabled(true);
       
       // Re-assert speakerphone setting after publishing mic
@@ -545,17 +555,6 @@ class CallService {
         ),
       );
       
-      if (Platform.isIOS && state.value.callId != null) {
-        final uuid = formatToUuid(state.value.callId!.toString());
-        const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((e) {
-          debugPrint('[CallService] ERROR invoking fulfillAccept: $e');
-        });
-      } else if (Platform.isAndroid && state.value.callId != null) {
-        final uuid = formatToUuid(state.value.callId!.toString());
-        FlutterCallkitIncoming.setCallConnected(uuid).catchError((e) {
-          debugPrint('[CallService] ERROR invoking setCallConnected: $e');
-        });
-      }
       _startElapsedTimer();
       await WakelockPlus.enable();
 
