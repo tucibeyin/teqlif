@@ -144,6 +144,10 @@ class WsService {
           if (raw == 'pong') return;
           try {
             final data = jsonDecode(raw) as Map<String, dynamic>;
+            final type = data['type'] as String?;
+            if (type != null && type.startsWith('call_')) {
+              debugPrint('[LIVE_SCREEN_CALL] WsService received message type: $type');
+            }
             messageStream.add(data);
           } catch (_) {}
         },

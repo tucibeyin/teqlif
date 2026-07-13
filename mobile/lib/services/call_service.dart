@@ -241,6 +241,7 @@ class CallService {
       _startRingTimer();
       await WakelockPlus.enable();
     } on CallApiException catch (e) {
+      debugPrint('[LIVE_SCREEN_CALL] startCall catch (CallApiException) USER_BUSY triggered');
       if (e.code == 'USER_BUSY') {
         _setState(state.value.copyWith(status: CallStatus.busy));
         _scheduleReset();
@@ -249,6 +250,7 @@ class CallService {
         _scheduleReset();
       }
     } catch (e, stack) {
+      debugPrint('[LIVE_SCREEN_CALL] startCall catch (general exception) triggered: $e');
       _setState(state.value.copyWith(status: CallStatus.ended));
       _scheduleReset();
     }
@@ -473,6 +475,7 @@ class CallService {
   }
 
   void onCallEnded() {
+    debugPrint('[LIVE_SCREEN_CALL] onCallEnded (via WS) triggered');
     _hangUpLocally(status: CallStatus.ended);
   }
 
@@ -645,6 +648,7 @@ class CallService {
     _setState(state.value.copyWith(isSpeaker: enabled));
   }
   Future<void> endCall() async {
+    debugPrint('[LIVE_SCREEN_CALL] endCall triggered manually by user');
     if (state.value.status == CallStatus.ended || state.value.status == CallStatus.idle) {
       return;
     }
@@ -676,6 +680,11 @@ class CallService {
 
   void _hangUpLocally({required CallStatus status}) {
     debugPrint('[LIVE_SCREEN_CALL] _hangUpLocally called with status: $status');
+    try {
+      throw Exception('_hangUpLocally stack trace logger');
+    } catch (e, st) {
+      debugPrint('[LIVE_SCREEN_CALL] Trace: $st');
+    }
     if (state.value.status == status) return;
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
