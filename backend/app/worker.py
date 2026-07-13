@@ -515,6 +515,7 @@ async def sync_swipelive_interests_task(ctx: dict) -> None:
                 if not category:
                     continue
                 events.append(AnalyticsEvent(
+                    session_id=f"worker_{uid}_{int(now.timestamp())}",
                     user_id=uid,
                     event_type="swipelive_dwell",
                     event_metadata={
