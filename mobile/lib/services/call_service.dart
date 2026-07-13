@@ -540,10 +540,10 @@ class CallService {
       );
       
       if (Platform.isIOS && state.value.callId != null) {
-        final uuid = PushNotificationService.formatToUuid(state.value.callId!.toString());
+        final uuid = formatToUuid(state.value.callId!.toString());
         const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((_) {});
       } else if (Platform.isAndroid && state.value.callId != null) {
-        final uuid = PushNotificationService.formatToUuid(state.value.callId!.toString());
+        final uuid = formatToUuid(state.value.callId!.toString());
         FlutterCallkitIncoming.setCallConnected(uuid).catchError((_) {});
       }
       _startElapsedTimer();
