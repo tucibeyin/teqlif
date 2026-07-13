@@ -25,9 +25,9 @@ import AVFAudio
 
     let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
-    if let controller = window?.rootViewController as? FlutterViewController {
+    if let registrar = self.registrar(forPlugin: "com.teqlif/callkit") {
         let callkitChannel = FlutterMethodChannel(name: "com.teqlif/callkit",
-                                                  binaryMessenger: controller.binaryMessenger)
+                                                  binaryMessenger: registrar.messenger())
         callkitChannel.setMethodCallHandler({ [weak self]
           (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
           if call.method == "fulfillAccept" {
