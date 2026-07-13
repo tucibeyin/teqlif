@@ -244,7 +244,7 @@ class CallService {
       await WakelockPlus.enable();
     } on CallApiException catch (e) {
       debugPrint('[CALL_FLOW] [CallService] startCall API error: $e');
-      if (e is CallApiException && e.code == 'USER_BUSY') {
+      if (e.code == 'USER_BUSY') {
         _setState(state.value.copyWith(status: CallStatus.busy));
         _scheduleReset();
       } else {
