@@ -119,6 +119,10 @@ Future<Map<String, dynamic>> apiCall(
       return {};
     }
 
+    if (response.statusCode >= 400) {
+      debugPrint('[CALL_FLOW] [API ERROR] Response Body: ${response.body}');
+    }
+
     if (response.statusCode >= 500 && !retried) {
       debugPrint('[CALL_FLOW] [API] 500/502/503 received. Retrying once after 500ms...');
       await Future.delayed(const Duration(milliseconds: 500));
