@@ -119,6 +119,7 @@ class CallService {
   StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSubscription;
   Timer? _ringTimer; // 30s no-answer timeout
   Timer? _elapsedTimer;
+  Timer? _peerTimeoutTimer; // Timeout if other user doesn't join LiveKit room
   Timer? _ringtoneLoopTimer; // For iOS ringtone looping
   Timer? _resetTimer; // To prevent delayed reset overwriting new calls
   
@@ -545,6 +546,14 @@ class CallService {
 
       _roomEventsSubscription = _room!.events.listen(_onRoomEvent);
       
+      _peerTimeoutTimer?.cancel();
+      _peerTimeoutTimer = Timer(const Duration(seconds: 15), () {
+        if (_room != null && _room!.remoteParticipants.isEmpty) {
+          debugPrint('[LIVE_SCREEN_CALL] Peer did not join within 15 seconds. Hanging up.');
+          endCall();
+        }
+      });
+      
       _setState(state.value.copyWith(status: CallStatus.connected));
       debugPrint('[LIVE_SCREEN_CALL] Call is now CONNECTED.');
       await _setupAudioInterruptionListener();
@@ -564,6 +573,9 @@ class CallService {
       if (state.value.status == CallStatus.reconnecting) {
         _setState(state.value.copyWith(status: CallStatus.connected));
       }
+    } else if (event is ParticipantConnectedEvent) {
+      debugPrint('[LIVE_SCREEN_CALL] Peer joined the room. Cancelling peer timeout.');
+      _peerTimeoutTimer?.cancel();
     } else if (event is TrackSubscribedEvent) {
       if (Platform.isAndroid && event.track.kind == TrackType.AUDIO) {
         Hardware.instance.setSpeakerphoneOn(false);
@@ -681,6 +693,7 @@ class CallService {
   Future<void> _disconnectRoom() async {
     _ringtoneLoopTimer?.cancel();
     _elapsedTimer?.cancel();
+    _peerTimeoutTimer?.cancel();
     _roomEventsSubscription?.call();
     _audioInterruptionSubscription?.cancel();
     _room?.disconnect();
@@ -693,6 +706,7 @@ class CallService {
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
+    _peerTimeoutTimer?.cancel();
     _disconnectRoom();
     WakelockPlus.disable();
     FlutterCallkitIncoming.endAllCalls();
