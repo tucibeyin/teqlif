@@ -341,6 +341,10 @@ class CallService {
 
   Future<void> acceptCall() async {
     debugPrint('[CALL_FLOW] [CallService] acceptCall invoked');
+    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
+      debugPrint('[CALL_FLOW] [CallService] acceptCall aborted - already connecting/connected');
+      return;
+    }
     final callId = state.value.callId;
     if (callId == null) {
       debugPrint('[CALL_FLOW] [CallService] acceptCall aborted - callId is null');
