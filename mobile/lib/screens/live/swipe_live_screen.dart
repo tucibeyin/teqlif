@@ -188,22 +188,6 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       _isCallActive = isCallActive;
       debugPrint('[LIVE_SCREEN_CALL] SwipeLiveScreen call state changed. isCallActive: $_isCallActive');
       _connectionManager.setCallActive(_isCallActive);
-      
-      if (!_isCallActive) {
-        // Çağrı bittiğinde LiveKit'in kendi ses yapılandırmalarını tamamlamasını bekliyoruz.
-        // Asenkron gecikmeler değişebildiği için, garantilemek adına çift deneme (1.5s ve 3.5s) yapıyoruz.
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (!mounted) return;
-          debugPrint('[SWIPE_LIVE_CALL] Forcing speaker ON (1st pass)');
-          Hardware.instance.setSpeakerphoneOn(true).catchError((_) {});
-        });
-        
-        Future.delayed(const Duration(milliseconds: 3500), () {
-          if (!mounted) return;
-          debugPrint('[SWIPE_LIVE_CALL] Forcing speaker ON (2nd pass)');
-          Hardware.instance.setSpeakerphoneOn(true).catchError((_) {});
-        });
-      }
     }
   }
 

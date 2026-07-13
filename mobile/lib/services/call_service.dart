@@ -670,7 +670,7 @@ class CallService {
         }
       } catch (_) {}
     }
-    _hangUpLocally(status: CallStatus.ended);
+    await _hangUpLocally(status: CallStatus.ended);
   }
 
   // ── Internal Cleanup ──────────────────────────────────────────────────────
@@ -680,7 +680,7 @@ class CallService {
     return '${padded.substring(0, 8)}-${padded.substring(8, 12)}-${padded.substring(12, 16)}-${padded.substring(16, 20)}-${padded.substring(20, 32)}';
   }
 
-  void _hangUpLocally({required CallStatus status}) {
+  Future<void> _hangUpLocally({required CallStatus status}) async {
     debugPrint('[LIVE_SCREEN_CALL] _hangUpLocally called with status: $status');
     try {
       throw Exception('_hangUpLocally stack trace logger');
@@ -691,12 +691,27 @@ class CallService {
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();
-    _disconnectRoom();
+    
+    // 1. Bekleyerek odayı koparıyoruz (LiveKit native kaynakları serbest bıraksın)
+    await _disconnectRoom();
     WakelockPlus.disable();
+    
+    // 2. CallKit'in iOS/Android native çağrılarını temizlemesini bekliyoruz
     if (state.value.callId != null) {
-      FlutterCallkitIncoming.endCall(_formatToUuid(state.value.callId.toString()));
+      await FlutterCallkitIncoming.endCall(_formatToUuid(state.value.callId.toString()));
     }
-    FlutterCallkitIncoming.endAllCalls();
+    await FlutterCallkitIncoming.endAllCalls();
+
+    // 3. CallKit ve LiveKit kapandıktan sonra global ses oturumunu (AVAudioSession)
+    // hoparlöre yönlendirecek şekilde zorluyoruz.
+    try {
+      await Hardware.instance.setSpeakerphoneOn(true);
+    } catch (e) {
+      debugPrint('[CallService] setSpeakerphoneOn(true) error: $e');
+    }
+
+    // 4. Bütün donanım/native işlemler bittikten sonra state'i güncelliyoruz
+    // Böylece UI katmanı (SwipeLiveScreen) tepki verdiğinde her şey hazır oluyor.
     _setState(state.value.copyWith(status: status));
     _scheduleReset();
   }
@@ -707,9 +722,12 @@ class CallService {
     _peerTimeoutTimer?.cancel();
     _roomEventsSubscription?.call();
     _audioInterruptionSubscription?.cancel();
-    _room?.disconnect();
-    _room?.dispose();
-    _room = null;
+    
+    if (_room != null) {
+      await _room!.disconnect();
+      await _room!.dispose();
+      _room = null;
+    }
   }
 
   void reset() {
