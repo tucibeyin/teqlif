@@ -160,12 +160,10 @@ import AVFAudio
 
   func didActivateAudioSession(_ audioSession: AVAudioSession) {
       print("[CallKit] didActivateAudioSession called")
-      SwiftFlutterCallkitIncomingPlugin.sharedInstance?.providerDidActivateAudioSession(audioSession)
   }
   
   func didDeactivateAudioSession(_ audioSession: AVAudioSession) {
       print("[CallKit] didDeactivateAudioSession called")
-      SwiftFlutterCallkitIncomingPlugin.sharedInstance?.providerDidDeactivateAudioSession(audioSession)
   }
   
   func providerDidReset() {
