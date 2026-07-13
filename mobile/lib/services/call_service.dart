@@ -14,6 +14,7 @@ import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:vibration/vibration.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart' hide AVAudioSessionCategory;
+import 'package:audioplayers/audioplayers.dart' as ap;
 import '../config/api.dart';
 import '../core/app_exception.dart';
 import '../services/storage_service.dart';
@@ -119,7 +120,13 @@ class CallState {
 }
 
 class CallService {
-  CallService._();
+  CallService._() {
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (state.value.status == CallStatus.calling) {
+         _audioPlayer.play(AssetSource('sounds/ringing.wav'));
+      }
+    });
+  }
   static final CallService instance = CallService._();
 
   final ValueNotifier<CallState> state = ValueNotifier(const CallState());
