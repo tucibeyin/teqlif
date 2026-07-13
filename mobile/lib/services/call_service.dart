@@ -205,14 +205,31 @@ class CallService {
             androidWillPauseWhenDucked: true,
           ));
           await Hardware.instance.setSpeakerphoneOn(false);
+
+          await _audioPlayer.setAudioContext(ap.AudioContext(
+            android: const ap.AudioContextAndroid(
+              usageType: ap.AndroidUsageType.voiceCommunication,
+              contentType: ap.AndroidContentType.speech,
+              audioFocus: ap.AndroidAudioFocus.gain,
+            ),
+            iOS: ap.AudioContextIOS(
+              category: ap.AVAudioSessionCategory.playAndRecord,
+              options: {ap.AVAudioSessionOptions.allowBluetooth, ap.AVAudioSessionOptions.allowBluetoothA2DP},
+            ),
+          ));
         } catch (e) {
-          debugPrint('[LIVE_SCREEN_CALL] AudioSession prep error: \$e');
+          debugPrint('[LIVE_SCREEN_CALL] AudioSession prep error: $e');
         }
         
         _audioPlayer.setReleaseMode(ReleaseMode.loop);
         if (state.value.status == CallStatus.calling) {
-          debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] _handleStatusChange: AUDIO PLAYER ringing.wav PLAY STARTED (EARPIECE)');
-          _audioPlayer.play(AssetSource('sounds/ringing.wav'));
+          if (Platform.isIOS) {
+            await Future.delayed(const Duration(milliseconds: 600));
+          }
+          if (state.value.status == CallStatus.calling) {
+            debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _handleStatusChange: AUDIO PLAYER ringing.wav PLAY STARTED (EARPIECE/LOOP)');
+            _audioPlayer.play(AssetSource('sounds/ringing.wav'));
+          }
         }
       });
     } else if (newStatus == CallStatus.busy || newStatus == CallStatus.rejected) {
