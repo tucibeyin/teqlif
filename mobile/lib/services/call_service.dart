@@ -13,6 +13,7 @@ import 'package:vibration/vibration.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart' hide AVAudioSessionCategory;
 import '../config/api.dart';
+import '../core/app_exception.dart';
 import '../services/storage_service.dart';
 import 'push_notification_service.dart';
 
