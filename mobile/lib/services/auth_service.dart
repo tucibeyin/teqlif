@@ -78,6 +78,7 @@ class AuthService {
       onboardingCompleted: user.onboardingCompleted,
       isVerified: user.isVerified,
       phoneVerified: user.phoneVerified,
+      isPrivate: user.isPrivate,
     );
     return user;
   }
@@ -118,6 +119,7 @@ class AuthService {
       onboardingCompleted: user.onboardingCompleted,
       isVerified: user.isVerified,
       phoneVerified: user.phoneVerified,
+      isPrivate: user.isPrivate,
     );
     return user;
   }
