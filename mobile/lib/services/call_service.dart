@@ -541,10 +541,14 @@ class CallService {
       
       if (Platform.isIOS && state.value.callId != null) {
         final uuid = formatToUuid(state.value.callId!.toString());
-        const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((_) {});
+        const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((e) {
+          debugPrint('[CallService] ERROR invoking fulfillAccept: $e');
+        });
       } else if (Platform.isAndroid && state.value.callId != null) {
         final uuid = formatToUuid(state.value.callId!.toString());
-        FlutterCallkitIncoming.setCallConnected(uuid).catchError((_) {});
+        FlutterCallkitIncoming.setCallConnected(uuid).catchError((e) {
+          debugPrint('[CallService] ERROR invoking setCallConnected: $e');
+        });
       }
       _startElapsedTimer();
       await WakelockPlus.enable();
