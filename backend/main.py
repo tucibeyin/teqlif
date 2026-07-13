@@ -294,7 +294,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
             "success": False,
             "error": {
                 "code": "INTERNAL_ERROR",
-                "message": "Sunucu hatası",
+                "message": f"Sunucu hatası: {str(exc)}",
             },
         },
     )
