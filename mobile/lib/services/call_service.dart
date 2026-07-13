@@ -375,7 +375,20 @@ class CallService {
 
     _setState(state.value.copyWith(status: CallStatus.connecting));
     try {
-      final data = await _post('/calls/$callId/accept');
+      Map<String, dynamic>? data;
+      int retryCount = 0;
+      while (retryCount < 4) {
+        try {
+          data = await _post('/calls/$callId/accept');
+          break; // Success
+        } catch (e) {
+          retryCount++;
+          debugPrint('[CALL_FLOW] [CallService] acceptCall POST failed (Attempt $retryCount/4): $e');
+          if (retryCount >= 4) rethrow;
+          await Future.delayed(Duration(milliseconds: 500 * retryCount)); // 500ms, 1000ms, 1500ms
+        }
+      }
+      if (data == null) throw Exception('Accept data is null');
       await _joinRoom(
         livekitUrl: data['livekit_url'] as String,
         token: data['token'] as String,
