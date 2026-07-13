@@ -507,6 +507,11 @@ class CallService {
       if (state.value.status == CallStatus.reconnecting) {
         _setState(state.value.copyWith(status: CallStatus.connected));
       }
+    } else if (event is TrackSubscribedEvent) {
+      if (Platform.isAndroid && event.track.kind == TrackType.AUDIO) {
+        Hardware.instance.setSpeakerphoneOn(false);
+        _setState(state.value.copyWith(isSpeaker: false));
+      }
     } else if (event is ParticipantConnectionQualityUpdatedEvent) {
       if (event.participant == _room?.localParticipant) {
         final isPoor =
