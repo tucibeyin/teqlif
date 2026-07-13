@@ -597,6 +597,11 @@ class CallService {
 
   // ── Internal Cleanup ──────────────────────────────────────────────────────
 
+  String _formatToUuid(String id) {
+    final padded = id.padLeft(32, '0');
+    return '${padded.substring(0, 8)}-${padded.substring(8, 12)}-${padded.substring(12, 16)}-${padded.substring(16, 20)}-${padded.substring(20, 32)}';
+  }
+
   void _hangUpLocally({required CallStatus status}) {
     if (state.value.status == status) return;
     stopRingtoneAndVibration();
@@ -605,7 +610,7 @@ class CallService {
     _disconnectRoom();
     WakelockPlus.disable();
     if (state.value.callId != null) {
-      FlutterCallkitIncoming.endCall(state.value.callId.toString());
+      FlutterCallkitIncoming.endCall(_formatToUuid(state.value.callId.toString()));
     }
     FlutterCallkitIncoming.endAllCalls();
     _setState(state.value.copyWith(status: status));
