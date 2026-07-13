@@ -298,14 +298,17 @@ async def end_call(
     if other_user and other_user.fcm_token:
         logger.info(f"[Calls] Sending 'call_ended' FCM push to {other_user.username} from end_call endpoint (call_id={call_id})")
         from app.services.firebase_service import send_push
-        await send_push(
-            token=other_user.fcm_token,
-            title="",
-            body="",
-            notif_type="call_ended",
-            extra_data={"call_id": str(call.id)},
-            is_silent=True
-        )
+        try:
+            await send_push(
+                token=other_user.fcm_token,
+                title="",
+                body="",
+                notif_type="call_ended",
+                extra_data={"call_id": str(call.id)},
+                is_silent=True
+            )
+        except Exception as push_err:
+            logger.warning(f"[Calls] Failed to send 'call_ended' push: {push_err}")
     await _delete_lk_room(call.room_name)
 
     logger.info("[Calls] Arama bitti | call_id=%d", call_id)
