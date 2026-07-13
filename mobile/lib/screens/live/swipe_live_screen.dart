@@ -190,9 +190,13 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       _connectionManager.setCallActive(_isCallActive);
       
       if (!_isCallActive) {
-        // Çağrı bittiğinde, yayının sesinin her halükarda speaker'dan gelmesini garantiye alıyoruz
-        debugPrint('[SWIPE_LIVE_CALL] Forcing speaker ON to restore live stream audio routing');
-        Hardware.instance.setSpeakerphoneOn(true).catchError((_) {});
+        // Çağrı bittiğinde LiveKit'in kendi ses yapılandırmalarını tamamlamasını bekliyoruz.
+        // Hemen çağırırsak LiveKit bizim speaker zorlamamızı eziyor (override).
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (!mounted) return;
+          debugPrint('[SWIPE_LIVE_CALL] Forcing speaker ON to restore live stream audio routing');
+          Hardware.instance.setSpeakerphoneOn(true).catchError((_) {});
+        });
       }
     }
   }
