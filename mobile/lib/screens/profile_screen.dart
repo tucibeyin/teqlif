@@ -606,6 +606,35 @@ class ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ],
+                            if (_user?['influence_rank'] != null && (_user!['influence_rank'] as int) > 0) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceVariant(context),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    FaIcon(
+                                      FontAwesomeIcons.rankingStar,
+                                      size: 10,
+                                      color: AppColors.textSecondary(context),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${_user!['influence_rank']}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         if (email.isNotEmpty)
@@ -631,15 +660,14 @@ class ProfileScreenState extends State<ProfileScreen> {
                         Builder(builder: (ctx) {
                           final l = AppLocalizations.of(ctx)!;
                           final ts = _user?['trust_score'] as int?;
-                          final ir = _user?['influence_rank'] as int?;
-                          if (ts == null && ir == null) return const SizedBox.shrink();
+                          if (ts == null) return const SizedBox.shrink();
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Wrap(
                               spacing: 6,
                               runSpacing: 4,
                               children: [
-                                if (ts != null) _ScoreBadge(
+                                _ScoreBadge(
                                   icon: FontAwesomeIcons.shieldHalved,
                                   title: l.trustScoreLabel,
                                   value: '$ts / 100',
@@ -647,13 +675,6 @@ class ProfileScreenState extends State<ProfileScreen> {
                                   color: ts >= 70
                                       ? const Color(0xFF10B981)
                                       : ts >= 35 ? const Color(0xFF3B82F6) : const Color(0xFF9CA3AF),
-                                ),
-                                if (ir != null && ir > 0) _ScoreBadge(
-                                  icon: FontAwesomeIcons.rankingStar,
-                                  title: l.influenceRankLabel,
-                                  value: '$ir',
-                                  hint: l.influenceRankHint,
-                                  color: const Color(0xFF8B5CF6),
                                 ),
                               ],
                             ),

@@ -362,89 +362,110 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                // ── Verified / PRO badge'leri ──────────────────────────────
-                if (_user!['is_verified'] == true ||
-                    _user!['is_premium'] == true)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_user!['is_verified'] == true)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const FaIcon(
-                                  FontAwesomeIcons.circleCheck,
-                                  size: 12,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  AppLocalizations.of(context)!.badgeVerified,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        if (_user!['is_verified'] == true &&
-                            _user!['is_premium'] == true)
-                          const SizedBox(width: 6),
-                        if (_user!['is_premium'] == true)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const FaIcon(
-                                  FontAwesomeIcons.crown,
-                                  size: 10,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  AppLocalizations.of(context)!.pro,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
+                // ── Kullanıcı Adı, Verified, PRO, Rank ─────────────────────
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  children: [
+                    Text(
+                      '@${widget.username}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary(context),
+                      ),
                     ),
-                  ),
-                Text(
-                  '@${widget.username}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary(context),
-                  ),
+                    if (_user!['is_verified'] == true)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2563EB),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const FaIcon(
+                              FontAwesomeIcons.circleCheck,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              AppLocalizations.of(context)!.badgeVerified,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_user!['is_premium'] == true)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const FaIcon(
+                              FontAwesomeIcons.crown,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              AppLocalizations.of(context)!.pro,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_user?['influence_rank'] != null && (_user!['influence_rank'] as int) > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant(context),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FaIcon(
+                              FontAwesomeIcons.rankingStar,
+                              size: 10,
+                              color: AppColors.textSecondary(context),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${_user!['influence_rank']}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 12),
 
@@ -709,60 +730,45 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         ),
                       ],
                       // ── Takip Et / Takip Ediliyor ──────────────────────
-                      GestureDetector(
-                        onTap: _followLoading ? null : _toggleFollow,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 11,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _followStatus != 'none'
-                                ? AppColors.surfaceVariant(context)
-                                : const Color(0xFF6366F1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: _followLoading
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
+                      // ── Takip Et / Takip Ediliyor (Sadece İkon) ──────────
+                      Tooltip(
+                        message: _followStatus == 'accepted'
+                            ? l.pubProfileFollowingLabel
+                            : _followStatus == 'pending'
+                                ? l.requested
+                                : l.pubProfileFollowLabel,
+                        child: GestureDetector(
+                          onTap: _followLoading ? null : _toggleFollow,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.all(11), // Kare form için eşit padding
+                            decoration: BoxDecoration(
+                              color: _followStatus != 'none'
+                                  ? AppColors.surfaceVariant(context)
+                                  : const Color(0xFF6366F1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: _followLoading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Icon(
+                                    _followStatus == 'accepted'
+                                        ? Icons.person_remove_outlined
+                                        : _followStatus == 'pending'
+                                            ? Icons.access_time
+                                            : Icons.person_add_outlined,
+                                    size: 18, // Diğer ikonlarla uyumlu boyut (Call = 18)
+                                    color: _followStatus != 'none'
+                                        ? AppColors.textPrimary(context)
+                                        : Colors.white,
                                   ),
-                                )
-                              : Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      _followStatus == 'accepted'
-                                          ? Icons.person_remove_outlined
-                                          : _followStatus == 'pending'
-                                              ? Icons.access_time
-                                              : Icons.person_add_outlined,
-                                      size: 16,
-                                      color: _followStatus != 'none'
-                                          ? AppColors.textPrimary(context)
-                                          : Colors.white,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      _followStatus == 'accepted'
-                                          ? l.pubProfileFollowingLabel
-                                          : _followStatus == 'pending'
-                                              ? l.requested
-                                              : l.pubProfileFollowLabel,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                        color: _followStatus != 'none'
-                                            ? AppColors.textPrimary(context)
-                                            : Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                          ),
                         ),
                       ),
                     ],
@@ -1895,8 +1901,8 @@ class _SocialLinksRow extends StatelessWidget {
     if (active.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+      spacing: 8, // 10 -> 8
+      runSpacing: 8, // 10 -> 8
       alignment: WrapAlignment.center,
       children: active.map((p) {
         final raw = user![p.field] as String;
@@ -1921,8 +1927,8 @@ class _SocialLinksRow extends StatelessWidget {
               }
             },
             child: Container(
-              width: 38,
-              height: 38,
+              width: 34, // 38 -> 34
+              height: 34, // 38 -> 34
               decoration: BoxDecoration(
                 color: p.color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
@@ -1933,7 +1939,7 @@ class _SocialLinksRow extends StatelessWidget {
               ),
               child: Center(
                 child: p.faIcon != null
-                    ? FaIcon(p.faIcon!, color: iconColor, size: 16)
+                    ? FaIcon(p.faIcon!, color: iconColor, size: 15) // 16 -> 15
                     : Text(
                         p.key.substring(0, 1).toUpperCase(),
                         style: TextStyle(
