@@ -38,7 +38,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     CallService.instance.state.addListener(_onStateChange);
 
     // Start loud ringtone and haptic only when full screen is open
-    CallService.instance.startRingtoneAndVibration();
+    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] IncomingCallScreen init: Calling startRingtoneAndVibration'); CallService.instance.startRingtoneAndVibration();
   }
 
   Future<void> _onStateChange() async {

@@ -353,6 +353,7 @@ class CallService {
   }
 
   void playNotification() {
+    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] playNotification() triggered');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (state.value.status == CallStatus.ringing) {
         FlutterRingtonePlayer().playNotification();
@@ -361,6 +362,7 @@ class CallService {
   }
 
   void startRingtoneAndVibration() async {
+    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startRingtoneAndVibration() triggered');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (state.value.status != CallStatus.ringing) return;
       
@@ -391,6 +393,7 @@ class CallService {
   }
 
   void stopRingtoneAndVibration() {
+    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] stopRingtoneAndVibration() triggered');
     _ringtoneLoopTimer?.cancel();
     _ringtoneLoopTimer = null;
     _hapticLoopTimer?.cancel();
