@@ -170,7 +170,6 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   }
 
   void _onVisibilityChanged() {
-    debugPrint('[GHOST_JOIN] SwipeLiveScreen _onVisibilityChanged -> ${globalIsLiveTabVisible.value}');
     _updateViewportConnections();
   }
 
@@ -327,7 +326,6 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   void _updateViewportConnections() {
     if (!globalIsLiveTabVisible.value) {
-      debugPrint('[GHOST_JOIN] Tab is hidden. Forcing clearViewport to prevent background audio.');
       _connectionManager.clearViewport();
       return;
     }
