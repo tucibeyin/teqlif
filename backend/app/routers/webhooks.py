@@ -81,6 +81,7 @@ async def _on_call_room_finished(room_name: str) -> None:
             call.ended_at = datetime.now(timezone.utc)
             await db.commit()
             
+            logger.info(f"[Calls] Webhook room_finished sending 'call_ended' WS message to caller {call.caller_id} and callee {call.callee_id}")
             # Kalan katılımcıların UI'ı kapansın diye iki tarafa da ended atıyoruz
             await ws_manager.send_personal_message(call.caller_id, {"type": "call_ended", "call_id": call.id})
             await ws_manager.send_personal_message(call.callee_id, {"type": "call_ended", "call_id": call.id})

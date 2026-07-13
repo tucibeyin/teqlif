@@ -261,6 +261,7 @@ async def reject_call(
     await _ws_broadcast(call.caller_id, {"type": "call_rejected", "call_id": call.id})
     caller = await db.get(User, call.caller_id)
     if caller and caller.fcm_token:
+        logger.info(f"[Calls] Sending 'call_rejected' FCM push to {caller.username} (call_id={call_id})")
         from app.services.firebase_service import send_push
         await send_push(
             token=caller.fcm_token,
@@ -295,6 +296,7 @@ async def end_call(
     await _ws_broadcast(other_id, {"type": "call_ended", "call_id": call.id})
     other_user = await db.get(User, other_id)
     if other_user and other_user.fcm_token:
+        logger.info(f"[Calls] Sending 'call_ended' FCM push to {other_user.username} from end_call endpoint (call_id={call_id})")
         from app.services.firebase_service import send_push
         await send_push(
             token=other_user.fcm_token,
@@ -318,6 +320,7 @@ from app.utils.i18n import _get_t, get_locale
 async def _send_missed_call_push(callee: User, caller: User) -> None:
     if not callee.fcm_token:
         return
+    logger.info(f"[Calls] Sending 'call_missed' FCM push to {callee.username} (call_id={callee.id})")
     from app.services.firebase_service import send_push
     locale = get_locale(callee)
     t = _get_t(locale)

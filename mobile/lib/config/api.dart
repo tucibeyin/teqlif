@@ -122,9 +122,12 @@ Future<Map<String, dynamic>> apiCall(
     if (response.statusCode >= 400) {
       // 401 → refresh dene, bir kez retry yap
       if (response.statusCode == 401 && !retried) {
+        debugPrint('[CALL_FLOW] [API] 401 Unauthorized received for ${response.request?.url}. Attempting token refresh...');
         final refreshed = await _tryRefreshOnce();
+        debugPrint('[CALL_FLOW] [API] Token refresh result: $refreshed');
         if (refreshed) return apiCall(request, retried: true);
         // Her iki token da geçersiz → global logout sinyali
+        debugPrint('[CALL_FLOW] [API] Token refresh failed. Triggering global logout.');
         AuthService.authFailedStream.add(null);
       }
       _parseErrorBody(body, response.statusCode);

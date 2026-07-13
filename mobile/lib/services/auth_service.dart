@@ -5,6 +5,7 @@ import '../config/api.dart';
 import '../core/logger_service.dart';
 import '../models/user.dart';
 import 'storage_service.dart';
+import 'package:flutter/foundation.dart';
 
 final _log = LoggerService.instance;
 
@@ -137,16 +138,19 @@ class AuthService {
 
     _refreshInProgress = Completer<bool>();
     try {
+      debugPrint('[CALL_FLOW] [AuthService] Sending refresh request with RT: ${rt.substring(0, 10)}...');
       final resp = await http.post(
         Uri.parse('$kBaseUrl/auth/refresh'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh_token': rt}),
       );
       if (resp.statusCode != 200) {
+        debugPrint('[CALL_FLOW] [AuthService] Refresh failed. Status: ${resp.statusCode}, Body: ${resp.body}');
         _refreshInProgress!.complete(false);
         _refreshInProgress = null;
         return false;
       }
+      debugPrint('[CALL_FLOW] [AuthService] Refresh succeeded! Parsing response...');
       final body = jsonDecode(resp.body) as Map<String, dynamic>;
       await Future.wait([
         StorageService.saveToken(body['access_token'] as String),

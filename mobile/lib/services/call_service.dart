@@ -137,27 +137,13 @@ class CallService {
     String path, [
     Map<String, dynamic>? body,
   ]) async {
-    final resp = await http.post(
-      Uri.parse('$kBaseUrl$path'),
-      headers: await _authHeaders(),
-      body: body != null ? jsonEncode(body) : null,
+    return await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl$path'),
+        headers: await _authHeaders(),
+        body: body != null ? jsonEncode(body) : null,
+      ),
     );
-    if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      try {
-        final json = jsonDecode(resp.body);
-        if (json['error'] != null) {
-          throw CallApiException(
-            resp.statusCode,
-            json['error']['code'],
-            json['error']['message'] ?? '',
-          );
-        }
-      } catch (e) {
-        if (e is CallApiException) rethrow;
-      }
-      throw CallApiException(resp.statusCode, null, resp.body);
-    }
-    return jsonDecode(resp.body) as Map<String, dynamic>;
   }
 
   void _setState(CallState s) {
