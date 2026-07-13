@@ -26,6 +26,24 @@ const _kCategoryCall  = 'incoming_call_category';
 
 final FlutterLocalNotificationsPlugin _flnp = FlutterLocalNotificationsPlugin();
 
+  static Future<void> showWarningNotification(String title, String body) async {
+    const androidDetails = AndroidNotificationDetails(
+      'general_alerts',
+      'Genel Bildirimler',
+      channelDescription: 'Uygulama uyarı ve bilgilendirmeleri',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails(presentAlert: true, presentSound: true);
+    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    await _flnp.show(
+      DateTime.now().millisecond,
+      title,
+      body,
+      details,
+    );
+  }
+
 // ─── Background FCM handler (separate isolate) ────────────────────────────────
 
 @pragma('vm:entry-point')
