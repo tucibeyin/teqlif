@@ -68,6 +68,21 @@ async def _delete_lk_room(room_name: str) -> None:
             logger.warning("[Calls] LK room silinemedi | room=%s | %s", room_name, exc)
 
 
+@router.get("/{call_id}/status")
+async def get_call_status(
+    call_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    stmt = select(Call).where(Call.id == call_id)
+    result = await db.execute(stmt)
+    call = result.scalars().first()
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+        
+    return {"status": call.status}
+
+
 async def _ws_broadcast(user_id: int, payload: dict) -> None:
     await ws_manager.publish(_DM_CHANNEL, f"dm:{user_id}", payload)
 

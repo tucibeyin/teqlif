@@ -148,6 +148,15 @@ class CallService {
     );
   }
 
+  Future<Map<String, dynamic>> _get(String path) async {
+    return await apiCall(
+      () async => http.get(
+        Uri.parse('$kBaseUrl$path'),
+        headers: await _authHeaders(),
+      ),
+    );
+  }
+
   void _setState(CallState s) {
     final oldStatus = state.value.status;
     final oldPoor = state.value.isPoorConnection;
@@ -290,6 +299,20 @@ class CallService {
         } catch (_) {}
       }
       return;
+    }
+
+    if (incomingCallId != null) {
+      try {
+        debugPrint('[CALL_FLOW] [CallService] Checking if call $incomingCallId is still active before ringing...');
+        final statusData = await _get('/calls/$incomingCallId/status');
+        final backendStatus = statusData['status'];
+        if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
+          debugPrint('[CALL_FLOW] [CallService] onIncomingCall aborted - API says call is $backendStatus');
+          return;
+        }
+      } catch (e) {
+        debugPrint('[CALL_FLOW] [CallService] Could not verify call status, proceeding to ring: $e');
+      }
     }
 
     _setState(
