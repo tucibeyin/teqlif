@@ -5,7 +5,10 @@ import PushKit
 import flutter_callkit_incoming
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate, CallkitIncomingAppDelegate {
+  
+  var pendingAcceptActions: [String: CXAnswerCallAction] = [:]
+  
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -17,6 +20,25 @@ import flutter_callkit_incoming
     let voipRegistry: PKPushRegistry = PKPushRegistry(queue: mainQueue)
     voipRegistry.delegate = self
     voipRegistry.desiredPushTypes = [PKPushType.voIP]
+
+    let controller : FlutterViewController = window?.rootViewController as! FlutterViewController
+    let callkitChannel = FlutterMethodChannel(name: "com.teqlif/callkit",
+                                              binaryMessenger: controller.binaryMessenger)
+    callkitChannel.setMethodCallHandler({ [weak self]
+      (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+      if call.method == "fulfillAccept" {
+          if let args = call.arguments as? [String: Any],
+             let uuid = args["uuid"] as? String {
+              self?.pendingAcceptActions[uuid]?.fulfill()
+              self?.pendingAcceptActions.removeValue(forKey: uuid)
+              result(true)
+          } else {
+              result(false)
+          }
+      } else {
+          result(FlutterMethodNotImplemented)
+      }
+    })
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
@@ -98,5 +120,41 @@ import flutter_callkit_incoming
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
     super.userNotificationCenter(center, didReceive: response, withCompletionHandler: completionHandler)
+  }
+
+  // MARK: - CallkitIncomingAppDelegate Methods
+  
+  func onAccept(_ call: flutter_callkit_incoming.Call, _ action: CXAnswerCallAction) {
+      print("[CallkitAppDelegate] onAccept called for \(call.uuid.uuidString)")
+      // ACTION'ı hafızada tutuyoruz, hemen fulfill etmiyoruz (Bağlanıyor yazısı çıkacak).
+      pendingAcceptActions[call.uuid.uuidString] = action
+  }
+  
+  func onDecline(_ call: flutter_callkit_incoming.Call, _ action: CXEndCallAction) {
+      action.fulfill()
+  }
+  
+  func onEnd(_ call: flutter_callkit_incoming.Call, _ action: CXEndCallAction) {
+      // Eğer arama sonlanmışsa ve önceden açık kalmış bir accept action varsa temizle
+      pendingAcceptActions.removeValue(forKey: call.uuid.uuidString)
+      action.fulfill()
+  }
+  
+  func onTimeOut(_ call: flutter_callkit_incoming.Call) {
+      pendingAcceptActions.removeValue(forKey: call.uuid.uuidString)
+  }
+
+  func didActivateAudioSession(_ audioSession: AVAudioSession) {
+  }
+  
+  func didDeactivateAudioSession(_ audioSession: AVAudioSession) {
+  }
+  
+  func providerDidReset() {
+      // Eğer provider çökerse her şeyi serbest bırak
+      for (_, action) in pendingAcceptActions {
+          action.fulfill()
+      }
+      pendingAcceptActions.removeAll()
   }
 }

@@ -51,7 +51,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     debugPrint('[FCM][BG] Call cancelled by caller (${message.data['type']}). Ending CallKit.');
     final callId = message.data['call_id']?.toString() ?? '';
     if (callId.isNotEmpty) {
-      final callUuid = _formatToUuid(callId);
+      final callUuid = PushNotificationService.formatToUuid(callId);
       await FlutterCallkitIncoming.endCall(callUuid);
     } else {
       await FlutterCallkitIncoming.endAllCalls();
@@ -61,7 +61,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
-String _formatToUuid(String id) {
+static String formatToUuid(String id) {
   // CallKit iOS'te id'nin kesinlikle geçerli bir UUID (8-4-4-4-12) formatında olmasını ister.
   // Veritabanındaki integer/string call_id'yi bu formata uyduruyoruz.
   final padded = id.padLeft(32, '0');
@@ -89,7 +89,7 @@ Future<void> _showCallNotification({
   
   final l = lookupAppLocalizations(Locale(langCode));
 
-  final callUuid = _formatToUuid(callId);
+  final callUuid = PushNotificationService.formatToUuid(callId);
 
   final params = CallKitParams(
     id: callUuid,

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:audio_session/audio_session.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -537,6 +538,11 @@ class CallService {
           elapsed: Duration.zero,
         ),
       );
+      
+      if (Platform.isIOS && state.value.callId != null) {
+        final uuid = PushNotificationService.formatToUuid(state.value.callId!.toString());
+        const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((_) {});
+      }
       _startElapsedTimer();
       await WakelockPlus.enable();
 
