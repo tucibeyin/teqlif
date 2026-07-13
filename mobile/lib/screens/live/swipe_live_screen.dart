@@ -1368,7 +1368,18 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                     onCoHostInvite: (hostUsername, targetUsername) {
                       if (!mounted || _isSelfCoHost) return;
                       if (targetUsername == _myUsername) {
-                        _showCoHostInviteDialog(hostUsername);
+                        if (CallService.instance.hasActiveCall) {
+                          debugPrint('[LIVE_SCREEN_CALL] User invited to co-host but has active call. Auto-rejecting locally.');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('@$hostUsername sizi sahneye davet etti, ancak görüşmede olduğunuz için otomatik reddedildi.'),
+                              backgroundColor: Colors.orange,
+                              duration: const Duration(seconds: 4),
+                            ),
+                          );
+                        } else {
+                          _showCoHostInviteDialog(hostUsername);
+                        }
                       }
                     },
                     onCoHostRemoved: (targetUsername) {
