@@ -89,7 +89,16 @@ import AVFAudio
       
       let uuidStr = "\(padded[start0..<start8])-\(padded[start8..<start12])-\(padded[start12..<start16])-\(padded[start16..<start20])-\(padded[start20..<end32])"
       
-      let data = flutter_callkit_incoming.Data(id: uuidStr, nameCaller: callerUsername, handle: "Sesli Arama", type: 0)
+      let langCode = UserDefaults.standard.string(forKey: "flutter.app_locale_language_code") ?? "tr"
+      var handleText = "Sesli Arama"
+      switch langCode {
+      case "en": handleText = "Voice Call"
+      case "ar": handleText = "مكالمة صوتية"
+      case "ru": handleText = "Голосовой звонок"
+      default: handleText = "Sesli Arama"
+      }
+      
+      let data = flutter_callkit_incoming.Data(id: uuidStr, nameCaller: callerUsername, handle: handleText, type: 0)
       data.avatar = callerAvatar
       data.extra = [
           "call_id": callId,
