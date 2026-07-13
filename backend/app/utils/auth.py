@@ -88,14 +88,14 @@ async def get_current_user(
     # Bearer header öncelikli (mobile), sonra cookie (web tarayıcı)
     raw_token = (credentials.credentials if credentials else None) or cookie_token
     if not raw_token:
-        from app.core.logger import logger
-        logger.error("[AUTH] get_current_user 401: Giriş yapmanız gerekiyor (raw_token is None)")
+        from app.core.logger import get_logger
+        get_logger(__name__).error("[AUTH] get_current_user 401: Giriş yapmanız gerekiyor (raw_token is None)")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Giriş yapmanız gerekiyor")
 
     user_id = decode_token(raw_token)
     if not user_id:
-        from app.core.logger import logger
-        logger.error(f"[AUTH] get_current_user 401: Geçersiz token (raw_token={raw_token})")
+        from app.core.logger import get_logger
+        get_logger(__name__).error(f"[AUTH] get_current_user 401: Geçersiz token (raw_token={raw_token})")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz token")
 
     result = await db.execute(select(User).where(User.id == user_id))
