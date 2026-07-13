@@ -120,13 +120,7 @@ class CallState {
 }
 
 class CallService {
-  CallService._() {
-    _audioPlayer.onPlayerComplete.listen((_) {
-      if (state.value.status == CallStatus.calling) {
-         _audioPlayer.play(AssetSource('sounds/ringing.wav'));
-      }
-    });
-  }
+  CallService._();
   static final CallService instance = CallService._();
 
   final ValueNotifier<CallState> state = ValueNotifier(const CallState());
