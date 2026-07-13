@@ -600,6 +600,9 @@ class CallService {
     _elapsedTimer?.cancel();
     _disconnectRoom();
     WakelockPlus.disable();
+    if (state.value.callId != null) {
+      FlutterCallkitIncoming.endCall(state.value.callId.toString());
+    }
     FlutterCallkitIncoming.endAllCalls();
     _setState(state.value.copyWith(status: status));
     _scheduleReset();

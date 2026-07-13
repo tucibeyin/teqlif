@@ -28,6 +28,7 @@ class _CallScreenState extends State<CallScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         CallService.instance.isCallScreenVisible.value = true;
+        _onStateChange();
       }
     });
     CallService.instance.state.addListener(_onStateChange);
