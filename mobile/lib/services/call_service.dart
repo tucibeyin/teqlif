@@ -174,6 +174,7 @@ class CallService {
     } else if (newStatus == CallStatus.ended) {
       if (oldStatus == CallStatus.connected || oldStatus == CallStatus.connecting) {
         _audioPlayer.setReleaseMode(ReleaseMode.release);
+        debugPrint('[CALL_FLOW] [CallService] Playing ended.wav');
         _audioPlayer.play(AssetSource('sounds/ended.wav'));
       } else {
         _audioPlayer.stop();
