@@ -26,6 +26,10 @@ import '../widgets/offline_banner.dart';
 
 import '../services/call_service.dart';
 
+/// Global visibility notifier for the Live tab.
+/// Prevents background ghost joining of streams when the user is on other tabs.
+final ValueNotifier<bool> globalIsLiveTabVisible = ValueNotifier<bool>(true);
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -88,7 +92,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     });
     _notifStreamSub = PushNotificationService.notificationStream.stream.listen((data) {
       _refreshBadges();
+      final isForegroundReceive = data['is_foreground_receive'] == true;
+      if (isForegroundReceive) {
+        debugPrint('[GHOST_JOIN] main_screen ignored navigation because is_foreground_receive=true');
+        return; // Ön planda (açıkken) gelen bildirim doğrudan yönlendirme yapmamalı
+      }
       if (data['type'] != null && (data['type'] as String).isNotEmpty) {
+        debugPrint('[GHOST_JOIN] main_screen executing _handleNotifNavigation for type=${data['type']}');
         WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotifNavigation(data));
       }
     });
@@ -210,6 +220,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       });
     }
     setState(() => _currentIndex = index);
+    
+    globalIsLiveTabVisible.value = (index == 0);
+    debugPrint('[GHOST_JOIN] Tab switched. globalIsLiveTabVisible = ${globalIsLiveTabVisible.value}');
+
     // Mesajlar tabına geçince badge'i güncelle (içerik TTL ile yönetiliyor)
     if (index == 3) {
       Future.delayed(const Duration(milliseconds: 300), _refreshBadges);

@@ -272,6 +272,8 @@ class PushNotificationService {
     FirebaseMessaging.onMessage.listen((msg) {
       debugPrint('[FCM] Foreground | type=${msg.data['type']}');
       final data = Map<String, dynamic>.from(msg.data);
+      data['is_foreground_receive'] = true; // Ön plan işareti eklendi
+      debugPrint('[GHOST_JOIN] FCM Foreground Push added to stream with is_foreground_receive=true');
       if (data['type'] == 'incoming_call') {
         debugPrint('[FCM] Foreground incoming_call — stream\'e ekleniyor');
       }
@@ -281,7 +283,10 @@ class PushNotificationService {
     // Background → tap
     FirebaseMessaging.onMessageOpenedApp.listen((msg) {
       debugPrint('[FCM] Background tap | type=${msg.data['type']}');
-      notificationStream.add(Map<String, dynamic>.from(msg.data));
+      final data = Map<String, dynamic>.from(msg.data);
+      data['is_foreground_receive'] = false; // Tıklama işareti eklendi
+      debugPrint('[GHOST_JOIN] FCM Background Tap added to stream with is_foreground_receive=false');
+      notificationStream.add(data);
     });
 
     // Killed state → FCM tap

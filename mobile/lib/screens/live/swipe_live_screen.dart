@@ -18,6 +18,7 @@ import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/wallet_service.dart';
 import '../../widgets/live/gift_hud.dart';
+import '../main_screen.dart';
 import '../../widgets/live/hype_meter_widget.dart';
 import '../../widgets/auction_panel.dart';
 import '../../l10n/app_localizations.dart';
@@ -164,6 +165,13 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
         _refreshLiveStreams();
       }
     });
+
+    globalIsLiveTabVisible.addListener(_onVisibilityChanged);
+  }
+
+  void _onVisibilityChanged() {
+    debugPrint('[GHOST_JOIN] SwipeLiveScreen _onVisibilityChanged -> ${globalIsLiveTabVisible.value}');
+    _updateViewportConnections();
   }
 
   Future<void> _fetchPersonalizedConfig() async {
@@ -208,6 +216,7 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
 
   @override
   void dispose() {
+    globalIsLiveTabVisible.removeListener(_onVisibilityChanged);
     activeScreenCount--;
     _notifSub?.cancel();
     _streamCheckTimer?.cancel();
@@ -317,6 +326,12 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
   }
 
   void _updateViewportConnections() {
+    if (!globalIsLiveTabVisible.value) {
+      debugPrint('[GHOST_JOIN] Tab is hidden. Forcing clearViewport to prevent background audio.');
+      _connectionManager.clearViewport();
+      return;
+    }
+
     debugPrint('[${DateTime.now().toString()}] [EVENT: VIEWPORT_UPDATE_CALLED] for _currentPage: $_currentPage');
     
     int activeId = -1;
