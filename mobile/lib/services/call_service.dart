@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
+import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
@@ -257,6 +258,42 @@ class CallService {
           token: data['token'] as String,
         ),
       );
+
+      if (Platform.isIOS) {
+        try {
+          final uuid = _formatToUuid(data['call_id'].toString());
+          final params = CallKitParams(
+            id: uuid,
+            nameCaller: calleeUsername,
+            appName: 'Teqlif',
+            avatar: calleeAvatar ?? 'https://i.pravatar.cc/100',
+            handle: 'Teqlif Voice Call',
+            type: 0,
+            duration: 45000,
+            extra: {'call_id': data['call_id']},
+            ios: IOSParams(
+              iconName: 'AppIcon',
+              handleType: 'generic',
+              supportsVideo: false,
+              maximumCallGroups: 1,
+              maximumCallsPerCallGroup: 1,
+              audioSessionMode: 'voiceChat',
+              audioSessionActive: true,
+              audioSessionPreferredSampleRate: 44100.0,
+              audioSessionPreferredIOBufferDuration: 0.005,
+              supportsDTMF: true,
+              supportsHolding: true,
+              supportsGrouping: false,
+              supportsUngrouping: false,
+              ringtonePath: 'system_ringtone_default',
+            ),
+          );
+          await FlutterCallkitIncoming.startCall(params);
+        } catch (e) {
+          debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startCall CallKit Error: \$e');
+        }
+      }
+
       _startRingTimer();
       await WakelockPlus.enable();
       

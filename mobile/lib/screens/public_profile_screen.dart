@@ -737,7 +737,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               return;
                             }
 
-                            await CallService.instance.startCall(
+                            CallService.instance.startCall(
                               calleeId: userId,
                               calleeUsername: widget.username,
                               calleeAvatar:

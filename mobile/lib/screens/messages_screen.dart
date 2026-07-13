@@ -2036,7 +2036,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                 return;
               }
 
-              await CallService.instance.startCall(
+              CallService.instance.startCall(
                 calleeId: widget.otherUserId,
                 calleeUsername: widget.otherHandle,
                 calleeAvatar: widget.otherAvatarUrl,
