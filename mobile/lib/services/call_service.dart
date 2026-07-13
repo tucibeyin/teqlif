@@ -178,6 +178,11 @@ class CallService {
       }
     } else if (newStatus == CallStatus.connected || newStatus == CallStatus.idle) {
       _audioPlayer.stop();
+      if (newStatus == CallStatus.connected) {
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          setSpeaker(false);
+        });
+      }
     }
   }
 
@@ -350,8 +355,8 @@ class CallService {
 
     _resetTimer?.cancel();
     stopRingtoneAndVibration();
-    final permStatus = await Permission.microphone.request();
-    if (permStatus != PermissionStatus.granted) {
+    final permStatus = await Permission.microphone.status;
+    if (!permStatus.isGranted) {
       _setState(
         state.value.copyWith(
           status: CallStatus.permissionDenied,
