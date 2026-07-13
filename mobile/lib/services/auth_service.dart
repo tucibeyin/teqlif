@@ -64,11 +64,10 @@ class AuthService {
         body: jsonEncode({'email': email, 'code': code}),
       ),
     );
-    await Future.wait([
-      StorageService.saveToken(body['access_token'] as String),
-      if (body['refresh_token'] != null)
-        StorageService.saveRefreshToken(body['refresh_token'] as String),
-    ]);
+    await StorageService.saveToken(body['access_token'] as String);
+    if (body['refresh_token'] != null) {
+      await StorageService.saveRefreshToken(body['refresh_token'] as String);
+    }
     final user = User.fromJson(body['user'] as Map<String, dynamic>);
     await StorageService.saveUserInfo(
       id: user.id,
@@ -105,11 +104,10 @@ class AuthService {
         body: jsonEncode({'login_identifier': identifier, 'password': password}),
       ),
     );
-    await Future.wait([
-      StorageService.saveToken(body['access_token'] as String),
-      if (body['refresh_token'] != null)
-        StorageService.saveRefreshToken(body['refresh_token'] as String),
-    ]);
+    await StorageService.saveToken(body['access_token'] as String);
+    if (body['refresh_token'] != null) {
+      await StorageService.saveRefreshToken(body['refresh_token'] as String);
+    }
     final user = User.fromJson(body['user'] as Map<String, dynamic>);
     await StorageService.saveUserInfo(
       id: user.id,
@@ -152,10 +150,8 @@ class AuthService {
       }
       debugPrint('[CALL_FLOW] [AuthService] Refresh succeeded! Parsing response...');
       final body = jsonDecode(resp.body) as Map<String, dynamic>;
-      await Future.wait([
-        StorageService.saveToken(body['access_token'] as String),
-        StorageService.saveRefreshToken(body['refresh_token'] as String),
-      ]);
+      await StorageService.saveToken(body['access_token'] as String);
+      await StorageService.saveRefreshToken(body['refresh_token'] as String);
       _refreshInProgress!.complete(true);
       _refreshInProgress = null;
       return true;

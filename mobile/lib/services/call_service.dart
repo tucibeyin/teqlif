@@ -360,6 +360,7 @@ class CallService {
     } catch (e, stack) {
       debugPrint('[CALL_FLOW] [CallService] acceptCall error: $e\n$stack');
       _setState(state.value.copyWith(status: CallStatus.ended));
+      _hangUpLocally(status: CallStatus.ended);
     }
   }
 
