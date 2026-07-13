@@ -1,6 +1,7 @@
 import asyncio
 import re
 import secrets
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from pydantic import BaseModel
@@ -1098,6 +1099,8 @@ async def save_device_tokens(
     if voip_token_sent:
         # Explicit None gönderilirse DB'den siliyoruz; dolu değer ise güncelliyoruz
         values["voip_token"] = voip_token or None
+        # Token güncellenince yaşını da kaydet (None ise silme — timestamp da temizle)
+        values["voip_token_updated_at"] = datetime.now(timezone.utc) if voip_token else None
     if current_user.locale != lang:
         values["locale"] = lang
 

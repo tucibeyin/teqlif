@@ -20,11 +20,14 @@ from app.models.call import Call
 from app.models.user import User
 from app.models.notification import Notification
 from app.utils.auth import get_current_user
+from app.utils.i18n import _get_t, get_locale
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
 from app.core.task_queue import get_pool
 from app.config import settings
 from app.core.exceptions import AppException
+from app.services.apns_service import send_voip_push
+from app.services.firebase_service import send_push
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/calls", tags=["calls"])
@@ -123,7 +126,6 @@ async def _send_call_push(
     # VoIP Push önceliği (iOS cihazlar için)
     if callee.voip_token:
         logger.info(f"[Calls] Callee {callee.id} has voip_token, attempting APNs VoIP push.")
-        from app.services.apns_service import send_voip_push
         try:
             # VoIP payload: Apple, VoIP push'larda aps.alert/sound'u ignore eder.
             # Tüm data top-level'da, aps sadece content-available sinyali için.
@@ -150,7 +152,6 @@ async def _send_call_push(
     # Fallback: Android veya VoIP başarısız olursa FCM at
     if callee.fcm_token:
         logger.info(f"[Calls] Falling back to FCM push for callee {callee.id}.")
-        from app.services.firebase_service import send_push
         try:
             await send_push(
                 token=callee.fcm_token,
@@ -286,7 +287,6 @@ async def reject_call(
     caller = await db.get(User, call.caller_id)
     if caller and caller.fcm_token:
         logger.info(f"[Calls] Sending 'call_rejected' FCM push to {caller.username} (call_id={call_id})")
-        from app.services.firebase_service import send_push
         await send_push(
             token=caller.fcm_token,
             title="",
@@ -321,7 +321,6 @@ async def end_call(
     other_user = await db.get(User, other_id)
     if other_user and other_user.fcm_token:
         logger.info(f"[Calls] Sending 'call_ended' FCM push to {other_user.username} from end_call endpoint (call_id={call_id})")
-        from app.services.firebase_service import send_push
         try:
             await send_push(
                 token=other_user.fcm_token,
@@ -341,27 +340,23 @@ async def end_call(
 
 # ── POST /api/calls/{id}/missed ───────────────────────────────────────────────
 
-
-from app.utils.i18n import _get_t, get_locale
-
 async def _send_missed_call_push(callee: User, caller: User) -> None:
     if not callee.fcm_token:
         return
-    logger.info(f"[Calls] Sending 'call_missed' FCM push to {callee.username} (call_id={callee.id})")
-    from app.services.firebase_service import send_push
+    logger.info(f"[Calls] Sending 'call_missed' FCM push to {callee.username}")
     locale = get_locale(callee)
     t = _get_t(locale)
-    
+
     title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
     body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
-    
+
     try:
         title = title_raw.format_map({"username": caller.username})
         body = body_raw.format_map({"username": caller.username})
     except (KeyError, ValueError):
         title = title_raw
         body = body_raw
-    
+
     await send_push(
         token=callee.fcm_token,
         title=title,
@@ -383,25 +378,22 @@ async def missed_call(
     if call.status == "calling":
         call.status = "missed"
         call.ended_at = datetime.now(timezone.utc)
-        
-        locale = get_locale(current_user) # callee user locale is actually what we need, but we don't have callee object here yet
+
+        # Callee'yi bir kez çek — locale için ve push için aynı obje kullanılır
         callee = await db.get(User, call.callee_id)
-        if callee:
-            locale = get_locale(callee)
-            
+        locale = get_locale(callee) if callee else get_locale(current_user)
         t = _get_t(locale)
-        
+
         title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
         body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
-        
+
         try:
             title = title_raw.format_map({"username": current_user.username})
             body = body_raw.format_map({"username": current_user.username})
         except (KeyError, ValueError):
             title = title_raw
             body = body_raw
-            
-        # Bildirim oluştur (sadece cevapsızlar için)
+
         n = Notification(
             user_id=call.callee_id,
             type="call_missed",
@@ -410,14 +402,14 @@ async def missed_call(
             related_id=current_user.id
         )
         db.add(n)
-        
-        callee = await db.get(User, call.callee_id)
-        
+
         await db.commit()
         await _ws_broadcast(call.callee_id, {"type": "call_missed", "call_id": call.id})
         await _delete_lk_room(call.room_name)
-        
+
         if callee:
+            # commit sonrası expire olan attribute'ları yenile
+            await db.refresh(callee)
             await _send_missed_call_push(callee, current_user)
 
     logger.info("[Calls] Cevapsız arama | call_id=%d", call_id)

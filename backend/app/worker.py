@@ -1260,25 +1260,29 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
             logger.info("Arama zaman aşımına uğradı (Ghost Call Timeout). CallID: %d", call_id)
             call.status = "missed"
             call.ended_at = datetime.now(timezone.utc)
-            
+
             # Kullanıcıları getir
             caller = await db.get(User, caller_id)
             callee = await db.get(User, callee_id)
-            
+
+            # Başlık/gövde varsayılanlarla başlat — caller/callee None ise NameError olmaz
+            title: str = "Cevapsız Arama"
+            body: str = "Size ulaşmaya çalıştı."
+
             if caller and callee:
                 locale = get_locale(callee)
                 t = _get_t(locale)
-                
+
                 title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
                 body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
-                
+
                 try:
                     title = title_raw.format_map({"username": caller.username})
                     body = body_raw.format_map({"username": caller.username})
                 except (KeyError, ValueError):
                     title = title_raw
                     body = body_raw
-                
+
                 # DB'ye bildirim kaydet
                 n = Notification(
                     user_id=callee.id,
@@ -1288,14 +1292,14 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
                     related_id=caller.id
                 )
                 db.add(n)
-            
+
             await db.commit()
 
             # İki tarafa da missed event'i at
             await ws_manager.send_personal_message(caller_id, {"type": "call_missed", "call_id": call_id})
             await ws_manager.send_personal_message(callee_id, {"type": "call_missed", "call_id": call_id})
-            
-            # Push bildirimi at
+
+            # Push bildirimi — title/body her zaman tanımlı, güvenli
             if caller and callee and callee.fcm_token:
                 await send_push(
                     token=callee.fcm_token,
