@@ -95,6 +95,7 @@ async def _send_call_push(
     caller: User,
     call_id: int,
     room_name: str,
+    callee_token: str,
     db: AsyncSession,
 ) -> None:
     """Send VoIP push for iOS if available, otherwise fallback to FCM push."""
@@ -121,6 +122,7 @@ async def _send_call_push(
         "caller_username": caller.username,
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
         "livekit_url": settings.livekit_url,
+        "callee_token": callee_token,
     }
 
     # VoIP Push önceliği (iOS cihazlar için)
@@ -198,6 +200,7 @@ async def start_call(
     await db.refresh(call)
 
     token = _make_livekit_token(room_name, current_user)
+    callee_token = _make_livekit_token(room_name, callee)
 
     # Notify callee via WS (foreground) + FCM (background)
     ws_payload = {
@@ -208,9 +211,10 @@ async def start_call(
         "caller_username": current_user.username,
         "caller_avatar": current_user.profile_image_thumb_url or current_user.profile_image_url or "",
         "livekit_url": settings.livekit_url,
+        "callee_token": callee_token,
     }
     await _ws_broadcast(callee_id, ws_payload)
-    await _send_call_push(callee, current_user, call.id, room_name, db)
+    await _send_call_push(callee, current_user, call.id, room_name, callee_token, db)
 
     # Askıda kalan aramaları (Ghost calls) 35-40 sn sonra timeout'a çekmek için ARQ görevi ekle
     pool = get_pool()
@@ -248,6 +252,7 @@ async def accept_call(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Call is no longer active")
 
     call.status = "active"
+    call.accepted_at = datetime.now(timezone.utc)
     await db.commit()
 
     token = _make_livekit_token(call.room_name, current_user)
@@ -256,6 +261,7 @@ async def accept_call(
         "type": "call_accepted",
         "call_id": call.id,
         "room_name": call.room_name,
+        "accepted_at": call.accepted_at.isoformat()
     });
 
     logger.info("[Calls] Arama kabul edildi | call_id=%d", call_id)
@@ -264,6 +270,7 @@ async def accept_call(
         "room_name": call.room_name,
         "livekit_url": settings.livekit_url,
         "token": token,
+        "accepted_at": call.accepted_at.isoformat()
     }
 
 

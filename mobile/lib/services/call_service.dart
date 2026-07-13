@@ -49,9 +49,11 @@ class CallState {
   final String? roomName;
   final String? livekitUrl;
   final String? token;
+  final String? calleeToken;
   final String? otherUsername;
   final String? otherAvatar;
   final int? otherUserId;
+  final DateTime? acceptedAt;
   final Duration elapsed;
   final bool isMuted;
   final bool isSpeaker;
@@ -64,9 +66,11 @@ class CallState {
     this.roomName,
     this.livekitUrl,
     this.token,
+    this.calleeToken,
     this.otherUsername,
     this.otherAvatar,
     this.otherUserId,
+    this.acceptedAt,
     this.elapsed = Duration.zero,
     this.isMuted = false,
     this.isSpeaker = false,
@@ -80,9 +84,11 @@ class CallState {
     String? roomName,
     String? livekitUrl,
     String? token,
+    String? calleeToken,
     String? otherUsername,
     String? otherAvatar,
     int? otherUserId,
+    DateTime? acceptedAt,
     Duration? elapsed,
     bool? isMuted,
     bool? isSpeaker,
@@ -95,9 +101,11 @@ class CallState {
       roomName: roomName ?? this.roomName,
       livekitUrl: livekitUrl ?? this.livekitUrl,
       token: token ?? this.token,
+      calleeToken: calleeToken ?? this.calleeToken,
       otherUsername: otherUsername ?? this.otherUsername,
       otherAvatar: otherAvatar ?? this.otherAvatar,
       otherUserId: otherUserId ?? this.otherUserId,
+      acceptedAt: acceptedAt ?? this.acceptedAt,
       elapsed: elapsed ?? this.elapsed,
       isMuted: isMuted ?? this.isMuted,
       isSpeaker: isSpeaker ?? this.isSpeaker,
@@ -242,6 +250,12 @@ class CallService {
       );
       _startRingTimer();
       await WakelockPlus.enable();
+      
+      // WhatsApp-like Pre-Connection: Arayan kişi beklemeden LiveKit'e bağlanır.
+      await _joinRoom(
+        livekitUrl: data['livekit_url'] as String,
+        token: data['token'] as String,
+      );
     } on AppException catch (e) {
       debugPrint('[LIVE_SCREEN_CALL] startCall catch (AppException) triggered: ${e.code}');
       if (e.code == 'USER_BUSY') {
@@ -320,6 +334,7 @@ class CallService {
             : int.tryParse(data['call_id'].toString()),
         roomName: data['room_name'] as String?,
         livekitUrl: data['livekit_url'] as String?,
+        calleeToken: data['callee_token'] as String?,
         otherUserId: data['caller_id'] is int
             ? data['caller_id']
             : int.tryParse(data['caller_id'].toString()),
@@ -401,6 +416,17 @@ class CallService {
     }
 
     _setState(state.value.copyWith(status: CallStatus.connecting));
+    
+    // WhatsApp-like Pre-Connection: Aranan kişi beklemeden LiveKit'e bağlanır.
+    if (state.value.livekitUrl != null && state.value.calleeToken != null) {
+      _joinRoom(
+        livekitUrl: state.value.livekitUrl!,
+        token: state.value.calleeToken!,
+      ).catchError((e) {
+        debugPrint('[CallService] Pre-connection error: $e');
+      });
+    }
+
     debugPrint('[LIVE_SCREEN_CALL] Calling POST /calls/$callId/accept');
     try {
       Map<String, dynamic>? data;
@@ -417,11 +443,12 @@ class CallService {
       }
       if (data == null) throw Exception('Accept data is null');
 
-      debugPrint('[LIVE_SCREEN_CALL] Accept SUCCESS. Joining room...');
-      await _joinRoom(
-        livekitUrl: data['livekit_url'] as String,
-        token: data['token'] as String,
-      );
+      debugPrint('[LIVE_SCREEN_CALL] Accept SUCCESS.');
+      if (data['accepted_at'] != null) {
+        _setState(state.value.copyWith(
+          acceptedAt: DateTime.parse(data['accepted_at']),
+        ));
+      }
     } catch (e, stack) {
       debugPrint('[LIVE_SCREEN_CALL] acceptCall ERROR: $e');
       _hangUpLocally(status: CallStatus.ended);
@@ -445,24 +472,16 @@ class CallService {
     _ringTimer?.cancel();
     stopRingtoneAndVibration();
     
-    final currentUrl = state.value.livekitUrl;
-    final currentToken = state.value.token;
-    
-    if (currentUrl == null || currentToken == null) {
-      debugPrint('[CallService] Cannot join room: token or url is null.');
-      _setState(state.value.copyWith(status: CallStatus.ended));
-      return;
+    if (data['accepted_at'] != null) {
+      _setState(state.value.copyWith(
+        acceptedAt: DateTime.parse(data['accepted_at']),
+      ));
     }
     
     if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) return;
     
     _resetTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.connecting));
-    
-    await _joinRoom(
-      livekitUrl: currentUrl,
-      token: currentToken,
-    );
   }
 
   void onCallRejected() async {
@@ -539,28 +558,33 @@ class CallService {
       await Future.delayed(const Duration(milliseconds: 500));
       await Hardware.instance.setSpeakerphoneOn(false);
       
-      _setState(
-        state.value.copyWith(
-          status: CallStatus.connected,
-          elapsed: Duration.zero,
-        ),
-      );
-      
-      _startElapsedTimer();
-      await WakelockPlus.enable();
-
       _roomEventsSubscription = _room!.events.listen(_onRoomEvent);
       
+      bool peerAlreadyJoined = _room!.remoteParticipants.isNotEmpty;
+      if (state.value.status == CallStatus.connecting || peerAlreadyJoined) {
+        _setState(
+          state.value.copyWith(
+            status: CallStatus.connected,
+          ),
+        );
+        _startElapsedTimer();
+        debugPrint('[LIVE_SCREEN_CALL] Call is now CONNECTED in _joinRoom.');
+      } else {
+        debugPrint('[LIVE_SCREEN_CALL] Joined LiveKit, waiting for peer to join.');
+      }
+      
+      await WakelockPlus.enable();
+
       _peerTimeoutTimer?.cancel();
       _peerTimeoutTimer = Timer(const Duration(seconds: 15), () {
         if (_room != null && _room!.remoteParticipants.isEmpty) {
-          debugPrint('[LIVE_SCREEN_CALL] Peer did not join within 15 seconds. Hanging up.');
-          endCall();
+          if (state.value.status == CallStatus.connected) {
+             debugPrint('[LIVE_SCREEN_CALL] Peer left or did not join within 15 seconds. Hanging up.');
+             endCall();
+          }
         }
       });
       
-      _setState(state.value.copyWith(status: CallStatus.connected));
-      debugPrint('[LIVE_SCREEN_CALL] Call is now CONNECTED.');
       await _setupAudioInterruptionListener();
     } catch (e) {
       debugPrint('[LIVE_SCREEN_CALL] _joinRoom EXCEPTION: $e');
@@ -581,6 +605,11 @@ class CallService {
     } else if (event is ParticipantConnectedEvent) {
       debugPrint('[LIVE_SCREEN_CALL] Peer joined the room. Cancelling peer timeout.');
       _peerTimeoutTimer?.cancel();
+      if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
+        _setState(state.value.copyWith(status: CallStatus.connected));
+        _startElapsedTimer();
+        stopRingtoneAndVibration(); // Just in case Caller was still ringing
+      }
     } else if (event is TrackSubscribedEvent) {
       if (Platform.isAndroid && event.track.kind == TrackType.AUDIO) {
         Hardware.instance.setSpeakerphoneOn(false);
@@ -624,11 +653,19 @@ class CallService {
     _elapsedTimer?.cancel();
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.value.status == CallStatus.connected) {
-        _setState(
-          state.value.copyWith(
-            elapsed: state.value.elapsed + const Duration(seconds: 1),
-          ),
-        );
+        if (state.value.acceptedAt != null) {
+          _setState(
+            state.value.copyWith(
+              elapsed: DateTime.now().toUtc().difference(state.value.acceptedAt!.toUtc()),
+            ),
+          );
+        } else {
+          _setState(
+            state.value.copyWith(
+              elapsed: state.value.elapsed + const Duration(seconds: 1),
+            ),
+          );
+        }
       }
     });
   }
