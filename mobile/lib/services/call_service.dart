@@ -241,8 +241,8 @@ class CallService {
       );
       _startRingTimer();
       await WakelockPlus.enable();
-    } on CallApiException catch (e) {
-      debugPrint('[LIVE_SCREEN_CALL] startCall catch (CallApiException) USER_BUSY triggered');
+    } on AppException catch (e) {
+      debugPrint('[LIVE_SCREEN_CALL] startCall catch (AppException) triggered: ${e.code}');
       if (e.code == 'USER_BUSY') {
         _setState(state.value.copyWith(status: CallStatus.busy));
         _scheduleReset();
