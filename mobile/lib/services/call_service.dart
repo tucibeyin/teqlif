@@ -279,7 +279,7 @@ class CallService {
 
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
-  void onIncomingCall(Map<String, dynamic> data) async {
+  Future<void> onIncomingCall(Map<String, dynamic> data) async {
     debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] onIncomingCall received data: $data');
     _resetTimer?.cancel();
     
