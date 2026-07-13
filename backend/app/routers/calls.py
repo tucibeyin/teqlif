@@ -259,6 +259,17 @@ async def reject_call(
     await db.commit()
 
     await _ws_broadcast(call.caller_id, {"type": "call_rejected", "call_id": call.id})
+    caller = await db.get(User, call.caller_id)
+    if caller and caller.fcm_token:
+        from app.services.firebase_service import send_push
+        await send_push(
+            token=caller.fcm_token,
+            title="",
+            body="",
+            notif_type="call_rejected",
+            extra_data={"call_id": str(call.id)},
+            is_silent=True
+        )
 
     logger.info("[Calls] Arama reddedildi | call_id=%d", call_id)
     return {"ok": True}
@@ -282,6 +293,17 @@ async def end_call(
 
     other_id = call.callee_id if current_user.id == call.caller_id else call.caller_id
     await _ws_broadcast(other_id, {"type": "call_ended", "call_id": call.id})
+    other_user = await db.get(User, other_id)
+    if other_user and other_user.fcm_token:
+        from app.services.firebase_service import send_push
+        await send_push(
+            token=other_user.fcm_token,
+            title="",
+            body="",
+            notif_type="call_ended",
+            extra_data={"call_id": str(call.id)},
+            is_silent=True
+        )
     await _delete_lk_room(call.room_name)
 
     logger.info("[Calls] Arama bitti | call_id=%d", call_id)

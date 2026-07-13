@@ -45,6 +45,15 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       roomName:       message.data['room_name']       ?? '',
       livekitUrl:     message.data['livekit_url']     ?? '',
     );
+  } else if (message.data['type'] == 'call_ended' || message.data['type'] == 'call_missed' || message.data['type'] == 'call_rejected') {
+    debugPrint('[FCM][BG] Call cancelled by caller (${message.data['type']}). Ending CallKit.');
+    final callId = message.data['call_id']?.toString() ?? '';
+    if (callId.isNotEmpty) {
+      final callUuid = _formatToUuid(callId);
+      await FlutterCallkitIncoming.endCall(callUuid);
+    } else {
+      await FlutterCallkitIncoming.endAllCalls();
+    }
   } else {
     debugPrint('[FCM][BG] arama dışı type, işlem yok');
   }

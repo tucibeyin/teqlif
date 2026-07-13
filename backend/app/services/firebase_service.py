@@ -41,6 +41,7 @@ async def send_push(
     notif_type: str | None = None,
     extra_data: dict[str, str] | None = None,
     image_url: str | None = None,
+    is_silent: bool = False,
 ) -> None:
     if not token:
         logger.error("[FCM] send_push çağrıldı ama token boş")
@@ -62,15 +63,16 @@ async def send_push(
                 data.update(extra_data)
 
             is_call = notif_type == "incoming_call"
+            hide_notification = is_call or is_silent
             msg = messaging.Message(
                 # Calls: data-only so the Flutter background handler fires and
                 # shows our custom local notification with action buttons.
-                notification=None if is_call else messaging.Notification(title=title, body=body, image=image_url),
+                notification=None if hide_notification else messaging.Notification(title=title, body=body, image=image_url),
                 data=data,
                 token=token,
                 android=messaging.AndroidConfig(
                     priority="high",
-                    notification=None if is_call else (
+                    notification=None if hide_notification else (
                         messaging.AndroidNotification(image=image_url) if image_url else None
                     ),
                 ),
@@ -79,12 +81,12 @@ async def send_push(
                     payload=messaging.APNSPayload(
                         aps=messaging.Aps(
                             content_available=True,
-                            sound="default",
+                            sound=None if hide_notification else "default",
                             badge=badge,
                             alert=messaging.ApsAlert(
                                 title=title,
                                 body=body,
-                            ) if is_call else None,
+                            ) if (is_call and not is_silent) else None,
                         )
                     ),
                 ),
