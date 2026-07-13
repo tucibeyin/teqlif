@@ -113,7 +113,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     }
     
     if (CallService.instance.preventCallScreenAutoOpen.value) {
-      debugPrint('[SWIPE_LIVE_CALL] preventCallScreenAutoOpen is true, bypassing CallScreen auto-open');
+      debugPrint('[SWIPE_LIVE_CALL][${DateTime.now().toIso8601String()}] preventCallScreenAutoOpen is true, bypassing CallScreen auto-open');
       return;
     }
     

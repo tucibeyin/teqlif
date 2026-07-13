@@ -14,10 +14,10 @@ class _WsLifecycleObserver extends WidgetsBindingObserver {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
-      debugPrint('[WS] Uygulama arka planda, soket bekletiliyor...');
+      debugPrint('[WS][${DateTime.now().toIso8601String()}] Uygulama arka planda, soket bekletiliyor...');
       WsService.pauseConnection();
     } else if (state == AppLifecycleState.resumed) {
-      debugPrint('[WS] Uygulama ön planda, yeniden bağlanılıyor...');
+      debugPrint('[WS][${DateTime.now().toIso8601String()}] Uygulama ön planda, yeniden bağlanılıyor...');
       WsService.resumeConnection();
     }
   }
@@ -58,10 +58,10 @@ class WsService {
 
     _connectivitySub ??= Connectivity().onConnectivityChanged.listen((results) {
       if (results.contains(ConnectivityResult.none)) {
-        debugPrint('[WS] İnternet bağlantısı kesildi, arka plan denemeleri durduruluyor.');
+        debugPrint('[WS][${DateTime.now().toIso8601String()}] İnternet bağlantısı kesildi, arka plan denemeleri durduruluyor.');
         _closeResources();
       } else {
-        debugPrint('[WS] Ağ bağlantısı aktifleştirildi (${results.first.name}), hızlı yeniden bağlanılıyor...');
+        debugPrint('[WS][${DateTime.now().toIso8601String()}] Ağ bağlantısı aktifleştirildi (${results.first.name}), hızlı yeniden bağlanılıyor...');
         if (_shouldStay && _channel == null) {
           _connect();
         }
@@ -146,7 +146,7 @@ class WsService {
             final data = jsonDecode(raw) as Map<String, dynamic>;
             final type = data['type'] as String?;
             if (type != null && type.startsWith('call_')) {
-              debugPrint('[LIVE_SCREEN_CALL] WsService received message type: $type');
+              debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] WsService received message type: $type');
             }
             messageStream.add(data);
           } catch (_) {}
@@ -156,9 +156,9 @@ class WsService {
           final errStr = error.toString();
           // SENTRY ÇÖZÜMÜ: İşletim sisteminin attığı sahte fatal hataları filtrele
           if (errStr.contains('Bad file descriptor') || errStr.contains('errno = 9')) {
-            debugPrint('[WS] OS tarafından soket kapatıldı (Normal davranış).');
+            debugPrint('[WS][${DateTime.now().toIso8601String()}] OS tarafından soket kapatıldı (Normal davranış).');
           } else {
-            debugPrint('[WS] Beklenmeyen Hata: $error');
+            debugPrint('[WS][${DateTime.now().toIso8601String()}] Beklenmeyen Hata: $error');
           }
           _onDisconnected();
         },
@@ -174,7 +174,7 @@ class WsService {
       // Dinleyicilere "bağlandı" sinyali — DirectChatScreen kaçırılan mesajları çeker
       messageStream.add({'type': 'connected'});
       _connecting = false;
-      debugPrint('[WS] Bağlandı');
+      debugPrint('[WS][${DateTime.now().toIso8601String()}] Bağlandı');
     } catch (_) {
       _connecting = false;
       _channel = null;
@@ -188,7 +188,7 @@ class WsService {
     _channelSub?.cancel();
     _channel = null;
     _connecting = false;
-    debugPrint('[WS] Bağlantı kesildi (code: $closeCode)');
+    debugPrint('[WS][${DateTime.now().toIso8601String()}] Bağlantı kesildi (code: $closeCode)');
     if (!_shouldStay) return;
     if (closeCode == 4001) {
       _refreshAndReconnect();
@@ -203,10 +203,10 @@ class WsService {
   static Future<void> _refreshAndReconnect() async {
     final ok = await AuthService.tryRefresh();
     if (ok) {
-      debugPrint('[WS] Token yenilendi, yeniden bağlanılıyor');
+      debugPrint('[WS][${DateTime.now().toIso8601String()}] Token yenilendi, yeniden bağlanılıyor');
       _scheduleReconnect();
     } else {
-      debugPrint('[WS] Token yenilenemedi, yeniden bağlanılmayacak');
+      debugPrint('[WS][${DateTime.now().toIso8601String()}] Token yenilenemedi, yeniden bağlanılmayacak');
       _shouldStay = false;
     }
   }
@@ -217,7 +217,7 @@ class WsService {
       if (!_shouldStay || _channel != null) return;
       final results = await Connectivity().checkConnectivity();
       if (results.contains(ConnectivityResult.none)) {
-        debugPrint('[WS] (Bekleme) İnternet yok, bağlantı tetiklenmeyecek.');
+        debugPrint('[WS][${DateTime.now().toIso8601String()}] (Bekleme) İnternet yok, bağlantı tetiklenmeyecek.');
         return;
       }
       _connect();
