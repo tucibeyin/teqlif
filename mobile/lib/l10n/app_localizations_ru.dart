@@ -9,6 +9,13 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get micPermissionRequiredTitle => 'Требуется разрешение на микрофон';
+
+  @override
+  String get micPermissionRequiredBody =>
+      'Вам нужно предоставить разрешение на использование микрофона в настройках устройства, чтобы отвечать на звонки.';
+
+  @override
   String get appName => 'теклиф';
 
   @override

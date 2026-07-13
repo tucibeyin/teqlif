@@ -1,5 +1,7 @@
 {
   "@@locale": "en",
+  "micPermissionRequiredTitle": "Microphone Permission Required",
+  "micPermissionRequiredBody": "You need to grant microphone permission from device settings to answer calls.",
   "appName": "teqlif",
   "pro": "PRO",
   "navLive": "Live",

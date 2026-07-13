@@ -26,7 +26,11 @@ const _kCategoryCall  = 'incoming_call_category';
 
 final FlutterLocalNotificationsPlugin _flnp = FlutterLocalNotificationsPlugin();
 
-  static Future<void> showWarningNotification(String title, String body) async {
+  static Future<void> showWarningNotification() async {
+    final prefs = await SharedPreferences.getInstance();
+    final langCode = prefs.getString('language') ?? 'tr';
+    final l = lookupAppLocalizations(Locale(langCode));
+
     const androidDetails = AndroidNotificationDetails(
       'general_alerts',
       'Genel Bildirimler',
@@ -38,8 +42,8 @@ final FlutterLocalNotificationsPlugin _flnp = FlutterLocalNotificationsPlugin();
     const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
     await _flnp.show(
       DateTime.now().millisecond,
-      title,
-      body,
+      l.micPermissionRequiredTitle,
+      l.micPermissionRequiredBody,
       details,
     );
   }

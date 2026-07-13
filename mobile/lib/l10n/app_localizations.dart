@@ -102,6 +102,18 @@ abstract class AppLocalizations {
     Locale('tr'),
   ];
 
+  /// No description provided for @micPermissionRequiredTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mikrofon İzni Gerekli'**
+  String get micPermissionRequiredTitle;
+
+  /// No description provided for @micPermissionRequiredBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aramalara cevap verebilmek için cihaz ayarlarından mikrofon izni vermelisiniz.'**
+  String get micPermissionRequiredBody;
+
   /// No description provided for @appName.
   ///
   /// In tr, this message translates to:

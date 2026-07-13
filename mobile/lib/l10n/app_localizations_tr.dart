@@ -9,6 +9,13 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
+  String get micPermissionRequiredTitle => 'Mikrofon İzni Gerekli';
+
+  @override
+  String get micPermissionRequiredBody =>
+      'Aramalara cevap verebilmek için cihaz ayarlarından mikrofon izni vermelisiniz.';
+
+  @override
   String get appName => 'teqlif';
 
   @override

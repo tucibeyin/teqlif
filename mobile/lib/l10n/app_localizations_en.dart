@@ -9,6 +9,13 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get micPermissionRequiredTitle => 'Microphone Permission Required';
+
+  @override
+  String get micPermissionRequiredBody =>
+      'You need to grant microphone permission from device settings to answer calls.';
+
+  @override
   String get appName => 'teqlif';
 
   @override

@@ -361,10 +361,7 @@ class CallService {
       );
       _hangUpLocally(status: CallStatus.ended);
       try {
-        await PushNotificationService.showWarningNotification(
-          'Mikrofon İzni Gerekli',
-          'Aramalara cevap verebilmek için cihaz ayarlarından mikrofon izni vermelisiniz.',
-        );
+        await PushNotificationService.showWarningNotification();
       } catch (_) {}
       return;
     }

@@ -1,5 +1,7 @@
 {
   "@@locale": "ar",
+  "micPermissionRequiredTitle": "إذن الميكروفون مطلوب",
+  "micPermissionRequiredBody": "تحتاج إلى منح إذن الميكروفون من إعدادات الجهاز للرد على المكالمات.",
   "appName": "teqlif",
   "pro": "PRO",
   "navLive": "مباشر",

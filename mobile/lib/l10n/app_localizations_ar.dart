@@ -9,6 +9,13 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get micPermissionRequiredTitle => 'إذن الميكروفون مطلوب';
+
+  @override
+  String get micPermissionRequiredBody =>
+      'تحتاج إلى منح إذن الميكروفون من إعدادات الجهاز للرد على المكالمات.';
+
+  @override
   String get appName => 'teqlif';
 
   @override

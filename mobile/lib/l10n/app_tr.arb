@@ -1,5 +1,7 @@
 {
   "@@locale": "tr",
+  "micPermissionRequiredTitle": "Mikrofon İzni Gerekli",
+  "micPermissionRequiredBody": "Aramalara cevap verebilmek için cihaz ayarlarından mikrofon izni vermelisiniz.",
   "appName": "teqlif",
   "pro": "PRO",
   "navLive": "Canlı",
