@@ -95,13 +95,11 @@ class StorageService {
   }
 
   static Future<void> saveRefreshToken(String token) async {
-    print('[CALL_FLOW] [Storage] saveRefreshToken = ${token.substring(0, 5)}...');
     await _secureStorage.write(key: _refreshTokenKey, value: token);
   }
 
   static Future<String?> getRefreshToken() async {
     final rt = await _secureStorage.read(key: _refreshTokenKey);
-    print('[CALL_FLOW] [Storage] getRefreshToken = ${rt == null ? "null" : rt.substring(0, 5)}...');
     return rt;
   }
 

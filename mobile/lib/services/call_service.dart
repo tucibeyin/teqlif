@@ -162,7 +162,6 @@ class CallService {
     final oldStatus = state.value.status;
     final oldPoor = state.value.isPoorConnection;
     state.value = s;
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [State] Transition: $oldStatus -> ${s.status}');
     
     if (oldStatus != s.status) {
       _handleStatusChange(oldStatus, s.status);
@@ -184,7 +183,6 @@ class CallService {
     } else if (newStatus == CallStatus.ended) {
       if (oldStatus == CallStatus.connected || oldStatus == CallStatus.connecting) {
         _audioPlayer.setReleaseMode(ReleaseMode.release);
-        debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] Playing ended.wav');
         _audioPlayer.play(AssetSource('sounds/ended.wav'));
       } else {
         _audioPlayer.stop();
@@ -202,11 +200,9 @@ class CallService {
     required String calleeUsername,
     required String? calleeAvatar,
   }) async {
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] startCall invoked for calleeId=$calleeId');
     _resetTimer?.cancel();
     if (hasActiveCall) {
       debugPrint('[CallService] Cannot start call: already in an active call.');
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] startCall aborted - already active.');
       return;
     }
 
@@ -243,7 +239,6 @@ class CallService {
       _startRingTimer();
       await WakelockPlus.enable();
     } on CallApiException catch (e) {
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] startCall API error: $e');
       if (e.code == 'USER_BUSY') {
         _setState(state.value.copyWith(status: CallStatus.busy));
         _scheduleReset();
@@ -252,7 +247,6 @@ class CallService {
         _scheduleReset();
       }
     } catch (e, stack) {
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] startCall error: $e\n$stack');
       _setState(state.value.copyWith(status: CallStatus.ended));
       _scheduleReset();
     }
@@ -281,7 +275,6 @@ class CallService {
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
   Future<void> onIncomingCall(Map<String, dynamic> data) async {
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] onIncomingCall received data: $data');
     _resetTimer?.cancel();
     
     final incomingCallId = data['call_id'] is int
@@ -289,7 +282,6 @@ class CallService {
         : int.tryParse(data['call_id'].toString());
 
     if (incomingCallId != null && incomingCallId == _lastEndedCallId) {
-      debugPrint('[CALL_FLOW] [CallService] onIncomingCall aborted - ghost call (already ended)');
       return;
     }
 
@@ -304,15 +296,12 @@ class CallService {
 
     if (incomingCallId != null) {
       try {
-        debugPrint('[CALL_FLOW] [CallService] Checking if call $incomingCallId is still active before ringing...');
         final statusData = await _get('/calls/$incomingCallId/status');
         final backendStatus = statusData['status'];
         if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
-          debugPrint('[CALL_FLOW] [CallService] onIncomingCall aborted - API says call is $backendStatus');
           return;
         }
       } catch (e) {
-        debugPrint('[CALL_FLOW] [CallService] Could not verify call status, proceeding to ring: $e');
       }
     }
 
@@ -375,18 +364,14 @@ class CallService {
   }
 
   Future<void> acceptCall() async {
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] acceptCall invoked');
     if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] acceptCall aborted - already connecting/connected');
       return;
     }
     final callId = state.value.callId;
     if (callId == null) {
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] acceptCall aborted - callId is null');
       return;
     }
     if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] acceptCall aborted - already connecting/connected');
       return;
     }
 
@@ -417,7 +402,6 @@ class CallService {
           break; // Success
         } catch (e) {
           retryCount++;
-          debugPrint('[CALL_FLOW] [CallService] acceptCall POST failed (Attempt $retryCount/4): $e');
           if (retryCount >= 4) rethrow;
           await Future.delayed(Duration(milliseconds: 500 * retryCount)); // 500ms, 1000ms, 1500ms
         }
@@ -429,13 +413,11 @@ class CallService {
         token: data['token'] as String,
       );
     } catch (e, stack) {
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] acceptCall error: $e\n$stack');
       _hangUpLocally(status: CallStatus.ended);
     }
   }
 
   Future<void> rejectCall() async {
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] rejectCall invoked');
     if (state.value.status == CallStatus.ended || state.value.status == CallStatus.rejected) return;
     final callId = state.value.callId;
     if (callId != null) {
@@ -507,7 +489,6 @@ class CallService {
     
     try {
       debugPrint('[CallService] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [LiveKit] _joinRoom starting...');
       
       // Force iOS to use earpiece and playAndRecord category before LiveKit messes with it
       try {
@@ -520,12 +501,10 @@ class CallService {
         await Hardware.instance.setSpeakerphoneOn(false);
       } catch (e) {
         debugPrint('[CallService] AudioSession pre-config error: $e');
-        debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [LiveKit] AudioSession pre-config error: $e');
       }
 
       await _room!.connect(livekitUrl, token, roomOptions: const RoomOptions(defaultAudioOutputOptions: AudioOutputOptions(speakerOn: false)));
       debugPrint('[CallService] _joinRoom SUCCESSFUL!');
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [LiveKit] _joinRoom SUCCESSFUL!');
       
       // We must fulfill CallKit BEFORE enabling the microphone on iOS!
       if (Platform.isIOS && state.value.callId != null) {
@@ -645,9 +624,7 @@ class CallService {
     _setState(state.value.copyWith(isSpeaker: enabled));
   }
   Future<void> endCall() async {
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] endCall invoked');
     if (state.value.status == CallStatus.ended || state.value.status == CallStatus.idle) {
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] endCall aborted - already idle/ended');
       return;
     }
     final callId = state.value.callId;
@@ -660,7 +637,6 @@ class CallService {
             break;
           } catch (e) {
             retryCount++;
-            debugPrint('[CALL_FLOW] [CallService] endCall POST failed (Attempt $retryCount/4): $e');
             if (retryCount >= 4) break;
             await Future.delayed(Duration(milliseconds: 500 * retryCount));
           }
@@ -703,7 +679,6 @@ class CallService {
   }
 
   void reset() {
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [CallService] reset() called - cleaning up all states');
     _resetTimer?.cancel();
     stopRingtoneAndVibration();
     _ringTimer?.cancel();

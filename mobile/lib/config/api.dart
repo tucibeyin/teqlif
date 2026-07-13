@@ -100,7 +100,6 @@ Future<Map<String, dynamic>> apiCall(
 }) async {
   try {
     final response = await request();
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] ${response.request?.method} ${response.request?.url} -> Status: ${response.statusCode}');
 
     // 429 → Retry-After kadar bekle, bir kez yeniden dene
     if (response.statusCode == 429 && !retried429) {
@@ -120,11 +119,9 @@ Future<Map<String, dynamic>> apiCall(
     }
 
     if (response.statusCode >= 400) {
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API ERROR] Response Body: ${response.body}');
     }
 
     if (response.statusCode >= 500 && !retried) {
-      debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] 500/502/503 received. Retrying once after 500ms...');
       await Future.delayed(const Duration(milliseconds: 500));
       return apiCall(request, retried: true, retried429: retried429);
     }
@@ -136,12 +133,9 @@ Future<Map<String, dynamic>> apiCall(
         final isAuthEndpoint = urlStr.contains('/api/auth/login') || urlStr.contains('/api/auth/register');
         
         if (!isAuthEndpoint) {
-          debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] 401 Unauthorized received for ${response.request?.url}. Attempting token refresh...');
           final refreshed = await _tryRefreshOnce();
-          debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] Token refresh result: $refreshed');
           if (refreshed) return apiCall(request, retried: true);
           // Her iki token da geçersiz → global logout sinyali
-          debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] Token refresh failed. Triggering global logout.');
           AuthService.authFailedStream.add(null);
         }
       }
@@ -153,7 +147,6 @@ Future<Map<String, dynamic>> apiCall(
     rethrow;
   } catch (e, stack) {
     // Ağ hatası (timeout, DNS, VPS tamamen kapalı, vb.)
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API] NETWORK ERROR: $e');
     LoggerService.instance.captureException(
       e,
       stackTrace: stack,
@@ -177,7 +170,6 @@ Future<List<dynamic>> apiCallList(
 }) async {
   try {
     final response = await request();
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API_LIST] ${response.request?.method} ${response.request?.url} -> Status: ${response.statusCode}');
 
     // 429 → Retry-After kadar bekle, bir kez yeniden dene
     if (response.statusCode == 429 && !retried429) {
@@ -221,7 +213,6 @@ Future<List<dynamic>> apiCallList(
   } on AppException {
     rethrow;
   } catch (e, stack) {
-    debugPrint('[CALL_FLOW] [${DateTime.now().toIso8601String()}] [API_LIST] NETWORK ERROR: $e');
     LoggerService.instance.captureException(
       e,
       stackTrace: stack,
