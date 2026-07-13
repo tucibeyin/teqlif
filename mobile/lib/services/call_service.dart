@@ -265,7 +265,7 @@ class CallService {
           final params = CallKitParams(
             id: uuid,
             nameCaller: calleeUsername,
-            appName: 'Teqlif',
+            appName: 'teqlif',
             avatar: calleeAvatar ?? 'https://i.pravatar.cc/100',
             handle: 'Teqlif Voice Call',
             type: 0,

@@ -94,7 +94,7 @@ Future<void> _showCallNotification({
   final params = CallKitParams(
     id: callUuid,
     nameCaller: callerUsername,
-    appName: 'Teqlif',
+    appName: 'teqlif',
     avatar: callerAvatar.isNotEmpty ? callerAvatar : 'https://i.pravatar.cc/100',
     handle: l.callVoiceCall,
     type: 0,
