@@ -188,6 +188,11 @@ class _SwipeLiveScreenState extends State<SwipeLiveScreen> {
       _isCallActive = isCallActive;
       debugPrint('[LIVE_SCREEN_CALL] SwipeLiveScreen call state changed. isCallActive: $_isCallActive');
       _connectionManager.setCallActive(_isCallActive);
+      
+      if (!_isCallActive) {
+        // Çağrı bittiğinde, yayının sesinin her halükarda speaker'dan gelmesini garantiye alıyoruz
+        Hardware.instance.setSpeakerphoneOn(true).catchError((_) {});
+      }
     }
   }
 
