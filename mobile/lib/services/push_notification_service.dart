@@ -488,13 +488,25 @@ class PushNotificationService {
           voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
           final shortVoip = (voipToken != null && voipToken.length >= 15) ? "${voipToken.substring(0, 15)}…" : voipToken;
           debugPrint('[CallKit] VoIP token alındı: ${shortVoip ?? "NULL"}');
+
+          // İlk denemede null gelirse bekleyip tekrar dene
+          // PKPushRegistry delegate henüz tetiklenmemiş olabilir
+          if (voipToken == null || voipToken.isEmpty) {
+            debugPrint('[CallKit] VoIP token null, 3s bekleyip tekrar deneniyor...');
+            await Future.delayed(const Duration(seconds: 3));
+            voipToken = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
+            final shortRetry = (voipToken != null && voipToken.length >= 15)
+                ? "${voipToken.substring(0, 15)}…"
+                : voipToken;
+            debugPrint('[CallKit] VoIP token retry sonucu: ${shortRetry ?? "HÂLÂ NULL"}');
+          }
         } catch (e) {
           debugPrint('[CallKit] VoIP token alınamadı: $e');
         }
       }
 
       await AuthService.saveDeviceTokens(fcmToken: token, voipToken: voipToken);
-      debugPrint('[FCM] Token backend\'e kaydedildi ✓');
+      debugPrint('[FCM] Token backend\'e kaydedildi ✓ | VoIP=${voipToken != null ? "var" : "yok"}');
     } catch (e) {
       debugPrint('[FCM] Token gönderilemedi: $e');
     }

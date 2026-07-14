@@ -8,6 +8,7 @@ Flow:
   POST /{id}/end     → other party gets WS call_ended; LK room deleted
   POST /{id}/missed  → callee gets WS call_missed (caller-side 30s timeout)
 """
+import asyncio
 import time
 from datetime import datetime, timezone, timedelta
 
@@ -101,7 +102,13 @@ async def _send_call_push(
     callee_token: str,
     db: AsyncSession,
 ) -> None:
-    """Send VoIP push for iOS if available, otherwise fallback to FCM push."""
+    """VoIP push (iOS) veya FCM fallback gönderir.
+
+    Token yaş stratejisi (WhatsApp pattern):
+      - Taze token  (<= 7 gün): sadece VoIP — batarya dostu, hızlı
+      - Stale token (8-30 gün): VoIP + FCM aynı anda — biri mutlaka ulaşır
+      - Çok eski    (> 30 gün): FCM önce, VoIP best-effort
+    """
     if not callee.fcm_token and not callee.voip_token:
         return
 
@@ -128,35 +135,36 @@ async def _send_call_push(
         "callee_token": callee_token,
     }
 
-    # VoIP Push önceliği (iOS cihazlar için)
-    if callee.voip_token:
-        logger.info(f"[Calls] Callee {callee.id} has voip_token, attempting APNs VoIP push.")
-        try:
-            # VoIP payload: Apple, VoIP push'larda aps.alert/sound'u ignore eder.
-            # Tüm data top-level'da, aps sadece content-available sinyali için.
-            payload = {
-                "aps": {"content-available": 1},
-                **extra_data,
-            }
-            logger.debug(f"[Calls] VoIP Payload: {payload}")
-            success, bad_token = await send_voip_push(callee.voip_token, payload)
-            if bad_token:
-                # Apple'ın önerisi: geçersiz token'ı DB'den temizle.
-                # Kullanıcı uygulamayı açtığında iOS yeni token üretir ve backend'e gönderir.
-                logger.warning(f"[Calls] VoIP token for user {callee.id} is invalid, clearing from DB.")
-                callee.voip_token = None
-                await db.commit()
-            if success:
-                logger.info(f"[Calls] VoIP push successful for {callee.id}, skipping FCM.")
-                return  # Eğer VoIP başarılıysa, FCM atmaya gerek yok.
-            else:
-                logger.warning(f"[Calls] VoIP push failed for {callee.id}, will fallback to FCM.")
-        except Exception as exc:
-            logger.warning("[Calls] VoIP push exception, FCM denenecek: %s", exc)
+    # Token yaşını hesapla
+    token_age_days = 999
+    if callee.voip_token and callee.voip_token_updated_at:
+        delta = datetime.now(timezone.utc) - (
+            callee.voip_token_updated_at
+            if callee.voip_token_updated_at.tzinfo
+            else callee.voip_token_updated_at.replace(tzinfo=timezone.utc)
+        )
+        token_age_days = delta.days
 
-    # Fallback: Android veya VoIP başarısız olursa FCM at
-    if callee.fcm_token:
-        logger.info(f"[Calls] Falling back to FCM push for callee {callee.id}.")
+    async def _try_voip() -> bool:
+        """VoIP push dener; başarısızsa token'ı temizler. True döner → başarılı."""
+        if not callee.voip_token:
+            return False
+        logger.info(f"[Calls] VoIP push denemesi | user={callee.id} age={token_age_days}d")
+        payload = {
+            "aps": {"content-available": 1},
+            **extra_data,
+        }
+        success, bad_token = await send_voip_push(callee.voip_token, payload)
+        if bad_token:
+            logger.warning(f"[Calls] VoIP token geçersiz, DB'den temizleniyor | user={callee.id}")
+            callee.voip_token = None
+            await db.commit()
+        return success
+
+    async def _try_fcm() -> None:
+        """FCM push dener."""
+        if not callee.fcm_token:
+            return
         try:
             await send_push(
                 token=callee.fcm_token,
@@ -167,7 +175,29 @@ async def _send_call_push(
                 extra_data=extra_data,
             )
         except Exception as exc:
-            logger.warning("[Calls] Call push bildirimi gönderilemedi: %s", exc)
+            logger.warning("[Calls] FCM push hatası: %s", exc)
+
+    if callee.voip_token:
+        if token_age_days <= 7:
+            # TAZE: sadece VoIP — hızlı, batarya dostu
+            logger.info(f"[Calls] Taze VoIP token ({token_age_days}gün) — sadece VoIP")
+            ok = await _try_voip()
+            if not ok:
+                logger.info("[Calls] VoIP başarısız, FCM fallback")
+                await _try_fcm()
+
+        elif token_age_days <= 30:
+            # STALE: VoIP + FCM eş zamanlı — biri mutlaka ulaşır
+            logger.info(f"[Calls] Stale VoIP token ({token_age_days}gün) — VoIP + FCM eş zamanlı")
+            await asyncio.gather(_try_voip(), _try_fcm())
+
+        else:
+            # ÇOK ESKİ: FCM önce, VoIP best-effort
+            logger.info(f"[Calls] Çok eski VoIP token ({token_age_days}gün) — FCM önce")
+            await asyncio.gather(_try_fcm(), _try_voip())
+    else:
+        # VoIP yok, sadece FCM
+        await _try_fcm()
 
 
 # ── POST /api/calls/start ─────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import PushKit
 import flutter_callkit_incoming
 import CallKit
 import AVFAudio
+import Security
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate, CallkitIncomingAppDelegate {
@@ -52,16 +53,83 @@ import AVFAudio
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
   }
 
+  // ── VoIP Token — Native Layer (WhatsApp pattern) ──────────────────────────
+  //
+  // Bu metod Flutter engine'den tamamen bağımsız çalışır.
+  // PKPushRegistry callback'i app kapalıyken de tetiklenir; Keychain'den
+  // auth token'ı okuyarak doğrudan URLSession ile backend'e kaydeder.
+
+  private let kVoIPTokenKey = "teqlif_voip_token"   // UserDefaults backup
+  private let kBackendURL   = "https://www.teqlif.com/api/auth/device-tokens"
+
+  /// flutter_secure_storage Keychain'inden JWT auth token'ını okur.
+  private func readAuthToken() -> String? {
+    let query: [CFString: Any] = [
+      kSecClass:            kSecClassGenericPassword,
+      kSecAttrService:      "flutter_secure_storage",
+      kSecAttrAccount:      "teqlif_token",
+      kSecReturnData:       true,
+      kSecMatchLimit:       kSecMatchLimitOne
+    ]
+    var result: AnyObject?
+    let status = SecItemCopyMatching(query as CFDictionary, &result)
+    guard status == errSecSuccess,
+          let data = result as? Data,
+          let token = String(data: data, encoding: .utf8) else {
+      return nil
+    }
+    return token
+  }
+
+  /// Token'ı backend'e URLSession ile gönderir — Flutter bridge gerektirmez.
+  /// voipToken boş string ise backend token'ı DB'den temizler.
+  private func sendVoIPTokenToBackend(_ voipToken: String) {
+    guard let authToken = readAuthToken() else {
+      print("[PushKit][Native] Auth token yok — token kaydedilemedi")
+      return
+    }
+    guard let url = URL(string: kBackendURL) else { return }
+
+    var req = URLRequest(url: url)
+    req.httpMethod          = "POST"
+    req.timeoutInterval     = 15
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+
+    let body: [String: Any] = ["voip_token": voipToken]
+    guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return }
+    req.httpBody = bodyData
+
+    URLSession.shared.dataTask(with: req) { _, response, error in
+      if let error = error {
+        print("[PushKit][Native] Token kayıt hatası: \(error.localizedDescription)")
+      } else if let http = response as? HTTPURLResponse {
+        print("[PushKit][Native] Token kayıt yanıtı: \(http.statusCode) | token=\(voipToken.prefix(10))...")
+      }
+    }.resume()
+  }
+
   // VoIP Push Token Updates
   func pushRegistry(_ registry: PKPushRegistry, didUpdate credentials: PKPushCredentials, for type: PKPushType) {
       let deviceToken = credentials.token.map { String(format: "%02x", $0) }.joined()
-      print("[PushKit] Token alındı: \(deviceToken)")
+      print("[PushKit] Token alındı: \(deviceToken.prefix(16))...")
+
+      // 1. Flutter plugin'e bildir (Flutter bridge — engine açıksa çalışır)
       SwiftFlutterCallkitIncomingPlugin.sharedInstance?.setDevicePushTokenVoIP(deviceToken)
+
+      // 2. UserDefaults yedek — uygulama açıldığında reconciliation için
+      UserDefaults.standard.set(deviceToken, forKey: kVoIPTokenKey)
+
+      // 3. Native HTTP: Flutter bridge bypass — uygulama kapalıyken de çalışır
+      sendVoIPTokenToBackend(deviceToken)
   }
 
   func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
-      print("[PushKit] Token geçersiz kılındı")
+      print("[PushKit] Token geçersiz kılındı — backend'e silme isteği gönderiliyor")
       SwiftFlutterCallkitIncomingPlugin.sharedInstance?.setDevicePushTokenVoIP("")
+      UserDefaults.standard.removeObject(forKey: kVoIPTokenKey)
+      // Backend'e explicit silme isteği at (boş string → DB'den sil)
+      sendVoIPTokenToBackend("")
   }
 
   // Handle incoming pushes
