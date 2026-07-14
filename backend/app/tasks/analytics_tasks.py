@@ -238,7 +238,7 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
             text("""
                 INSERT INTO tuci_transactions (user_id, amount, transaction_type, created_at)
                 SELECT u, :amount, :ttype, NOW()
-                FROM unnest(:uids) AS u
+                FROM unnest(CAST(:uids AS BIGINT[])) AS u
             """),
             {"amount": _AIRDROP_AMOUNT, "ttype": _AIRDROP_TYPE, "uids": uid_list},
         )
