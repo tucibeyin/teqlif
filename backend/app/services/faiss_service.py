@@ -127,7 +127,16 @@ async def rebuild_index() -> None:
         return
 
     listing_ids = np.array([r[0] for r in rows], dtype=np.int64)
-    vectors = np.array([r[1] for r in rows], dtype=np.float32)
+
+    # embedding DB'den string olarak gelebilir ('[-0.08, ...]' formatı)
+    # pgvector native list döndürüyorsa isinstance kontrolü bunu yakalar
+    def _parse_embedding(raw) -> list:
+        if isinstance(raw, str):
+            import json
+            return json.loads(raw)
+        return list(raw)
+
+    vectors = np.array([_parse_embedding(r[1]) for r in rows], dtype=np.float32)
     faiss.normalize_L2(vectors)
 
     n = len(rows)
