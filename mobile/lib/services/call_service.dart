@@ -198,35 +198,44 @@ class CallService {
     if (newStatus == CallStatus.calling) {
       AudioSession.instance.then((session) async {
         try {
+          // Ringtone için ses ayarları — VoiceCommunication değil, ring/notification.
+          // Android'de voiceCommunication + AudioFocus.gain, ReleaseMode.loop'u
+          // keserek ses sadece bir kere çalar. Ring context bunu engeller.
           await session.configure(AudioSessionConfiguration(
             avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
             avAudioSessionMode: AVAudioSessionMode.voiceChat,
-            avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
+            avAudioSessionCategoryOptions:
+                AVAudioSessionCategoryOptions.allowBluetooth |
+                AVAudioSessionCategoryOptions.allowBluetoothA2dp,
             androidAudioAttributes: AndroidAudioAttributes(
-              contentType: AndroidAudioContentType.speech,
+              contentType: AndroidAudioContentType.music,
               flags: AndroidAudioFlags.none,
-              usage: AndroidAudioUsage.voiceCommunication,
+              usage: AndroidAudioUsage.notificationRingtone,
             ),
-            androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-            androidWillPauseWhenDucked: true,
+            androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientMayDuck,
+            androidWillPauseWhenDucked: false,
           ));
           await Hardware.instance.setSpeakerphoneOn(false);
 
+          // AudioPlayer context: ringtone için ring stream
           await _audioPlayer.setAudioContext(ap.AudioContext(
             android: const ap.AudioContextAndroid(
-              usageType: ap.AndroidUsageType.voiceCommunication,
-              contentType: ap.AndroidContentType.speech,
-              audioFocus: ap.AndroidAudioFocus.gain,
+              usageType: ap.AndroidUsageType.notificationRingtone,
+              contentType: ap.AndroidContentType.music,
+              audioFocus: ap.AndroidAudioFocus.gainTransientMayDuck,
             ),
             iOS: ap.AudioContextIOS(
               category: ap.AVAudioSessionCategory.playAndRecord,
-              options: {ap.AVAudioSessionOptions.allowBluetooth, ap.AVAudioSessionOptions.allowBluetoothA2DP},
+              options: {
+                ap.AVAudioSessionOptions.allowBluetooth,
+                ap.AVAudioSessionOptions.allowBluetoothA2DP,
+              },
             ),
           ));
         } catch (e) {
           debugPrint('[LIVE_SCREEN_CALL] AudioSession prep error: $e');
         }
-        
+
         _audioPlayer.setReleaseMode(ReleaseMode.loop);
         if (state.value.status == CallStatus.calling) {
           if (Platform.isIOS) {
@@ -250,7 +259,6 @@ class CallService {
       }
     } else if (newStatus == CallStatus.connected || newStatus == CallStatus.idle) {
       _audioPlayer.stop();
-
     }
   }
 
