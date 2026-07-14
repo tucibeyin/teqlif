@@ -1349,8 +1349,9 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
 
             if not ghost_calls:
                 return
-            
-            lk_rooms = []
+
+            # LiveKit oda listesini çek — HATA DURUMUNDA active aramalara dokunma
+            lk_rooms = None  # None = API çağrısı başarısız, [] = başarılı ama oda yok
             try:
                 async with aiohttp.ClientSession() as session:
                     svc = RoomService(
@@ -1363,18 +1364,56 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
                     lk_rooms = [r.name for r in res.rooms]
             except Exception as e:
                 logger.error("LiveKit list_rooms failed in cleanup_ghost_calls_task: %s", e)
+                # lk_rooms = None kalır → aktif aramalara dokunulmaz
+
+            rooms_to_delete = []
 
             for call in ghost_calls:
                 if call.status == "calling":
                     logger.warning("Ghost call cleaned up: %d changed from calling to missed", call.id)
                     call.status = "missed"
+                    call.ended_at = now  # FIX: ended_at eksikti
+                    rooms_to_delete.append(call.room_name)
+                    # FIX: WS bildirimi — kullanıcılar ekranda takılı kalmasın
+                    try:
+                        await ws_manager.send_personal_message(call.caller_id, {"type": "call_missed", "call_id": call.id})
+                        await ws_manager.send_personal_message(call.callee_id, {"type": "call_missed", "call_id": call.id})
+                    except Exception as ws_err:
+                        logger.warning("Ghost call WS notify failed for %d: %s", call.id, ws_err)
+
                 elif call.status == "active":
+                    # FIX: lk_rooms None ise (API hatası) aktif aramalara dokunma
+                    if lk_rooms is None:
+                        logger.warning("Ghost call check skipped for %d: LiveKit API unavailable", call.id)
+                        continue
                     if call.room_name not in lk_rooms:
                         logger.warning("Ghost call cleaned up: %d changed from active to ended (no room)", call.id)
                         call.status = "ended"
                         call.ended_at = now
-            
+                        rooms_to_delete.append(call.room_name)
+                        # FIX: WS bildirimi
+                        try:
+                            await ws_manager.send_personal_message(call.caller_id, {"type": "call_ended", "call_id": call.id})
+                            await ws_manager.send_personal_message(call.callee_id, {"type": "call_ended", "call_id": call.id})
+                        except Exception as ws_err:
+                            logger.warning("Ghost call WS notify failed for %d: %s", call.id, ws_err)
+
             await db.commit()
+
+            # FIX: Ghost call room'larını LiveKit'ten de sil
+            for room_name in rooms_to_delete:
+                try:
+                    from livekit.api import LiveKitAPI, DeleteRoomRequest
+                    async with LiveKitAPI(
+                        url=settings.livekit_api_base,
+                        api_key=settings.livekit_api_key,
+                        api_secret=settings.livekit_api_secret,
+                    ) as api:
+                        await api.room.delete_room(DeleteRoomRequest(room=room_name))
+                except Exception as lk_err:
+                    err_msg = str(lk_err).lower()
+                    if "not_found" not in err_msg and "does not exist" not in err_msg:
+                        logger.warning("Ghost call LK room delete failed | room=%s | %s", room_name, lk_err)
 
     except Exception as exc:
         logger.error(f"Error in cleanup_ghost_calls_task: {exc}", exc_info=True)
