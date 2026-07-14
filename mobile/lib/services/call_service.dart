@@ -141,6 +141,9 @@ class CallService {
   Timer? _peerTimeoutTimer; // Timeout if other user doesn't join LiveKit room
   Timer? _ringtoneLoopTimer; // For iOS ringtone looping
   Timer? _resetTimer; // To prevent delayed reset overwriting new calls
+  Timer? _callerStatusPollTimer; // Poll /status while in calling state (WS kayıp event recovery)
+
+  bool _isHangingUp = false; // Eş zamanlı _hangUpLocally çağrılarını önler
   
   Timer? _hapticLoopTimer;
   
@@ -354,6 +357,10 @@ class CallService {
         token: data['token'] as String,
       );
       debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] startCall: AWAIT _joinRoom FINISHED');
+
+      // WS kayıp event recovery: call_accepted WS'den gelmezse poll ile yakala
+      final callIdForPoll = data['call_id'] as int;
+      _startCallerStatusPoll(callIdForPoll);
     } on AppException catch (e) {
       debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] startCall catch (AppException) triggered: ${e.code}');
       if (e.code == 'USER_BUSY') {
@@ -372,7 +379,8 @@ class CallService {
 
   void _startRingTimer() {
     _ringTimer?.cancel();
-    _ringTimer = Timer(const Duration(seconds: 45), () async {
+    // 30s: server ARQ 35s'den önce client timeout atar (server sadece backup)
+    _ringTimer = Timer(const Duration(seconds: 30), () async {
       if (state.value.status == CallStatus.calling) {
         final callId = state.value.callId;
         if (callId != null) {
@@ -384,6 +392,37 @@ class CallService {
         await Future.delayed(const Duration(seconds: 2));
         reset();
       }
+    });
+  }
+
+  /// WS kayıp event recovery: caller calling durumundayken /status'u poll et.
+  /// WS geçici kopuksa ve call_accepted eventi kaçtıysa bu metod yakalar.
+  void _startCallerStatusPoll(int callId) {
+    _callerStatusPollTimer?.cancel();
+    _callerStatusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
+      if (state.value.status != CallStatus.calling) {
+        _callerStatusPollTimer?.cancel();
+        return;
+      }
+      try {
+        final statusData = await _get('/calls/$callId/status');
+        final s = statusData['status'] as String?;
+        if (s == 'active') {
+          _callerStatusPollTimer?.cancel();
+          if (state.value.status == CallStatus.calling) {
+            debugPrint('[LIVE_SCREEN_CALL] Poll recovered call_accepted event | call_id=$callId');
+            await onCallAccepted({
+              if (statusData['accepted_at'] != null) 'accepted_at': statusData['accepted_at'],
+            });
+          }
+        } else if (s == 'missed' || s == 'ended' || s == 'rejected') {
+          _callerStatusPollTimer?.cancel();
+          if (state.value.status == CallStatus.calling) {
+            debugPrint('[LIVE_SCREEN_CALL] Poll detected call terminated | call_id=$callId status=$s');
+            await _hangUpLocally(status: CallStatus.ended);
+          }
+        }
+      } catch (_) {}
     });
   }
 
@@ -585,6 +624,7 @@ class CallService {
 
   Future<void> onCallAccepted(Map<String, dynamic> data) async {
     _ringTimer?.cancel();
+    _callerStatusPollTimer?.cancel(); // Poll'u durdur — event zaten geldi
     stopRingtoneAndVibration();
     
     if (data['accepted_at'] != null) {
@@ -808,20 +848,13 @@ class CallService {
       return;
     }
     final callId = state.value.callId;
+    _callerStatusPollTimer?.cancel();
     if (callId != null) {
-      try {
-        int retryCount = 0;
-        while (retryCount < 4) {
-          try {
-            await _post('/calls/$callId/end');
-            break;
-          } catch (e) {
-            retryCount++;
-            if (retryCount >= 4) break;
-            await Future.delayed(Duration(milliseconds: 500 * retryCount));
-          }
-        }
-      } catch (_) {}
+      // Fire-and-forget + tek retry: UI'ı bloke etme, arka planda gönder
+      _post('/calls/$callId/end').catchError((_) async {
+        await Future.delayed(const Duration(milliseconds: 500));
+        _post('/calls/$callId/end').catchError((_) {});
+      });
     }
     await _hangUpLocally(status: CallStatus.ended);
   }
@@ -835,44 +868,53 @@ class CallService {
 
   Future<void> _hangUpLocally({required CallStatus status}) async {
     debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _hangUpLocally called with status: $status');
+    // _isHangingUp: eş zamanlı çağrıları (WS event + FCM + LK disconnect) önler
+    if (_isHangingUp) {
+      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _hangUpLocally skipped (already hanging up)');
+      return;
+    }
+    _isHangingUp = true;
     try {
-      throw Exception('_hangUpLocally stack trace logger');
-    } catch (e, st) {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Trace: $st');
-    }
-    if (state.value.status == status) return;
-    stopRingtoneAndVibration();
-    _ringTimer?.cancel();
-    _elapsedTimer?.cancel();
-    
-    // 1. Bekleyerek odayı koparıyoruz (LiveKit native kaynakları serbest bıraksın)
-    await _disconnectRoom();
-    WakelockPlus.disable();
-    
-    // 2. CallKit'in iOS/Android native çağrılarını temizlemesini bekliyoruz
-    if (state.value.callId != null) {
-      await FlutterCallkitIncoming.endCall(_formatToUuid(state.value.callId.toString()));
-    }
-    await FlutterCallkitIncoming.endAllCalls();
+      if (state.value.status == status) {
+        return;
+      }
+      _callerStatusPollTimer?.cancel();
+      stopRingtoneAndVibration();
+      _ringTimer?.cancel();
+      _elapsedTimer?.cancel();
+      
+      // 1. Bekleyerek odayı koparıyoruz (LiveKit native kaynakları serbest bıraksın)
+      await _disconnectRoom();
+      WakelockPlus.disable();
+      
+      // 2. CallKit'in iOS/Android native çağrılarını temizlemesini bekliyoruz
+      if (state.value.callId != null) {
+        await FlutterCallkitIncoming.endCall(_formatToUuid(state.value.callId.toString()));
+      }
+      await FlutterCallkitIncoming.endAllCalls();
 
-    // 3. CallKit ve LiveKit kapandıktan sonra global ses oturumunu (AVAudioSession)
-    // hoparlöre yönlendirecek şekilde zorluyoruz.
-    try {
-      await Hardware.instance.setSpeakerphoneOn(true);
-    } catch (e) {
-      debugPrint('[CallService] setSpeakerphoneOn(true) error: $e');
-    }
+      // 3. CallKit ve LiveKit kapandıktan sonra global ses oturumunu (AVAudioSession)
+      // hoparlöre yönlendirecek şekilde zorluyoruz.
+      try {
+        await Hardware.instance.setSpeakerphoneOn(true);
+      } catch (e) {
+        debugPrint('[CallService] setSpeakerphoneOn(true) error: $e');
+      }
 
-    // 4. Bütün donanım/native işlemler bittikten sonra state'i güncelliyoruz
-    // Böylece UI katmanı (SwipeLiveScreen) tepki verdiğinde her şey hazır oluyor.
-    _setState(state.value.copyWith(status: status));
-    _scheduleReset();
+      // 4. Bütün donanım/native işlemler bittikten sonra state'i güncelliyoruz
+      // Böylece UI katmanı (SwipeLiveScreen) tepki verdiğinde her şey hazır oluyor.
+      _setState(state.value.copyWith(status: status));
+      _scheduleReset();
+    } finally {
+      _isHangingUp = false;
+    }
   }
 
   Future<void> _disconnectRoom() async {
     _ringtoneLoopTimer?.cancel();
     _elapsedTimer?.cancel();
     _peerTimeoutTimer?.cancel();
+    _callerStatusPollTimer?.cancel();
     _roomEventsSubscription?.call();
     _audioInterruptionSubscription?.cancel();
     
@@ -885,6 +927,7 @@ class CallService {
 
   void reset() {
     _resetTimer?.cancel();
+    _callerStatusPollTimer?.cancel();
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();

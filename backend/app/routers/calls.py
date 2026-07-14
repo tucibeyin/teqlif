@@ -82,8 +82,11 @@ async def get_call_status(
     call = result.scalars().first()
     if not call:
         raise HTTPException(status_code=404, detail="Call not found")
-        
-    return {"status": call.status}
+
+    return {
+        "status": call.status,
+        "accepted_at": call.accepted_at.isoformat() if call.accepted_at else None,
+    }
 
 
 async def _ws_broadcast(user_id: int, payload: dict) -> None:
@@ -183,6 +186,16 @@ async def start_call(
     if not callee:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    # Check if caller is already in an active call
+    caller_busy = await db.scalar(
+        select(Call).where(
+            or_(Call.caller_id == current_user.id, Call.callee_id == current_user.id),
+            Call.status.in_(["calling", "active"])
+        )
+    )
+    if caller_busy:
+        raise AppException(status_code=409, message="Already in a call", code="CALLER_BUSY")
+
     # Check if callee is already in an active call
     active_call = await db.scalar(
         select(Call).where(
@@ -245,32 +258,41 @@ async def accept_call(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    call = await db.get(Call, call_id)
+    # SELECT FOR UPDATE — eş zamanlı iki accept isteği race condition'ı önler
+    result = await db.execute(
+        select(Call).where(Call.id == call_id).with_for_update()
+    )
+    call = result.scalar_one_or_none()
     if not call or call.callee_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
     if call.status != "calling":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Call is no longer active")
 
+    # accepted_at'ı yerel değişkene al — commit sonrası SQLAlchemy attribute expire olmaz
+    accepted_at = datetime.now(timezone.utc)
     call.status = "active"
-    call.accepted_at = datetime.now(timezone.utc)
+    call.accepted_at = accepted_at
+    room_name = call.room_name
+    caller_id = call.caller_id
+    call_id_val = call.id
     await db.commit()
 
-    token = _make_livekit_token(call.room_name, current_user)
+    token = _make_livekit_token(room_name, current_user)
 
-    await _ws_broadcast(call.caller_id, {
+    await _ws_broadcast(caller_id, {
         "type": "call_accepted",
-        "call_id": call.id,
-        "room_name": call.room_name,
-        "accepted_at": call.accepted_at.isoformat()
-    });
+        "call_id": call_id_val,
+        "room_name": room_name,
+        "accepted_at": accepted_at.isoformat(),
+    })
 
     logger.info("[Calls] Arama kabul edildi | call_id=%d", call_id)
     return {
-        "call_id": call.id,
-        "room_name": call.room_name,
+        "call_id": call_id_val,
+        "room_name": room_name,
         "livekit_url": settings.livekit_url,
         "token": token,
-        "accepted_at": call.accepted_at.isoformat()
+        "accepted_at": accepted_at.isoformat(),
     }
 
 
@@ -286,12 +308,15 @@ async def reject_call(
     if not call or call.callee_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
 
+    room_name = call.room_name
+    caller_id = call.caller_id
+    call_id_val = call.id
     call.status = "rejected"
     call.ended_at = datetime.now(timezone.utc)
     await db.commit()
 
-    await _ws_broadcast(call.caller_id, {"type": "call_rejected", "call_id": call.id})
-    caller = await db.get(User, call.caller_id)
+    await _ws_broadcast(caller_id, {"type": "call_rejected", "call_id": call_id_val})
+    caller = await db.get(User, caller_id)
     if caller and caller.fcm_token:
         logger.info(f"[Calls] Sending 'call_rejected' FCM push to {caller.username} (call_id={call_id})")
         await send_push(
@@ -299,9 +324,12 @@ async def reject_call(
             title="",
             body="",
             notif_type="call_rejected",
-            extra_data={"call_id": str(call.id)},
+            extra_data={"call_id": str(call_id_val)},
             is_silent=True
         )
+
+    # LK room'u sil — reject sonrası oda askıda kalıyordu
+    await _delete_lk_room(room_name)
 
     logger.info("[Calls] Arama reddedildi | call_id=%d", call_id)
     return {"ok": True}
@@ -319,12 +347,30 @@ async def end_call(
     if not call or current_user.id not in (call.caller_id, call.callee_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
 
+    # Idempotency: zaten bitmişse tekrar işleme, duplicate WS/FCM gönderme
+    if call.status in ("ended", "rejected", "missed"):
+        logger.debug("[Calls] /end called on already-terminal call | call_id=%d status=%s", call_id, call.status)
+        return {"ok": True}
+
+    # Yerel değişkenlere al — commit sonrası SQLAlchemy attribute expire olmaz
+    other_id = call.callee_id if current_user.id == call.caller_id else call.caller_id
+    call_id_val = call.id
+    room_name = call.room_name
+    accepted_at = call.accepted_at
+
+    ended_at = datetime.now(timezone.utc)
+    # Arama süresi hesapla (sadece bağlantı kurulmuş aramalarda)
+    duration_seconds: int | None = None
+    if accepted_at:
+        acc = accepted_at if accepted_at.tzinfo else accepted_at.replace(tzinfo=timezone.utc)
+        duration_seconds = max(0, int((ended_at - acc).total_seconds()))
+
     call.status = "ended"
-    call.ended_at = datetime.now(timezone.utc)
+    call.ended_at = ended_at
+    call.duration_seconds = duration_seconds
     await db.commit()
 
-    other_id = call.callee_id if current_user.id == call.caller_id else call.caller_id
-    await _ws_broadcast(other_id, {"type": "call_ended", "call_id": call.id})
+    await _ws_broadcast(other_id, {"type": "call_ended", "call_id": call_id_val})
     other_user = await db.get(User, other_id)
     if other_user and other_user.fcm_token:
         logger.info(f"[Calls] Sending 'call_ended' FCM push to {other_user.username} from end_call endpoint (call_id={call_id})")
@@ -334,14 +380,14 @@ async def end_call(
                 title="",
                 body="",
                 notif_type="call_ended",
-                extra_data={"call_id": str(call.id)},
+                extra_data={"call_id": str(call_id_val)},
                 is_silent=True
             )
         except Exception as push_err:
             logger.warning(f"[Calls] Failed to send 'call_ended' push: {push_err}")
-    await _delete_lk_room(call.room_name)
+    await _delete_lk_room(room_name)
 
-    logger.info("[Calls] Arama bitti | call_id=%d", call_id)
+    logger.info("[Calls] Arama bitti | call_id=%d duration=%s", call_id, duration_seconds)
     return {"ok": True}
 
 
