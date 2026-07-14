@@ -11,7 +11,9 @@ Her task:
 
 from __future__ import annotations
 
+import asyncio
 import json
+
 
 from arq import cron
 from arq.connections import RedisSettings
