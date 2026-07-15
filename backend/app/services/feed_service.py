@@ -458,16 +458,25 @@ async def _mark_impressions(user_id: int, listing_ids: list[int], db: AsyncSessi
     """Gösterilen ilanları listing_impressions tablosuna yazar (upsert)."""
     if not listing_ids:
         return
-    await db.execute(
-        text("""
-            INSERT INTO listing_impressions (user_id, listing_id)
-            VALUES (:uid, :lid)
-            ON CONFLICT (user_id, listing_id) DO UPDATE SET seen_at = NOW()
-        """),
-        [{"uid": user_id, "lid": lid} for lid in listing_ids],
-    )
-    await db.commit()
-
+        
+    # 1. DEADLOCK ÇÖZÜMÜ: ID'leri benzersiz yapıp küçükten büyüğe sıralıyoruz.
+    # Böylece Postgres kilitleri her zaman aynı sırayla (örn: 1 -> 2 -> 3) alır ve kilitlenme olmaz.
+    sorted_lids = sorted(list(set(listing_ids)))
+    
+    try:
+        await db.execute(
+            text("""
+                INSERT INTO listing_impressions (user_id, listing_id)
+                VALUES (:uid, :lid)
+                ON CONFLICT (user_id, listing_id) DO UPDATE SET seen_at = NOW()
+            """),
+            [{"uid": user_id, "lid": lid} for lid in sorted_lids],
+        )
+        await db.commit()
+    except Exception as exc:
+        # 2. ZOMBİ İŞLEM ÇÖZÜMÜ: Olası bir hatada kilitli kalan oturumu temizliyoruz.
+        await db.rollback()
+        logger.warning(f"[Feed] Impression yazılamadı, rollback yapıldı: {exc}")
 
 # ── For-You Feed (pgvector cosine distance) ──────────────────────────────────
 
