@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, text as sql_text
 
 import json
-
+import logging
 from app.database import get_db
 from app.models.user import User
 from app.models.tuci_transaction import TuciTransaction
@@ -15,6 +15,7 @@ from app.services.chat_service import publish_chat
 from app.utils.auth import get_current_user
 from app.utils.redis_client import get_redis
 
+logger = logging.getLogger("teqlif")
 router = APIRouter(prefix="/api/wallet", tags=["wallet"])
 
 _TYPE_LABELS = {
@@ -178,6 +179,9 @@ async def send_gift(
         raise HTTPException(status_code=400, detail="Kendinize hediye gönderemezsiniz.")
 
     if current_user.tuci_balance < body.cost:
+        logger.warning(f"TUCi transaction failed: insufficient balance", extra={
+            "user_id": current_user.id, "required": body.cost, "current": current_user.tuci_balance
+        })
         raise HTTPException(
             status_code=402,
             detail=f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {body.cost} TUCi",
@@ -220,6 +224,14 @@ async def send_gift(
         transaction_type="receive_gift",
         reference_id=gift_ev.id, reference_type="gift_event",
     ))
+
+    logger.info("TUCi transaction: send_gift", extra={
+        "sender_id": current_user.id,
+        "receiver_id": receiver.id,
+        "amount": body.cost,
+        "gift_name": body.gift_name
+    })
+    
     await db.commit()
 
     # 4) WebSocket: anlık animasyon
