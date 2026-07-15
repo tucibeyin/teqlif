@@ -64,6 +64,10 @@ async def send_push(
 
             is_call = notif_type == "incoming_call"
             hide_notification = is_call or is_silent
+            
+            # APNs HATA ÇÖZÜMÜ: Görünmez bildirimlerde öncelik (priority) 5 olmak ZORUNDADIR.
+            apns_priority = "5" if hide_notification else "10"
+
             msg = messaging.Message(
                 # Calls: data-only so the Flutter background handler fires and
                 # shows our custom local notification with action buttons.
@@ -71,13 +75,13 @@ async def send_push(
                 data=data,
                 token=token,
                 android=messaging.AndroidConfig(
-                    priority="high",
+                    priority="high", # Android'de data-only mesajlar için "high" kalabilir, Doze modunu delmek için faydalıdır.
                     notification=None if hide_notification else (
                         messaging.AndroidNotification(image=image_url) if image_url else None
                     ),
                 ),
                 apns=messaging.APNSConfig(
-                    headers={"apns-priority": "10"},
+                    headers={"apns-priority": apns_priority}, # Dinamik öncelik ataması yapıldı
                     payload=messaging.APNSPayload(
                         aps=messaging.Aps(
                             content_available=True,
@@ -86,7 +90,7 @@ async def send_push(
                             alert=messaging.ApsAlert(
                                 title=title,
                                 body=body,
-                            ) if (not is_call and not is_silent) else None,
+                            ) if not hide_notification else None, # Kodu biraz daha temizledik
                         )
                     ),
                 ),
