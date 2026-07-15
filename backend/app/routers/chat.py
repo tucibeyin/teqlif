@@ -276,12 +276,21 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
         )
         return
 
-    # ── 2. İlk mesajdan token al (5s timeout) ────────────────────────────────
+# ── 2. İlk mesajdan token al (5s timeout) ────────────────────────────────
     try:
         raw = await asyncio.wait_for(websocket.receive_json(), timeout=_WS_AUTH_TIMEOUT_SECS)
         token = raw.get("token", "") if isinstance(raw, dict) else ""
+    except WebSocketDisconnect:
+        # İstemci (kullanıcı) bağlantıyı zaten kopardı. 
+        # Kapatılacak bir socket kalmadığı için sessizce çık.
+        return
     except (asyncio.TimeoutError, Exception):
-        await websocket.close(code=_WS_CODE_UNAUTHORIZED)
+        # 5 saniye dolduysa veya başka bir hata olduysa bağlantıyı BİZ kapatıyoruz.
+        try:
+            await websocket.close(code=_WS_CODE_UNAUTHORIZED)
+        except RuntimeError:
+            # Eğer tam bu esnada bağlantı koptuysa, Uvicorn'un fırlatacağı "Unexpected ASGI message" hatasını yut.
+            pass
         return
 
     user_id = decode_token(token)
