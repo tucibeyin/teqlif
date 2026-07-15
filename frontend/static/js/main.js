@@ -52,8 +52,8 @@ async function apiFetch(path, options = {}, retried = false) {
 let _cfToken = null;
 
 window.onTurnstileToken = function (token) { _cfToken = token; };
-window.onTurnstileError  = function ()      { _cfToken = null; };
-window.onTurnstileExpire = function ()      { _cfToken = null; };
+window.onTurnstileError = function () { _cfToken = null; };
+window.onTurnstileExpire = function () { _cfToken = null; };
 
 // Token hazır olana kadar en fazla 10s bekler; timeout'ta fail-open ile devam eder.
 async function _pollForToken() {
@@ -78,7 +78,7 @@ function _resetTurnstile() {
         if (!window.turnstile) return;
         const container = document.querySelector('.cf-turnstile');
         if (container) turnstile.reset(container);
-    } catch (_) {}
+    } catch (_) { }
 }
 
 // Submit anında çağrılır; token hazırsa anında döner, yoksa en fazla 10s bekler (fail-open).
@@ -119,6 +119,12 @@ function restartTeqlifTour() {
 
 function initTeqlifTour() {
     if (localStorage.getItem('teqlif_tour_seen')) return;
+
+    // YENİ EKLENEN GÜVENLİK KONTROLÜ: 
+    // Eğer driver kütüphanesi bu sayfada yüklü değilse (örn: support.html), hata verme, sessizce çık.
+    if (typeof window.driver === 'undefined' || typeof window.driver.js === 'undefined') {
+        return;
+    }
 
     const driverObj = window.driver.js.driver({
         showProgress: true,
