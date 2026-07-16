@@ -544,11 +544,19 @@ class CallService {
       ),
     );
 
-    // VoIP push path: callee_token push payload'ında gelmez (JWT güvenlik).
-    // Proaktif fetch ile kullanıcı kabul ettiğinde pre-connect hazır olur.
+    // Pre-connect: LK odaya ringing sırasında bağlan → acceptance'da sadece mic aktive et.
     if ((calleeToken == null || livekitUrl == null) && incomingCallId != null) {
-      _cpLog('IN', 'calleeToken/livekitUrl missing — proactive fetch starting | callId=$incomingCallId');
+      // VoIP push (iOS): payload'da token yok → önce fetch, sonra pre-connect.
+      _cpLog('IN', 'calleeToken/livekitUrl missing — proactive fetch starting | callId=$incomingCallId source=$source');
       _fetchAndStoreCalleeToken(incomingCallId);
+    } else if (calleeToken != null && livekitUrl != null && incomingCallId != null && _room == null && !_isJoiningRoom) {
+      // WS path (Android foreground): token payload'da hazır → pre-connect hemen başlat.
+      // iOS VoIP push path'i _fetchAndStoreCalleeToken üzerinden zaten pre-connect yapar.
+      _preConnectStartedAt = DateTime.now();
+      _cpLog('IN', 'callee pre-connect (WS token path): _joinRoom starting immediately | callId=$incomingCallId preConnectStartUtc=${_preConnectStartedAt!.toUtc().toIso8601String()} source=$source');
+      _joinRoom(livekitUrl: livekitUrl, token: calleeToken).catchError((e) {
+        _cpLog('IN', 'callee pre-connect (WS token path) _joinRoom ERROR | $e callId=$incomingCallId');
+      });
     }
 
     playNotification();
@@ -1036,28 +1044,34 @@ class CallService {
         // callStatusAtEntry: caller=calling, callee-pre-connect=ringing
 
         if (callStatusAtEntry == CallStatus.calling) {
-          // WhatsApp-kalitesi FAST PATH:
-          // AudioSession zaten playAndRecord+voiceChat modunda (ringtone için ayarlandı).
-          // setMicrophoneEnabled(true) → WebRTC müzakeresi tamamlanır → pub.mute(stopOnMute:false) → RTP sessiz.
-          // stopOnMute:false önemli: mikrofon capture'ı durmaz, sadece RTP paketleri gönderilmez.
-          // Acceptance gelince pub.unmute(stopOnMute:false) ~50ms — re-start yok, re-negotiation yok.
-          _cpLog('LK', 'caller pre-connect: pre-publishing MUTED audio track for fast acceptance | callId=${state.value.callId}');
-          _cpLog('HW', 'microphone CAPTURE START (muted pre-connect) | audioCapture=active rtpTransmission=paused stopOnMute=false ringtone=preserved');
-          try {
-            await _room!.localParticipant?.setMicrophoneEnabled(true);
-            final micPubs = _room!.localParticipant?.audioTrackPublications;
-            if (micPubs != null && micPubs.isNotEmpty) {
-              final pub = micPubs.first;
-              // stopOnMute:false → capture çalışır, RTP paketleri gönderilmez.
-              await pub.mute(stopOnMute: false);
-              _cpLog('LK', 'muted audio track pre-published | sid=${pub.sid} muted=${pub.muted} waiting for call_accepted to unmute');
-              _cpLog('HW', 'microphone MUTED (pre-connect) | track=published rtpMuted=true audioCapture=active stopOnMute=false');
-            } else {
-              _cpLog('LK', 'pre-publish muted track: no publications after setMicEnabled (micPubs empty) | standard path on acceptance');
+          // iOS'ta setMicrophoneEnabled(true) LiveKit'in AVAudioSession'ı ele geçirmesine yol açar
+          // ve audioplayers'ın çaldığı ringing.wav ringback tonunu keser.
+          // Android'de audio focus sistemi farklı çalıştığı için sorun yaratmaz.
+          // iOS caller: sadece ağ pre-connect (TCP/TLS/ICE); mic onCallAccepted'da standart yolla açılır.
+          // Android caller: muted pre-publish → acceptance'da pub.unmute (~50ms FAST PATH).
+          if (Platform.isAndroid) {
+            _cpLog('LK', 'caller pre-connect: pre-publishing MUTED audio track for fast acceptance | callId=${state.value.callId} platform=Android');
+            _cpLog('HW', 'microphone CAPTURE START (muted pre-connect) | audioCapture=active rtpTransmission=paused stopOnMute=false ringtone=preserved platform=Android');
+            try {
+              await _room!.localParticipant?.setMicrophoneEnabled(true);
+              final micPubs = _room!.localParticipant?.audioTrackPublications;
+              if (micPubs != null && micPubs.isNotEmpty) {
+                final pub = micPubs.first;
+                // stopOnMute:false → capture çalışır, RTP paketleri gönderilmez.
+                await pub.mute(stopOnMute: false);
+                _cpLog('LK', 'muted audio track pre-published | sid=${pub.sid} waitingForUnmute=true platform=Android');
+                _cpLog('HW', 'microphone MUTED (pre-connect) | track=published rtpMuted=true audioCapture=active stopOnMute=false platform=Android');
+              } else {
+                _cpLog('LK', 'pre-publish muted track: no publications after setMicEnabled (micPubs empty) | standard path on acceptance platform=Android');
+              }
+            } catch (e) {
+              _cpLog('LK', 'pre-publish muted track ERROR | $e → standard setMicEnabled path will be used on acceptance platform=Android');
+              _cpLog('HW', 'microphone CAPTURE (muted pre-connect) FAILED | fallback=standard on acceptance platform=Android');
             }
-          } catch (e) {
-            _cpLog('LK', 'pre-publish muted track ERROR | $e → standard setMicEnabled path will be used on acceptance');
-            _cpLog('HW', 'microphone CAPTURE (muted pre-connect) FAILED | fallback=standard on acceptance');
+          } else {
+            // iOS: sadece ağ pre-connect — mic/AudioSession dokunulmaz, ringing.wav korunur.
+            _cpLog('LK', 'caller pre-connect: network-only (NO mic pre-publish) | callId=${state.value.callId} platform=iOS reason=avAudioSession-would-kill-ringback');
+            _cpLog('HW', 'microphone SKIPPED (caller pre-connect) | platform=iOS ringback=preserved mic-will-start-on-acceptance');
           }
         } else {
           // callee pre-connect (ringing): ringtone korunuyor, mic yok
@@ -1198,8 +1212,16 @@ class CallService {
       // 1. AudioSession → voice-chat mode (ringtone session'dan geçiş)
       // 2. Ringtone durdur
       // 3. connected state → _handleStatusChange stops _audioPlayer (ringing.wav)
-      _cpLog('LK', 'TrackSubscribed | kind=${event.track.kind}');
+      _cpLog('LK', 'TrackSubscribed | kind=${event.track.kind} status=${state.value.status.name}');
       if (event.track.kind == TrackType.AUDIO) {
+        // ringing: callee pre-connect — caller'ın muted track'i subscribe edildi.
+        // Ringtone durdurulmamalı; AudioSession CallKit aktive edilmeden configure edilemez.
+        // Gerçek geçiş acceptCall → _activateCalleeAudio yolunda gerçekleşir.
+        if (state.value.status == CallStatus.ringing) {
+          _cpLog('LK', 'TrackSubscribed AUDIO during RINGING (callee pre-connect) | track is still MUTED → skip ringtone stop + AudioSession configure');
+          return;
+        }
+
         _cpLog('LK', 'TrackSubscribed AUDIO → voice AudioSession → ringing stop → connected');
         // AudioSession'ı ses akışı başlamadan hemen önce voice-chat moduna geçir.
         // iOS: speakerphone AudioSession sonrası set edilir (async callback).
