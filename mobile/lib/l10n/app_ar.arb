@@ -2786,5 +2786,14 @@
   "tabRatingsGiven": "التقييمات المقدمة",
   "tabFollowRequestsReceived": "الطلبات المستلمة",
   "tabFollowRequestsSent": "الطلبات المرسلة",
-  "withdrawRequest": "سحب"
+  "withdrawRequest": "سحب",
+  "callE2eeEncrypted": "مكالمة مشفرة",
+  "callE2eeEncryptedShort": "مشفرة",
+  "callBatteryOptTitle": "تحسين البطارية",
+  "callBatteryOptBody": "قم بتعطيل تحسين البطارية لـ Teqlif لضمان عمل المكالمات بشكل صحيح.",
+  "callBatteryOptAction": "فتح الإعدادات",
+  "callBatteryOptSkip": "ليس الآن",
+  "callAudioQualityPoor": "جودة الاتصال ضعيفة",
+  "callAudioQualityLost": "انقطع الاتصال",
+  "callActiveNow": "المكالمة جارية"
 }

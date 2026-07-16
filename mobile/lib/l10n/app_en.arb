@@ -2822,5 +2822,14 @@
   "tabRatingsGiven": "Given Ratings",
   "tabFollowRequestsReceived": "Received Requests",
   "tabFollowRequestsSent": "Sent Requests",
-  "withdrawRequest": "Withdraw"
+  "withdrawRequest": "Withdraw",
+  "callE2eeEncrypted": "Encrypted Call",
+  "callE2eeEncryptedShort": "Encrypted",
+  "callBatteryOptTitle": "Battery Optimization",
+  "callBatteryOptBody": "Disable battery optimization for Teqlif to ensure calls work properly.",
+  "callBatteryOptAction": "Open Settings",
+  "callBatteryOptSkip": "Not Now",
+  "callAudioQualityPoor": "Poor connection quality",
+  "callAudioQualityLost": "Connection lost",
+  "callActiveNow": "Call in Progress"
 }

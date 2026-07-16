@@ -2787,5 +2787,14 @@
   "tabRatingsGiven": "Оставленные отзывы",
   "tabFollowRequestsReceived": "Полученные запросы",
   "tabFollowRequestsSent": "Отправленные запросы",
-  "withdrawRequest": "Отменить"
+  "withdrawRequest": "Отменить",
+  "callE2eeEncrypted": "Зашифрованный звонок",
+  "callE2eeEncryptedShort": "Зашифровано",
+  "callBatteryOptTitle": "Оптимизация батареи",
+  "callBatteryOptBody": "Отключите оптимизацию батареи для Teqlif, чтобы звонки работали правильно.",
+  "callBatteryOptAction": "Открыть настройки",
+  "callBatteryOptSkip": "Не сейчас",
+  "callAudioQualityPoor": "Слабое качество связи",
+  "callAudioQualityLost": "Соединение потеряно",
+  "callActiveNow": "Звонок продолжается"
 }

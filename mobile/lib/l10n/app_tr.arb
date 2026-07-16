@@ -2785,5 +2785,14 @@
   "tabRatingsGiven": "Benim Verdiklerim",
   "tabFollowRequestsReceived": "Gelen İstekler",
   "tabFollowRequestsSent": "Gönderdiklerim",
-  "withdrawRequest": "Geri Al"
+  "withdrawRequest": "Geri Al",
+  "callE2eeEncrypted": "Şifreli Bağlantı",
+  "callE2eeEncryptedShort": "Şifreli",
+  "callBatteryOptTitle": "Pil Optimizasyonu",
+  "callBatteryOptBody": "Teqlif aramalarının düzgün çalışması için pil optimizasyonunu devre dışı bırakın.",
+  "callBatteryOptAction": "Ayarları Aç",
+  "callBatteryOptSkip": "Şimdi Değil",
+  "callAudioQualityPoor": "Bağlantı kalitesi düşük",
+  "callAudioQualityLost": "Bağlantı kesildi",
+  "callActiveNow": "Arama Devam Ediyor"
 }

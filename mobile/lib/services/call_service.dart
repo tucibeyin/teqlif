@@ -15,6 +15,8 @@ import 'package:vibration/vibration.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart' hide AVAudioSessionCategory;
 import 'package:audioplayers/audioplayers.dart' as ap;
+import 'package:proximity_sensor/proximity_sensor.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/api.dart';
 import '../core/app_exception.dart';
 import '../services/storage_service.dart';
@@ -66,6 +68,7 @@ class CallState {
   final bool isSpeaker;
   final bool permPermanentlyDenied;
   final bool isPoorConnection;
+  final String? e2eeKey;
 
   const CallState({
     this.status = CallStatus.idle,
@@ -83,6 +86,7 @@ class CallState {
     this.isSpeaker = false,
     this.permPermanentlyDenied = false,
     this.isPoorConnection = false,
+    this.e2eeKey,
   });
 
   CallState copyWith({
@@ -101,6 +105,7 @@ class CallState {
     bool? isSpeaker,
     bool? permPermanentlyDenied,
     bool? isPoorConnection,
+    String? e2eeKey,
   }) {
     return CallState(
       status: status ?? this.status,
@@ -119,6 +124,7 @@ class CallState {
       permPermanentlyDenied:
           permPermanentlyDenied ?? this.permPermanentlyDenied,
       isPoorConnection: isPoorConnection ?? this.isPoorConnection,
+      e2eeKey: e2eeKey ?? this.e2eeKey,
     );
   }
 }
@@ -251,6 +257,9 @@ class CallService {
   }
 
   Timer? _hapticLoopTimer;
+  Timer? _statsTimer;               // WebRTC audio stats polling (5s)
+  StreamSubscription<int>? _proximitySub;     // Proximity sensor → earpiece auto-switch
+  StreamSubscription<List<ConnectivityResult>>? _networkSub;  // Network change monitor
 
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -440,12 +449,15 @@ class CallService {
       _cpLog('OUT', 'POST /calls/start → request | calleeId=$calleeId');
       final data = await _post('/calls/start', {'callee_id': calleeId});
       _cpLog('OUT', 'POST /calls/start → response | callId=${data['call_id']} roomName=${data['room_name']}');
+      final e2eeKey = data['e2ee_key'] as String?;
+      _cpLog('OUT', 'POST /calls/start e2ee=${e2eeKey != null ? "YES key=${e2eeKey.substring(0, 8)}…" : "NO"}');
       _setState(
         state.value.copyWith(
           callId: data['call_id'] as int,
           roomName: data['room_name'] as String,
           livekitUrl: data['livekit_url'] as String,
           token: data['token'] as String,
+          e2eeKey: e2eeKey,
         ),
       );
 
@@ -671,12 +683,14 @@ class CallService {
       final token = data['token'] as String?;
       final url = data['livekit_url'] as String?;
       final room = data['room_name'] as String?;
-      _cpLog('IN', '_fetchCalleeToken result | tokenLen=${token?.length} url=${url != null} room=$room httpMs=$httpMs');
+      final e2eeKey = data['e2ee_key'] as String?;
+      _cpLog('IN', '_fetchCalleeToken result | tokenLen=${token?.length} url=${url != null} room=$room e2ee=${e2eeKey != null} httpMs=$httpMs');
       if (state.value.status == CallStatus.ringing && state.value.callId == callId) {
         _setState(state.value.copyWith(
           calleeToken: token,
           livekitUrl: url,
           roomName: room,
+          e2eeKey: e2eeKey,
         ));
         _cpLog('IN', '_fetchCalleeToken stored → pre-connect ready | callId=$callId httpMs=$httpMs');
 
@@ -921,6 +935,13 @@ class CallService {
         _cpLog('TIMER', 'acceptedAt MISSING in /accept response — timer will use local clock');
       }
 
+      // E2EE key from /accept response (callee path)
+      final e2eeKey = data['e2ee_key'] as String?;
+      if (e2eeKey != null && state.value.e2eeKey == null) {
+        _cpLog('LK', 'E2EE key received via /accept | key=${e2eeKey.substring(0, 8)}…');
+        _setState(state.value.copyWith(e2eeKey: e2eeKey));
+      }
+
       // FALLBACK: hiç pre-connect başlamadıysa response token ile LiveKit'e bağlan.
       if (_room == null && !_isJoiningRoom) {
         final responseToken = data['token'] as String?;
@@ -1150,8 +1171,34 @@ class CallService {
       }
 
       // ── Ağ bağlantısı (audio session gerektirmez) ────────────────────────────
-      _cpLog('LK', 'room.connect() → calling LiveKit');
-      await _room!.connect(livekitUrl, token, roomOptions: const RoomOptions(defaultAudioOutputOptions: AudioOutputOptions(speakerOn: false)));
+      // Opus DTX (Discontinuous Transmission): sessizlikte paket gönderilmez → %40 bant genişliği tasarrufu.
+      // audioBitrate=16000: WhatsApp-grade voice quality (12kbps telephone / 16kbps HD voice / 48kbps music).
+      const audioPublishOpts = AudioPublishOptions(dtx: true, audioBitrate: 16000);
+      _cpLog('LK', 'room.connect() → calling LiveKit | dtx=true bitrate=16kbps e2ee=${state.value.e2eeKey != null}');
+
+      E2EEOptions? e2eeOptions;
+      final e2eeKey = state.value.e2eeKey;
+      if (e2eeKey != null && e2eeKey.isNotEmpty) {
+        try {
+          final keyProvider = await BaseKeyProvider.create();
+          await keyProvider.setSharedKey(e2eeKey);
+          e2eeOptions = E2EEOptions(keyProvider: keyProvider);
+          _cpLog('LK', 'E2EE initialized | sharedKey=${e2eeKey.substring(0, 8)}… keyLen=${e2eeKey.length}');
+        } catch (e) {
+          _cpLog('LK', 'E2EE init FAILED (proceeding unencrypted) | $e');
+          e2eeOptions = null;
+        }
+      }
+
+      await _room!.connect(
+        livekitUrl,
+        token,
+        roomOptions: RoomOptions(
+          defaultAudioOutputOptions: const AudioOutputOptions(speakerOn: false),
+          defaultAudioPublishOptions: audioPublishOpts,
+          e2eeOptions: e2eeOptions,
+        ),
+      );
       _cpLog('LK', 'room.connect() SUCCESS');
 
       // ── iOS Callee: audio session aktive olana kadar bekle ───────────────────
@@ -1294,6 +1341,9 @@ class CallService {
             stopRingtoneAndVibration();
             _setState(state.value.copyWith(status: CallStatus.connected));
             _startElapsedTimer();
+            _startProximitySensor();
+            _startStatsMonitor();
+            _startNetworkMonitor();
           } else {
             _cpLog('LK', 'peerAlreadyJoined but audio not yet subscribed → waiting for TrackSubscribed');
           }
@@ -1407,6 +1457,9 @@ class CallService {
           _cpLog('TIMER', 'TrackSubscribed → CONNECTED | role=${preTransitionStatus.name} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
           _setState(state.value.copyWith(status: CallStatus.connected));
           _startElapsedTimer();
+          _startProximitySensor();
+          _startStatsMonitor();
+          _startNetworkMonitor();
           // P0 FIX: iOS caller mic race.
           // iOS skips mic pre-publish during pre-connect (to preserve ringback AVAudioSession).
           // call_accepted WS arrives ~1.65s AFTER TrackSubscribed, so we must enable mic HERE
@@ -1459,6 +1512,83 @@ class CallService {
         }
       }
     });
+  }
+
+  // ── Proximity Sensor (auto earpiece when phone at ear) ───────────────────
+
+  void _startProximitySensor() {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+    _proximitySub?.cancel();
+    _cpLog('HW', 'proximitySensor START | context=_startProximitySensor');
+    _proximitySub = ProximitySensor.events.listen((int value) {
+      if (state.value.status != CallStatus.connected) return;
+      final isNear = value == 0;
+      if (isNear && state.value.isSpeaker) {
+        _cpLog('HW', 'proximitySensor NEAR → auto speakerOff (phone at ear)');
+        setSpeaker(false);
+      }
+    }, onError: (e) {
+      _cpLog('HW', 'proximitySensor ERROR | $e');
+    });
+    if (Platform.isAndroid) {
+      ProximitySensor.setProximityScreenOff(true).catchError((e) {
+        _cpLog('HW', 'proximitySensor setScreenOff ERROR | $e');
+      });
+    }
+  }
+
+  void _stopProximitySensor() {
+    _proximitySub?.cancel();
+    _proximitySub = null;
+    if (Platform.isAndroid) {
+      ProximitySensor.setProximityScreenOff(false).catchError((_) {});
+    }
+    _cpLog('HW', 'proximitySensor STOP');
+  }
+
+  // ── WebRTC Audio Health Monitor ───────────────────────────────────────────
+  // Polls room state every 5s during connected calls.
+  // Granular packet-loss stats use LiveKit's internal stats engine via ConnectionQuality events.
+  // This periodic log captures one-way audio (remoteParticipants empty mid-call).
+
+  void _startStatsMonitor() {
+    _statsTimer?.cancel();
+    _cpLog('LK', 'statsMonitor START | interval=5s callId=${state.value.callId}');
+    _statsTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (state.value.status != CallStatus.connected || _room == null) {
+        _statsTimer?.cancel();
+        return;
+      }
+      final remotePeerCount = _room!.remoteParticipants.length;
+      final quality = state.value.isPoorConnection ? 'POOR' : 'OK';
+      _cpLog('LK', 'healthTick | remotePeers=$remotePeerCount quality=$quality callId=${state.value.callId}');
+      if (remotePeerCount == 0 && state.value.status == CallStatus.connected) {
+        _cpLog('LK', 'healthTick: NO REMOTE PEERS (one-way audio risk) | callId=${state.value.callId}');
+      }
+    });
+  }
+
+  void _stopStatsMonitor() {
+    _statsTimer?.cancel();
+    _statsTimer = null;
+  }
+
+  // ── Network Change Monitor (logs only — LiveKit handles reconnect) ────────
+
+  void _startNetworkMonitor() {
+    _networkSub?.cancel();
+    _cpLog('LK', 'networkMonitor START | callId=${state.value.callId}');
+    _networkSub = Connectivity().onConnectivityChanged.listen((results) {
+      if (state.value.status == CallStatus.connected || state.value.status == CallStatus.reconnecting) {
+        final netType = results.isNotEmpty ? results.first.name : 'unknown';
+        _cpLog('LK', 'networkChange during call | network=$netType status=${state.value.status.name} callId=${state.value.callId}');
+      }
+    });
+  }
+
+  void _stopNetworkMonitor() {
+    _networkSub?.cancel();
+    _networkSub = null;
   }
 
   void _startElapsedTimer() {
@@ -1617,6 +1747,9 @@ class CallService {
     _connectingTimeoutTimer?.cancel();
     _roomEventsSubscription?.call();
     _audioInterruptionSubscription?.cancel();
+    _stopStatsMonitor();
+    _stopProximitySensor();
+    _stopNetworkMonitor();
     _ringbackPlayer.stop(); // Pre-loaded ringback'i durdur (caller hangup veya reset)
 
     _isJoiningRoom = false;
@@ -1650,6 +1783,9 @@ class CallService {
     _preConnectStartedAt = null;
     _activeIncomingCallId = null; // Dedup guard sıfırla — yeni aramalara açık
     elapsed.value = Duration.zero; // elapsed notifier'ı sıfırla
+    _stopStatsMonitor();
+    _stopProximitySensor();
+    _stopNetworkMonitor();
     _cpLog('TIMER', 'elapsed notifier RESET | value=Duration.zero');
 
     if (state.value.callId != null) {

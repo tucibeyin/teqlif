@@ -196,6 +196,56 @@ class GlobalWSManager:
                 redis_channel, topic, exc, exc_info=True,
             )
 
+    # ── Call Event Replay (WS kayıp event recovery) ──────────────────────
+
+    async def store_call_event(self, user_id: int, payload: dict) -> None:
+        """
+        Gelen arama eventini Redis sorted set'e kaydeder (score=Unix timestamp).
+        TTL=90s: arama etkinlikleri bu pencerede yeniden teslim edilebilir.
+        Bağlantı kopukluğu sırasında kaçırılan call_accepted/call_ended gibi
+        kritik eventleri, yeniden bağlanmada replay_call_events ile gönderir.
+        """
+        import time
+        try:
+            redis = await get_redis()
+            score = time.time()
+            data = json.dumps({"_ts": score, **payload})
+            key = f"call_events:{user_id}"
+            await redis.zadd(key, {data: score})
+            await redis.expire(key, 90)
+            logger.debug("[WS GATEWAY] call_events stored | user_id=%s type=%s score=%s", user_id, payload.get("type"), score)
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] call_events store FAILED | user_id=%s | %s", user_id, exc)
+
+    async def replay_call_events(self, ws: "WebSocket", user_id: int, since_ts: float) -> int:
+        """
+        since_ts'den bu yana kaydedilen call_ eventleri yeniden gönderir.
+        WS yeniden bağlandığında auth mesajındaki since_ts ile çağrılır.
+        """
+        try:
+            redis = await get_redis()
+            key = f"call_events:{user_id}"
+            # since_ts'den BÜYÜK score'ları al (strictly greater — yinelemeyi önler)
+            events_raw = await redis.zrangebyscore(key, f"({since_ts}", "+inf")
+            count = 0
+            for raw in events_raw:
+                try:
+                    event_payload = json.loads(raw)
+                    event_payload.pop("_ts", None)
+                    await safe_send_json(ws, event_payload)
+                    count += 1
+                except Exception:
+                    pass
+            if count > 0:
+                logger.info(
+                    "[WS GATEWAY] call_events REPLAYED | user_id=%s since_ts=%s count=%s",
+                    user_id, since_ts, count,
+                )
+            return count
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] replay_call_events FAILED | user_id=%s | %s", user_id, exc)
+            return 0
+
     # ── Graceful Shutdown ─────────────────────────────────────────────────
 
     async def shutdown(self) -> None:

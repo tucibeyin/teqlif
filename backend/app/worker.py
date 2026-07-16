@@ -1460,6 +1460,99 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
         capture_exception(exc)
         raise
 
+async def apns_feedback_cleanup_task(ctx: dict) -> None:
+    """
+    APNs Feedback Service: Apple'ın geri bildirdiği geçersiz VoIP token'larını DB'den siler.
+    Her gün 07:00'da çalışır.
+
+    Apple, teslim edilemeyen APNs push'ları için Feedback Service'e token + timestamp yazar.
+    Token, feedback timestamp'inden ÖNCE güncellenmediyse geçersiz kabul edilir ve silinir.
+    Bu sayede VoIP push denemesi yapılmaz → pil + sunucu yükü düşer.
+    """
+    from app.config import settings
+
+    if not settings.apns_cert_path:
+        logger.info("[CALL_PROCESS][APNS] apns_feedback_cleanup_task skipped — apns_cert_path not configured")
+        return
+
+    try:
+        import ssl
+        import asyncio
+        import aiohttp
+        from datetime import datetime, timezone
+
+        apns_host = "feedback.sandbox.push.apple.com" if settings.apns_use_sandbox else "feedback.push.apple.com"
+        apns_port = 2196
+
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.load_cert_chain(settings.apns_cert_path)
+
+        invalid_tokens: list[tuple[str, datetime]] = []
+
+        async def _read_feedback() -> None:
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(apns_host, apns_port, ssl=ssl_ctx),
+                timeout=15,
+            )
+            try:
+                while True:
+                    header = await asyncio.wait_for(reader.read(6), timeout=5)
+                    if not header or len(header) < 6:
+                        break
+                    import struct
+                    timestamp, token_len = struct.unpack("!IH", header)
+                    token_data = await reader.read(token_len)
+                    token_hex = token_data.hex()
+                    dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                    invalid_tokens.append((token_hex, dt))
+                    logger.info("[CALL_PROCESS][APNS] feedback: bad token=%s… at=%s", token_hex[:10], dt.isoformat())
+            except asyncio.TimeoutError:
+                pass  # No more data
+            finally:
+                writer.close()
+                try:
+                    await writer.wait_closed()
+                except Exception:
+                    pass
+
+        await _read_feedback()
+
+        if not invalid_tokens:
+            logger.info("[CALL_PROCESS][APNS] apns_feedback_cleanup_task: no bad tokens reported")
+            return
+
+        from app.database import AsyncSessionLocal
+        from app.models.user import User
+        from sqlalchemy import select, update as sa_update
+
+        async with AsyncSessionLocal() as db:
+            cleared = 0
+            for token_hex, feedback_ts in invalid_tokens:
+                # Only clear if the token hasn't been refreshed since feedback
+                result = await db.execute(
+                    select(User).where(User.voip_token == token_hex)
+                )
+                user = result.scalar_one_or_none()
+                if not user:
+                    continue
+                updated_at = user.voip_token_updated_at
+                if updated_at:
+                    uat = updated_at if updated_at.tzinfo else updated_at.replace(tzinfo=timezone.utc)
+                    if uat > feedback_ts:
+                        logger.info("[CALL_PROCESS][APNS] feedback: token refreshed after feedback → keeping | user=%d", user.id)
+                        continue
+                user.voip_token = None
+                cleared += 1
+                logger.info("[CALL_PROCESS][APNS] feedback: voip_token cleared | user=%d", user.id)
+            await db.commit()
+            logger.info("[CALL_PROCESS][APNS] apns_feedback_cleanup_task DONE | checked=%d cleared=%d", len(invalid_tokens), cleared)
+
+    except Exception as exc:
+        logger.error("[CALL_PROCESS][APNS] apns_feedback_cleanup_task ERROR | %s", exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 async def delayed_close_stream_task(ctx: dict, room_name: str) -> None:
     """
     room_finished webhook'tan 60sn sonra oda hâlâ aktifse yayını kapatır (ARQ defer).
@@ -2691,6 +2784,7 @@ class WorkerSettings:
         delayed_close_stream_task,
         delayed_call_timeout_task,
         cleanup_ghost_calls_task,
+        apns_feedback_cleanup_task,
         send_telegram_notification_task,
         hesitation_retarget_task,
         notify_hot_listing_task,
@@ -2746,6 +2840,8 @@ class WorkerSettings:
         cron(optimize_notification_timing_task, hour=4, minute=0),
         # Her gece 04:30 — CLIP görsel embedding backfill (30 ilan/çalıştırma)
         cron(clip_visual_backfill_task, hour=4, minute=30),
+        # Her gün 07:00 — APNs Feedback Service: geçersiz VoIP token temizliği
+        cron(apns_feedback_cleanup_task, hour=7, minute=0),
         # Her gece 05:15 — NSFW backfill (20 ilan/çalıştırma)
         cron(nsfw_backfill_task, hour=5, minute=15),
         # Her gece 05:30 — pHash backfill (50 ilan/çalıştırma)

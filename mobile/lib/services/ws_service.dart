@@ -35,6 +35,8 @@ class WsService {
   static bool _shouldStay = false;
   static bool _connecting = false;
   static StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  // WS event replay: tracks last received call event timestamp for since_ts on reconnect
+  static double? _lastCallEventTs;
 
   // Lifecycle dinleyicisi tanımlamaları
   static final _WsLifecycleObserver _observer = _WsLifecycleObserver();
@@ -91,7 +93,8 @@ class WsService {
 
     _connectivitySub?.cancel();
     _connectivitySub = null;
-    
+    _lastCallEventTs = null;
+
     _closeResources();
   }
 
@@ -136,7 +139,10 @@ class WsService {
       final uri = Uri.parse('$wsBase/messages/ws');
       _channel = WebSocketChannel.connect(uri);
       // Token URL'de taşınmaz — bağlantı açılır açılmaz ilk mesaj olarak gönderilir
-      _channel!.sink.add(jsonEncode({'type': 'auth', 'token': token}));
+      // since_ts: son alınan call event'in Unix timestamp'i — sunucu kaçırılan eventleri replay eder
+      final authMsg = <String, dynamic>{'type': 'auth', 'token': token};
+      if (_lastCallEventTs != null) authMsg['since_ts'] = _lastCallEventTs;
+      _channel!.sink.add(jsonEncode(authMsg));
 
       _channelSub = _channel!.stream.listen(
         (raw) {
@@ -147,6 +153,8 @@ class WsService {
             final type = data['type'] as String?;
             if (type != null && type.startsWith('call_')) {
               debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] WsService received message type: $type');
+              // Track timestamp for WS event replay on reconnect
+              _lastCallEventTs = DateTime.now().millisecondsSinceEpoch / 1000.0;
             }
             messageStream.add(data);
           } catch (_) {}

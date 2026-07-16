@@ -200,6 +200,24 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
       children: [
         widget.child,
 
+        // Active call floating indicator — shown when call is connected but CallScreen is not visible
+        if (CallService.instance.state.value.status == CallStatus.connected &&
+            !CallService.instance.isCallScreenVisible.value)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: _ActiveCallBar(
+                  username: CallService.instance.state.value.otherUsername ?? '',
+                  onTap: _openCallScreen,
+                ),
+              ),
+            ),
+          ),
+
         // Ringing UI
         if (CallService.instance.state.value.status == CallStatus.ringing)
           Positioned(
@@ -451,6 +469,104 @@ class _IncomingCallBar extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Active Call Floating Indicator ───────────────────────────────────────────
+// Shows a green pill at the top when a call is connected but CallScreen is minimized.
+// Tapping it returns the user to the active CallScreen.
+class _ActiveCallBar extends StatefulWidget {
+  final String username;
+  final VoidCallback onTap;
+
+  const _ActiveCallBar({required this.username, required this.onTap});
+
+  @override
+  State<_ActiveCallBar> createState() => _ActiveCallBarState();
+}
+
+class _ActiveCallBarState extends State<_ActiveCallBar> {
+  @override
+  void initState() {
+    super.initState();
+    CallService.instance.elapsed.addListener(_onElapsed);
+  }
+
+  void _onElapsed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    CallService.instance.elapsed.removeListener(_onElapsed);
+    super.dispose();
+  }
+
+  String _fmt(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final elapsed = CallService.instance.elapsed.value;
+    _cpLog('UI', 'ActiveCallBar BUILD | user=${widget.username} elapsed=${_fmt(elapsed)}');
+
+    return GestureDetector(
+      onTap: () {
+        _cpLog('UI', 'ActiveCallBar TAP → openCallScreen | user=${widget.username}');
+        widget.onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF22C55E),
+          borderRadius: BorderRadius.circular(100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.call, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              widget.username,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 4,
+              height: 4,
+              decoration: const BoxDecoration(
+                color: Colors.white54,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _fmt(elapsed),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
       ),
     );

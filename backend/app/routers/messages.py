@@ -693,10 +693,18 @@ async def messages_ws(websocket: WebSocket):
         logger.error("[DM WS] accept() başarısız | %s", exc, exc_info=True)
         return
 
-    # ── 2. İlk mesajdan token al (5s timeout) ────────────────────────────────
+    # ── 2. İlk mesajdan token + since_ts al (5s timeout) ───────────────────
+    since_ts: float | None = None
     try:
         raw = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
         token = raw.get("token", "") if isinstance(raw, dict) else ""
+        # since_ts: son alınan call event'in Unix timestamp'i (float).
+        # Yeniden bağlanmada kaçırılan call eventleri replay edilir.
+        if isinstance(raw, dict) and "since_ts" in raw:
+            try:
+                since_ts = float(raw["since_ts"])
+            except (ValueError, TypeError):
+                since_ts = None
     except WebSocketDisconnect:
         return
     except (asyncio.TimeoutError, Exception):
@@ -750,7 +758,16 @@ async def messages_ws(websocket: WebSocket):
 
     ws_manager.connect(websocket, f"dm:{user_id}")
     ws_manager.connect(websocket, "global")   # feed eventleri (stream_ended vb.)
-    logger.info("[DM WS] BAĞLANDI | user_id=%s", user_id)
+    logger.info("[DM WS] BAĞLANDI | user_id=%s since_ts=%s", user_id, since_ts)
+
+    # Call event replay: yeniden bağlanmada kaçırılan call eventlerini gönder
+    if since_ts is not None:
+        try:
+            replayed = await ws_manager.replay_call_events(websocket, user_id, since_ts)
+            if replayed > 0:
+                logger.info("[CALL_PROCESS][STATE] WS event replay | user_id=%s since_ts=%s replayed=%s", user_id, since_ts, replayed)
+        except Exception as _replay_exc:
+            logger.warning("[DM WS] call event replay failed | user_id=%s | %s", user_id, _replay_exc)
 
     try:
         while True:
