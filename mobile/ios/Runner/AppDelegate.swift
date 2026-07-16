@@ -9,15 +9,18 @@ import Security
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate, CallkitIncomingAppDelegate {
-  
+
+  // Pending CXAnswerCallAction — onAccept'te saklanır, fulfillAccept'te fulfill edilir.
   var pendingAcceptActions: [String: CXAnswerCallAction] = [:]
-  
+  // Flutter'a audioSessionActivated sinyali göndermek için kanal referansı.
+  var callkitChannel: FlutterMethodChannel?
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self
-    
+
     // Setup VOIP
     let mainQueue = DispatchQueue.main
     let voipRegistry: PKPushRegistry = PKPushRegistry(queue: mainQueue)
@@ -27,19 +30,23 @@ import Security
     let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
     if let registrar = self.registrar(forPlugin: "com.teqlif/callkit") {
-        let callkitChannel = FlutterMethodChannel(name: "com.teqlif/callkit",
-                                                  binaryMessenger: registrar.messenger())
-        callkitChannel.setMethodCallHandler({ [weak self]
+        let channel = FlutterMethodChannel(name: "com.teqlif/callkit",
+                                           binaryMessenger: registrar.messenger())
+        self.callkitChannel = channel
+        channel.setMethodCallHandler({ [weak self]
           (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
           if call.method == "fulfillAccept" {
-              if let args = call.arguments as? [String: Any],
-                 let uuid = args["uuid"] as? String {
-                  self?.pendingAcceptActions[uuid]?.fulfill()
-                  self?.pendingAcceptActions.removeValue(forKey: uuid)
-                  result(true)
-              } else {
-                  result(false)
+              // UUID mismatch'ten kaçın: bire-bir aramada her zaman tek pending action vardır.
+              // Tüm pending action'ları fulfill et.
+              if let self = self {
+                  let count = self.pendingAcceptActions.count
+                  print("[CallkitAppDelegate] fulfillAccept: fulfilling \(count) pending action(s)")
+                  for (_, action) in self.pendingAcceptActions {
+                      action.fulfill()
+                  }
+                  self.pendingAcceptActions.removeAll()
               }
+              result(true)
           } else {
               result(FlutterMethodNotImplemented)
           }
@@ -227,11 +234,15 @@ import Security
   }
 
   func didActivateAudioSession(_ audioSession: AVAudioSession) {
-      print("[CallKit] didActivateAudioSession called")
+      print("[CallKit][CALL_PROCESS] didActivateAudioSession — signalling Flutter")
+      // CallKit audio session hazır → Flutter'a bildir, setMicrophoneEnabled bekleyebilir.
+      DispatchQueue.main.async { [weak self] in
+          self?.callkitChannel?.invokeMethod("audioSessionActivated", arguments: nil)
+      }
   }
-  
+
   func didDeactivateAudioSession(_ audioSession: AVAudioSession) {
-      print("[CallKit] didDeactivateAudioSession called")
+      print("[CallKit][CALL_PROCESS] didDeactivateAudioSession called")
   }
   
   func providerDidReset() {

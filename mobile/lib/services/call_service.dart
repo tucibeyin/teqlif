@@ -130,6 +130,9 @@ class CallService {
         await _audioPlayer.play(ap.AssetSource('sounds/ringing.wav'));
       }
     });
+    if (Platform.isIOS) {
+      _initCallkitChannelHandler();
+    }
   }
   static final CallService instance = CallService._();
 
@@ -149,6 +152,22 @@ class CallService {
 
   bool _isHangingUp = false;  // Eş zamanlı _hangUpLocally çağrılarını önler
   bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
+  Completer<void>? _callkitAudioReady; // iOS: didActivateAudioSession sinyali
+
+  static const _callkitChannel = MethodChannel('com.teqlif/callkit');
+
+  // iOS: CallKit audio session aktive olduğunda native'den sinyal alır.
+  // Bu handler uygulama boyunca aktif kalmalı.
+  void _initCallkitChannelHandler() {
+    _callkitChannel.setMethodCallHandler((call) async {
+      if (call.method == 'audioSessionActivated') {
+        _cpLog('LK', 'audioSessionActivated received from CallKit native');
+        if (_callkitAudioReady != null && !_callkitAudioReady!.isCompleted) {
+          _callkitAudioReady!.complete();
+        }
+      }
+    });
+  }
 
   Timer? _hapticLoopTimer;
   
@@ -754,27 +773,53 @@ class CallService {
     _isJoiningRoom = true;
     _room = Room();
 
+    // callStatus'u snapshot alıyoruz — async boyunca değişebilir
+    final callStatusAtEntry = state.value.status;
+    final isCalleeRole = callStatusAtEntry == CallStatus.connecting;
+
     try {
-      _cpLog('LK', '_joinRoom starting | url=$livekitUrl tokenLen=${token.length} status=${state.value.status}');
-      
-      // We must fulfill CallKit BEFORE enabling the microphone and connecting on iOS!
-      // This prevents the AudioSession from defaulting to SoloAmbient (Speaker) and jumping to VoiceChat.
-      if (Platform.isIOS && state.value.callId != null && state.value.status == CallStatus.connecting) {
-        final uuid = formatToUuid(state.value.callId!.toString());
-        _cpLog('LK', 'iOS CallKit fulfillAccept | uuid=$uuid');
-        const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((e) {
+      _cpLog('LK', '_joinRoom starting | url=$livekitUrl tokenLen=${token.length} status=$callStatusAtEntry isCallee=$isCalleeRole');
+
+      // ── iOS Callee: fulfillAccept → didActivateAudioSession sinyali bekle ──────
+      // CallKit audio session async aktive edilir (fulfill → didActivate).
+      // Audio donanımını yalnızca didActivate sonrası kullanmak gerekir.
+      if (Platform.isIOS && isCalleeRole) {
+        // UUID mismatch'ten kaçın: tüm pending action'ları fulfill et (bire-bir arama).
+        _callkitAudioReady = Completer<void>();
+        _cpLog('LK', 'iOS callee: calling fulfillAccept (all pending)');
+        _callkitChannel.invokeMethod('fulfillAccept', {'uuid': ''}).catchError((e) {
           _cpLog('LK', 'fulfillAccept ERROR | $e');
+          // Sinyal gelmezse timeout devreye girer — hata durumunu bloke etme
         });
-        // Give CallKit a moment to fully activate the audio session
-        await Future.delayed(const Duration(milliseconds: 500));
-      } else if (Platform.isAndroid && state.value.callId != null && state.value.status == CallStatus.connecting) {
-        final uuid = formatToUuid(state.value.callId!.toString());
+        // Android callee: setCallConnected (audio session yok, direkt çalışır)
+      } else if (Platform.isAndroid && isCalleeRole && state.value.callId != null) {
+        final uuid = _formatToUuid(state.value.callId!.toString());
+        _cpLog('LK', 'Android callee: setCallConnected | uuid=$uuid');
         FlutterCallkitIncoming.setCallConnected(uuid).catchError((e) {
-          debugPrint('[CallService] ERROR invoking setCallConnected: $e');
+          _cpLog('LK', 'setCallConnected ERROR | $e');
         });
+        // Android'de audio session yok — kısa bekleme yeterli
+        await Future.delayed(const Duration(milliseconds: 200));
       }
 
-      // Force iOS to use earpiece and playAndRecord category before LiveKit messes with it
+      // ── Ağ bağlantısı (audio session gerektirmez) ────────────────────────────
+      _cpLog('LK', 'room.connect() → calling LiveKit');
+      await _room!.connect(livekitUrl, token, roomOptions: const RoomOptions(defaultAudioOutputOptions: AudioOutputOptions(speakerOn: false)));
+      _cpLog('LK', 'room.connect() SUCCESS');
+
+      // ── iOS Callee: audio session aktive olana kadar bekle ───────────────────
+      if (Platform.isIOS && isCalleeRole && _callkitAudioReady != null) {
+        _cpLog('LK', 'iOS callee: waiting for audioSessionActivated (max 4s)');
+        await _callkitAudioReady!.future.timeout(
+          const Duration(seconds: 4),
+          onTimeout: () {
+            _cpLog('LK', 'audioSessionActivated TIMEOUT — CallKit may not have activated audio. Proceeding anyway.');
+          },
+        );
+        _callkitAudioReady = null;
+      }
+
+      // ── Audio session yapılandır (iOS için CallKit sonrası, diğerleri için hemen) ──
       try {
         _cpLog('LK', 'AudioSession configure | category=playAndRecord mode=voiceChat speaker=false');
         final session = await AudioSession.instance;
@@ -786,17 +831,13 @@ class CallService {
         await Hardware.instance.setSpeakerphoneOn(false);
         _cpLog('LK', 'AudioSession configure OK');
       } catch (e) {
-        _cpLog('LK', 'AudioSession pre-config ERROR | $e');
+        _cpLog('LK', 'AudioSession configure ERROR | $e');
       }
-
-      _cpLog('LK', 'room.connect() → calling LiveKit');
-      await _room!.connect(livekitUrl, token, roomOptions: const RoomOptions(defaultAudioOutputOptions: AudioOutputOptions(speakerOn: false)));
-      _cpLog('LK', 'room.connect() SUCCESS');
 
       _cpLog('LK', 'setMicrophoneEnabled(true) calling');
       await _room!.localParticipant?.setMicrophoneEnabled(true);
       _cpLog('LK', 'setMicrophoneEnabled(true) done');
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 300));
       await Hardware.instance.setSpeakerphoneOn(false);
       
       _roomEventsSubscription = _room!.events.listen(_onRoomEvent);

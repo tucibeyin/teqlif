@@ -141,6 +141,9 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
       _cpLog('UI', 'overlay._openCallScreen SKIPPED | preventAutoOpen=true');
       return;
     }
+    // Hemen işaretle — frame gecikmesi nedeniyle isCallScreenVisible henüz true değil.
+    // Bu guard olmadan _onCallState her tetiklendiğinde tekrar push yapar.
+    CallService.instance.isCallScreenVisible.value = true;
     _cpLog('UI', 'overlay._openCallScreen → pushing /call_screen');
     final nav = widget.navigatorKey?.currentState ?? Navigator.of(context, rootNavigator: true);
     nav.push(
