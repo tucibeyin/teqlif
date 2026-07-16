@@ -510,10 +510,27 @@ class PushNotificationService {
         }
       }
 
-      await AuthService.saveDeviceTokens(fcmToken: token, voipToken: voipToken);
-      _cpLog('TOKEN', 'backend registration SUCCESS | voip=${voipToken != null ? "present" : "absent"}');
+      // 429 Rate Limited için exponential backoff: 10s, 30s, vazgeç.
+      const delays = [10, 30];
+      for (int attempt = 1; attempt <= delays.length + 1; attempt++) {
+        try {
+          await AuthService.saveDeviceTokens(fcmToken: token, voipToken: voipToken);
+          _cpLog('TOKEN', 'backend registration SUCCESS | attempt=$attempt voip=${voipToken != null ? "present" : "absent"}');
+          return;
+        } catch (e) {
+          final isRateLimited = e.toString().contains('429') || e.toString().contains('RATE_LIMITED') || e.toString().contains('rate_limited');
+          if (isRateLimited && attempt <= delays.length) {
+            final waitSecs = delays[attempt - 1];
+            _cpLog('TOKEN', 'backend registration 429 RATE_LIMITED | attempt=$attempt → retrying in ${waitSecs}s');
+            await Future.delayed(Duration(seconds: waitSecs));
+          } else {
+            _cpLog('TOKEN', '_sendTokenToBackend FAILED | attempt=$attempt error=$e');
+            return;
+          }
+        }
+      }
     } catch (e) {
-      _cpLog('TOKEN', '_sendTokenToBackend FAILED | $e');
+      _cpLog('TOKEN', '_sendTokenToBackend OUTER FAILED | $e');
     }
   }
 }

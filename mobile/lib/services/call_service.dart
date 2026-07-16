@@ -147,8 +147,9 @@ class CallService {
   Timer? _resetTimer; // To prevent delayed reset overwriting new calls
   Timer? _callerStatusPollTimer; // Poll /status while in calling state (WS kayıp event recovery)
 
-  bool _isHangingUp = false; // Eş zamanlı _hangUpLocally çağrılarını önler
-  
+  bool _isHangingUp = false;  // Eş zamanlı _hangUpLocally çağrılarını önler
+  bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
+
   Timer? _hapticLoopTimer;
   
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -380,7 +381,7 @@ class CallService {
         _setState(state.value.copyWith(status: CallStatus.ended));
         _scheduleReset();
       }
-    } catch (e, stack) {
+    } catch (e) {
       _cpLog('OUT', 'startCall EXCEPTION | $e');
       _setState(state.value.copyWith(status: CallStatus.ended));
       _scheduleReset();
@@ -410,8 +411,8 @@ class CallService {
   /// WS geçici kopuksa ve call_accepted eventi kaçtıysa bu metod yakalar.
   void _startCallerStatusPoll(int callId) {
     _callerStatusPollTimer?.cancel();
-    _cpLog('OUT', 'callerStatusPoll started | interval=4s callId=$callId');
-    _callerStatusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
+    _cpLog('OUT', 'callerStatusPoll started | interval=2s callId=$callId');
+    _callerStatusPollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       if (state.value.status != CallStatus.calling) {
         _callerStatusPollTimer?.cancel();
         return;
@@ -419,7 +420,7 @@ class CallService {
       try {
         final statusData = await _get('/calls/$callId/status');
         final s = statusData['status'] as String?;
-        _cpLog('OUT', 'callerStatusPoll tick | callId=$callId backendStatus=$s');
+        _cpLog('OUT', 'callerStatusPoll tick | callId=$callId backendStatus=$s status=${state.value.status}');
         if (s == 'active') {
           _callerStatusPollTimer?.cancel();
           if (state.value.status == CallStatus.calling) {
@@ -481,15 +482,16 @@ class CallService {
       }
     }
 
+    final calleeToken = data['callee_token'] as String?;
+    final livekitUrl = data['livekit_url'] as String?;
+
     _setState(
       CallState(
         status: CallStatus.ringing,
-        callId: data['call_id'] is int
-            ? data['call_id']
-            : int.tryParse(data['call_id'].toString()),
+        callId: incomingCallId,
         roomName: data['room_name'] as String?,
-        livekitUrl: data['livekit_url'] as String?,
-        calleeToken: data['callee_token'] as String?,
+        livekitUrl: livekitUrl,
+        calleeToken: calleeToken,
         otherUserId: data['caller_id'] is int
             ? data['caller_id']
             : int.tryParse(data['caller_id'].toString()),
@@ -498,7 +500,39 @@ class CallService {
       ),
     );
 
+    // VoIP push path: callee_token push payload'ında gelmez (JWT güvenlik).
+    // Proaktif fetch ile kullanıcı kabul ettiğinde pre-connect hazır olur.
+    if ((calleeToken == null || livekitUrl == null) && incomingCallId != null) {
+      _cpLog('IN', 'calleeToken/livekitUrl missing — proactive fetch starting | callId=$incomingCallId');
+      _fetchAndStoreCalleeToken(incomingCallId);
+    }
+
     playNotification();
+  }
+
+  /// VoIP push path için callee LK token'ını arka planda çeker ve state'e yazar.
+  /// Kullanıcı kabul ettiğinde pre-connect başlatılabilmesi için ringing sırasında çalışır.
+  Future<void> _fetchAndStoreCalleeToken(int callId) async {
+    _cpLog('IN', '_fetchCalleeToken start | callId=$callId');
+    try {
+      final data = await _get('/calls/$callId/callee-token');
+      final token = data['token'] as String?;
+      final url = data['livekit_url'] as String?;
+      final room = data['room_name'] as String?;
+      _cpLog('IN', '_fetchCalleeToken result | tokenLen=${token?.length} url=${url != null} room=$room');
+      if (state.value.status == CallStatus.ringing && state.value.callId == callId) {
+        _setState(state.value.copyWith(
+          calleeToken: token,
+          livekitUrl: url,
+          roomName: room,
+        ));
+        _cpLog('IN', '_fetchCalleeToken stored → pre-connect ready | callId=$callId');
+      } else {
+        _cpLog('IN', '_fetchCalleeToken discarded (state changed) | callId=$callId status=${state.value.status.name}');
+      }
+    } catch (e) {
+      _cpLog('IN', '_fetchCalleeToken FAILED (acceptCall response-token fallback will be used) | $e');
+    }
   }
 
   void playNotification() {
@@ -583,19 +617,27 @@ class CallService {
     }
 
     _setState(state.value.copyWith(status: CallStatus.connecting));
-    
-    _cpLog('IN', 'pre-connect check | livekitUrl=${state.value.livekitUrl != null ? "EXISTS" : "NULL"} calleeToken=${state.value.calleeToken != null ? "EXISTS" : "NULL"}');
 
-    if (state.value.livekitUrl != null && state.value.calleeToken != null) {
-      _cpLog('IN', 'pre-connect _joinRoom starting (callee, no await)');
-      _joinRoom(
-        livekitUrl: state.value.livekitUrl!,
-        token: state.value.calleeToken!,
-      ).catchError((e) {
+    // Snapshot token/url — may be set by _fetchAndStoreCalleeToken (proactive fetch)
+    final preConnectUrl = state.value.livekitUrl;
+    final preConnectToken = state.value.calleeToken;
+
+    _cpLog(
+      'IN',
+      'pre-connect check | livekitUrl=${preConnectUrl != null ? "EXISTS" : "NULL"} '
+      'calleeToken=${preConnectToken != null ? "EXISTS" : "NULL"} '
+      'isJoining=$_isJoiningRoom roomNull=${_room == null}',
+    );
+
+    bool preConnectStarted = false;
+    if (preConnectUrl != null && preConnectToken != null && !_isJoiningRoom && _room == null) {
+      preConnectStarted = true;
+      _cpLog('IN', 'pre-connect _joinRoom starting (callee token available)');
+      _joinRoom(livekitUrl: preConnectUrl, token: preConnectToken).catchError((e) {
         _cpLog('IN', 'pre-connect _joinRoom ERROR | $e');
       });
     } else {
-      _cpLog('IN', 'pre-connect _joinRoom SKIPPED | url or calleeToken is null');
+      _cpLog('IN', 'pre-connect SKIPPED → will use accept-response token');
     }
 
     _cpLog('IN', 'POST /calls/$callId/accept → request (retry max=4)');
@@ -606,7 +648,7 @@ class CallService {
         try {
           _cpLog('IN', 'POST /calls/$callId/accept attempt=${retryCount + 1}');
           data = await _post('/calls/$callId/accept');
-          _cpLog('IN', 'POST /calls/$callId/accept SUCCESS | acceptedAt=${data?['accepted_at']}');
+          _cpLog('IN', 'POST /calls/$callId/accept SUCCESS | acceptedAt=${data['accepted_at']} tokenLen=${(data['token'] as String?)?.length}');
           break;
         } catch (e) {
           retryCount++;
@@ -618,11 +660,25 @@ class CallService {
       if (data == null) throw Exception('Accept data is null');
 
       if (data['accepted_at'] != null) {
-        _setState(state.value.copyWith(
-          acceptedAt: DateTime.parse(data['accepted_at']),
-        ));
+        _setState(state.value.copyWith(acceptedAt: DateTime.parse(data['accepted_at'])));
       }
-    } catch (e, stack) {
+
+      // PRIMARY PATH: pre-connect çalışmadıysa response token ile LiveKit'e bağlan.
+      // preConnectStarted=false ise token push payload'ında yoktu; accept yanıtı otoritedir.
+      if (!preConnectStarted && !_isJoiningRoom && _room == null) {
+        final responseToken = data['token'] as String?;
+        final responseLkUrl = (data['livekit_url'] as String?) ?? preConnectUrl;
+        _cpLog('IN', 'acceptCall PRIMARY: _joinRoom with RESPONSE token | tokenLen=${responseToken?.length} url=$responseLkUrl');
+        if (responseToken != null && responseLkUrl != null) {
+          _joinRoom(livekitUrl: responseLkUrl, token: responseToken).catchError((e) {
+            _cpLog('IN', 'acceptCall _joinRoom (response token) ERROR | $e');
+          });
+        } else {
+          _cpLog('IN', 'acceptCall: response token/url null — cannot join LiveKit');
+          _hangUpLocally(status: CallStatus.ended);
+        }
+      }
+    } catch (e) {
       _cpLog('IN', 'acceptCall FAILED after retries | $e');
       _hangUpLocally(status: CallStatus.ended);
     }
@@ -691,8 +747,13 @@ class CallService {
     required String livekitUrl,
     required String token,
   }) async {
+    if (_isJoiningRoom) {
+      _cpLog('LK', '_joinRoom SKIPPED — already joining (double call guard)');
+      return;
+    }
+    _isJoiningRoom = true;
     _room = Room();
-    
+
     try {
       _cpLog('LK', '_joinRoom starting | url=$livekitUrl tokenLen=${token.length} status=${state.value.status}');
       
@@ -742,30 +803,34 @@ class CallService {
       
       bool peerAlreadyJoined = _room!.remoteParticipants.isNotEmpty;
       _cpLog('LK', 'peerAlreadyJoined=$peerAlreadyJoined status=${state.value.status}');
-      if (state.value.status == CallStatus.connecting || peerAlreadyJoined) {
+      // "connected" yalnızca peer gerçekten LK'da ise set edilir.
+      // Caller'ın tek taraflı connect etmesi yeterli değil — WhatsApp pattern.
+      if (peerAlreadyJoined) {
         _setState(state.value.copyWith(status: CallStatus.connected));
         _startElapsedTimer();
-        _cpLog('LK', 'setState(connected) → call is CONNECTED in _joinRoom');
+        _peerTimeoutTimer?.cancel();
+        _cpLog('LK', 'setState(connected) → peer already in room');
       } else {
-        _cpLog('LK', 'joined LiveKit → waiting for peer to join');
+        _cpLog('LK', 'joined LiveKit → waiting for peer (ParticipantConnectedEvent)');
       }
-      
+
       await WakelockPlus.enable();
 
       _peerTimeoutTimer?.cancel();
-      _cpLog('LK', 'peerTimeoutTimer started | 15s');
-      _peerTimeoutTimer = Timer(const Duration(seconds: 15), () {
+      _cpLog('LK', 'peerTimeoutTimer started | 25s');
+      _peerTimeoutTimer = Timer(const Duration(seconds: 25), () {
         if (_room != null && _room!.remoteParticipants.isEmpty) {
-          if (state.value.status == CallStatus.connected) {
-            _cpLog('LK', 'peerTimeoutTimer FIRED → peer did not join in 15s → endCall');
-            endCall();
-          }
+          _cpLog('LK', 'peerTimeoutTimer FIRED → peer did not join in 25s → endCall | status=${state.value.status}');
+          endCall();
         }
       });
-      
+
+      _isJoiningRoom = false;
+      _cpLog('LK', '_joinRoom complete | _isJoiningRoom reset');
       await _setupAudioInterruptionListener();
     } catch (e) {
       _cpLog('LK', '_joinRoom EXCEPTION | $e');
+      _isJoiningRoom = false;
       _hangUpLocally(status: CallStatus.ended);
       await _disconnectRoom();
     }
@@ -878,10 +943,15 @@ class CallService {
     _callerStatusPollTimer?.cancel();
     if (callId != null) {
       _cpLog('END', 'POST /calls/$callId/end fire-and-forget');
-      _post('/calls/$callId/end').catchError((_) async {
-        _cpLog('END', 'POST /calls/$callId/end retry');
-        await Future.delayed(const Duration(milliseconds: 500));
-        _post('/calls/$callId/end').catchError((_) {});
+      _post('/calls/$callId/end').catchError((e) {
+        _cpLog('END', 'POST /calls/$callId/end retry | $e');
+        Future.delayed(const Duration(milliseconds: 500)).then((_) {
+          _post('/calls/$callId/end').catchError((e2) {
+            _cpLog('END', 'POST /calls/$callId/end retry2 FAILED | $e2');
+            return <String, dynamic>{};
+          });
+        });
+        return <String, dynamic>{};
       });
     }
     await _hangUpLocally(status: CallStatus.ended);
@@ -946,15 +1016,16 @@ class CallService {
     _roomEventsSubscription?.call();
     _audioInterruptionSubscription?.cancel();
 
+    _isJoiningRoom = false;
     if (_room != null) {
       _cpLog('LK', 'room.disconnect() calling');
       await _room!.disconnect();
       _cpLog('LK', 'room.disconnect() done → dispose()');
       await _room!.dispose();
       _room = null;
-      _cpLog('LK', 'room disposed | _room=null');
+      _cpLog('LK', 'room disposed | _room=null _isJoiningRoom=false');
     } else {
-      _cpLog('LK', '_disconnectRoom: room was already null');
+      _cpLog('LK', '_disconnectRoom: room was already null | _isJoiningRoom=false');
     }
   }
 

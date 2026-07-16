@@ -13,7 +13,6 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../l10n/app_localizations.dart';
 import 'messages_screen.dart';
-import 'call_screen.dart';
 import '../services/call_service.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
@@ -721,39 +720,19 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       // ── Ara (sadece takip ediliyorsa) ────────────────────
                       if (_followStatus == 'accepted') ...[
                         GestureDetector(
-                          onTap: () async {
-                            debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] public_profile_screen CALL BUTTON CLICKED');
-                            final nav = Navigator.of(context);
+                          onTap: () {
+                            debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] public_profile_screen CALL BUTTON TAPPED | userId=$userId');
                             if (CallService.instance.hasActiveCall) {
-                              nav.push(
-                                MaterialPageRoute(
-                                  settings: const RouteSettings(
-                                    name: '/call_screen',
-                                  ),
-                                  builder: (_) => const CallScreen(),
-                                  fullscreenDialog: true,
-                                ),
-                              );
+                              debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] public_profile_screen: hasActiveCall → overlay will open CallScreen');
                               return;
                             }
-
+                            // CallScreen'i overlay açar: status → calling olunca _onCallState tetiklenir.
                             CallService.instance.startCall(
                               calleeId: userId,
                               calleeUsername: widget.username,
-                              calleeAvatar:
-                                  _user?['profile_image_thumb_url']
-                                      as String?,
+                              calleeAvatar: _user?['profile_image_thumb_url'] as String?,
                             );
-                            debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] public_profile_screen startCall await finished, executing nav.push');
-                            nav.push(
-                              MaterialPageRoute(
-                                settings: const RouteSettings(
-                                  name: '/call_screen',
-                                ),
-                                builder: (_) => const CallScreen(),
-                                fullscreenDialog: true,
-                              ),
-                            );
+                            debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] public_profile_screen startCall fired — overlay will navigate to CallScreen');
                           },
                           child: Container(
                             padding: const EdgeInsets.all(11),

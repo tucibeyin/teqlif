@@ -72,6 +72,38 @@ async def _delete_lk_room(room_name: str) -> None:
             logger.warning("[Calls] LK room silinemedi | room=%s | %s", room_name, exc)
 
 
+@router.get("/{call_id}/callee-token")
+async def get_callee_token(
+    call_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    VoIP push token'ı taşımaz — callee, uyanınca bu endpoint'ten taze LK token'ını çeker.
+    Sadece call.callee_id == current_user.id ise erişilebilir.
+    """
+    call = await db.get(Call, call_id)
+    if not call or call.callee_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Call not found")
+    if call.status not in ("calling", "active"):
+        logger.warning(
+            "[CALL_PROCESS][IN] callee-token rejected — call not active | call_id=%d status=%s",
+            call_id, call.status,
+        )
+        raise HTTPException(status_code=409, detail="Call not active")
+
+    token = _make_livekit_token(call.room_name, current_user)
+    logger.info(
+        "[CALL_PROCESS][IN] callee-token issued | call_id=%d callee=%d room=%s",
+        call_id, current_user.id, call.room_name,
+    )
+    return {
+        "token": token,
+        "livekit_url": settings.livekit_url,
+        "room_name": call.room_name,
+    }
+
+
 @router.get("/{call_id}/status")
 async def get_call_status(
     call_id: int,
@@ -132,7 +164,8 @@ async def _send_call_push(
         title = title_raw
         body = body_raw
 
-    extra_data = {
+    # FCM payload: tam veri — Android flutter_callkit_incoming extra dict'i doğru map eder
+    fcm_extra_data = {
         "call_id": str(call_id),
         "room_name": room_name,
         "caller_id": str(caller.id),
@@ -140,6 +173,18 @@ async def _send_call_push(
         "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
         "livekit_url": settings.livekit_url,
         "callee_token": callee_token,
+    }
+
+    # VoIP (APNs) payload: minimal — JWT token push payload'ında olmamalı.
+    # iOS callee uyanınca GET /calls/:id/callee-token ile taze token çeker.
+    # flutter_callkit_incoming native handler'ı sadece bilinen alanları map eder;
+    # custom alanlar ancak "extra" alt dict'inde ulaşılabilir olur.
+    voip_extra_data = {
+        "call_id": str(call_id),
+        "room_name": room_name,
+        "caller_id": str(caller.id),
+        "caller_username": caller.username,
+        "caller_avatar": caller.profile_image_thumb_url or caller.profile_image_url or "",
     }
 
     # Token yaşını hesapla
@@ -160,9 +205,10 @@ async def _send_call_push(
             "[CALL_PROCESS][PUSH] VoIP push attempt | callee=%d tokenAge=%dd token=%s…",
             callee.id, token_age_days, callee.voip_token[:10],
         )
+        # VoIP payload'ında JWT yok — callee API'den çeker (GET /callee-token)
         payload = {
             "aps": {"content-available": 1},
-            **extra_data,
+            **voip_extra_data,
         }
         success, bad_token = await send_voip_push(callee.voip_token, payload)
         logger.info(
@@ -188,7 +234,7 @@ async def _send_call_push(
                 body=body,
                 badge=None,
                 notif_type="incoming_call",
-                extra_data=extra_data,
+                extra_data=fcm_extra_data,  # FCM: full payload with callee_token
             )
             logger.info("[CALL_PROCESS][PUSH] FCM push sent | callee=%d", callee.id)
         except Exception as exc:

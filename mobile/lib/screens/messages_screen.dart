@@ -41,7 +41,6 @@ import '../l10n/app_localizations.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 import '../services/call_service.dart';
-import 'call_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -2022,34 +2021,19 @@ class _DirectChatScreenState extends State<DirectChatScreen>
           IconButton(
             icon: const Icon(Icons.call, size: 22),
             tooltip: l.callVoiceCall,
-            onPressed: () async {
-              debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] messages_screen CALL BUTTON CLICKED');
+            onPressed: () {
+              debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}');
               if (CallService.instance.hasActiveCall) {
-                if (!context.mounted) return;
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    settings: const RouteSettings(name: '/call_screen'),
-                    builder: (_) => const CallScreen(),
-                    fullscreenDialog: true,
-                  ),
-                );
+                debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen: hasActiveCall → overlay will open CallScreen');
                 return;
               }
-
+              // CallScreen'i overlay açar: status → calling olunca _onCallState tetiklenir.
               CallService.instance.startCall(
                 calleeId: widget.otherUserId,
                 calleeUsername: widget.otherHandle,
                 calleeAvatar: widget.otherAvatarUrl,
               );
-              debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] messages_screen startCall await finished, executing nav.push');
-              if (!context.mounted) return;
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  settings: const RouteSettings(name: '/call_screen'),
-                  builder: (_) => const CallScreen(),
-                  fullscreenDialog: true,
-                ),
-              );
+              debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen startCall fired — overlay will navigate to CallScreen');
             },
           ),
         ],
