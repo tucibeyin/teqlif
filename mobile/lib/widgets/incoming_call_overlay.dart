@@ -10,6 +10,10 @@ import '../services/ws_service.dart';
 import '../screens/incoming_call_screen.dart';
 import '../screens/call_screen.dart';
 
+void _cpLog(String phase, String msg) {
+  debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
+}
+
 class IncomingCallOverlay extends StatefulWidget {
   final Widget child;
   final GlobalKey<NavigatorState>? navigatorKey;
@@ -44,33 +48,45 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   void _onData(Map<String, dynamic> data) {
     final type = data['type'] as String?;
+    if (type == null) return;
+    if (!type.startsWith('call') && !type.startsWith('incoming')) return;
+    _cpLog('UI', 'overlay._onData received | type=$type currentStatus=${CallService.instance.state.value.status}');
     switch (type) {
       case 'incoming_call':
       case 'call_incoming':
         if (CallService.instance.state.value.status != CallStatus.ringing) {
+          _cpLog('UI', 'IncomingCallBar will show | caller=${data['caller_username']}');
           _isBarDismissed = false;
           CallService.instance.onIncomingCall(data);
+        } else {
+          _cpLog('UI', 'incoming_call SKIPPED | already ringing');
         }
         break;
       case 'incoming_call_notification_tap':
+        _cpLog('UI', 'notification_tap → openIncomingScreen | status=${CallService.instance.state.value.status}');
         if (CallService.instance.state.value.status == CallStatus.ringing) {
           _openIncomingScreen();
         }
         break;
       case 'incoming_call_auto_accept':
-        _openCallScreen(); // CallKit or FCM already invoked acceptCall()
+        _cpLog('UI', 'auto_accept → openCallScreen (CallKit accepted)');
+        _openCallScreen();
         break;
       case 'call_accepted':
+        _cpLog('UI', 'call_accepted WS → onCallAccepted + openCallScreen');
         CallService.instance.onCallAccepted(data);
         _openCallScreen();
         break;
       case 'call_rejected':
+        _cpLog('UI', 'call_rejected WS → onCallRejected');
         CallService.instance.onCallRejected();
         break;
       case 'call_ended':
+        _cpLog('UI', 'call_ended WS → onCallEnded');
         CallService.instance.onCallEnded();
         break;
       case 'call_missed':
+        _cpLog('UI', 'call_missed WS → onCallMissed');
         CallService.instance.onCallMissed();
         break;
       default:
@@ -79,16 +95,17 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   }
 
   void _onCallState() {
-    // Check if the state is ringing to determine if the bar should show.
-    // We always call setState to rebuild so the bar can hide when rejected/missed.
-    if (CallService.instance.state.value.status != CallStatus.ringing) {
+    final status = CallService.instance.state.value.status;
+    _cpLog('UI', 'overlay._onCallState | status=${status.name} isCallScreenVisible=${CallService.instance.isCallScreenVisible.value}');
+    if (status != CallStatus.ringing) {
       _isBarDismissed = false;
     }
-    setState(() {}); // trigger rebuild for the bar
+    setState(() {});
   }
 
   void _openIncomingScreen() {
     if (!mounted) return;
+    _cpLog('UI', 'overlay._openIncomingScreen | callId=${CallService.instance.state.value.callId}');
     final nav = widget.navigatorKey?.currentState ?? Navigator.of(context, rootNavigator: true);
     nav.push(
       MaterialPageRoute(
@@ -109,14 +126,14 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   void _openCallScreen() {
     if (!mounted) return;
     if (CallService.instance.isCallScreenVisible.value) {
+      _cpLog('UI', 'overlay._openCallScreen SKIPPED | already visible');
       return;
     }
-    
     if (CallService.instance.preventCallScreenAutoOpen.value) {
-      debugPrint('[SWIPE_LIVE_CALL][${DateTime.now().toIso8601String()}] preventCallScreenAutoOpen is true, bypassing CallScreen auto-open');
+      _cpLog('UI', 'overlay._openCallScreen SKIPPED | preventAutoOpen=true');
       return;
     }
-    
+    _cpLog('UI', 'overlay._openCallScreen → pushing /call_screen');
     final nav = widget.navigatorKey?.currentState ?? Navigator.of(context, rootNavigator: true);
     nav.push(
       MaterialPageRoute(
@@ -129,6 +146,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   Future<void> _openCallScreenAndAccept() async {
     if (!mounted) return;
+    _cpLog('UI', 'overlay._openCallScreenAndAccept → acceptCall + openCallScreen');
     CallService.instance.acceptCall();
     _openCallScreen();
   }

@@ -10,6 +10,10 @@ import '../config/app_colors.dart';
 import '../services/call_service.dart';
 import 'messages_screen.dart';
 
+void _cpLog(String phase, String msg) {
+  debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
+}
+
 class CallScreen extends StatefulWidget {
   const CallScreen({super.key});
 
@@ -25,7 +29,7 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] call_screen.dart initState ENTERED (Screen Mounted)');
+    _cpLog('UI', 'CallScreen initState | callId=${CallService.instance.state.value.callId} status=${CallService.instance.state.value.status.name}');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         CallService.instance.isCallScreenVisible.value = true;
@@ -43,19 +47,23 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _onStateChange() {
+    final s = CallService.instance.state.value.status;
+    _cpLog('UI', 'CallScreen._onStateChange | status=${s.name} hasActiveCall=${CallService.instance.hasActiveCall} hasPopped=$_hasPopped');
     if (!CallService.instance.hasActiveCall && mounted && !_hasPopped) {
-      final s = CallService.instance.state.value.status;
       if (s == CallStatus.rejected ||
           s == CallStatus.missed ||
           s == CallStatus.busy ||
           s == CallStatus.noAnswer) {
+        _cpLog('UI', 'CallScreen → delayed pop (2s) | reason=${s.name}');
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted && !_hasPopped) {
+            _cpLog('UI', 'CallScreen → pop (delayed) | reason=${s.name}');
             _hasPopped = true;
             Navigator.of(context).pop();
           }
         });
       } else {
+        _cpLog('UI', 'CallScreen → pop immediately | reason=${s.name}');
         _hasPopped = true;
         Navigator.of(context).pop();
       }
@@ -64,12 +72,13 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    _cpLog('UI', 'CallScreen dispose | callId=${CallService.instance.state.value.callId}');
     try {
       _proximitySubscription.cancel().catchError((e) {
-        debugPrint('[CallScreen] Proximity cancel error: $e');
+        _cpLog('UI', 'CallScreen proximity cancel error | $e');
       });
     } catch (e) {
-      debugPrint('[CallScreen] Proximity cancel sync error: $e');
+      _cpLog('UI', 'CallScreen proximity cancel sync error | $e');
     }
     CallService.instance.state.removeListener(_onStateChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -86,7 +95,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] call_screen.dart build() FIRED (Screen Rendering)');
+    _cpLog('UI', 'CallScreen build | status=${CallService.instance.state.value.status.name}');
     final l = AppLocalizations.of(context)!;
     return ValueListenableBuilder<CallState>(
       valueListenable: CallService.instance.state,
@@ -130,6 +139,7 @@ class _CallScreenState extends State<CallScreen> {
                           size: 32,
                         ),
                         onPressed: () {
+                          _cpLog('UI', 'CallScreen minimize tapped → pop');
                           _hasPopped = true;
                           Navigator.of(context).pop();
                         },
@@ -326,8 +336,10 @@ class _CallScreenState extends State<CallScreen> {
                                       cs.status == CallStatus.connected ||
                                       cs.status == CallStatus.reconnecting)
                                     GestureDetector(
-                                      onTap: () =>
-                                          CallService.instance.endCall(),
+                                      onTap: () {
+                                        _cpLog('END', 'CallScreen END CALL tapped | callId=${CallService.instance.state.value.callId}');
+                                        CallService.instance.endCall();
+                                      },
                                       child: Container(
                                         width: 72,
                                         height: 72,

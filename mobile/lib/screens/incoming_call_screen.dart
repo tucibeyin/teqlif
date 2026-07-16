@@ -8,6 +8,10 @@ import 'package:permission_handler/permission_handler.dart';
 import '../services/call_service.dart';
 import 'call_screen.dart';
 
+void _cpLog(String phase, String msg) {
+  debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
+}
+
 class IncomingCallScreen extends StatefulWidget {
   final Map<String, dynamic> callData;
   const IncomingCallScreen({super.key, required this.callData});
@@ -37,21 +41,25 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     // If the caller ends before we answer, pop automatically
     CallService.instance.state.addListener(_onStateChange);
 
-    // Start loud ringtone and haptic only when full screen is open
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] IncomingCallScreen init: Calling startRingtoneAndVibration'); CallService.instance.startRingtoneAndVibration();
+    _cpLog('UI', 'IncomingCallScreen initState | callId=${CallService.instance.state.value.callId} caller=${widget.callData['caller_username']}');
+    _cpLog('SOUND', 'startRingtoneAndVibration → IncomingCallScreen open');
+    CallService.instance.startRingtoneAndVibration();
   }
 
   Future<void> _onStateChange() async {
     final status = CallService.instance.state.value.status;
+    _cpLog('UI', 'IncomingCallScreen._onStateChange | status=${status.name} hasNavigated=$_hasNavigated');
 
     if (_hasNavigated || !mounted) return;
 
     if (status == CallStatus.ended ||
         status == CallStatus.idle ||
         status == CallStatus.missed) {
+      _cpLog('UI', 'IncomingCallScreen → pop | reason=${status.name}');
       _hasNavigated = true;
       Navigator.of(context).pop();
     } else if (status == CallStatus.connecting) {
+      _cpLog('UI', 'IncomingCallScreen → pushReplacement /call_screen | status=connecting');
       _hasNavigated = true;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -102,8 +110,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   }
 
   Future<void> _accept() async {
+    _cpLog('IN', 'IncomingCallScreen ACCEPT tapped | callId=${CallService.instance.state.value.callId}');
     await CallService.instance.acceptCall();
     if (!mounted) return;
+    _cpLog('UI', 'IncomingCallScreen → pushReplacement /call_screen after acceptCall');
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         settings: const RouteSettings(name: '/call_screen'),
@@ -114,8 +124,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   }
 
   Future<void> _decline() async {
+    _cpLog('IN', 'IncomingCallScreen DECLINE tapped | callId=${CallService.instance.state.value.callId}');
     await CallService.instance.rejectCall();
-    // _onStateChange listener will automatically pop the screen when state becomes idle
   }
 
   @override

@@ -20,6 +20,10 @@ import '../core/app_exception.dart';
 import '../services/storage_service.dart';
 import 'push_notification_service.dart';
 
+void _cpLog(String phase, String msg) {
+  debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
+}
+
 enum CallStatus {
   idle,
   calling, // outgoing — waiting for answer
@@ -182,8 +186,8 @@ class CallService {
   }
 
   void _setState(CallState s) {
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] CallState changed to: ${s.status}');
     final oldStatus = state.value.status;
+    _cpLog('STATE', '${oldStatus.name} → ${s.status.name} | callId=${s.callId}');
     final oldPoor = state.value.isPoorConnection;
     state.value = s;
     
@@ -192,6 +196,7 @@ class CallService {
     }
     
     if (!oldPoor && s.isPoorConnection && s.status == CallStatus.connected) {
+      _cpLog('SOUND', 'weak.wav PLAY | poorConnection detected');
       _audioPlayer.setReleaseMode(ReleaseMode.release);
       _audioPlayer.play(AssetSource('sounds/weak.wav'));
     }
@@ -245,22 +250,26 @@ class CallService {
             await Future.delayed(const Duration(milliseconds: 600));
           }
           if (state.value.status == CallStatus.calling) {
-            debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _handleStatusChange: AUDIO PLAYER ringing.wav PLAY STARTED (EARPIECE/LOOP)');
+            _cpLog('SOUND', 'ringing.wav PLAY | mode=loop earpiece');
             _audioPlayer.play(AssetSource('sounds/ringing.wav'));
           }
         }
       });
     } else if (newStatus == CallStatus.busy || newStatus == CallStatus.rejected) {
+      _cpLog('SOUND', 'busy.wav PLAY | reason=$newStatus');
       _audioPlayer.setReleaseMode(ReleaseMode.release);
       _audioPlayer.play(AssetSource('sounds/busy.wav'));
     } else if (newStatus == CallStatus.ended) {
       if (oldStatus == CallStatus.connected || oldStatus == CallStatus.connecting) {
+        _cpLog('SOUND', 'ended.wav PLAY | wasConnected=true');
         _audioPlayer.setReleaseMode(ReleaseMode.release);
         _audioPlayer.play(AssetSource('sounds/ended.wav'));
       } else {
+        _cpLog('SOUND', 'audioPlayer.stop | ended without connection');
         _audioPlayer.stop();
       }
     } else if (newStatus == CallStatus.connected || newStatus == CallStatus.idle) {
+      _cpLog('SOUND', 'audioPlayer.stop | status=$newStatus');
       _audioPlayer.stop();
     }
   }
@@ -272,14 +281,15 @@ class CallService {
     required String calleeUsername,
     required String? calleeAvatar,
   }) async {
-    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startCall function ENTERED');
+    _cpLog('OUT', 'startCall ENTERED | calleeId=$calleeId calleeUsername=$calleeUsername');
     _resetTimer?.cancel();
     if (hasActiveCall) {
-      debugPrint('[CallService] Cannot start call: already in an active call.');
+      _cpLog('OUT', 'startCall BLOCKED | hasActiveCall=true currentStatus=${state.value.status}');
       return;
     }
 
     final permStatus = await Permission.microphone.request();
+    _cpLog('OUT', 'mic permission | status=$permStatus');
     if (permStatus != PermissionStatus.granted) {
       _setState(
         state.value.copyWith(
@@ -300,9 +310,9 @@ class CallService {
     );
 
     try {
-      debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startCall: Calling HTTP POST /calls/start');
+      _cpLog('OUT', 'POST /calls/start → request | calleeId=$calleeId');
       final data = await _post('/calls/start', {'callee_id': calleeId});
-      debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startCall: HTTP POST SUCCESS');
+      _cpLog('OUT', 'POST /calls/start → response | callId=${data['call_id']} roomName=${data['room_name']}');
       _setState(
         state.value.copyWith(
           callId: data['call_id'] as int,
@@ -343,7 +353,7 @@ class CallService {
           );
           await FlutterCallkitIncoming.startCall(params);
         } catch (e) {
-          debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startCall CallKit Error: \$e');
+          _cpLog('OUT', 'CallKit.startCall ERROR | $e');
         }
       }
 
@@ -351,18 +361,18 @@ class CallService {
       await WakelockPlus.enable();
       
       // WhatsApp-like Pre-Connection: Arayan kişi beklemeden LiveKit'e bağlanır.
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] startCall: About to AWAIT _joinRoom for Pre-Connection');
+      _cpLog('OUT', 'pre-connect _joinRoom starting (WhatsApp-like)');
       await _joinRoom(
         livekitUrl: data['livekit_url'] as String,
         token: data['token'] as String,
       );
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] startCall: AWAIT _joinRoom FINISHED');
+      _cpLog('OUT', 'pre-connect _joinRoom finished');
 
       // WS kayıp event recovery: call_accepted WS'den gelmezse poll ile yakala
       final callIdForPoll = data['call_id'] as int;
       _startCallerStatusPoll(callIdForPoll);
     } on AppException catch (e) {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] startCall catch (AppException) triggered: ${e.code}');
+      _cpLog('OUT', 'startCall AppException | code=${e.code}');
       if (e.code == 'USER_BUSY') {
         _setState(state.value.copyWith(status: CallStatus.busy));
         _scheduleReset();
@@ -371,7 +381,7 @@ class CallService {
         _scheduleReset();
       }
     } catch (e, stack) {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] startCall catch (general exception) triggered: $e');
+      _cpLog('OUT', 'startCall EXCEPTION | $e');
       _setState(state.value.copyWith(status: CallStatus.ended));
       _scheduleReset();
     }
@@ -379,10 +389,11 @@ class CallService {
 
   void _startRingTimer() {
     _ringTimer?.cancel();
-    // 30s: server ARQ 35s'den önce client timeout atar (server sadece backup)
+    _cpLog('OUT', 'ringTimer started | timeout=30s callId=${state.value.callId}');
     _ringTimer = Timer(const Duration(seconds: 30), () async {
       if (state.value.status == CallStatus.calling) {
         final callId = state.value.callId;
+        _cpLog('OUT', 'ringTimer FIRED → noAnswer | callId=$callId');
         if (callId != null) {
           try {
             await _post('/calls/$callId/missed');
@@ -399,6 +410,7 @@ class CallService {
   /// WS geçici kopuksa ve call_accepted eventi kaçtıysa bu metod yakalar.
   void _startCallerStatusPoll(int callId) {
     _callerStatusPollTimer?.cancel();
+    _cpLog('OUT', 'callerStatusPoll started | interval=4s callId=$callId');
     _callerStatusPollTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
       if (state.value.status != CallStatus.calling) {
         _callerStatusPollTimer?.cancel();
@@ -407,10 +419,11 @@ class CallService {
       try {
         final statusData = await _get('/calls/$callId/status');
         final s = statusData['status'] as String?;
+        _cpLog('OUT', 'callerStatusPoll tick | callId=$callId backendStatus=$s');
         if (s == 'active') {
           _callerStatusPollTimer?.cancel();
           if (state.value.status == CallStatus.calling) {
-            debugPrint('[LIVE_SCREEN_CALL] Poll recovered call_accepted event | call_id=$callId');
+            _cpLog('OUT', 'callerStatusPoll → RECOVERED call_accepted | callId=$callId');
             await onCallAccepted({
               if (statusData['accepted_at'] != null) 'accepted_at': statusData['accepted_at'],
             });
@@ -418,7 +431,7 @@ class CallService {
         } else if (s == 'missed' || s == 'ended' || s == 'rejected') {
           _callerStatusPollTimer?.cancel();
           if (state.value.status == CallStatus.calling) {
-            debugPrint('[LIVE_SCREEN_CALL] Poll detected call terminated | call_id=$callId status=$s');
+            _cpLog('OUT', 'callerStatusPoll → terminated | callId=$callId status=$s');
             await _hangUpLocally(status: CallStatus.ended);
           }
         }
@@ -432,19 +445,20 @@ class CallService {
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
   Future<void> onIncomingCall(Map<String, dynamic> data) async {
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] onIncomingCall received. data=$data');
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] onIncomingCall Explicit Check: livekitUrl=${data['livekit_url']}, calleeToken=${data['callee_token'] != null ? "EXISTS" : "MISSING"}');
+    _cpLog('IN', 'onIncomingCall received | callId=${data['call_id']} caller=${data['caller_username']} calleeToken=${data['callee_token'] != null ? "EXISTS" : "MISSING"} livekitUrl=${data['livekit_url'] != null ? "EXISTS" : "MISSING"}');
     _resetTimer?.cancel();
-    
+
     final incomingCallId = data['call_id'] is int
         ? data['call_id']
         : int.tryParse(data['call_id'].toString());
 
     if (incomingCallId != null && incomingCallId == _lastEndedCallId) {
+      _cpLog('IN', 'ghostCall BLOCKED | incoming=$incomingCallId == lastEnded=$_lastEndedCallId');
       return;
     }
 
     if (hasActiveCall) {
+      _cpLog('IN', 'hasActiveCall BUSY_REJECT | currentStatus=${state.value.status} currentCallId=${state.value.callId} incomingCallId=$incomingCallId');
       if (incomingCallId != null && incomingCallId != state.value.callId) {
         try {
           await _post('/calls/$incomingCallId/reject');
@@ -457,10 +471,13 @@ class CallService {
       try {
         final statusData = await _get('/calls/$incomingCallId/status');
         final backendStatus = statusData['status'];
+        _cpLog('IN', 'backendStatus check | callId=$incomingCallId status=$backendStatus');
         if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
+          _cpLog('IN', 'backendStatus SKIPPED (already terminated) | callId=$incomingCallId');
           return;
         }
       } catch (e) {
+        _cpLog('IN', 'backendStatus check FAILED (continuing) | $e');
       }
     }
 
@@ -485,7 +502,7 @@ class CallService {
   }
 
   void playNotification() {
-    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] playNotification() triggered');
+    _cpLog('SOUND', 'playNotification triggered');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (state.value.status == CallStatus.ringing) {
         FlutterRingtonePlayer().playNotification();
@@ -494,18 +511,18 @@ class CallService {
   }
 
   void startRingtoneAndVibration() async {
-    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] startRingtoneAndVibration() triggered');
+    _cpLog('SOUND', 'startRingtoneAndVibration CALLED | status=${state.value.status}');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (state.value.status != CallStatus.ringing) return;
       
-      // Play immediately
+      _cpLog('SOUND', 'ringtone PLAY | platform=${defaultTargetPlatform.name} looping=true');
       FlutterRingtonePlayer().playRingtone(
         looping: true,
-      ); // Android handles looping natively
+      );
 
-      // iOS manual ringtone & haptic loop
       if (defaultTargetPlatform == TargetPlatform.iOS) {
         _ringtoneLoopTimer?.cancel();
+        _cpLog('SOUND', 'iOS ringtoneLoopTimer started | interval=3s');
         _ringtoneLoopTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
           FlutterRingtonePlayer().playRingtone();
         });
@@ -525,7 +542,7 @@ class CallService {
   }
 
   void stopRingtoneAndVibration() {
-    debugPrint('[LIVE_SCREEN_CALL][\${DateTime.now().toIso8601String()}] stopRingtoneAndVibration() triggered');
+    _cpLog('SOUND', 'stopRingtoneAndVibration CALLED | status=${state.value.status}');
     _ringtoneLoopTimer?.cancel();
     _ringtoneLoopTimer = null;
     _hapticLoopTimer?.cancel();
@@ -535,7 +552,7 @@ class CallService {
   }
 
   Future<void> acceptCall() async {
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] acceptCall triggered. Current status: ${state.value.status}');
+    _cpLog('IN', 'acceptCall TRIGGERED | status=${state.value.status} callId=${state.value.callId}');
     if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
       return;
     }
@@ -550,6 +567,7 @@ class CallService {
     _resetTimer?.cancel();
     stopRingtoneAndVibration();
     final permStatus = await Permission.microphone.status;
+    _cpLog('IN', 'mic status check | status=$permStatus');
     if (!permStatus.isGranted) {
       _setState(
         state.value.copyWith(
@@ -566,45 +584,46 @@ class CallService {
 
     _setState(state.value.copyWith(status: CallStatus.connecting));
     
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] acceptCall Pre-Connection Check: livekitUrl=${state.value.livekitUrl != null ? "EXISTS" : "NULL"}, calleeToken=${state.value.calleeToken != null ? "EXISTS" : "NULL"}');
-    
-    // WhatsApp-like Pre-Connection: Aranan kişi beklemeden LiveKit'e bağlanır.
+    _cpLog('IN', 'pre-connect check | livekitUrl=${state.value.livekitUrl != null ? "EXISTS" : "NULL"} calleeToken=${state.value.calleeToken != null ? "EXISTS" : "NULL"}');
+
     if (state.value.livekitUrl != null && state.value.calleeToken != null) {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Executing _joinRoom for Callee pre-connection');
+      _cpLog('IN', 'pre-connect _joinRoom starting (callee, no await)');
       _joinRoom(
         livekitUrl: state.value.livekitUrl!,
         token: state.value.calleeToken!,
       ).catchError((e) {
-        debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Pre-connection error: $e');
+        _cpLog('IN', 'pre-connect _joinRoom ERROR | $e');
       });
     } else {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] SKIPPED _joinRoom for Callee because URL or Token is NULL!');
+      _cpLog('IN', 'pre-connect _joinRoom SKIPPED | url or calleeToken is null');
     }
 
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Calling POST /calls/$callId/accept');
+    _cpLog('IN', 'POST /calls/$callId/accept → request (retry max=4)');
     try {
       Map<String, dynamic>? data;
       int retryCount = 0;
       while (retryCount < 4) {
         try {
+          _cpLog('IN', 'POST /calls/$callId/accept attempt=${retryCount + 1}');
           data = await _post('/calls/$callId/accept');
-          break; // Success
+          _cpLog('IN', 'POST /calls/$callId/accept SUCCESS | acceptedAt=${data?['accepted_at']}');
+          break;
         } catch (e) {
           retryCount++;
+          _cpLog('IN', 'POST /calls/$callId/accept RETRY | attempt=$retryCount error=$e');
           if (retryCount >= 4) rethrow;
-          await Future.delayed(Duration(milliseconds: 500 * retryCount)); // 500ms, 1000ms, 1500ms
+          await Future.delayed(Duration(milliseconds: 500 * retryCount));
         }
       }
       if (data == null) throw Exception('Accept data is null');
 
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Accept SUCCESS.');
       if (data['accepted_at'] != null) {
         _setState(state.value.copyWith(
           acceptedAt: DateTime.parse(data['accepted_at']),
         ));
       }
     } catch (e, stack) {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] acceptCall ERROR: $e');
+      _cpLog('IN', 'acceptCall FAILED after retries | $e');
       _hangUpLocally(status: CallStatus.ended);
     }
   }
@@ -623,8 +642,9 @@ class CallService {
   // ── Called when caller gets call_accepted WS event ────────────────────────
 
   Future<void> onCallAccepted(Map<String, dynamic> data) async {
+    _cpLog('OUT', 'call_accepted WS event received | acceptedAt=${data['accepted_at']}');
     _ringTimer?.cancel();
-    _callerStatusPollTimer?.cancel(); // Poll'u durdur — event zaten geldi
+    _callerStatusPollTimer?.cancel();
     stopRingtoneAndVibration();
     
     if (data['accepted_at'] != null) {
@@ -651,7 +671,7 @@ class CallService {
   }
 
   void onCallEnded() {
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] onCallEnded (via WS) triggered');
+    _cpLog('END', 'call_ended WS event received → hangUpLocally');
     _hangUpLocally(status: CallStatus.ended);
   }
 
@@ -674,14 +694,15 @@ class CallService {
     _room = Room();
     
     try {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _joinRoom starting... livekitUrl: $livekitUrl, token length: ${token.length}');
+      _cpLog('LK', '_joinRoom starting | url=$livekitUrl tokenLen=${token.length} status=${state.value.status}');
       
       // We must fulfill CallKit BEFORE enabling the microphone and connecting on iOS!
       // This prevents the AudioSession from defaulting to SoloAmbient (Speaker) and jumping to VoiceChat.
       if (Platform.isIOS && state.value.callId != null && state.value.status == CallStatus.connecting) {
         final uuid = formatToUuid(state.value.callId!.toString());
+        _cpLog('LK', 'iOS CallKit fulfillAccept | uuid=$uuid');
         const MethodChannel('com.teqlif/callkit').invokeMethod('fulfillAccept', {'uuid': uuid}).catchError((e) {
-          debugPrint('[CallService] ERROR invoking fulfillAccept: $e');
+          _cpLog('LK', 'fulfillAccept ERROR | $e');
         });
         // Give CallKit a moment to fully activate the audio session
         await Future.delayed(const Duration(milliseconds: 500));
@@ -694,6 +715,7 @@ class CallService {
 
       // Force iOS to use earpiece and playAndRecord category before LiveKit messes with it
       try {
+        _cpLog('LK', 'AudioSession configure | category=playAndRecord mode=voiceChat speaker=false');
         final session = await AudioSession.instance;
         await session.configure(AudioSessionConfiguration(
           avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
@@ -701,56 +723,58 @@ class CallService {
           avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
         ));
         await Hardware.instance.setSpeakerphoneOn(false);
+        _cpLog('LK', 'AudioSession configure OK');
       } catch (e) {
-        debugPrint('[CallService] AudioSession pre-config error: $e');
+        _cpLog('LK', 'AudioSession pre-config ERROR | $e');
       }
 
+      _cpLog('LK', 'room.connect() → calling LiveKit');
       await _room!.connect(livekitUrl, token, roomOptions: const RoomOptions(defaultAudioOutputOptions: AudioOutputOptions(speakerOn: false)));
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _joinRoom SUCCESSFUL!');
+      _cpLog('LK', 'room.connect() SUCCESS');
 
+      _cpLog('LK', 'setMicrophoneEnabled(true) calling');
       await _room!.localParticipant?.setMicrophoneEnabled(true);
-      
-      // Re-assert speakerphone setting after publishing mic
+      _cpLog('LK', 'setMicrophoneEnabled(true) done');
       await Future.delayed(const Duration(milliseconds: 500));
       await Hardware.instance.setSpeakerphoneOn(false);
       
       _roomEventsSubscription = _room!.events.listen(_onRoomEvent);
       
       bool peerAlreadyJoined = _room!.remoteParticipants.isNotEmpty;
+      _cpLog('LK', 'peerAlreadyJoined=$peerAlreadyJoined status=${state.value.status}');
       if (state.value.status == CallStatus.connecting || peerAlreadyJoined) {
-        _setState(
-          state.value.copyWith(
-            status: CallStatus.connected,
-          ),
-        );
+        _setState(state.value.copyWith(status: CallStatus.connected));
         _startElapsedTimer();
-        debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Call is now CONNECTED in _joinRoom.');
+        _cpLog('LK', 'setState(connected) → call is CONNECTED in _joinRoom');
       } else {
-        debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Joined LiveKit, waiting for peer to join.');
+        _cpLog('LK', 'joined LiveKit → waiting for peer to join');
       }
       
       await WakelockPlus.enable();
 
       _peerTimeoutTimer?.cancel();
+      _cpLog('LK', 'peerTimeoutTimer started | 15s');
       _peerTimeoutTimer = Timer(const Duration(seconds: 15), () {
         if (_room != null && _room!.remoteParticipants.isEmpty) {
           if (state.value.status == CallStatus.connected) {
-             debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Peer left or did not join within 15 seconds. Hanging up.');
-             endCall();
+            _cpLog('LK', 'peerTimeoutTimer FIRED → peer did not join in 15s → endCall');
+            endCall();
           }
         }
       });
       
       await _setupAudioInterruptionListener();
     } catch (e) {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _joinRoom EXCEPTION: $e');
+      _cpLog('LK', '_joinRoom EXCEPTION | $e');
       _hangUpLocally(status: CallStatus.ended);
       await _disconnectRoom();
     }
   }
 
   void _onRoomEvent(RoomEvent event) {
+    _cpLog('LK', 'roomEvent | ${event.runtimeType}');
     if (event is RoomDisconnectedEvent) {
+      _cpLog('LK', 'RoomDisconnected → hangUpLocally');
       _hangUpLocally(status: CallStatus.ended);
     } else if (event is RoomReconnectingEvent) {
       _setState(state.value.copyWith(status: CallStatus.reconnecting));
@@ -759,7 +783,7 @@ class CallService {
         _setState(state.value.copyWith(status: CallStatus.connected));
       }
     } else if (event is ParticipantConnectedEvent) {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] Peer joined the room. Cancelling peer timeout.');
+      _cpLog('LK', 'ParticipantConnected → peer joined | peerCount=${_room?.remoteParticipants.length}');
       _peerTimeoutTimer?.cancel();
       if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
         _setState(state.value.copyWith(status: CallStatus.connected));
@@ -830,28 +854,32 @@ class CallService {
 
   Future<void> toggleMute() async {
     final muted = !state.value.isMuted;
+    _cpLog('UI', 'toggleMute | newMuted=$muted');
     await _room?.localParticipant?.setMicrophoneEnabled(!muted);
     _setState(state.value.copyWith(isMuted: muted));
   }
 
   Future<void> setSpeaker(bool enabled) async {
+    _cpLog('UI', 'setSpeaker | enabled=$enabled');
     try {
       await Hardware.instance.setSpeakerphoneOn(enabled);
     } catch (e) {
-      debugPrint('[CallService] setSpeaker error: $e');
+      _cpLog('UI', 'setSpeaker ERROR | $e');
     }
     _setState(state.value.copyWith(isSpeaker: enabled));
   }
   Future<void> endCall() async {
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] endCall triggered manually by user');
+    _cpLog('END', 'endCall TRIGGERED by user | prevStatus=${state.value.status} callId=${state.value.callId}');
     if (state.value.status == CallStatus.ended || state.value.status == CallStatus.idle) {
+      _cpLog('END', 'endCall SKIPPED | already ended/idle');
       return;
     }
     final callId = state.value.callId;
     _callerStatusPollTimer?.cancel();
     if (callId != null) {
-      // Fire-and-forget + tek retry: UI'ı bloke etme, arka planda gönder
+      _cpLog('END', 'POST /calls/$callId/end fire-and-forget');
       _post('/calls/$callId/end').catchError((_) async {
+        _cpLog('END', 'POST /calls/$callId/end retry');
         await Future.delayed(const Duration(milliseconds: 500));
         _post('/calls/$callId/end').catchError((_) {});
       });
@@ -867,10 +895,9 @@ class CallService {
   }
 
   Future<void> _hangUpLocally({required CallStatus status}) async {
-    debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _hangUpLocally called with status: $status');
-    // _isHangingUp: eş zamanlı çağrıları (WS event + FCM + LK disconnect) önler
+    _cpLog('END', '_hangUpLocally called | targetStatus=$status prevStatus=${state.value.status} callId=${state.value.callId}');
     if (_isHangingUp) {
-      debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] _hangUpLocally skipped (already hanging up)');
+      _cpLog('END', '_hangUpLocally SKIPPED | already hanging up');
       return;
     }
     _isHangingUp = true;
@@ -883,11 +910,12 @@ class CallService {
       _ringTimer?.cancel();
       _elapsedTimer?.cancel();
       
-      // 1. Bekleyerek odayı koparıyoruz (LiveKit native kaynakları serbest bıraksın)
+      _cpLog('END', 'disconnectRoom starting');
       await _disconnectRoom();
+      _cpLog('END', 'disconnectRoom done');
       WakelockPlus.disable();
-      
-      // 2. CallKit'in iOS/Android native çağrılarını temizlemesini bekliyoruz
+
+      _cpLog('END', 'CallKit.endCall | callId=${state.value.callId}');
       if (state.value.callId != null) {
         await FlutterCallkitIncoming.endCall(_formatToUuid(state.value.callId.toString()));
       }
@@ -917,15 +945,21 @@ class CallService {
     _callerStatusPollTimer?.cancel();
     _roomEventsSubscription?.call();
     _audioInterruptionSubscription?.cancel();
-    
+
     if (_room != null) {
+      _cpLog('LK', 'room.disconnect() calling');
       await _room!.disconnect();
+      _cpLog('LK', 'room.disconnect() done → dispose()');
       await _room!.dispose();
       _room = null;
+      _cpLog('LK', 'room disposed | _room=null');
+    } else {
+      _cpLog('LK', '_disconnectRoom: room was already null');
     }
   }
 
   void reset() {
+    _cpLog('END', 'reset() called | callId=${state.value.callId} status=${state.value.status}');
     _resetTimer?.cancel();
     _callerStatusPollTimer?.cancel();
     stopRingtoneAndVibration();
@@ -935,16 +969,19 @@ class CallService {
     _disconnectRoom();
     WakelockPlus.disable();
     FlutterCallkitIncoming.endAllCalls();
-    
+
     if (state.value.callId != null) {
       _lastEndedCallId = state.value.callId;
+      _cpLog('END', '_lastEndedCallId set | callId=$_lastEndedCallId');
     }
-    
+
     _setState(const CallState());
+    _cpLog('END', 'reset() done → state=idle');
   }
 
   void _scheduleReset() {
     _resetTimer?.cancel();
+    _cpLog('END', 'scheduleReset 2s scheduled | status=${state.value.status}');
     _resetTimer = Timer(const Duration(seconds: 2), reset);
   }
 
