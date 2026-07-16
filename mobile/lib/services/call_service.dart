@@ -387,8 +387,10 @@ class CallService {
           if (state.value.status == CallStatus.calling) {
             if (_ringbackPreloaded) {
               // Pre-loaded path: seek to start + resume — no asset loading delay (~10ms)
+              // setReleaseMode explicitly on every resume: after stop() the mode may reset.
               _cpLog('SOUND', 'ringbackPlayer RESUME (pre-loaded) | ringing.wav instant start');
               _cpLog('HW', 'ringbackPlayer PLAY | mode=loop pre-loaded=true device=earpiece');
+              await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
               await _ringbackPlayer.seek(Duration.zero);
               await _ringbackPlayer.resume();
             } else {

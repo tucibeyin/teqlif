@@ -367,7 +367,16 @@ class PushNotificationService {
 
         final data = Map<String, dynamic>.from(params?.extra ?? {});
         final callIdStr = data['call_id']?.toString() ?? '';
-        _cpLog('PUSH', '${isTimeout ? "CallEventActionCallTimeout" : "CallEventActionCallEnded"} | callId=$callIdStr activeCallId=${CallService.instance.state.value.callId} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+        final currentStatus = CallService.instance.state.value.status;
+        _cpLog('PUSH', '${isTimeout ? "CallEventActionCallTimeout" : "CallEventActionCallEnded"} | callId=$callIdStr activeCallId=${CallService.instance.state.value.callId} status=$currentStatus nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+
+        // Skip if ringing: this fires from the foreground CallKit auto-dismissal
+        // (VoIP push arrives while app is active → we end CX call in native to prevent
+        // UI takeover). The actual call is handled by WS/IncomingCallBar — don't end it.
+        if (currentStatus == CallStatus.ringing) {
+          _cpLog('PUSH', 'CallEventActionCallEnded SKIPPED | status=ringing (foreground CallKit suppress) | callId=$callIdStr');
+          return;
+        }
 
         if (CallService.instance.state.value.callId != null) {
           CallService.instance.endCall();

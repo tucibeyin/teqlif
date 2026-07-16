@@ -12,6 +12,8 @@ import Security
 
   // Flutter'a audioSessionActivated sinyali göndermek için kanal referansı.
   var callkitChannel: FlutterMethodChannel?
+  // Retained CXCallController for foreground VoIP-push auto-dismiss transactions.
+  private let _ckController = CXCallController()
 
   override func application(
     _ application: UIApplication,
@@ -181,10 +183,26 @@ import Security
           "room_name": roomName
       ]
       
-      print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming → CallKit UI will show | callId=\(callId) caller=\(callerUsername)")
+      // If app is already in foreground, WS has handled this call via IncomingCallBar.
+      // Apple still requires reportNewIncomingCall for every VoIP push, so we call
+      // showCallkitIncoming but end the CX call after 300ms to prevent the full-screen
+      // CallKit UI from taking over the foreground app.
+      let appIsActive = UIApplication.shared.applicationState == .active
+      print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming | callId=\(callId) caller=\(callerUsername) appIsActive=\(appIsActive)")
       SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(data, fromPushKit: true) {
           print("[CALL_PROCESS][\(self.ts())][PUSH] showCallkitIncoming completion | callId=\(callId)")
           completion()
+      }
+      if appIsActive {
+          print("[CALL_PROCESS][\(ts())][PUSH] App ACTIVE → auto-dismiss CallKit in 300ms | callId=\(callId)")
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+              guard let self = self else { return }
+              let endAction = CXEndCallAction(call: data.uuid)
+              let tx = CXTransaction(action: endAction)
+              self._ckController.request(tx) { error in
+                  print("[CALL_PROCESS][\(self.ts())][PUSH] CallKit auto-dismiss done | callId=\(callId) error=\(error?.localizedDescription ?? "none")")
+              }
+          }
       }
   }
 
