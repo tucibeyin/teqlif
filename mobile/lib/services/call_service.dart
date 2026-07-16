@@ -1528,6 +1528,48 @@ class CallService {
           _setState(state.value.copyWith(isSpeaker: false));
         }
       }
+    } else if (event is TrackUnmutedEvent) {
+      // Android caller pre-publishes a MUTED audio track during calling state.
+      // iOS callee receives TrackSubscribedEvent during RINGING → skips transition (correct).
+      // When Android unmutes after callee accepts, only TrackUnmutedEvent fires on iOS —
+      // no second TrackSubscribedEvent. Drive connecting→connected here.
+      final isRemote = event.participant != _room?.localParticipant;
+      _cpLog('LK', 'TrackUnmuted | kind=${event.publication.kind} isRemote=$isRemote status=${state.value.status.name}');
+      if (isRemote && event.publication.kind == TrackType.AUDIO && state.value.status == CallStatus.connecting) {
+        _cpLog('LK', 'TrackUnmuted AUDIO remote → connecting→connected (Android unmuted pre-published track)');
+        AudioSession.instance.then((session) async {
+          try {
+            _cpLog('HW', 'audioSession CONFIGURE | context=TrackUnmuted category=playAndRecord mode=voiceChat');
+            await session.configure(AudioSessionConfiguration(
+              avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+              avAudioSessionMode: AVAudioSessionMode.voiceChat,
+              avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
+            ));
+            if (Platform.isIOS) {
+              _cpLog('HW', 'speakerphone SET | enabled=false context=TrackUnmuted-post-configure platform=iOS');
+              await Hardware.instance.setSpeakerphoneOn(false);
+            }
+            _cpLog('LK', 'TrackUnmuted: AudioSession voice configure OK');
+          } catch (e) {
+            _cpLog('LK', 'TrackUnmuted: AudioSession configure ERROR | $e');
+          }
+        });
+        stopRingtoneAndVibration();
+        final nowUtc = DateTime.now().toUtc();
+        final acceptedAt = state.value.acceptedAt;
+        final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
+        _cpLog('TIMER', 'TrackUnmuted → CONNECTED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} acceptToAudioMs=$audioLag');
+        _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
+        _startElapsedTimer();
+        _startProximitySensor();
+        _startStatsMonitor();
+        _startNetworkMonitor();
+        if (Platform.isAndroid) {
+          _cpLog('HW', 'speakerphone SET | enabled=false context=TrackUnmuted-Android isSpeaker=false');
+          Hardware.instance.setSpeakerphoneOn(false);
+          _setState(state.value.copyWith(isSpeaker: false));
+        }
+      }
     } else if (event is ParticipantConnectionQualityUpdatedEvent) {
       if (event.participant == _room?.localParticipant) {
         final isPoor =

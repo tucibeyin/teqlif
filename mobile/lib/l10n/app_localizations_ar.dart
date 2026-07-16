@@ -5199,4 +5199,32 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get withdrawRequest => 'سحب';
+
+  @override
+  String get callE2eeEncrypted => 'مكالمة مشفرة';
+
+  @override
+  String get callE2eeEncryptedShort => 'مشفرة';
+
+  @override
+  String get callBatteryOptTitle => 'تحسين البطارية';
+
+  @override
+  String get callBatteryOptBody =>
+      'قم بتعطيل تحسين البطارية لـ Teqlif لضمان عمل المكالمات بشكل صحيح.';
+
+  @override
+  String get callBatteryOptAction => 'فتح الإعدادات';
+
+  @override
+  String get callBatteryOptSkip => 'ليس الآن';
+
+  @override
+  String get callAudioQualityPoor => 'جودة الاتصال ضعيفة';
+
+  @override
+  String get callAudioQualityLost => 'انقطع الاتصال';
+
+  @override
+  String get callActiveNow => 'المكالمة جارية';
 }

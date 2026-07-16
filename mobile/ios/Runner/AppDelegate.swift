@@ -152,8 +152,8 @@ import Security
       let callerId = dictionary["caller_id"] as? String ?? ""
       print("[CALL_PROCESS][\(ts())][PUSH] VoIP Push received | callId=\(callId) caller=\(callerUsername) roomName=\(roomName) callerId=\(callerId)")
       
-      // CallId'yi UUID'ye çeviriyoruz (Tıpkı Dart tarafında yaptığımız gibi)
-      let padded = callId.padding(toLength: 32, withPad: "0", startingAt: 0)
+      // CallId'yi UUID'ye çeviriyoruz (Dart _formatToUuid ile aynı: sola sıfır dolgulama)
+      let padded = String(repeating: "0", count: max(0, 32 - callId.count)) + callId
       let start0 = padded.index(padded.startIndex, offsetBy: 0)
       let start8 = padded.index(padded.startIndex, offsetBy: 8)
       let start12 = padded.index(padded.startIndex, offsetBy: 12)

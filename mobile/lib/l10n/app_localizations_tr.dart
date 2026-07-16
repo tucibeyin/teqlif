@@ -5231,4 +5231,32 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get withdrawRequest => 'Geri Al';
+
+  @override
+  String get callE2eeEncrypted => 'Şifreli Bağlantı';
+
+  @override
+  String get callE2eeEncryptedShort => 'Şifreli';
+
+  @override
+  String get callBatteryOptTitle => 'Pil Optimizasyonu';
+
+  @override
+  String get callBatteryOptBody =>
+      'Teqlif aramalarının düzgün çalışması için pil optimizasyonunu devre dışı bırakın.';
+
+  @override
+  String get callBatteryOptAction => 'Ayarları Aç';
+
+  @override
+  String get callBatteryOptSkip => 'Şimdi Değil';
+
+  @override
+  String get callAudioQualityPoor => 'Bağlantı kalitesi düşük';
+
+  @override
+  String get callAudioQualityLost => 'Bağlantı kesildi';
+
+  @override
+  String get callActiveNow => 'Arama Devam Ediyor';
 }

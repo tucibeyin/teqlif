@@ -9431,6 +9431,60 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Geri Al'**
   String get withdrawRequest;
+
+  /// No description provided for @callE2eeEncrypted.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifreli Bağlantı'**
+  String get callE2eeEncrypted;
+
+  /// No description provided for @callE2eeEncryptedShort.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şifreli'**
+  String get callE2eeEncryptedShort;
+
+  /// No description provided for @callBatteryOptTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pil Optimizasyonu'**
+  String get callBatteryOptTitle;
+
+  /// No description provided for @callBatteryOptBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teqlif aramalarının düzgün çalışması için pil optimizasyonunu devre dışı bırakın.'**
+  String get callBatteryOptBody;
+
+  /// No description provided for @callBatteryOptAction.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ayarları Aç'**
+  String get callBatteryOptAction;
+
+  /// No description provided for @callBatteryOptSkip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şimdi Değil'**
+  String get callBatteryOptSkip;
+
+  /// No description provided for @callAudioQualityPoor.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bağlantı kalitesi düşük'**
+  String get callAudioQualityPoor;
+
+  /// No description provided for @callAudioQualityLost.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bağlantı kesildi'**
+  String get callAudioQualityLost;
+
+  /// No description provided for @callActiveNow.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arama Devam Ediyor'**
+  String get callActiveNow;
 }
 
 class _AppLocalizationsDelegate

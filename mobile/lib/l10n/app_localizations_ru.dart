@@ -5279,4 +5279,32 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get withdrawRequest => 'Отменить';
+
+  @override
+  String get callE2eeEncrypted => 'Зашифрованный звонок';
+
+  @override
+  String get callE2eeEncryptedShort => 'Зашифровано';
+
+  @override
+  String get callBatteryOptTitle => 'Оптимизация батареи';
+
+  @override
+  String get callBatteryOptBody =>
+      'Отключите оптимизацию батареи для Teqlif, чтобы звонки работали правильно.';
+
+  @override
+  String get callBatteryOptAction => 'Открыть настройки';
+
+  @override
+  String get callBatteryOptSkip => 'Не сейчас';
+
+  @override
+  String get callAudioQualityPoor => 'Слабое качество связи';
+
+  @override
+  String get callAudioQualityLost => 'Соединение потеряно';
+
+  @override
+  String get callActiveNow => 'Звонок продолжается';
 }

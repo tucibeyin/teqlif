@@ -5228,4 +5228,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get withdrawRequest => 'Withdraw';
+
+  @override
+  String get callE2eeEncrypted => 'Encrypted Call';
+
+  @override
+  String get callE2eeEncryptedShort => 'Encrypted';
+
+  @override
+  String get callBatteryOptTitle => 'Battery Optimization';
+
+  @override
+  String get callBatteryOptBody =>
+      'Disable battery optimization for Teqlif to ensure calls work properly.';
+
+  @override
+  String get callBatteryOptAction => 'Open Settings';
+
+  @override
+  String get callBatteryOptSkip => 'Not Now';
+
+  @override
+  String get callAudioQualityPoor => 'Poor connection quality';
+
+  @override
+  String get callAudioQualityLost => 'Connection lost';
+
+  @override
+  String get callActiveNow => 'Call in Progress';
 }
