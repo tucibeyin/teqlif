@@ -53,6 +53,10 @@ async def send_voip_push(token: str, payload: dict) -> tuple[bool, bool]:
 
     try:
         topic = f"{settings.ios_bundle_id}.voip"
+        logger.info(
+            "[CALL_PROCESS][APNS] send_voip_push | topic=%s sandbox=%s token=%s…",
+            topic, settings.apns_use_sandbox, token[:10],
+        )
 
         request = NotificationRequest(
             device_token=token,
@@ -63,12 +67,15 @@ async def send_voip_push(token: str, payload: dict) -> tuple[bool, bool]:
 
         response = await client.send_notification(request)
         if response.is_successful:
-            logger.info(f"[APNs] VoIP push sent successfully to {token[:10]}...")
+            logger.info("[CALL_PROCESS][APNS] VoIP push SUCCESS | topic=%s token=%s…", topic, token[:10])
             return True, False
         else:
             is_bad_token = response.description in ("BadDeviceToken", "Unregistered", "ExpiredToken")
-            logger.error(f"[APNs] VoIP push failed: {response.description} (bad_token={is_bad_token})")
+            logger.error(
+                "[CALL_PROCESS][APNS] VoIP push FAILED | topic=%s description=%s bad_token=%s",
+                topic, response.description, is_bad_token,
+            )
             return False, is_bad_token
     except Exception as e:
-        logger.error(f"[APNs] Error sending VoIP push: {e}", exc_info=True)
+        logger.error("[CALL_PROCESS][APNS] VoIP push EXCEPTION | %s", e, exc_info=True)
         return False, False

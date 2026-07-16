@@ -1106,15 +1106,20 @@ async def save_device_tokens(
 
     if not token and not voip_token_sent:
         logger.warning(
-            f"[Auth] /device-tokens called for user {current_user.id} but no token fields provided."
+            "[CALL_PROCESS][TOKEN] /device-tokens called with NO token fields | user=%d",
+            current_user.id,
         )
 
     if values:
+        voip_status = "CLEAR" if (voip_token_sent and not voip_token) else ("SET" if voip_token else "UNCHANGED")
         logger.info(
-            f"[Auth] Updating tokens for user {current_user.id}: "
-            f"FCM={'Yes' if token else 'No'}, "
-            f"VoIP={'Clear' if voip_token_sent and not voip_token else ('Yes' if voip_token else 'No')}, "
-            f"Locale={lang}"
+            "[CALL_PROCESS][TOKEN] /device-tokens update | user=%d fcm=%s voip=%s locale=%s fcmLen=%s voipLen=%s",
+            current_user.id,
+            "SET" if token else "UNCHANGED",
+            voip_status,
+            lang,
+            len(token) if token else "-",
+            len(voip_token) if voip_token else "-",
         )
         await db.execute(sa_update(User).where(User.id == current_user.id).values(**values))
         await db.commit()

@@ -109,7 +109,14 @@ async def _send_call_push(
       - Stale token (8-30 gün): VoIP + FCM aynı anda — biri mutlaka ulaşır
       - Çok eski    (> 30 gün): FCM önce, VoIP best-effort
     """
+    logger.info(
+        "[CALL_PROCESS][PUSH] _send_call_push | callee=%d voip=%s fcm=%s",
+        callee.id,
+        f"{callee.voip_token[:10]}…" if callee.voip_token else "NONE",
+        f"{callee.fcm_token[:10]}…" if callee.fcm_token else "NONE",
+    )
     if not callee.fcm_token and not callee.voip_token:
+        logger.warning("[CALL_PROCESS][PUSH] callee=%d has NO push tokens — push skipped", callee.id)
         return
 
     locale = get_locale(callee)
@@ -149,14 +156,21 @@ async def _send_call_push(
         """VoIP push dener; başarısızsa token'ı temizler. True döner → başarılı."""
         if not callee.voip_token:
             return False
-        logger.info(f"[Calls] VoIP push denemesi | user={callee.id} age={token_age_days}d")
+        logger.info(
+            "[CALL_PROCESS][PUSH] VoIP push attempt | callee=%d tokenAge=%dd token=%s…",
+            callee.id, token_age_days, callee.voip_token[:10],
+        )
         payload = {
             "aps": {"content-available": 1},
             **extra_data,
         }
         success, bad_token = await send_voip_push(callee.voip_token, payload)
+        logger.info(
+            "[CALL_PROCESS][PUSH] VoIP push result | callee=%d success=%s bad_token=%s",
+            callee.id, success, bad_token,
+        )
         if bad_token:
-            logger.warning(f"[Calls] VoIP token geçersiz, DB'den temizleniyor | user={callee.id}")
+            logger.warning("[CALL_PROCESS][PUSH] VoIP token invalid → clearing from DB | callee=%d", callee.id)
             callee.voip_token = None
             await db.commit()
         return success
@@ -164,7 +178,9 @@ async def _send_call_push(
     async def _try_fcm() -> None:
         """FCM push dener."""
         if not callee.fcm_token:
+            logger.warning("[CALL_PROCESS][PUSH] FCM push skipped — no fcm_token | callee=%d", callee.id)
             return
+        logger.info("[CALL_PROCESS][PUSH] FCM push attempt | callee=%d token=%s…", callee.id, callee.fcm_token[:10])
         try:
             await send_push(
                 token=callee.fcm_token,
@@ -174,29 +190,27 @@ async def _send_call_push(
                 notif_type="incoming_call",
                 extra_data=extra_data,
             )
+            logger.info("[CALL_PROCESS][PUSH] FCM push sent | callee=%d", callee.id)
         except Exception as exc:
-            logger.warning("[Calls] FCM push hatası: %s", exc)
+            logger.warning("[CALL_PROCESS][PUSH] FCM push FAILED | callee=%d | %s", callee.id, exc)
 
     if callee.voip_token:
         if token_age_days <= 7:
-            # TAZE: sadece VoIP — hızlı, batarya dostu
-            logger.info(f"[Calls] Taze VoIP token ({token_age_days}gün) — sadece VoIP")
+            logger.info("[CALL_PROCESS][PUSH] strategy=VoIP_ONLY | tokenAge=%dd", token_age_days)
             ok = await _try_voip()
             if not ok:
-                logger.info("[Calls] VoIP başarısız, FCM fallback")
+                logger.info("[CALL_PROCESS][PUSH] VoIP failed → FCM fallback | callee=%d", callee.id)
                 await _try_fcm()
 
         elif token_age_days <= 30:
-            # STALE: VoIP + FCM eş zamanlı — biri mutlaka ulaşır
-            logger.info(f"[Calls] Stale VoIP token ({token_age_days}gün) — VoIP + FCM eş zamanlı")
+            logger.info("[CALL_PROCESS][PUSH] strategy=VoIP+FCM_PARALLEL | tokenAge=%dd", token_age_days)
             await asyncio.gather(_try_voip(), _try_fcm())
 
         else:
-            # ÇOK ESKİ: FCM önce, VoIP best-effort
-            logger.info(f"[Calls] Çok eski VoIP token ({token_age_days}gün) — FCM önce")
+            logger.info("[CALL_PROCESS][PUSH] strategy=FCM_FIRST+VoIP_BESTEFFORT | tokenAge=%dd", token_age_days)
             await asyncio.gather(_try_fcm(), _try_voip())
     else:
-        # VoIP yok, sadece FCM
+        logger.info("[CALL_PROCESS][PUSH] strategy=FCM_ONLY (no voip_token) | callee=%d", callee.id)
         await _try_fcm()
 
 
@@ -271,7 +285,12 @@ async def start_call(
             _job_id=f"call_timeout_{call.id}"
         )
 
-    logger.info("[Calls] Arama başlatıldı | call_id=%d caller=%d callee=%d", call.id, current_user.id, callee_id)
+    logger.info(
+        "[CALL_PROCESS][OUT] start_call OK | call_id=%d caller=%d callee=%d room=%s callee_voip=%s callee_fcm=%s",
+        call.id, current_user.id, callee_id, room_name,
+        "YES" if callee.voip_token else "NO",
+        "YES" if callee.fcm_token else "NO",
+    )
     return {
         "call_id": call.id,
         "room_name": room_name,
@@ -316,7 +335,10 @@ async def accept_call(
         "accepted_at": accepted_at.isoformat(),
     })
 
-    logger.info("[Calls] Arama kabul edildi | call_id=%d", call_id)
+    logger.info(
+        "[CALL_PROCESS][IN] accept_call OK | call_id=%d callee=%d caller=%d accepted_at=%s",
+        call_id, current_user.id, caller_id, accepted_at.isoformat(),
+    )
     return {
         "call_id": call_id_val,
         "room_name": room_name,
@@ -361,7 +383,7 @@ async def reject_call(
     # LK room'u sil — reject sonrası oda askıda kalıyordu
     await _delete_lk_room(room_name)
 
-    logger.info("[Calls] Arama reddedildi | call_id=%d", call_id)
+    logger.info("[CALL_PROCESS][IN] reject_call OK | call_id=%d callee=%d", call_id, current_user.id)
     return {"ok": True}
 
 
@@ -417,7 +439,10 @@ async def end_call(
             logger.warning(f"[Calls] Failed to send 'call_ended' push: {push_err}")
     await _delete_lk_room(room_name)
 
-    logger.info("[Calls] Arama bitti | call_id=%d duration=%s", call_id, duration_seconds)
+    logger.info(
+        "[CALL_PROCESS][END] end_call OK | call_id=%d by=%d duration=%ss",
+        call_id, current_user.id, duration_seconds,
+    )
     return {"ok": True}
 
 
@@ -495,5 +520,5 @@ async def missed_call(
             await db.refresh(callee)
             await _send_missed_call_push(callee, current_user)
 
-    logger.info("[Calls] Cevapsız arama | call_id=%d", call_id)
+    logger.info("[CALL_PROCESS][END] missed_call OK | call_id=%d caller=%d", call_id, current_user.id)
     return {"ok": True}
