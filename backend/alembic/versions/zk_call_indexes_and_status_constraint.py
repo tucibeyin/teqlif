@@ -1,6 +1,6 @@
 """add compound indexes and status check constraint to calls
 
-Revision ID: zk_call_indexes_and_status_constraint
+Revision ID: zk_call_compound_indexes
 Revises: zj_add_call_duration_seconds
 Create Date: 2026-07-16
 
@@ -13,7 +13,7 @@ from typing import Union, Sequence
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "zk_call_indexes_and_status_constraint"
+revision: str = "zk_call_compound_indexes"
 down_revision: Union[str, Sequence[str], None] = "zj_add_call_duration_seconds"
 branch_labels = None
 depends_on = None
