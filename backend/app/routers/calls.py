@@ -390,14 +390,21 @@ async def accept_call(
     call_id_val = call.id
     await db.commit()
 
-    token = _make_livekit_token(room_name, current_user)
-
+    # Send WS IMMEDIATELY before LK token generation.
+    # Token gen takes ~200-500ms; the caller's TrackSubscribed event may already have fired
+    # by the time WS arrives. Sending first eliminates that avoidable delay.
     await _ws_broadcast(caller_id, {
         "type": "call_accepted",
         "call_id": call_id_val,
         "room_name": room_name,
         "accepted_at": accepted_at.isoformat(),
     })
+    logger.info(
+        "[CALL_PROCESS][IN] accept_call: call_accepted WS sent (pre-token-gen) | call_id=%d caller=%d",
+        call_id_val, caller_id,
+    )
+
+    token = _make_livekit_token(room_name, current_user)
 
     logger.info(
         "[CALL_PROCESS][IN] accept_call OK | call_id=%d callee=%d caller=%d accepted_at=%s",

@@ -141,6 +141,7 @@ class CallService {
 
     if (Platform.isIOS) {
       _initCallkitChannelHandler();
+      _prewarmAudioSession();
     }
   }
 
@@ -164,6 +165,19 @@ class CallService {
       await _ringbackPlayer.setSource(ap.AssetSource('sounds/ringing.wav'));
       _ringbackPreloaded = true;
       _cpLog('SOUND', 'ringing.wav PRE-LOADED in ringbackPlayer | ready for instant resume()');
+      // P2: Android MediaPlayer cold-start (~780ms). Force-decode by playing 50ms then pausing.
+      // After this, resume() in startCall starts in ~15ms instead of ~780ms.
+      if (Platform.isAndroid) {
+        try {
+          await _ringbackPlayer.resume();
+          await Future.delayed(const Duration(milliseconds: 50));
+          await _ringbackPlayer.pause();
+          await _ringbackPlayer.seek(Duration.zero);
+          _cpLog('SOUND', 'ringing.wav FORCE-BUFFERED (Android) | cold-start latency eliminated');
+        } catch (e) {
+          _cpLog('SOUND', 'Android buffer-force FAILED | $e');
+        }
+      }
     } catch (e) {
       _cpLog('SOUND', 'ringing.wav pre-load FAILED | $e → will fallback to play(AssetSource)');
     }
@@ -187,6 +201,7 @@ class CallService {
   Timer? _ringtoneLoopTimer; // For iOS ringtone looping
   Timer? _resetTimer; // To prevent delayed reset overwriting new calls
   Timer? _callerStatusPollTimer; // Poll /status while in calling state (WS kayıp event recovery)
+  Timer? _connectingTimeoutTimer; // 15s guard: connecting → endCall if TrackSubscribed never fires
 
   bool _isHangingUp = false;   // Eş zamanlı _hangUpLocally çağrılarını önler
   bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
@@ -207,6 +222,20 @@ class CallService {
   DateTime? _preConnectStartedAt;
 
   static const _callkitChannel = MethodChannel('com.teqlif/callkit');
+
+  // iOS: AVAudioSession'ı app başlatılırken soloAmbient ile önceden ısıt.
+  // Bu sayede ilk arama sırasındaki playAndRecord geçişi ~300-500ms daha hızlı olur.
+  Future<void> _prewarmAudioSession() async {
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.soloAmbient,
+      ));
+      _cpLog('HW', 'audioSession PRE-WARM (iOS) | category=soloAmbient');
+    } catch (e) {
+      _cpLog('HW', 'audioSession pre-warm ERROR | $e');
+    }
+  }
 
   // iOS: CallKit audio session aktive olduğunda native'den sinyal alır.
   void _initCallkitChannelHandler() {
@@ -281,6 +310,22 @@ class CallService {
   }
 
   void _handleStatusChange(CallStatus oldStatus, CallStatus newStatus) {
+    // Cancel connecting timeout whenever we leave connecting state
+    if (oldStatus == CallStatus.connecting) {
+      _connectingTimeoutTimer?.cancel();
+    }
+
+    if (newStatus == CallStatus.connecting) {
+      _connectingTimeoutTimer?.cancel();
+      _cpLog('TIMER', 'connectingTimeoutTimer started | 15s callId=${state.value.callId}');
+      _connectingTimeoutTimer = Timer(const Duration(seconds: 15), () {
+        if (state.value.status == CallStatus.connecting) {
+          _cpLog('TIMER', 'connectingTimeoutTimer FIRED | stuck 15s in connecting → endCall | callId=${state.value.callId}');
+          endCall();
+        }
+      });
+    }
+
     if (newStatus == CallStatus.calling) {
       AudioSession.instance.then((session) async {
         try {
@@ -910,44 +955,63 @@ class CallService {
   // ── Called when caller gets call_accepted WS event ────────────────────────
 
   Future<void> onCallAccepted(Map<String, dynamic> data) async {
-    _cpLog('OUT', 'call_accepted WS event received | acceptedAt=${data['accepted_at']}');
+    _cpLog('OUT', 'call_accepted WS event received | acceptedAt=${data['accepted_at']} currentStatus=${state.value.status.name}');
     _ringTimer?.cancel();
     _callerStatusPollTimer?.cancel();
-    // Ringtone intentionally NOT stopped here.
-    // ringing.wav (_audioPlayer) TrackSubscribed event'te durur — ses gerçekten
-    // akmaya başladığında. Bu sayede "zil → sessizlik → ses" yerine
-    // "zil → ses" geçişi olur (WhatsApp pattern).
 
-    // Guard: zaten connecting/connected → mükerrer çağrı, dön.
-    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
-      _cpLog('OUT', 'call_accepted SKIPPED (already ${state.value.status.name})');
+    // PART 1: acceptedAt — always update regardless of current status.
+    // Critical for iOS: TrackSubscribed fires ~1.65s BEFORE this WS arrives,
+    // so status is already `connected` when we get here. Without this unconditional
+    // update, acceptedAt stays null → durationMs=-1 in analytics.
+    if (data['accepted_at'] != null && state.value.acceptedAt == null) {
+      final parsedAt = DateTime.parse(data['accepted_at'] as String);
+      final nowUtc = DateTime.now().toUtc();
+      _cpLog('TIMER', 'acceptedAt SET [CALLER/WS] | acceptedAt=${parsedAt.toIso8601String()} nowUtc=${nowUtc.toIso8601String()} wsLag=${nowUtc.difference(parsedAt).inMilliseconds}ms');
+      _setState(state.value.copyWith(acceptedAt: parsedAt));
+      // Correct elapsed timer if TrackSubscribed already transitioned us to connected.
+      // Without this, the elapsed timer starts from zero even though the call started ~1.65s ago.
+      if (state.value.status == CallStatus.connected) {
+        final correctedElapsed = nowUtc.difference(parsedAt);
+        if (!correctedElapsed.isNegative && correctedElapsed.inSeconds < 300) {
+          elapsed.value = correctedElapsed;
+          _cpLog('TIMER', 'elapsed CORRECTED from acceptedAt | correctedMs=${correctedElapsed.inMilliseconds} (WS arrived after TrackSubscribed)');
+        }
+      }
+    }
+
+    // PART 2: State transition + mic activation, conditional on current status.
+
+    // iOS race: TrackSubscribed fires ~1.65s before WS → already connected.
+    // TrackSubscribed pre-enables mic (see _onRoomEvent), but call _ensureMicEnabled
+    // as a safety net in case pre-enable failed or was skipped.
+    if (state.value.status == CallStatus.connected) {
+      _cpLog('OUT', 'call_accepted WS arrived after connected (iOS race) → ensureMicEnabled | callId=${state.value.callId}');
+      _ensureMicEnabled('onCallAccepted-already-connected');
+      return;
+    }
+
+    // Poll recovery or duplicate WS: already transitioning.
+    if (state.value.status == CallStatus.connecting) {
+      _cpLog('OUT', 'call_accepted: already connecting — skip state-change, ensureMicEnabled | callId=${state.value.callId}');
+      _ensureMicEnabled('onCallAccepted-already-connecting');
       return;
     }
 
     _resetTimer?.cancel();
+    _cpLog('OUT', 'call_accepted → state=connecting | callId=${state.value.callId}');
+    _setState(state.value.copyWith(status: CallStatus.connecting));
 
-    // acceptedAt ve status=connecting tek setState'te — ara calling→calling paraziti kalkar.
-    if (data['accepted_at'] != null) {
-      final parsedAt = DateTime.parse(data['accepted_at']);
-      final nowUtc = DateTime.now().toUtc();
-      _cpLog('TIMER', 'acceptedAt SET [CALLER/WS] | acceptedAt=${parsedAt.toIso8601String()} nowUtc=${nowUtc.toIso8601String()} wsLag=${nowUtc.difference(parsedAt).inMilliseconds}ms');
-      _setState(state.value.copyWith(acceptedAt: parsedAt, status: CallStatus.connecting));
-    } else {
-      _cpLog('TIMER', 'acceptedAt MISSING in call_accepted WS payload — timer will use local clock');
-      _setState(state.value.copyWith(status: CallStatus.connecting));
-    }
-
-    // Caller mikrofon aktivasyonu: iki yol
-    // FAST PATH: Pre-connect'te muted track yayınlandıysa → sadece unmute (~50ms, re-negotiation yok).
-    // STANDARD PATH: Pre-publish başarısızsa → setMicrophoneEnabled(true) (1.5s).
+    // Caller mic activation: two paths
+    // FAST PATH (Android): Pre-connect published muted track → unmute (~15ms, no re-negotiation).
+    // STANDARD PATH (iOS/fallback): setMicrophoneEnabled(true) (~1-1.5s, AVAudioSession init).
     if (_room != null) {
       final micPubs = _room!.localParticipant?.audioTrackPublications;
       if (micPubs != null && micPubs.isNotEmpty) {
         final pub = micPubs.first;
         if (pub.muted) {
           _cpLog('OUT', 'call_accepted → FAST PATH: unmuting pre-published track | pubSid=${pub.sid}');
-          _cpLog('HW', 'microphone UNMUTE | context=onCallAccepted-caller fastPath=true stopOnMute=false prePublishedTrack audioCapture=wasAlreadyActive');
-          // stopOnMute:false → capture zaten çalışıyor, sadece RTP akışı başlıyor.
+          _cpLog('HW', 'microphone UNMUTE | context=onCallAccepted-caller fastPath=true stopOnMute=false');
+          // stopOnMute:false → capture already running; only RTP stream gate opens.
           pub.unmute(stopOnMute: false).catchError((e) {
             _cpLog('OUT', 'caller mic unmute ERROR | $e → fallback to setMicEnabled');
             _cpLog('HW', 'microphone ENABLE (unmute-fallback) | context=onCallAccepted-caller');
@@ -955,13 +1019,12 @@ class CallService {
             return null;
           });
         } else {
-          _cpLog('OUT', 'call_accepted → mic already published+unmuted | no action needed');
+          _cpLog('OUT', 'call_accepted → mic already published+unmuted | no action');
           _cpLog('HW', 'microphone ALREADY ENABLED+UNMUTED | context=onCallAccepted-caller pubSid=${pub.sid}');
         }
       } else {
-        // Pre-publish başarısız veya hiç yayınlanmadı → standart yol
-        _cpLog('OUT', 'call_accepted → STANDARD PATH: setMicrophoneEnabled (no pre-publish) | AudioSession deferred to TrackSubscribed');
-        _cpLog('HW', 'microphone ENABLE | context=onCallAccepted-caller standardPath=true audioSessionDeferred=true');
+        _cpLog('OUT', 'call_accepted → STANDARD PATH: setMicrophoneEnabled | no pre-publish');
+        _cpLog('HW', 'microphone ENABLE | context=onCallAccepted-caller standardPath=true');
         _room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
           _cpLog('OUT', 'caller mic enable ERROR | $e');
           return null;
@@ -969,6 +1032,36 @@ class CallService {
       }
     } else {
       _cpLog('OUT', 'call_accepted: _room is null — mic will be enabled when _joinRoom completes');
+    }
+  }
+
+  /// Mic durumunu kontrol eder ve gerekiyorsa etkinleştirir.
+  /// iOS caller race condition recovery için kullanılır: WS geç geldiğinde
+  /// mic zaten açıksa no-op, muted pre-publish varsa unmute, yoksa setMicEnabled.
+  void _ensureMicEnabled(String context) {
+    if (_room == null) {
+      _cpLog('HW', 'microphone ENSURE SKIPPED | context=$context room=null');
+      return;
+    }
+    final micPubs = _room!.localParticipant?.audioTrackPublications;
+    if (micPubs == null || micPubs.isEmpty) {
+      _cpLog('HW', 'microphone ENABLE | context=$context standardPath=true (no publications)');
+      _room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
+        _cpLog('HW', 'microphone ENABLE ERROR | context=$context $e');
+        return null;
+      });
+      return;
+    }
+    final pub = micPubs.first;
+    if (pub.muted) {
+      _cpLog('HW', 'microphone UNMUTE | context=$context fastPath=true pub.sid=${pub.sid}');
+      pub.unmute(stopOnMute: false).catchError((e) {
+        _cpLog('HW', 'microphone ENABLE (unmute-fallback) | context=$context $e');
+        _room!.localParticipant?.setMicrophoneEnabled(true);
+        return null;
+      });
+    } else {
+      _cpLog('HW', 'microphone ALREADY ENABLED+UNMUTED | context=$context pub.sid=${pub.sid}');
     }
   }
 
@@ -989,8 +1082,18 @@ class CallService {
     _hangUpLocally(status: CallStatus.ended);
   }
 
-  void onCallMissed() async {
+  void onCallMissed({int? callId}) async {
     if (state.value.status == CallStatus.missed) return;
+    // Guard: no active call in state → stale event after reset(), ignore.
+    if (state.value.callId == null) {
+      _cpLog('END', 'onCallMissed SKIPPED | no active call (state.callId=null) incoming=$callId (stale event)');
+      return;
+    }
+    // Guard: callId mismatch → event for a different call, ignore.
+    if (callId != null && callId != state.value.callId) {
+      _cpLog('END', 'onCallMissed SKIPPED | callId mismatch incoming=$callId current=${state.value.callId}');
+      return;
+    }
     stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.missed));
     if (await Vibration.hasVibrator() == true) {
@@ -1297,12 +1400,26 @@ class CallService {
         });
         stopRingtoneAndVibration();
         if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
+          final preTransitionStatus = state.value.status;
           final nowUtc = DateTime.now().toUtc();
           final acceptedAt = state.value.acceptedAt;
           final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
-          _cpLog('TIMER', 'TrackSubscribed → CONNECTED | role=${state.value.status.name} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
+          _cpLog('TIMER', 'TrackSubscribed → CONNECTED | role=${preTransitionStatus.name} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
           _setState(state.value.copyWith(status: CallStatus.connected));
           _startElapsedTimer();
+          // P0 FIX: iOS caller mic race.
+          // iOS skips mic pre-publish during pre-connect (to preserve ringback AVAudioSession).
+          // call_accepted WS arrives ~1.65s AFTER TrackSubscribed, so we must enable mic HERE
+          // instead of waiting for the WS. onCallAccepted will see status=connected and call
+          // _ensureMicEnabled as a safety net when the WS finally arrives.
+          if (Platform.isIOS && preTransitionStatus == CallStatus.calling) {
+            _cpLog('LK', 'TrackSubscribed: iOS caller mic pre-enable (before WS) | callId=${state.value.callId}');
+            _cpLog('HW', 'microphone ENABLE | context=TrackSubscribed-iOS-caller-preemptive platform=iOS');
+            _room?.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
+              _cpLog('LK', 'TrackSubscribed iOS caller mic ERROR | $e');
+              return null;
+            });
+          }
         }
         if (Platform.isAndroid) {
           _cpLog('HW', 'speakerphone SET | enabled=false context=TrackSubscribed-Android isSpeaker=false');
@@ -1438,10 +1555,11 @@ class CallService {
       _cpLog('END', '_hangUpLocally SKIPPED | already hanging up');
       return;
     }
-    // Ghost state guard: geç gelen WS/FCM event'leri (call_ended/call_missed) zaten idle
+    // Ghost state guard: geç gelen WS/FCM event'leri (call_ended/call_missed) zaten idle/ended
     // olan state'i ended'a geçirmesin — kullanıcı ekrandan döndükten sonra gereksiz pop tetikler.
-    if (state.value.status == CallStatus.idle) {
-      _cpLog('END', '_hangUpLocally SKIPPED | already idle (late WS/FCM event ignored) | targetStatus=$status');
+    // ended guard: FCM + WS call_ended aynı anda gelebilir → ikinci çağrı atlanır.
+    if (state.value.status == CallStatus.idle || state.value.status == CallStatus.ended) {
+      _cpLog('END', '_hangUpLocally SKIPPED | already ${state.value.status.name} (late WS/FCM event ignored) | targetStatus=$status');
       return;
     }
     _isHangingUp = true;
@@ -1496,6 +1614,7 @@ class CallService {
     _elapsedTimer?.cancel();
     _peerTimeoutTimer?.cancel();
     _callerStatusPollTimer?.cancel();
+    _connectingTimeoutTimer?.cancel();
     _roomEventsSubscription?.call();
     _audioInterruptionSubscription?.cancel();
     _ringbackPlayer.stop(); // Pre-loaded ringback'i durdur (caller hangup veya reset)
@@ -1517,6 +1636,7 @@ class CallService {
     _cpLog('END', 'reset() called | callId=${state.value.callId} status=${state.value.status}');
     _resetTimer?.cancel();
     _callerStatusPollTimer?.cancel();
+    _connectingTimeoutTimer?.cancel();
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _elapsedTimer?.cancel();

@@ -89,8 +89,11 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
         CallService.instance.onCallEnded();
         break;
       case 'call_missed':
-        _cpLog('UI', 'call_missed WS → onCallMissed');
-        CallService.instance.onCallMissed();
+        final missedCallId = data['call_id'] is int
+            ? data['call_id'] as int
+            : int.tryParse(data['call_id']?.toString() ?? '');
+        _cpLog('UI', 'call_missed WS → onCallMissed | callId=$missedCallId');
+        CallService.instance.onCallMissed(callId: missedCallId);
         break;
       default:
         break;
