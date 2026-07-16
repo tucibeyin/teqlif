@@ -269,11 +269,14 @@ async def start_call(
     db: AsyncSession = Depends(get_db),
 ):
     callee_id: int = body.get("callee_id")
+    logger.info("[CALL_PROCESS][OUT] start_call ENTER | caller=%d callee_id=%s", current_user.id, callee_id)
     if not callee_id or callee_id == current_user.id:
+        logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=invalid_callee_id caller=%d callee_id=%s", current_user.id, callee_id)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid callee_id")
 
     callee = await db.get(User, callee_id)
     if not callee:
+        logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=callee_not_found caller=%d callee_id=%d", current_user.id, callee_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     # Check if caller is already in an active call
@@ -284,6 +287,7 @@ async def start_call(
         )
     )
     if caller_busy:
+        logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=CALLER_BUSY caller=%d busy_call_id=%s", current_user.id, caller_busy)
         raise AppException(status_code=409, message="Already in a call", code="CALLER_BUSY")
 
     # Check if callee is already in an active call
@@ -294,6 +298,7 @@ async def start_call(
         )
     )
     if active_call:
+        logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=USER_BUSY caller=%d callee=%d", current_user.id, callee_id)
         raise AppException(status_code=409, message="User is busy", code="USER_BUSY")
 
     room_name = f"call_{current_user.id}_{callee_id}_{int(time.time())}"
@@ -301,6 +306,7 @@ async def start_call(
     db.add(call)
     await db.commit()
     await db.refresh(call)
+    logger.info("[CALL_PROCESS][OUT] start_call: DB call created | call_id=%d room=%s", call.id, room_name)
 
     token = _make_livekit_token(room_name, current_user)
     callee_token = _make_livekit_token(room_name, callee)
@@ -319,6 +325,12 @@ async def start_call(
     await _ws_broadcast(callee_id, ws_payload)
     await _send_call_push(callee, current_user, call.id, room_name, callee_token, db)
 
+    logger.info(
+        "[CALL_PROCESS][OUT] start_call: WS+Push sent | call_id=%d callee=%d callee_voip=%s callee_fcm=%s",
+        call.id, callee_id,
+        "YES" if callee.voip_token else "NO",
+        "YES" if callee.fcm_token else "NO",
+    )
     # Askıda kalan aramaları (Ghost calls) 35-40 sn sonra timeout'a çekmek için ARQ görevi ekle
     pool = get_pool()
     if pool:
@@ -330,6 +342,9 @@ async def start_call(
             _defer_by=timedelta(seconds=35),
             _job_id=f"call_timeout_{call.id}"
         )
+        logger.info("[CALL_PROCESS][OUT] start_call: ARQ timeout task enqueued | call_id=%d defer=35s", call.id)
+    else:
+        logger.warning("[CALL_PROCESS][OUT] start_call: ARQ pool not available — timeout task NOT enqueued | call_id=%d", call.id)
 
     logger.info(
         "[CALL_PROCESS][OUT] start_call OK | call_id=%d caller=%d callee=%d room=%s callee_voip=%s callee_fcm=%s",
@@ -353,14 +368,17 @@ async def accept_call(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info("[CALL_PROCESS][IN] accept_call ENTER | call_id=%d callee=%d", call_id, current_user.id)
     # SELECT FOR UPDATE — eş zamanlı iki accept isteği race condition'ı önler
     result = await db.execute(
         select(Call).where(Call.id == call_id).with_for_update()
     )
     call = result.scalar_one_or_none()
     if not call or call.callee_id != current_user.id:
+        logger.warning("[CALL_PROCESS][IN] accept_call NOT FOUND | call_id=%d callee=%d", call_id, current_user.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
     if call.status != "calling":
+        logger.warning("[CALL_PROCESS][IN] accept_call CONFLICT | call_id=%d current_status=%s", call_id, call.status)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Call is no longer active")
 
     # accepted_at'ı yerel değişkene al — commit sonrası SQLAlchemy attribute expire olmaz
@@ -402,8 +420,10 @@ async def reject_call(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info("[CALL_PROCESS][IN] reject_call ENTER | call_id=%d callee=%d", call_id, current_user.id)
     call = await db.get(Call, call_id)
     if not call or call.callee_id != current_user.id:
+        logger.warning("[CALL_PROCESS][IN] reject_call NOT FOUND | call_id=%d callee=%d", call_id, current_user.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
 
     room_name = call.room_name
@@ -429,7 +449,10 @@ async def reject_call(
     # LK room'u sil — reject sonrası oda askıda kalıyordu
     await _delete_lk_room(room_name)
 
-    logger.info("[CALL_PROCESS][IN] reject_call OK | call_id=%d callee=%d", call_id, current_user.id)
+    logger.info(
+        "[CALL_PROCESS][IN] reject_call OK | call_id=%d callee=%d caller=%d room=%s",
+        call_id, current_user.id, caller_id, room_name
+    )
     return {"ok": True}
 
 
@@ -441,13 +464,15 @@ async def end_call(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info("[CALL_PROCESS][END] end_call ENTER | call_id=%d by=%d", call_id, current_user.id)
     call = await db.get(Call, call_id)
     if not call or current_user.id not in (call.caller_id, call.callee_id):
+        logger.warning("[CALL_PROCESS][END] end_call NOT FOUND | call_id=%d by=%d", call_id, current_user.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
 
     # Idempotency: zaten bitmişse tekrar işleme, duplicate WS/FCM gönderme
     if call.status in ("ended", "rejected", "missed"):
-        logger.debug("[Calls] /end called on already-terminal call | call_id=%d status=%s", call_id, call.status)
+        logger.info("[CALL_PROCESS][END] end_call ALREADY TERMINAL | call_id=%d status=%s by=%d", call_id, call.status, current_user.id)
         return {"ok": True}
 
     # Yerel değişkenlere al — commit sonrası SQLAlchemy attribute expire olmaz
@@ -525,8 +550,10 @@ async def missed_call(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    logger.info("[CALL_PROCESS][END] missed_call ENTER | call_id=%d caller=%d", call_id, current_user.id)
     call = await db.get(Call, call_id)
     if not call or call.caller_id != current_user.id:
+        logger.warning("[CALL_PROCESS][END] missed_call NOT FOUND | call_id=%d caller=%d", call_id, current_user.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
 
     if call.status == "calling":

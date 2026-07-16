@@ -125,17 +125,47 @@ class CallState {
 
 class CallService {
   CallService._() {
-    _audioPlayer.onPlayerComplete.listen((_) async {
-      // calling: zil çalınıyor, callee henüz cevaplamadı.
-      // connecting: callee kabul etti ama TrackSubscribed henüz gelmedi.
-      // Her iki durumda da ringtone devam etmeli — ses gerçekten akana dek.
+    // _audioPlayer: busy/ended/weak sesleri için — ringing.wav buradan kaldırıldı.
+    // (ringing.wav artık pre-loaded _ringbackPlayer'da loop ile çalıyor)
+
+    // _ringbackPlayer: caller ringback (ringing.wav) — init'te pre-load edilir.
+    // ReleaseMode.loop ile otomatik döngü; onPlayerComplete fallback için korunuyor.
+    _ringbackPlayer.onPlayerComplete.listen((_) async {
       if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
-        _cpLog('HW', 'audioPlayer RESTART | source=ringing.wav onComplete status=${state.value.status.name}');
-        await _audioPlayer.play(ap.AssetSource('sounds/ringing.wav'));
+        _cpLog('SOUND', 'ringbackPlayer RESTART on complete (loop fallback) | status=${state.value.status.name}');
+        await _ringbackPlayer.seek(Duration.zero);
+        await _ringbackPlayer.resume();
       }
     });
+    _preloadRingback();
+
     if (Platform.isIOS) {
       _initCallkitChannelHandler();
+    }
+  }
+
+  Future<void> _preloadRingback() async {
+    try {
+      await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
+      await _ringbackPlayer.setAudioContext(ap.AudioContext(
+        android: const ap.AudioContextAndroid(
+          usageType: ap.AndroidUsageType.notificationRingtone,
+          contentType: ap.AndroidContentType.music,
+          audioFocus: ap.AndroidAudioFocus.gainTransientMayDuck,
+        ),
+        iOS: ap.AudioContextIOS(
+          category: ap.AVAudioSessionCategory.playAndRecord,
+          options: {
+            ap.AVAudioSessionOptions.allowBluetooth,
+            ap.AVAudioSessionOptions.allowBluetoothA2DP,
+          },
+        ),
+      ));
+      await _ringbackPlayer.setSource(ap.AssetSource('sounds/ringing.wav'));
+      _ringbackPreloaded = true;
+      _cpLog('SOUND', 'ringing.wav PRE-LOADED in ringbackPlayer | ready for instant resume()');
+    } catch (e) {
+      _cpLog('SOUND', 'ringing.wav pre-load FAILED | $e → will fallback to play(AssetSource)');
     }
   }
   static final CallService instance = CallService._();
@@ -162,6 +192,11 @@ class CallService {
   bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
   Completer<void>? _callkitAudioReady; // iOS: didActivateAudioSession sinyali
 
+  // Synchronous dedup guard: WS + FCM + CallKit aynı call_id ile ~150ms arayla gelir.
+  // İlk çağrı _activeIncomingCallId'yi set eder; sonrakiler erken döner.
+  // reset() + _hangUpLocally'de null'a çekilir.
+  int? _activeIncomingCallId;
+
   // Race condition fix: didActivateAudioSession, _joinRoom'daki Completer'dan önce gelebilir.
   // VoIP push auto-accept senaryosunda bu kaçınılmaz: kullanıcı lock screen'den kabul eder,
   // action.fulfill() → didActivateAudioSession senkron ateşlenir, Flutter henüz hazır değildir.
@@ -187,8 +222,13 @@ class CallService {
   }
 
   Timer? _hapticLoopTimer;
-  
+
   final AudioPlayer _audioPlayer = AudioPlayer();
+
+  // Pre-loaded ringback player: caller ringtone için ayrı player, init'te yüklenir.
+  // Her çağrıda AssetSource yükleme gecikmesi (~500ms) ortadan kalkar → resume() ile anında başlar.
+  final AudioPlayer _ringbackPlayer = AudioPlayer();
+  bool _ringbackPreloaded = false;
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -261,45 +301,42 @@ class CallService {
           ));
           _cpLog('HW', 'speakerphone SET | enabled=false context=ringtone-start');
           await Hardware.instance.setSpeakerphoneOn(false);
-
-          // AudioPlayer context: ringtone için ring stream
-          await _audioPlayer.setAudioContext(ap.AudioContext(
-            android: const ap.AudioContextAndroid(
-              usageType: ap.AndroidUsageType.notificationRingtone,
-              contentType: ap.AndroidContentType.music,
-              audioFocus: ap.AndroidAudioFocus.gainTransientMayDuck,
-            ),
-            iOS: ap.AudioContextIOS(
-              category: ap.AVAudioSessionCategory.playAndRecord,
-              options: {
-                ap.AVAudioSessionOptions.allowBluetooth,
-                ap.AVAudioSessionOptions.allowBluetoothA2DP,
-              },
-            ),
-          ));
         } catch (e) {
           _cpLog('HW', 'audioSession CONFIGURE ERROR | context=ringtone $e');
           debugPrint('[LIVE_SCREEN_CALL] AudioSession prep error: $e');
         }
 
-        _audioPlayer.setReleaseMode(ReleaseMode.loop);
         if (state.value.status == CallStatus.calling) {
           if (Platform.isIOS) {
             await Future.delayed(const Duration(milliseconds: 600));
           }
           if (state.value.status == CallStatus.calling) {
-            _cpLog('HW', 'audioPlayer PLAY | source=ringing.wav mode=loop device=earpiece');
-            _cpLog('SOUND', 'ringing.wav PLAY | mode=loop earpiece');
-            _audioPlayer.play(AssetSource('sounds/ringing.wav'));
+            if (_ringbackPreloaded) {
+              // Pre-loaded path: seek to start + resume — no asset loading delay (~10ms)
+              _cpLog('SOUND', 'ringbackPlayer RESUME (pre-loaded) | ringing.wav instant start');
+              _cpLog('HW', 'ringbackPlayer PLAY | mode=loop pre-loaded=true device=earpiece');
+              await _ringbackPlayer.seek(Duration.zero);
+              await _ringbackPlayer.resume();
+            } else {
+              // Fallback: pre-load başarısızsa normal play (yükleme gecikmesi olabilir)
+              _cpLog('SOUND', 'ringbackPlayer PLAY (fallback, not pre-loaded) | ringing.wav');
+              _cpLog('HW', 'ringbackPlayer PLAY | mode=loop pre-loaded=false device=earpiece');
+              await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
+              await _ringbackPlayer.play(ap.AssetSource('sounds/ringing.wav'));
+            }
           }
         }
       });
     } else if (newStatus == CallStatus.busy || newStatus == CallStatus.rejected) {
+      _cpLog('HW', 'ringbackPlayer STOP | reason=$newStatus');
+      _ringbackPlayer.stop();
       _cpLog('HW', 'audioPlayer PLAY | source=busy.wav mode=release reason=$newStatus');
       _cpLog('SOUND', 'busy.wav PLAY | reason=$newStatus');
       _audioPlayer.setReleaseMode(ReleaseMode.release);
       _audioPlayer.play(AssetSource('sounds/busy.wav'));
     } else if (newStatus == CallStatus.ended) {
+      _cpLog('HW', 'ringbackPlayer STOP | reason=ended');
+      _ringbackPlayer.stop();
       if (oldStatus == CallStatus.connected || oldStatus == CallStatus.connecting) {
         _cpLog('HW', 'audioPlayer PLAY | source=ended.wav mode=release wasConnected=true');
         _cpLog('SOUND', 'ended.wav PLAY | wasConnected=true');
@@ -311,6 +348,8 @@ class CallService {
         _audioPlayer.stop();
       }
     } else if (newStatus == CallStatus.connected || newStatus == CallStatus.idle) {
+      _cpLog('HW', 'ringbackPlayer STOP | reason=$newStatus');
+      _ringbackPlayer.stop();
       _cpLog('HW', 'audioPlayer STOP | reason=$newStatus');
       _cpLog('SOUND', 'audioPlayer.stop | status=$newStatus');
       _audioPlayer.stop();
@@ -497,8 +536,20 @@ class CallService {
         ? data['call_id']
         : int.tryParse(data['call_id'].toString());
 
+    // Synchronous dedup: WS + FCM + CallKit aynı call_id için ~150ms arayla gelir.
+    // _activeIncomingCallId ilk çağrıda await öncesinde set edilir — sonraki tüm kaynaklar erken döner.
+    // Bu check + set atomik (tek-threaded Dart): iki çağrı aynı anda bu satırı geçemez.
+    if (incomingCallId != null) {
+      if (incomingCallId == _activeIncomingCallId) {
+        _cpLog('IN', 'onIncomingCall DEDUP BLOCKED | callId=$incomingCallId source=$source (WS/FCM/CallKit duplicate)');
+        return;
+      }
+      _activeIncomingCallId = incomingCallId; // Synchronously set BEFORE first await
+    }
+
     if (incomingCallId != null && incomingCallId == _lastEndedCallId) {
       _cpLog('IN', 'ghostCall BLOCKED | incoming=$incomingCallId == lastEnded=$_lastEndedCallId');
+      _activeIncomingCallId = null; // Blocked — reset so next real call can proceed
       return;
     }
 
@@ -509,6 +560,7 @@ class CallService {
           await _post('/calls/$incomingCallId/reject');
         } catch (_) {}
       }
+      _activeIncomingCallId = null; // Rejected — reset so future calls aren't blocked
       return;
     }
 
@@ -1386,6 +1438,12 @@ class CallService {
       _cpLog('END', '_hangUpLocally SKIPPED | already hanging up');
       return;
     }
+    // Ghost state guard: geç gelen WS/FCM event'leri (call_ended/call_missed) zaten idle
+    // olan state'i ended'a geçirmesin — kullanıcı ekrandan döndükten sonra gereksiz pop tetikler.
+    if (state.value.status == CallStatus.idle) {
+      _cpLog('END', '_hangUpLocally SKIPPED | already idle (late WS/FCM event ignored) | targetStatus=$status');
+      return;
+    }
     _isHangingUp = true;
     try {
       if (state.value.status == status) {
@@ -1414,13 +1472,14 @@ class CallService {
       }
       await FlutterCallkitIncoming.endAllCalls();
 
-      // CallKit ve LiveKit kapandıktan sonra global ses oturumunu hoparlöre yönlendir.
+      // Çağrı sonrası ses oturumunu varsayılan konuma (kulaklık/earpiece) döndür.
+      // true bırakmak hoparlörü açık bırakır → bir sonraki arama/bildirim hoparlörden gelir.
       try {
-        _cpLog('HW', 'speakerphone SET | enabled=true context=_hangUpLocally-post-callkit');
-        await Hardware.instance.setSpeakerphoneOn(true);
+        _cpLog('HW', 'speakerphone SET | enabled=false context=_hangUpLocally-post-callkit (reset to earpiece)');
+        await Hardware.instance.setSpeakerphoneOn(false);
       } catch (e) {
         _cpLog('HW', 'speakerphone SET ERROR | context=_hangUpLocally $e');
-        debugPrint('[CallService] setSpeakerphoneOn(true) error: $e');
+        debugPrint('[CallService] setSpeakerphoneOn(false) error: $e');
       }
 
       // 4. Bütün donanım/native işlemler bittikten sonra state'i güncelliyoruz
@@ -1439,6 +1498,7 @@ class CallService {
     _callerStatusPollTimer?.cancel();
     _roomEventsSubscription?.call();
     _audioInterruptionSubscription?.cancel();
+    _ringbackPlayer.stop(); // Pre-loaded ringback'i durdur (caller hangup veya reset)
 
     _isJoiningRoom = false;
     if (_room != null) {
@@ -1468,6 +1528,7 @@ class CallService {
     _audioSessionActivated = false; // Sonraki çağrı için iOS audio flag'i sıfırla
     _callkitAudioReady = null;
     _preConnectStartedAt = null;
+    _activeIncomingCallId = null; // Dedup guard sıfırla — yeni aramalara açık
     elapsed.value = Duration.zero; // elapsed notifier'ı sıfırla
     _cpLog('TIMER', 'elapsed notifier RESET | value=Duration.zero');
 

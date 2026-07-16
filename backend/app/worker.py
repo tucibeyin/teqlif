@@ -1257,9 +1257,17 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
             call = result.scalar_one_or_none()
 
             if not call or call.status != "calling":
+                logger.info(
+                    "[CALL_PROCESS][END] delayed_call_timeout_task SKIPPED | call_id=%d status=%s (already resolved)",
+                    call_id, call.status if call else "NOT_FOUND"
+                )
                 return  # Zaten kabul edilmiş veya sonlanmış
 
-            logger.info("Arama zaman aşımına uğradı (Ghost Call Timeout). CallID: %d", call_id)
+            room_name = call.room_name
+            logger.info(
+                "[CALL_PROCESS][END] delayed_call_timeout_task FIRING | call_id=%d caller_id=%d callee_id=%d room=%s",
+                call_id, caller_id, callee_id, room_name
+            )
             call.status = "missed"
             call.ended_at = datetime.now(timezone.utc)
 
@@ -1311,8 +1319,34 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
                     extra_data={"caller_username": caller.username, "related_id": str(caller.id)}
                 )
 
+            # LK oda sil — timeout-missed çağrılar cleanup_ghost_calls'a düşmez
+            # (o task status=calling/active arar; biz zaten missed'e çektik).
+            # Room silinmezse LK'da ghost oda birikir.
+            logger.info("[CALL_PROCESS][END] delayed_call_timeout_task: deleting LK room | room=%s call_id=%d", room_name, call_id)
+            try:
+                from livekit.api import LiveKitAPI, DeleteRoomRequest
+                from app.config import settings as _settings
+                async with LiveKitAPI(
+                    url=_settings.livekit_api_base,
+                    api_key=_settings.livekit_api_key,
+                    api_secret=_settings.livekit_api_secret,
+                ) as api:
+                    await api.room.delete_room(DeleteRoomRequest(room=room_name))
+                logger.info("[CALL_PROCESS][END] LK room deleted | room=%s call_id=%d", room_name, call_id)
+            except Exception as lk_exc:
+                err = str(lk_exc).lower()
+                if "not_found" in err or "does not exist" in err:
+                    logger.debug("[CALL_PROCESS][END] LK room already gone | room=%s", room_name)
+                else:
+                    logger.warning("[CALL_PROCESS][END] LK room delete FAILED | room=%s call_id=%d err=%s", room_name, call_id, lk_exc)
+
+            logger.info(
+                "[CALL_PROCESS][END] delayed_call_timeout_task DONE | call_id=%d status=missed room=%s",
+                call_id, room_name
+            )
+
     except Exception as exc:
-        logger.error(f"Error in delayed_call_timeout_task for CallID {call_id}: {exc}", exc_info=True)
+        logger.error(f"[CALL_PROCESS][END] delayed_call_timeout_task ERROR | call_id={call_id} err={exc}", exc_info=True)
         from sentry_sdk import capture_exception
         capture_exception(exc)
         raise
@@ -1323,6 +1357,7 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
     Cron Job (Her 15dk): Çok eski olan calling ve active çağrıları bulup temizler.
     Sunucu kapanıp açıldığında vs kaybolan calling ve active call'ları toparlar.
     """
+    logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task START")
     try:
         from app.database import AsyncSessionLocal
         from app.models.call import Call
@@ -1348,7 +1383,9 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
             ghost_calls = result.scalars().all()
 
             if not ghost_calls:
+                logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task: no ghost calls found")
                 return
+            logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task: found %d ghost call(s)", len(ghost_calls))
 
             # LiveKit oda listesini çek — HATA DURUMUNDA active aramalara dokunma
             lk_rooms = None  # None = API çağrısı başarısız, [] = başarılı ama oda yok
@@ -1415,8 +1452,10 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
                     if "not_found" not in err_msg and "does not exist" not in err_msg:
                         logger.warning("Ghost call LK room delete failed | room=%s | %s", room_name, lk_err)
 
+        logger.info("[CALL_PROCESS][END] cleanup_ghost_calls_task DONE")
+
     except Exception as exc:
-        logger.error(f"Error in cleanup_ghost_calls_task: {exc}", exc_info=True)
+        logger.error("[CALL_PROCESS][END] cleanup_ghost_calls_task ERROR | %s", exc, exc_info=True)
         from sentry_sdk import capture_exception
         capture_exception(exc)
         raise
