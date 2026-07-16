@@ -153,18 +153,24 @@ class CallService {
   Timer? _resetTimer; // To prevent delayed reset overwriting new calls
   Timer? _callerStatusPollTimer; // Poll /status while in calling state (WS kayıp event recovery)
 
-  bool _isHangingUp = false;  // Eş zamanlı _hangUpLocally çağrılarını önler
+  bool _isHangingUp = false;   // Eş zamanlı _hangUpLocally çağrılarını önler
   bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
   Completer<void>? _callkitAudioReady; // iOS: didActivateAudioSession sinyali
+
+  // Race condition fix: didActivateAudioSession, _joinRoom'daki Completer'dan önce gelebilir.
+  // VoIP push auto-accept senaryosunda bu kaçınılmaz: kullanıcı lock screen'den kabul eder,
+  // action.fulfill() → didActivateAudioSession senkron ateşlenir, Flutter henüz hazır değildir.
+  // Flag sayesinde sinyal kaybolmaz — _joinRoom Completer'ı bulunca anında tamamlar.
+  bool _audioSessionActivated = false;
 
   static const _callkitChannel = MethodChannel('com.teqlif/callkit');
 
   // iOS: CallKit audio session aktive olduğunda native'den sinyal alır.
-  // Bu handler uygulama boyunca aktif kalmalı.
   void _initCallkitChannelHandler() {
     _callkitChannel.setMethodCallHandler((call) async {
       if (call.method == 'audioSessionActivated') {
-        _cpLog('LK', 'audioSessionActivated received from CallKit native');
+        _cpLog('LK', 'audioSessionActivated received from CallKit native | completerReady=${_callkitAudioReady != null}');
+        _audioSessionActivated = true; // Flag: sinyal erken gelse de kaybolmaz
         if (_callkitAudioReady != null && !_callkitAudioReady!.isCompleted) {
           _callkitAudioReady!.complete();
         }
@@ -549,12 +555,74 @@ class CallService {
           roomName: room,
         ));
         _cpLog('IN', '_fetchCalleeToken stored → pre-connect ready | callId=$callId');
+
+        // Callee Pre-Connect: Kullanıcı kabul etmeden önce LK ağ bağlantısını kur.
+        // Mic/ses oturumu YOK — sadece TCP+TLS+ICE handshake.
+        // Kullanıcı kabul edince _joinRoom atlanır, sadece mic etkinleştirilir.
+        // Reddetme/timeout durumunda reset() → _disconnectRoom() temizler.
+        if (_room == null && !_isJoiningRoom && token != null && url != null) {
+          _cpLog('IN', 'callee pre-connect _joinRoom starting during ringing | callId=$callId');
+          _joinRoom(livekitUrl: url, token: token).catchError((e) {
+            _cpLog('IN', 'callee pre-connect _joinRoom ERROR | $e');
+          });
+        }
       } else {
         _cpLog('IN', '_fetchCalleeToken discarded (state changed) | callId=$callId status=${state.value.status.name}');
       }
     } catch (e) {
       _cpLog('IN', '_fetchCalleeToken FAILED (acceptCall response-token fallback will be used) | $e');
     }
+  }
+
+  /// Callee pre-connect sonrası audio session + mic aktivasyonu.
+  /// Çağrıldığında _room bağlı olmalı; iOS'ta CallKit audio session sinyali beklenir.
+  Future<void> _activateCalleeAudio() async {
+    _cpLog('IN', '_activateCalleeAudio START | status=${state.value.status}');
+
+    if (Platform.isIOS) {
+      if (_audioSessionActivated) {
+        _cpLog('IN', '_activateCalleeAudio: audioSessionActivated flag=true → no wait');
+      } else {
+        _callkitAudioReady ??= Completer<void>();
+        _cpLog('IN', '_activateCalleeAudio: waiting for didActivateAudioSession (max 4s)');
+        await _callkitAudioReady!.future.timeout(
+          const Duration(seconds: 4),
+          onTimeout: () {
+            _cpLog('IN', '_activateCalleeAudio: audioSessionActivated TIMEOUT → proceeding');
+          },
+        );
+        _callkitAudioReady = null;
+      }
+    } else if (Platform.isAndroid && state.value.callId != null) {
+      final uuid = _formatToUuid(state.value.callId!.toString());
+      _cpLog('IN', '_activateCalleeAudio: Android setCallConnected | uuid=$uuid');
+      FlutterCallkitIncoming.setCallConnected(uuid).catchError((e) {
+        _cpLog('IN', '_activateCalleeAudio setCallConnected ERROR | $e');
+      });
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+
+    try {
+      _cpLog('IN', '_activateCalleeAudio: AudioSession configure voiceChat');
+      final session = await AudioSession.instance;
+      await session.configure(AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+        avAudioSessionMode: AVAudioSessionMode.voiceChat,
+        avAudioSessionCategoryOptions:
+            AVAudioSessionCategoryOptions.allowBluetooth |
+            AVAudioSessionCategoryOptions.allowBluetoothA2dp,
+      ));
+      await Hardware.instance.setSpeakerphoneOn(false);
+      _cpLog('IN', '_activateCalleeAudio: AudioSession configure OK');
+    } catch (e) {
+      _cpLog('IN', '_activateCalleeAudio: AudioSession configure ERROR | $e');
+    }
+
+    _cpLog('IN', '_activateCalleeAudio: setMicrophoneEnabled(true)');
+    await _room?.localParticipant?.setMicrophoneEnabled(true);
+    await Future.delayed(const Duration(milliseconds: 300));
+    await Hardware.instance.setSpeakerphoneOn(false);
+    _cpLog('IN', '_activateCalleeAudio DONE');
   }
 
   void playNotification() {
@@ -646,20 +714,27 @@ class CallService {
 
     _cpLog(
       'IN',
-      'pre-connect check | livekitUrl=${preConnectUrl != null ? "EXISTS" : "NULL"} '
+      'acceptCall pre-connect check | livekitUrl=${preConnectUrl != null ? "EXISTS" : "NULL"} '
       'calleeToken=${preConnectToken != null ? "EXISTS" : "NULL"} '
       'isJoining=$_isJoiningRoom roomNull=${_room == null}',
     );
 
-    bool preConnectStarted = false;
-    if (preConnectUrl != null && preConnectToken != null && !_isJoiningRoom && _room == null) {
-      preConnectStarted = true;
-      _cpLog('IN', 'pre-connect _joinRoom starting (callee token available)');
-      _joinRoom(livekitUrl: preConnectUrl, token: preConnectToken).catchError((e) {
-        _cpLog('IN', 'pre-connect _joinRoom ERROR | $e');
+    if (_room != null) {
+      // _fetchAndStoreCalleeToken pre-connect tamamlandı → sadece audio aktive et.
+      _cpLog('IN', 'acceptCall: callee pre-connect room ready → _activateCalleeAudio');
+      _activateCalleeAudio().catchError((e) {
+        _cpLog('IN', 'acceptCall _activateCalleeAudio ERROR | $e');
       });
-    } else {
-      _cpLog('IN', 'pre-connect SKIPPED → will use accept-response token');
+    } else if (_isJoiningRoom) {
+      // Pre-connect room.connect() devam ediyor.
+      // _joinRoom else bloğu status=connecting + callStatusAtEntry=ringing detektörü devralacak.
+      _cpLog('IN', 'acceptCall: callee pre-connect _joinRoom in progress → _activateCalleeAudio deferred');
+    } else if (preConnectUrl != null && preConnectToken != null) {
+      // Token hazır ama _joinRoom henüz başlamadı → callee rolüyle başlat (isCallee=true).
+      _cpLog('IN', 'acceptCall: token ready → _joinRoom (isCallee=true path)');
+      _joinRoom(livekitUrl: preConnectUrl, token: preConnectToken).catchError((e) {
+        _cpLog('IN', 'acceptCall _joinRoom (callee token) ERROR | $e');
+      });
     }
 
     _cpLog('IN', 'POST /calls/$callId/accept → request (retry max=4)');
@@ -685,12 +760,11 @@ class CallService {
         _setState(state.value.copyWith(acceptedAt: DateTime.parse(data['accepted_at'])));
       }
 
-      // PRIMARY PATH: pre-connect çalışmadıysa response token ile LiveKit'e bağlan.
-      // preConnectStarted=false ise token push payload'ında yoktu; accept yanıtı otoritedir.
-      if (!preConnectStarted && !_isJoiningRoom && _room == null) {
+      // FALLBACK: hiç pre-connect başlamadıysa response token ile LiveKit'e bağlan.
+      if (_room == null && !_isJoiningRoom) {
         final responseToken = data['token'] as String?;
         final responseLkUrl = (data['livekit_url'] as String?) ?? preConnectUrl;
-        _cpLog('IN', 'acceptCall PRIMARY: _joinRoom with RESPONSE token | tokenLen=${responseToken?.length} url=$responseLkUrl');
+        _cpLog('IN', 'acceptCall FALLBACK: _joinRoom with RESPONSE token | tokenLen=${responseToken?.length} url=$responseLkUrl');
         if (responseToken != null && responseLkUrl != null) {
           _joinRoom(livekitUrl: responseLkUrl, token: responseToken).catchError((e) {
             _cpLog('IN', 'acceptCall _joinRoom (response token) ERROR | $e');
@@ -801,12 +875,20 @@ class CallService {
       _cpLog('LK', '_joinRoom starting | url=$livekitUrl tokenLen=${token.length} status=$callStatusAtEntry isCallee=$isCalleeRole');
 
       // ── iOS Callee: didActivateAudioSession sinyali bekle ───────────────────
-      // action.fulfill() AppDelegate.onAccept'te anında çağrılır (Dart'ın onayı gerekmez).
+      // action.fulfill() AppDelegate.onAccept'te anında çağrılır.
       // fulfill() → CallKit → provider(_:didActivate:) → didActivateAudioSession → Flutter signal.
-      // Dart burada sadece sinyali bekler; audio donanımını önceden kurmaz.
+      //
+      // Race condition: VoIP push auto-accept senaryosunda kullanıcı lock screen'den kabul eder.
+      // didActivateAudioSession bu kodu çalışmadan önce ateşlenir (717ms önce, log'dan).
+      // Çözüm: _audioSessionActivated flag'i. Sinyal erken geldiyse Completer'ı anında tamamla.
       if (Platform.isIOS && isCalleeRole) {
         _callkitAudioReady = Completer<void>();
-        _cpLog('LK', 'iOS callee: waiting for didActivateAudioSession signal from CallKit');
+        if (_audioSessionActivated) {
+          _callkitAudioReady!.complete();
+          _cpLog('LK', 'iOS callee: audioSessionActivated already received (early signal, flag=true) — no wait');
+        } else {
+          _cpLog('LK', 'iOS callee: waiting for didActivateAudioSession signal from CallKit');
+        }
         // Android callee: setCallConnected (audio session yok, direkt çalışır)
       } else if (Platform.isAndroid && isCalleeRole && state.value.callId != null) {
         final uuid = _formatToUuid(state.value.callId!.toString());
@@ -860,59 +942,82 @@ class CallService {
         await Future.delayed(const Duration(milliseconds: 300));
         await Hardware.instance.setSpeakerphoneOn(false);
       } else {
-        // Caller pre-connect: ses oturumu ve mikrofon atlandı.
-        // onCallAccepted() tetiklenene kadar ringtone ses oturumu korunur.
-        _cpLog('LK', 'AudioSession/mic SKIPPED | role=caller pre-connect (ringtone preserved)');
-        // Kenar durum: onCallAccepted zaten tetiklendiyse (WS çok hızlı geldiyse) mic'i aç.
+        // Network-only pre-connect (caller veya callee ringing): ses oturumu ve mikrofon atlandı.
+        // callStatusAtEntry: caller=calling, callee-pre-connect=ringing
+        _cpLog('LK', 'AudioSession/mic SKIPPED | preConnectRole=${callStatusAtEntry.name} (ringtone preserved)');
+
+        // Kenar durum: accept/onCallAccepted bu room.connect() sırasında tetiklendiyse.
         if (state.value.status == CallStatus.connecting) {
-          _cpLog('LK', 'caller: call_accepted already received during pre-connect → configuring audio + mic now');
-          try {
-            final session = await AudioSession.instance;
-            await session.configure(AudioSessionConfiguration(
-              avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-              avAudioSessionMode: AVAudioSessionMode.voiceChat,
-              avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-            ));
-            await Hardware.instance.setSpeakerphoneOn(false);
-          } catch (e) {
-            _cpLog('LK', 'late AudioSession configure ERROR | $e');
+          if (callStatusAtEntry == CallStatus.ringing) {
+            // Callee pre-connect: acceptCall, room.connect() sırasında geldi.
+            // _activateCalleeAudio iOS audio session + mic'i doğru sırayla açar.
+            _cpLog('LK', 'callee pre-connect: accept fired during room.connect() → _activateCalleeAudio');
+            _activateCalleeAudio().catchError((e) {
+              _cpLog('LK', '_activateCalleeAudio ERROR (pre-connect edge case) | $e');
+            });
+          } else {
+            // Caller: onCallAccepted, room.connect() sırasında geldi.
+            _cpLog('LK', 'caller: call_accepted already received during pre-connect → configuring audio + mic now');
+            try {
+              final session = await AudioSession.instance;
+              await session.configure(AudioSessionConfiguration(
+                avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+                avAudioSessionMode: AVAudioSessionMode.voiceChat,
+                avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
+              ));
+              await Hardware.instance.setSpeakerphoneOn(false);
+            } catch (e) {
+              _cpLog('LK', 'late AudioSession configure ERROR | $e');
+            }
+            await _room!.localParticipant?.setMicrophoneEnabled(true);
+            _cpLog('LK', 'caller mic enabled (late, accepted-during-preconnect) | done');
           }
-          await _room!.localParticipant?.setMicrophoneEnabled(true);
-          _cpLog('LK', 'caller mic enabled (late, accepted-during-preconnect) | done');
         }
       }
 
       _roomEventsSubscription = _room!.events.listen(_onRoomEvent);
 
       bool peerAlreadyJoined = _room!.remoteParticipants.isNotEmpty;
-      _cpLog('LK', 'peerAlreadyJoined=$peerAlreadyJoined status=${state.value.status}');
+      _cpLog('LK', 'peerAlreadyJoined=$peerAlreadyJoined status=${state.value.status.name}');
       if (peerAlreadyJoined) {
-        // Peer odada ama ses track'ı henüz subscribe edilmemiş olabilir.
-        // connected state'i TrackSubscribed'da set edilecek — gerçek ses akışını bekle.
         _peerTimeoutTimer?.cancel();
-        final anyAudioSubscribed = _room!.remoteParticipants.values.any(
-          (p) => p.trackPublications.values.any(
-            (pub) => pub.subscribed && pub.kind == TrackType.AUDIO,
-          ),
-        );
-        if (anyAudioSubscribed) {
-          _cpLog('LK', 'peerAlreadyJoined + audioSubscribed → connected immediately');
-          stopRingtoneAndVibration();
-          _setState(state.value.copyWith(status: CallStatus.connected));
-          _startElapsedTimer();
+        // Callee pre-connect sırasında (ringing) arayan oda da olabilir.
+        // Kullanıcı kabul etmeden connected set etme.
+        if (state.value.status == CallStatus.ringing) {
+          _cpLog('LK', 'peerAlreadyJoined during callee pre-connect (ringing) → waiting for acceptCall');
         } else {
-          _cpLog('LK', 'peerAlreadyJoined but audio not yet subscribed → waiting for TrackSubscribed');
+          // Peer odada ama ses track'ı henüz subscribe edilmemiş olabilir.
+          // connected state'i TrackSubscribed'da set edilecek — gerçek ses akışını bekle.
+          final anyAudioSubscribed = _room!.remoteParticipants.values.any(
+            (p) => p.trackPublications.values.any(
+              (pub) => pub.subscribed && pub.kind == TrackType.AUDIO,
+            ),
+          );
+          if (anyAudioSubscribed) {
+            _cpLog('LK', 'peerAlreadyJoined + audioSubscribed → connected immediately');
+            stopRingtoneAndVibration();
+            _setState(state.value.copyWith(status: CallStatus.connected));
+            _startElapsedTimer();
+          } else {
+            _cpLog('LK', 'peerAlreadyJoined but audio not yet subscribed → waiting for TrackSubscribed');
+          }
         }
       } else {
         _cpLog('LK', 'joined LiveKit → waiting for peer (ParticipantConnectedEvent)');
         _peerTimeoutTimer?.cancel();
-        _cpLog('LK', 'peerTimeoutTimer started | 25s');
-        _peerTimeoutTimer = Timer(const Duration(seconds: 25), () {
-          if (_room != null && _room!.remoteParticipants.isEmpty) {
-            _cpLog('LK', 'peerTimeoutTimer FIRED → peer did not join in 25s → endCall | status=${state.value.status}');
-            endCall();
-          }
-        });
+        // Callee pre-connect sırasında (ringing) peer timeout başlatma.
+        // Kullanıcı reddetse zaten reset() timeout'u iptal eder; gereksiz endCall riski var.
+        if (state.value.status != CallStatus.ringing) {
+          _cpLog('LK', 'peerTimeoutTimer started | 25s');
+          _peerTimeoutTimer = Timer(const Duration(seconds: 25), () {
+            if (_room != null && _room!.remoteParticipants.isEmpty) {
+              _cpLog('LK', 'peerTimeoutTimer FIRED → peer did not join in 25s → endCall | status=${state.value.status}');
+              endCall();
+            }
+          });
+        } else {
+          _cpLog('LK', 'peerTimeoutTimer SKIPPED during callee pre-connect (ringing)');
+        }
       }
 
       await WakelockPlus.enable();
@@ -940,14 +1045,19 @@ class CallService {
         _setState(state.value.copyWith(status: CallStatus.connected));
       }
     } else if (event is ParticipantConnectedEvent) {
-      _cpLog('LK', 'ParticipantConnected → peer joined | peerCount=${_room?.remoteParticipants.length}');
+      _cpLog('LK', 'ParticipantConnected → peer joined | peerCount=${_room?.remoteParticipants.length} status=${state.value.status.name}');
       _peerTimeoutTimer?.cancel();
+      // Callee pre-connect sırasında (ringing) mic kasıtlı olarak kapalı — erken açma.
       // connected state'i TrackSubscribed'da set ediliyor (ses gerçekten akmaya başladığında).
       // Burada yalnızca mic'in aktif olduğundan emin oluyoruz (WS gecikmesi kenar durumu).
-      final micPubs = _room?.localParticipant?.audioTrackPublications;
-      if (micPubs == null || micPubs.isEmpty) {
-        _cpLog('LK', 'ParticipantConnected: mic not yet published → enabling now');
-        _room?.localParticipant?.setMicrophoneEnabled(true);
+      if (state.value.status != CallStatus.ringing) {
+        final micPubs = _room?.localParticipant?.audioTrackPublications;
+        if (micPubs == null || micPubs.isEmpty) {
+          _cpLog('LK', 'ParticipantConnected: mic not yet published → enabling now');
+          _room?.localParticipant?.setMicrophoneEnabled(true);
+        }
+      } else {
+        _cpLog('LK', 'ParticipantConnected: mic enable SKIPPED during callee pre-connect (ringing)');
       }
     } else if (event is TrackSubscribedEvent) {
       // Uzak ses track'ı abone oldu → callee'nin sesi gerçekten akıyor.
@@ -1161,6 +1271,8 @@ class CallService {
     _disconnectRoom();
     WakelockPlus.disable();
     FlutterCallkitIncoming.endAllCalls();
+    _audioSessionActivated = false; // Sonraki çağrı için iOS audio flag'i sıfırla
+    _callkitAudioReady = null;
 
     if (state.value.callId != null) {
       _lastEndedCallId = state.value.callId;
