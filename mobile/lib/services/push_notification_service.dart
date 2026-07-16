@@ -340,6 +340,22 @@ class PushNotificationService {
           '_source': 'CallEventActionCallIncoming',
         });
         _cpLog('PUSH', 'CallEventActionCallIncoming done | callId=$callId status=${CallService.instance.state.value.status.name}');
+        // Android: FCM background handler always calls showCallkitIncoming which shows a
+        // persistent notification (Accept/Decline buttons). When the app is in foreground
+        // the IncomingCallBar is the correct UI — dismiss the native notification so the
+        // user doesn't see both. On iOS this path is handled by the AppDelegate instant-dismiss.
+        if (Platform.isAndroid) {
+          final isAppForeground = WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+          if (isAppForeground) {
+            try {
+              final callUuid = formatToUuid(callId);
+              await FlutterCallkitIncoming.endCall(callUuid);
+              _cpLog('PUSH', 'CallEventActionCallIncoming → Android notification dismissed (app foreground, IncomingCallBar active) | callId=$callId');
+            } catch (e) {
+              _cpLog('PUSH', 'CallEventActionCallIncoming → Android dismiss ERROR | $e');
+            }
+          }
+        }
       } else if (event is CallEventActionCallAccept) {
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         final callId = data['call_id']?.toString() ?? 'NULL';

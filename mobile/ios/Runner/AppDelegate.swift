@@ -182,30 +182,27 @@ import Security
           "caller_avatar": callerAvatar,
           "room_name": roomName
       ]
-      
-      // If app is already in foreground, WS has handled this call via IncomingCallBar.
-      // Apple still requires reportNewIncomingCall for every VoIP push, so we call
-      // showCallkitIncoming but end the CX call after 300ms to prevent the full-screen
-      // CallKit UI from taking over the foreground app.
+
+      // If app is already in foreground, WS + IncomingCallBar handles the call UI.
+      // Apple requires reportNewIncomingCall for every VoIP push, so we call
+      // showCallkitIncoming — but dismiss the CX call immediately inside the completion
+      // block (fires once reportNewIncomingCall succeeds) to prevent the full-screen
+      // CallKit UI from ever appearing. 300ms asyncAfter caused a visible flash; the
+      // completion block eliminates it entirely.
       let appIsActive = UIApplication.shared.applicationState == .active
+      let callUUID = UUID(uuidString: data.uuid)
       print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming | callId=\(callId) caller=\(callerUsername) appIsActive=\(appIsActive)")
-      SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(data, fromPushKit: true) {
-          print("[CALL_PROCESS][\(self.ts())][PUSH] showCallkitIncoming completion | callId=\(callId)")
+      SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(data, fromPushKit: true) { [weak self] in
+          guard let self = self else { completion(); return }
+          print("[CALL_PROCESS][\(self.ts())][PUSH] showCallkitIncoming completion | callId=\(callId) appIsActive=\(appIsActive)")
           completion()
-      }
-      if appIsActive {
-          print("[CALL_PROCESS][\(ts())][PUSH] App ACTIVE → auto-dismiss CallKit in 300ms | callId=\(callId)")
-          if let callUUID = UUID(uuidString: data.uuid) {
-              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                  guard let self = self else { return }
-                  let endAction = CXEndCallAction(call: callUUID)
-                  let tx = CXTransaction(action: endAction)
-                  self._ckController.request(tx) { error in
-                      print("[CALL_PROCESS][\(self.ts())][PUSH] CallKit auto-dismiss done | callId=\(callId) error=\(error?.localizedDescription ?? "none")")
-                  }
-              }
-          } else {
-              print("[CALL_PROCESS][\(ts())][PUSH] App ACTIVE — UUID parse failed, cannot auto-dismiss | callId=\(callId) uuid=\(data.uuid)")
+          guard appIsActive, let uuid = callUUID else { return }
+          // Dismiss synchronously after registration — no asyncAfter delay needed since
+          // the completion block guarantees reportNewIncomingCall has already returned.
+          let endAction = CXEndCallAction(call: uuid)
+          let tx = CXTransaction(action: endAction)
+          self._ckController.request(tx) { error in
+              print("[CALL_PROCESS][\(self.ts())][PUSH] CallKit instant-dismiss | callId=\(callId) error=\(error?.localizedDescription ?? "none")")
           }
       }
   }
