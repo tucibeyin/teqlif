@@ -131,7 +131,7 @@ class CallService {
     // (ringing.wav artık pre-loaded _ringbackPlayer'da loop ile çalıyor)
 
     // _ringbackPlayer: caller ringback (ringing.wav) — init'te pre-load edilir.
-    // ReleaseMode.loop ile otomatik döngü; onPlayerComplete fallback için korunuyor.
+    // ReleaseMode.stop: onPlayerComplete her zaman tetiklenir; manuel restart loop yapar.
     _ringbackPlayer.onPlayerComplete.listen((_) async {
       if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
         _cpLog('SOUND', 'ringbackPlayer RESTART on complete (loop fallback) | status=${state.value.status.name}');
@@ -149,7 +149,7 @@ class CallService {
 
   Future<void> _preloadRingback() async {
     try {
-      await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
+      await _ringbackPlayer.setReleaseMode(ReleaseMode.stop);
       await _ringbackPlayer.setAudioContext(ap.AudioContext(
         android: const ap.AudioContextAndroid(
           usageType: ap.AndroidUsageType.notificationRingtone,
@@ -385,15 +385,15 @@ class CallService {
               // Pre-loaded path: seek to start + resume — no asset loading delay (~10ms)
               // setReleaseMode explicitly on every resume: after stop() the mode may reset.
               _cpLog('SOUND', 'ringbackPlayer RESUME (pre-loaded) | ringing.wav instant start');
-              _cpLog('HW', 'ringbackPlayer PLAY | mode=loop pre-loaded=true device=earpiece');
-              await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
+              _cpLog('HW', 'ringbackPlayer PLAY | mode=stop pre-loaded=true device=earpiece');
+              await _ringbackPlayer.setReleaseMode(ReleaseMode.stop);
               await _ringbackPlayer.seek(Duration.zero);
               await _ringbackPlayer.resume();
             } else {
               // Fallback: pre-load başarısızsa normal play (yükleme gecikmesi olabilir)
               _cpLog('SOUND', 'ringbackPlayer PLAY (fallback, not pre-loaded) | ringing.wav');
-              _cpLog('HW', 'ringbackPlayer PLAY | mode=loop pre-loaded=false device=earpiece');
-              await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
+              _cpLog('HW', 'ringbackPlayer PLAY | mode=stop pre-loaded=false device=earpiece');
+              await _ringbackPlayer.setReleaseMode(ReleaseMode.stop);
               await _ringbackPlayer.play(ap.AssetSource('sounds/ringing.wav'));
             }
           }
@@ -675,6 +675,8 @@ class CallService {
     final calleeToken = data['callee_token'] as String?;
     final livekitUrl = data['livekit_url'] as String?;
 
+    final wasAlreadyRinging = state.value.status == CallStatus.ringing;
+
     _setState(
       CallState(
         status: CallStatus.ringing,
@@ -705,7 +707,11 @@ class CallService {
       });
     }
 
-    playNotification();
+    if (!wasAlreadyRinging) {
+      playNotification();
+    } else {
+      _cpLog('IN', 'playNotification SKIPPED | already ringing (ringing→ringing dedup)');
+    }
   }
 
   /// VoIP push path için callee LK token'ını arka planda çeker ve state'e yazar.
@@ -1310,7 +1316,7 @@ class CallService {
                       AVAudioSessionCategoryOptions.allowBluetooth |
                       AVAudioSessionCategoryOptions.allowBluetoothA2dp,
                 ));
-                await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
+                await _ringbackPlayer.setReleaseMode(ReleaseMode.stop);
                 if (_ringbackPlayer.state != PlayerState.playing) {
                   await _ringbackPlayer.seek(Duration.zero);
                   await _ringbackPlayer.resume();
@@ -1402,10 +1408,10 @@ class CallService {
         // Callee pre-connect sırasında (ringing) peer timeout başlatma.
         // Kullanıcı reddetse zaten reset() timeout'u iptal eder; gereksiz endCall riski var.
         if (state.value.status != CallStatus.ringing) {
-          _cpLog('LK', 'peerTimeoutTimer started | 25s');
-          _peerTimeoutTimer = Timer(const Duration(seconds: 25), () {
+          _cpLog('LK', 'peerTimeoutTimer started | 40s');
+          _peerTimeoutTimer = Timer(const Duration(seconds: 40), () {
             if (_room != null && _room!.remoteParticipants.isEmpty) {
-              _cpLog('LK', 'peerTimeoutTimer FIRED → peer did not join in 25s → endCall | status=${state.value.status}');
+              _cpLog('LK', 'peerTimeoutTimer FIRED → peer did not join in 40s → endCall | status=${state.value.status}');
               endCall();
             }
           });
