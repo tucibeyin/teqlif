@@ -73,7 +73,8 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
         _openCallScreen();
         break;
       case 'call_accepted':
-        _cpLog('UI', 'call_accepted WS → onCallAccepted + openCallScreen');
+        _cpLog('UI', 'call_accepted WS → onCallAccepted + openCallScreen | acceptedAt=${data['accepted_at']} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+        _cpLog('TIMER', 'overlay: call_accepted WS received | acceptedAt=${data['accepted_at']} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
         CallService.instance.onCallAccepted(data);
         _openCallScreen();
         break;
@@ -141,6 +142,10 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
       _cpLog('UI', 'overlay._openCallScreen SKIPPED | preventAutoOpen=true');
       return;
     }
+    final nowUtc = DateTime.now().toUtc();
+    final acceptedAt = CallService.instance.state.value.acceptedAt;
+    final lagMs = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
+    _cpLog('TIMER', 'overlay._openCallScreen → /call_screen | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} openLagMs=$lagMs status=${CallService.instance.state.value.status.name}');
     _cpLog('UI', 'overlay._openCallScreen → pushing /call_screen');
     final nav = widget.navigatorKey?.currentState ?? Navigator.of(context, rootNavigator: true);
     nav.push(

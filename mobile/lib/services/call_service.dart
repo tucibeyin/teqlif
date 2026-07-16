@@ -757,7 +757,12 @@ class CallService {
       if (data == null) throw Exception('Accept data is null');
 
       if (data['accepted_at'] != null) {
-        _setState(state.value.copyWith(acceptedAt: DateTime.parse(data['accepted_at'])));
+        final parsedAt = DateTime.parse(data['accepted_at']);
+        final nowUtc = DateTime.now().toUtc();
+        _cpLog('TIMER', 'acceptedAt SET [CALLEE/accept-response] | acceptedAt=${parsedAt.toIso8601String()} nowUtc=${nowUtc.toIso8601String()} httpRTT=${nowUtc.difference(parsedAt).inMilliseconds}ms');
+        _setState(state.value.copyWith(acceptedAt: parsedAt));
+      } else {
+        _cpLog('TIMER', 'acceptedAt MISSING in /accept response — timer will use local clock');
       }
 
       // FALLBACK: hiç pre-connect başlamadıysa response token ile LiveKit'e bağlan.
@@ -803,9 +808,12 @@ class CallService {
     // "zil → ses" geçişi olur (WhatsApp pattern).
 
     if (data['accepted_at'] != null) {
-      _setState(state.value.copyWith(
-        acceptedAt: DateTime.parse(data['accepted_at']),
-      ));
+      final parsedAt = DateTime.parse(data['accepted_at']);
+      final nowUtc = DateTime.now().toUtc();
+      _cpLog('TIMER', 'acceptedAt SET [CALLER/WS] | acceptedAt=${parsedAt.toIso8601String()} nowUtc=${nowUtc.toIso8601String()} wsLag=${nowUtc.difference(parsedAt).inMilliseconds}ms');
+      _setState(state.value.copyWith(acceptedAt: parsedAt));
+    } else {
+      _cpLog('TIMER', 'acceptedAt MISSING in call_accepted WS payload — timer will use local clock');
     }
 
     if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) return;
@@ -995,6 +1003,10 @@ class CallService {
           );
           if (anyAudioSubscribed) {
             _cpLog('LK', 'peerAlreadyJoined + audioSubscribed → connected immediately');
+            final nowUtc = DateTime.now().toUtc();
+            final acceptedAt = state.value.acceptedAt;
+            final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
+            _cpLog('TIMER', 'peerAlreadyJoined → CONNECTED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
             stopRingtoneAndVibration();
             _setState(state.value.copyWith(status: CallStatus.connected));
             _startElapsedTimer();
@@ -1083,6 +1095,10 @@ class CallService {
         });
         stopRingtoneAndVibration();
         if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
+          final nowUtc = DateTime.now().toUtc();
+          final acceptedAt = state.value.acceptedAt;
+          final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
+          _cpLog('TIMER', 'TrackSubscribed → CONNECTED | role=${state.value.status.name} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
           _setState(state.value.copyWith(status: CallStatus.connected));
           _startElapsedTimer();
         }
@@ -1127,20 +1143,24 @@ class CallService {
 
   void _startElapsedTimer() {
     _elapsedTimer?.cancel();
+    final acceptedAt = state.value.acceptedAt;
+    final nowUtc = DateTime.now().toUtc();
+    final alreadyElapsed = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()) : Duration.zero;
+    _cpLog('TIMER', '_startElapsedTimer CALLED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} alreadyElapsed=${alreadyElapsed.inMilliseconds}ms status=${state.value.status.name}');
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.value.status == CallStatus.connected) {
         if (state.value.acceptedAt != null) {
-          _setState(
-            state.value.copyWith(
-              elapsed: DateTime.now().toUtc().difference(state.value.acceptedAt!.toUtc()),
-            ),
-          );
+          final elapsed = DateTime.now().toUtc().difference(state.value.acceptedAt!.toUtc());
+          if (elapsed.inSeconds <= 5) {
+            _cpLog('TIMER', 'tick [acceptedAt] | elapsed=${elapsed.inMilliseconds}ms (${elapsed.inSeconds}s) acceptedAt=${state.value.acceptedAt?.toIso8601String()}');
+          }
+          _setState(state.value.copyWith(elapsed: elapsed));
         } else {
-          _setState(
-            state.value.copyWith(
-              elapsed: state.value.elapsed + const Duration(seconds: 1),
-            ),
-          );
+          final elapsed = state.value.elapsed + const Duration(seconds: 1);
+          if (elapsed.inSeconds <= 5) {
+            _cpLog('TIMER', 'tick [localClock] | elapsed=${elapsed.inSeconds}s (no acceptedAt)');
+          }
+          _setState(state.value.copyWith(elapsed: elapsed));
         }
       }
     });

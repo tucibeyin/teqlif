@@ -47,7 +47,13 @@ class _CallScreenState extends State<CallScreen> {
 
   void _onStateChange() {
     final s = CallService.instance.state.value.status;
+    final elapsed = CallService.instance.state.value.elapsed;
+    final acceptedAt = CallService.instance.state.value.acceptedAt;
     _cpLog('UI', 'CallScreen._onStateChange | status=${s.name} hasActiveCall=${CallService.instance.hasActiveCall} hasPopped=$_hasPopped');
+    if (s == CallStatus.connected && elapsed.inSeconds == 0) {
+      final nowUtc = DateTime.now().toUtc();
+      _cpLog('TIMER', 'CallScreen: first CONNECTED state | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} elapsed=${elapsed.inMilliseconds}ms nowUtc=${nowUtc.toIso8601String()}');
+    }
     if (!CallService.instance.hasActiveCall && mounted && !_hasPopped) {
       if (s == CallStatus.rejected ||
           s == CallStatus.missed ||
@@ -397,10 +403,16 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   String _statusText(CallStatus s, AppLocalizations l, Duration elapsed) {
+    if (s == CallStatus.connected) {
+      final formatted = _formatElapsed(elapsed);
+      if (elapsed.inSeconds <= 5) {
+        _cpLog('TIMER', 'CallScreen UI RENDER | elapsed=${elapsed.inMilliseconds}ms ($formatted) acceptedAt=${CallService.instance.state.value.acceptedAt?.toIso8601String() ?? "NULL"}');
+      }
+      return formatted;
+    }
     return switch (s) {
       CallStatus.calling => l.callCalling,
       CallStatus.connecting => l.callConnecting,
-      CallStatus.connected => _formatElapsed(elapsed),
       CallStatus.ended => l.callEnded,
       CallStatus.rejected => l.callRejected,
       CallStatus.missed => l.callMissed,
