@@ -127,8 +127,10 @@ async def get_call_status(
 
 async def _ws_broadcast(user_id: int, payload: dict) -> None:
     await ws_manager.publish(_DM_CHANNEL, f"dm:{user_id}", payload)
-    # Store call events for WS replay (lost event recovery on reconnect)
-    if payload.get("type", "").startswith("call_"):
+    event_type = payload.get("type", "")
+    # Only replay non-terminal events — terminal events (call_ended/rejected/missed) are
+    # handled by backendStatus check on reconnect; storing them causes replay duplicates.
+    if event_type.startswith("call_") and event_type not in ("call_ended", "call_rejected", "call_missed"):
         await ws_manager.store_call_event(user_id, payload)
 
 
@@ -511,6 +513,15 @@ async def end_call(
     call.ended_at = ended_at
     call.duration_seconds = duration_seconds
     await db.commit()
+
+    # Redis NX lock: prevent duplicate call_ended if webhook fires concurrently.
+    # Whoever sets this key first (API or webhook) wins — the other path skips.
+    try:
+        from app.utils.redis_client import get_redis as _get_redis
+        _redis = await _get_redis()
+        await _redis.set(f"call_ended_sent:{call_id_val}", "api", ex=60, nx=True)
+    except Exception:
+        pass  # Redis failure is non-fatal — webhook guard is the safety net
 
     await _ws_broadcast(other_id, {"type": "call_ended", "call_id": call_id_val})
     other_user = await db.get(User, other_id)

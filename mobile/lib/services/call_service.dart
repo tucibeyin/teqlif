@@ -198,6 +198,9 @@ class CallService {
   // CallScreen bu notifier'ı doğrudan dinler; overlay ve diğer listener'lar etkilenmez.
   final ValueNotifier<Duration> elapsed = ValueNotifier(Duration.zero);
 
+  /// acceptedAt backing field accessor — use instead of state.value.acceptedAt internally.
+  DateTime? get acceptedAt => _acceptedAt ?? state.value.acceptedAt;
+
   Room? _room;
   Function? _roomEventsSubscription;
   StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSubscription;
@@ -256,10 +259,16 @@ class CallService {
     });
   }
 
+  // Backing field for acceptedAt — avoids calling→calling / connecting→connecting self-transitions.
+  // Set when we learn the accepted timestamp (WS or /accept response).
+  // Included in CallState when transitioning to connected so widgets can read it from state.
+  DateTime? _acceptedAt;
+
   Timer? _hapticLoopTimer;
   Timer? _statsTimer;               // WebRTC audio stats polling (5s)
   StreamSubscription<int>? _proximitySub;     // Proximity sensor → earpiece auto-switch
   StreamSubscription<List<ConnectivityResult>>? _networkSub;  // Network change monitor
+  ConnectivityResult? _prevNetworkType;  // For networkChange false-positive suppression
 
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -304,6 +313,17 @@ class CallService {
     final oldStatus = state.value.status;
     _cpLog('STATE', '${oldStatus.name} → ${s.status.name} | callId=${s.callId}');
     final oldPoor = state.value.isPoorConnection;
+
+    // Pre-sync elapsed BEFORE notifying listeners so the first connected frame
+    // shows the correct time instead of 00:00 (timer 00:00 flash fix).
+    if (oldStatus != CallStatus.connected && s.status == CallStatus.connected) {
+      final at = s.acceptedAt ?? _acceptedAt ?? state.value.acceptedAt;
+      if (at != null) {
+        final already = DateTime.now().toUtc().difference(at.toUtc());
+        if (already.inMilliseconds > 0) elapsed.value = already;
+      }
+    }
+
     state.value = s;
     
     if (oldStatus != s.status) {
@@ -851,6 +871,14 @@ class CallService {
 
     _resetTimer?.cancel();
     stopRingtoneAndVibration();
+
+    // IMMEDIATELY transition to connecting before any async work.
+    // Fixes two visual glitches observed in logs:
+    // 1. 272ms IncomingCallBar + CallScreen overlap: bar hides on ringing→connecting,
+    //    which now fires before _openCallScreen() pushes the route.
+    // 2. 179ms CallScreen ringing flash: screen opens with connecting state, not ringing.
+    _setState(state.value.copyWith(status: CallStatus.connecting));
+
     final permStatus = await Permission.microphone.status;
     _cpLog('IN', 'mic status check | status=$permStatus');
     if (!permStatus.isGranted) {
@@ -866,8 +894,6 @@ class CallService {
       } catch (_) {}
       return;
     }
-
-    _setState(state.value.copyWith(status: CallStatus.connecting));
 
     // Snapshot token/url — may be set by _fetchAndStoreCalleeToken (proactive fetch)
     final preConnectUrl = state.value.livekitUrl;
@@ -930,16 +956,10 @@ class CallService {
         final parsedAt = DateTime.parse(data['accepted_at']);
         final nowUtc = DateTime.now().toUtc();
         _cpLog('TIMER', 'acceptedAt SET [CALLEE/accept-response] | acceptedAt=${parsedAt.toIso8601String()} nowUtc=${nowUtc.toIso8601String()} httpRTT=${nowUtc.difference(parsedAt).inMilliseconds}ms');
-        _setState(state.value.copyWith(acceptedAt: parsedAt));
+        // Use backing field — avoids connecting→connecting self-transition rebuild.
+        _acceptedAt = parsedAt;
       } else {
         _cpLog('TIMER', 'acceptedAt MISSING in /accept response — timer will use local clock');
-      }
-
-      // E2EE key from /accept response (callee path)
-      final e2eeKey = data['e2ee_key'] as String?;
-      if (e2eeKey != null && state.value.e2eeKey == null) {
-        _cpLog('LK', 'E2EE key received via /accept | key=${e2eeKey.substring(0, 8)}…');
-        _setState(state.value.copyWith(e2eeKey: e2eeKey));
       }
 
       // FALLBACK: hiç pre-connect başlamadıysa response token ile LiveKit'e bağlan.
@@ -984,11 +1004,12 @@ class CallService {
     // Critical for iOS: TrackSubscribed fires ~1.65s BEFORE this WS arrives,
     // so status is already `connected` when we get here. Without this unconditional
     // update, acceptedAt stays null → durationMs=-1 in analytics.
-    if (data['accepted_at'] != null && state.value.acceptedAt == null) {
+    if (data['accepted_at'] != null && _acceptedAt == null && state.value.acceptedAt == null) {
       final parsedAt = DateTime.parse(data['accepted_at'] as String);
       final nowUtc = DateTime.now().toUtc();
       _cpLog('TIMER', 'acceptedAt SET [CALLER/WS] | acceptedAt=${parsedAt.toIso8601String()} nowUtc=${nowUtc.toIso8601String()} wsLag=${nowUtc.difference(parsedAt).inMilliseconds}ms');
-      _setState(state.value.copyWith(acceptedAt: parsedAt));
+      // Use backing field — avoids calling→calling self-transition rebuild.
+      _acceptedAt = parsedAt;
       // Correct elapsed timer if TrackSubscribed already transitioned us to connected.
       // Without this, the elapsed timer starts from zero even though the call started ~1.65s ago.
       if (state.value.status == CallStatus.connected) {
@@ -1339,7 +1360,7 @@ class CallService {
             final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
             _cpLog('TIMER', 'peerAlreadyJoined → CONNECTED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
             stopRingtoneAndVibration();
-            _setState(state.value.copyWith(status: CallStatus.connected));
+            _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
             _startElapsedTimer();
             _startProximitySensor();
             _startStatsMonitor();
@@ -1455,7 +1476,7 @@ class CallService {
           final acceptedAt = state.value.acceptedAt;
           final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
           _cpLog('TIMER', 'TrackSubscribed → CONNECTED | role=${preTransitionStatus.name} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
-          _setState(state.value.copyWith(status: CallStatus.connected));
+          _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
           _startElapsedTimer();
           _startProximitySensor();
           _startStatsMonitor();
@@ -1577,11 +1598,14 @@ class CallService {
 
   void _startNetworkMonitor() {
     _networkSub?.cancel();
+    _prevNetworkType = null;
     _cpLog('LK', 'networkMonitor START | callId=${state.value.callId}');
     _networkSub = Connectivity().onConnectivityChanged.listen((results) {
       if (state.value.status == CallStatus.connected || state.value.status == CallStatus.reconnecting) {
-        final netType = results.isNotEmpty ? results.first.name : 'unknown';
-        _cpLog('LK', 'networkChange during call | network=$netType status=${state.value.status.name} callId=${state.value.callId}');
+        final newType = results.isNotEmpty ? results.first : ConnectivityResult.none;
+        if (newType == _prevNetworkType) return; // same type → connectivity_plus false positive
+        _prevNetworkType = newType;
+        _cpLog('LK', 'networkChange during call | network=${newType.name} status=${state.value.status.name} callId=${state.value.callId}');
       }
     });
   }
@@ -1593,7 +1617,7 @@ class CallService {
 
   void _startElapsedTimer() {
     _elapsedTimer?.cancel();
-    final acceptedAt = state.value.acceptedAt;
+    final acceptedAt = _acceptedAt ?? state.value.acceptedAt;
     final nowUtc = DateTime.now().toUtc();
     final alreadyElapsed = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()) : Duration.zero;
     _cpLog('TIMER', '_startElapsedTimer CALLED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} alreadyElapsed=${alreadyElapsed.inMilliseconds}ms status=${state.value.status.name}');
@@ -1703,10 +1727,11 @@ class CallService {
       _elapsedTimer?.cancel();
 
       // Arama süresi logu — analytics ve gözlem için.
-      final callDurationMs = state.value.acceptedAt != null
-          ? DateTime.now().toUtc().difference(state.value.acceptedAt!.toUtc()).inMilliseconds
+      final effectiveAcceptedAt = _acceptedAt ?? state.value.acceptedAt;
+      final callDurationMs = effectiveAcceptedAt != null
+          ? DateTime.now().toUtc().difference(effectiveAcceptedAt.toUtc()).inMilliseconds
           : -1;
-      _cpLog('END', 'call DURATION | callId=${state.value.callId} acceptedAt=${state.value.acceptedAt?.toIso8601String() ?? "NULL"} durationMs=$callDurationMs durationSec=${callDurationMs > 0 ? callDurationMs ~/ 1000 : -1}');
+      _cpLog('END', 'call DURATION | callId=${state.value.callId} acceptedAt=${effectiveAcceptedAt?.toIso8601String() ?? "NULL"} durationMs=$callDurationMs durationSec=${callDurationMs > 0 ? callDurationMs ~/ 1000 : -1}');
       
       _cpLog('END', 'disconnectRoom starting');
       await _disconnectRoom();
@@ -1782,6 +1807,7 @@ class CallService {
     _callkitAudioReady = null;
     _preConnectStartedAt = null;
     _activeIncomingCallId = null; // Dedup guard sıfırla — yeni aramalara açık
+    _acceptedAt = null;
     elapsed.value = Duration.zero; // elapsed notifier'ı sıfırla
     _stopStatsMonitor();
     _stopProximitySensor();

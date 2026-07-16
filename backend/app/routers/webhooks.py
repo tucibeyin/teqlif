@@ -79,12 +79,22 @@ async def _on_call_room_finished(room_name: str) -> None:
             logger.info("Call %s closed via Webhook (room_finished)", room_name)
             call.status = "ended"
             call.ended_at = datetime.now(timezone.utc)
+            call_id = call.id
+            caller_id = call.caller_id
+            callee_id = call.callee_id
             await db.commit()
-            
-            logger.info(f"[CALL_PROCESS][END] Webhook room_finished: sending call_ended to caller {call.caller_id} and callee {call.callee_id}")
+
+            # NX lock: if end_call API already set this key, skip — avoids 182ms duplicate delivery.
+            from app.utils.redis_client import get_redis as _get_redis
+            _redis = await _get_redis()
+            if not await _redis.set(f"call_ended_sent:{call_id}", "webhook", ex=60, nx=True):
+                logger.info("[CALL_PROCESS][END] Webhook: call_ended already sent by API, skipping | call_id=%s", call_id)
+                return
+
+            logger.info("[CALL_PROCESS][END] Webhook room_finished: sending call_ended to caller %s and callee %s", caller_id, callee_id)
             _DM = "dm_broadcast"
-            await ws_manager.publish(_DM, f"dm:{call.caller_id}", {"type": "call_ended", "call_id": call.id})
-            await ws_manager.publish(_DM, f"dm:{call.callee_id}", {"type": "call_ended", "call_id": call.id})
+            await ws_manager.publish(_DM, f"dm:{caller_id}", {"type": "call_ended", "call_id": call_id})
+            await ws_manager.publish(_DM, f"dm:{callee_id}", {"type": "call_ended", "call_id": call_id})
             
     except Exception as exc:
         logger.error(f"Error closing ghost call {room_name} via webhook: {exc}", exc_info=True)

@@ -11,15 +11,9 @@ import 'storage_service.dart';
 class _WsLifecycleObserver extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
-      debugPrint('[WS][${DateTime.now().toIso8601String()}] Uygulama arka planda, soket bekletiliyor...');
-      WsService.pauseConnection();
-    } else if (state == AppLifecycleState.resumed) {
-      debugPrint('[WS][${DateTime.now().toIso8601String()}] Uygulama ön planda, yeniden bağlanılıyor...');
-      WsService.resumeConnection();
-    }
+    // Debounce: Flutter didChangeAppLifecycleState fires multiple times (~100ms apart)
+    // for a single background transition. 200ms debounce fires only once with the final state.
+    WsService._debounceLifecycle(state);
   }
 }
 
@@ -37,6 +31,27 @@ class WsService {
   static StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   // WS event replay: tracks last received call event timestamp for since_ts on reconnect
   static double? _lastCallEventTs;
+  // Lifecycle debounce: prevents triple-fire when OS sends multiple lifecycle events
+  static Timer? _lifecycleDebounce;
+  static AppLifecycleState? _pendingLifecycleState;
+
+  static void _debounceLifecycle(AppLifecycleState state) {
+    _pendingLifecycleState = state;
+    _lifecycleDebounce?.cancel();
+    _lifecycleDebounce = Timer(const Duration(milliseconds: 200), () {
+      final s = _pendingLifecycleState;
+      if (s == null) return;
+      if (s == AppLifecycleState.paused ||
+          s == AppLifecycleState.inactive ||
+          s == AppLifecycleState.hidden) {
+        debugPrint('[WS][${DateTime.now().toIso8601String()}] Uygulama arka planda, soket bekletiliyor...');
+        pauseConnection();
+      } else if (s == AppLifecycleState.resumed) {
+        debugPrint('[WS][${DateTime.now().toIso8601String()}] Uygulama ön planda, yeniden bağlanılıyor...');
+        resumeConnection();
+      }
+    });
+  }
 
   // Lifecycle dinleyicisi tanımlamaları
   static final _WsLifecycleObserver _observer = _WsLifecycleObserver();
