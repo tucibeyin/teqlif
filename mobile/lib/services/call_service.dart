@@ -1183,6 +1183,12 @@ class CallService {
     final nowUtc = DateTime.now().toUtc();
     final alreadyElapsed = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()) : Duration.zero;
     _cpLog('TIMER', '_startElapsedTimer CALLED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} alreadyElapsed=${alreadyElapsed.inMilliseconds}ms status=${state.value.status.name}');
+    // İlk frame'de doğru elapsed göster — "00:00 flash → 00:04 jump" önlenir.
+    // Timer.periodic ilk tick'i 1s sonra atar; bu arada state güncellenmemiş olur.
+    if (alreadyElapsed.inMilliseconds > 0) {
+      _cpLog('TIMER', '_startElapsedTimer: immediate elapsed sync | alreadyElapsed=${alreadyElapsed.inMilliseconds}ms → UI gösterir: ${alreadyElapsed.inMinutes.remainder(60).toString().padLeft(2, "0")}:${alreadyElapsed.inSeconds.remainder(60).toString().padLeft(2, "0")}');
+      _setState(state.value.copyWith(elapsed: alreadyElapsed));
+    }
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.value.status == CallStatus.connected) {
         if (state.value.acceptedAt != null) {
