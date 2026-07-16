@@ -9,7 +9,6 @@ Flow:
   POST /{id}/missed  → callee gets WS call_missed (caller-side 30s timeout)
 """
 import asyncio
-import secrets
 import time
 from datetime import datetime, timezone, timedelta
 
@@ -94,16 +93,14 @@ async def get_callee_token(
         raise HTTPException(status_code=409, detail="Call not active")
 
     token = _make_livekit_token(call.room_name, current_user)
-    e2ee_key = call.e2ee_key
     logger.info(
-        "[CALL_PROCESS][IN] callee-token issued | call_id=%d callee=%d room=%s e2ee=%s",
-        call_id, current_user.id, call.room_name, "YES" if e2ee_key else "NO",
+        "[CALL_PROCESS][IN] callee-token issued | call_id=%d callee=%d room=%s",
+        call_id, current_user.id, call.room_name,
     )
     return {
         "token": token,
         "livekit_url": settings.livekit_url,
         "room_name": call.room_name,
-        **({"e2ee_key": e2ee_key} if e2ee_key else {}),
     }
 
 
@@ -310,13 +307,11 @@ async def start_call(
         raise AppException(status_code=409, message="User is busy", code="USER_BUSY")
 
     room_name = f"call_{current_user.id}_{callee_id}_{int(time.time())}"
-    # E2EE per-call key — 256-bit random; only generated when E2EE is enabled on server
-    e2ee_key = secrets.token_hex(32) if settings.livekit_e2ee_enabled else None
-    call = Call(caller_id=current_user.id, callee_id=callee_id, room_name=room_name, status="calling", e2ee_key=e2ee_key)
+    call = Call(caller_id=current_user.id, callee_id=callee_id, room_name=room_name, status="calling")
     db.add(call)
     await db.commit()
     await db.refresh(call)
-    logger.info("[CALL_PROCESS][OUT] start_call: DB call created | call_id=%d room=%s e2ee=%s", call.id, room_name, "YES" if e2ee_key else "NO")
+    logger.info("[CALL_PROCESS][OUT] start_call: DB call created | call_id=%d room=%s", call.id, room_name)
 
     token = _make_livekit_token(room_name, current_user)
     callee_token = _make_livekit_token(room_name, callee)
@@ -357,18 +352,16 @@ async def start_call(
         logger.warning("[CALL_PROCESS][OUT] start_call: ARQ pool not available — timeout task NOT enqueued | call_id=%d", call.id)
 
     logger.info(
-        "[CALL_PROCESS][OUT] start_call OK | call_id=%d caller=%d callee=%d room=%s callee_voip=%s callee_fcm=%s e2ee=%s",
+        "[CALL_PROCESS][OUT] start_call OK | call_id=%d caller=%d callee=%d room=%s callee_voip=%s callee_fcm=%s",
         call.id, current_user.id, callee_id, room_name,
         "YES" if callee.voip_token else "NO",
         "YES" if callee.fcm_token else "NO",
-        "YES" if e2ee_key else "NO",
     )
     return {
         "call_id": call.id,
         "room_name": room_name,
         "livekit_url": settings.livekit_url,
         "token": token,
-        **({"e2ee_key": e2ee_key} if e2ee_key else {}),
     }
 
 
@@ -400,7 +393,6 @@ async def accept_call(
     room_name = call.room_name
     caller_id = call.caller_id
     call_id_val = call.id
-    e2ee_key = call.e2ee_key  # capture before commit/expire
     await db.commit()
 
     # Send WS IMMEDIATELY before LK token generation.
@@ -420,8 +412,8 @@ async def accept_call(
     token = _make_livekit_token(room_name, current_user)
 
     logger.info(
-        "[CALL_PROCESS][IN] accept_call OK | call_id=%d callee=%d caller=%d accepted_at=%s e2ee=%s",
-        call_id, current_user.id, caller_id, accepted_at.isoformat(), "YES" if e2ee_key else "NO",
+        "[CALL_PROCESS][IN] accept_call OK | call_id=%d callee=%d caller=%d accepted_at=%s",
+        call_id, current_user.id, caller_id, accepted_at.isoformat(),
     )
     return {
         "call_id": call_id_val,
@@ -429,7 +421,6 @@ async def accept_call(
         "livekit_url": settings.livekit_url,
         "token": token,
         "accepted_at": accepted_at.isoformat(),
-        **({"e2ee_key": e2ee_key} if e2ee_key else {}),
     }
 
 

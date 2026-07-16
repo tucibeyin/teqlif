@@ -53,9 +53,6 @@ class Settings(BaseSettings):
     ios_bundle_id: str = "teqlif"
     apns_use_sandbox: bool = False
 
-    # LiveKit E2EE — Requires server configured in SFU passthrough mode
-    livekit_e2ee_enabled: bool = False
-
     class Config:
         env_file = ".env"
 

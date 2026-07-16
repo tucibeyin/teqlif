@@ -24,4 +24,3 @@ class Call(Base):
     accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    e2ee_key: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)

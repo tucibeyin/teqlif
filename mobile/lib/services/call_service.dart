@@ -68,7 +68,6 @@ class CallState {
   final bool isSpeaker;
   final bool permPermanentlyDenied;
   final bool isPoorConnection;
-  final String? e2eeKey;
 
   const CallState({
     this.status = CallStatus.idle,
@@ -86,7 +85,6 @@ class CallState {
     this.isSpeaker = false,
     this.permPermanentlyDenied = false,
     this.isPoorConnection = false,
-    this.e2eeKey,
   });
 
   CallState copyWith({
@@ -105,7 +103,6 @@ class CallState {
     bool? isSpeaker,
     bool? permPermanentlyDenied,
     bool? isPoorConnection,
-    String? e2eeKey,
   }) {
     return CallState(
       status: status ?? this.status,
@@ -124,7 +121,6 @@ class CallState {
       permPermanentlyDenied:
           permPermanentlyDenied ?? this.permPermanentlyDenied,
       isPoorConnection: isPoorConnection ?? this.isPoorConnection,
-      e2eeKey: e2eeKey ?? this.e2eeKey,
     );
   }
 }
@@ -471,15 +467,13 @@ class CallService {
       _cpLog('OUT', 'POST /calls/start → request | calleeId=$calleeId');
       final data = await _post('/calls/start', {'callee_id': calleeId});
       _cpLog('OUT', 'POST /calls/start → response | callId=${data['call_id']} roomName=${data['room_name']}');
-      final e2eeKey = data['e2ee_key'] as String?;
-      _cpLog('OUT', 'POST /calls/start e2ee=${e2eeKey != null ? "YES key=${e2eeKey.substring(0, 8)}…" : "NO"}');
+      _cpLog('OUT', 'POST /calls/start e2ee=NO');
       _setState(
         state.value.copyWith(
           callId: data['call_id'] as int,
           roomName: data['room_name'] as String,
           livekitUrl: data['livekit_url'] as String,
           token: data['token'] as String,
-          e2eeKey: e2eeKey,
         ),
       );
 
@@ -705,14 +699,12 @@ class CallService {
       final token = data['token'] as String?;
       final url = data['livekit_url'] as String?;
       final room = data['room_name'] as String?;
-      final e2eeKey = data['e2ee_key'] as String?;
-      _cpLog('IN', '_fetchCalleeToken result | tokenLen=${token?.length} url=${url != null} room=$room e2ee=${e2eeKey != null} httpMs=$httpMs');
+      _cpLog('IN', '_fetchCalleeToken result | tokenLen=${token?.length} url=${url != null} room=$room httpMs=$httpMs');
       if (state.value.status == CallStatus.ringing && state.value.callId == callId) {
         _setState(state.value.copyWith(
           calleeToken: token,
           livekitUrl: url,
           roomName: room,
-          e2eeKey: e2eeKey,
         ));
         _cpLog('IN', '_fetchCalleeToken stored → pre-connect ready | callId=$callId httpMs=$httpMs');
 
@@ -1197,21 +1189,7 @@ class CallService {
       // Opus DTX (Discontinuous Transmission): sessizlikte paket gönderilmez → %40 bant genişliği tasarrufu.
       // audioBitrate=16000: WhatsApp-grade voice quality (12kbps telephone / 16kbps HD voice / 48kbps music).
       const audioPublishOpts = AudioPublishOptions(dtx: true, audioBitrate: 16000);
-      _cpLog('LK', 'room.connect() → calling LiveKit | dtx=true bitrate=16kbps e2ee=${state.value.e2eeKey != null}');
-
-      E2EEOptions? e2eeOptions;
-      final e2eeKey = state.value.e2eeKey;
-      if (e2eeKey != null && e2eeKey.isNotEmpty) {
-        try {
-          final keyProvider = await BaseKeyProvider.create();
-          await keyProvider.setSharedKey(e2eeKey);
-          e2eeOptions = E2EEOptions(keyProvider: keyProvider);
-          _cpLog('LK', 'E2EE initialized | sharedKey=${e2eeKey.substring(0, 8)}… keyLen=${e2eeKey.length}');
-        } catch (e) {
-          _cpLog('LK', 'E2EE init FAILED (proceeding unencrypted) | $e');
-          e2eeOptions = null;
-        }
-      }
+      _cpLog('LK', 'room.connect() → calling LiveKit | dtx=true bitrate=16kbps e2ee=false');
 
       await _room!.connect(
         livekitUrl,
@@ -1219,7 +1197,6 @@ class CallService {
         roomOptions: RoomOptions(
           defaultAudioOutputOptions: const AudioOutputOptions(speakerOn: false),
           defaultAudioPublishOptions: audioPublishOpts,
-          e2eeOptions: e2eeOptions,
         ),
       );
       _cpLog('LK', 'room.connect() SUCCESS');
