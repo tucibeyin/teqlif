@@ -30,11 +30,10 @@ class _CallScreenState extends State<CallScreen> {
   void initState() {
     super.initState();
     _cpLog('UI', 'CallScreen initState | callId=${CallService.instance.state.value.callId} status=${CallService.instance.state.value.status.name}');
+    // isCallScreenVisible → CallRouteObserver yönetir (call_route_observer.dart).
+    // initState'den set etmek observer'a ihtiyaç bırakmaz ve frame gecikmesi yaratırdı.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        CallService.instance.isCallScreenVisible.value = true;
-        _onStateChange();
-      }
+      if (mounted) _onStateChange();
     });
     CallService.instance.state.addListener(_onStateChange);
     _proximitySubscription = ProximitySensor.events.listen((int event) {
@@ -81,9 +80,7 @@ class _CallScreenState extends State<CallScreen> {
       _cpLog('UI', 'CallScreen proximity cancel sync error | $e');
     }
     CallService.instance.state.removeListener(_onStateChange);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      CallService.instance.isCallScreenVisible.value = false;
-    });
+    // isCallScreenVisible → Navigator.pop tetikler didPop → CallRouteObserver false set eder.
     super.dispose();
   }
 

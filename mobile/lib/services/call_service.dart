@@ -780,17 +780,13 @@ class CallService {
     try {
       _cpLog('LK', '_joinRoom starting | url=$livekitUrl tokenLen=${token.length} status=$callStatusAtEntry isCallee=$isCalleeRole');
 
-      // ── iOS Callee: fulfillAccept → didActivateAudioSession sinyali bekle ──────
-      // CallKit audio session async aktive edilir (fulfill → didActivate).
-      // Audio donanımını yalnızca didActivate sonrası kullanmak gerekir.
+      // ── iOS Callee: didActivateAudioSession sinyali bekle ───────────────────
+      // action.fulfill() AppDelegate.onAccept'te anında çağrılır (Dart'ın onayı gerekmez).
+      // fulfill() → CallKit → provider(_:didActivate:) → didActivateAudioSession → Flutter signal.
+      // Dart burada sadece sinyali bekler; audio donanımını önceden kurmaz.
       if (Platform.isIOS && isCalleeRole) {
-        // UUID mismatch'ten kaçın: tüm pending action'ları fulfill et (bire-bir arama).
         _callkitAudioReady = Completer<void>();
-        _cpLog('LK', 'iOS callee: calling fulfillAccept (all pending)');
-        _callkitChannel.invokeMethod('fulfillAccept', {'uuid': ''}).catchError((e) {
-          _cpLog('LK', 'fulfillAccept ERROR | $e');
-          // Sinyal gelmezse timeout devreye girer — hata durumunu bloke etme
-        });
+        _cpLog('LK', 'iOS callee: waiting for didActivateAudioSession signal from CallKit');
         // Android callee: setCallConnected (audio session yok, direkt çalışır)
       } else if (Platform.isAndroid && isCalleeRole && state.value.callId != null) {
         final uuid = _formatToUuid(state.value.callId!.toString());

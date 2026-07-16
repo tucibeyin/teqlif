@@ -10,8 +10,6 @@ import Security
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, PKPushRegistryDelegate, CallkitIncomingAppDelegate {
 
-  // Pending CXAnswerCallAction — onAccept'te saklanır, fulfillAccept'te fulfill edilir.
-  var pendingAcceptActions: [String: CXAnswerCallAction] = [:]
   // Flutter'a audioSessionActivated sinyali göndermek için kanal referansı.
   var callkitChannel: FlutterMethodChannel?
 
@@ -33,19 +31,10 @@ import Security
         let channel = FlutterMethodChannel(name: "com.teqlif/callkit",
                                            binaryMessenger: registrar.messenger())
         self.callkitChannel = channel
-        channel.setMethodCallHandler({ [weak self]
-          (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+        channel.setMethodCallHandler({ (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+          // fulfillAccept artık gerekmez — onAccept anında fulfill eder.
+          // Bu handler geriye dönük uyumluluk için korunuyor (no-op).
           if call.method == "fulfillAccept" {
-              // UUID mismatch'ten kaçın: bire-bir aramada her zaman tek pending action vardır.
-              // Tüm pending action'ları fulfill et.
-              if let self = self {
-                  let count = self.pendingAcceptActions.count
-                  print("[CallkitAppDelegate] fulfillAccept: fulfilling \(count) pending action(s)")
-                  for (_, action) in self.pendingAcceptActions {
-                      action.fulfill()
-                  }
-                  self.pendingAcceptActions.removeAll()
-              }
               result(true)
           } else {
               result(FlutterMethodNotImplemented)
@@ -214,9 +203,11 @@ import Security
   // MARK: - CallkitIncomingAppDelegate Methods
   
   func onAccept(_ call: flutter_callkit_incoming.Call, _ action: CXAnswerCallAction) {
-      print("[CallkitAppDelegate] onAccept called for \(call.uuid.uuidString)")
-      // ACTION'ı hafızada tutuyoruz, hemen fulfill etmiyoruz (Bağlanıyor yazısı çıkacak).
-      pendingAcceptActions[call.uuid.uuidString] = action
+      print("[CallkitAppDelegate][CALL_PROCESS] onAccept | uuid=\(call.uuid.uuidString)")
+      // Apple CallKit contract: action.fulfill() → CallKit audio session aktive eder
+      // → provider(_:didActivate:) → didActivateAudioSession → Flutter'a sinyal.
+      // Dart'ın onayını beklemek UUID uyumsuzluğu doğurur; doğrudan fulfill et.
+      action.fulfill()
   }
   
   func onDecline(_ call: flutter_callkit_incoming.Call, _ action: CXEndCallAction) {
@@ -224,13 +215,11 @@ import Security
   }
   
   func onEnd(_ call: flutter_callkit_incoming.Call, _ action: CXEndCallAction) {
-      // Eğer arama sonlanmışsa ve önceden açık kalmış bir accept action varsa temizle
-      pendingAcceptActions.removeValue(forKey: call.uuid.uuidString)
       action.fulfill()
   }
-  
+
   func onTimeOut(_ call: flutter_callkit_incoming.Call) {
-      pendingAcceptActions.removeValue(forKey: call.uuid.uuidString)
+      // pendingAcceptActions kaldırıldı — temizlenecek bir şey yok.
   }
 
   func didActivateAudioSession(_ audioSession: AVAudioSession) {
@@ -246,10 +235,6 @@ import Security
   }
   
   func providerDidReset() {
-      // Eğer provider çökerse her şeyi serbest bırak
-      for (_, action) in pendingAcceptActions {
-          action.fulfill()
-      }
-      pendingAcceptActions.removeAll()
+      // Provider sıfırlandığında yapacak bir şey yok — pending action tutulmadığından temiz.
   }
 }

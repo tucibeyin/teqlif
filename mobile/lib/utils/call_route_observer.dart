@@ -1,38 +1,51 @@
 import 'package:flutter/material.dart';
 import '../services/call_service.dart';
 
+/// Navigator stack'i dinleyerek CallScreen görünürlüğünü tek otorite olarak yönetir.
+/// CallScreen.initState / dispose artık bu flag'a dokunmaz.
+/// addPostFrameCallback KULLANILMAZ — didPush/didPop synchronous olarak tetiklenir,
+/// bu nedenle flag anında güncellenir ve overlay'in frame-gecikme bug'ı ortadan kalkar.
 class CallRouteObserver extends NavigatorObserver {
-  void _updateCallScreenVisibility(Route<dynamic>? route) {
-    if (route == null) return;
-    if (route is! ModalRoute) return;
+  static const _callScreenName = '/call_screen';
+  static const _incomingScreenName = '/incoming_call_screen';
 
-    final name = route.settings.name;
-    if (name == null) return;
-
-    final isVisible = (name == '/call_screen' || name == '/incoming_call_screen');
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (CallService.instance.isCallScreenVisible.value != isVisible) {
-        CallService.instance.isCallScreenVisible.value = isVisible;
-      }
-    });
+  void _setVisible(bool value) {
+    if (CallService.instance.isCallScreenVisible.value != value) {
+      CallService.instance.isCallScreenVisible.value = value;
+    }
   }
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
-    _updateCallScreenVisibility(route);
+    final name = route.settings.name;
+    if (name == _callScreenName || name == _incomingScreenName) {
+      _setVisible(true);
+    }
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
-    _updateCallScreenVisibility(previousRoute);
+    final prevName = previousRoute?.settings.name;
+    // Sadece bir call ekranına dönülüyorsa visible kalır; yoksa false.
+    _setVisible(prevName == _callScreenName || prevName == _incomingScreenName);
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    _updateCallScreenVisibility(newRoute);
+    final name = newRoute?.settings.name;
+    _setVisible(name == _callScreenName || name == _incomingScreenName);
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didRemove(route, previousRoute);
+    final name = route.settings.name;
+    if (name == _callScreenName || name == _incomingScreenName) {
+      final prevName = previousRoute?.settings.name;
+      _setVisible(prevName == _callScreenName || prevName == _incomingScreenName);
+    }
   }
 }
