@@ -1705,6 +1705,13 @@ class CallService {
       _cpLog('END', 'endCall SKIPPED | already ended/idle');
       return;
     }
+    // Guard: CallEventActionCallEnded fires twice (endCall + endCallAlls transactions) while
+    // _hangUpLocally is already in progress. Without this guard both events pass the status
+    // check (status is still connected/calling during async hangup) and each posts to backend.
+    if (_isHangingUp) {
+      _cpLog('END', 'endCall SKIPPED | _isHangingUp (duplicate CallKit event)');
+      return;
+    }
     final callId = state.value.callId;
     _callerStatusPollTimer?.cancel();
     if (callId != null) {

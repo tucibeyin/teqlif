@@ -324,6 +324,7 @@ class PushNotificationService {
       if (event == null) return;
       _cpLog('PUSH', 'CallKit onEvent | event=${event.eventName} platform=${Platform.isIOS ? "iOS" : "Android"} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
 
+
       if (event is CallEventActionCallIncoming) {
         // ── WhatsApp-kalitesi callee pre-connect ────────────────────────────────
         // iOS VoIP push: CallKit UI gösterildiğinde bu event ateşlenir.
@@ -415,9 +416,18 @@ class PushNotificationService {
         } catch (e) {
           _cpLog('TOKEN', 'VoIP async update FAILED | $e');
         }
+      } else if (event is CallEventActionCallToggleAudioSession) {
+        // Fired by iOS during didActivate/didDeactivateAudioSession. Audio session is managed
+        // by call_service directly; no action needed here.
       } else {
         _cpLog('PUSH', 'CallKit onEvent UNHANDLED | event=${event.eventName}');
       }
+    }, onError: (Object error) {
+      // flutter_callkit_incoming throws FormatException for ACTION_CALL_TOGGLE_AUDIO_SESSION
+      // when isActive is null (iOS caller flow with no active incoming call id). Without this
+      // handler the exception surfaces in [PlatformDispatcher] HATA log on every audio session
+      // activate/deactivate. Suppress silently — it's a plugin bug, not a call logic error.
+      _cpLog('PUSH', 'CallKit onEvent stream error (suppressed) | $error');
     });
 
     debugPrint('[FCM] initEarly tamamlandı');
