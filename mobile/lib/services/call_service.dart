@@ -130,6 +130,7 @@ class CallService {
       // connecting: callee kabul etti ama TrackSubscribed henüz gelmedi.
       // Her iki durumda da ringtone devam etmeli — ses gerçekten akana dek.
       if (state.value.status == CallStatus.calling || state.value.status == CallStatus.connecting) {
+        _cpLog('HW', 'audioPlayer RESTART | source=ringing.wav onComplete status=${state.value.status.name}');
         await _audioPlayer.play(ap.AssetSource('sounds/ringing.wav'));
       }
     });
@@ -225,6 +226,7 @@ class CallService {
     }
     
     if (!oldPoor && s.isPoorConnection && s.status == CallStatus.connected) {
+      _cpLog('HW', 'audioPlayer PLAY | source=weak.wav poorConnection=true');
       _cpLog('SOUND', 'weak.wav PLAY | poorConnection detected');
       _audioPlayer.setReleaseMode(ReleaseMode.release);
       _audioPlayer.play(AssetSource('sounds/weak.wav'));
@@ -235,9 +237,7 @@ class CallService {
     if (newStatus == CallStatus.calling) {
       AudioSession.instance.then((session) async {
         try {
-          // Ringtone için ses ayarları — VoiceCommunication değil, ring/notification.
-          // Android'de voiceCommunication + AudioFocus.gain, ReleaseMode.loop'u
-          // keserek ses sadece bir kere çalar. Ring context bunu engeller.
+          _cpLog('HW', 'audioSession CONFIGURE | context=ringtone category=playAndRecord mode=voiceChat androidUsage=notificationRingtone');
           await session.configure(AudioSessionConfiguration(
             avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
             avAudioSessionMode: AVAudioSessionMode.voiceChat,
@@ -252,6 +252,7 @@ class CallService {
             androidAudioFocusGainType: AndroidAudioFocusGainType.gainTransientMayDuck,
             androidWillPauseWhenDucked: false,
           ));
+          _cpLog('HW', 'speakerphone SET | enabled=false context=ringtone-start');
           await Hardware.instance.setSpeakerphoneOn(false);
 
           // AudioPlayer context: ringtone için ring stream
@@ -270,6 +271,7 @@ class CallService {
             ),
           ));
         } catch (e) {
+          _cpLog('HW', 'audioSession CONFIGURE ERROR | context=ringtone $e');
           debugPrint('[LIVE_SCREEN_CALL] AudioSession prep error: $e');
         }
 
@@ -279,25 +281,30 @@ class CallService {
             await Future.delayed(const Duration(milliseconds: 600));
           }
           if (state.value.status == CallStatus.calling) {
+            _cpLog('HW', 'audioPlayer PLAY | source=ringing.wav mode=loop device=earpiece');
             _cpLog('SOUND', 'ringing.wav PLAY | mode=loop earpiece');
             _audioPlayer.play(AssetSource('sounds/ringing.wav'));
           }
         }
       });
     } else if (newStatus == CallStatus.busy || newStatus == CallStatus.rejected) {
+      _cpLog('HW', 'audioPlayer PLAY | source=busy.wav mode=release reason=$newStatus');
       _cpLog('SOUND', 'busy.wav PLAY | reason=$newStatus');
       _audioPlayer.setReleaseMode(ReleaseMode.release);
       _audioPlayer.play(AssetSource('sounds/busy.wav'));
     } else if (newStatus == CallStatus.ended) {
       if (oldStatus == CallStatus.connected || oldStatus == CallStatus.connecting) {
+        _cpLog('HW', 'audioPlayer PLAY | source=ended.wav mode=release wasConnected=true');
         _cpLog('SOUND', 'ended.wav PLAY | wasConnected=true');
         _audioPlayer.setReleaseMode(ReleaseMode.release);
         _audioPlayer.play(AssetSource('sounds/ended.wav'));
       } else {
+        _cpLog('HW', 'audioPlayer STOP | reason=ended-without-connection');
         _cpLog('SOUND', 'audioPlayer.stop | ended without connection');
         _audioPlayer.stop();
       }
     } else if (newStatus == CallStatus.connected || newStatus == CallStatus.idle) {
+      _cpLog('HW', 'audioPlayer STOP | reason=$newStatus');
       _cpLog('SOUND', 'audioPlayer.stop | status=$newStatus');
       _audioPlayer.stop();
     }
@@ -387,8 +394,9 @@ class CallService {
       }
 
       _startRingTimer();
+      _cpLog('HW', 'wakelock ENABLE | reason=startCall status=calling');
       await WakelockPlus.enable();
-      
+
       // WhatsApp-like Pre-Connection: Arayan kişi beklemeden LiveKit'e bağlanır.
       _cpLog('OUT', 'pre-connect _joinRoom starting (WhatsApp-like)');
       await _joinRoom(
@@ -604,6 +612,7 @@ class CallService {
 
     try {
       _cpLog('IN', '_activateCalleeAudio: AudioSession configure voiceChat');
+      _cpLog('HW', 'audioSession CONFIGURE | context=_activateCalleeAudio category=playAndRecord mode=voiceChat');
       final session = await AudioSession.instance;
       await session.configure(AudioSessionConfiguration(
         avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
@@ -612,6 +621,7 @@ class CallService {
             AVAudioSessionCategoryOptions.allowBluetooth |
             AVAudioSessionCategoryOptions.allowBluetoothA2dp,
       ));
+      _cpLog('HW', 'speakerphone SET | enabled=false context=_activateCalleeAudio-post-configure');
       await Hardware.instance.setSpeakerphoneOn(false);
       _cpLog('IN', '_activateCalleeAudio: AudioSession configure OK');
     } catch (e) {
@@ -619,8 +629,10 @@ class CallService {
     }
 
     _cpLog('IN', '_activateCalleeAudio: setMicrophoneEnabled(true)');
+    _cpLog('HW', 'microphone ENABLE | context=_activateCalleeAudio');
     await _room?.localParticipant?.setMicrophoneEnabled(true);
     await Future.delayed(const Duration(milliseconds: 300));
+    _cpLog('HW', 'speakerphone SET | enabled=false context=_activateCalleeAudio-post-mic');
     await Hardware.instance.setSpeakerphoneOn(false);
     _cpLog('IN', '_activateCalleeAudio DONE');
   }
@@ -638,28 +650,32 @@ class CallService {
     _cpLog('SOUND', 'startRingtoneAndVibration CALLED | status=${state.value.status}');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (state.value.status != CallStatus.ringing) return;
-      
+
+      _cpLog('HW', 'ringtonePlayer PLAY | platform=${defaultTargetPlatform.name} looping=true context=incoming-call');
       _cpLog('SOUND', 'ringtone PLAY | platform=${defaultTargetPlatform.name} looping=true');
-      FlutterRingtonePlayer().playRingtone(
-        looping: true,
-      );
+      FlutterRingtonePlayer().playRingtone(looping: true);
 
       if (defaultTargetPlatform == TargetPlatform.iOS) {
         _ringtoneLoopTimer?.cancel();
+        _cpLog('HW', 'ringtoneLoopTimer START | interval=3s platform=iOS');
         _cpLog('SOUND', 'iOS ringtoneLoopTimer started | interval=3s');
         _ringtoneLoopTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+          _cpLog('HW', 'ringtonePlayer PLAY | platform=iOS loopTick');
           FlutterRingtonePlayer().playRingtone();
         });
 
         _hapticLoopTimer?.cancel();
+        _cpLog('HW', 'hapticLoopTimer START | interval=2s platform=iOS');
         _hapticLoopTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
           if (await Vibration.hasVibrator() == true) {
+            _cpLog('HW', 'haptic VIBRATE | platform=iOS loopTick');
             Vibration.vibrate();
           }
         });
       }
 
       if (await Vibration.hasVibrator() == true && defaultTargetPlatform != TargetPlatform.iOS) {
+        _cpLog('HW', 'haptic VIBRATE | pattern=[2000,500,2000,500] repeat=0 platform=Android');
         Vibration.vibrate(pattern: [2000, 500, 2000, 500], repeat: 0);
       }
     });
@@ -671,7 +687,9 @@ class CallService {
     _ringtoneLoopTimer = null;
     _hapticLoopTimer?.cancel();
     _hapticLoopTimer = null;
+    _cpLog('HW', 'ringtonePlayer STOP | context=stopRingtoneAndVibration');
     FlutterRingtonePlayer().stop();
+    _cpLog('HW', 'haptic CANCEL | context=stopRingtoneAndVibration');
     Vibration.cancel();
   }
 
@@ -827,6 +845,7 @@ class CallService {
     // Bu sayede ringtone, callee'nin sesi gerçekten gelene dek kesintisiz çalar.
     if (_room != null) {
       _cpLog('OUT', 'call_accepted → enabling caller mic (AudioSession configure deferred to TrackSubscribed)');
+      _cpLog('HW', 'microphone ENABLE | context=onCallAccepted-caller audioSessionDeferred=true');
       _room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
         _cpLog('OUT', 'caller mic enable ERROR | $e');
         return null;
@@ -842,6 +861,7 @@ class CallService {
     _ringTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.rejected));
     if (await Vibration.hasVibrator() == true) {
+      _cpLog('HW', 'haptic VIBRATE | pattern=[200,100,200,100,200] reason=rejected');
       Vibration.vibrate(pattern: [200, 100, 200, 100, 200]);
     }
     _scheduleReset();
@@ -857,6 +877,7 @@ class CallService {
     stopRingtoneAndVibration();
     _setState(state.value.copyWith(status: CallStatus.missed));
     if (await Vibration.hasVibrator() == true) {
+      _cpLog('HW', 'haptic VIBRATE | pattern=[200,100,200] reason=missed');
       Vibration.vibrate(pattern: [200, 100, 200]);
     }
     _scheduleReset();
@@ -933,21 +954,25 @@ class CallService {
       if (isCalleeRole) {
         try {
           _cpLog('LK', 'AudioSession configure | role=callee category=playAndRecord mode=voiceChat');
+          _cpLog('HW', 'audioSession CONFIGURE | context=_joinRoom-callee category=playAndRecord mode=voiceChat');
           final session = await AudioSession.instance;
           await session.configure(AudioSessionConfiguration(
             avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
             avAudioSessionMode: AVAudioSessionMode.voiceChat,
             avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
           ));
+          _cpLog('HW', 'speakerphone SET | enabled=false context=_joinRoom-callee-post-configure');
           await Hardware.instance.setSpeakerphoneOn(false);
           _cpLog('LK', 'AudioSession configure OK | role=callee');
         } catch (e) {
           _cpLog('LK', 'AudioSession configure ERROR | role=callee $e');
         }
         _cpLog('LK', 'setMicrophoneEnabled(true) calling | role=callee');
+        _cpLog('HW', 'microphone ENABLE | context=_joinRoom-callee');
         await _room!.localParticipant?.setMicrophoneEnabled(true);
         _cpLog('LK', 'setMicrophoneEnabled(true) done | role=callee');
         await Future.delayed(const Duration(milliseconds: 300));
+        _cpLog('HW', 'speakerphone SET | enabled=false context=_joinRoom-callee-post-mic');
         await Hardware.instance.setSpeakerphoneOn(false);
       } else {
         // Network-only pre-connect (caller veya callee ringing): ses oturumu ve mikrofon atlandı.
@@ -967,16 +992,19 @@ class CallService {
             // Caller: onCallAccepted, room.connect() sırasında geldi.
             _cpLog('LK', 'caller: call_accepted already received during pre-connect → configuring audio + mic now');
             try {
+              _cpLog('HW', 'audioSession CONFIGURE | context=_joinRoom-caller-late category=playAndRecord mode=voiceChat');
               final session = await AudioSession.instance;
               await session.configure(AudioSessionConfiguration(
                 avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
                 avAudioSessionMode: AVAudioSessionMode.voiceChat,
                 avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
               ));
+              _cpLog('HW', 'speakerphone SET | enabled=false context=_joinRoom-caller-late');
               await Hardware.instance.setSpeakerphoneOn(false);
             } catch (e) {
               _cpLog('LK', 'late AudioSession configure ERROR | $e');
             }
+            _cpLog('HW', 'microphone ENABLE | context=_joinRoom-caller-late-accept');
             await _room!.localParticipant?.setMicrophoneEnabled(true);
             _cpLog('LK', 'caller mic enabled (late, accepted-during-preconnect) | done');
           }
@@ -1032,6 +1060,7 @@ class CallService {
         }
       }
 
+      _cpLog('HW', 'wakelock ENABLE | reason=_joinRoom-complete status=${state.value.status.name}');
       await WakelockPlus.enable();
 
       _isJoiningRoom = false;
@@ -1066,10 +1095,14 @@ class CallService {
         final micPubs = _room?.localParticipant?.audioTrackPublications;
         if (micPubs == null || micPubs.isEmpty) {
           _cpLog('LK', 'ParticipantConnected: mic not yet published → enabling now');
+          _cpLog('HW', 'microphone ENABLE | context=ParticipantConnected-mic-not-published');
           _room?.localParticipant?.setMicrophoneEnabled(true);
+        } else {
+          _cpLog('HW', 'microphone ALREADY ENABLED | context=ParticipantConnected pubCount=${micPubs.length}');
         }
       } else {
         _cpLog('LK', 'ParticipantConnected: mic enable SKIPPED during callee pre-connect (ringing)');
+        _cpLog('HW', 'microphone ENABLE SKIPPED | context=ParticipantConnected status=ringing pre-connect');
       }
     } else if (event is TrackSubscribedEvent) {
       // Uzak ses track'ı abone oldu → callee'nin sesi gerçekten akıyor.
@@ -1082,11 +1115,13 @@ class CallService {
         // AudioSession'ı ses akışı başlamadan hemen önce voice-chat moduna geçir.
         AudioSession.instance.then((session) async {
           try {
+            _cpLog('HW', 'audioSession CONFIGURE | context=TrackSubscribed category=playAndRecord mode=voiceChat');
             await session.configure(AudioSessionConfiguration(
               avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
               avAudioSessionMode: AVAudioSessionMode.voiceChat,
               avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
             ));
+            _cpLog('HW', 'speakerphone SET | enabled=false context=TrackSubscribed-post-configure');
             await Hardware.instance.setSpeakerphoneOn(false);
             _cpLog('LK', 'TrackSubscribed: AudioSession voice configure OK');
           } catch (e) {
@@ -1103,6 +1138,7 @@ class CallService {
           _startElapsedTimer();
         }
         if (Platform.isAndroid) {
+          _cpLog('HW', 'speakerphone SET | enabled=false context=TrackSubscribed-Android isSpeaker=false');
           Hardware.instance.setSpeakerphoneOn(false);
           _setState(state.value.copyWith(isSpeaker: false));
         }
@@ -1126,14 +1162,14 @@ class CallService {
       event,
     ) {
       if (event.begin) {
-        // Interruption began (e.g. phone call came in)
         if (!state.value.isMuted) {
+          _cpLog('HW', 'microphone DISABLE | context=audioInterruption-begin isMuted=false→true');
           _room?.localParticipant?.setMicrophoneEnabled(false);
           _setState(state.value.copyWith(isMuted: true));
         }
       } else {
-        // Interruption ended
         if (state.value.isMuted) {
+          _cpLog('HW', 'microphone ENABLE | context=audioInterruption-end isMuted=true→false');
           _room?.localParticipant?.setMicrophoneEnabled(true);
           _setState(state.value.copyWith(isMuted: false));
         }
@@ -1171,16 +1207,19 @@ class CallService {
   Future<void> toggleMute() async {
     final muted = !state.value.isMuted;
     _cpLog('UI', 'toggleMute | newMuted=$muted');
+    _cpLog('HW', 'microphone ${muted ? "DISABLE" : "ENABLE"} | context=toggleMute userAction=true');
     await _room?.localParticipant?.setMicrophoneEnabled(!muted);
     _setState(state.value.copyWith(isMuted: muted));
   }
 
   Future<void> setSpeaker(bool enabled) async {
     _cpLog('UI', 'setSpeaker | enabled=$enabled');
+    _cpLog('HW', 'speakerphone SET | enabled=$enabled context=setSpeaker userAction=true');
     try {
       await Hardware.instance.setSpeakerphoneOn(enabled);
     } catch (e) {
       _cpLog('UI', 'setSpeaker ERROR | $e');
+      _cpLog('HW', 'speakerphone SET ERROR | enabled=$enabled $e');
     }
     _setState(state.value.copyWith(isSpeaker: enabled));
   }
@@ -1234,6 +1273,7 @@ class CallService {
       _cpLog('END', 'disconnectRoom starting');
       await _disconnectRoom();
       _cpLog('END', 'disconnectRoom done');
+      _cpLog('HW', 'wakelock DISABLE | context=_hangUpLocally');
       WakelockPlus.disable();
 
       _cpLog('END', 'CallKit.endCall | callId=${state.value.callId}');
@@ -1242,11 +1282,12 @@ class CallService {
       }
       await FlutterCallkitIncoming.endAllCalls();
 
-      // 3. CallKit ve LiveKit kapandıktan sonra global ses oturumunu (AVAudioSession)
-      // hoparlöre yönlendirecek şekilde zorluyoruz.
+      // CallKit ve LiveKit kapandıktan sonra global ses oturumunu hoparlöre yönlendir.
       try {
+        _cpLog('HW', 'speakerphone SET | enabled=true context=_hangUpLocally-post-callkit');
         await Hardware.instance.setSpeakerphoneOn(true);
       } catch (e) {
+        _cpLog('HW', 'speakerphone SET ERROR | context=_hangUpLocally $e');
         debugPrint('[CallService] setSpeakerphoneOn(true) error: $e');
       }
 
@@ -1289,6 +1330,7 @@ class CallService {
     _elapsedTimer?.cancel();
     _peerTimeoutTimer?.cancel();
     _disconnectRoom();
+    _cpLog('HW', 'wakelock DISABLE | context=reset');
     WakelockPlus.disable();
     FlutterCallkitIncoming.endAllCalls();
     _audioSessionActivated = false; // Sonraki çağrı için iOS audio flag'i sıfırla

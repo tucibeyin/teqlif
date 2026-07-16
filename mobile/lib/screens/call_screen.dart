@@ -38,8 +38,12 @@ class _CallScreenState extends State<CallScreen> {
     CallService.instance.state.addListener(_onStateChange);
     _proximitySubscription = ProximitySensor.events.listen((int event) {
       if (mounted) {
+        final isNear = event > 0;
+        if (isNear != _isNear) {
+          _cpLog('HW', 'proximitySensor CHANGED | isNear=$isNear → screen ${isNear ? "BLACKOUT (ear-mode)" : "RESTORE (away-from-ear)"}');
+        }
         setState(() {
-          _isNear = (event > 0);
+          _isNear = isNear;
         });
       }
     });
