@@ -27,10 +27,12 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
   StreamSubscription<Map<String, dynamic>>? _notifSub;
   StreamSubscription<Map<String, dynamic>>? _wsSub;
   bool _isBarDismissed = false;
+  CallStatus _prevStatus = CallStatus.idle;
 
   @override
   void initState() {
     super.initState();
+    _cpLog('UI', 'IncomingCallOverlay initState | currentStatus=${CallService.instance.state.value.status.name}');
     _notifSub = PushNotificationService.notificationStream.stream.listen(
       _onData,
     );
@@ -41,7 +43,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (CallService.instance.state.value.status == CallStatus.ringing) {
-        // Cold start, handled by bar automatically
+        _cpLog('UI', 'IncomingCallOverlay cold-start: status=ringing → IncomingCallBar visible | caller=${CallService.instance.state.value.otherUsername}');
       }
     });
   }
@@ -97,7 +99,18 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   void _onCallState() {
     final status = CallService.instance.state.value.status;
-    _cpLog('UI', 'overlay._onCallState | status=${status.name} isCallScreenVisible=${CallService.instance.isCallScreenVisible.value}');
+    final caller = CallService.instance.state.value.otherUsername ?? '?';
+    final callId = CallService.instance.state.value.callId;
+    _cpLog('UI', 'overlay._onCallState | ${_prevStatus.name} → ${status.name} isCallScreenVisible=${CallService.instance.isCallScreenVisible.value} callId=$callId');
+
+    // Bar görünürlük geçişlerini logla
+    if (_prevStatus != CallStatus.ringing && status == CallStatus.ringing) {
+      _cpLog('UI', 'BAR SHOW: IncomingCallBar appeared | caller=$caller callId=$callId');
+    } else if (_prevStatus == CallStatus.ringing && status != CallStatus.ringing) {
+      _cpLog('UI', 'BAR HIDE: IncomingCallBar disappeared | reason=${status.name} callId=$callId');
+    }
+    _prevStatus = status;
+
     if (status != CallStatus.ringing) {
       _isBarDismissed = false;
     }
@@ -105,7 +118,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     // Bu sayede public_profile_screen / messages_screen'in doğrudan push'u kaldırılabildi.
     if (status == CallStatus.calling || status == CallStatus.connecting || status == CallStatus.connected) {
       if (!CallService.instance.isCallScreenVisible.value) {
-        _cpLog('UI', 'overlay._onCallState: status=${ status.name} → _openCallScreen()');
+        _cpLog('UI', 'overlay._onCallState: status=${status.name} → _openCallScreen()');
         _openCallScreen();
       }
     }
@@ -114,7 +127,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   void _openIncomingScreen() {
     if (!mounted) return;
-    _cpLog('UI', 'overlay._openIncomingScreen | callId=${CallService.instance.state.value.callId}');
+    _cpLog('UI', 'IncomingCallBar → user TAP bar body → IncomingCallScreen | callId=${CallService.instance.state.value.callId} caller=${CallService.instance.state.value.otherUsername}');
     final nav = widget.navigatorKey?.currentState ?? Navigator.of(context, rootNavigator: true);
     nav.push(
       MaterialPageRoute(
@@ -159,7 +172,12 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
   Future<void> _openCallScreenAndAccept() async {
     if (!mounted) return;
-    _cpLog('UI', 'overlay._openCallScreenAndAccept → acceptCall + openCallScreen');
+    final nowUtc = DateTime.now().toUtc();
+    final callId = CallService.instance.state.value.callId;
+    final caller = CallService.instance.state.value.otherUsername;
+    final preConnectReady = CallService.instance.state.value.calleeToken != null;
+    _cpLog('UI', 'IncomingCallBar → user ACCEPT tap | callId=$callId caller=$caller nowUtc=${nowUtc.toIso8601String()}');
+    _cpLog('TIMER', 'IncomingCallBar: ACCEPT tapped | callId=$callId caller=$caller nowUtc=${nowUtc.toIso8601String()} preConnectTokenReady=$preConnectReady');
     CallService.instance.acceptCall();
     _openCallScreen();
   }
@@ -193,21 +211,25 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
                 ),
                 child: _isBarDismissed
                     ? _MinimizedCallBar(
-                        onRestore: () =>
-                            setState(() => _isBarDismissed = false),
+                        callerUsername: CallService.instance.state.value.otherUsername ?? '',
+                        callId: CallService.instance.state.value.callId,
+                        onRestore: () {
+                          _cpLog('UI', 'MinimizedCallBar → user TAP → restored to IncomingCallBar | callId=${CallService.instance.state.value.callId}');
+                          setState(() => _isBarDismissed = false);
+                        },
                       )
                     : _IncomingCallBar(
-                        username:
-                            CallService.instance.state.value.otherUsername ??
-                            '',
+                        username: CallService.instance.state.value.otherUsername ?? '',
                         avatarUrl: CallService.instance.state.value.otherAvatar,
                         onTap: _openIncomingScreen,
                         onAccept: _openCallScreenAndAccept,
                         onReject: () {
+                          _cpLog('UI', 'IncomingCallBar → user REJECT tap | callId=${CallService.instance.state.value.callId} caller=${CallService.instance.state.value.otherUsername}');
                           setState(() => _isBarDismissed = true);
                           CallService.instance.rejectCall();
                         },
                         onDismiss: () {
+                          _cpLog('UI', 'IncomingCallBar → user SWIPE-UP dismiss → MinimizedCallBar | callId=${CallService.instance.state.value.callId}');
                           setState(() => _isBarDismissed = true);
                         },
                       ),
@@ -221,17 +243,25 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
 
 class _MinimizedCallBar extends StatelessWidget {
   final VoidCallback onRestore;
+  final String callerUsername;
+  final int? callId;
 
-  const _MinimizedCallBar({required this.onRestore});
+  const _MinimizedCallBar({
+    required this.onRestore,
+    required this.callerUsername,
+    this.callId,
+  });
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    _cpLog('UI', 'MinimizedCallBar BUILD | caller=$callerUsername callId=$callId');
 
     return Dismissible(
       key: const Key('minimized_call_bar'),
       direction: DismissDirection.down,
       onDismissed: (_) {
+        _cpLog('UI', 'MinimizedCallBar → user SWIPE-DOWN → restored to IncomingCallBar | callId=$callId caller=$callerUsername');
         onRestore();
       },
       child: Material(
@@ -305,11 +335,15 @@ class _IncomingCallBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final title = l.callIncomingBody(username);
+    _cpLog('UI', 'IncomingCallBar BUILD | caller=$username avatarUrl=${avatarUrl != null ? "EXISTS" : "NULL"}');
 
     return Dismissible(
       key: const Key('incoming_call_bar'),
       direction: DismissDirection.up,
-      onDismissed: (_) => onDismiss(),
+      onDismissed: (_) {
+        _cpLog('UI', 'IncomingCallBar → user SWIPE-UP → dismissed (onDismiss via Dismissible) | caller=$username');
+        onDismiss();
+      },
       child: Material(
         type: MaterialType.transparency,
         child: GestureDetector(
@@ -396,6 +430,7 @@ class _IncomingCallBar extends StatelessWidget {
                         color: const Color(0xFFEF4444),
                         label: l.callDecline,
                         onTap: onReject,
+                        logLabel: 'REJECT',
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -405,6 +440,7 @@ class _IncomingCallBar extends StatelessWidget {
                         color: const Color(0xFF22C55E),
                         label: l.callAccept,
                         onTap: onAccept,
+                        logLabel: 'ACCEPT',
                       ),
                     ),
                   ],
@@ -423,18 +459,23 @@ class _BarButton extends StatelessWidget {
   final Color color;
   final String label;
   final VoidCallback onTap;
+  final String logLabel;
 
   const _BarButton({
     required this.icon,
     required this.color,
     required this.label,
     required this.onTap,
+    required this.logLabel,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        _cpLog('UI', '_BarButton TAP | action=$logLabel label=$label');
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
