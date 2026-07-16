@@ -195,13 +195,17 @@ import Security
       }
       if appIsActive {
           print("[CALL_PROCESS][\(ts())][PUSH] App ACTIVE → auto-dismiss CallKit in 300ms | callId=\(callId)")
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-              guard let self = self else { return }
-              let endAction = CXEndCallAction(call: data.uuid)
-              let tx = CXTransaction(action: endAction)
-              self._ckController.request(tx) { error in
-                  print("[CALL_PROCESS][\(self.ts())][PUSH] CallKit auto-dismiss done | callId=\(callId) error=\(error?.localizedDescription ?? "none")")
+          if let callUUID = UUID(uuidString: data.uuid) {
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                  guard let self = self else { return }
+                  let endAction = CXEndCallAction(call: callUUID)
+                  let tx = CXTransaction(action: endAction)
+                  self._ckController.request(tx) { error in
+                      print("[CALL_PROCESS][\(self.ts())][PUSH] CallKit auto-dismiss done | callId=\(callId) error=\(error?.localizedDescription ?? "none")")
+                  }
               }
+          } else {
+              print("[CALL_PROCESS][\(ts())][PUSH] App ACTIVE — UUID parse failed, cannot auto-dismiss | callId=\(callId) uuid=\(data.uuid)")
           }
       }
   }
