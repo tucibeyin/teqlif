@@ -144,6 +144,10 @@ class CallService {
   final isCallScreenVisible = ValueNotifier<bool>(false);
   final preventCallScreenAutoOpen = ValueNotifier<bool>(false);
 
+  // Arama sayacı: CallState'ten bağımsız notifier — her saniye setState() tetiklemez.
+  // CallScreen bu notifier'ı doğrudan dinler; overlay ve diğer listener'lar etkilenmez.
+  final ValueNotifier<Duration> elapsed = ValueNotifier(Duration.zero);
+
   Room? _room;
   Function? _roomEventsSubscription;
   StreamSubscription<AudioInterruptionEvent>? _audioInterruptionSubscription;
@@ -854,31 +858,55 @@ class CallService {
     // akmaya başladığında. Bu sayede "zil → sessizlik → ses" yerine
     // "zil → ses" geçişi olur (WhatsApp pattern).
 
+    // Guard: zaten connecting/connected → mükerrer çağrı, dön.
+    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) {
+      _cpLog('OUT', 'call_accepted SKIPPED (already ${state.value.status.name})');
+      return;
+    }
+
+    _resetTimer?.cancel();
+
+    // acceptedAt ve status=connecting tek setState'te — ara calling→calling paraziti kalkar.
     if (data['accepted_at'] != null) {
       final parsedAt = DateTime.parse(data['accepted_at']);
       final nowUtc = DateTime.now().toUtc();
       _cpLog('TIMER', 'acceptedAt SET [CALLER/WS] | acceptedAt=${parsedAt.toIso8601String()} nowUtc=${nowUtc.toIso8601String()} wsLag=${nowUtc.difference(parsedAt).inMilliseconds}ms');
-      _setState(state.value.copyWith(acceptedAt: parsedAt));
+      _setState(state.value.copyWith(acceptedAt: parsedAt, status: CallStatus.connecting));
     } else {
       _cpLog('TIMER', 'acceptedAt MISSING in call_accepted WS payload — timer will use local clock');
+      _setState(state.value.copyWith(status: CallStatus.connecting));
     }
 
-    if (state.value.status == CallStatus.connecting || state.value.status == CallStatus.connected) return;
-
-    _resetTimer?.cancel();
-    _setState(state.value.copyWith(status: CallStatus.connecting));
-
-    // Caller'ın mikrofonu: pre-connect sırasında ringtone ses oturumunu korumak için atlandı.
-    // Callee kabul etti → şimdi sadece mik aç. AudioSession'a burada dokunmuyoruz.
-    // AudioSession → voice mode geçişi TrackSubscribed handler'da yapılır (ringtone bitmeden önce).
-    // Bu sayede ringtone, callee'nin sesi gerçekten gelene dek kesintisiz çalar.
+    // Caller mikrofon aktivasyonu: iki yol
+    // FAST PATH: Pre-connect'te muted track yayınlandıysa → sadece unmute (~50ms, re-negotiation yok).
+    // STANDARD PATH: Pre-publish başarısızsa → setMicrophoneEnabled(true) (1.5s).
     if (_room != null) {
-      _cpLog('OUT', 'call_accepted → enabling caller mic (AudioSession configure deferred to TrackSubscribed)');
-      _cpLog('HW', 'microphone ENABLE | context=onCallAccepted-caller audioSessionDeferred=true');
-      _room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
-        _cpLog('OUT', 'caller mic enable ERROR | $e');
-        return null;
-      });
+      final micPubs = _room!.localParticipant?.audioTrackPublications;
+      if (micPubs != null && micPubs.isNotEmpty) {
+        final pub = micPubs.first;
+        if (pub.muted) {
+          _cpLog('OUT', 'call_accepted → FAST PATH: unmuting pre-published track | pubSid=${pub.sid}');
+          _cpLog('HW', 'microphone UNMUTE | context=onCallAccepted-caller fastPath=true stopOnMute=false prePublishedTrack audioCapture=wasAlreadyActive');
+          // stopOnMute:false → capture zaten çalışıyor, sadece RTP akışı başlıyor.
+          pub.unmute(stopOnMute: false).catchError((e) {
+            _cpLog('OUT', 'caller mic unmute ERROR | $e → fallback to setMicEnabled');
+            _cpLog('HW', 'microphone ENABLE (unmute-fallback) | context=onCallAccepted-caller');
+            _room!.localParticipant?.setMicrophoneEnabled(true);
+            return null;
+          });
+        } else {
+          _cpLog('OUT', 'call_accepted → mic already published+unmuted | no action needed');
+          _cpLog('HW', 'microphone ALREADY ENABLED+UNMUTED | context=onCallAccepted-caller pubSid=${pub.sid}');
+        }
+      } else {
+        // Pre-publish başarısız veya hiç yayınlanmadı → standart yol
+        _cpLog('OUT', 'call_accepted → STANDARD PATH: setMicrophoneEnabled (no pre-publish) | AudioSession deferred to TrackSubscribed');
+        _cpLog('HW', 'microphone ENABLE | context=onCallAccepted-caller standardPath=true audioSessionDeferred=true');
+        _room!.localParticipant?.setMicrophoneEnabled(true).catchError((e) {
+          _cpLog('OUT', 'caller mic enable ERROR | $e');
+          return null;
+        });
+      }
     } else {
       _cpLog('OUT', 'call_accepted: _room is null — mic will be enabled when _joinRoom completes');
     }
@@ -1004,9 +1032,37 @@ class CallService {
         _cpLog('HW', 'speakerphone SET | enabled=false context=_joinRoom-callee-post-mic');
         await Hardware.instance.setSpeakerphoneOn(false);
       } else {
-        // Network-only pre-connect (caller veya callee ringing): ses oturumu ve mikrofon atlandı.
+        // Network-only pre-connect (caller=calling veya callee=ringing): standart ses atlandı.
         // callStatusAtEntry: caller=calling, callee-pre-connect=ringing
-        _cpLog('LK', 'AudioSession/mic SKIPPED | preConnectRole=${callStatusAtEntry.name} (ringtone preserved)');
+
+        if (callStatusAtEntry == CallStatus.calling) {
+          // WhatsApp-kalitesi FAST PATH:
+          // AudioSession zaten playAndRecord+voiceChat modunda (ringtone için ayarlandı).
+          // setMicrophoneEnabled(true) → WebRTC müzakeresi tamamlanır → pub.mute(stopOnMute:false) → RTP sessiz.
+          // stopOnMute:false önemli: mikrofon capture'ı durmaz, sadece RTP paketleri gönderilmez.
+          // Acceptance gelince pub.unmute(stopOnMute:false) ~50ms — re-start yok, re-negotiation yok.
+          _cpLog('LK', 'caller pre-connect: pre-publishing MUTED audio track for fast acceptance | callId=${state.value.callId}');
+          _cpLog('HW', 'microphone CAPTURE START (muted pre-connect) | audioCapture=active rtpTransmission=paused stopOnMute=false ringtone=preserved');
+          try {
+            await _room!.localParticipant?.setMicrophoneEnabled(true);
+            final micPubs = _room!.localParticipant?.audioTrackPublications;
+            if (micPubs != null && micPubs.isNotEmpty) {
+              final pub = micPubs.first;
+              // stopOnMute:false → capture çalışır, RTP paketleri gönderilmez.
+              await pub.mute(stopOnMute: false);
+              _cpLog('LK', 'muted audio track pre-published | sid=${pub.sid} muted=${pub.muted} waiting for call_accepted to unmute');
+              _cpLog('HW', 'microphone MUTED (pre-connect) | track=published rtpMuted=true audioCapture=active stopOnMute=false');
+            } else {
+              _cpLog('LK', 'pre-publish muted track: no publications after setMicEnabled (micPubs empty) | standard path on acceptance');
+            }
+          } catch (e) {
+            _cpLog('LK', 'pre-publish muted track ERROR | $e → standard setMicEnabled path will be used on acceptance');
+            _cpLog('HW', 'microphone CAPTURE (muted pre-connect) FAILED | fallback=standard on acceptance');
+          }
+        } else {
+          // callee pre-connect (ringing): ringtone korunuyor, mic yok
+          _cpLog('LK', 'AudioSession/mic SKIPPED | preConnectRole=${callStatusAtEntry.name} (ringtone preserved)');
+        }
 
         // Kenar durum: accept/onCallAccepted bu room.connect() sırasında tetiklendiyse.
         if (state.value.status == CallStatus.connecting) {
@@ -1019,23 +1075,25 @@ class CallService {
             });
           } else {
             // Caller: onCallAccepted, room.connect() sırasında geldi.
-            _cpLog('LK', 'caller: call_accepted already received during pre-connect → configuring audio + mic now');
-            try {
-              _cpLog('HW', 'audioSession CONFIGURE | context=_joinRoom-caller-late category=playAndRecord mode=voiceChat');
-              final session = await AudioSession.instance;
-              await session.configure(AudioSessionConfiguration(
-                avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-                avAudioSessionMode: AVAudioSessionMode.voiceChat,
-                avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-              ));
-              _cpLog('HW', 'speakerphone SET | enabled=false context=_joinRoom-caller-late');
-              await Hardware.instance.setSpeakerphoneOn(false);
-            } catch (e) {
-              _cpLog('LK', 'late AudioSession configure ERROR | $e');
+            // Muted track zaten yayınlandı — sadece unmute et.
+            _cpLog('LK', 'caller: call_accepted already received during pre-connect → unmuting pre-published track');
+            final micPubs = _room!.localParticipant?.audioTrackPublications;
+            if (micPubs != null && micPubs.isNotEmpty) {
+              final pub = micPubs.first;
+              if (pub.muted) {
+                _cpLog('HW', 'microphone UNMUTE | context=_joinRoom-caller-late-accept fastPath=true stopOnMute=false');
+                await pub.unmute(stopOnMute: false);
+                _cpLog('LK', 'caller mic unmuted (late-accept-during-preconnect) | done');
+              } else {
+                _cpLog('LK', 'caller: pre-published track already unmuted | done');
+              }
+            } else {
+              // Pre-publish çalışmadıysa standard yol
+              _cpLog('LK', 'caller late-accept: no pre-published track → standard setMicEnabled');
+              _cpLog('HW', 'microphone ENABLE | context=_joinRoom-caller-late-accept standardPath=true');
+              await _room!.localParticipant?.setMicrophoneEnabled(true);
+              _cpLog('LK', 'caller mic enabled (late, accepted-during-preconnect, standard) | done');
             }
-            _cpLog('HW', 'microphone ENABLE | context=_joinRoom-caller-late-accept');
-            await _room!.localParticipant?.setMicrophoneEnabled(true);
-            _cpLog('LK', 'caller mic enabled (late, accepted-during-preconnect) | done');
           }
         }
       }
@@ -1144,6 +1202,8 @@ class CallService {
       if (event.track.kind == TrackType.AUDIO) {
         _cpLog('LK', 'TrackSubscribed AUDIO → voice AudioSession → ringing stop → connected');
         // AudioSession'ı ses akışı başlamadan hemen önce voice-chat moduna geçir.
+        // iOS: speakerphone AudioSession sonrası set edilir (async callback).
+        // Android: speakerphone aşağıdaki senkron blokta hemen set edilir — callback'te tekrar edilmez.
         AudioSession.instance.then((session) async {
           try {
             _cpLog('HW', 'audioSession CONFIGURE | context=TrackSubscribed category=playAndRecord mode=voiceChat');
@@ -1152,8 +1212,10 @@ class CallService {
               avAudioSessionMode: AVAudioSessionMode.voiceChat,
               avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth | AVAudioSessionCategoryOptions.allowBluetoothA2dp,
             ));
-            _cpLog('HW', 'speakerphone SET | enabled=false context=TrackSubscribed-post-configure');
-            await Hardware.instance.setSpeakerphoneOn(false);
+            if (Platform.isIOS) {
+              _cpLog('HW', 'speakerphone SET | enabled=false context=TrackSubscribed-post-configure platform=iOS');
+              await Hardware.instance.setSpeakerphoneOn(false);
+            }
             _cpLog('LK', 'TrackSubscribed: AudioSession voice configure OK');
           } catch (e) {
             _cpLog('LK', 'TrackSubscribed: AudioSession configure ERROR | $e');
@@ -1214,27 +1276,32 @@ class CallService {
     final nowUtc = DateTime.now().toUtc();
     final alreadyElapsed = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()) : Duration.zero;
     _cpLog('TIMER', '_startElapsedTimer CALLED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} alreadyElapsed=${alreadyElapsed.inMilliseconds}ms status=${state.value.status.name}');
+
     // İlk frame'de doğru elapsed göster — "00:00 flash → 00:04 jump" önlenir.
-    // Timer.periodic ilk tick'i 1s sonra atar; bu arada state güncellenmemiş olur.
+    // elapsed ValueNotifier ile güncellenir — _setState çağırılmaz, listener paraziti olmaz.
     if (alreadyElapsed.inMilliseconds > 0) {
-      _cpLog('TIMER', '_startElapsedTimer: immediate elapsed sync | alreadyElapsed=${alreadyElapsed.inMilliseconds}ms → UI gösterir: ${alreadyElapsed.inMinutes.remainder(60).toString().padLeft(2, "0")}:${alreadyElapsed.inSeconds.remainder(60).toString().padLeft(2, "0")}');
-      _setState(state.value.copyWith(elapsed: alreadyElapsed));
+      final fmt = '${alreadyElapsed.inMinutes.remainder(60).toString().padLeft(2, "0")}:${alreadyElapsed.inSeconds.remainder(60).toString().padLeft(2, "0")}';
+      _cpLog('TIMER', '_startElapsedTimer: immediate elapsed sync | alreadyElapsed=${alreadyElapsed.inMilliseconds}ms → UI gösterir: $fmt');
+      elapsed.value = alreadyElapsed;
     }
+
     _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.value.status == CallStatus.connected) {
+        final Duration newElapsed;
         if (state.value.acceptedAt != null) {
-          final elapsed = DateTime.now().toUtc().difference(state.value.acceptedAt!.toUtc());
-          if (elapsed.inSeconds <= 5) {
-            _cpLog('TIMER', 'tick [acceptedAt] | elapsed=${elapsed.inMilliseconds}ms (${elapsed.inSeconds}s) acceptedAt=${state.value.acceptedAt?.toIso8601String()}');
+          newElapsed = DateTime.now().toUtc().difference(state.value.acceptedAt!.toUtc());
+          if (newElapsed.inSeconds <= 5) {
+            _cpLog('TIMER', 'tick [acceptedAt] | elapsed=${newElapsed.inMilliseconds}ms (${newElapsed.inSeconds}s) acceptedAt=${state.value.acceptedAt?.toIso8601String()}');
           }
-          _setState(state.value.copyWith(elapsed: elapsed));
         } else {
-          final elapsed = state.value.elapsed + const Duration(seconds: 1);
-          if (elapsed.inSeconds <= 5) {
-            _cpLog('TIMER', 'tick [localClock] | elapsed=${elapsed.inSeconds}s (no acceptedAt)');
+          newElapsed = elapsed.value + const Duration(seconds: 1);
+          if (newElapsed.inSeconds <= 5) {
+            _cpLog('TIMER', 'tick [localClock] | elapsed=${newElapsed.inSeconds}s (no acceptedAt)');
           }
-          _setState(state.value.copyWith(elapsed: elapsed));
         }
+        // ValueNotifier.value güncelle — _setState DEĞİL.
+        // Bu sayede overlay._onCallState ve CallScreen._onStateChange saniyede tetiklenmez.
+        elapsed.value = newElapsed;
       }
     });
   }
@@ -1306,6 +1373,12 @@ class CallService {
       stopRingtoneAndVibration();
       _ringTimer?.cancel();
       _elapsedTimer?.cancel();
+
+      // Arama süresi logu — analytics ve gözlem için.
+      final callDurationMs = state.value.acceptedAt != null
+          ? DateTime.now().toUtc().difference(state.value.acceptedAt!.toUtc()).inMilliseconds
+          : -1;
+      _cpLog('END', 'call DURATION | callId=${state.value.callId} acceptedAt=${state.value.acceptedAt?.toIso8601String() ?? "NULL"} durationMs=$callDurationMs durationSec=${callDurationMs > 0 ? callDurationMs ~/ 1000 : -1}');
       
       _cpLog('END', 'disconnectRoom starting');
       await _disconnectRoom();
@@ -1373,6 +1446,8 @@ class CallService {
     _audioSessionActivated = false; // Sonraki çağrı için iOS audio flag'i sıfırla
     _callkitAudioReady = null;
     _preConnectStartedAt = null;
+    elapsed.value = Duration.zero; // elapsed notifier'ı sıfırla
+    _cpLog('TIMER', 'elapsed notifier RESET | value=Duration.zero');
 
     if (state.value.callId != null) {
       _lastEndedCallId = state.value.callId;

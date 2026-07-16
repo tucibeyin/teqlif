@@ -51,12 +51,12 @@ class _CallScreenState extends State<CallScreen> {
 
   void _onStateChange() {
     final s = CallService.instance.state.value.status;
-    final elapsed = CallService.instance.state.value.elapsed;
+    // elapsed artık CallState'te değil — ayrı notifier'da. _onStateChange'de kullanılmaz.
     final acceptedAt = CallService.instance.state.value.acceptedAt;
     _cpLog('UI', 'CallScreen._onStateChange | status=${s.name} hasActiveCall=${CallService.instance.hasActiveCall} hasPopped=$_hasPopped');
-    if (s == CallStatus.connected && elapsed.inSeconds == 0) {
+    if (s == CallStatus.connected && CallService.instance.elapsed.value == Duration.zero) {
       final nowUtc = DateTime.now().toUtc();
-      _cpLog('TIMER', 'CallScreen: first CONNECTED state | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} elapsed=${elapsed.inMilliseconds}ms nowUtc=${nowUtc.toIso8601String()}');
+      _cpLog('TIMER', 'CallScreen: first CONNECTED state | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} elapsedNotifier=${CallService.instance.elapsed.value.inMilliseconds}ms nowUtc=${nowUtc.toIso8601String()}');
     }
     if (!CallService.instance.hasActiveCall && mounted && !_hasPopped) {
       if (s == CallStatus.rejected ||
@@ -200,28 +200,34 @@ class _CallScreenState extends State<CallScreen> {
                         const SizedBox(height: 10),
 
                         // Status / timer
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (cs.isPoorConnection &&
-                                cs.status == CallStatus.connected)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: Icon(
-                                  Icons
-                                      .signal_cellular_connected_no_internet_4_bar,
-                                  color: Colors.orange,
-                                  size: 18,
+                        // Timer, CallState'ten bağımsız elapsed notifier'ı dinler.
+                        // Bu sayede saniyede 3 gereksiz listener callback önlenir.
+                        ValueListenableBuilder<Duration>(
+                          valueListenable: CallService.instance.elapsed,
+                          builder: (context, elapsedDuration, _) {
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (cs.isPoorConnection &&
+                                    cs.status == CallStatus.connected)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: Icon(
+                                      Icons.signal_cellular_connected_no_internet_4_bar,
+                                      color: Colors.orange,
+                                      size: 18,
+                                    ),
+                                  ),
+                                Text(
+                                  _statusText(cs.status, l, elapsedDuration),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(context),
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                            Text(
-                              _statusText(cs.status, l, cs.elapsed),
-                              style: TextStyle(
-                                color: AppColors.textSecondary(context),
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
+                              ],
+                            );
+                          },
                         ),
 
                         const Spacer(),
