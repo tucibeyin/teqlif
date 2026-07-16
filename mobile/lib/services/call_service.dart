@@ -632,6 +632,15 @@ class CallService {
         try {
           await _post('/calls/$incomingCallId/reject');
         } catch (_) {}
+        // Dismiss the stale incoming notification so the user cannot tap Accept/Decline
+        // on it later (which would fire duplicate call_rejected events to the caller).
+        try {
+          final formattedUuid = _formatToUuid(incomingCallId.toString());
+          await FlutterCallkitIncoming.endCall(formattedUuid);
+          _cpLog('IN', 'hasActiveCall BUSY_REJECT → notification dismissed | callId=$incomingCallId');
+        } catch (e) {
+          _cpLog('IN', 'hasActiveCall BUSY_REJECT endCall ERROR | $e');
+        }
       }
       _activeIncomingCallId = null; // Rejected — reset so future calls aren't blocked
       return;
@@ -644,6 +653,18 @@ class CallService {
         _cpLog('IN', 'backendStatus check | callId=$incomingCallId status=$backendStatus');
         if (backendStatus == 'ended' || backendStatus == 'rejected' || backendStatus == 'missed') {
           _cpLog('IN', 'backendStatus SKIPPED (already terminated) | callId=$incomingCallId');
+          // Dismiss the Android notification — FCM already called showCallkitIncoming so the
+          // notification is visible even though we won't ring. Without this endCall the user
+          // can tap "Accept" minutes later and get a phantom CallScreen (the "tekrar arama
+          // geliyor" UX bug).
+          try {
+            final formattedUuid = _formatToUuid(incomingCallId.toString());
+            await FlutterCallkitIncoming.endCall(formattedUuid);
+            _cpLog('IN', 'backendStatus TERMINATED → notification dismissed | callId=$incomingCallId uuid=$formattedUuid');
+          } catch (e) {
+            _cpLog('IN', 'backendStatus TERMINATED endCall ERROR | $e');
+          }
+          _activeIncomingCallId = null;
           return;
         }
       } catch (e) {
@@ -1102,7 +1123,10 @@ class CallService {
   }
 
   void onCallRejected() async {
-    if (state.value.status == CallStatus.rejected) return;
+    if (state.value.status != CallStatus.calling) {
+      _cpLog('END', 'onCallRejected SKIPPED | status=${state.value.status} (not calling — stale/duplicate event)');
+      return;
+    }
     stopRingtoneAndVibration();
     _ringTimer?.cancel();
     _setState(state.value.copyWith(status: CallStatus.rejected));
