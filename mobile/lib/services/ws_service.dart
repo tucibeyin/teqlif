@@ -155,6 +155,9 @@ class WsService {
       _channel = WebSocketChannel.connect(uri);
       // Token URL'de taşınmaz — bağlantı açılır açılmaz ilk mesaj olarak gönderilir
       // since_ts: son alınan call event'in Unix timestamp'i — sunucu kaçırılan eventleri replay eder
+      // Fresh start'ta _lastCallEventTs null olursa backend replay'i atlar. İlk connect zamanını
+      // baseline olarak kullan (5s clock-skew buffer ile) — arka planda gelen çağrılar yakalanır.
+      _lastCallEventTs ??= DateTime.now().millisecondsSinceEpoch / 1000.0 - 5.0;
       final authMsg = <String, dynamic>{'type': 'auth', 'token': token};
       if (_lastCallEventTs != null) authMsg['since_ts'] = _lastCallEventTs;
       _channel!.sink.add(jsonEncode(authMsg));

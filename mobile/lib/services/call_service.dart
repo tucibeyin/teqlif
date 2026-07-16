@@ -1274,6 +1274,30 @@ class CallService {
             // iOS: sadece ağ pre-connect — mic/AudioSession dokunulmaz, ringing.wav korunur.
             _cpLog('LK', 'caller pre-connect: network-only (NO mic pre-publish) | callId=${state.value.callId} platform=iOS reason=avAudioSession-would-kill-ringback');
             _cpLog('HW', 'microphone SKIPPED (caller pre-connect) | platform=iOS ringback=preserved mic-will-start-on-acceptance');
+            // room.connect() internally overrides AVAudioSession to SoloAmbient, which
+            // interrupts the audioplayers ringback. Restore playAndRecord and re-resume.
+            if (state.value.status == CallStatus.calling) {
+              try {
+                final session = await AudioSession.instance;
+                await session.configure(AudioSessionConfiguration(
+                  avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+                  avAudioSessionMode: AVAudioSessionMode.voiceChat,
+                  avAudioSessionCategoryOptions:
+                      AVAudioSessionCategoryOptions.allowBluetooth |
+                      AVAudioSessionCategoryOptions.allowBluetoothA2dp,
+                ));
+                await _ringbackPlayer.setReleaseMode(ReleaseMode.loop);
+                if (_ringbackPlayer.state != PlayerState.playing) {
+                  await _ringbackPlayer.seek(Duration.zero);
+                  await _ringbackPlayer.resume();
+                  _cpLog('SOUND', 'ringbackPlayer RESUMED after LiveKit SoloAmbient override | iOS caller pre-connect');
+                } else {
+                  _cpLog('SOUND', 'ringbackPlayer STILL PLAYING after room.connect() (no interruption) | iOS caller');
+                }
+              } catch (e) {
+                _cpLog('SOUND', 'ringbackPlayer restore ERROR after LiveKit SoloAmbient | $e');
+              }
+            }
           }
         } else {
           // callee pre-connect (ringing): ringtone korunuyor, mic yok
