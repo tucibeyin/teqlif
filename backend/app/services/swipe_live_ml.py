@@ -11,7 +11,7 @@ Yeterli veri yoksa (<10 satır) sessizce çıkar — fallback affiniy skoruna d�
 from __future__ import annotations
 
 import logging
-
+import math
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -107,15 +107,24 @@ async def train_swipe_live_als() -> None:
     u2i = {uid: i for i, uid in enumerate(user_ids)}
     s2i = {sid: i for i, sid in enumerate(stream_ids)}
 
-    # Confidence matrisi:
-    #   dwell kalitesi × tekrar sayısı + strong engagement bonusu
-    #   skip → düşük ama sıfır değil (negatif örnek)
     data, rows_idx, cols_idx = [], [], []
     for uid, sid, dwells, skips, avg_dwell, hearts, strong in rows:
-        dwell_quality = min((avg_dwell or 0) / 8000.0, 1.0)
+        
+        # 1. GÜVENLİK: ClickHouse'dan gelen "NaN" zehrini temizle
+        if avg_dwell is None or math.isnan(float(avg_dwell)):
+            safe_avg_dwell = 0.0
+        else:
+            safe_avg_dwell = float(avg_dwell)
+
+        dwell_quality = min(safe_avg_dwell / 8000.0, 1.0)
         confidence = dwell_quality * dwells + 0.1 * skips + 0.3 * hearts + 1.0 * strong
+        
+        # 2. GÜVENLİK: Tavan ve Taban Değerleri (Clipping)
+        # Çok fazla spam (10 bin kalp vs.) modelin patlamasına neden olmasın diye 500'de kesiyoruz.
         confidence = max(confidence, 0.01)
-        data.append(confidence)
+        confidence = min(confidence, 500.0)
+        
+        data.append(float(confidence))
         rows_idx.append(u2i[uid])
         cols_idx.append(s2i[sid])
 
@@ -128,6 +137,9 @@ async def train_swipe_live_als() -> None:
         shape=(n_users, n_streams),
         dtype=np.float32,
     )
+
+    # 3. GÜVENLİK: NumPy Seviyesinde Son Filtre (Ne olur ne olmaz)
+    user_items.data = np.nan_to_num(user_items.data, nan=0.01, posinf=500.0, neginf=0.01)
 
     factors = min(32, max(8, n_users // 3, n_streams // 3))
     model = implicit.als.AlternatingLeastSquares(
