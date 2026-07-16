@@ -1117,21 +1117,23 @@ class CallService {
     } else if (event is ParticipantConnectedEvent) {
       _cpLog('LK', 'ParticipantConnected → peer joined | peerCount=${_room?.remoteParticipants.length} status=${state.value.status.name}');
       _peerTimeoutTimer?.cancel();
-      // Callee pre-connect sırasında (ringing) mic kasıtlı olarak kapalı — erken açma.
-      // connected state'i TrackSubscribed'da set ediliyor (ses gerçekten akmaya başladığında).
-      // Burada yalnızca mic'in aktif olduğundan emin oluyoruz (WS gecikmesi kenar durumu).
-      if (state.value.status != CallStatus.ringing) {
+      // Mic sadece connecting state'inde açılır — kabul sonrası ses aktivasyon aşaması.
+      // calling: caller pre-connect (kabul bekleniyor) → mic kapalı kalmalı.
+      // ringing: callee pre-connect (kullanıcı henüz kabul etmedi) → mic kapalı kalmalı.
+      // connecting: call_accepted geldi, ses aktivasyonu başladı → mic açılabilir.
+      // connected: mic zaten açık, tekrar açmaya gerek yok.
+      if (state.value.status == CallStatus.connecting) {
         final micPubs = _room?.localParticipant?.audioTrackPublications;
         if (micPubs == null || micPubs.isEmpty) {
           _cpLog('LK', 'ParticipantConnected: mic not yet published → enabling now');
-          _cpLog('HW', 'microphone ENABLE | context=ParticipantConnected-mic-not-published');
+          _cpLog('HW', 'microphone ENABLE | context=ParticipantConnected-mic-not-published status=connecting');
           _room?.localParticipant?.setMicrophoneEnabled(true);
         } else {
           _cpLog('HW', 'microphone ALREADY ENABLED | context=ParticipantConnected pubCount=${micPubs.length}');
         }
       } else {
-        _cpLog('LK', 'ParticipantConnected: mic enable SKIPPED during callee pre-connect (ringing)');
-        _cpLog('HW', 'microphone ENABLE SKIPPED | context=ParticipantConnected status=ringing pre-connect');
+        _cpLog('LK', 'ParticipantConnected: mic enable SKIPPED | status=${state.value.status.name} (pre-connect guard)');
+        _cpLog('HW', 'microphone ENABLE SKIPPED | context=ParticipantConnected status=${state.value.status.name}');
       }
     } else if (event is TrackSubscribedEvent) {
       // Uzak ses track'ı abone oldu → callee'nin sesi gerçekten akıyor.
