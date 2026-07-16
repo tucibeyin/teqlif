@@ -128,19 +128,27 @@ import Security
       sendVoIPTokenToBackend("")
   }
 
+  // ── ISO8601 timestamp helper ─────────────────────────────────────────────────
+  private func ts() -> String {
+    let fmt = ISO8601DateFormatter()
+    fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return fmt.string(from: Date())
+  }
+
   // Handle incoming pushes
   func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
       print("[PushKit] VoIP Push Geldi!")
       guard type == .voIP else { return }
       
       let dictionary = payload.dictionaryPayload
-      
+
       // APNs'ten gelen verileri alıyoruz
       let callId = dictionary["call_id"] as? String ?? dictionary["id"] as? String ?? ""
       let callerUsername = dictionary["caller_username"] as? String ?? dictionary["nameCaller"] as? String ?? "Bilinmeyen"
       let callerAvatar = dictionary["caller_avatar"] as? String ?? dictionary["avatar"] as? String ?? "https://i.pravatar.cc/100"
       let roomName = dictionary["room_name"] as? String ?? ""
       let callerId = dictionary["caller_id"] as? String ?? ""
+      print("[CALL_PROCESS][\(ts())][PUSH] VoIP Push received | callId=\(callId) caller=\(callerUsername) roomName=\(roomName) callerId=\(callerId)")
       
       // CallId'yi UUID'ye çeviriyoruz (Tıpkı Dart tarafında yaptığımız gibi)
       let padded = callId.padding(toLength: 32, withPad: "0", startingAt: 0)
@@ -173,7 +181,9 @@ import Security
           "room_name": roomName
       ]
       
+      print("[CALL_PROCESS][\(ts())][PUSH] showCallkitIncoming → CallKit UI will show | callId=\(callId) caller=\(callerUsername)")
       SwiftFlutterCallkitIncomingPlugin.sharedInstance?.showCallkitIncoming(data, fromPushKit: true) {
+          print("[CALL_PROCESS][\(self.ts())][PUSH] showCallkitIncoming completion | callId=\(callId)")
           completion()
       }
   }
@@ -203,38 +213,43 @@ import Security
   // MARK: - CallkitIncomingAppDelegate Methods
   
   func onAccept(_ call: flutter_callkit_incoming.Call, _ action: CXAnswerCallAction) {
-      print("[CallkitAppDelegate][CALL_PROCESS] onAccept | uuid=\(call.uuid.uuidString)")
       // Apple CallKit contract: action.fulfill() → CallKit audio session aktive eder
       // → provider(_:didActivate:) → didActivateAudioSession → Flutter'a sinyal.
       // Dart'ın onayını beklemek UUID uyumsuzluğu doğurur; doğrudan fulfill et.
+      print("[CALL_PROCESS][\(ts())][IN] onAccept | uuid=\(call.uuid.uuidString)")
       action.fulfill()
+      print("[CALL_PROCESS][\(ts())][IN] action.fulfill() done → didActivateAudioSession expected next")
   }
-  
+
   func onDecline(_ call: flutter_callkit_incoming.Call, _ action: CXEndCallAction) {
+      print("[CALL_PROCESS][\(ts())][IN] onDecline | uuid=\(call.uuid.uuidString)")
       action.fulfill()
   }
-  
+
   func onEnd(_ call: flutter_callkit_incoming.Call, _ action: CXEndCallAction) {
+      print("[CALL_PROCESS][\(ts())][IN] onEnd | uuid=\(call.uuid.uuidString)")
       action.fulfill()
   }
 
   func onTimeOut(_ call: flutter_callkit_incoming.Call) {
-      // pendingAcceptActions kaldırıldı — temizlenecek bir şey yok.
+      print("[CALL_PROCESS][\(ts())][IN] onTimeOut | uuid=\(call.uuid.uuidString)")
   }
 
   func didActivateAudioSession(_ audioSession: AVAudioSession) {
-      print("[CallKit][CALL_PROCESS] didActivateAudioSession — signalling Flutter")
       // CallKit audio session hazır → Flutter'a bildir, setMicrophoneEnabled bekleyebilir.
+      print("[CALL_PROCESS][\(ts())][HW] didActivateAudioSession → signalling Flutter via callkitChannel")
       DispatchQueue.main.async { [weak self] in
+          let dispatchTs = ISO8601DateFormatter().string(from: Date())
+          print("[CALL_PROCESS][\(dispatchTs)][HW] didActivateAudioSession: invokeMethod audioSessionActivated dispatched")
           self?.callkitChannel?.invokeMethod("audioSessionActivated", arguments: nil)
       }
   }
 
   func didDeactivateAudioSession(_ audioSession: AVAudioSession) {
-      print("[CallKit][CALL_PROCESS] didDeactivateAudioSession called")
+      print("[CALL_PROCESS][\(ts())][HW] didDeactivateAudioSession")
   }
-  
+
   func providerDidReset() {
-      // Provider sıfırlandığında yapacak bir şey yok — pending action tutulmadığından temiz.
+      print("[CALL_PROCESS][\(ts())][IN] providerDidReset")
   }
 }

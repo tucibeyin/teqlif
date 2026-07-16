@@ -322,24 +322,52 @@ class PushNotificationService {
     // CallKit Listener
     FlutterCallkitIncoming.onEvent.listen((CallEvent? event) async {
       if (event == null) return;
-      debugPrint('[CallKit] onEvent: ${event.eventName}');
-      
-      if (event is CallEventActionCallAccept) {
-        debugPrint('[CallKit] Kabul Et tıklandı');
+      _cpLog('PUSH', 'CallKit onEvent | event=${event.eventName} platform=${Platform.isIOS ? "iOS" : "Android"} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+
+      if (event is CallEventActionCallIncoming) {
+        // ── WhatsApp-kalitesi callee pre-connect ────────────────────────────────
+        // iOS VoIP push: CallKit UI gösterildiğinde bu event ateşlenir.
+        // onIncomingCall → ringing state → _fetchAndStoreCalleeToken → _joinRoom(ringing)
+        // Kullanıcı Kabul'e bastığında LK bağlantısı hazır olur — sadece mic aktivasyonu gerekir.
+        // Bu event handle edilmediğinde pre-connect hiç çalışmıyordu (2-4s gecikme).
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
-        await CallService.instance.onIncomingCall({...data, 'type': 'incoming_call'});
-        CallService.instance.acceptCall(); // Accept immediately in background
+        final callId = data['call_id']?.toString() ?? 'NULL';
+        final caller = data['caller_username']?.toString() ?? 'NULL';
+        _cpLog('PUSH', 'CallEventActionCallIncoming | callId=$callId caller=$caller nowUtc=${DateTime.now().toUtc().toIso8601String()} → onIncomingCall (pre-connect trigger)');
+        await CallService.instance.onIncomingCall({
+          ...data,
+          'type': 'incoming_call',
+          '_source': 'CallEventActionCallIncoming',
+        });
+        _cpLog('PUSH', 'CallEventActionCallIncoming done | callId=$callId status=${CallService.instance.state.value.status.name}');
+      } else if (event is CallEventActionCallAccept) {
+        final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
+        final callId = data['call_id']?.toString() ?? 'NULL';
+        final roomReady = CallService.instance.state.value.calleeToken != null;
+        _cpLog('PUSH', 'CallEventActionCallAccept | callId=$callId preConnectTokenReady=$roomReady currentStatus=${CallService.instance.state.value.status.name} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+        // Not: CallEventActionCallIncoming zaten onIncomingCall'u çağırdı (status=ringing).
+        // Burada ikinci çağrı hasActiveCall nedeniyle engellenir — sorun yok.
+        await CallService.instance.onIncomingCall({
+          ...data,
+          'type': 'incoming_call',
+          '_source': 'CallEventActionCallAccept',
+        });
+        CallService.instance.acceptCall();
         notificationStream.add({...data, 'type': 'incoming_call_auto_accept'});
+        _cpLog('PUSH', 'CallEventActionCallAccept: acceptCall triggered | callId=$callId');
       } else if (event is CallEventActionCallDecline) {
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         final callId = data['call_id']?.toString() ?? '';
+        _cpLog('PUSH', 'CallEventActionCallDecline | callId=$callId nowUtc=${DateTime.now().toUtc().toIso8601String()}');
         if (callId.isNotEmpty) _rejectCallById(callId);
       } else if (event is CallEventActionCallEnded || event is CallEventActionCallTimeout) {
         CallKitParams? params;
+        final isTimeout = event is CallEventActionCallTimeout;
         if (event is CallEventActionCallEnded) params = event.callKitParams;
-        
+
         final data = Map<String, dynamic>.from(params?.extra ?? {});
         final callIdStr = data['call_id']?.toString() ?? '';
+        _cpLog('PUSH', '${isTimeout ? "CallEventActionCallTimeout" : "CallEventActionCallEnded"} | callId=$callIdStr activeCallId=${CallService.instance.state.value.callId} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
 
         if (CallService.instance.state.value.callId != null) {
           CallService.instance.endCall();
@@ -362,6 +390,8 @@ class PushNotificationService {
         } catch (e) {
           _cpLog('TOKEN', 'VoIP async update FAILED | $e');
         }
+      } else {
+        _cpLog('PUSH', 'CallKit onEvent UNHANDLED | event=${event.eventName}');
       }
     });
 

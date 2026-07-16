@@ -164,6 +164,9 @@ class CallService {
   // Flag sayesinde sinyal kaybolmaz — _joinRoom Completer'ı bulunca anında tamamlar.
   bool _audioSessionActivated = false;
 
+  // Pre-connect başlama zamanı — acceptCall'da kaç ms önce başladığını ölçer.
+  DateTime? _preConnectStartedAt;
+
   static const _callkitChannel = MethodChannel('com.teqlif/callkit');
 
   // iOS: CallKit audio session aktive olduğunda native'den sinyal alır.
@@ -482,7 +485,8 @@ class CallService {
   // ── Incoming Call (WS / FCM triggered) ────────────────────────────────────
 
   Future<void> onIncomingCall(Map<String, dynamic> data) async {
-    _cpLog('IN', 'onIncomingCall received | callId=${data['call_id']} caller=${data['caller_username']} calleeToken=${data['callee_token'] != null ? "EXISTS" : "MISSING"} livekitUrl=${data['livekit_url'] != null ? "EXISTS" : "MISSING"}');
+    final source = data['_source'] as String? ?? 'overlay/ws';
+    _cpLog('IN', 'onIncomingCall received | source=$source callId=${data['call_id']} caller=${data['caller_username']} calleeToken=${data['callee_token'] != null ? "EXISTS" : "MISSING"} livekitUrl=${data['livekit_url'] != null ? "EXISTS" : "MISSING"} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
     _resetTimer?.cancel();
 
     final incomingCallId = data['call_id'] is int
@@ -549,30 +553,36 @@ class CallService {
   /// VoIP push path için callee LK token'ını arka planda çeker ve state'e yazar.
   /// Kullanıcı kabul ettiğinde pre-connect başlatılabilmesi için ringing sırasında çalışır.
   Future<void> _fetchAndStoreCalleeToken(int callId) async {
-    _cpLog('IN', '_fetchCalleeToken start | callId=$callId');
+    final fetchStartAt = DateTime.now();
+    _cpLog('IN', '_fetchCalleeToken start | callId=$callId fetchStartUtc=${fetchStartAt.toUtc().toIso8601String()}');
     try {
       final data = await _get('/calls/$callId/callee-token');
+      final fetchEndAt = DateTime.now();
+      final httpMs = fetchEndAt.difference(fetchStartAt).inMilliseconds;
       final token = data['token'] as String?;
       final url = data['livekit_url'] as String?;
       final room = data['room_name'] as String?;
-      _cpLog('IN', '_fetchCalleeToken result | tokenLen=${token?.length} url=${url != null} room=$room');
+      _cpLog('IN', '_fetchCalleeToken result | tokenLen=${token?.length} url=${url != null} room=$room httpMs=$httpMs');
       if (state.value.status == CallStatus.ringing && state.value.callId == callId) {
         _setState(state.value.copyWith(
           calleeToken: token,
           livekitUrl: url,
           roomName: room,
         ));
-        _cpLog('IN', '_fetchCalleeToken stored → pre-connect ready | callId=$callId');
+        _cpLog('IN', '_fetchCalleeToken stored → pre-connect ready | callId=$callId httpMs=$httpMs');
 
         // Callee Pre-Connect: Kullanıcı kabul etmeden önce LK ağ bağlantısını kur.
         // Mic/ses oturumu YOK — sadece TCP+TLS+ICE handshake.
         // Kullanıcı kabul edince _joinRoom atlanır, sadece mic etkinleştirilir.
         // Reddetme/timeout durumunda reset() → _disconnectRoom() temizler.
         if (_room == null && !_isJoiningRoom && token != null && url != null) {
-          _cpLog('IN', 'callee pre-connect _joinRoom starting during ringing | callId=$callId');
+          _preConnectStartedAt = DateTime.now();
+          _cpLog('IN', 'callee pre-connect _joinRoom starting during ringing | callId=$callId preConnectStartUtc=${_preConnectStartedAt!.toUtc().toIso8601String()} fetchHttpMs=$httpMs');
           _joinRoom(livekitUrl: url, token: token).catchError((e) {
             _cpLog('IN', 'callee pre-connect _joinRoom ERROR | $e');
           });
+        } else {
+          _cpLog('IN', '_fetchCalleeToken: pre-connect _joinRoom SKIPPED | roomNull=${_room == null} isJoining=$_isJoiningRoom tokenOk=${token != null} urlOk=${url != null}');
         }
       } else {
         _cpLog('IN', '_fetchCalleeToken discarded (state changed) | callId=$callId status=${state.value.status.name}');
@@ -585,20 +595,29 @@ class CallService {
   /// Callee pre-connect sonrası audio session + mic aktivasyonu.
   /// Çağrıldığında _room bağlı olmalı; iOS'ta CallKit audio session sinyali beklenir.
   Future<void> _activateCalleeAudio() async {
-    _cpLog('IN', '_activateCalleeAudio START | status=${state.value.status}');
+    final activateStartAt = DateTime.now();
+    _cpLog('IN', '_activateCalleeAudio START | status=${state.value.status} audioSessionActivated=$_audioSessionActivated startUtc=${activateStartAt.toUtc().toIso8601String()}');
 
     if (Platform.isIOS) {
       if (_audioSessionActivated) {
-        _cpLog('IN', '_activateCalleeAudio: audioSessionActivated flag=true → no wait');
+        _cpLog('IN', '_activateCalleeAudio: audioSessionActivated flag=true → no wait | waitMs=0');
+        _cpLog('HW', 'audioSessionActivated SKIPPED WAIT | flag=true already received');
       } else {
         _callkitAudioReady ??= Completer<void>();
-        _cpLog('IN', '_activateCalleeAudio: waiting for didActivateAudioSession (max 4s)');
+        final waitStartAt = DateTime.now();
+        _cpLog('IN', '_activateCalleeAudio: waiting for didActivateAudioSession (max 4s) | waitStartUtc=${waitStartAt.toUtc().toIso8601String()}');
+        _cpLog('HW', 'didActivateAudioSession WAITING | callkitAudioReady created maxWait=4s');
         await _callkitAudioReady!.future.timeout(
           const Duration(seconds: 4),
           onTimeout: () {
-            _cpLog('IN', '_activateCalleeAudio: audioSessionActivated TIMEOUT → proceeding');
+            final waitMs = DateTime.now().difference(waitStartAt).inMilliseconds;
+            _cpLog('IN', '_activateCalleeAudio: audioSessionActivated TIMEOUT after ${waitMs}ms → proceeding');
+            _cpLog('HW', 'didActivateAudioSession TIMEOUT | waitMs=$waitMs → proceeding without signal');
           },
         );
+        final waitMs = DateTime.now().difference(waitStartAt).inMilliseconds;
+        _cpLog('IN', '_activateCalleeAudio: audioSessionActivated received | waitMs=$waitMs');
+        _cpLog('HW', 'didActivateAudioSession RECEIVED | waitMs=$waitMs');
         _callkitAudioReady = null;
       }
     } else if (Platform.isAndroid && state.value.callId != null) {
@@ -634,7 +653,8 @@ class CallService {
     await Future.delayed(const Duration(milliseconds: 300));
     _cpLog('HW', 'speakerphone SET | enabled=false context=_activateCalleeAudio-post-mic');
     await Hardware.instance.setSpeakerphoneOn(false);
-    _cpLog('IN', '_activateCalleeAudio DONE');
+    final totalMs = DateTime.now().difference(activateStartAt).inMilliseconds;
+    _cpLog('IN', '_activateCalleeAudio DONE | totalMs=$totalMs');
   }
 
   void playNotification() {
@@ -730,29 +750,38 @@ class CallService {
     final preConnectUrl = state.value.livekitUrl;
     final preConnectToken = state.value.calleeToken;
 
+    final preConnectAgeMs = _preConnectStartedAt != null
+        ? DateTime.now().difference(_preConnectStartedAt!).inMilliseconds
+        : -1;
     _cpLog(
       'IN',
-      'acceptCall pre-connect check | livekitUrl=${preConnectUrl != null ? "EXISTS" : "NULL"} '
-      'calleeToken=${preConnectToken != null ? "EXISTS" : "NULL"} '
-      'isJoining=$_isJoiningRoom roomNull=${_room == null}',
+      'acceptCall pre-connect check | roomReady=${_room != null} isJoining=$_isJoiningRoom '
+      'tokenReady=${preConnectToken != null} urlReady=${preConnectUrl != null} '
+      'preConnectAgeMs=$preConnectAgeMs nowUtc=${DateTime.now().toUtc().toIso8601String()}',
     );
 
     if (_room != null) {
       // _fetchAndStoreCalleeToken pre-connect tamamlandı → sadece audio aktive et.
-      _cpLog('IN', 'acceptCall: callee pre-connect room ready → _activateCalleeAudio');
+      // Bu yol: callee pre-connect ÇALIŞIYOR (WhatsApp kalitesi).
+      _cpLog('IN', 'acceptCall: callee pre-connect ROOM READY → _activateCalleeAudio | preConnectAgeMs=$preConnectAgeMs');
       _activateCalleeAudio().catchError((e) {
         _cpLog('IN', 'acceptCall _activateCalleeAudio ERROR | $e');
       });
     } else if (_isJoiningRoom) {
       // Pre-connect room.connect() devam ediyor.
       // _joinRoom else bloğu status=connecting + callStatusAtEntry=ringing detektörü devralacak.
-      _cpLog('IN', 'acceptCall: callee pre-connect _joinRoom in progress → _activateCalleeAudio deferred');
+      _cpLog('IN', 'acceptCall: callee pre-connect IN PROGRESS (_joinRoom running) → _activateCalleeAudio deferred | preConnectAgeMs=$preConnectAgeMs');
     } else if (preConnectUrl != null && preConnectToken != null) {
-      // Token hazır ama _joinRoom henüz başlamadı → callee rolüyle başlat (isCallee=true).
-      _cpLog('IN', 'acceptCall: token ready → _joinRoom (isCallee=true path)');
+      // Token hazır ama _joinRoom henüz başlamadı → callee rolüyle başlat.
+      // Bu yol: token fetch tamam ama pre-connect başlatılamamış (edge case).
+      _cpLog('IN', 'acceptCall: token ready, room NULL → _joinRoom now (isCallee=true) | preConnectAgeMs=$preConnectAgeMs');
       _joinRoom(livekitUrl: preConnectUrl, token: preConnectToken).catchError((e) {
         _cpLog('IN', 'acceptCall _joinRoom (callee token) ERROR | $e');
       });
+    } else {
+      // Pre-connect hiç başlamamış — FALLBACK: /accept response token kullanılacak.
+      // Bu yol: CallEventActionCallIncoming handle edilmemişse veya token fetch başarısızsa.
+      _cpLog('IN', 'acceptCall: NO pre-connect (room=null, isJoining=false, token=${preConnectToken != null}) → FALLBACK to /accept response token');
     }
 
     _cpLog('IN', 'POST /calls/$callId/accept → request (retry max=4)');
@@ -1341,6 +1370,7 @@ class CallService {
     FlutterCallkitIncoming.endAllCalls();
     _audioSessionActivated = false; // Sonraki çağrı için iOS audio flag'i sıfırla
     _callkitAudioReady = null;
+    _preConnectStartedAt = null;
 
     if (state.value.callId != null) {
       _lastEndedCallId = state.value.callId;
