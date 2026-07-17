@@ -318,7 +318,7 @@ async def start_call(
         logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=USER_BUSY caller=%d callee=%d", current_user.id, callee_id)
         raise AppException(status_code=409, message="User is busy", code="USER_BUSY")
 
-    room_name = f"call_{current_user.id}_{callee_id}_{int(time.time())}"
+    room_name = f"call_{current_user.id}_{callee_id}_{int(time.time() * 1000)}"
     call = Call(caller_id=current_user.id, callee_id=callee_id, room_name=room_name, status="calling")
     db.add(call)
     await db.commit()
@@ -449,6 +449,10 @@ async def reject_call(
     if not call or call.callee_id != current_user.id:
         logger.warning("[CALL_PROCESS][IN] reject_call NOT FOUND | call_id=%d callee=%d", call_id, current_user.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
+
+    if call.status in ("ended", "missed", "rejected"):
+        logger.info("[CALL_PROCESS][IN] reject_call ALREADY TERMINAL | call_id=%d status=%s callee=%d", call_id, call.status, current_user.id)
+        return {"ok": True}
 
     room_name = call.room_name
     caller_id = call.caller_id
