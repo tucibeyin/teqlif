@@ -13,6 +13,8 @@ import time
 import sys
 from datetime import datetime, timezone
 
+import getpass
+
 import httpx
 import websockets
 import asyncpg
@@ -22,9 +24,8 @@ BASE_URL   = "https://www.teqlif.com/api"
 WS_URL     = "wss://www.teqlif.com/api/messages/ws"
 DB_DSN     = "postgresql://teqlif:teqlif@localhost:5432/teqlif"  # adjust if different
 
-CALLER_USER = "teqlif"    # iOS caller
-CALLEE_USER = "tesbih"    # Android callee
-PASSWORD    = "teqlif123" # same password for both (adjust if different)
+CALLER_USER = "teqlif"   # iOS caller
+CALLEE_USER = "tesbih"   # Android callee
 
 PASS_MARK = "✓"
 FAIL_MARK = "✗"
@@ -172,10 +173,10 @@ class WsCapture:
 
 # ─── TEST CASES ────────────────────────────────────────────────────────────────
 
-async def test_login(caller: ApiClient, callee: ApiClient):
+async def test_login(caller: ApiClient, callee: ApiClient, caller_pass: str, callee_pass: str):
     log("\n=== SETUP: Login ===")
-    ok_c = await caller.login(PASSWORD)
-    ok_e = await callee.login(PASSWORD)
+    ok_c = await caller.login(caller_pass)
+    ok_e = await callee.login(callee_pass)
     record("Login teqlif (caller)", ok_c)
     record("Login tesbih (callee)", ok_e)
     return ok_c and ok_e
@@ -389,10 +390,17 @@ async def main():
     log(f"Base URL: {BASE_URL}")
     log("=" * 60)
 
+    print(f"\nŞifreler (terminale yazılanlar görünmez)\n")
+    caller_pass = getpass.getpass(f"  {CALLER_USER} şifresi: ")
+    callee_pass = getpass.getpass(f"  {CALLEE_USER} şifresi: ")
+    print()
+
     caller = ApiClient(CALLER_USER)
     callee = ApiClient(CALLEE_USER)
+    caller._password = caller_pass
+    callee._password = callee_pass
 
-    if not await test_login(caller, callee):
+    if not await test_login(caller, callee, caller_pass, callee_pass):
         log("\n[FATAL] Login failed — check credentials. Exiting.")
         sys.exit(1)
 
