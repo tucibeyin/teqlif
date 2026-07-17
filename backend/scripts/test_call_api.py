@@ -22,7 +22,7 @@ import asyncpg
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 BASE_URL   = "https://www.teqlif.com/api"
 WS_URL     = "wss://www.teqlif.com/api/messages/ws"
-DB_DSN     = "postgresql://teqlif:teqlif@localhost:5432/teqlif"  # adjust if different
+DB_DSN     = "postgresql://teqlif:Teqlif5664@127.0.0.1:5432/teqlif"
 
 CALLER_USER = "teqlif"   # iOS caller
 CALLEE_USER = "tesbih"   # Android callee
@@ -88,7 +88,8 @@ class ApiClient:
             if r.status_code == 200:
                 data = r.json()
                 self.token = data.get("access_token")
-                self.user_id = data.get("user_id") or data.get("id")
+                user_obj = data.get("user") or {}
+                self.user_id = user_obj.get("id") or data.get("user_id") or data.get("id")
                 log(f"  Login OK | user={self.username} user_id={self.user_id}")
                 return True
             log(f"  Login FAIL | user={self.username} status={r.status_code} body={r.text[:200]}")
