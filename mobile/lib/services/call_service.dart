@@ -707,10 +707,16 @@ class CallService {
       });
     }
 
-    if (!wasAlreadyRinging) {
+    // playNotification: sadece idle→ringing geçişinde ve native call screen yokken çal.
+    // wasAlreadyRinging: WS replay veya FCM+WS çift teslimat guard'ı.
+    // CallEventActionCallIncoming (Android): native call screen + system ringtone gösteriliyor,
+    //   Flutter'ın notification sesi audio focus çalarak native ringtone'u kesiyor → atla.
+    final shouldPlayNotification = !wasAlreadyRinging &&
+        !(Platform.isAndroid && source == 'CallEventActionCallIncoming');
+    if (shouldPlayNotification) {
       playNotification();
     } else {
-      _cpLog('IN', 'playNotification SKIPPED | already ringing (ringing→ringing dedup)');
+      _cpLog('IN', 'playNotification SKIPPED | wasAlreadyRinging=$wasAlreadyRinging source=$source');
     }
   }
 
@@ -1474,10 +1480,12 @@ class CallService {
       _cpLog('LK', 'TrackSubscribed | kind=${event.track.kind} status=${state.value.status.name}');
       if (event.track.kind == TrackType.AUDIO) {
         // ringing: callee pre-connect — caller'ın muted track'i subscribe edildi.
-        // Ringtone durdurulmamalı; AudioSession CallKit aktive edilmeden configure edilemez.
-        // Gerçek geçiş acceptCall → _activateCalleeAudio yolunda gerçekleşir.
-        if (state.value.status == CallStatus.ringing) {
-          _cpLog('LK', 'TrackSubscribed AUDIO during RINGING (callee pre-connect) | track is still MUTED → skip ringtone stop + AudioSession configure');
+        // calling: callee pre-connect sırasında arayan bekliyorken callee muted track publish eder.
+        // Her iki durumda da AudioSession ve ringtone'a dokunma — callee henüz kabul etmedi.
+        // Gerçek geçiş: calling→connecting (call_accepted WS), ringing→connecting (acceptCall).
+        // connecting→connected TrackUnmutedEvent (callee unmutes) veya yeni TrackSubscribed ile olur.
+        if (state.value.status == CallStatus.ringing || state.value.status == CallStatus.calling) {
+          _cpLog('LK', 'TrackSubscribed AUDIO during ${state.value.status.name} (pre-connect) | muted track subscribed → skip AudioSession configure + ringtone stop');
           return;
         }
 

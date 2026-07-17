@@ -375,7 +375,15 @@ class PushNotificationService {
       } else if (event is CallEventActionCallDecline) {
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         final callId = data['call_id']?.toString() ?? '';
-        _cpLog('PUSH', 'CallEventActionCallDecline | callId=$callId nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+        final currentStatus = CallService.instance.state.value.status;
+        _cpLog('PUSH', 'CallEventActionCallDecline | callId=$callId status=$currentStatus nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+        // Guard: iOS foreground'da VoIP push geldiğinde AppDelegate, CallKit tam ekranını
+        // bastırmak için CXEndCallAction gönderir. Bu onDecline'ı tetikler ve buraya düşer.
+        // Gerçek arama IncomingCallBar ile devam ediyor — reddetme API'yi çağırma.
+        if (currentStatus == CallStatus.ringing) {
+          _cpLog('PUSH', 'CallEventActionCallDecline SKIPPED | status=ringing (foreground CallKit auto-dismiss guard)');
+          return;
+        }
         if (callId.isNotEmpty) _rejectCallById(callId);
       } else if (event is CallEventActionCallEnded || event is CallEventActionCallTimeout) {
         CallKitParams? params;

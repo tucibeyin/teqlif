@@ -292,8 +292,20 @@ async def start_call(
         )
     )
     if caller_busy:
-        logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=CALLER_BUSY caller=%d busy_call_id=%s", current_user.id, caller_busy)
-        raise AppException(status_code=409, message="Already in a call", code="CALLER_BUSY")
+        if caller_busy.status == "calling":
+            # Stale "calling" call: callee never answered (client crash / network failure / CallKit auto-dismiss race).
+            # Safe to auto-end — if the call were truly active the status would be "active".
+            caller_busy.status = "ended"
+            caller_busy.ended_at = datetime.now(timezone.utc)
+            await db.commit()
+            logger.info(
+                "[CALL_PROCESS][OUT] start_call: stale CALLING auto-ended | stale_call_id=%d caller=%d",
+                caller_busy.id, current_user.id,
+            )
+        else:
+            # status == "active" → caller is genuinely mid-call, reject.
+            logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=CALLER_BUSY caller=%d busy_call_id=%d", current_user.id, caller_busy.id)
+            raise AppException(status_code=409, message="Already in a call", code="CALLER_BUSY")
 
     # Check if callee is already in an active call
     active_call = await db.scalar(
