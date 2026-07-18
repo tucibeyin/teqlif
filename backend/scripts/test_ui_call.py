@@ -39,6 +39,10 @@ USERS = {
     "android":  "tesbih",
 }
 
+# Hardware device identifiers — fixed per physical device
+ADB_SERIAL_DEFAULT  = "98522010325540"           # tesbih — Samsung S19 Max
+IOS_UDID_DEFAULT    = "00008130-0016759C00FA8D3A" # tucibeyin's iPhone (teqlif)
+
 # Populated at runtime
 TOKENS: dict[str, str] = {}
 CALL_IDS: dict[str, int | None] = {}
@@ -524,21 +528,11 @@ def main() -> None:
             log("ERROR", f"Geçersiz seçim: {choice}")
             sys.exit(1)
 
-    # --- Android device serial (interactive if android selected and not passed) ---
-    adb_device = args.adb_device or ""
-    if callee_filter in ("android", "") and not adb_device:
-        print()
-        print("  Android cihaz serial'ı gir (boş bırakırsan 'adb devices' ile bul):")
-        adb_device = input("  ADB device serial (Enter=otomatik): ").strip()
+    # --- Android device serial (hardcoded default, can be overridden) ---
+    adb_device = args.adb_device or ADB_SERIAL_DEFAULT
 
-    # --- iOS log path (interactive if ios selected and not passed) ---
-    ios_log = args.ios_log or ""
-    if callee_filter in ("ios", "") and not ios_log:
-        print()
-        print("  iOS Xcode log dosyası yolu (Xcode konsolunu txt olarak kaydet):")
-        ios_log = input("  iOS log dosyası (Enter=yok): ").strip() or None
-    elif ios_log == "":
-        ios_log = None
+    # --- iOS log path (optional, pass via --ios-log) ---
+    ios_log = args.ios_log or None
 
     print()
 
