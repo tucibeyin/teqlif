@@ -210,17 +210,36 @@ class LiveKitCaller:
             self._thread.join(timeout=5)
 
     def _run(self) -> None:
+        SAMPLE_RATE       = 48000
+        NUM_CHANNELS      = 1
+        SAMPLES_PER_FRAME = 480  # 10ms @ 48kHz
+
         async def _inner() -> None:
-            room = lk_rtc.Room()
+            room   = lk_rtc.Room()
+            source = lk_rtc.AudioSource(SAMPLE_RATE, NUM_CHANNELS)
+            track  = lk_rtc.LocalAudioTrack.create_audio_track("microphone", source)
             try:
                 await room.connect(self._url, self._token,
-                                   options=lk_rtc.RoomOptions(auto_subscribe=False))
-                log("LK", "Dummy caller joined LiveKit room")
+                                   options=lk_rtc.RoomOptions(auto_subscribe=True))
+                pub_opts = lk_rtc.TrackPublishOptions(
+                    source=lk_rtc.TrackSource.SOURCE_MICROPHONE,
+                )
+                await room.local_participant.publish_track(track, pub_opts)
+                log("LK", "Dummy caller joined LiveKit — publishing silent audio track")
                 self._ready.set()
+
+                # Push silent int16 frames at 100Hz to keep the track alive
+                silent_frame = lk_rtc.AudioFrame(
+                    data=bytes(SAMPLES_PER_FRAME * NUM_CHANNELS * 2),
+                    sample_rate=SAMPLE_RATE,
+                    num_channels=NUM_CHANNELS,
+                    samples_per_channel=SAMPLES_PER_FRAME,
+                )
                 while not self._stop.is_set():
                     if room.connection_state != lk_rtc.ConnectionState.CONN_CONNECTED:
                         break
-                    await asyncio.sleep(0.4)
+                    await source.capture_frame(silent_frame)
+                    await asyncio.sleep(0.01)
             except Exception as e:
                 log("WARN", f"LiveKit caller error: {e}")
                 self._ready.set()
@@ -230,6 +249,7 @@ class LiveKitCaller:
                 except Exception:
                     pass
                 log("LK", "Dummy caller left LiveKit room")
+
         asyncio.run(_inner())
 
 # ---------------------------------------------------------------------------
