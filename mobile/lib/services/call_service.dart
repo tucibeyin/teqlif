@@ -1741,7 +1741,7 @@ class CallService {
 
   void _stopProximitySensor() {
     if (_proximitySub == null) return;
-    _proximitySub!.cancel();
+    _proximitySub!.cancel().catchError((_) {});
     _proximitySub = null;
     if (Platform.isAndroid) {
       ProximitySensor.setProximityScreenOff(false).catchError((_) {});
