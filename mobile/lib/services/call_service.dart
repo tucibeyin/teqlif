@@ -21,6 +21,7 @@ import '../config/api.dart';
 import '../core/app_exception.dart';
 import '../services/storage_service.dart';
 import 'push_notification_service.dart';
+import '../models/call_event.dart';
 
 void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
@@ -194,6 +195,11 @@ class CallService {
   // CallScreen bu notifier'ı doğrudan dinler; overlay ve diğer listener'lar etkilenmez.
   final ValueNotifier<Duration> elapsed = ValueNotifier(Duration.zero);
 
+  // Typed event stream — all signaling sources (WS, FCM, CallKit) emit here.
+  // Consumers can listen without depending on the raw Map<String, dynamic> format.
+  final _eventController = StreamController<CallEvent>.broadcast();
+  Stream<CallEvent> get callEventStream => _eventController.stream;
+
   /// acceptedAt backing field accessor — use instead of state.value.acceptedAt internally.
   DateTime? get acceptedAt => _acceptedAt ?? state.value.acceptedAt;
 
@@ -309,8 +315,31 @@ class CallService {
     );
   }
 
+  // WhatsApp-style explicit transition table.
+  // Log-only guard (no hard block) during hardening phase — prevents blind drift.
+  static const Map<CallStatus, Set<CallStatus>> _allowedTransitions = {
+    CallStatus.idle: {CallStatus.calling, CallStatus.ringing},
+    CallStatus.calling: {CallStatus.connecting, CallStatus.ended, CallStatus.rejected, CallStatus.missed, CallStatus.noAnswer, CallStatus.busy, CallStatus.idle},
+    CallStatus.ringing: {CallStatus.connecting, CallStatus.ended, CallStatus.missed, CallStatus.rejected, CallStatus.idle},
+    CallStatus.connecting: {CallStatus.connected, CallStatus.ended, CallStatus.idle, CallStatus.reconnecting},
+    CallStatus.connected: {CallStatus.ended, CallStatus.reconnecting, CallStatus.idle},
+    CallStatus.reconnecting: {CallStatus.connected, CallStatus.ended, CallStatus.idle},
+    CallStatus.ended: {CallStatus.idle},
+    CallStatus.rejected: {CallStatus.idle},
+    CallStatus.missed: {CallStatus.idle},
+    CallStatus.noAnswer: {CallStatus.idle},
+    CallStatus.busy: {CallStatus.idle},
+    CallStatus.permissionDenied: {CallStatus.idle},
+  };
+
   void _setState(CallState s) {
     final oldStatus = state.value.status;
+    if (oldStatus != s.status) {
+      final allowed = _allowedTransitions[oldStatus] ?? {};
+      if (!allowed.contains(s.status)) {
+        _cpLog('STATE', 'WARN unexpected transition ${oldStatus.name} → ${s.status.name} | allowed=${allowed.map((e) => e.name).join(",")} callId=${s.callId}');
+      }
+    }
     _cpLog('STATE', '${oldStatus.name} → ${s.status.name} | callId=${s.callId}');
     final oldPoor = state.value.isPoorConnection;
 
@@ -2064,6 +2093,39 @@ class CallService {
       }
     } catch (e) {
       _cpLog('RECOVERY', 'checkActiveCall FAILED | $e (non-fatal, call proceeds without recovery)');
+    }
+  }
+
+  /// Single entry point for all call signaling events.
+  ///
+  /// Parse raw WS/FCM payload → typed [CallEvent] → publish to [callEventStream]
+  /// → delegate to existing handler. All signaling sources should eventually
+  /// converge here for unified logging, typing, and observability.
+  void processEvent(Map<String, dynamic> data) {
+    final event = CallEvent.fromMap(data);
+    _cpLog('EVENT', 'processEvent | type=${data["type"]} → ${event.runtimeType}');
+
+    if (!_eventController.isClosed) {
+      _eventController.add(event);
+    }
+
+    switch (event) {
+      case IncomingCallEvent():
+        onIncomingCall(event.toMap());
+      case CallAcceptedEvent():
+        onCallAccepted({'type': 'call_accepted', 'call_id': event.callId});
+      case CallRejectedEvent():
+        onCallRejected();
+      case CallEndedEvent():
+        onCallEnded();
+      case CallMissedEvent():
+        onCallMissed(callId: event.callId);
+      case WsConnectedEvent():
+        checkActiveCall();
+      case _:
+        // IncomingCallTapEvent, IncomingCallAutoAcceptEvent, UnknownCallEvent:
+        // still handled by IncomingCallOverlay via the raw stream.
+        _cpLog('EVENT', 'processEvent: delegated to overlay | type=${data["type"]}');
     }
   }
 }

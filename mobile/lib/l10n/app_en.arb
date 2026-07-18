@@ -2831,5 +2831,18 @@
   "callBatteryOptSkip": "Not Now",
   "callAudioQualityPoor": "Poor connection quality",
   "callAudioQualityLost": "Connection lost",
-  "callActiveNow": "Call in Progress"
+  "callActiveNow": "Call in Progress",
+  "callHistoryTitle": "Recent Calls",
+  "callHistoryAll": "All",
+  "callHistoryMissed": "Missed",
+  "callHistoryIncoming": "Incoming",
+  "callHistoryOutgoing": "Outgoing",
+  "callHistoryEmpty": "No calls yet",
+  "callHistoryDurationShort": "{mm}:{ss}",
+  "@callHistoryDurationShort": {
+    "placeholders": {
+      "mm": {"type": "String"},
+      "ss": {"type": "String"}
+    }
+  }
 }

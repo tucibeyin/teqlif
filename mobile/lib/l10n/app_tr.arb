@@ -2794,5 +2794,18 @@
   "callBatteryOptSkip": "Şimdi Değil",
   "callAudioQualityPoor": "Bağlantı kalitesi düşük",
   "callAudioQualityLost": "Bağlantı kesildi",
-  "callActiveNow": "Arama Devam Ediyor"
+  "callActiveNow": "Arama Devam Ediyor",
+  "callHistoryTitle": "Son Aramalar",
+  "callHistoryAll": "Tümü",
+  "callHistoryMissed": "Cevapsız",
+  "callHistoryIncoming": "Gelen",
+  "callHistoryOutgoing": "Giden",
+  "callHistoryEmpty": "Henüz arama yok",
+  "callHistoryDurationShort": "{mm}:{ss}",
+  "@callHistoryDurationShort": {
+    "placeholders": {
+      "mm": {"type": "String"},
+      "ss": {"type": "String"}
+    }
+  }
 }

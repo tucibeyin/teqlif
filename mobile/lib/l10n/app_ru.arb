@@ -2796,5 +2796,18 @@
   "callBatteryOptSkip": "Не сейчас",
   "callAudioQualityPoor": "Слабое качество связи",
   "callAudioQualityLost": "Соединение потеряно",
-  "callActiveNow": "Звонок продолжается"
+  "callActiveNow": "Звонок продолжается",
+  "callHistoryTitle": "Последние звонки",
+  "callHistoryAll": "Все",
+  "callHistoryMissed": "Пропущенные",
+  "callHistoryIncoming": "Входящие",
+  "callHistoryOutgoing": "Исходящие",
+  "callHistoryEmpty": "Звонков ещё нет",
+  "callHistoryDurationShort": "{mm}:{ss}",
+  "@callHistoryDurationShort": {
+    "placeholders": {
+      "mm": {"type": "String"},
+      "ss": {"type": "String"}
+    }
+  }
 }

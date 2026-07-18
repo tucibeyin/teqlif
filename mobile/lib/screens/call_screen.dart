@@ -153,6 +153,51 @@ class _CallScreenState extends State<CallScreen> {
                       ),
                     ),
 
+                    // Poor connection banner — slides in/out at the top
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: AnimatedSlide(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                        offset: cs.isPoorConnection && cs.status == CallStatus.connected
+                            ? Offset.zero
+                            : const Offset(0, -1),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 250),
+                          opacity: cs.isPoorConnection && cs.status == CallStatus.connected ? 1.0 : 0.0,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            color: Colors.orange.withValues(alpha: 0.92),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.signal_wifi_bad,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  l.callAudioQualityPoor,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
                     Column(
                       children: [
                         const SizedBox(height: 64),
@@ -205,27 +250,12 @@ class _CallScreenState extends State<CallScreen> {
                         ValueListenableBuilder<Duration>(
                           valueListenable: CallService.instance.elapsed,
                           builder: (context, elapsedDuration, _) {
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (cs.isPoorConnection &&
-                                    cs.status == CallStatus.connected)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 6),
-                                    child: Icon(
-                                      Icons.signal_cellular_connected_no_internet_4_bar,
-                                      color: Colors.orange,
-                                      size: 18,
-                                    ),
-                                  ),
-                                Text(
-                                  _statusText(cs.status, l, elapsedDuration),
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary(context),
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
+                            return Text(
+                              _statusText(cs.status, l, elapsedDuration),
+                              style: TextStyle(
+                                color: AppColors.textSecondary(context),
+                                fontSize: 16,
+                              ),
                             );
                           },
                         ),

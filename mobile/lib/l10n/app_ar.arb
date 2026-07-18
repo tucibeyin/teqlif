@@ -2795,5 +2795,18 @@
   "callBatteryOptSkip": "ليس الآن",
   "callAudioQualityPoor": "جودة الاتصال ضعيفة",
   "callAudioQualityLost": "انقطع الاتصال",
-  "callActiveNow": "المكالمة جارية"
+  "callActiveNow": "المكالمة جارية",
+  "callHistoryTitle": "المكالمات الأخيرة",
+  "callHistoryAll": "الكل",
+  "callHistoryMissed": "الفائتة",
+  "callHistoryIncoming": "الواردة",
+  "callHistoryOutgoing": "الصادرة",
+  "callHistoryEmpty": "لا توجد مكالمات بعد",
+  "callHistoryDurationShort": "{mm}:{ss}",
+  "@callHistoryDurationShort": {
+    "placeholders": {
+      "mm": {"type": "String"},
+      "ss": {"type": "String"}
+    }
+  }
 }

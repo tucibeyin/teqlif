@@ -8,6 +8,7 @@ Flow:
   POST /{id}/end     → other party gets WS call_ended; LK room deleted
   POST /{id}/missed  → callee gets WS call_missed (caller-side 30s timeout)
   GET  /active       → returns current user's active/calling call (crash/reconnect recovery)
+  GET  /history      → paginated call history for the current user
 """
 import asyncio
 import time
@@ -788,3 +789,101 @@ async def missed_call(
 
     logger.info("[CALL_PROCESS][END] missed_call OK | call_id=%d caller=%d", call_id, current_user.id)
     return {"ok": True}
+
+
+# ── History ──────────────────────────────────────────────────────────────────
+
+@router.get("/history")
+async def get_call_history(
+    page: int = 1,
+    per_page: int = 20,
+    filter: str = "all",  # "all" | "missed" | "incoming" | "outgoing"
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Paginated call history for the current user.
+
+    Returns newest-first. Each item includes role (caller/callee), status,
+    duration_seconds, started_at, and the other participant's public profile.
+
+    filter:
+      all      — every call the user participated in
+      missed   — calls where status=missed and user is callee
+      incoming — user was callee (any status)
+      outgoing — user was caller (any status)
+    """
+    if per_page < 1 or per_page > 100:
+        raise HTTPException(status_code=400, detail="per_page must be 1-100")
+    if page < 1:
+        raise HTTPException(status_code=400, detail="page must be >= 1")
+
+    uid = current_user.id
+
+    base_where = or_(Call.caller_id == uid, Call.callee_id == uid)
+
+    if filter == "missed":
+        filter_where = (Call.callee_id == uid) & (Call.status == "missed")
+    elif filter == "incoming":
+        filter_where = Call.callee_id == uid
+    elif filter == "outgoing":
+        filter_where = Call.caller_id == uid
+    else:
+        filter_where = base_where
+
+    offset = (page - 1) * per_page
+
+    result = await db.execute(
+        select(Call)
+        .where(filter_where)
+        .order_by(Call.started_at.desc())
+        .limit(per_page)
+        .offset(offset)
+    )
+    calls = result.scalars().all()
+
+    # Collect all unique other-user IDs in one query
+    other_ids = set()
+    for c in calls:
+        other_ids.add(c.callee_id if c.caller_id == uid else c.caller_id)
+
+    other_users: dict[int, User] = {}
+    if other_ids:
+        users_result = await db.execute(
+            select(User).where(User.id.in_(other_ids))
+        )
+        for u in users_result.scalars().all():
+            other_users[u.id] = u
+
+    items = []
+    for c in calls:
+        role = "caller" if c.caller_id == uid else "callee"
+        other_id = c.callee_id if role == "caller" else c.caller_id
+        other = other_users.get(other_id)
+        items.append({
+            "call_id": c.id,
+            "status": c.status,
+            "role": role,
+            "duration_seconds": c.duration_seconds,
+            "started_at": c.started_at.isoformat() if c.started_at else None,
+            "accepted_at": c.accepted_at.isoformat() if c.accepted_at else None,
+            "ended_at": c.ended_at.isoformat() if c.ended_at else None,
+            "other_user": {
+                "id": other_id,
+                "username": other.username if other else None,
+                "avatar": other.avatar if other else None,
+            } if other else None,
+        })
+
+    has_more = len(calls) == per_page
+
+    logger.info(
+        "[CALL_PROCESS][HISTORY] get_call_history | user=%d filter=%s page=%d per_page=%d count=%d has_more=%s",
+        uid, filter, page, per_page, len(items), has_more
+    )
+    return {
+        "items": items,
+        "page": page,
+        "per_page": per_page,
+        "has_more": has_more,
+    }

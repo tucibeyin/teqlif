@@ -1306,8 +1306,9 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
             await db.commit()
 
             # İki tarafa da missed event'i at
-            await ws_manager.send_personal_message(caller_id, {"type": "call_missed", "call_id": call_id})
-            await ws_manager.send_personal_message(callee_id, {"type": "call_missed", "call_id": call_id})
+            await ws_manager.publish("dm_broadcast", f"dm:{caller_id}", {"type": "call_missed", "call_id": call_id})
+            await ws_manager.publish("dm_broadcast", f"dm:{callee_id}", {"type": "call_missed", "call_id": call_id})
+            logger.info("[CALL_PROCESS][ARQ] delayed_call_timeout_task: WS call_missed sent | caller=%d callee=%d call_id=%d", caller_id, callee_id, call_id)
 
             # Push bildirimi — title/body her zaman tanımlı, güvenli
             if caller and callee and callee.fcm_token:
@@ -1413,8 +1414,9 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
                     rooms_to_delete.append(call.room_name)
                     # FIX: WS bildirimi — kullanıcılar ekranda takılı kalmasın
                     try:
-                        await ws_manager.send_personal_message(call.caller_id, {"type": "call_missed", "call_id": call.id})
-                        await ws_manager.send_personal_message(call.callee_id, {"type": "call_missed", "call_id": call.id})
+                        await ws_manager.publish("dm_broadcast", f"dm:{call.caller_id}", {"type": "call_missed", "call_id": call.id})
+                        await ws_manager.publish("dm_broadcast", f"dm:{call.callee_id}", {"type": "call_missed", "call_id": call.id})
+                        logger.info("[CALL_PROCESS][GHOST] WS call_missed sent | caller=%d callee=%d call_id=%d", call.caller_id, call.callee_id, call.id)
                     except Exception as ws_err:
                         logger.warning("Ghost call WS notify failed for %d: %s", call.id, ws_err)
 
@@ -1430,8 +1432,9 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
                         rooms_to_delete.append(call.room_name)
                         # FIX: WS bildirimi
                         try:
-                            await ws_manager.send_personal_message(call.caller_id, {"type": "call_ended", "call_id": call.id})
-                            await ws_manager.send_personal_message(call.callee_id, {"type": "call_ended", "call_id": call.id})
+                            await ws_manager.publish("dm_broadcast", f"dm:{call.caller_id}", {"type": "call_ended", "call_id": call.id})
+                            await ws_manager.publish("dm_broadcast", f"dm:{call.callee_id}", {"type": "call_ended", "call_id": call.id})
+                            logger.info("[CALL_PROCESS][GHOST] WS call_ended sent | caller=%d callee=%d call_id=%d", call.caller_id, call.callee_id, call.id)
                         except Exception as ws_err:
                             logger.warning("Ghost call WS notify failed for %d: %s", call.id, ws_err)
 
