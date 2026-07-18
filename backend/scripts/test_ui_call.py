@@ -510,19 +510,53 @@ def main() -> None:
     print(f"  Time: {ts()}")
     print("=" * 60)
 
-    # Credentials
+    # --- Device selection (interactive if not passed via --callee) ---
+    callee_filter = args.callee.lower() if args.callee else ""
+    if not callee_filter:
+        print()
+        print("  Hangi cihazda test yapacaksın?")
+        print("  [1] iOS   (teqlif)")
+        print("  [2] Android (tesbih)")
+        print("  [3] Her ikisi")
+        choice = input("  Seçim (1/2/3): ").strip()
+        callee_filter = {"1": "ios", "2": "android", "3": ""}.get(choice, "")
+        if choice not in ("1", "2", "3"):
+            log("ERROR", f"Geçersiz seçim: {choice}")
+            sys.exit(1)
+
+    # --- Android device serial (interactive if android selected and not passed) ---
+    adb_device = args.adb_device or ""
+    if callee_filter in ("android", "") and not adb_device:
+        print()
+        print("  Android cihaz serial'ı gir (boş bırakırsan 'adb devices' ile bul):")
+        adb_device = input("  ADB device serial (Enter=otomatik): ").strip()
+
+    # --- iOS log path (interactive if ios selected and not passed) ---
+    ios_log = args.ios_log or ""
+    if callee_filter in ("ios", "") and not ios_log:
+        print()
+        print("  iOS Xcode log dosyası yolu (Xcode konsolunu txt olarak kaydet):")
+        ios_log = input("  iOS log dosyası (Enter=yok): ").strip() or None
+    elif ios_log == "":
+        ios_log = None
+
+    print()
+
+    # --- Credentials ---
     caller_pass  = input(f"Password for {USERS['caller']}: ")
-    ios_pass     = input(f"Password for {USERS['ios']}:    ")
-    android_pass = input(f"Password for {USERS['android']}:  ")
+    ios_pass     = input(f"Password for {USERS['ios']}:    ") if callee_filter in ("ios", "") else ""
+    android_pass = input(f"Password for {USERS['android']}:  ") if callee_filter in ("android", "") else ""
 
     log("AUTH", "Logging in...")
     TOKENS["caller"]  = login(USERS["caller"],  caller_pass)
-    TOKENS["ios"]     = login(USERS["ios"],     ios_pass)
-    TOKENS["android"] = login(USERS["android"], android_pass)
+    if ios_pass:
+        TOKENS["ios"]     = login(USERS["ios"],     ios_pass)
+    if android_pass:
+        TOKENS["android"] = login(USERS["android"], android_pass)
     log("AUTH", "All tokens acquired")
 
     # Start adb capture
-    android_thread = start_android_logcat(args.adb_device or None)
+    android_thread = start_android_logcat(adb_device or None)
     android_active = android_thread is not None
 
     # Build and filter test cases
@@ -531,14 +565,12 @@ def main() -> None:
     if args.tc:
         wanted = {x.strip().upper() for x in args.tc.split(",")}
         all_cases = [c for c in all_cases if c.tc_id in wanted]
-    if args.callee:
-        all_cases = [c for c in all_cases if c.callee == args.callee.lower()]
+    if callee_filter:
+        all_cases = [c for c in all_cases if c.callee == callee_filter]
 
     if not all_cases:
         log("ERROR", "No test cases matched the given filters")
         sys.exit(1)
-
-    ios_log = args.ios_log or None
 
     log("INFO", f"Running {len(all_cases)} test case(s)")
     results: list[dict] = []
