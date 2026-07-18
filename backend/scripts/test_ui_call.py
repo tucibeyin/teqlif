@@ -76,7 +76,7 @@ def api(method: str, path: str, token: str | None = None, **kwargs) -> requests.
     return resp
 
 def login(username: str, password: str) -> str:
-    r = api("POST", "/api/auth/login", json={"username": username, "password": password})
+    r = api("POST", "/api/auth/login", json={"login_identifier": username, "password": password})
     if r.status_code != 200:
         raise RuntimeError(f"Login failed for {username}: {r.status_code} {r.text}")
     return r.json()["access_token"]
