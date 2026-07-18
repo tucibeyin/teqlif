@@ -126,6 +126,26 @@ def get_call_status(token: str, call_id: int) -> str:
         return "unknown"
     return r.json().get("status", "unknown")
 
+def cleanup_stale_calls() -> None:
+    """Her test çalıştırması öncesinde backend'de kalan aktif çağrıları temizler."""
+    for role, token in TOKENS.items():
+        if not token:
+            continue
+        r = api("GET", "/api/calls/active", token)
+        if r.status_code != 200:
+            continue
+        active = r.json().get("active_call")
+        if not active:
+            continue
+        call_id = active.get("call_id")
+        status  = active.get("status", "?")
+        log("CLEANUP", f"Stale call found for {role} | call_id={call_id} status={status} → ending")
+        er = api("POST", f"/api/calls/{call_id}/end", token)
+        if er.status_code in (200, 204):
+            log("CLEANUP", f"call_id={call_id} ended OK")
+        else:
+            log("WARN", f"Failed to end call_id={call_id}: {er.status_code} {er.text}")
+
 # ---------------------------------------------------------------------------
 # Terminal interaction helpers
 # ---------------------------------------------------------------------------
@@ -313,7 +333,16 @@ class TestCase:
                 human_prompt(detail)
 
             elif action == "start_call":
-                call_id, lk_token, lk_url = start_call(caller_token, callee_username)
+                try:
+                    call_id, lk_token, lk_url = start_call(caller_token, callee_username)
+                except RuntimeError as e:
+                    if "409" in str(e) and "CALLER_BUSY" in str(e):
+                        log("CLEANUP", f"[{tc}] 409 CALLER_BUSY on start_call → cleaning up and retrying once")
+                        cleanup_stale_calls()
+                        time.sleep(1)
+                        call_id, lk_token, lk_url = start_call(caller_token, callee_username)
+                    else:
+                        raise
                 CALL_IDS[tc] = call_id
                 log_event(tc, "CALL_STARTED", f"call_id={call_id} callee={callee_username}")
                 # Join LiveKit so callee sees ParticipantConnectedEvent → CONNECTED
@@ -655,6 +684,9 @@ def main() -> None:
     if callee_filter in ("android", ""):
         USER_IDS[USERS["android"]] = get_user_id(caller_token, USERS["android"])
     log("AUTH", f"User IDs resolved: {USER_IDS}")
+
+    # Test öncesi kalan çağrıları temizle
+    cleanup_stale_calls()
 
     # Start adb capture
     android_thread = start_android_logcat(adb_device or None)
