@@ -881,6 +881,36 @@ class CallService {
     await Hardware.instance.setSpeakerphoneOn(false);
     final totalMs = DateTime.now().difference(activateStartAt).inMilliseconds;
     _cpLog('IN', '_activateCalleeAudio DONE | totalMs=$totalMs');
+
+    // Pre-connect sırasında (ringing) TrackSubscribed skipped edildi.
+    // Şimdi connecting state'indeyiz; remote audio zaten subscribe edilmişse
+    // yeni TrackSubscribed gelmez → burada kontrol et.
+    if (state.value.status == CallStatus.connecting && _room != null) {
+      final anyAudioSubscribed = _room!.remoteParticipants.values.any(
+        (p) => p.trackPublications.values.any(
+          (pub) => pub.subscribed && pub.kind == TrackType.AUDIO,
+        ),
+      );
+      _cpLog('IN', '_activateCalleeAudio: post-audio check | anyAudioSubscribed=$anyAudioSubscribed');
+      if (anyAudioSubscribed) {
+        _cpLog('LK', '_activateCalleeAudio: remote audio already subscribed → connected immediately');
+        stopRingtoneAndVibration();
+        final nowUtc = DateTime.now().toUtc();
+        final acceptedAt = state.value.acceptedAt;
+        final audioLag = acceptedAt != null ? nowUtc.difference(acceptedAt.toUtc()).inMilliseconds : -1;
+        _cpLog('TIMER', '_activateCalleeAudio → CONNECTED | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} nowUtc=${nowUtc.toIso8601String()} acceptToAudioMs=$audioLag');
+        _setState(state.value.copyWith(status: CallStatus.connected, acceptedAt: _acceptedAt));
+        _startElapsedTimer();
+        _startProximitySensor();
+        _startStatsMonitor();
+        _startNetworkMonitor();
+        if (Platform.isAndroid) {
+          _cpLog('HW', 'speakerphone SET | enabled=false context=_activateCalleeAudio-already-subscribed isSpeaker=false');
+          Hardware.instance.setSpeakerphoneOn(false);
+          _setState(state.value.copyWith(isSpeaker: false));
+        }
+      }
+    }
   }
 
   void playNotification() {
