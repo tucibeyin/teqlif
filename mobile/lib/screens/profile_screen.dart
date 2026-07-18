@@ -51,6 +51,7 @@ import 'sales_screen.dart';
 import '../services/share_service.dart';
 import '../services/wallet_service.dart';
 import 'faq_screen.dart';
+import 'call_history_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -1961,6 +1962,12 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           _SettingsSection(
             title: l.profileAccountSection,
             items: [
+              _SettingsTile(
+                icon: Icons.call_outlined,
+                label: l.callHistoryTitle,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const CallHistoryScreen())),
+              ),
               _SettingsTile(
                 icon: Icons.star_outline,
                 label: l.settingsMyRatings,
