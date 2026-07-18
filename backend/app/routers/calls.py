@@ -454,6 +454,12 @@ async def reject_call(
         logger.info("[CALL_PROCESS][IN] reject_call ALREADY TERMINAL | call_id=%d status=%s callee=%d", call_id, call.status, current_user.id)
         return {"ok": True}
 
+    if call.status == "active":
+        # Call was already accepted — callee device sent a stale reject (ghost-call dismiss race).
+        # Silently ignore: accepted calls must be ended via /end, not rejected.
+        logger.info("[CALL_PROCESS][IN] reject_call BLOCKED (call accepted) | call_id=%d callee=%d", call_id, current_user.id)
+        return {"ok": True}
+
     room_name = call.room_name
     caller_id = call.caller_id
     call_id_val = call.id
