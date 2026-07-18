@@ -732,7 +732,7 @@ async def _send_missed_call_push(callee: User, caller: User) -> None:
         title=title,
         body=body,
         notif_type="call_missed",
-        extra_data={"caller_username": caller.username, "related_id": str(caller.id)}
+        extra_data={"caller_username": caller.username, "related_id": str(caller.id), "call_id": str(call_id)}
     )
 
 @router.post("/{call_id}/missed")

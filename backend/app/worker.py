@@ -1317,7 +1317,7 @@ async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, cal
                     title=title,
                     body=body,
                     notif_type="call_missed",
-                    extra_data={"caller_username": caller.username, "related_id": str(caller.id)}
+                    extra_data={"caller_username": caller.username, "related_id": str(caller.id), "call_id": str(call_id)}
                 )
 
             # LK oda sil — timeout-missed çağrılar cleanup_ghost_calls'a düşmez

@@ -1022,7 +1022,7 @@ class CallService {
       'preConnectAgeMs=$preConnectAgeMs nowUtc=${DateTime.now().toUtc().toIso8601String()}',
     );
 
-    if (_room != null) {
+    if (_room != null && !_isJoiningRoom) {
       // _fetchAndStoreCalleeToken pre-connect tamamlandı → sadece audio aktive et.
       // Bu yol: callee pre-connect ÇALIŞIYOR (WhatsApp kalitesi).
       _cpLog('IN', 'acceptCall: callee pre-connect ROOM READY → _activateCalleeAudio | preConnectAgeMs=$preConnectAgeMs');
@@ -1030,7 +1030,7 @@ class CallService {
         _cpLog('IN', 'acceptCall _activateCalleeAudio ERROR | $e');
       });
     } else if (_isJoiningRoom) {
-      // Pre-connect room.connect() devam ediyor.
+      // Pre-connect room.connect() devam ediyor (_room null veya non-null olabilir).
       // _joinRoom else bloğu status=connecting + callStatusAtEntry=ringing detektörü devralacak.
       _cpLog('IN', 'acceptCall: callee pre-connect IN PROGRESS (_joinRoom running) → _activateCalleeAudio deferred | preConnectAgeMs=$preConnectAgeMs');
     } else if (preConnectUrl != null && preConnectToken != null) {
@@ -1260,8 +1260,19 @@ class CallService {
       _cpLog('END', 'onCallMissed SKIPPED | no active call (state.callId=null) incoming=$callId (stale event)');
       return;
     }
+    // Guard: a connected/reconnecting call cannot be missed — stale queued FCM.
+    if (state.value.status == CallStatus.connected ||
+        state.value.status == CallStatus.reconnecting) {
+      _cpLog('END', 'onCallMissed SKIPPED | call already connected | incoming=$callId current=${state.value.callId}');
+      return;
+    }
+    // Guard: no call_id in event → cannot verify target call, ignore.
+    if (callId == null) {
+      _cpLog('END', 'onCallMissed SKIPPED | no call_id in event | current=${state.value.callId} (stale queued FCM)');
+      return;
+    }
     // Guard: callId mismatch → event for a different call, ignore.
-    if (callId != null && callId != state.value.callId) {
+    if (callId != state.value.callId) {
       _cpLog('END', 'onCallMissed SKIPPED | callId mismatch incoming=$callId current=${state.value.callId}');
       return;
     }
