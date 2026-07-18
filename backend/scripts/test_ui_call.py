@@ -326,175 +326,171 @@ class TestCase:
 def build_test_cases(auto: bool) -> list[TestCase]:
     a = "auto" if auto else "human"
 
-    cases: list[TestCase] = [
-        # ------------------------------------------------------------------
-        # FG — Foreground tests (callee app is open and in foreground)
-        # ------------------------------------------------------------------
-        TestCase("FG1", "Caller calls iOS (FG), callee accepts", "ios", a, [
-            {"action": "human_setup",   "detail": "Ensure teqlif (iOS) app is OPEN and in FOREGROUND"},
+    # ------------------------------------------------------------------
+    # iOS sequence — app açık kalır, sadece home/FG geçişi yapılır
+    # Sıra: FG kabul → BG kabul → FG red → pill → pill+BG bar → caller iptal → timeout → kilit
+    # ------------------------------------------------------------------
+    ios_cases: list[TestCase] = [
+        TestCase("FG1", "iOS FG: arama gelir, callee kabul eder", "ios", a, [
+            {"action": "human_setup",   "detail": "teqlif (iOS) uygulaması AÇIK ve FOREGROUND'da olsun"},
             {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR appear on iOS?"},
+            {"action": "verify_human",  "detail": "iOS'ta INCOMING_BAR göründü mü?"},
             {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did CALL_SCREEN show CONNECTED state on iOS?"},
+            {"action": "verify_human",  "detail": "iOS'ta CALL_SCREEN CONNECTED durumuna geçti mi?"},
             {"action": "auto_end",      "wait": 3},
-            {"action": "verify_human",  "detail": "Did CALL_SCREEN dismiss on iOS after end?"},
+            {"action": "verify_human",  "detail": "Çağrı bittikten sonra CALL_SCREEN kapandı mı?"},
             {"action": "collect_logs"},
         ]),
 
-        TestCase("FG2", "Caller calls Android (FG), callee accepts", "android", a, [
-            {"action": "human_setup",   "detail": "Ensure tesbih (Android) app is OPEN and in FOREGROUND"},
+        TestCase("BG1", "iOS BG: arama gelir, uygulama FG'ye alınır, kabul edilir", "ios", a, [
+            {"action": "human_bg",      "detail": "teqlif uygulamasını BACKGROUND'a al (home swipe) — KAPATMA"},
             {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR appear on Android?"},
+            {"action": "verify_human",  "detail": "iOS'ta sistem bildirimi çıktı mı?"},
+            {"action": "human_fg",      "detail": "Bildirimine veya app'e dokun → teqlif'i FOREGROUND'a al"},
+            {"action": "verify_human",  "detail": "iOS'ta INCOMING_BAR veya INCOMING_SCREEN göründü mü?"},
             {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did CALL_SCREEN show CONNECTED state on Android?"},
+            {"action": "verify_human",  "detail": "CALL_SCREEN CONNECTED oldu mu?"},
             {"action": "auto_end",      "wait": 3},
-            {"action": "verify_human",  "detail": "Did CALL_SCREEN dismiss on Android after end?"},
             {"action": "collect_logs"},
         ]),
 
-        TestCase("FG3", "Caller calls iOS (FG), callee declines", "ios", a, [
-            {"action": "human_setup",   "detail": "Ensure teqlif (iOS) app is OPEN and in FOREGROUND"},
+        TestCase("FG3", "iOS FG: arama gelir, callee reddeder", "ios", a, [
+            {"action": "human_setup",   "detail": "teqlif (iOS) FOREGROUND'da olsun"},
             {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
             {"action": "auto_reject" if auto else "human_reject"},
             {"action": "wait",          "wait": 3},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR disappear on iOS after decline?"},
+            {"action": "verify_human",  "detail": "Reddetikten sonra INCOMING_BAR kayboldu mu?"},
             {"action": "collect_logs"},
         ]),
 
-        TestCase("FG4", "Caller calls Android (FG), callee declines", "android", a, [
-            {"action": "human_setup",   "detail": "Ensure tesbih (Android) app is OPEN and in FOREGROUND"},
+        TestCase("ACT1", "iOS: bağlı çağrı minimize → pill → pill'e tap → ekran açılır", "ios", a, [
+            {"action": "human_setup",   "detail": "teqlif (iOS) FOREGROUND'da olsun"},
             {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "auto_reject" if auto else "human_reject"},
-            {"action": "wait",          "wait": 3},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR disappear on Android after decline?"},
-            {"action": "collect_logs"},
-        ]),
-
-        # ------------------------------------------------------------------
-        # BG — Background tests (callee app is open but backgrounded)
-        # ------------------------------------------------------------------
-        TestCase("BG1", "Caller calls iOS (BG), callee brings FG and accepts", "ios", a, [
-            {"action": "human_setup",   "detail": "Ensure teqlif (iOS) is running but in BACKGROUND"},
-            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did system notification appear on iOS?"},
-            {"action": "human_fg",      "detail": "Open teqlif app from notification (bring to FG)"},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR or INCOMING_SCREEN appear on iOS?"},
             {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did CALL_SCREEN show CONNECTED?"},
+            {"action": "human_minimize","detail": "iOS CALL_SCREEN'de aşağı ok (minimize) butonuna tap"},
+            {"action": "wait",          "wait": 2},
+            {"action": "verify_human",  "detail": "Ekranın üstünde yeşil pill göründü mü?"},
+            {"action": "human_setup",   "detail": "Yeşil pill'e tap yap"},
+            {"action": "wait",          "wait": 2},
+            {"action": "verify_human",  "detail": "CALL_SCREEN yeniden açıldı mı?"},
             {"action": "auto_end",      "wait": 3},
             {"action": "collect_logs"},
         ]),
 
-        TestCase("BG2", "Caller calls Android (BG), callee brings FG and accepts", "android", a, [
-            {"action": "human_setup",   "detail": "Ensure tesbih (Android) is running but in BACKGROUND"},
+        TestCase("ACT3", "iOS: bağlı çağrı varken app BG → FG → ACTIVE_BAR görünür", "ios", a, [
+            {"action": "human_setup",   "detail": "teqlif (iOS) FOREGROUND'da olsun"},
             {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did system notification appear on Android?"},
-            {"action": "human_fg",      "detail": "Open tesbih app from notification (bring to FG)"},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR or INCOMING_SCREEN appear on Android?"},
             {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did CALL_SCREEN show CONNECTED?"},
+            {"action": "verify_human",  "detail": "CALL_SCREEN CONNECTED gösteriyor mu?"},
+            {"action": "human_bg",      "detail": "teqlif'i BACKGROUND'a al (home swipe) — çağrı devam ediyor"},
+            {"action": "wait",          "wait": 2},
+            {"action": "human_fg",      "detail": "teqlif'i tekrar FOREGROUND'a al"},
+            {"action": "verify_human",  "detail": "Başka bir ekrandayken üstte ACTIVE_BAR göründü mü? (ya da CALL_SCREEN restore oldu mu?)"},
             {"action": "auto_end",      "wait": 3},
             {"action": "collect_logs"},
         ]),
 
-        # ------------------------------------------------------------------
-        # ACT — Active call bar and pill tests
-        # ------------------------------------------------------------------
-        TestCase("ACT1", "Connected iOS call: minimize to pill, tap pill to restore", "ios", a, [
-            {"action": "human_setup",   "detail": "Ensure teqlif (iOS) app is OPEN and in FOREGROUND"},
-            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
-            {"action": "human_minimize","detail": "TAP MINIMIZE (chevron-down) on iOS CALL_SCREEN"},
-            {"action": "wait",          "wait": 2},
-            {"action": "verify_human",  "detail": "Did the green pill appear at the top of the iOS screen?"},
-            {"action": "human_prompt" if True else "", "detail": "TAP the green pill on iOS to return to call screen"},
-            {"action": "wait",          "wait": 2},
-            {"action": "verify_human",  "detail": "Did CALL_SCREEN reopen on iOS?"},
+        TestCase("LIFE2", "iOS: arayan çağrıyı cevap gelmeden iptal eder", "ios", a, [
+            {"action": "human_setup",   "detail": "teqlif (iOS) FOREGROUND'da olsun"},
+            {"action": "start_call",    "wait": 3},
             {"action": "auto_end",      "wait": 3},
+            {"action": "verify_human",  "detail": "Caller iptal ettikten sonra INCOMING_BAR kayboldu mu?"},
             {"action": "collect_logs"},
         ]),
 
-        TestCase("ACT2", "Connected Android call: minimize to pill, end from pill", "android", a, [
-            {"action": "human_setup",   "detail": "Ensure tesbih (Android) app is OPEN and in FOREGROUND"},
-            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
-            {"action": "human_minimize","detail": "TAP MINIMIZE (chevron-down) on Android CALL_SCREEN"},
-            {"action": "wait",          "wait": 2},
-            {"action": "verify_human",  "detail": "Did the green pill appear on Android?"},
-            {"action": "human_end",     "detail": "TAP the red END button on the green pill on Android"},
-            {"action": "wait",          "wait": 3},
-            {"action": "verify_human",  "detail": "Did the pill disappear after ending from pill?"},
-            {"action": "collect_logs"},
-        ]),
-
-        TestCase("ACT3", "iOS connected, background app → ACTIVE_BAR visible", "ios", a, [
-            {"action": "human_setup",   "detail": "Ensure teqlif (iOS) app is OPEN and in FOREGROUND"},
-            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Is CALL_SCREEN showing CONNECTED on iOS?"},
-            {"action": "human_bg",      "detail": "Put teqlif (iOS) into BACKGROUND (home swipe up)"},
-            {"action": "wait",          "wait": 2},
-            {"action": "human_fg",      "detail": "Bring teqlif (iOS) back to FOREGROUND"},
-            {"action": "verify_human",  "detail": "Did ACTIVE_BAR appear at the top while in another screen? (or call screen restored?)"},
-            {"action": "auto_end",      "wait": 3},
-            {"action": "collect_logs"},
-        ]),
-
-        # ------------------------------------------------------------------
-        # LIFE — Call lifecycle edge cases
-        # ------------------------------------------------------------------
-        TestCase("LIFE1", "Caller calls iOS, no answer (timeout)", "ios", "human", [
-            {"action": "human_setup",   "detail": "Ensure teqlif (iOS) app is OPEN — do NOT accept"},
+        TestCase("LIFE1", "iOS: cevap verilmez, çağrı timeout olur (~35s)", "ios", "human", [
+            {"action": "human_setup",   "detail": "teqlif (iOS) FOREGROUND'da olsun — KABUL ETME"},
             {"action": "start_call",    "wait": 35},
             {"action": "check_status"},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR disappear after timeout on iOS?"},
+            {"action": "verify_human",  "detail": "Timeout sonrası INCOMING_BAR kayboldu mu?"},
             {"action": "collect_logs"},
         ]),
 
-        TestCase("LIFE2", "Caller cancels call before callee answers (iOS)", "ios", a, [
-            {"action": "human_setup",   "detail": "Ensure teqlif (iOS) app is OPEN and in FOREGROUND"},
-            {"action": "start_call",    "wait": 3},
-            {"action": "auto_end",      "wait": 3, "detail": "Caller cancels"},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR disappear on iOS after caller cancel?"},
-            {"action": "collect_logs"},
-        ]),
-
-        TestCase("LIFE3", "Caller cancels call before callee answers (Android)", "android", a, [
-            {"action": "human_setup",   "detail": "Ensure tesbih (Android) app is OPEN and in FOREGROUND"},
-            {"action": "start_call",    "wait": 3},
-            {"action": "auto_end",      "wait": 3, "detail": "Caller cancels"},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR disappear on Android after caller cancel?"},
-            {"action": "collect_logs"},
-        ]),
-
-        # ------------------------------------------------------------------
-        # LOCK — Lock screen tests
-        # ------------------------------------------------------------------
-        TestCase("LOCK1", "Call arrives on locked iOS device", "ios", "human", [
-            {"action": "human_setup",   "detail": "LOCK the teqlif (iOS) device screen now"},
+        TestCase("LOCK1", "iOS: kilit ekranında arama gelir", "ios", "human", [
+            {"action": "human_lock",    "detail": "teqlif (iOS) cihazını KILITLE"},
             {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did lock screen notification appear on iOS?"},
-            {"action": "human_unlock",  "detail": "UNLOCK the iOS device and open teqlif"},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR or INCOMING_SCREEN appear after unlock?"},
+            {"action": "verify_human",  "detail": "Kilit ekranında bildirim çıktı mı?"},
+            {"action": "human_unlock",  "detail": "Cihazı AÇ ve teqlif uygulamasına gir"},
+            {"action": "verify_human",  "detail": "INCOMING_BAR veya INCOMING_SCREEN göründü mü?"},
             {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did CALL_SCREEN reach CONNECTED state?"},
-            {"action": "auto_end",      "wait": 3},
-            {"action": "collect_logs"},
-        ]),
-
-        TestCase("LOCK2", "Call arrives on locked Android device", "android", "human", [
-            {"action": "human_setup",   "detail": "LOCK the tesbih (Android) device screen now"},
-            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did lock screen notification appear on Android?"},
-            {"action": "human_unlock",  "detail": "UNLOCK the Android device and open tesbih"},
-            {"action": "verify_human",  "detail": "Did INCOMING_BAR or INCOMING_SCREEN appear after unlock?"},
-            {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
-            {"action": "verify_human",  "detail": "Did CALL_SCREEN reach CONNECTED state?"},
+            {"action": "verify_human",  "detail": "CALL_SCREEN CONNECTED oldu mu?"},
             {"action": "auto_end",      "wait": 3},
             {"action": "collect_logs"},
         ]),
     ]
-    return cases
+
+    # ------------------------------------------------------------------
+    # Android sequence — app açık kalır, sadece home/FG geçişi yapılır
+    # Sıra: FG kabul → BG kabul → FG red → pill → caller iptal → kilit
+    # ------------------------------------------------------------------
+    android_cases: list[TestCase] = [
+        TestCase("FG2", "Android FG: arama gelir, callee kabul eder", "android", a, [
+            {"action": "human_setup",   "detail": "tesbih (Android) uygulaması AÇIK ve FOREGROUND'da olsun"},
+            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
+            {"action": "verify_human",  "detail": "Android'de INCOMING_BAR göründü mü?"},
+            {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
+            {"action": "verify_human",  "detail": "Android'de CALL_SCREEN CONNECTED durumuna geçti mi?"},
+            {"action": "auto_end",      "wait": 3},
+            {"action": "verify_human",  "detail": "Çağrı bittikten sonra CALL_SCREEN kapandı mı?"},
+            {"action": "collect_logs"},
+        ]),
+
+        TestCase("BG2", "Android BG: arama gelir, uygulama FG'ye alınır, kabul edilir", "android", a, [
+            {"action": "human_bg",      "detail": "tesbih uygulamasını BACKGROUND'a al (home tuşu) — KAPATMA"},
+            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
+            {"action": "verify_human",  "detail": "Android'de sistem bildirimi çıktı mı?"},
+            {"action": "human_fg",      "detail": "Bildirime veya app'e dokun → tesbih'i FOREGROUND'a al"},
+            {"action": "verify_human",  "detail": "Android'de INCOMING_BAR veya INCOMING_SCREEN göründü mü?"},
+            {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
+            {"action": "verify_human",  "detail": "CALL_SCREEN CONNECTED oldu mu?"},
+            {"action": "auto_end",      "wait": 3},
+            {"action": "collect_logs"},
+        ]),
+
+        TestCase("FG4", "Android FG: arama gelir, callee reddeder", "android", a, [
+            {"action": "human_setup",   "detail": "tesbih (Android) FOREGROUND'da olsun"},
+            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
+            {"action": "auto_reject" if auto else "human_reject"},
+            {"action": "wait",          "wait": 3},
+            {"action": "verify_human",  "detail": "Reddetikten sonra INCOMING_BAR kayboldu mu?"},
+            {"action": "collect_logs"},
+        ]),
+
+        TestCase("ACT2", "Android: bağlı çağrı minimize → pill → pill'den kapat", "android", a, [
+            {"action": "human_setup",   "detail": "tesbih (Android) FOREGROUND'da olsun"},
+            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
+            {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
+            {"action": "human_minimize","detail": "Android CALL_SCREEN'de aşağı ok (minimize) butonuna tap"},
+            {"action": "wait",          "wait": 2},
+            {"action": "verify_human",  "detail": "Ekranın üstünde yeşil pill göründü mü?"},
+            {"action": "human_end",     "detail": "Yeşil pill üzerindeki kırmızı END butonuna tap"},
+            {"action": "wait",          "wait": 3},
+            {"action": "verify_human",  "detail": "Pill kaybolduktan sonra çağrı bitti mi?"},
+            {"action": "collect_logs"},
+        ]),
+
+        TestCase("LIFE3", "Android: arayan çağrıyı cevap gelmeden iptal eder", "android", a, [
+            {"action": "human_setup",   "detail": "tesbih (Android) FOREGROUND'da olsun"},
+            {"action": "start_call",    "wait": 3},
+            {"action": "auto_end",      "wait": 3},
+            {"action": "verify_human",  "detail": "Caller iptal ettikten sonra INCOMING_BAR kayboldu mu?"},
+            {"action": "collect_logs"},
+        ]),
+
+        TestCase("LOCK2", "Android: kilit ekranında arama gelir", "android", "human", [
+            {"action": "human_lock",    "detail": "tesbih (Android) cihazını KILITLE"},
+            {"action": "start_call",    "wait": CALL_WAIT_SECONDS},
+            {"action": "verify_human",  "detail": "Kilit ekranında bildirim çıktı mı?"},
+            {"action": "human_unlock",  "detail": "Cihazı AÇ ve tesbih uygulamasına gir"},
+            {"action": "verify_human",  "detail": "INCOMING_BAR veya INCOMING_SCREEN göründü mü?"},
+            {"action": "auto_accept" if auto else "human_accept", "wait": CALL_WAIT_SECONDS},
+            {"action": "verify_human",  "detail": "CALL_SCREEN CONNECTED oldu mu?"},
+            {"action": "auto_end",      "wait": 3},
+            {"action": "collect_logs"},
+        ]),
+    ]
+
+    return ios_cases + android_cases
 
 # ---------------------------------------------------------------------------
 # Main
