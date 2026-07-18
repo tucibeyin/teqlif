@@ -23,8 +23,15 @@ import subprocess
 import threading
 from pathlib import Path
 
+import asyncio
 import getpass
 import requests
+
+try:
+    from livekit import rtc as lk_rtc
+    LIVEKIT_AVAILABLE = True
+except ImportError:
+    LIVEKIT_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
 # Config
@@ -82,14 +89,15 @@ def login(username: str, password: str) -> str:
         raise RuntimeError(f"Login failed for {username}: {r.status_code} {r.text}")
     return r.json()["access_token"]
 
-def start_call(caller_token: str, callee_username: str) -> int:
+def start_call(caller_token: str, callee_username: str) -> tuple[int, str, str]:
+    """Returns (call_id, livekit_token, livekit_url)."""
     callee_id = USER_IDS[callee_username]
     r = api("POST", "/api/calls/start", caller_token,
             json={"callee_id": callee_id})
     if r.status_code != 200:
         raise RuntimeError(f"start_call failed: {r.status_code} {r.text}")
     data = r.json()
-    return data["call_id"]
+    return data["call_id"], data["token"], data["livekit_url"]
 
 def accept_call(callee_token: str, call_id: int) -> None:
     r = api("POST", f"/api/calls/{call_id}/accept", callee_token)
@@ -173,6 +181,58 @@ def dump_android_log(tc: str) -> None:
             print(f"  {l}")
 
 # ---------------------------------------------------------------------------
+# LiveKit dummy caller — joins room so callee sees ParticipantConnectedEvent
+# ---------------------------------------------------------------------------
+class LiveKitCaller:
+    """Connects to a LiveKit room as a silent participant (no audio published).
+    This is enough for the callee to receive ParticipantConnectedEvent and
+    transition from 'connecting' to 'connected'."""
+
+    def __init__(self, url: str, token: str):
+        self._url   = url
+        self._token = token
+        self._stop  = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._ready = threading.Event()  # set when room.connect() completes
+
+    def start(self) -> None:
+        if not LIVEKIT_AVAILABLE:
+            log("WARN", "livekit package not installed — caller will NOT join LiveKit room. "
+                        "Run: pip install livekit")
+            return
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        self._ready.wait(timeout=10)
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=5)
+
+    def _run(self) -> None:
+        async def _inner() -> None:
+            room = lk_rtc.Room()
+            try:
+                await room.connect(self._url, self._token,
+                                   options=lk_rtc.RoomOptions(auto_subscribe=False))
+                log("LK", "Dummy caller joined LiveKit room")
+                self._ready.set()
+                while not self._stop.is_set():
+                    if room.connection_state != lk_rtc.ConnectionState.CONN_CONNECTED:
+                        break
+                    await asyncio.sleep(0.4)
+            except Exception as e:
+                log("WARN", f"LiveKit caller error: {e}")
+                self._ready.set()
+            finally:
+                try:
+                    await room.disconnect()
+                except Exception:
+                    pass
+                log("LK", "Dummy caller left LiveKit room")
+        asyncio.run(_inner())
+
+# ---------------------------------------------------------------------------
 # iOS log file parsing
 # ---------------------------------------------------------------------------
 def parse_ios_log(path: str, since: datetime.datetime) -> list[str]:
@@ -222,6 +282,7 @@ class TestCase:
 
         tc_start = datetime.datetime.now()
         call_id: int | None = None
+        lk_caller: LiveKitCaller | None = None
 
         for step in self.steps:
             action = step["action"]
@@ -232,9 +293,12 @@ class TestCase:
                 human_prompt(detail)
 
             elif action == "start_call":
-                call_id = start_call(caller_token, callee_username)
+                call_id, lk_token, lk_url = start_call(caller_token, callee_username)
                 CALL_IDS[tc] = call_id
                 log_event(tc, "CALL_STARTED", f"call_id={call_id} callee={callee_username}")
+                # Join LiveKit so callee sees ParticipantConnectedEvent → CONNECTED
+                lk_caller = LiveKitCaller(lk_url, lk_token)
+                lk_caller.start()
                 if wait:
                     countdown(wait, "Waiting for ring UI")
 
@@ -268,11 +332,17 @@ class TestCase:
                 if call_id is None:
                     log("ERROR", "auto_end: no call_id"); return
                 countdown(int(END_DELAY), "Auto-ending call")
+                if lk_caller:
+                    lk_caller.stop()
+                    lk_caller = None
                 end_call(caller_token, call_id)
                 log_event(tc, "API_END", f"call_id={call_id}")
 
             elif action == "human_end":
                 human_prompt(detail or "TAP END CALL on device or script presses end")
+                if lk_caller:
+                    lk_caller.stop()
+                    lk_caller = None
                 log_event(tc, "HUMAN_END_DONE", "")
 
             elif action == "human_bg":
@@ -316,6 +386,10 @@ class TestCase:
                 if not passed and result not in ("skip", "s"):
                     self.passed = False
                     self.notes.append(f"FAIL: {detail}")
+
+        # Cleanup: stop dummy caller if still running (reject / timeout scenarios)
+        if lk_caller:
+            lk_caller.stop()
 
         # Final log collect
         if android_active and self.callee == "android":
