@@ -74,6 +74,16 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
         _cpLog('UI', 'auto_accept → openCallScreen (CallKit accepted)');
         _openCallScreen();
         break;
+      case 'connected':
+        // WS (re)connected — check if we're in a call we don't know about.
+        // Covers: crash-restart, network handoff, WS session kick by real device.
+        // Guard: only run when idle so we don't clobber an already-active call state.
+        final recoveryStatus = CallService.instance.state.value.status;
+        _cpLog('UI', 'WS connected event | currentStatus=${recoveryStatus.name} → checkActiveCall if idle');
+        if (recoveryStatus == CallStatus.idle) {
+          CallService.instance.checkActiveCall();
+        }
+        break;
       case 'call_accepted':
         _cpLog('UI', 'call_accepted WS → onCallAccepted + openCallScreen | acceptedAt=${data['accepted_at']} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
         _cpLog('TIMER', 'overlay: call_accepted WS received | acceptedAt=${data['accepted_at']} nowUtc=${DateTime.now().toUtc().toIso8601String()}');

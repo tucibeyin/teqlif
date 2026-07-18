@@ -14,6 +14,7 @@ Users:
 TC01–TC18: 2-user core lifecycle, idempotency, race, auth, endpoint checks
 TC19–TC20: 2-user concurrent race & explicit active-guard validation
 TC21–TC28: 3-user multi-party scenarios (WhatsApp-style busy, isolation, cross-role)
+TC29–TC32: GET /calls/active recovery endpoint (crash recovery, reconnect)
 """
 
 import asyncio
@@ -912,6 +913,128 @@ async def tc28_callee_busy_in_active(caller: ApiClient, callee: ApiClient, third
     await caller.post(f"/calls/{call_id1}/end")
 
 
+
+# ─── TC29-TC32: GET /calls/active recovery endpoint ────────────────────────────
+
+async def tc29_active_caller_recovery(caller: ApiClient, callee: ApiClient):
+    """GET /calls/active while caller is in 'calling' state.
+    Simulates crash recovery: caller restarts app, queries active call, restores state."""
+    log("\n=== TC29: Active call recovery — caller perspective (calling state) ===")
+    await ensure_clean(caller, callee)
+
+    s, d = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC29: A→B startCall 200", s == 200, f"status={s}")
+    if s != 200:
+        return
+    call_id = d["call_id"]
+    await asyncio.sleep(0.3)
+
+    s2, d2 = await caller.get("/calls/active")
+    record("TC29: GET /calls/active 200", s2 == 200, f"status={s2}")
+    active = d2.get("active_call")
+    record("TC29: active_call not null", active is not None, f"data={d2}")
+    if active:
+        record("TC29: role=caller", active.get("role") == "caller",         f"role={active.get('role')}")
+        record("TC29: status=calling",active.get("status") == "calling",    f"status={active.get('status')}")
+        record("TC29: call_id matches", active.get("call_id") == call_id,   f"active_id={active.get('call_id')} expected={call_id}")
+        record("TC29: fresh token present", bool(active.get("token")),       f"token_len={len(active.get('token',''))}")
+        record("TC29: room_name present", bool(active.get("room_name")),     f"room={active.get('room_name','')[:30]}")
+        record("TC29: other_user.username=tesbih",
+               (active.get("other_user") or {}).get("username") == callee.username,
+               f"other={active.get('other_user')}")
+        record("TC29: livekit_url present", bool(active.get("livekit_url")), f"url={active.get('livekit_url','')[:30]}")
+        record("TC29: accepted_at is null (not yet accepted)", active.get("accepted_at") is None)
+    log(f"  [TC29] DEBUG active_call={active}")
+    await caller.post(f"/calls/{call_id}/end")
+
+
+async def tc30_active_callee_recovery(caller: ApiClient, callee: ApiClient):
+    """GET /calls/active while callee is being ringed.
+    Simulates callee app restart — should restore incoming call state."""
+    log("\n=== TC30: Active call recovery — callee perspective (ringing) ===")
+    await ensure_clean(caller, callee)
+
+    s, d = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC30: A→B startCall 200", s == 200, f"status={s}")
+    if s != 200:
+        return
+    call_id = d["call_id"]
+    await asyncio.sleep(0.3)
+
+    s2, d2 = await callee.get("/calls/active")
+    record("TC30: GET /calls/active 200", s2 == 200, f"status={s2}")
+    active = d2.get("active_call")
+    record("TC30: active_call not null (callee sees incoming)", active is not None, f"data={d2}")
+    if active:
+        record("TC30: role=callee",        active.get("role") == "callee",       f"role={active.get('role')}")
+        record("TC30: status=calling",     active.get("status") == "calling",    f"status={active.get('status')}")
+        record("TC30: call_id matches",    active.get("call_id") == call_id,     f"active_id={active.get('call_id')} expected={call_id}")
+        record("TC30: fresh token present",bool(active.get("token")),            f"token_len={len(active.get('token',''))}")
+        record("TC30: other_user.username=teqlif",
+               (active.get("other_user") or {}).get("username") == caller.username,
+               f"other={active.get('other_user')}")
+    await caller.post(f"/calls/{call_id}/end")
+
+
+async def tc31_active_no_call(caller: ApiClient):
+    """GET /calls/active when no call is in progress → active_call=null (never 404)."""
+    log("\n=== TC31: GET /calls/active — no active call ===")
+    # No ensure_clean needed: the test just checks the idle state.
+
+    s, d = await caller.get("/calls/active")
+    record("TC31: GET /calls/active 200 (no call)", s == 200, f"status={s}")
+    active = d.get("active_call")
+    record("TC31: active_call is null", active is None, f"active_call={active}")
+
+
+async def tc32_active_accepted_call_recovery(caller: ApiClient, callee: ApiClient):
+    """GET /calls/active while call is in 'active' status (both parties accepted).
+    Both caller and callee should get role-appropriate fresh LK tokens."""
+    log("\n=== TC32: Active call recovery — live call (both sides) ===")
+    await ensure_clean(caller, callee)
+
+    s, d = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC32: A→B startCall 200", s == 200, f"status={s}")
+    if s != 200:
+        return
+    call_id = d["call_id"]
+    await asyncio.sleep(0.3)
+
+    s2, _ = await callee.post(f"/calls/{call_id}/accept")
+    record("TC32: B accepts 200", s2 == 200, f"status={s2}")
+    await asyncio.sleep(0.3)
+    record("TC32: DB=active", await db_call_status(call_id) == "active")
+
+    # Caller recovery
+    s3, d3 = await caller.get("/calls/active")
+    record("TC32: caller GET /calls/active 200", s3 == 200, f"status={s3}")
+    ca = d3.get("active_call")
+    record("TC32: caller active_call not null",  ca is not None,                  f"data={d3}")
+    if ca:
+        record("TC32: caller role=caller",       ca.get("role")   == "caller",    f"role={ca.get('role')}")
+        record("TC32: caller status=active",     ca.get("status") == "active",    f"status={ca.get('status')}")
+        record("TC32: caller token present",     bool(ca.get("token")),           f"token_len={len(ca.get('token',''))}")
+        record("TC32: caller accepted_at set",   ca.get("accepted_at") is not None, f"accepted_at={ca.get('accepted_at','')[:30]}")
+
+    # Callee recovery
+    s4, d4 = await callee.get("/calls/active")
+    record("TC32: callee GET /calls/active 200", s4 == 200, f"status={s4}")
+    cb = d4.get("active_call")
+    record("TC32: callee active_call not null",  cb is not None,                  f"data={d4}")
+    if cb:
+        record("TC32: callee role=callee",       cb.get("role")   == "callee",    f"role={cb.get('role')}")
+        record("TC32: callee status=active",     cb.get("status") == "active",    f"status={cb.get('status')}")
+        record("TC32: callee token present",     bool(cb.get("token")),           f"token_len={len(cb.get('token',''))}")
+
+    # Tokens should be different (different user roles → different LK grants)
+    if ca and cb and ca.get("token") and cb.get("token"):
+        record("TC32: caller and callee get distinct tokens",
+               ca.get("token") != cb.get("token"),
+               f"same={ca.get('token') == cb.get('token')}")
+
+    await caller.post(f"/calls/{call_id}/end")
+
+
 # ─── FINAL CLEANUP ─────────────────────────────────────────────────────────────
 
 async def final_cleanup(*users: ApiClient):
@@ -1051,6 +1174,16 @@ async def main():
             await asyncio.sleep(1)
         else:
             log("\n  [SKIP] TC21-TC28 skipped (third user login failed)")
+
+        # ── Recovery endpoint ───────────────────────────────────────────────────
+        await tc31_active_no_call(caller)           # no-call case first (cheap, no cleanup)
+        await asyncio.sleep(0.5)
+        await tc29_active_caller_recovery(caller, callee)
+        await asyncio.sleep(1)
+        await tc30_active_callee_recovery(caller, callee)
+        await asyncio.sleep(1)
+        await tc32_active_accepted_call_recovery(caller, callee)
+        await asyncio.sleep(1)
 
         await final_cleanup(caller, callee, third)
 

@@ -60,6 +60,16 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     } else {
       await FlutterCallkitIncoming.endAllCalls();
     }
+  } else if (message.data['type'] == 'call_accepted') {
+    // Silent data push: caller's app was suspended/killed while waiting for answer.
+    // Background isolate cannot access CallService (UI services not initialized).
+    // Recovery happens when caller brings the app to foreground:
+    //   app resume → WsService reconnects → "connected" event → checkActiveCall()
+    // This log entry helps confirm the push was delivered to the background isolate.
+    debugPrint(
+      '[FCM][BG][RECOVERY] call_accepted received in background | '
+      'call_id=${message.data['call_id']} — recovery via checkActiveCall() on foreground',
+    );
   } else {
     debugPrint('[FCM][BG] arama dışı type, işlem yok');
   }
@@ -277,11 +287,17 @@ class PushNotificationService {
 
     // Foreground FCM
     FirebaseMessaging.onMessage.listen((msg) {
-      debugPrint('[FCM] Foreground | type=${msg.data['type']}');
+      final type = msg.data['type'] as String? ?? 'unknown';
+      debugPrint('[FCM] Foreground | type=$type');
       final data = Map<String, dynamic>.from(msg.data);
-      data['is_foreground_receive'] = true; // Ön plan işareti eklendi
-      if (data['type'] == 'incoming_call') {
+      data['is_foreground_receive'] = true;
+      if (type == 'incoming_call') {
         debugPrint('[FCM] Foreground incoming_call — stream\'e ekleniyor');
+      } else if (type == 'call_accepted') {
+        // call_accepted FCM: caller was in foreground but WS may have been down.
+        // notificationStream → IncomingCallOverlay._onData handles 'call_accepted'
+        // the same way the WS event does → CallService.onCallAccepted() → openCallScreen.
+        _cpLog('PUSH', 'call_accepted FCM foreground | call_id=${data['call_id']} → notificationStream');
       }
       notificationStream.add(data);
     });

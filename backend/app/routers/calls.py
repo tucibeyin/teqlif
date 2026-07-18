@@ -3,10 +3,11 @@ Voice call signaling endpoints.
 
 Flow:
   POST /start        → caller gets LK token; callee gets WS event + FCM push
-  POST /{id}/accept  → callee gets LK token; caller gets WS call_accepted
+  POST /{id}/accept  → callee gets LK token; caller gets WS call_accepted + FCM (backup for background)
   POST /{id}/reject  → caller gets WS call_rejected
   POST /{id}/end     → other party gets WS call_ended; LK room deleted
   POST /{id}/missed  → callee gets WS call_missed (caller-side 30s timeout)
+  GET  /active       → returns current user's active/calling call (crash/reconnect recovery)
 """
 import asyncio
 import time
@@ -119,6 +120,74 @@ async def get_call_status(
     return {
         "status": call.status,
         "accepted_at": call.accepted_at.isoformat() if call.accepted_at else None,
+    }
+
+
+# ── GET /api/calls/active ─────────────────────────────────────────────────────
+
+@router.get("/active")
+async def get_active_call(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns the caller's or callee's currently active/ringing call.
+    Used by mobile client for crash recovery and WS-reconnect state restore.
+
+    Response shape:
+      { "active_call": { call_id, status, role, room_name, livekit_url,
+                         token, other_user, accepted_at, created_at } }
+    active_call is null when the user has no active call — always 200.
+    """
+    logger.info("[CALL_PROCESS][RECOVERY] get_active_call ENTER | user=%d", current_user.id)
+
+    result = await db.execute(
+        select(Call).where(
+            or_(Call.caller_id == current_user.id, Call.callee_id == current_user.id),
+            Call.status.in_(["calling", "active"]),
+        ).order_by(Call.started_at.desc()).limit(1)
+    )
+    call = result.scalar_one_or_none()
+
+    if not call:
+        logger.info("[CALL_PROCESS][RECOVERY] get_active_call → no active call | user=%d", current_user.id)
+        return {"active_call": None}
+
+    role = "caller" if call.caller_id == current_user.id else "callee"
+    other_user_id = call.callee_id if role == "caller" else call.caller_id
+    other_user = await db.get(User, other_user_id)
+
+    # Always generate a fresh LK token — original token TTL may have elapsed after crash/restart.
+    token = _make_livekit_token(call.room_name, current_user)
+
+    logger.info(
+        "[CALL_PROCESS][RECOVERY] get_active_call → found | call_id=%d status=%s role=%s "
+        "caller=%d callee=%d other=%s token_len=%d",
+        call.id, call.status, role,
+        call.caller_id, call.callee_id,
+        other_user.username if other_user else "?",
+        len(token),
+    )
+
+    return {
+        "active_call": {
+            "call_id": call.id,
+            "status": call.status,
+            "role": role,
+            "room_name": call.room_name,
+            "livekit_url": settings.livekit_url,
+            "token": token,
+            "other_user": {
+                "id": other_user_id,
+                "username": other_user.username if other_user else None,
+                "avatar": (
+                    other_user.profile_image_thumb_url
+                    or other_user.profile_image_url
+                ) if other_user else None,
+            },
+            "accepted_at": call.accepted_at.isoformat() if call.accepted_at else None,
+            "started_at": call.started_at.isoformat() if call.started_at else None,
+        }
     }
 
 
@@ -456,6 +525,40 @@ async def accept_call(
         "[CALL_PROCESS][IN] accept_call: call_accepted WS sent (pre-token-gen) | call_id=%d caller=%d",
         call_id_val, caller_id,
     )
+
+    # FCM backup: WS is the primary channel but may be missed if caller's screen is locked
+    # (iOS suspended) or WS is momentarily down. Silent data push wakes the app; on resume
+    # WsService "connected" event triggers checkActiveCall() which restores the calling state
+    # and opens the call screen.  iOS: content-available=1 wakes background fetch.
+    caller_user = await db.get(User, caller_id)
+    if caller_user and caller_user.fcm_token:
+        logger.info(
+            "[CALL_PROCESS][IN] accept_call: call_accepted FCM push → caller | call_id=%d caller=%d token=%s…",
+            call_id_val, caller_id, caller_user.fcm_token[:10],
+        )
+        try:
+            await send_push(
+                token=caller_user.fcm_token,
+                title="",
+                body="",
+                notif_type="call_accepted",
+                extra_data={"call_id": str(call_id_val)},
+                is_silent=True,
+            )
+            logger.info(
+                "[CALL_PROCESS][IN] accept_call: call_accepted FCM sent | call_id=%d caller=%d",
+                call_id_val, caller_id,
+            )
+        except Exception as push_err:
+            logger.warning(
+                "[CALL_PROCESS][IN] accept_call: call_accepted FCM FAILED (non-fatal) | call_id=%d caller=%d | %s",
+                call_id_val, caller_id, push_err,
+            )
+    else:
+        logger.info(
+            "[CALL_PROCESS][IN] accept_call: call_accepted FCM skipped (no token) | call_id=%d caller=%d has_token=%s",
+            call_id_val, caller_id, "NO",
+        )
 
     token = _make_livekit_token(room_name, current_user)
 

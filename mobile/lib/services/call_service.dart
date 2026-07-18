@@ -1942,4 +1942,128 @@ class CallService {
       state.value.status == CallStatus.connecting ||
       state.value.status == CallStatus.connected ||
       state.value.status == CallStatus.reconnecting;
+
+  // ── Crash / Reconnect Recovery ────────────────────────────────────────────
+
+  /// Queries GET /calls/active and restores call state if a call is in progress.
+  ///
+  /// Called in three situations:
+  ///   1. WS "connected" event fires after reconnect (IncomingCallOverlay)
+  ///   2. App cold-start / login restore (AuthService / main.dart)
+  ///   3. FCM call_accepted push arrives while callId is null (killed app)
+  ///
+  /// Guards: if state is already non-idle this is a no-op — avoids clobbering
+  /// an in-progress call that the caller may have resumed normally.
+  Future<void> checkActiveCall() async {
+    final currentStatus = state.value.status;
+    _cpLog('RECOVERY', 'checkActiveCall ENTER | currentStatus=${currentStatus.name}');
+
+    if (currentStatus != CallStatus.idle) {
+      _cpLog('RECOVERY', 'checkActiveCall SKIPPED | non-idle state=${currentStatus.name} (no-op)');
+      return;
+    }
+
+    try {
+      final data = await _get('/calls/active');
+      final activeCall = data['active_call'];
+
+      if (activeCall == null) {
+        _cpLog('RECOVERY', 'checkActiveCall → no active call (idle confirmed)');
+        return;
+      }
+
+      final callId     = activeCall['call_id'] as int;
+      final callStatus = activeCall['status']  as String;
+      final role       = activeCall['role']    as String;    // "caller" | "callee"
+      final roomName   = activeCall['room_name'] as String;
+      final lkUrl      = activeCall['livekit_url'] as String;
+      final freshToken = activeCall['token']   as String;
+      final otherUser  = activeCall['other_user'] as Map<String, dynamic>? ?? {};
+      final otherUserId   = otherUser['id'] as int?;
+      final otherUsername = otherUser['username'] as String?;
+      final otherAvatar   = otherUser['avatar']   as String?;
+      final acceptedAtStr = activeCall['accepted_at'] as String?;
+      final acceptedAt    = acceptedAtStr != null ? DateTime.tryParse(acceptedAtStr) : null;
+
+      _cpLog(
+        'RECOVERY',
+        'checkActiveCall → active call found | call_id=$callId status=$callStatus role=$role '
+        'other=$otherUsername tokenLen=${freshToken.length}',
+      );
+
+      // Dedup: if this callId is already in memory from a concurrent path, skip.
+      if (state.value.callId == callId && state.value.status != CallStatus.idle) {
+        _cpLog('RECOVERY', 'checkActiveCall DEDUP | call_id=$callId already in state=${state.value.status.name}');
+        return;
+      }
+
+      if (callStatus == 'calling' && role == 'caller') {
+        // Restore outgoing call — we're waiting for the callee to answer.
+        _cpLog('RECOVERY', 'checkActiveCall → RESTORE calling (outgoing) | call_id=$callId callee=$otherUsername');
+        _setState(CallState(
+          status:       CallStatus.calling,
+          callId:       callId,
+          roomName:     roomName,
+          livekitUrl:   lkUrl,
+          token:        freshToken,
+          otherUserId:  otherUserId,
+          otherUsername: otherUsername,
+          otherAvatar:  otherAvatar,
+        ));
+        // Resume the poll so we detect acceptance without relying on WS alone.
+        _startCallerStatusPoll(callId);
+
+      } else if (callStatus == 'calling' && role == 'callee') {
+        // We were being ringed. Reconstruct onIncomingCall with known data.
+        // If the ARQ timeout already fired (status flipped to "missed" server-side),
+        // the /active endpoint returns null and we never reach here.
+        _cpLog('RECOVERY', 'checkActiveCall → RESTORE ringing (incoming) | call_id=$callId caller=$otherUsername');
+        await onIncomingCall({
+          'call_id':        callId,
+          'room_name':      roomName,
+          'livekit_url':    lkUrl,
+          'callee_token':   freshToken,
+          'caller_id':      otherUserId,
+          'caller_username': otherUsername,
+          'caller_avatar':  otherAvatar,
+          '_source':        'checkActiveCall',
+        });
+
+      } else if (callStatus == 'active') {
+        // Call is live — re-join the LiveKit room with a fresh token.
+        _cpLog(
+          'RECOVERY',
+          'checkActiveCall → RESTORE active (reconnecting to LK room) | '
+          'call_id=$callId role=$role other=$otherUsername',
+        );
+        _setState(CallState(
+          status:       CallStatus.reconnecting,
+          callId:       callId,
+          roomName:     roomName,
+          livekitUrl:   lkUrl,
+          token:        freshToken,
+          calleeToken:  role == 'callee' ? freshToken : null,
+          otherUserId:  otherUserId,
+          otherUsername: otherUsername,
+          otherAvatar:  otherAvatar,
+          acceptedAt:   acceptedAt,
+        ));
+        // Sync elapsed timer immediately so the call-screen shows real duration.
+        if (acceptedAt != null) {
+          final alreadyElapsed = DateTime.now().toUtc().difference(acceptedAt.toUtc());
+          if (alreadyElapsed.inMilliseconds > 0) elapsed.value = alreadyElapsed;
+          _cpLog('RECOVERY', 'checkActiveCall → elapsed synced | ${alreadyElapsed.inSeconds}s');
+        }
+        _joinRoom(livekitUrl: lkUrl, token: freshToken).catchError((e) {
+          _cpLog('RECOVERY', 'checkActiveCall _joinRoom ERROR | $e — forcing ended');
+          _hangUpLocally(status: CallStatus.ended);
+        });
+
+      } else {
+        _cpLog('RECOVERY', 'checkActiveCall → unhandled state | status=$callStatus role=$role');
+      }
+    } catch (e) {
+      _cpLog('RECOVERY', 'checkActiveCall FAILED | $e (non-fatal, call proceeds without recovery)');
+    }
+  }
 }
