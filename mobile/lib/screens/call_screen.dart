@@ -14,6 +14,10 @@ void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
 }
 
+void _uiLog(String component, String event, String detail) {
+  debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
+}
+
 class CallScreen extends StatefulWidget {
   const CallScreen({super.key});
 
@@ -30,6 +34,7 @@ class _CallScreenState extends State<CallScreen> {
   void initState() {
     super.initState();
     _cpLog('UI', 'CallScreen initState | callId=${CallService.instance.state.value.callId} status=${CallService.instance.state.value.status.name}');
+    _uiLog('CALL_SCREEN', 'OPEN', 'callId=${CallService.instance.state.value.callId} status=${CallService.instance.state.value.status.name}');
     // isCallScreenVisible → CallRouteObserver yönetir (call_route_observer.dart).
     // initState'den set etmek observer'a ihtiyaç bırakmaz ve frame gecikmesi yaratırdı.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -54,9 +59,11 @@ class _CallScreenState extends State<CallScreen> {
     // elapsed artık CallState'te değil — ayrı notifier'da. _onStateChange'de kullanılmaz.
     final acceptedAt = CallService.instance.state.value.acceptedAt;
     _cpLog('UI', 'CallScreen._onStateChange | status=${s.name} hasActiveCall=${CallService.instance.hasActiveCall} hasPopped=$_hasPopped');
+    _uiLog('CALL_SCREEN', 'STATUS_CHANGE', 'callId=${CallService.instance.state.value.callId} status=${s.name}');
     if (s == CallStatus.connected && CallService.instance.elapsed.value == Duration.zero) {
       final nowUtc = DateTime.now().toUtc();
       _cpLog('TIMER', 'CallScreen: first CONNECTED state | acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"} elapsedNotifier=${CallService.instance.elapsed.value.inMilliseconds}ms nowUtc=${nowUtc.toIso8601String()}');
+      _uiLog('CALL_SCREEN', 'CONNECTED', 'callId=${CallService.instance.state.value.callId} acceptedAt=${acceptedAt?.toIso8601String() ?? "NULL"}');
     }
     if (!CallService.instance.hasActiveCall && mounted && !_hasPopped) {
       if (s == CallStatus.rejected ||
@@ -82,6 +89,7 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void dispose() {
     _cpLog('UI', 'CallScreen dispose | callId=${CallService.instance.state.value.callId}');
+    _uiLog('CALL_SCREEN', 'CLOSE', 'callId=${CallService.instance.state.value.callId} status=${CallService.instance.state.value.status.name}');
     try {
       _proximitySubscription.cancel().catchError((e) {
         _cpLog('UI', 'CallScreen proximity cancel error | $e');
@@ -147,6 +155,7 @@ class _CallScreenState extends State<CallScreen> {
                         ),
                         onPressed: () {
                           _cpLog('UI', 'CallScreen minimize tapped → pop');
+                          _uiLog('CALL_SCREEN', 'MINIMIZE_TAP', 'callId=${CallService.instance.state.value.callId}');
                           _hasPopped = true;
                           Navigator.of(context).pop();
                         },
@@ -381,6 +390,7 @@ class _CallScreenState extends State<CallScreen> {
                                     GestureDetector(
                                       onTap: () {
                                         _cpLog('END', 'CallScreen END CALL tapped | callId=${CallService.instance.state.value.callId}');
+                                        _uiLog('CALL_SCREEN', 'END_TAP', 'callId=${CallService.instance.state.value.callId}');
                                         CallService.instance.endCall();
                                       },
                                       child: Container(

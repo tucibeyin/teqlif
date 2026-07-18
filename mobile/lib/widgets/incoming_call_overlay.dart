@@ -14,6 +14,10 @@ void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
 }
 
+void _uiLog(String component, String event, String detail) {
+  debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
+}
+
 class IncomingCallOverlay extends StatefulWidget {
   final Widget child;
   final GlobalKey<NavigatorState>? navigatorKey;
@@ -119,8 +123,10 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     // Bar görünürlük geçişlerini logla
     if (_prevStatus != CallStatus.ringing && status == CallStatus.ringing) {
       _cpLog('UI', 'BAR SHOW: IncomingCallBar appeared | caller=$caller callId=$callId');
+      _uiLog('INCOMING_BAR', 'SHOW', 'callId=$callId caller=$caller');
     } else if (_prevStatus == CallStatus.ringing && status != CallStatus.ringing) {
       _cpLog('UI', 'BAR HIDE: IncomingCallBar disappeared | reason=${status.name} callId=$callId');
+      _uiLog('INCOMING_BAR', 'HIDE', 'callId=$callId reason=${status.name}');
     }
     _prevStatus = status;
 
@@ -191,6 +197,7 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
     final preConnectReady = CallService.instance.state.value.calleeToken != null;
     _cpLog('UI', 'IncomingCallBar → user ACCEPT tap | callId=$callId caller=$caller nowUtc=${nowUtc.toIso8601String()}');
     _cpLog('TIMER', 'IncomingCallBar: ACCEPT tapped | callId=$callId caller=$caller nowUtc=${nowUtc.toIso8601String()} preConnectTokenReady=$preConnectReady');
+    _uiLog('INCOMING_BAR', 'ACCEPT_TAP', 'callId=$callId caller=$caller');
     CallService.instance.acceptCall();
     _openCallScreen();
   }
@@ -255,7 +262,10 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
                         onTap: _openIncomingScreen,
                         onAccept: _openCallScreenAndAccept,
                         onReject: () {
-                          _cpLog('UI', 'IncomingCallBar → user REJECT tap | callId=${CallService.instance.state.value.callId} caller=${CallService.instance.state.value.otherUsername}');
+                          final _rCallId = CallService.instance.state.value.callId;
+                          final _rCaller = CallService.instance.state.value.otherUsername;
+                          _cpLog('UI', 'IncomingCallBar → user REJECT tap | callId=$_rCallId caller=$_rCaller');
+                          _uiLog('INCOMING_BAR', 'REJECT_TAP', 'callId=$_rCallId caller=$_rCaller');
                           setState(() => _isBarDismissed = true);
                           CallService.instance.rejectCall();
                         },
@@ -503,6 +513,7 @@ class _ActiveCallBarState extends State<_ActiveCallBar> {
   void initState() {
     super.initState();
     CallService.instance.elapsed.addListener(_onElapsed);
+    _uiLog('ACTIVE_BAR', 'SHOW', 'callId=${CallService.instance.state.value.callId} user=${widget.username}');
   }
 
   void _onElapsed() {
@@ -511,6 +522,7 @@ class _ActiveCallBarState extends State<_ActiveCallBar> {
 
   @override
   void dispose() {
+    _uiLog('ACTIVE_BAR', 'HIDE', 'callId=${CallService.instance.state.value.callId} user=${widget.username}');
     CallService.instance.elapsed.removeListener(_onElapsed);
     super.dispose();
   }
@@ -529,6 +541,7 @@ class _ActiveCallBarState extends State<_ActiveCallBar> {
     return GestureDetector(
       onTap: () {
         _cpLog('UI', 'ActiveCallBar TAP → openCallScreen | user=${widget.username}');
+        _uiLog('ACTIVE_BAR', 'TAP', 'callId=${CallService.instance.state.value.callId} user=${widget.username}');
         widget.onTap();
       },
       child: Container(

@@ -12,6 +12,10 @@ void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
 }
 
+void _uiLog(String component, String event, String detail) {
+  debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
+}
+
 class IncomingCallScreen extends StatefulWidget {
   final Map<String, dynamic> callData;
   const IncomingCallScreen({super.key, required this.callData});
@@ -42,6 +46,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     CallService.instance.state.addListener(_onStateChange);
 
     _cpLog('UI', 'IncomingCallScreen initState | callId=${CallService.instance.state.value.callId} caller=${widget.callData['caller_username']}');
+    _uiLog('INCOMING_SCREEN', 'OPEN', 'callId=${CallService.instance.state.value.callId} caller=${widget.callData['caller_username']}');
     _cpLog('SOUND', 'startRingtoneAndVibration → IncomingCallScreen open');
     CallService.instance.startRingtoneAndVibration();
   }
@@ -111,6 +116,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   Future<void> _accept() async {
     _cpLog('IN', 'IncomingCallScreen ACCEPT tapped | callId=${CallService.instance.state.value.callId}');
+    _uiLog('INCOMING_SCREEN', 'ACCEPT_TAP', 'callId=${CallService.instance.state.value.callId}');
     await CallService.instance.acceptCall();
     if (!mounted) return;
     _cpLog('UI', 'IncomingCallScreen → pushReplacement /call_screen after acceptCall');
@@ -125,6 +131,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   Future<void> _decline() async {
     _cpLog('IN', 'IncomingCallScreen DECLINE tapped | callId=${CallService.instance.state.value.callId}');
+    _uiLog('INCOMING_SCREEN', 'DECLINE_TAP', 'callId=${CallService.instance.state.value.callId}');
     await CallService.instance.rejectCall();
   }
 

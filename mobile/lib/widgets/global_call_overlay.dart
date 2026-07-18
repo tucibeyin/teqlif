@@ -5,6 +5,10 @@ import '../l10n/app_localizations.dart';
 import '../config/api.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+void _uiLog(String component, String event, String detail) {
+  debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
+}
+
 class GlobalCallOverlay extends StatefulWidget {
   final Widget child;
   final GlobalKey<NavigatorState> navigatorKey;
@@ -21,6 +25,7 @@ class GlobalCallOverlay extends StatefulWidget {
 
 class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
   final _cs = CallService.instance;
+  bool _prevPillVisible = false;
 
   @override
   void initState() {
@@ -38,8 +43,31 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
     super.dispose();
   }
 
-  void _onVisibilityChange() => setState(() {});
-  void _onStateChange() => setState(() {});
+  void _checkPillTransition() {
+    final isVisible = _cs.isCallScreenVisible.value;
+    final cs = _cs.state.value;
+    final shouldShow = !isVisible &&
+        (cs.status == CallStatus.connected || cs.status == CallStatus.connecting);
+    if (shouldShow != _prevPillVisible) {
+      _prevPillVisible = shouldShow;
+      if (shouldShow) {
+        _uiLog('PILL', 'SHOW', 'callId=${cs.callId} user=${cs.otherUsername} status=${cs.status.name}');
+      } else {
+        _uiLog('PILL', 'HIDE', 'callId=${cs.callId} status=${cs.status.name} isScreenVisible=$isVisible');
+      }
+    }
+  }
+
+  void _onVisibilityChange() {
+    _checkPillTransition();
+    setState(() {});
+  }
+
+  void _onStateChange() {
+    _checkPillTransition();
+    setState(() {});
+  }
+
   void _onElapsedChange() => setState(() {});
 
   String _formatElapsed(Duration d) {
@@ -80,6 +108,7 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
                           final ctx = widget.navigatorKey.currentContext;
                           if (ctx != null) {
                             if (_cs.isCallScreenVisible.value) return;
+                            _uiLog('PILL', 'TAP', 'callId=${_cs.state.value.callId} user=${_cs.state.value.otherUsername}');
                             _cs.isCallScreenVisible.value = true;
                             Navigator.of(ctx).push(
                               MaterialPageRoute(
@@ -192,6 +221,7 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
                               const SizedBox(width: 12),
                               GestureDetector(
                                 onTap: () {
+                                  _uiLog('PILL', 'END_TAP', 'callId=${_cs.state.value.callId} user=${_cs.state.value.otherUsername}');
                                   _cs.endCall();
                                 },
                                 behavior: HitTestBehavior.opaque,

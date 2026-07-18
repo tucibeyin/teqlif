@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/call_service.dart';
 
+void _uiLog(String component, String event, String detail) {
+  debugPrint('[UI_CALL][$component][${DateTime.now().toIso8601String()}] $event | $detail');
+}
+
 /// Navigator stack'i dinleyerek CallScreen görünürlüğünü tek otorite olarak yönetir.
 /// CallScreen.initState / dispose artık bu flag'a dokunmaz.
 /// addPostFrameCallback KULLANILMAZ — didPush/didPop synchronous olarak tetiklenir,
@@ -12,6 +16,7 @@ class CallRouteObserver extends NavigatorObserver {
   void _setVisible(bool value) {
     if (CallService.instance.isCallScreenVisible.value != value) {
       CallService.instance.isCallScreenVisible.value = value;
+      _uiLog('ROUTE', 'VISIBILITY_CHANGE', 'isCallScreenVisible=$value callId=${CallService.instance.state.value.callId}');
     }
   }
 
