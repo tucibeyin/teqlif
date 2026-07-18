@@ -56,28 +56,40 @@ void main() async {
 
       // (Removed custom debugPrint filter to allow all logs)
 
+      final _sw = Stopwatch()..start();
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] main() appRunner start');
+
       // iOS'ta Keychain uygulama silinse de korunur; SharedPreferences silinir.
       // Fresh install tespiti: SharedPreferences'ta flag yoksa → stale Keychain'i temizle.
       final prefs = await SharedPreferences.getInstance();
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] SharedPreferences done | ${_sw.elapsedMilliseconds}ms');
       if (prefs.getBool('app_installed') != true) {
         await StorageService.clear();
         await prefs.setBool('app_installed', true);
       }
 
       await CacheService.init();
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] CacheService.init done | ${_sw.elapsedMilliseconds}ms');
       // Süresi dolmuş Hive kayıtlarını arka planda temizle — startup'ı bloke etme
       CacheService.clearExpired().ignore();
       await StorageService.restoreAvatarUrl();
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] StorageService.restoreAvatarUrl done | ${_sw.elapsedMilliseconds}ms');
       await OfflineQueueService.init();
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] OfflineQueueService.init done | ${_sw.elapsedMilliseconds}ms');
       OfflineQueueService.startDrainOnReconnect();
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] Firebase.initializeApp done | ${_sw.elapsedMilliseconds}ms');
       await ThemeProvider.instance.load();
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] ThemeProvider.load done | ${_sw.elapsedMilliseconds}ms');
       // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
       // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
       PushNotificationService.initEarly();
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] PushNotificationService.initEarly done | ${_sw.elapsedMilliseconds}ms');
       FeedTelemetryService.instance.init();
       await initBackgroundAudio();
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] initBackgroundAudio done | ${_sw.elapsedMilliseconds}ms');
 
+      debugPrint('[STARTUP][${DateTime.now().toIso8601String()}] runApp starting | totalMs=${_sw.elapsedMilliseconds}ms');
       // Sentry appRunner zaten runZonedGuarded ile sarılı olduğundan
       // async hataları da Sentry tarafından yakalanır.
       runApp(const ProviderScope(child: TeqlifApp()));

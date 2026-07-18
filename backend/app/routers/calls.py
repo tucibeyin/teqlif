@@ -462,10 +462,10 @@ async def start_call(
             call.id,
             current_user.id,
             callee_id,
-            _defer_by=timedelta(seconds=35),
+            _defer_by=timedelta(seconds=60),
             _job_id=f"call_timeout_{call.id}"
         )
-        logger.info("[CALL_PROCESS][OUT] start_call: ARQ timeout task enqueued | call_id=%d defer=35s", call.id)
+        logger.info("[CALL_PROCESS][OUT] start_call: ARQ timeout task enqueued | call_id=%d defer=60s", call.id)
     else:
         logger.warning("[CALL_PROCESS][OUT] start_call: ARQ pool not available — timeout task NOT enqueued | call_id=%d", call.id)
 
