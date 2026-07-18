@@ -529,9 +529,9 @@ def build_test_cases(auto: bool) -> list[TestCase]:
             {"action": "collect_logs"},
         ]),
 
-        TestCase("LIFE1", "iOS: cevap verilmez, çağrı timeout olur (~35s)", "ios", "human", [
+        TestCase("LIFE1", "iOS: cevap verilmez, çağrı timeout olur (~60s)", "ios", "human", [
             {"action": "human_setup",   "detail": "teqlif (iOS) FOREGROUND'da olsun — KABUL ETME"},
-            {"action": "start_call",    "wait": 35},
+            {"action": "start_call",    "wait": 60},
             {"action": "check_status"},
             {"action": "verify_human",  "detail": "Timeout sonrası INCOMING_BAR kayboldu mu?"},
             {"action": "collect_logs"},
