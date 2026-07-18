@@ -46,6 +46,7 @@ IOS_UDID_DEFAULT    = "00008130-0016759C00FA8D3A" # tucibeyin's iPhone (teqlif)
 
 # Populated at runtime
 TOKENS: dict[str, str] = {}
+USER_IDS: dict[str, int] = {}
 CALL_IDS: dict[str, int | None] = {}
 
 # ---------------------------------------------------------------------------
@@ -82,8 +83,9 @@ def login(username: str, password: str) -> str:
     return r.json()["access_token"]
 
 def start_call(caller_token: str, callee_username: str) -> int:
+    callee_id = USER_IDS[callee_username]
     r = api("POST", "/api/calls/start", caller_token,
-            json={"callee_username": callee_username})
+            json={"callee_id": callee_id})
     if r.status_code != 200:
         raise RuntimeError(f"start_call failed: {r.status_code} {r.text}")
     data = r.json()
@@ -103,6 +105,12 @@ def end_call(caller_token: str, call_id: int) -> None:
     r = api("POST", f"/api/calls/{call_id}/end", caller_token)
     if r.status_code not in (200, 204):
         raise RuntimeError(f"end_call failed: {r.status_code} {r.text}")
+
+def get_user_id(token: str, username: str) -> int:
+    r = api("GET", f"/api/users/{username}", token)
+    if r.status_code != 200:
+        raise RuntimeError(f"get_user_id failed for {username}: {r.status_code} {r.text}")
+    return r.json()["id"]
 
 def get_call_status(token: str, call_id: int) -> str:
     r = api("GET", f"/api/calls/{call_id}", token)
@@ -545,6 +553,14 @@ def main() -> None:
     if android_pass:
         TOKENS["android"] = login(USERS["android"], android_pass)
     log("AUTH", "All tokens acquired")
+
+    # Resolve user IDs needed for start_call
+    caller_token = TOKENS["caller"]
+    if callee_filter in ("ios", ""):
+        USER_IDS[USERS["ios"]]     = get_user_id(caller_token, USERS["ios"])
+    if callee_filter in ("android", ""):
+        USER_IDS[USERS["android"]] = get_user_id(caller_token, USERS["android"])
+    log("AUTH", f"User IDs resolved: {USER_IDS}")
 
     # Start adb capture
     android_thread = start_android_logcat(adb_device or None)
