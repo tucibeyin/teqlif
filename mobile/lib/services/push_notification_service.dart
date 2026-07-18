@@ -375,15 +375,37 @@ class PushNotificationService {
       } else if (event is CallEventActionCallDecline) {
         final data = Map<String, dynamic>.from(event.callKitParams.extra ?? {});
         final callId = data['call_id']?.toString() ?? '';
-        final currentStatus = CallService.instance.state.value.status;
-        _cpLog('PUSH', 'CallEventActionCallDecline | callId=$callId status=$currentStatus nowUtc=${DateTime.now().toUtc().toIso8601String()}');
-        // Guard: iOS foreground'da VoIP push geldiğinde AppDelegate, CallKit tam ekranını
-        // bastırmak için CXEndCallAction gönderir. Bu onDecline'ı tetikler ve buraya düşer.
-        // Gerçek arama IncomingCallBar ile devam ediyor — reddetme API'yi çağırma.
+        final callIdInt = int.tryParse(callId);
+        final cs = CallService.instance;
+        final currentStatus = cs.state.value.status;
+        _cpLog('PUSH', 'CallEventActionCallDecline | callId=$callId status=$currentStatus activeIncomingId=${cs.activeIncomingCallId} nowUtc=${DateTime.now().toUtc().toIso8601String()}');
+
+        // Guard 1: iOS foreground VoIP push → AppDelegate sends CXEndCallAction to suppress
+        // full-screen CallKit UI. Call is handled by WS/IncomingCallBar — don't reject.
         if (currentStatus == CallStatus.ringing) {
-          _cpLog('PUSH', 'CallEventActionCallDecline SKIPPED | status=ringing (foreground CallKit auto-dismiss guard)');
+          _cpLog('PUSH', 'CallEventActionCallDecline SKIPPED | status=ringing (iOS foreground auto-dismiss)');
           return;
         }
+
+        // Guard 2: Call already accepted — stale dismiss after accept must not re-reject.
+        if (currentStatus == CallStatus.connecting ||
+            currentStatus == CallStatus.connected ||
+            currentStatus == CallStatus.reconnecting) {
+          _cpLog('PUSH', 'CallEventActionCallDecline SKIPPED | status=$currentStatus (call already accepted — use endCall)');
+          return;
+        }
+
+        // Guard 3: onIncomingCall in-flight for this callId (backendStatus HTTP pending).
+        // Android foreground: WS triggers onIncomingCall, sets activeIncomingCallId, awaits HTTP.
+        // FCM arrives in parallel → CallEventActionCallIncoming → dedup returns immediately →
+        // Android foreground dismiss fires FlutterCallkitIncoming.endCall → this event fires
+        // BEFORE onIncomingCall finishes (status still idle). Without this guard, _rejectCallById
+        // fires against a call that hasn't been shown or rejected by the user.
+        if (callIdInt != null && callIdInt == cs.activeIncomingCallId) {
+          _cpLog('PUSH', 'CallEventActionCallDecline SKIPPED | onIncomingCall in-flight callId=$callId (Android foreground race)');
+          return;
+        }
+
         if (callId.isNotEmpty) _rejectCallById(callId);
       } else if (event is CallEventActionCallEnded || event is CallEventActionCallTimeout) {
         CallKitParams? params;
@@ -482,6 +504,15 @@ class PushNotificationService {
   }
 
   static Future<void> _rejectCallById(String callId) async {
+    // Final defense: never send /reject if call has moved past ringing (already accepted).
+    final status = CallService.instance.state.value.status;
+    if (status == CallStatus.connecting ||
+        status == CallStatus.connected ||
+        status == CallStatus.reconnecting) {
+      _cpLog('PUSH', '_rejectCallById SKIPPED | status=$status (call accepted) callId=$callId');
+      return;
+    }
+    _cpLog('PUSH', '_rejectCallById | callId=$callId status=$status');
     try {
       final token = await StorageService.getToken();
       if (token != null) {
@@ -489,10 +520,12 @@ class PushNotificationService {
           Uri.parse('$kBaseUrl/calls/$callId/reject'),
           headers: {'Authorization': 'Bearer $token'},
         );
-        debugPrint('[FLNP] reject yanıtı: ${r.statusCode}');
+        _cpLog('PUSH', '_rejectCallById response | callId=$callId statusCode=${r.statusCode}');
+      } else {
+        _cpLog('PUSH', '_rejectCallById SKIPPED | no auth token callId=$callId');
       }
     } catch (e) {
-      debugPrint('[FLNP] reject hatası: $e');
+      _cpLog('PUSH', '_rejectCallById ERROR | callId=$callId $e');
     }
   }
 

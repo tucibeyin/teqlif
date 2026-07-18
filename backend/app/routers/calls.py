@@ -445,7 +445,10 @@ async def reject_call(
     db: AsyncSession = Depends(get_db),
 ):
     logger.info("[CALL_PROCESS][IN] reject_call ENTER | call_id=%d callee=%d", call_id, current_user.id)
-    call = await db.get(Call, call_id)
+    # SELECT FOR UPDATE serializes reject vs accept — prevents stale-read lost-update race
+    # where reject reads "calling", accept commits "active", reject overwrites with "rejected".
+    result = await db.execute(select(Call).where(Call.id == call_id).with_for_update())
+    call = result.scalar_one_or_none()
     if not call or call.callee_id != current_user.id:
         logger.warning("[CALL_PROCESS][IN] reject_call NOT FOUND | call_id=%d callee=%d", call_id, current_user.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")

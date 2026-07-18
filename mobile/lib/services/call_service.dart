@@ -216,6 +216,10 @@ class CallService {
   // İlk çağrı _activeIncomingCallId'yi set eder; sonrakiler erken döner.
   // reset() + _hangUpLocally'de null'a çekilir.
   int? _activeIncomingCallId;
+  // Exposed so PushNotificationService can guard CallEventActionCallDecline:
+  // if this matches the declining callId, onIncomingCall is still in-flight
+  // (backendStatus HTTP pending) — Android foreground dismiss fired too early.
+  int? get activeIncomingCallId => _activeIncomingCallId;
 
   // Race condition fix: didActivateAudioSession, _joinRoom'daki Completer'dan önce gelebilir.
   // VoIP push auto-accept senaryosunda bu kaçınılmaz: kullanıcı lock screen'den kabul eder,
@@ -965,6 +969,11 @@ class CallService {
       Map<String, dynamic>? data;
       int retryCount = 0;
       while (retryCount < 4) {
+        // Abort if state changed during a retry wait (e.g. endCall called while backing off).
+        if (state.value.status != CallStatus.connecting) {
+          _cpLog('IN', 'acceptCall ABORTED during retry | status=${state.value.status.name}');
+          return;
+        }
         try {
           _cpLog('IN', 'POST /calls/$callId/accept attempt=${retryCount + 1}');
           data = await _post('/calls/$callId/accept');
@@ -1010,7 +1019,15 @@ class CallService {
   }
 
   Future<void> rejectCall() async {
-    if (state.value.status == CallStatus.ended || state.value.status == CallStatus.rejected) return;
+    final currentStatus = state.value.status;
+    if (currentStatus == CallStatus.ended || currentStatus == CallStatus.rejected) return;
+    // Call already accepted — stale reject from UI must not call /reject.
+    if (currentStatus == CallStatus.connecting ||
+        currentStatus == CallStatus.connected ||
+        currentStatus == CallStatus.reconnecting) {
+      _cpLog('IN', 'rejectCall SKIPPED | status=${currentStatus.name} (call already accepted — use endCall)');
+      return;
+    }
     final callId = state.value.callId;
     if (callId != null) {
       try {
