@@ -34,7 +34,7 @@ DB_DSN      = "postgresql://teqlif:Teqlif5664@127.0.0.1:5432/teqlif"
 
 CALLER_USER = "teqlif"
 CALLEE_USER = "tesbih"
-THIRD_USER  = ""  # filled at runtime
+THIRD_USER  = "tucibeyin"
 
 PASS_MARK = "✓"
 FAIL_MARK = "✗"
@@ -944,8 +944,7 @@ async def main():
     print(f"\nŞifreler (terminale yazılanlar görünmez)\n")
     caller_pass = getpass.getpass(f"  {CALLER_USER} şifresi: ")
     callee_pass = getpass.getpass(f"  {CALLEE_USER} şifresi: ")
-    THIRD_USER = input(f"  Üçüncü kullanıcı adı (TC21-TC28 için): ").strip()
-    third_pass = getpass.getpass(f"  {THIRD_USER} şifresi: ")
+    third_pass  = getpass.getpass(f"  {THIRD_USER} şifresi: ")
     print()
 
     caller = ApiClient(CALLER_USER)
