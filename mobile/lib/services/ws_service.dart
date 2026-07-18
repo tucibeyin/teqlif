@@ -35,6 +35,12 @@ class WsService {
   static Timer? _lifecycleDebounce;
   static AppLifecycleState? _pendingLifecycleState;
 
+  // Connection lock: prevents socket close while an active call holds the lock.
+  // Callers: CallService.acquireConnectionLock / releaseConnectionLock.
+  // WsService never imports CallService — coupling is one-way through this counter.
+  static int _connectionLocks = 0;
+  static bool _pendingPause = false;
+
   static void _debounceLifecycle(AppLifecycleState state) {
     _pendingLifecycleState = state;
     _lifecycleDebounce?.cancel();
@@ -113,16 +119,42 @@ class WsService {
     _closeResources();
   }
 
-  /// İşletim sistemi uygulamayı arka plana attığında çağrılır
+  /// Acquires a connection lock. While at least one lock is held,
+  /// [pauseConnection] is deferred — the socket stays alive for the active call.
+  static void acquireConnectionLock(String reason) {
+    _connectionLocks++;
+    debugPrint('[WS][LOCK][${DateTime.now().toIso8601String()}] acquired ($reason) | locks=$_connectionLocks');
+  }
+
+  /// Releases a previously acquired lock. If this was the last lock and
+  /// [pauseConnection] was deferred while the lock was held, the socket is
+  /// closed now (the app is still in background).
+  static void releaseConnectionLock(String reason) {
+    _connectionLocks = (_connectionLocks - 1).clamp(0, 999);
+    debugPrint('[WS][LOCK][${DateTime.now().toIso8601String()}] released ($reason) | locks=$_connectionLocks');
+    if (_connectionLocks == 0 && _pendingPause) {
+      _pendingPause = false;
+      debugPrint('[WS][LOCK][${DateTime.now().toIso8601String()}] executing deferred pauseConnection');
+      _closeResources();
+    }
+  }
+
+  /// İşletim sistemi uygulamayı arka plana attığında çağrılır.
+  /// Eğer aktif bir arama lock tutuyorsa kapatma ertelenir.
   static void pauseConnection() {
-    // Çıkış yapılmış gibi tamamen silmeyiz, sadece soketi kapatırız.
-    // _shouldStay = true olarak kalır ki öne gelince tekrar bağlansın.
+    if (_connectionLocks > 0) {
+      _pendingPause = true;
+      debugPrint('[WS][LOCK][${DateTime.now().toIso8601String()}] pauseConnection DEFERRED | locks=$_connectionLocks');
+      return;
+    }
+    _pendingPause = false;
     _closeResources();
   }
 
   /// Uygulama tekrar ekrana geldiğinde çağrılır
   static void resumeConnection() {
-    // Eğer kullanıcı çıkış yapmamışsa tekrar bağlan
+    // Clear any pending pause — app is foreground again, no need to close on lock release
+    _pendingPause = false;
     if (_shouldStay && _channel == null) {
       _connect();
     }

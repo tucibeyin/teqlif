@@ -5227,4 +5227,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get callActiveNow => 'المكالمة جارية';
+
+  @override
+  String get callHistoryTitle => 'المكالمات الأخيرة';
+
+  @override
+  String get callHistoryAll => 'الكل';
+
+  @override
+  String get callHistoryMissed => 'الفائتة';
+
+  @override
+  String get callHistoryIncoming => 'الواردة';
+
+  @override
+  String get callHistoryOutgoing => 'الصادرة';
+
+  @override
+  String get callHistoryEmpty => 'لا توجد مكالمات بعد';
+
+  @override
+  String callHistoryDurationShort(String mm, String ss) {
+    return '$mm:$ss';
+  }
 }

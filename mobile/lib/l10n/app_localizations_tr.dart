@@ -5259,4 +5259,27 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get callActiveNow => 'Arama Devam Ediyor';
+
+  @override
+  String get callHistoryTitle => 'Son Aramalar';
+
+  @override
+  String get callHistoryAll => 'Tümü';
+
+  @override
+  String get callHistoryMissed => 'Cevapsız';
+
+  @override
+  String get callHistoryIncoming => 'Gelen';
+
+  @override
+  String get callHistoryOutgoing => 'Giden';
+
+  @override
+  String get callHistoryEmpty => 'Henüz arama yok';
+
+  @override
+  String callHistoryDurationShort(String mm, String ss) {
+    return '$mm:$ss';
+  }
 }

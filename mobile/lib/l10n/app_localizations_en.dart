@@ -5256,4 +5256,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get callActiveNow => 'Call in Progress';
+
+  @override
+  String get callHistoryTitle => 'Recent Calls';
+
+  @override
+  String get callHistoryAll => 'All';
+
+  @override
+  String get callHistoryMissed => 'Missed';
+
+  @override
+  String get callHistoryIncoming => 'Incoming';
+
+  @override
+  String get callHistoryOutgoing => 'Outgoing';
+
+  @override
+  String get callHistoryEmpty => 'No calls yet';
+
+  @override
+  String callHistoryDurationShort(String mm, String ss) {
+    return '$mm:$ss';
+  }
 }

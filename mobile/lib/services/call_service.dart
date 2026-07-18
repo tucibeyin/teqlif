@@ -21,6 +21,7 @@ import '../config/api.dart';
 import '../core/app_exception.dart';
 import '../services/storage_service.dart';
 import 'push_notification_service.dart';
+import 'ws_service.dart';
 import '../models/call_event.dart';
 
 void _cpLog(String phase, String msg) {
@@ -216,6 +217,9 @@ class CallService {
 
   bool _isHangingUp = false;   // Eş zamanlı _hangUpLocally çağrılarını önler
   bool _isJoiningRoom = false; // Çift _joinRoom çağrısını önler
+  // WS connection lock: true while an active call is holding the WsService lock.
+  // Ensures background lifecycle doesn't close the socket mid-call.
+  bool _wsLockHeld = false;
   Completer<void>? _callkitAudioReady; // iOS: didActivateAudioSession sinyali
 
   // Synchronous dedup guard: WS + FCM + CallKit aynı call_id ile ~150ms arayla gelir.
@@ -367,7 +371,26 @@ class CallService {
     }
   }
 
+  static bool _isActiveCallStatus(CallStatus s) =>
+      s == CallStatus.calling ||
+      s == CallStatus.ringing ||
+      s == CallStatus.connecting ||
+      s == CallStatus.connected ||
+      s == CallStatus.reconnecting;
+
   void _handleStatusChange(CallStatus oldStatus, CallStatus newStatus) {
+    // Acquire WS connection lock when entering first active-call state so the
+    // background lifecycle observer cannot close the socket mid-call.
+    if (!_wsLockHeld && _isActiveCallStatus(newStatus)) {
+      _wsLockHeld = true;
+      WsService.acquireConnectionLock('call-${state.value.callId}-$newStatus');
+    }
+    // Release lock when leaving all active-call states (terminal or idle).
+    if (_wsLockHeld && !_isActiveCallStatus(newStatus)) {
+      _wsLockHeld = false;
+      WsService.releaseConnectionLock('call-${state.value.callId}-$newStatus');
+    }
+
     // Cancel connecting timeout whenever we leave connecting state
     if (oldStatus == CallStatus.connecting) {
       _connectingTimeoutTimer?.cancel();
@@ -1936,6 +1959,11 @@ class CallService {
     _elapsedTimer?.cancel();
     _peerTimeoutTimer?.cancel();
     _disconnectRoom();
+    // Safety net: release WS lock if still held (error path bypassed _handleStatusChange).
+    if (_wsLockHeld) {
+      _wsLockHeld = false;
+      WsService.releaseConnectionLock('call-reset-safety');
+    }
     _cpLog('HW', 'wakelock DISABLE | context=reset');
     WakelockPlus.disable();
     FlutterCallkitIncoming.endAllCalls();

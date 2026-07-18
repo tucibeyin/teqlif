@@ -5307,4 +5307,27 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get callActiveNow => 'Звонок продолжается';
+
+  @override
+  String get callHistoryTitle => 'Последние звонки';
+
+  @override
+  String get callHistoryAll => 'Все';
+
+  @override
+  String get callHistoryMissed => 'Пропущенные';
+
+  @override
+  String get callHistoryIncoming => 'Входящие';
+
+  @override
+  String get callHistoryOutgoing => 'Исходящие';
+
+  @override
+  String get callHistoryEmpty => 'Звонков ещё нет';
+
+  @override
+  String callHistoryDurationShort(String mm, String ss) {
+    return '$mm:$ss';
+  }
 }

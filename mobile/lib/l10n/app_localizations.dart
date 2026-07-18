@@ -9485,6 +9485,48 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Arama Devam Ediyor'**
   String get callActiveNow;
+
+  /// No description provided for @callHistoryTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son Aramalar'**
+  String get callHistoryTitle;
+
+  /// No description provided for @callHistoryAll.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tümü'**
+  String get callHistoryAll;
+
+  /// No description provided for @callHistoryMissed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cevapsız'**
+  String get callHistoryMissed;
+
+  /// No description provided for @callHistoryIncoming.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gelen'**
+  String get callHistoryIncoming;
+
+  /// No description provided for @callHistoryOutgoing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Giden'**
+  String get callHistoryOutgoing;
+
+  /// No description provided for @callHistoryEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz arama yok'**
+  String get callHistoryEmpty;
+
+  /// No description provided for @callHistoryDurationShort.
+  ///
+  /// In tr, this message translates to:
+  /// **'{mm}:{ss}'**
+  String callHistoryDurationShort(String mm, String ss);
 }
 
 class _AppLocalizationsDelegate
