@@ -197,8 +197,8 @@ class CallService {
 
   // Typed event stream — all signaling sources (WS, FCM, CallKit) emit here.
   // Consumers can listen without depending on the raw Map<String, dynamic> format.
-  final _eventController = StreamController<CallEvent>.broadcast();
-  Stream<CallEvent> get callEventStream => _eventController.stream;
+  final _eventController = StreamController<CallSignal>.broadcast();
+  Stream<CallSignal> get callEventStream => _eventController.stream;
 
   /// acceptedAt backing field accessor — use instead of state.value.acceptedAt internally.
   DateTime? get acceptedAt => _acceptedAt ?? state.value.acceptedAt;
@@ -2098,33 +2098,34 @@ class CallService {
 
   /// Single entry point for all call signaling events.
   ///
-  /// Parse raw WS/FCM payload → typed [CallEvent] → publish to [callEventStream]
+  /// Parse raw WS/FCM payload → typed [CallSignal] → publish to [callEventStream]
   /// → delegate to existing handler. All signaling sources should eventually
   /// converge here for unified logging, typing, and observability.
   void processEvent(Map<String, dynamic> data) {
-    final event = CallEvent.fromMap(data);
-    _cpLog('EVENT', 'processEvent | type=${data["type"]} → ${event.runtimeType}');
+    final signal = CallSignal.fromMap(data);
+    _cpLog('EVENT', 'processEvent | type=${data["type"]} → ${signal.runtimeType}');
 
     if (!_eventController.isClosed) {
-      _eventController.add(event);
+      _eventController.add(signal);
     }
 
-    switch (event) {
-      case IncomingCallEvent():
-        onIncomingCall(event.toMap());
-      case CallAcceptedEvent():
-        onCallAccepted({'type': 'call_accepted', 'call_id': event.callId});
-      case CallRejectedEvent():
+    switch (signal) {
+      case IncomingCallSignal():
+        onIncomingCall(signal.toMap());
+      case CallAcceptedSignal():
+        onCallAccepted({'type': 'call_accepted', 'call_id': signal.callId});
+      case CallRejectedSignal():
         onCallRejected();
-      case CallEndedEvent():
+      case CallEndedSignal():
         onCallEnded();
-      case CallMissedEvent():
-        onCallMissed(callId: event.callId);
-      case WsConnectedEvent():
+      case CallMissedSignal():
+        onCallMissed(callId: signal.callId);
+      case WsConnectedSignal():
         checkActiveCall();
-      case _:
-        // IncomingCallTapEvent, IncomingCallAutoAcceptEvent, UnknownCallEvent:
-        // still handled by IncomingCallOverlay via the raw stream.
+      case IncomingCallTapSignal() ||
+            IncomingCallAutoAcceptSignal() ||
+            UnknownCallSignal():
+        // Handled by IncomingCallOverlay via the raw stream.
         _cpLog('EVENT', 'processEvent: delegated to overlay | type=${data["type"]}');
     }
   }

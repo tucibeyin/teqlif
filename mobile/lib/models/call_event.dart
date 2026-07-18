@@ -1,32 +1,32 @@
-/// Typed call event system — replaces raw Map<String, dynamic> passing.
+/// Typed call signaling system — replaces raw `Map<String, dynamic>` passing.
 ///
-/// All signaling sources (WS, FCM, CallKit) produce CallEvent instances.
+/// All signaling sources (WS, FCM, CallKit) produce [CallSignal] instances.
 /// CallService.processEvent() is the single entry point.
-sealed class CallEvent {
-  const CallEvent();
+sealed class CallSignal {
+  const CallSignal();
 
-  /// Parse a raw WS/FCM payload map into a typed CallEvent.
-  factory CallEvent.fromMap(Map<String, dynamic> data) {
+  /// Parse a raw WS/FCM payload map into a typed [CallSignal].
+  factory CallSignal.fromMap(Map<String, dynamic> data) {
     final type = (data['type'] as String?) ?? '';
     final callId = _int(data['call_id']);
 
     return switch (type) {
-      'call_incoming' || 'incoming_call' => IncomingCallEvent(
+      'call_incoming' || 'incoming_call' => IncomingCallSignal(
           callId: callId,
           callerId: _int(data['caller_id']),
           callerUsername: (data['caller_username'] as String?) ?? '',
           callerAvatar: data['caller_avatar'] as String?,
           locale: data['locale'] as String?,
         ),
-      'call_accepted' => CallAcceptedEvent(callId: callId),
-      'call_rejected' => CallRejectedEvent(callId: callId),
-      'call_ended' => CallEndedEvent(callId: callId),
-      'call_missed' => CallMissedEvent(callId: callId),
-      'connected' => const WsConnectedEvent(),
+      'call_accepted' => CallAcceptedSignal(callId: callId),
+      'call_rejected' => CallRejectedSignal(callId: callId),
+      'call_ended'   => CallEndedSignal(callId: callId),
+      'call_missed'  => CallMissedSignal(callId: callId),
+      'connected'    => const WsConnectedSignal(),
       // CallKit / push-service synthetic events
-      'incoming_call_notification_tap' => IncomingCallTapEvent(data: data),
-      'incoming_call_auto_accept' => IncomingCallAutoAcceptEvent(data: data),
-      _ => UnknownCallEvent(type: type, raw: data),
+      'incoming_call_notification_tap'  => IncomingCallTapSignal(data: data),
+      'incoming_call_auto_accept'       => IncomingCallAutoAcceptSignal(data: data),
+      _                                 => UnknownCallSignal(type: type, raw: data),
     };
   }
 
@@ -37,16 +37,16 @@ sealed class CallEvent {
   }
 }
 
-// ── Concrete event types ──────────────────────────────────────────────────────
+// ── Concrete signal types ─────────────────────────────────────────────────────
 
-class IncomingCallEvent extends CallEvent {
+class IncomingCallSignal extends CallSignal {
   final int callId;
   final int callerId;
   final String callerUsername;
   final String? callerAvatar;
   final String? locale;
 
-  const IncomingCallEvent({
+  const IncomingCallSignal({
     required this.callId,
     required this.callerId,
     required this.callerUsername,
@@ -64,42 +64,42 @@ class IncomingCallEvent extends CallEvent {
       };
 }
 
-class CallAcceptedEvent extends CallEvent {
+class CallAcceptedSignal extends CallSignal {
   final int callId;
-  const CallAcceptedEvent({required this.callId});
+  const CallAcceptedSignal({required this.callId});
 }
 
-class CallRejectedEvent extends CallEvent {
+class CallRejectedSignal extends CallSignal {
   final int callId;
-  const CallRejectedEvent({required this.callId});
+  const CallRejectedSignal({required this.callId});
 }
 
-class CallEndedEvent extends CallEvent {
+class CallEndedSignal extends CallSignal {
   final int callId;
-  const CallEndedEvent({required this.callId});
+  const CallEndedSignal({required this.callId});
 }
 
-class CallMissedEvent extends CallEvent {
+class CallMissedSignal extends CallSignal {
   final int callId;
-  const CallMissedEvent({required this.callId});
+  const CallMissedSignal({required this.callId});
 }
 
-class WsConnectedEvent extends CallEvent {
-  const WsConnectedEvent();
+class WsConnectedSignal extends CallSignal {
+  const WsConnectedSignal();
 }
 
-class IncomingCallTapEvent extends CallEvent {
+class IncomingCallTapSignal extends CallSignal {
   final Map<String, dynamic> data;
-  const IncomingCallTapEvent({required this.data});
+  const IncomingCallTapSignal({required this.data});
 }
 
-class IncomingCallAutoAcceptEvent extends CallEvent {
+class IncomingCallAutoAcceptSignal extends CallSignal {
   final Map<String, dynamic> data;
-  const IncomingCallAutoAcceptEvent({required this.data});
+  const IncomingCallAutoAcceptSignal({required this.data});
 }
 
-class UnknownCallEvent extends CallEvent {
+class UnknownCallSignal extends CallSignal {
   final String type;
   final Map<String, dynamic> raw;
-  const UnknownCallEvent({required this.type, required this.raw});
+  const UnknownCallSignal({required this.type, required this.raw});
 }

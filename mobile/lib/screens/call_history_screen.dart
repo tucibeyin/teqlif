@@ -303,7 +303,7 @@ class _FilteredListState extends State<_FilteredList> {
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: widget.items.length + (widget.hasMore ? 1 : 0),
-        separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+        separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
         itemBuilder: (context, i) {
           if (i == widget.items.length) {
             return const Padding(
