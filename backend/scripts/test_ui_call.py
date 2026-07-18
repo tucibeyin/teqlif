@@ -23,6 +23,7 @@ import subprocess
 import threading
 from pathlib import Path
 
+import getpass
 import requests
 
 # ---------------------------------------------------------------------------
@@ -75,13 +76,13 @@ def api(method: str, path: str, token: str | None = None, **kwargs) -> requests.
     return resp
 
 def login(username: str, password: str) -> str:
-    r = api("POST", "/auth/login", json={"username": username, "password": password})
+    r = api("POST", "/api/auth/login", json={"username": username, "password": password})
     if r.status_code != 200:
         raise RuntimeError(f"Login failed for {username}: {r.status_code} {r.text}")
     return r.json()["access_token"]
 
 def start_call(caller_token: str, callee_username: str) -> int:
-    r = api("POST", "/calls/start", caller_token,
+    r = api("POST", "/api/calls/start", caller_token,
             json={"callee_username": callee_username})
     if r.status_code != 200:
         raise RuntimeError(f"start_call failed: {r.status_code} {r.text}")
@@ -89,22 +90,22 @@ def start_call(caller_token: str, callee_username: str) -> int:
     return data["call_id"]
 
 def accept_call(callee_token: str, call_id: int) -> None:
-    r = api("POST", f"/calls/{call_id}/accept", callee_token)
+    r = api("POST", f"/api/calls/{call_id}/accept", callee_token)
     if r.status_code not in (200, 204):
         raise RuntimeError(f"accept_call failed: {r.status_code} {r.text}")
 
 def reject_call(callee_token: str, call_id: int) -> None:
-    r = api("POST", f"/calls/{call_id}/reject", callee_token)
+    r = api("POST", f"/api/calls/{call_id}/reject", callee_token)
     if r.status_code not in (200, 204):
         raise RuntimeError(f"reject_call failed: {r.status_code} {r.text}")
 
 def end_call(caller_token: str, call_id: int) -> None:
-    r = api("POST", f"/calls/{call_id}/end", caller_token)
+    r = api("POST", f"/api/calls/{call_id}/end", caller_token)
     if r.status_code not in (200, 204):
         raise RuntimeError(f"end_call failed: {r.status_code} {r.text}")
 
 def get_call_status(token: str, call_id: int) -> str:
-    r = api("GET", f"/calls/{call_id}", token)
+    r = api("GET", f"/api/calls/{call_id}", token)
     if r.status_code != 200:
         return "unknown"
     return r.json().get("status", "unknown")
@@ -537,9 +538,9 @@ def main() -> None:
     print()
 
     # --- Credentials ---
-    caller_pass  = input(f"Password for {USERS['caller']}: ")
-    ios_pass     = input(f"Password for {USERS['ios']}:    ") if callee_filter in ("ios", "") else ""
-    android_pass = input(f"Password for {USERS['android']}:  ") if callee_filter in ("android", "") else ""
+    caller_pass  = getpass.getpass(f"Password for {USERS['caller']}: ")
+    ios_pass     = getpass.getpass(f"Password for {USERS['ios']}:    ") if callee_filter in ("ios", "") else ""
+    android_pass = getpass.getpass(f"Password for {USERS['android']}:  ") if callee_filter in ("android", "") else ""
 
     log("AUTH", "Logging in...")
     TOKENS["caller"]  = login(USERS["caller"],  caller_pass)
