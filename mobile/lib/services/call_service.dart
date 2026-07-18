@@ -1534,16 +1534,15 @@ class CallService {
     } catch (e) {
       _cpLog('LK', '_joinRoom EXCEPTION | $e');
       _isJoiningRoom = false;
-      _hangUpLocally(status: CallStatus.ended);
-      await _disconnectRoom();
+      endCall();
     }
   }
 
   void _onRoomEvent(RoomEvent event) {
     _cpLog('LK', 'roomEvent | ${event.runtimeType}');
     if (event is RoomDisconnectedEvent) {
-      _cpLog('LK', 'RoomDisconnected → hangUpLocally');
-      _hangUpLocally(status: CallStatus.ended);
+      _cpLog('LK', 'RoomDisconnected → endCall (notifies backend)');
+      endCall();
     } else if (event is RoomReconnectingEvent) {
       _setState(state.value.copyWith(status: CallStatus.reconnecting));
     } else if (event is RoomReconnectedEvent) {
