@@ -151,28 +151,41 @@ class WsCapture:
         self.username = username
         self.events: list[dict] = []
         self._task: asyncio.Task | None = None
+        self._stopped = False
 
     async def start(self):
+        self._stopped = False
         self._task = asyncio.create_task(self._run())
         await asyncio.sleep(0.5)
 
     async def _run(self):
-        try:
-            async with websockets.connect(WS_URL, ping_interval=None) as ws:
-                auth = {"type": "auth", "token": self.token, "since_ts": time.time() - 5}
-                await ws.send(json.dumps(auth))
-                async for msg in ws:
-                    if msg == "pong":
-                        continue
-                    try:
-                        data = json.loads(msg)
-                        if data.get("type", "").startswith("call_"):
-                            self.events.append({**data, "_ts": time.time()})
-                            log(f"  [WS:{self.username}] {data.get('type')} call_id={data.get('call_id')}")
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+        # Reconnect loop: if the server kicks this WS (e.g. code 4008 — another session
+        # on the same account, like a real device coming to foreground), reconnect after
+        # a brief delay so test assertions aren't silently missed.
+        if not self.token:
+            return
+        while not self._stopped:
+            try:
+                async with websockets.connect(WS_URL, ping_interval=None) as ws:
+                    auth = {"type": "auth", "token": self.token, "since_ts": time.time() - 5}
+                    await ws.send(json.dumps(auth))
+                    async for msg in ws:
+                        if self._stopped:
+                            return
+                        if msg == "pong":
+                            continue
+                        try:
+                            data = json.loads(msg)
+                            if data.get("type", "").startswith("call_"):
+                                self.events.append({**data, "_ts": time.time()})
+                                log(f"  [WS:{self.username}] {data.get('type')} call_id={data.get('call_id')}")
+                        except Exception:
+                            pass
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                if not self._stopped:
+                    await asyncio.sleep(1)
 
     def get(self, event_type: str, call_id: int = None) -> list[dict]:
         return [
@@ -181,11 +194,12 @@ class WsCapture:
         ]
 
     async def stop(self):
+        self._stopped = True
         if self._task:
             self._task.cancel()
             try:
-                await self._task
-            except asyncio.CancelledError:
+                await asyncio.wait_for(asyncio.shield(self._task), timeout=2.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
                 pass
 
 # ─── CLEANUP HELPER ────────────────────────────────────────────────────────────
@@ -319,7 +333,7 @@ async def tc04_accept_callee_ends(caller: ApiClient, callee: ApiClient,
 
 
 async def tc05_stale_caller_busy(caller: ApiClient, callee: ApiClient):
-    log("\n=== TC05: Stale CALLER_BUSY — crash simulation (calling auto-ended) ===")
+    log("\n=== TC05: Stale CALLER_BUSY — crash simulation (calling → missed, stale callee notified) ===")
     await ensure_clean(caller, callee)
 
     s1, d1 = await caller.post("/calls/start", {"callee_id": callee.user_id})
@@ -338,7 +352,7 @@ async def tc05_stale_caller_busy(caller: ApiClient, callee: ApiClient):
         return
     call_id2 = d2["call_id"]
     await asyncio.sleep(0.3)
-    record("TC05: stale call1=ended in DB", await db_call_status(call_id1) == "ended")
+    record("TC05: stale call1=missed in DB", await db_call_status(call_id1) == "missed")
     record("TC05: new call2=calling in DB", await db_call_status(call_id2) == "calling")
     await caller.post(f"/calls/{call_id2}/end")
 

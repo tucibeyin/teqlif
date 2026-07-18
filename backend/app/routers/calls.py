@@ -14,7 +14,7 @@ from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, text
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.call import Call
@@ -296,15 +296,39 @@ async def start_call(
         if is_caller_role and caller_busy.status == "calling":
             # Stale "calling" call where current user was the CALLER: callee never answered
             # (client crash / network failure / CallKit auto-dismiss race). Safe to auto-end.
-            # NOTE: we only auto-end when current_user IS the caller. If current_user is the
-            # CALLEE in a "calling" call, someone is actively ringing them — block with CALLER_BUSY
-            # instead of silently ending the other party's call without notifying them.
-            caller_busy.status = "ended"
+            # We mark as "missed" (not "ended") and immediately notify the stale callee —
+            # without this, callee would keep ringing for up to 35s until the ARQ timeout fires.
+            stale_call_id = caller_busy.id
+            stale_callee_id = caller_busy.callee_id
+            stale_room_name = caller_busy.room_name
+
+            caller_busy.status = "missed"
             caller_busy.ended_at = datetime.now(timezone.utc)
+
+            stale_callee = await db.get(User, stale_callee_id)
+            locale = get_locale(stale_callee) if stale_callee else get_locale(current_user)
+            t = _get_t(locale)
+            title_raw = t.get("notifCallMissed", "Cevapsız Arama: @{username}")
+            body_raw = t.get("notifCallMissedBody", "Size ulaşmaya çalıştı.")
+            try:
+                title = title_raw.format_map({"username": current_user.username})
+                body = body_raw.format_map({"username": current_user.username})
+            except (KeyError, ValueError):
+                title = title_raw
+                body = body_raw
+            db.add(Notification(user_id=stale_callee_id, type="call_missed",
+                                title=title, body=body, related_id=current_user.id))
             await db.commit()
+
+            await _ws_broadcast(stale_callee_id, {"type": "call_missed", "call_id": stale_call_id})
+            await _delete_lk_room(stale_room_name)
+            if stale_callee:
+                await db.refresh(stale_callee)
+                await _send_missed_call_push(stale_callee, current_user)
+
             logger.info(
-                "[CALL_PROCESS][OUT] start_call: stale CALLING auto-ended | stale_call_id=%d caller=%d",
-                caller_busy.id, current_user.id,
+                "[CALL_PROCESS][OUT] start_call: stale CALLING → missed, callee notified | stale_call_id=%d caller=%d stale_callee=%d",
+                stale_call_id, current_user.id, stale_callee_id,
             )
         else:
             # Either: (a) current user is active caller, (b) current user is callee in calling/active call.
@@ -312,11 +336,18 @@ async def start_call(
                            current_user.id, caller_busy.id, "caller" if is_caller_role else "callee")
             raise AppException(status_code=409, message="Already in a call", code="CALLER_BUSY")
 
+    # Serialize concurrent start_call for the same callee at DB level.
+    # Two callers firing simultaneously both read "callee not busy" without this lock,
+    # creating two parallel calls to the same person. pg_advisory_xact_lock holds until
+    # the transaction commits, so the second caller always sees the first call in DB.
+    # Namespace key 42 prevents collisions with any other advisory lock usage in the app.
+    await db.execute(text("SELECT pg_advisory_xact_lock(42, :cid)"), {"cid": callee_id})
+
     # Check if callee is already in an active call
     active_call = await db.scalar(
         select(Call).where(
             or_(Call.caller_id == callee_id, Call.callee_id == callee_id),
-            Call.status.in_(["calling", "active", "connecting", "connected"])
+            Call.status.in_(["calling", "active"])
         )
     )
     if active_call:
@@ -507,7 +538,10 @@ async def end_call(
     db: AsyncSession = Depends(get_db),
 ):
     logger.info("[CALL_PROCESS][END] end_call ENTER | call_id=%d by=%d", call_id, current_user.id)
-    call = await db.get(Call, call_id)
+    result = await db.execute(
+        select(Call).where(Call.id == call_id).with_for_update()
+    )
+    call = result.scalar_one_or_none()
     if not call or current_user.id not in (call.caller_id, call.callee_id):
         logger.warning("[CALL_PROCESS][END] end_call NOT FOUND | call_id=%d by=%d", call_id, current_user.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
@@ -535,14 +569,16 @@ async def end_call(
     call.duration_seconds = duration_seconds
     await db.commit()
 
-    # Redis NX lock: prevent duplicate call_ended if webhook fires concurrently.
-    # Whoever sets this key first (API or webhook) wins — the other path skips.
+    # FOR UPDATE above handles concurrent API-vs-API end_call.
+    # NX lock handles API-vs-webhook race: whoever sets this key first wins.
     try:
         from app.utils.redis_client import get_redis as _get_redis
         _redis = await _get_redis()
-        await _redis.set(f"call_ended_sent:{call_id_val}", "api", ex=60, nx=True)
+        if not await _redis.set(f"call_ended_sent:{call_id_val}", "api", ex=60, nx=True):
+            logger.info("[CALL_PROCESS][END] end_call: duplicate suppressed by Redis NX | call_id=%d", call_id_val)
+            return {"ok": True}
     except Exception:
-        pass  # Redis failure is non-fatal — webhook guard is the safety net
+        pass  # Redis failure is non-fatal — proceed without webhook dedup
 
     await _ws_broadcast(other_id, {"type": "call_ended", "call_id": call_id_val})
     other_user = await db.get(User, other_id)
@@ -602,7 +638,10 @@ async def missed_call(
     db: AsyncSession = Depends(get_db),
 ):
     logger.info("[CALL_PROCESS][END] missed_call ENTER | call_id=%d caller=%d", call_id, current_user.id)
-    call = await db.get(Call, call_id)
+    result = await db.execute(
+        select(Call).where(Call.id == call_id).with_for_update()
+    )
+    call = result.scalar_one_or_none()
     if not call or call.caller_id != current_user.id:
         logger.warning("[CALL_PROCESS][END] missed_call NOT FOUND | call_id=%d caller=%d", call_id, current_user.id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
