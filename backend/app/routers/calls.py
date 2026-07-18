@@ -871,7 +871,7 @@ async def get_call_history(
             "other_user": {
                 "id": other_id,
                 "username": other.username if other else None,
-                "avatar": other.avatar if other else None,
+                "avatar": (other.profile_image_thumb_url or other.profile_image_url) if other else None,
             } if other else None,
         })
 
