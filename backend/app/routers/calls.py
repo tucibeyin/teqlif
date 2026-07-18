@@ -292,9 +292,13 @@ async def start_call(
         )
     )
     if caller_busy:
-        if caller_busy.status == "calling":
-            # Stale "calling" call: callee never answered (client crash / network failure / CallKit auto-dismiss race).
-            # Safe to auto-end — if the call were truly active the status would be "active".
+        is_caller_role = caller_busy.caller_id == current_user.id
+        if is_caller_role and caller_busy.status == "calling":
+            # Stale "calling" call where current user was the CALLER: callee never answered
+            # (client crash / network failure / CallKit auto-dismiss race). Safe to auto-end.
+            # NOTE: we only auto-end when current_user IS the caller. If current_user is the
+            # CALLEE in a "calling" call, someone is actively ringing them — block with CALLER_BUSY
+            # instead of silently ending the other party's call without notifying them.
             caller_busy.status = "ended"
             caller_busy.ended_at = datetime.now(timezone.utc)
             await db.commit()
@@ -303,8 +307,9 @@ async def start_call(
                 caller_busy.id, current_user.id,
             )
         else:
-            # status == "active" → caller is genuinely mid-call, reject.
-            logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=CALLER_BUSY caller=%d busy_call_id=%d", current_user.id, caller_busy.id)
+            # Either: (a) current user is active caller, (b) current user is callee in calling/active call.
+            logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=CALLER_BUSY caller=%d busy_call_id=%d role=%s",
+                           current_user.id, caller_busy.id, "caller" if is_caller_role else "callee")
             raise AppException(status_code=409, message="Already in a call", code="CALLER_BUSY")
 
     # Check if callee is already in an active call

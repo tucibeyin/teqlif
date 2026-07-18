@@ -6,9 +6,14 @@ Run on VPS: python3 test_call_api.py
 Comprehensive call lifecycle tests at API/DB/WS level.
 Deps: pip install httpx websockets asyncpg
 
-NOTE: CALLEE_BUSY (USER_BUSY) cannot be tested with 2 users — the auto-end path
-for stale "calling" calls prevents isolation of the callee-busy check. A 3rd user
-account would be needed to test this code path cleanly.
+Users:
+  caller (A) = teqlif
+  callee (B) = tesbih
+  third  (C) = third account (prompted at runtime)
+
+TC01–TC18: 2-user core lifecycle, idempotency, race, auth, endpoint checks
+TC19–TC20: 2-user concurrent race & explicit active-guard validation
+TC21–TC28: 3-user multi-party scenarios (WhatsApp-style busy, isolation, cross-role)
 """
 
 import asyncio
@@ -29,6 +34,7 @@ DB_DSN      = "postgresql://teqlif:Teqlif5664@127.0.0.1:5432/teqlif"
 
 CALLER_USER = "teqlif"
 CALLEE_USER = "tesbih"
+THIRD_USER  = ""  # filled at runtime
 
 PASS_MARK = "✓"
 FAIL_MARK = "✗"
@@ -183,24 +189,29 @@ class WsCapture:
                 pass
 
 # ─── CLEANUP HELPER ────────────────────────────────────────────────────────────
-async def ensure_clean(caller: ApiClient, callee: ApiClient):
+async def ensure_clean(*users: ApiClient):
     """Force-end any lingering active calls before each test."""
     seen: set[int] = set()
-    for user_id in [caller.user_id, callee.user_id]:
-        rows = await db_active_calls_for_user(user_id)
+    for user in users:
+        if user.user_id is None:
+            continue
+        rows = await db_active_calls_for_user(user.user_id)
         for c in rows:
             cid = c["id"]
             if cid in seen:
                 continue
             seen.add(cid)
-            s, _ = await caller.post(f"/calls/{cid}/end")
-            if s != 200:
-                s, _ = await callee.post(f"/calls/{cid}/end")
-            if s != 200:
+            ended = False
+            for u in users:
+                s, _ = await u.post(f"/calls/{cid}/end")
+                if s == 200:
+                    ended = True
+                    break
+            if not ended:
                 await db_execute(
                     "UPDATE calls SET status='ended', ended_at=NOW() WHERE id=$1", cid
                 )
-            log(f"  [CLEANUP] call_id={cid} was={c['status']} force-ended (api={s})")
+            log(f"  [CLEANUP] call_id={cid} was={c['status']} force-ended")
 
 # ─── HELPERS ───────────────────────────────────────────────────────────────────
 def err_code(body: dict) -> str:
@@ -300,7 +311,7 @@ async def tc04_accept_callee_ends(caller: ApiClient, callee: ApiClient,
     record("TC04: DB=active after accept", await db_call_status(call_id) == "active")
     record("TC04: caller WS call_accepted", len(ws_caller.get("call_accepted", call_id)) > 0)
 
-    s3, _ = await callee.post(f"/calls/{call_id}/end")  # callee hangs up
+    s3, _ = await callee.post(f"/calls/{call_id}/end")
     record("TC04: endCall (callee) 200", s3 == 200, f"status={s3}")
     await asyncio.sleep(0.5)
     record("TC04: DB=ended after callee end", await db_call_status(call_id) == "ended")
@@ -411,10 +422,8 @@ async def tc09_end_then_reject_race(caller: ApiClient, callee: ApiClient,
 
     await asyncio.sleep(0.5)
     record("TC09: DB=ended (end wins)", await db_call_status(call_id) == "ended")
-    # Idempotent reject must NOT emit call_rejected WS
     record("TC09: no call_rejected WS (reject was no-op)",
            len(ws_caller.get("call_rejected", call_id)) == 0)
-    # end_call must still send call_ended to callee
     record("TC09: callee WS call_ended received",
            len(ws_callee.get("call_ended", call_id)) > 0)
 
@@ -441,7 +450,6 @@ async def tc10_reject_then_end_race(caller: ApiClient, callee: ApiClient,
     record("TC10: DB=rejected (reject wins)", await db_call_status(call_id) == "rejected")
     record("TC10: caller WS call_rejected received",
            len(ws_caller.get("call_rejected", call_id)) > 0)
-    # Idempotent end must NOT emit call_ended WS
     record("TC10: no call_ended WS (end was no-op)",
            len(ws_callee.get("call_ended", call_id)) == 0)
 
@@ -573,46 +581,361 @@ async def tc18_callee_token_endpoint(caller: ApiClient, callee: ApiClient):
         return
     call_id = d["call_id"]
 
-    # Callee fetches token while call is "calling"
     s2, d2 = await callee.get(f"/calls/{call_id}/callee-token")
     record("TC18: callee-token 200 while calling", s2 == 200, f"status={s2}")
     record("TC18: token field present", bool(d2.get("token")), f"keys={list(d2.keys())}")
     record("TC18: room_name field present", bool(d2.get("room_name")), f"room={d2.get('room_name','')[:30]}")
 
-    # Caller must NOT get callee-token (callee_id check)
     s3, _ = await caller.get(f"/calls/{call_id}/callee-token")
     record("TC18: caller cannot fetch callee-token → 404", s3 == 404, f"status={s3}")
 
-    # After accept, callee-token still valid
     await callee.post(f"/calls/{call_id}/accept")
     await asyncio.sleep(0.3)
     s4, _ = await callee.get(f"/calls/{call_id}/callee-token")
     record("TC18: callee-token 200 while active", s4 == 200, f"status={s4}")
 
-    # After end, callee-token rejected
     await caller.post(f"/calls/{call_id}/end")
     await asyncio.sleep(0.3)
     s5, _ = await callee.get(f"/calls/{call_id}/callee-token")
     record("TC18: callee-token 409 after end", s5 == 409, f"status={s5}")
 
 
-async def final_cleanup(caller: ApiClient, callee: ApiClient):
+# ─── TC19-TC20: Concurrent race & explicit active-guard ────────────────────────
+
+async def tc19_concurrent_accept_reject(caller: ApiClient, callee: ApiClient,
+                                         ws_caller: WsCapture, ws_callee: WsCapture):
+    """Concurrent /accept and /reject — SELECT FOR UPDATE ensures exactly one wins.
+    Before the FOR UPDATE fix: reject could read stale 'calling' while accept committed
+    'active', then overwrite 'active' with 'rejected'. This TC validates the fix."""
+    log("\n=== TC19: Concurrent accept+reject race (FOR UPDATE validation) ===")
+    await ensure_clean(caller, callee)
+
+    s, d = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC19: startCall 200", s == 200, f"status={s}")
+    if s != 200:
+        return
+    call_id = d["call_id"]
+    await asyncio.sleep(0.3)
+
+    # Fire both concurrently — one must win, one must lose
+    accept_task = asyncio.create_task(callee.post(f"/calls/{call_id}/accept"))
+    reject_task = asyncio.create_task(callee.post(f"/calls/{call_id}/reject"))
+    (accept_s, _), (reject_s, _) = await asyncio.gather(accept_task, reject_task)
+
+    await asyncio.sleep(0.5)
+    final_status = await db_call_status(call_id)
+
+    if accept_s == 200:
+        # Accept won: DB must stay "active"; reject must be a no-op (active guard)
+        record("TC19: accept won → DB=active (no lost-update)",
+               final_status == "active", f"db={final_status}")
+        record("TC19: reject returned 200 (active guard idempotent)", reject_s == 200,
+               f"reject_s={reject_s}")
+        record("TC19: no call_rejected WS (active guard blocked emit)",
+               len(ws_caller.get("call_rejected", call_id)) == 0)
+        await caller.post(f"/calls/{call_id}/end")
+    elif reject_s == 200:
+        # Reject won: DB must be "rejected"; accept must return 409
+        record("TC19: reject won → DB=rejected", final_status == "rejected",
+               f"db={final_status}")
+        record("TC19: accept returned 409 (CONFLICT)", accept_s == 409,
+               f"accept_s={accept_s}")
+        record("TC19: call_rejected WS sent to caller",
+               len(ws_caller.get("call_rejected", call_id)) > 0)
+    else:
+        record("TC19: exactly one side must win", False,
+               f"accept={accept_s} reject={reject_s} db={final_status}")
+
+
+async def tc20_reject_after_accept(caller: ApiClient, callee: ApiClient,
+                                    ws_caller: WsCapture):
+    """Explicit reject after accept — tests the 'active' guard without relying
+    on real-device timing. Validates that DB stays 'active' and no WS is emitted."""
+    log("\n=== TC20: Reject after accept — active guard explicit ===")
+    await ensure_clean(caller, callee)
+
+    s, d = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC20: startCall 200", s == 200, f"status={s}")
+    if s != 200:
+        return
+    call_id = d["call_id"]
+    await asyncio.sleep(0.3)
+
+    s2, _ = await callee.post(f"/calls/{call_id}/accept")
+    record("TC20: acceptCall 200", s2 == 200, f"status={s2}")
+    await asyncio.sleep(0.3)
+    record("TC20: DB=active after accept", await db_call_status(call_id) == "active")
+
+    # Spurious /reject (ghost-call dismiss scenario)
+    s3, _ = await callee.post(f"/calls/{call_id}/reject")
+    record("TC20: spurious /reject returns 200 (active guard)", s3 == 200, f"status={s3}")
+    await asyncio.sleep(0.3)
+    record("TC20: DB still=active (active guard blocked overwrite)",
+           await db_call_status(call_id) == "active")
+    record("TC20: no call_rejected WS emitted",
+           len(ws_caller.get("call_rejected", call_id)) == 0)
+
+    await caller.post(f"/calls/{call_id}/end")
+
+
+# ─── TC21-TC28: 3-user multi-party scenarios ───────────────────────────────────
+
+async def tc21_user_busy_calling(caller: ApiClient, callee: ApiClient, third: ApiClient):
+    """C calls B while A→B is in 'calling' state → USER_BUSY.
+    B is the callee of an active incoming call — a third party cannot ring B."""
+    log("\n=== TC21: USER_BUSY — C calls B while A→B is ringing (calling state) ===")
+    await ensure_clean(caller, callee, third)
+
+    s1, d1 = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC21: A→B startCall 200", s1 == 200, f"status={s1}")
+    if s1 != 200:
+        return
+    call_id1 = d1["call_id"]
+    await asyncio.sleep(0.3)
+    record("TC21: A→B DB=calling", await db_call_status(call_id1) == "calling")
+
+    s2, d2 = await third.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC21: C→B → 409 USER_BUSY (B ringing)",
+           s2 == 409 and err_code(d2) == "USER_BUSY",
+           f"status={s2} code={err_code(d2)}")
+
+    # Original A→B call untouched
+    record("TC21: A→B still calling (untouched by C's attempt)",
+           await db_call_status(call_id1) == "calling")
+
+    await caller.post(f"/calls/{call_id1}/end")
+
+
+async def tc22_user_busy_active(caller: ApiClient, callee: ApiClient, third: ApiClient):
+    """C calls B while A→B is active → USER_BUSY.
+    B is in a live call — no one can reach B until the call ends."""
+    log("\n=== TC22: USER_BUSY — C calls B while A→B is active ===")
+    await ensure_clean(caller, callee, third)
+
+    s1, d1 = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC22: A→B startCall 200", s1 == 200, f"status={s1}")
+    if s1 != 200:
+        return
+    call_id1 = d1["call_id"]
+    await asyncio.sleep(0.3)
+
+    s2, _ = await callee.post(f"/calls/{call_id1}/accept")
+    record("TC22: B accepts A→B 200", s2 == 200, f"status={s2}")
+    await asyncio.sleep(0.3)
+    record("TC22: A→B DB=active", await db_call_status(call_id1) == "active")
+
+    s3, d3 = await third.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC22: C→B → 409 USER_BUSY (B in active call)",
+           s3 == 409 and err_code(d3) == "USER_BUSY",
+           f"status={s3} code={err_code(d3)}")
+
+    await caller.post(f"/calls/{call_id1}/end")
+
+
+async def tc23_concurrent_caller_race(caller: ApiClient, callee: ApiClient, third: ApiClient,
+                                       ws_callee: WsCapture):
+    """A and C simultaneously call B — exactly one 200, one 409 USER_BUSY.
+    Tests DB-level callee_busy check under true concurrency."""
+    log("\n=== TC23: Concurrent caller race — A and C both call B simultaneously ===")
+    await ensure_clean(caller, callee, third)
+
+    a_task = asyncio.create_task(caller.post("/calls/start", {"callee_id": callee.user_id}))
+    c_task = asyncio.create_task(third.post("/calls/start", {"callee_id": callee.user_id}))
+    (sa, da), (sc, dc) = await asyncio.gather(a_task, c_task)
+
+    await asyncio.sleep(0.5)
+
+    a_won = sa == 200
+    c_won = sc == 200
+    record("TC23: exactly one caller wins 200", a_won != c_won, f"A={sa} C={sc}")
+
+    if a_won:
+        winner_d, loser_s, loser_d, winner_name, winner = da, sc, dc, "A", caller
+    elif c_won:
+        winner_d, loser_s, loser_d, winner_name, winner = dc, sa, da, "C", third
+    else:
+        record("TC23: loser gets 409 USER_BUSY", False, f"A={sa} C={sc} — both failed")
+        return
+
+    win_call_id = winner_d.get("call_id")
+    record("TC23: loser gets 409 USER_BUSY",
+           loser_s == 409 and err_code(loser_d) == "USER_BUSY",
+           f"loser_status={loser_s} code={err_code(loser_d)}")
+    if win_call_id:
+        record("TC23: winner call DB=calling",
+               await db_call_status(win_call_id) == "calling",
+               f"winner={winner_name} call_id={win_call_id}")
+        await asyncio.sleep(0.3)
+        # B should receive exactly 1 call_incoming for the winning call
+        incoming = ws_callee.get("call_incoming", win_call_id)
+        record("TC23: B gets exactly 1 call_incoming (no duplicate)", len(incoming) == 1,
+               f"count={len(incoming)}")
+        await winner.post(f"/calls/{win_call_id}/end")
+
+
+async def tc24_third_party_end(caller: ApiClient, callee: ApiClient, third: ApiClient):
+    """C (unrelated user) tries to /end A-B's call → 404.
+    /end checks caller_id OR callee_id — third party must be rejected."""
+    log("\n=== TC24: Third-party /end attempt → 404 ===")
+    await ensure_clean(caller, callee, third)
+
+    s, d = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC24: A→B startCall 200", s == 200, f"status={s}")
+    if s != 200:
+        return
+    call_id = d["call_id"]
+    await asyncio.sleep(0.3)
+
+    s2, _ = await third.post(f"/calls/{call_id}/end")
+    record("TC24: C /end → 404 (not a participant)", s2 == 404, f"status={s2}")
+    record("TC24: DB still=calling (end rejected)", await db_call_status(call_id) == "calling")
+
+    await caller.post(f"/calls/{call_id}/end")
+
+
+async def tc25_third_party_reject(caller: ApiClient, callee: ApiClient, third: ApiClient):
+    """C (not the callee) tries to /reject A-B's call → 404.
+    TC15 tests caller /reject; TC25 tests a completely unrelated third party."""
+    log("\n=== TC25: Third-party /reject attempt → 404 ===")
+    await ensure_clean(caller, callee, third)
+
+    s, d = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC25: A→B startCall 200", s == 200, f"status={s}")
+    if s != 200:
+        return
+    call_id = d["call_id"]
+    await asyncio.sleep(0.3)
+
+    s2, _ = await third.post(f"/calls/{call_id}/reject")
+    record("TC25: C /reject → 404 (not the callee)", s2 == 404, f"status={s2}")
+    record("TC25: DB still=calling (reject rejected)", await db_call_status(call_id) == "calling")
+
+    await caller.post(f"/calls/{call_id}/end")
+
+
+async def tc26_ws_isolation(caller: ApiClient, callee: ApiClient, third: ApiClient,
+                              ws_caller: WsCapture, ws_callee: WsCapture,
+                              ws_third: WsCapture):
+    """A-B call events (call_accepted, call_ended) must NOT be delivered to C's WS.
+    WS broadcast is keyed on user_id — only participants receive their events."""
+    log("\n=== TC26: WS event isolation — C does not receive A-B call events ===")
+    await ensure_clean(caller, callee, third)
+
+    s, d = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC26: A→B startCall 200", s == 200, f"status={s}")
+    if s != 200:
+        return
+    call_id = d["call_id"]
+    await asyncio.sleep(0.3)
+
+    await callee.post(f"/calls/{call_id}/accept")
+    await asyncio.sleep(0.3)
+    await caller.post(f"/calls/{call_id}/end")
+    await asyncio.sleep(0.5)
+
+    record("TC26: A receives call_accepted WS",
+           len(ws_caller.get("call_accepted", call_id)) > 0)
+    record("TC26: B receives call_ended WS",
+           len(ws_callee.get("call_ended", call_id)) > 0)
+
+    leaked = [e for e in ws_third.events if e.get("call_id") == call_id]
+    record("TC26: C receives ZERO events for A-B call",
+           len(leaked) == 0,
+           f"leaked={[e.get('type') for e in leaked]}")
+
+
+async def tc27_callee_busy_while_ringing(caller: ApiClient, callee: ApiClient, third: ApiClient):
+    """B is ringed by A (B is callee in 'calling' call). B tries to call C.
+    Expected: 409 CALLER_BUSY — B must first reject/ignore A's call before initiating.
+    (Before the CALLER_BUSY callee-role fix, B's action would silently auto-end A's call.)"""
+    log("\n=== TC27: CALLER_BUSY — B (callee, being ringed) tries to call C ===")
+    await ensure_clean(caller, callee, third)
+
+    s1, d1 = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC27: A→B startCall 200", s1 == 200, f"status={s1}")
+    if s1 != 200:
+        return
+    call_id1 = d1["call_id"]
+    await asyncio.sleep(0.3)
+    record("TC27: A→B DB=calling", await db_call_status(call_id1) == "calling")
+
+    # B tries to initiate a call to C while being ringed by A
+    s2, d2 = await callee.post("/calls/start", {"callee_id": third.user_id})
+    record("TC27: B→C → 409 CALLER_BUSY (B is callee in ringing call)",
+           s2 == 409 and err_code(d2) == "CALLER_BUSY",
+           f"status={s2} code={err_code(d2)}")
+
+    # A's call must NOT have been silently terminated
+    record("TC27: A→B still calling (A's call preserved)",
+           await db_call_status(call_id1) == "calling")
+
+    await caller.post(f"/calls/{call_id1}/end")
+
+
+async def tc28_callee_busy_in_active(caller: ApiClient, callee: ApiClient, third: ApiClient):
+    """B is in active call with A. B tries to call C → CALLER_BUSY.
+    Tests the 'callee_id == current_user.id AND status=active' branch of CALLER_BUSY."""
+    log("\n=== TC28: CALLER_BUSY — B (callee in active call) tries to call C ===")
+    await ensure_clean(caller, callee, third)
+
+    s1, d1 = await caller.post("/calls/start", {"callee_id": callee.user_id})
+    record("TC28: A→B startCall 200", s1 == 200, f"status={s1}")
+    if s1 != 200:
+        return
+    call_id1 = d1["call_id"]
+    await asyncio.sleep(0.3)
+
+    s2, _ = await callee.post(f"/calls/{call_id1}/accept")
+    record("TC28: B accepts A→B 200", s2 == 200, f"status={s2}")
+    await asyncio.sleep(0.3)
+    record("TC28: A→B DB=active", await db_call_status(call_id1) == "active")
+
+    s3, d3 = await callee.post("/calls/start", {"callee_id": third.user_id})
+    record("TC28: B→C → 409 CALLER_BUSY (B is callee in active call)",
+           s3 == 409 and err_code(d3) == "CALLER_BUSY",
+           f"status={s3} code={err_code(d3)}")
+
+    await caller.post(f"/calls/{call_id1}/end")
+
+
+# ─── FINAL CLEANUP ─────────────────────────────────────────────────────────────
+
+async def final_cleanup(*users: ApiClient):
     log("\n=== FINAL CLEANUP: Check for lingering active calls ===")
-    active_caller = await db_active_calls_for_user(caller.user_id)
-    active_callee = await db_active_calls_for_user(callee.user_id)
-    record("CLEANUP: no stale calls for caller", len(active_caller) == 0, f"stale={active_caller}")
-    record("CLEANUP: no stale calls for callee", len(active_callee) == 0, f"stale={active_callee}")
+    all_stale: list[dict] = []
     seen: set[int] = set()
-    for c in active_caller + active_callee:
-        cid = c["id"]
-        if cid in seen:
+    for user in users:
+        if user.user_id is None:
             continue
-        seen.add(cid)
-        s, _ = await caller.post(f"/calls/{cid}/end")
-        log(f"  Force-ended stale call_id={cid} was={c['status']} api={s}")
+        rows = await db_active_calls_for_user(user.user_id)
+        for c in rows:
+            if c["id"] not in seen:
+                seen.add(c["id"])
+                all_stale.append(c)
+
+    for u in users:
+        if u.user_id is None:
+            continue
+        stale = [c for c in all_stale
+                 if c["id"] in seen]
+        record(f"CLEANUP: no stale calls for {u.username}", len(stale) == 0,
+               f"stale={stale}")
+
+    for c in all_stale:
+        cid = c["id"]
+        for u in users:
+            s, _ = await u.post(f"/calls/{cid}/end")
+            if s == 200:
+                break
+        else:
+            await db_execute("UPDATE calls SET status='ended', ended_at=NOW() WHERE id=$1", cid)
+        log(f"  Force-ended stale call_id={cid} was={c['status']}")
+
 
 # ─── MAIN ──────────────────────────────────────────────────────────────────────
 async def main():
+    global THIRD_USER
+
     log("=" * 60)
     log("teqlif Call API Test Suite")
     log(f"Base URL: {BASE_URL}")
@@ -621,26 +944,37 @@ async def main():
     print(f"\nŞifreler (terminale yazılanlar görünmez)\n")
     caller_pass = getpass.getpass(f"  {CALLER_USER} şifresi: ")
     callee_pass = getpass.getpass(f"  {CALLEE_USER} şifresi: ")
+    THIRD_USER = input(f"  Üçüncü kullanıcı adı (TC21-TC28 için): ").strip()
+    third_pass = getpass.getpass(f"  {THIRD_USER} şifresi: ")
     print()
 
     caller = ApiClient(CALLER_USER)
     callee = ApiClient(CALLEE_USER)
+    third  = ApiClient(THIRD_USER)
 
     log("\n=== SETUP: Login ===")
-    ok_c = await caller.login(caller_pass)
-    ok_e = await callee.login(callee_pass)
-    record("Login teqlif (caller)", ok_c)
-    record("Login tesbih (callee)", ok_e)
-    if not (ok_c and ok_e):
-        log("\n[FATAL] Login failed. Exiting.")
+    ok_a = await caller.login(caller_pass)
+    ok_b = await callee.login(callee_pass)
+    ok_c = await third.login(third_pass)
+    record("Login A (caller/teqlif)", ok_a)
+    record("Login B (callee/tesbih)", ok_b)
+    record(f"Login C (third/{THIRD_USER})", ok_c)
+    if not (ok_a and ok_b):
+        log("\n[FATAL] A or B login failed. Exiting.")
         sys.exit(1)
+    if not ok_c:
+        log("\n[WARN] Third user login failed — TC21-TC28 will be skipped.")
 
     ws_caller = WsCapture(caller.token, CALLER_USER)
     ws_callee = WsCapture(callee.token, CALLEE_USER)
+    ws_third  = WsCapture(third.token if ok_c else "", THIRD_USER)
     await ws_caller.start()
     await ws_callee.start()
+    if ok_c:
+        await ws_third.start()
 
     try:
+        # ── 2-user core ────────────────────────────────────────────────────────
         await tc01_caller_cancels(caller, callee, ws_caller, ws_callee)
         await asyncio.sleep(1)
         await tc02_callee_rejects(caller, callee, ws_caller, ws_callee)
@@ -678,13 +1012,42 @@ async def main():
         await tc18_callee_token_endpoint(caller, callee)
         await asyncio.sleep(1)
 
-        await final_cleanup(caller, callee)
+        # ── Concurrent race & active-guard ─────────────────────────────────────
+        await tc19_concurrent_accept_reject(caller, callee, ws_caller, ws_callee)
+        await asyncio.sleep(1)
+        await tc20_reject_after_accept(caller, callee, ws_caller)
+        await asyncio.sleep(1)
+
+        # ── 3-user multi-party ──────────────────────────────────────────────────
+        if ok_c:
+            await tc21_user_busy_calling(caller, callee, third)
+            await asyncio.sleep(1)
+            await tc22_user_busy_active(caller, callee, third)
+            await asyncio.sleep(1)
+            await tc23_concurrent_caller_race(caller, callee, third, ws_callee)
+            await asyncio.sleep(1)
+            await tc24_third_party_end(caller, callee, third)
+            await asyncio.sleep(1)
+            await tc25_third_party_reject(caller, callee, third)
+            await asyncio.sleep(1)
+            await tc26_ws_isolation(caller, callee, third, ws_caller, ws_callee, ws_third)
+            await asyncio.sleep(1)
+            await tc27_callee_busy_while_ringing(caller, callee, third)
+            await asyncio.sleep(1)
+            await tc28_callee_busy_in_active(caller, callee, third)
+            await asyncio.sleep(1)
+        else:
+            log("\n  [SKIP] TC21-TC28 skipped (third user login failed)")
+
+        await final_cleanup(caller, callee, third)
 
     finally:
         await ws_caller.stop()
         await ws_callee.stop()
+        await ws_third.stop()
         await caller.close()
         await callee.close()
+        await third.close()
 
     log("\n" + "=" * 60)
     log("RESULTS SUMMARY")
