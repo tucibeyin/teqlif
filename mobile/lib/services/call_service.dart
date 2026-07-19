@@ -747,6 +747,11 @@ class CallService {
         otherAvatar: data['caller_avatar'] as String?,
       ),
     );
+    // Guard 3 in push_notification_service only needs to block the Android foreground
+    // race (FCM decline arriving while HTTP is in-flight, ~150-300ms). Once state is
+    // ringing, hasActiveCall guards future duplicates — clear so real user declines
+    // (e.g. iOS lock-screen Decline button) are not incorrectly blocked.
+    _activeIncomingCallId = null;
 
     // Pre-connect: LK odaya ringing sırasında bağlan → acceptance'da sadece mic aktive et.
     if ((calleeToken == null || livekitUrl == null) && incomingCallId != null) {

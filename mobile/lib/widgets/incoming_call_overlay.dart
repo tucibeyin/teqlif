@@ -235,8 +235,9 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
             ),
           ),
 
-        // Ringing UI
-        if (CallService.instance.state.value.status == CallStatus.ringing)
+        // Ringing UI — hidden when IncomingCallScreen/CallScreen is open (full-screen handles it)
+        if (CallService.instance.state.value.status == CallStatus.ringing &&
+            !CallService.instance.isCallScreenVisible.value)
           Positioned(
             top: 0,
             left: 0,
