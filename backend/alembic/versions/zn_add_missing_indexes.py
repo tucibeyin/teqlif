@@ -1,13 +1,13 @@
 """Add missing indexes for hot query paths
 
 Revision ID: zn_add_missing_indexes
-Revises: zm_drop_e2ee_key_from_calls
+Revises: zm_drop_e2ee_key
 Create Date: 2026-07-19
 """
 from alembic import op
 
 revision = "zn_add_missing_indexes"
-down_revision = "zm_drop_e2ee_key_from_calls"
+down_revision = "zm_drop_e2ee_key"
 branch_labels = None
 depends_on = None
 
