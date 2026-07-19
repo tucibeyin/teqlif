@@ -5465,4 +5465,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get callHistoryStatusCancelled => 'Отменено';
+
+  @override
+  String get walletTxnChurnAirdrop => 'Подарок за возвращение';
 }

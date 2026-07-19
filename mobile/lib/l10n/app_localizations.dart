@@ -9749,6 +9749,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'İptal edildi'**
   String get callHistoryStatusCancelled;
+
+  /// No description provided for @walletTxnChurnAirdrop.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geri Dönüş Hediyesi'**
+  String get walletTxnChurnAirdrop;
 }
 
 class _AppLocalizationsDelegate

@@ -2934,5 +2934,6 @@
   "callHistoryStatusYouDeclined": "Вы отклонили",
   "callHistoryStatusNoAnswer": "Нет ответа",
   "callHistoryStatusNotAnswered": "Не отвечено",
-  "callHistoryStatusCancelled": "Отменено"
+  "callHistoryStatusCancelled": "Отменено",
+  "walletTxnChurnAirdrop": "Подарок за возвращение"
 }

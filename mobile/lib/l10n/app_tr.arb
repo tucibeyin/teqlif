@@ -2932,5 +2932,6 @@
   "callHistoryStatusYouDeclined": "Siz reddettiniz",
   "callHistoryStatusNoAnswer": "Cevap yok",
   "callHistoryStatusNotAnswered": "Cevaplanmadı",
-  "callHistoryStatusCancelled": "İptal edildi"
+  "callHistoryStatusCancelled": "İptal edildi",
+  "walletTxnChurnAirdrop": "Geri Dönüş Hediyesi"
 }

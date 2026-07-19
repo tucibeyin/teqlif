@@ -5385,4 +5385,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get callHistoryStatusCancelled => 'ألغيت';
+
+  @override
+  String get walletTxnChurnAirdrop => 'هدية العودة';
 }

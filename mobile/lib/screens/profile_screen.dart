@@ -3857,6 +3857,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Map<String, String> _typeLabels(AppLocalizations l) => {
     'airdrop':              l.walletTxnAirdrop,
+    'churn_airdrop':        l.walletTxnChurnAirdrop,
     'receive_gift':         l.walletTxnReceiveGift,
     'send_gift':            l.walletTxnSendGift,
     'spend_lead_gen':       l.walletTxnSpendLeadGen,
@@ -4581,10 +4582,34 @@ class _GiftNameBadge extends StatelessWidget {
     'rose': '🌹', 'heart': '❤️', 'fire': '🔥', 'star': '⭐',
     'diamond': '💎', 'crown': '👑', 'rocket': '🚀', 'trophy': '🏆',
     'money': '💰', 'clap': '👏', 'kiss': '💋', 'gift': '🎁',
+    'ateş': '🔥', 'elmas': '💎', 'kral tacı': '👑',
   };
+
+  String _displayName(AppLocalizations l) {
+    switch (giftName.toLowerCase()) {
+      case 'fire':
+      case 'ateş':
+      case 'огонь':
+      case 'نار':
+        return l.giftNameFire;
+      case 'diamond':
+      case 'elmas':
+      case 'бриллиант':
+      case 'ماس':
+        return l.giftNameDiamond;
+      case 'crown':
+      case 'kral tacı':
+      case 'королевская корона':
+      case 'تاج ملكي':
+        return l.giftNameCrown;
+      default:
+        return giftName;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final emoji = _giftEmojis[giftName.toLowerCase()] ?? '🎁';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -4599,7 +4624,7 @@ class _GiftNameBadge extends StatelessWidget {
           Text(emoji, style: const TextStyle(fontSize: 22)),
           const SizedBox(width: 10),
           Text(
-            giftName,
+            _displayName(l),
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,

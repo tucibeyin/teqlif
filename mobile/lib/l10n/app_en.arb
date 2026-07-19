@@ -2969,5 +2969,6 @@
   "callHistoryStatusYouDeclined": "You declined",
   "callHistoryStatusNoAnswer": "No answer",
   "callHistoryStatusNotAnswered": "Not answered",
-  "callHistoryStatusCancelled": "Cancelled"
+  "callHistoryStatusCancelled": "Cancelled",
+  "walletTxnChurnAirdrop": "Welcome Back Airdrop"
 }

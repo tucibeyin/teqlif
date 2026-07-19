@@ -5414,4 +5414,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get callHistoryStatusCancelled => 'Cancelled';
+
+  @override
+  String get walletTxnChurnAirdrop => 'Welcome Back Airdrop';
 }

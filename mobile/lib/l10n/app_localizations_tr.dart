@@ -5417,4 +5417,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get callHistoryStatusCancelled => 'İptal edildi';
+
+  @override
+  String get walletTxnChurnAirdrop => 'Geri Dönüş Hediyesi';
 }

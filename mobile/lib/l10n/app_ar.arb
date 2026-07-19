@@ -2933,5 +2933,6 @@
   "callHistoryStatusYouDeclined": "أنت رفضت",
   "callHistoryStatusNoAnswer": "لا يوجد رد",
   "callHistoryStatusNotAnswered": "لم يتم الرد",
-  "callHistoryStatusCancelled": "ألغيت"
+  "callHistoryStatusCancelled": "ألغيت",
+  "walletTxnChurnAirdrop": "هدية العودة"
 }
