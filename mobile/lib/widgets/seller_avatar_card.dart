@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../config/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../config/app_colors.dart';
 import '../config/theme.dart';
-
 import '../config/api.dart';
 
 class SellerAvatarCard extends StatelessWidget {
@@ -65,14 +65,18 @@ class SellerAvatarCard extends StatelessWidget {
                     bottom: 0,
                     right: 0,
                     child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: const BoxDecoration(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                        ),
                         shape: BoxShape.circle,
-                        color: Color(0xFFF59E0B),
+                        border: Border.all(color: AppColors.surface(context), width: 1.5),
                       ),
-                      child: const Center(
-                        child: Text('👑', style: TextStyle(fontSize: 10)),
+                      child: const FaIcon(
+                        FontAwesomeIcons.crown,
+                        size: 9,
+                        color: Colors.white,
                       ),
                     ),
                   ),
