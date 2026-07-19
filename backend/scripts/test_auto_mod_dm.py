@@ -95,11 +95,11 @@ def main():
         # Change current working directory so Pydantic finds .env
         os.chdir(backend_dir)
         
-        from app.database import async_session_maker
+        from app.database import AsyncSessionLocal
         from app.models.message import DirectMessage
         
         async def check_db():
-            async with async_session_maker() as session:
+            async with AsyncSessionLocal() as session:
                 for desc, content, msg_id in msg_ids:
                     msg = await session.get(DirectMessage, msg_id)
                     if msg:
