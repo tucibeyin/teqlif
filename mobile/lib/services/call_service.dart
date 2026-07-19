@@ -1715,6 +1715,13 @@ class CallService {
         _cpLog('LK', 'TrackUnsubscribed VIDEO | participant=${event.participant.identity}');
         _setState(state.value.copyWith(remoteVideoEnabled: false));
       }
+    } else if (event is TrackMutedEvent) {
+      final isRemote = event.participant != _room?.localParticipant;
+      _cpLog('LK', 'TrackMuted | kind=${event.publication.kind} isRemote=$isRemote');
+      if (isRemote && event.publication.kind == TrackType.VIDEO) {
+        _cpLog('LK', 'TrackMuted remote VIDEO → remoteVideoEnabled=false');
+        _setState(state.value.copyWith(remoteVideoEnabled: false));
+      }
     } else if (event is TrackUnmutedEvent) {
       // Android caller pre-publishes a MUTED audio track during calling state.
       // iOS callee receives TrackSubscribedEvent during RINGING → skips transition (correct).
@@ -1722,7 +1729,10 @@ class CallService {
       // no second TrackSubscribedEvent. Drive connecting→connected here.
       final isRemote = event.participant != _room?.localParticipant;
       _cpLog('LK', 'TrackUnmuted | kind=${event.publication.kind} isRemote=$isRemote status=${state.value.status.name}');
-      if (isRemote && event.publication.kind == TrackType.AUDIO && state.value.status == CallStatus.connecting) {
+      if (isRemote && event.publication.kind == TrackType.VIDEO) {
+        _cpLog('LK', 'TrackUnmuted remote VIDEO → remoteVideoEnabled=true');
+        _setState(state.value.copyWith(remoteVideoEnabled: true));
+      } else if (isRemote && event.publication.kind == TrackType.AUDIO && state.value.status == CallStatus.connecting) {
         _cpLog('LK', 'TrackUnmuted AUDIO remote → connecting→connected (Android unmuted pre-published track)');
         AudioSession.instance.then((session) async {
           try {
@@ -2338,11 +2348,14 @@ class CallService {
     }
     final enabled = state.value.localVideoEnabled;
     _cpLog('VIDEO', 'toggleCamera | current=$enabled → ${!enabled}');
+    // Optimistic update — setCameraEnabled fires TrackMutedEvent (not Unpublished),
+    // so the event handler alone would never clear localVideoEnabled.
+    _setState(state.value.copyWith(localVideoEnabled: !enabled));
     try {
       await room.localParticipant?.setCameraEnabled(!enabled);
-      // State updated via TrackPublishedEvent / TrackUnpublishedEvent in _onRoomEvent
     } catch (e) {
       _cpLog('VIDEO', 'toggleCamera ERROR | $e');
+      _setState(state.value.copyWith(localVideoEnabled: enabled)); // revert
     }
   }
 

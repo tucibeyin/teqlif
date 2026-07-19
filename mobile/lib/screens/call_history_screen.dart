@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../config/api.dart';
 import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
+import 'public_profile_screen.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
 
@@ -335,17 +336,20 @@ class _CallTile extends StatelessWidget {
     if (dt == null) return '';
     final now = DateTime.now();
     final local = dt.toLocal();
-    final diff = now.difference(local);
+    final today = DateTime(now.year, now.month, now.day);
+    final localDate = DateTime(local.year, local.month, local.day);
+    final diffDays = today.difference(localDate).inDays;
+    
+    final timeStr = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 
-    if (diff.inDays == 0) {
-      return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-    } else if (diff.inDays == 1) {
-      return 'Yesterday';
-    } else if (diff.inDays < 7) {
-      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      return days[local.weekday - 1];
+    if (diffDays == 0) {
+      return 'Bugün $timeStr';
+    } else if (diffDays == 1) {
+      return 'Dün $timeStr';
     } else {
-      return '${local.day}/${local.month}/${local.year}';
+      final d = local.day.toString().padLeft(2, '0');
+      final m = local.month.toString().padLeft(2, '0');
+      return '$d/$m/${local.year} $timeStr';
     }
   }
 
@@ -378,6 +382,19 @@ class _CallTile extends StatelessWidget {
     };
 
     return ListTile(
+      onTap: () {
+        if (item.otherUsername != null && item.otherUsername!.isNotEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PublicProfileScreen(
+                username: item.otherUsername!,
+                userId: item.otherUserId,
+              ),
+            ),
+          );
+        }
+      },
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: Stack(

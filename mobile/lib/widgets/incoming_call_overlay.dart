@@ -252,24 +252,6 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
       children: [
         widget.child,
 
-        // Active call floating indicator — shown when call is connected but CallScreen is not visible
-        if (CallService.instance.state.value.status == CallStatus.connected &&
-            !CallService.instance.isCallScreenVisible.value)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: _ActiveCallBar(
-                  username: CallService.instance.state.value.otherUsername ?? '',
-                  onTap: _openCallScreen,
-                ),
-              ),
-            ),
-          ),
-
         // Ringing UI — hidden when IncomingCallScreen/CallScreen is open (full-screen handles it)
         if (CallService.instance.state.value.status == CallStatus.ringing &&
             !CallService.instance.isCallScreenVisible.value)

@@ -618,6 +618,7 @@ class _CallScreenState extends State<CallScreen> {
                     left: _pipPos!.dx,
                     top: _pipPos!.dy,
                     child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onPanUpdate: (d) {
                         setState(() {
                           _pipPos = Offset(
@@ -631,8 +632,10 @@ class _CallScreenState extends State<CallScreen> {
                         child: SizedBox(
                           width: pipW,
                           height: pipH,
-                          child: _LocalVideoView(
-                            room: CallService.instance.room,
+                          child: IgnorePointer(
+                            child: _LocalVideoView(
+                              room: CallService.instance.room,
+                            ),
                           ),
                         ),
                       ),
