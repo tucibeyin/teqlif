@@ -2015,7 +2015,20 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.displayName),
+        title: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PublicProfileScreen(
+                  username: widget.otherHandle,
+                  userId: widget.otherUserId,
+                ),
+              ),
+            );
+          },
+          child: Text(widget.displayName),
+        ),
         leading: const BackButton(),
         actions: [
           IconButton(
