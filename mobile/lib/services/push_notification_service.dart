@@ -30,6 +30,10 @@ const _kCategoryCall  = 'incoming_call_category';
 
 final FlutterLocalNotificationsPlugin _flnp = FlutterLocalNotificationsPlugin();
 
+// iOS: true when the VoIP push arrived while app was foreground (AppDelegate will
+// auto-dismiss CallKit UI). The subsequent ACTION_CALL_DECLINE is synthetic, not user.
+bool _callKitAutoDismissExpected = false;
+
 
 
 // ─── Background FCM handler (separate isolate) ────────────────────────────────
@@ -351,6 +355,11 @@ class PushNotificationService {
         final callId = data['call_id']?.toString() ?? 'NULL';
         final caller = data['caller_username']?.toString() ?? 'NULL';
         _cpLog('PUSH', 'CallEventActionCallIncoming | callId=$callId caller=$caller nowUtc=${DateTime.now().toUtc().toIso8601String()} → onIncomingCall (pre-connect trigger)');
+        // Track whether AppDelegate will auto-dismiss (only when app is foreground).
+        if (Platform.isIOS) {
+          _callKitAutoDismissExpected = WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+          _cpLog('PUSH', 'CallEventActionCallIncoming: autoDismissExpected=$_callKitAutoDismissExpected');
+        }
         await CallService.instance.onIncomingCall({
           ...data,
           'type': 'incoming_call',
@@ -398,10 +407,14 @@ class PushNotificationService {
 
         // Guard 1: iOS foreground VoIP push → AppDelegate sends CXEndCallAction to suppress
         // full-screen CallKit UI. Call is handled by WS/IncomingCallBar — don't reject.
-        if (currentStatus == CallStatus.ringing) {
+        // Only skip when we know the VoIP push arrived while foreground (_callKitAutoDismissExpected).
+        // Background declines (lock screen Decline button) must NOT be skipped.
+        if (Platform.isIOS && currentStatus == CallStatus.ringing && _callKitAutoDismissExpected) {
+          _callKitAutoDismissExpected = false;
           _cpLog('PUSH', 'CallEventActionCallDecline SKIPPED | status=ringing (iOS foreground auto-dismiss)');
           return;
         }
+        _callKitAutoDismissExpected = false;
 
         // Guard 2: Call already accepted — stale dismiss after accept must not re-reject.
         if (currentStatus == CallStatus.connecting ||
