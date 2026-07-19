@@ -32,9 +32,8 @@ class _CallScreenState extends State<CallScreen> {
   bool _hasPopped = false;
   late StreamSubscription<int> _proximitySubscription;
 
-  // PiP local video position
-  double _pipRight = 16;
-  double _pipBottom = 200;
+  // PiP local video position (left/top from screen origin, lazy-init on first build)
+  Offset? _pipPos;
 
   // Toast for participant joined/left/removed
   String? _toastMessage;
@@ -606,30 +605,40 @@ class _CallScreenState extends State<CallScreen> {
                 ),
               ),
 
-              // Local video PiP — draggable, bottom-right
+              // Local video PiP — freely draggable anywhere on screen
               if (cs.localVideoEnabled && cs.status == CallStatus.connected)
-                Positioned(
-                  right: _pipRight,
-                  bottom: _pipBottom,
-                  child: GestureDetector(
-                    onPanUpdate: (d) {
-                      setState(() {
-                        _pipRight = (_pipRight - d.delta.dx).clamp(8.0, 200.0);
-                        _pipBottom = (_pipBottom - d.delta.dy).clamp(80.0, 500.0);
-                      });
-                    },
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: SizedBox(
-                        width: 100,
-                        height: 140,
-                        child: _LocalVideoView(
-                          room: CallService.instance.room,
+                Builder(builder: (context) {
+                  const double pipW = 100, pipH = 140, pad = 8;
+                  final size = MediaQuery.of(context).size;
+                  _pipPos ??= Offset(
+                    size.width - pipW - 16,
+                    size.height - pipH - 200,
+                  );
+                  return Positioned(
+                    left: _pipPos!.dx,
+                    top: _pipPos!.dy,
+                    child: GestureDetector(
+                      onPanUpdate: (d) {
+                        setState(() {
+                          _pipPos = Offset(
+                            (_pipPos!.dx + d.delta.dx).clamp(pad, size.width - pipW - pad),
+                            (_pipPos!.dy + d.delta.dy).clamp(pad, size.height - pipH - pad),
+                          );
+                        });
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: pipW,
+                          height: pipH,
+                          child: _LocalVideoView(
+                            room: CallService.instance.room,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                }),
 
               // Camera switch button — top-right when local video active
               if (cs.localVideoEnabled && cs.status == CallStatus.connected)
