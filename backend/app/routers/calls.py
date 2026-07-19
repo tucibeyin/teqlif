@@ -718,7 +718,7 @@ async def end_call(
 
 # ── POST /api/calls/{id}/missed ───────────────────────────────────────────────
 
-async def _send_missed_call_push(callee: User, caller: User) -> None:
+async def _send_missed_call_push(callee: User, caller: User, call_id: int) -> None:
     if not callee.fcm_token:
         return
     logger.info(f"[Calls] Sending 'call_missed' FCM push to {callee.username}")
@@ -793,7 +793,7 @@ async def missed_call(
         if callee:
             # commit sonrası expire olan attribute'ları yenile
             await db.refresh(callee)
-            await _send_missed_call_push(callee, current_user)
+            await _send_missed_call_push(callee, current_user, call_id)
 
     logger.info("[CALL_PROCESS][END] missed_call OK | call_id=%d caller=%d", call_id, current_user.id)
     return {"ok": True}
