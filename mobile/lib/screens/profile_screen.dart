@@ -78,13 +78,14 @@ class ProfileScreenState extends State<ProfileScreen> {
   List<(String, String)>? _allCategoryLabels;
 
   List<(String, String)> get _categories {
-    final keys = _listings
-        .map((l) => l['category'] as String?)
-        .whereType<String>()
-        .where((c) => c.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final keys =
+        _listings
+            .map((l) => l['category'] as String?)
+            .whereType<String>()
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     if (_allCategoryLabels == null) {
       return keys.map((k) => (k, k)).toList();
     }
@@ -104,7 +105,9 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      r = r.where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q)).toList();
+      r = r
+          .where((l) => (l['title'] as String? ?? '').toLowerCase().contains(q))
+          .toList();
     }
     return r;
   }
@@ -122,8 +125,9 @@ class ProfileScreenState extends State<ProfileScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_allCategoryLabels == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) {
+      CategoryService.getCategories(
+        locale: Localizations.localeOf(context).languageCode,
+      ).then((cats) {
         if (mounted) setState(() => _allCategoryLabels = cats);
       });
     }
@@ -174,13 +178,15 @@ class ProfileScreenState extends State<ProfileScreen> {
   /// [bypassCache]: pull-to-refresh için cache okumayı atlar, cache'i ezar.
   Future<void> _load({bool bypassCache = false}) async {
     // Önceki abonelikleri iptal et (tekrarlı _load çağrıları için)
-    for (final sub in _subs) { sub.cancel(); }
+    for (final sub in _subs) {
+      sub.cancel();
+    }
     _subs.clear();
 
     // Kimlik bilgisi: güvenli depodan al (hızlı, bir kez)
     final localInfo = await StorageService.getUserInfo();
     final username = localInfo?['username'] as String?;
-    final userId   = localInfo?['id'] as int?;
+    final userId = localInfo?['id'] as int?;
 
     if (!mounted) return;
     // Güvenli depodan temel bilgileri anında göster (cache gelene kadar).
@@ -188,7 +194,10 @@ class ProfileScreenState extends State<ProfileScreen> {
     if (_user == null && localInfo != null) {
       final avatarUrl = StorageService.cachedAvatarUrl;
       if (avatarUrl != null) localInfo['profile_image_url'] = avatarUrl;
-      setState(() { _user = localInfo; _loading = true; });
+      setState(() {
+        _user = localInfo;
+        _loading = true;
+      });
     }
 
     if (username == null || userId == null) {
@@ -212,24 +221,31 @@ class ProfileScreenState extends State<ProfileScreen> {
           if (avatarUrl != null && avatarUrl.isNotEmpty) {
             StorageService.saveAvatarUrl(avatarUrl);
           }
-          
+
           // Profil bilgisi güncellenince is_premium dahil tüm bilgileri locale kaydet.
           // /users/{username} endpoint'i email döndurmüyor, localInfo'dan alıyoruz.
           StorageService.saveUserInfo(
-              id: user['id'] as int? ?? userId,
-              email: localInfo?['email'] as String? ?? '',
-              username: user['username'] as String? ?? username,
-              fullName: user['full_name'] as String? ?? '',
-              isPremium: user['is_premium'] == true,
-              onboardingCompleted: user['onboarding_completed'] == true,
-              isVerified: user['is_verified'] == true,
-              phoneVerified: user['phone_verified'] == true,
+            id: user['id'] as int? ?? userId,
+            email: localInfo?['email'] as String? ?? '',
+            username: user['username'] as String? ?? username,
+            fullName: user['full_name'] as String? ?? '',
+            isPremium: user['is_premium'] == true,
+            onboardingCompleted: user['onboarding_completed'] == true,
+            isVerified: user['is_verified'] == true,
+            phoneVerified: user['phone_verified'] == true,
           );
 
-          if (mounted) setState(() { _user = user; _loading = false; });
+          if (mounted)
+            setState(() {
+              _user = user;
+              _loading = false;
+            });
         },
         onError: (e) {
-          LoggerService.instance.warning('ProfileScreen', 'Profil yüklenemedi: $e');
+          LoggerService.instance.warning(
+            'ProfileScreen',
+            'Profil yüklenemedi: $e',
+          );
           if (mounted) setState(() => _loading = false);
         },
       ),
@@ -245,9 +261,20 @@ class ProfileScreenState extends State<ProfileScreen> {
         fromJson: (raw) => raw as List,
       ).listen(
         (listings) {
-          if (mounted) setState(() { _listings = listings; _loading = false; _listingsError = false; });
+          if (mounted)
+            setState(() {
+              _listings = listings;
+              _loading = false;
+              _listingsError = false;
+            });
         },
-        onError: (_) { if (mounted) setState(() { _loading = false; _listingsError = true; }); },
+        onError: (_) {
+          if (mounted)
+            setState(() {
+              _loading = false;
+              _listingsError = true;
+            });
+        },
       ),
     );
 
@@ -256,19 +283,16 @@ class ProfileScreenState extends State<ProfileScreen> {
 
     _subs.add(
       // ── Cüzdan (cache: user_wallet_data) ─────────────────────────────────
-      WalletService.getBalanceStream(bypassCache: bypassCache).listen(
-        (wallet) {
-          if (mounted) {
-            setState(() {
-              _tuciBalance = wallet['balance'] as int?;
-              _tuciHistory = wallet['transactions'] as List? ?? [];
-            });
-          }
-        },
-      ),
+      WalletService.getBalanceStream(bypassCache: bypassCache).listen((wallet) {
+        if (mounted) {
+          setState(() {
+            _tuciBalance = wallet['balance'] as int?;
+            _tuciHistory = wallet['transactions'] as List? ?? [];
+          });
+        }
+      }),
     );
   }
-
 
   String _buildImageUrl(String url) {
     if (url.startsWith('http')) return url;
@@ -277,20 +301,26 @@ class ProfileScreenState extends State<ProfileScreen> {
   }
 
   /// Profil fotoğrafı — CachedNetworkImage ile disk'e önbelleğe alınır.
-  Widget _buildAvatar({required String? imageUrl, required double radius, required Widget fallback}) {
+  Widget _buildAvatar({
+    required String? imageUrl,
+    required double radius,
+    required Widget fallback,
+  }) {
     final bg = AppColors.primaryBg(context);
     if (imageUrl == null) {
       return CircleAvatar(radius: radius, backgroundColor: bg, child: fallback);
     }
     return ClipOval(
       child: CachedNetworkImage(
-                  cacheManager: TeqlifCacheManager(),
+        cacheManager: TeqlifCacheManager(),
         imageUrl: imageUrl,
         width: radius * 2,
         height: radius * 2,
         fit: BoxFit.cover,
-        placeholder: (_, _) => CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
-        errorWidget:  (_, _, _) => CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
+        placeholder: (_, _) =>
+            CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
+        errorWidget: (_, _, _) =>
+            CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
       ),
     );
   }
@@ -311,7 +341,10 @@ class ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    final fullName = _user?['full_name'] ?? _user?['username'] ?? AppLocalizations.of(context)!.defaultUserFallback;
+    final fullName =
+        _user?['full_name'] ??
+        _user?['username'] ??
+        AppLocalizations.of(context)!.defaultUserFallback;
     final username = _user?['username'] ?? '';
     final email = _user?['email'] ?? '';
     final isVerified = _user?['is_verified'] == true;
@@ -326,7 +359,9 @@ class ProfileScreenState extends State<ProfileScreen> {
         surfaceTintColor: Colors.transparent,
         leading: PopupMenuButton<String>(
           offset: const Offset(8, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           elevation: 6,
           icon: Container(
             width: 36,
@@ -361,7 +396,10 @@ class ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(width: 12),
                   Text(
                     AppLocalizations.of(context)!.btnAddListing,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -377,13 +415,19 @@ class ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.videocam_outlined,
-                        color: Colors.red, size: 18),
+                    child: const Icon(
+                      Icons.videocam_outlined,
+                      color: Colors.red,
+                      size: 18,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(
                     AppLocalizations.of(context)!.startLiveStreamOption,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -393,9 +437,7 @@ class ProfileScreenState extends State<ProfileScreen> {
             if (val == 'listing') {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const CreateListingScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const CreateListingScreen()),
               );
             } else if (val == 'live') {
               showStartStreamDialog(context);
@@ -498,8 +540,13 @@ class ProfileScreenState extends State<ProfileScreen> {
                           clipBehavior: Clip.none,
                           children: [
                             _buildAvatar(
-                              imageUrl: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
-                                  ? _buildImageUrl(_user!['profile_image_url'] as String)
+                              imageUrl:
+                                  (_user?['profile_image_url'] as String?)
+                                          ?.isNotEmpty ==
+                                      true
+                                  ? _buildImageUrl(
+                                      _user!['profile_image_url'] as String,
+                                    )
                                   : null,
                               radius: 40,
                               fallback: Text(
@@ -519,7 +566,10 @@ class ProfileScreenState extends State<ProfileScreen> {
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                                      colors: [
+                                        Color(0xFF0891B2),
+                                        Color(0xFF06B6D4),
+                                      ],
                                     ),
                                     shape: BoxShape.circle,
                                     border: Border.all(
@@ -542,43 +592,58 @@ class ProfileScreenState extends State<ProfileScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _StatItem(count: _listings.length, label: AppLocalizations.of(context)!.profileListingCount),
+                              _StatItem(
+                                count: _listings.length,
+                                label: AppLocalizations.of(
+                                  context,
+                                )!.profileListingCount,
+                              ),
                               GestureDetector(
                                 key: const Key('profile_stat_takipci'),
                                 onTap: _user?['id'] != null
                                     ? () => Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => FollowListScreen(
-                                              userId: _user!['id'] as int,
-                                              type: FollowListType.followers,
-                                              title: AppLocalizations.of(context)!.profileFollowersList,
-                                            ),
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => FollowListScreen(
+                                            userId: _user!['id'] as int,
+                                            type: FollowListType.followers,
+                                            title: AppLocalizations.of(
+                                              context,
+                                            )!.profileFollowersList,
                                           ),
-                                        )
+                                        ),
+                                      )
                                     : null,
                                 child: _StatItem(
-                                  count: (_user?['follower_count'] as int?) ?? 0,
-                                  label: AppLocalizations.of(context)!.profileFollowers,
+                                  count:
+                                      (_user?['follower_count'] as int?) ?? 0,
+                                  label: AppLocalizations.of(
+                                    context,
+                                  )!.profileFollowers,
                                 ),
                               ),
                               GestureDetector(
                                 key: const Key('profile_stat_takip'),
                                 onTap: _user?['id'] != null
                                     ? () => Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => FollowListScreen(
-                                              userId: _user!['id'] as int,
-                                              type: FollowListType.following,
-                                              title: AppLocalizations.of(context)!.profileFollowingList,
-                                            ),
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => FollowListScreen(
+                                            userId: _user!['id'] as int,
+                                            type: FollowListType.following,
+                                            title: AppLocalizations.of(
+                                              context,
+                                            )!.profileFollowingList,
                                           ),
-                                        )
+                                        ),
+                                      )
                                     : null,
                                 child: _StatItem(
-                                  count: (_user?['following_count'] as int?) ?? 0,
-                                  label: AppLocalizations.of(context)!.profileFollowing,
+                                  count:
+                                      (_user?['following_count'] as int?) ?? 0,
+                                  label: AppLocalizations.of(
+                                    context,
+                                  )!.profileFollowing,
                                 ),
                               ),
                             ],
@@ -602,33 +667,41 @@ class ProfileScreenState extends State<ProfileScreen> {
                                 fontSize: 14,
                               ),
                             ),
-                            if (_user?['influence_rank'] != null && (_user!['influence_rank'] as int) > 0) ...[
+                            if (_user?['influence_rank'] != null &&
+                                (_user!['influence_rank'] as int) > 0) ...[
                               const SizedBox(width: 6),
                               _ScoreBadge(
                                 icon: FontAwesomeIcons.rankingStar,
-                                title: AppLocalizations.of(context)!.influenceRankLabel,
+                                title: AppLocalizations.of(
+                                  context,
+                                )!.influenceRankLabel,
                                 value: '${_user!['influence_rank']}',
-                                hint: AppLocalizations.of(context)!.influenceRankHint,
+                                hint: AppLocalizations.of(
+                                  context,
+                                )!.influenceRankHint,
                                 color: const Color(0xFF8B5CF6),
                               ),
                             ],
                             if (_user?['trust_score'] != null) ...[
                               const SizedBox(width: 6),
-                              Builder(builder: (ctx) {
-                                final ts = (_user!['trust_score'] as num).toInt();
-                                final l = AppLocalizations.of(ctx)!;
-                                return _ScoreBadge(
-                                  icon: FontAwesomeIcons.shieldHalved,
-                                  title: l.trustScoreLabel,
-                                  value: '$ts / 100',
-                                  hint: l.trustScoreHint,
-                                  color: ts >= 70
-                                      ? const Color(0xFF10B981)
-                                      : ts >= 35
-                                          ? const Color(0xFF3B82F6)
-                                          : const Color(0xFF9CA3AF),
-                                );
-                              }),
+                              Builder(
+                                builder: (ctx) {
+                                  final ts = (_user!['trust_score'] as num)
+                                      .toInt();
+                                  final l = AppLocalizations.of(ctx)!;
+                                  return _ScoreBadge(
+                                    icon: FontAwesomeIcons.shieldHalved,
+                                    title: l.trustScoreLabel,
+                                    value: '$ts / 100',
+                                    hint: l.trustScoreHint,
+                                    color: ts >= 70
+                                        ? const Color(0xFF10B981)
+                                        : ts >= 35
+                                        ? const Color(0xFF3B82F6)
+                                        : const Color(0xFF9CA3AF),
+                                  );
+                                },
+                              ),
                             ],
                           ],
                         ),
@@ -651,25 +724,36 @@ class ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ],
-                        if ((_user?['website_url'] as String?)?.isNotEmpty == true) ...[
+                        if ((_user?['website_url'] as String?)?.isNotEmpty ==
+                            true) ...[
                           const SizedBox(height: 4),
                           GestureDetector(
                             onTap: () => _websiteGuard.run(() async {
                               final raw = _user!['website_url'] as String;
                               final uri = Uri.tryParse(raw);
                               if (uri != null && await canLaunchUrl(uri)) {
-                                launchUrl(uri, mode: LaunchMode.externalApplication);
+                                launchUrl(
+                                  uri,
+                                  mode: LaunchMode.externalApplication,
+                                );
                               }
                             }),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.link_rounded, size: 14, color: Color(0xFF0EA5E9)),
+                                const Icon(
+                                  Icons.link_rounded,
+                                  size: 14,
+                                  color: Color(0xFF0EA5E9),
+                                ),
                                 const SizedBox(width: 3),
                                 Flexible(
                                   child: Text(
                                     (_user!['website_url'] as String)
-                                        .replaceFirst(RegExp(r'^https?://'), ''),
+                                        .replaceFirst(
+                                          RegExp(r'^https?://'),
+                                          '',
+                                        ),
                                     style: const TextStyle(
                                       fontSize: 13,
                                       color: Color(0xFF0EA5E9),
@@ -683,7 +767,10 @@ class ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ],
                         const SizedBox(height: 10),
-                        _SocialLinksRow(user: _user, userId: _user?['id'] as int?),
+                        _SocialLinksRow(
+                          user: _user,
+                          userId: _user?['id'] as int?,
+                        ),
                       ],
                     ),
                   ),
@@ -721,7 +808,9 @@ class ProfileScreenState extends State<ProfileScreen> {
 
             // ── Stale veri uyarısı ──
             if (_listingsError && _listings.isNotEmpty)
-              SliverToBoxAdapter(child: StaleDataBanner(onRetry: () => _load(bypassCache: true))),
+              SliverToBoxAdapter(
+                child: StaleDataBanner(onRetry: () => _load(bypassCache: true)),
+              ),
 
             // ── Arama & Kategori filtresi ──
             if (!_loading || _listings.isNotEmpty)
@@ -731,7 +820,8 @@ class ProfileScreenState extends State<ProfileScreen> {
                   searchQuery: _searchQuery,
                   selectedCategory: _selectedCategory,
                   categories: _categories,
-                  onSearchChanged: (v) => setState(() => _searchQuery = v.trim()),
+                  onSearchChanged: (v) =>
+                      setState(() => _searchQuery = v.trim()),
                   onSearchCleared: () {
                     _searchCtrl.clear();
                     setState(() => _searchQuery = '');
@@ -746,8 +836,7 @@ class ProfileScreenState extends State<ProfileScreen> {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 sliver: SliverGrid(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 3,
                     crossAxisSpacing: 2,
                     mainAxisSpacing: 2,
@@ -762,7 +851,10 @@ class ProfileScreenState extends State<ProfileScreen> {
             else if (_listingsError && _listings.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
-                child: NetworkErrorWidget(scrollable: true, onRetry: () => _load(bypassCache: true)),
+                child: NetworkErrorWidget(
+                  scrollable: true,
+                  onRetry: () => _load(bypassCache: true),
+                ),
               )
             else if (_listings.isEmpty)
               SliverFillRemaining(
@@ -777,8 +869,11 @@ class ProfileScreenState extends State<ProfileScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.grid_off_outlined,
-                                size: 52, color: Color(0xFFD1D5DB)),
+                            const Icon(
+                              Icons.grid_off_outlined,
+                              size: 52,
+                              color: Color(0xFFD1D5DB),
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               l.emptyListings,
@@ -814,7 +909,11 @@ class ProfileScreenState extends State<ProfileScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.search_off_rounded, size: 52, color: Color(0xFFD1D5DB)),
+                          const Icon(
+                            Icons.search_off_rounded,
+                            size: 52,
+                            color: Color(0xFFD1D5DB),
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             AppLocalizations.of(ctx)!.noResultsFound,
@@ -839,8 +938,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                   ),
                   childCount: _filteredListings.length,
                 ),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   crossAxisSpacing: 2,
                   mainAxisSpacing: 2,
@@ -893,15 +991,25 @@ class _ListingFilterState extends State<ListingFilter> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Icon(Icons.filter_list, size: 20, color: AppColors.textSecondary(context)),
+                Icon(
+                  Icons.filter_list,
+                  size: 20,
+                  color: AppColors.textSecondary(context),
+                ),
                 const SizedBox(width: 8),
                 Text(
                   AppLocalizations.of(context)!.filterTitle,
-                  style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const Spacer(),
                 Icon(
-                  _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  _expanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
                   color: AppColors.textSecondary(context),
                 ),
               ],
@@ -920,8 +1028,13 @@ class _ListingFilterState extends State<ListingFilter> {
                   onChanged: widget.onSearchChanged,
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context)!.profileSearchListingHint,
-                    hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary(context)),
+                    hintText: AppLocalizations.of(
+                      context,
+                    )!.profileSearchListingHint,
+                    hintStyle: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textTertiary(context),
+                    ),
                     prefixIcon: const Icon(Icons.search, size: 20),
                     suffixIcon: widget.searchQuery.isNotEmpty
                         ? IconButton(
@@ -960,18 +1073,22 @@ class _ListingFilterState extends State<ListingFilter> {
                         selected: widget.selectedCategory == null,
                         onTap: () => widget.onCategorySelected(null),
                       ),
-                      ...widget.categories.map((cat) => _CategoryChip(
-                            label: cat.$2,
-                            selected: widget.selectedCategory == cat.$1,
-                            onTap: () => widget.onCategorySelected(cat.$1),
-                          )),
+                      ...widget.categories.map(
+                        (cat) => _CategoryChip(
+                          label: cat.$2,
+                          selected: widget.selectedCategory == cat.$1,
+                          onTap: () => widget.onCategorySelected(cat.$1),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               const SizedBox(height: 16),
             ],
           ),
-          crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          crossFadeState: _expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 200),
         ),
       ],
@@ -979,12 +1096,15 @@ class _ListingFilterState extends State<ListingFilter> {
   }
 }
 
-
 class _CategoryChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _CategoryChip({required this.label, required this.selected, required this.onTap});
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1027,12 +1147,19 @@ class _StatItem extends StatelessWidget {
       children: [
         Text(
           '$count',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary(context),
+          ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary(context),
+          ),
         ),
       ],
     );
@@ -1070,8 +1197,8 @@ class _ListingGridItem extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ListingDetailScreen(
-              listing: Map<String, dynamic>.from(listing)),
+          builder: (_) =>
+              ListingDetailScreen(listing: Map<String, dynamic>.from(listing)),
         ),
       ),
       child: Stack(
@@ -1082,8 +1209,9 @@ class _ListingGridItem extends StatelessWidget {
                   cacheManager: TeqlifCacheManager(),
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
-                  placeholder: (_, _) =>
-                      const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  placeholder: (_, _) => const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                   errorWidget: (_, _, _) => _placeholder(context),
                 )
               : _placeholder(context),
@@ -1167,12 +1295,15 @@ class _ListingGridItem extends StatelessWidget {
   }
 
   Widget _placeholder(BuildContext context) => Container(
-        color: AppColors.surfaceVariant(context),
-        child: Center(
-          child: Icon(Icons.image_outlined,
-              size: 28, color: AppColors.border(context)),
-        ),
-      );
+    color: AppColors.surfaceVariant(context),
+    child: Center(
+      child: Icon(
+        Icons.image_outlined,
+        size: 28,
+        color: AppColors.border(context),
+      ),
+    ),
+  );
 }
 
 // ── Ayarlar ekranı ────────────────────────────────────────────────────────────
@@ -1260,8 +1391,8 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     final info = await StorageService.getUserInfo();
     if (mounted && info != null) {
       setState(() {
-         _isPremium = info['is_premium'] == true;
-         _isPrivate = info['is_private'] == true;
+        _isPremium = info['is_premium'] == true;
+        _isPrivate = info['is_private'] == true;
       });
     }
   }
@@ -1297,7 +1428,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
         setState(() => _isPrivate = !val);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.errorGenericRetry)),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.errorGenericRetry),
+            ),
           );
         }
       }
@@ -1305,7 +1438,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       setState(() => _isPrivate = !val);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.errNetworkRetry)),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.errNetworkRetry),
+          ),
         );
       }
     }
@@ -1317,7 +1452,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   // Çift tıklama guard'ları
   final _logoutGuard = OnceGuard();
   final _proHubGuard = OnceGuard();
-  final _urlGuard    = OnceGuard();
+  final _urlGuard = OnceGuard();
 
   Future<void> _shareInvite() async {
     if (_shareLoading) return;
@@ -1341,7 +1476,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     setState(() => _shareLoading = false);
     if (code == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.profileInviteCodeError)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.profileInviteCodeError),
+        ),
       );
       return;
     }
@@ -1406,12 +1543,16 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
-              Icon(Icons.card_giftcard_rounded, size: 48, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.card_giftcard_rounded,
+                size: 48,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(height: 16),
               Text(
                 l.profileInviteTitle,
                 style: TextStyle(
-                  fontSize: 20, 
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -1421,18 +1562,27 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               Text(
                 l.profileInviteSubtitle,
                 style: TextStyle(
-                  fontSize: 14, 
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontSize: 14,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1450,33 +1600,47 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     InkWell(
                       onTap: () {
                         Clipboard.setData(ClipboardData(text: code!));
-                        
+
                         // Show overlay toast instead of snackbar so it appears in front of the modal
                         final overlay = Overlay.of(ctx);
                         late OverlayEntry entry;
                         entry = OverlayEntry(
                           builder: (context) => Positioned(
-                            bottom: MediaQuery.of(context).viewInsets.bottom + 120,
+                            bottom:
+                                MediaQuery.of(context).viewInsets.bottom + 120,
                             left: 32,
                             right: 32,
                             child: Material(
                               color: Colors.transparent,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.inverseSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.inverseSurface,
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.2),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.2,
+                                      ),
                                       blurRadius: 10,
                                       offset: const Offset(0, 5),
-                                    )
-                                  ]
+                                    ),
+                                  ],
                                 ),
                                 child: Text(
                                   l.profileInviteCodeCopied,
-                                  style: TextStyle(color: Theme.of(context).colorScheme.onInverseSurface, fontSize: 15, fontWeight: FontWeight.w600),
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onInverseSurface,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -1495,7 +1659,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.copy_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 20),
+                        child: Icon(
+                          Icons.copy_rounded,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ],
@@ -1504,7 +1672,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               const SizedBox(height: 12),
               Text(
                 l.profileInviteModalExpiry(expiryText),
-                style: TextStyle(fontSize: 13, color: Colors.red.shade400, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.red.shade400,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 32),
               SizedBox(
@@ -1513,18 +1685,22 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    ShareService.show(
-                      context,
-                      text: shareText,
-                      origin: origin,
-                    );
+                    ShareService.show(context, text: shareText, origin: origin);
                   },
                   icon: const Icon(Icons.share_rounded),
-                  label: Text(l.profileInviteShareBtn, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  label: Text(
+                    l.profileInviteShareBtn,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),
@@ -1572,9 +1748,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           title: Text(
             l.profileChangePassword,
             style: TextStyle(
-                color: AppColors.textPrimary(ctx),
-                fontSize: 16,
-                fontWeight: FontWeight.w600),
+              color: AppColors.textPrimary(ctx),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -1627,16 +1804,22 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     maxLength: 6,
                     decoration: InputDecoration(
                       labelText: l.fieldEmailCode,
-                      labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
+                      labelStyle: TextStyle(
+                        color: AppColors.textSecondary(ctx),
+                      ),
                       counterText: '',
                     ),
                   ),
                 ],
                 if (error != null) ...[
                   const SizedBox(height: 8),
-                  Text(error!,
-                      style: const TextStyle(
-                          color: Color(0xFFEF4444), fontSize: 12)),
+                  Text(
+                    error!,
+                    style: const TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -1644,8 +1827,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           actions: [
             TextButton(
               onPressed: loading ? null : () => Navigator.pop(ctx),
-              child: Text(l.btnCancel,
-                  style: TextStyle(color: AppColors.textSecondary(ctx))),
+              child: Text(
+                l.btnCancel,
+                style: TextStyle(color: AppColors.textSecondary(ctx)),
+              ),
             ),
             ElevatedButton(
               onPressed: loading
@@ -1686,7 +1871,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         try {
                           await apiCall(
                             () => http.post(
-                              Uri.parse('$kBaseUrl/auth/change-password/send-code'),
+                              Uri.parse(
+                                '$kBaseUrl/auth/change-password/send-code',
+                              ),
                               headers: {'Authorization': 'Bearer $token'},
                             ),
                           );
@@ -1700,7 +1887,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                             loading = false;
                           });
                         } catch (e) {
-                          LoggerService.instance.warning('ProfileScreen', 'Şifre kodu gönderilemedi: $e');
+                          LoggerService.instance.warning(
+                            'ProfileScreen',
+                            'Şifre kodu gönderilemedi: $e',
+                          );
                           setS(() {
                             error = l.errorNetworkMessage;
                             loading = false;
@@ -1718,7 +1908,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         try {
                           await apiCall(
                             () => http.post(
-                              Uri.parse('$kBaseUrl/auth/change-password/confirm'),
+                              Uri.parse(
+                                '$kBaseUrl/auth/change-password/confirm',
+                              ),
                               headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': 'Bearer $token',
@@ -1742,7 +1934,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                             loading = false;
                           });
                         } catch (e) {
-                          LoggerService.instance.warning('ProfileScreen', 'Şifre değiştirme başarısız: $e');
+                          LoggerService.instance.warning(
+                            'ProfileScreen',
+                            'Şifre değiştirme başarısız: $e',
+                          );
                           setS(() {
                             error = l.errorNetworkMessage;
                             loading = false;
@@ -1756,7 +1951,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : Text(
                       codeSent ? l.btnChangePassword : l.btnSendCode,
                       style: const TextStyle(color: Colors.white),
@@ -1807,19 +2005,30 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               if (error != null) ...[
                 const SizedBox(height: 8),
-                Text(error!, style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+                Text(
+                  error!,
+                  style: const TextStyle(
+                    color: Color(0xFFEF4444),
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(l.btnCancel, style: const TextStyle(color: Color(0xFF6B7280))),
+              child: Text(
+                l.btnCancel,
+                style: const TextStyle(color: Color(0xFF6B7280)),
+              ),
             ),
             AsyncElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 minimumSize: const Size(0, 38),
               ),
               onPressed: () async {
@@ -1831,16 +2040,24 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   await AuthService.deleteAccount(passCtrl.text);
                   if (ctx.mounted) {
                     Navigator.of(ctx).pop();
-                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/login', (_) => false);
                   }
                 } on AppException catch (e) {
                   setS(() => error = e.message);
                 } catch (e) {
-                  LoggerService.instance.warning('ProfileScreen', 'Hesap silinemedi: $e');
+                  LoggerService.instance.warning(
+                    'ProfileScreen',
+                    'Hesap silinemedi: $e',
+                  );
                   setS(() => error = l.errorNetworkMessage);
                 }
               },
-              child: Text(l.btnDeleteAccount, style: const TextStyle(color: Colors.white)),
+              child: Text(
+                l.btnDeleteAccount,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -1866,25 +2083,53 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             items: [
               _SettingsTile(
                 icon: Icons.workspace_premium_outlined,
-                leadingWidget: const FaIcon(FontAwesomeIcons.crown, color: Color(0xFF06B6D4), size: 22),
+                leadingWidget: const FaIcon(
+                  FontAwesomeIcons.crown,
+                  color: Color(0xFF06B6D4),
+                  size: 22,
+                ),
                 iconColor: const Color(0xFF06B6D4),
                 label: l.proHubTitle,
                 trailing: _isPremium
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [Color(0xFF1E1B4B), Color(0xFF4338CA)]),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1E1B4B), Color(0xFF4338CA)],
+                          ),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(l.settingsProActive, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                        child: Text(
+                          l.settingsProActive,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
                       )
                     : Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                          ),
                           borderRadius: BorderRadius.circular(50),
                         ),
-                        child: Text(AppLocalizations.of(context)!.pro, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
+                        child: Text(
+                          AppLocalizations.of(context)!.pro,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                 onTap: () => _proHubGuard.run(() async {
                   // StorageService'ten güncel is_premium oku — widget.user stale olabilir
@@ -1893,7 +2138,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ProHubScreen(isPremium: freshInfo?['is_premium'] == true),
+                      builder: (_) => ProHubScreen(
+                        isPremium: freshInfo?['is_premium'] == true,
+                      ),
                     ),
                   );
                 }),
@@ -1906,12 +2153,32 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             items: [
               ListTile(
                 key: _shareTileKey,
-                leading: const Icon(Icons.card_giftcard_outlined, color: Color(0xFF16A34A)),
-                title: Text(AppLocalizations.of(context)!.profileInviteTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                subtitle: Text(AppLocalizations.of(context)!.profileInviteSubtitle, style: const TextStyle(fontSize: 12)),
+                leading: const Icon(
+                  Icons.card_giftcard_outlined,
+                  color: Color(0xFF16A34A),
+                ),
+                title: Text(
+                  AppLocalizations.of(context)!.profileInviteTitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  AppLocalizations.of(context)!.profileInviteSubtitle,
+                  style: const TextStyle(fontSize: 12),
+                ),
                 trailing: _shareLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        Icons.chevron_right,
+                        color: AppColors.border(context),
+                        size: 20,
+                      ),
                 onTap: _shareInvite,
               ),
             ],
@@ -1923,44 +2190,87 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.list_alt_outlined,
                 label: l.profileActiveListings,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const _MyListingsScreen(active: true))),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const _MyListingsScreen(active: true),
+                  ),
+                ),
               ),
               _SettingsTile(
                 icon: Icons.archive_outlined,
                 label: l.profilePassiveListings,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const _MyListingsScreen(active: false))),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const _MyListingsScreen(active: false),
+                  ),
+                ),
               ),
               _SettingsTile(
                 icon: Icons.favorite_outline,
                 label: l.profileFavorites,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const _FavoritesScreen())),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const _FavoritesScreen()),
+                ),
               ),
               _SettingsTile(
                 icon: Icons.shopping_bag_outlined,
                 label: l.settingsMyPurchases,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const PurchasesScreen())),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PurchasesScreen()),
+                ),
               ),
               _SettingsTile(
                 icon: Icons.sell_outlined,
                 label: l.settingsMySales,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const SalesScreen())),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SalesScreen()),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: l.profileAccountSection,
+            title: l.profileActivitySection,
             items: [
+              _SettingsTile(
+                icon: Icons.person_add_outlined,
+                label: l.followRequests,
+                trailing: _pendingRequestCount > 0
+                    ? Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          _pendingRequestCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    : null,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const FollowRequestsScreen(),
+                  ),
+                ).then((_) => _loadPendingRequests()),
+              ),
               _SettingsTile(
                 icon: Icons.call_outlined,
                 label: l.callHistoryTitle,
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const CallHistoryScreen())),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CallHistoryScreen()),
+                ),
               ),
               _SettingsTile(
                 icon: Icons.star_outline,
@@ -1991,31 +2301,84 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   _loadUnreadRatings();
                 },
               ),
-              _SettingsTile(
-                icon: Icons.person_add_outlined,
-                label: l.followRequests,
-                trailing: _pendingRequestCount > 0
-                    ? Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          _pendingRequestCount.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+            ],
+          ),
+          const SizedBox(height: 8),
+          _SettingsSection(
+            title: l.profilePrivacySection,
+            items: [
+              SwitchListTile(
+                secondary: Icon(
+                  Icons.lock_outline,
+                  color: AppColors.iconColor(context),
+                ),
+                title: Row(
+                  children: [
+                    Text(
+                      l.privateAccount,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        showDialog<void>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            backgroundColor: AppColors.surface(context),
+                            title: Text(
+                              l.privateAccount,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                            content: Text(
+                              l.privateAccountDesc,
+                              style: TextStyle(
+                                color: AppColors.textSecondary(context),
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text(
+                                  l.btnOk,
+                                  style: const TextStyle(color: kPrimary),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      )
-                    : null,
+                        );
+                      },
+                      child: Icon(
+                        Icons.help_outline,
+                        size: 16,
+                        color: AppColors.iconColor(context),
+                      ),
+                    ),
+                  ],
+                ),
+                value: _isPrivate,
+                activeThumbColor: kPrimary,
+                onChanged: _togglePrivateAccount,
+              ),
+              _SettingsTile(
+                icon: Icons.block_outlined,
+                label: l.profileBlockedUsers,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const FollowRequestsScreen()),
-                ).then((_) => _loadPendingRequests()),
+                  MaterialPageRoute(builder: (_) => const BlockedUsersScreen()),
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _SettingsSection(
+            title: l.profileAccountSection,
+            items: [
               _SettingsTile(
                 icon: Icons.manage_accounts_outlined,
                 label: l.accountInfoMenuLabel,
@@ -2029,82 +2392,61 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 label: l.profileChangePassword,
                 onTap: () => _showChangePasswordDialog(context),
               ),
+              if (_biometricAvailable)
+                SwitchListTile(
+                  key: const Key('settings_switch_face_id'),
+                  secondary: Icon(
+                    Icons.face_outlined,
+                    color: AppColors.iconColor(context),
+                  ),
+                  title: Text(
+                    l.profileFaceId,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  subtitle: Text(
+                    _biometricEnabled ? l.statusOn : l.statusOff,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                  value: _biometricEnabled,
+                  activeThumbColor: kPrimary,
+                  onChanged: _toggleBiometric,
+                ),
               _SettingsTile(
                 icon: Icons.notifications_outlined,
                 label: l.profileNotificationSettings,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => NotificationSettingsScreen(
-                      isPremium: _isPremium,
-                    ),
+                    builder: (_) =>
+                        NotificationSettingsScreen(isPremium: _isPremium),
                   ),
                 ),
               ),
-              _SettingsTile(
-                icon: Icons.block_outlined,
-                label: l.profileBlockedUsers,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const BlockedUsersScreen(),
-                  ),
-                ),
-              ),
-              SwitchListTile(
-                secondary: Icon(Icons.lock_outline, color: AppColors.iconColor(context)),
-                title: Row(
-                  children: [
-                    Text(l.privateAccount, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        showDialog<void>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            backgroundColor: AppColors.surface(context),
-                            title: Text(l.privateAccount, style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary(context))),
-                            content: Text(l.privateAccountDesc, style: TextStyle(color: AppColors.textSecondary(context))),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text(l.btnOk, style: const TextStyle(color: kPrimary)),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      child: Icon(Icons.help_outline, size: 16, color: AppColors.iconColor(context)),
-                    ),
-                  ],
-                ),
-                value: _isPrivate,
-                activeThumbColor: kPrimary,
-                onChanged: _togglePrivateAccount,
-              ),
-              if (_biometricAvailable)
-                SwitchListTile(
-                  key: const Key('settings_switch_face_id'),
-                  secondary: Icon(Icons.face_outlined,
-                      color: AppColors.iconColor(context)),
-                  title: Text(l.profileFaceId,
-                      style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
-                  subtitle: Text(
-                    _biometricEnabled ? l.statusOn : l.statusOff,
-                    style: TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary(context)),
-                  ),
-                  value: _biometricEnabled,
-                  activeThumbColor: kPrimary,
-                  onChanged: _toggleBiometric,
-                ),
               SwitchListTile(
                 key: const Key('settings_switch_karanlik_mod'),
-                secondary: Icon(Icons.dark_mode_outlined, color: AppColors.iconColor(context)),
-                title: Text(l.profileDarkMode, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
+                secondary: Icon(
+                  Icons.dark_mode_outlined,
+                  color: AppColors.iconColor(context),
+                ),
+                title: Text(
+                  l.profileDarkMode,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
                 subtitle: Text(
                   ThemeProvider.instance.isDark ? l.statusOn : l.statusOff,
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
                 value: ThemeProvider.instance.isDark,
                 activeThumbColor: kPrimary,
@@ -2115,15 +2457,35 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               ),
               ListTile(
                 key: const Key('settings_tile_dil'),
-                leading: Icon(Icons.language_outlined, color: AppColors.iconColor(context)),
-                title: Text(l.settingsLanguage,
-                    style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
+                leading: Icon(
+                  Icons.language_outlined,
+                  color: AppColors.iconColor(context),
+                ),
+                title: Text(
+                  l.settingsLanguage,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
                 trailing: SegmentedButton<String>(
                   segments: [
-                    ButtonSegment(value: 'tr', label: Text(AppLocalizations.of(context)!.langTR)),
-                    ButtonSegment(value: 'en', label: Text(AppLocalizations.of(context)!.langEN)),
-                    ButtonSegment(value: 'ar', label: Text(AppLocalizations.of(context)!.langAR)),
-                    ButtonSegment(value: 'ru', label: Text(AppLocalizations.of(context)!.langRU)),
+                    ButtonSegment(
+                      value: 'tr',
+                      label: Text(AppLocalizations.of(context)!.langTR),
+                    ),
+                    ButtonSegment(
+                      value: 'en',
+                      label: Text(AppLocalizations.of(context)!.langEN),
+                    ),
+                    ButtonSegment(
+                      value: 'ar',
+                      label: Text(AppLocalizations.of(context)!.langAR),
+                    ),
+                    ButtonSegment(
+                      value: 'ru',
+                      label: Text(AppLocalizations.of(context)!.langRU),
+                    ),
                   ],
                   selected: {currentLocale.languageCode},
                   showSelectedIcon: false,
@@ -2132,7 +2494,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   onSelectionChanged: (selection) {
-                    ref.read(localeProvider.notifier).setLocale(Locale(selection.first));
+                    ref
+                        .read(localeProvider.notifier)
+                        .setLocale(Locale(selection.first));
                   },
                 ),
               ),
@@ -2156,14 +2520,19 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.question_answer_outlined,
                 label: l.profileFaq,
                 onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FaqScreen()),
+                  );
                 },
               ),
               _SettingsTile(
                 icon: Icons.description_outlined,
                 label: l.profileTerms,
                 onTap: () => _urlGuard.run(() async {
-                  final uri = Uri.parse('https://www.teqlif.com/kullanim-sartlari.html');
+                  final uri = Uri.parse(
+                    'https://www.teqlif.com/kullanim-sartlari.html',
+                  );
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
@@ -2173,7 +2542,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.lock_outline,
                 label: l.profilePrivacy,
                 onTap: () => _urlGuard.run(() async {
-                  final uri = Uri.parse('https://www.teqlif.com/gizlilik-politikasi');
+                  final uri = Uri.parse(
+                    'https://www.teqlif.com/gizlilik-politikasi',
+                  );
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
@@ -2188,7 +2559,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               children: [
                 ListTile(
                   key: const Key('settings_tile_hesabi_sil'),
-                  leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
+                  leading: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFFEF4444),
+                  ),
                   title: Text(
                     l.btnDeleteAccount,
                     style: const TextStyle(
@@ -2276,9 +2650,16 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: leadingWidget ?? Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
-      title: Text(label, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
-      trailing: trailing ?? Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
+      leading:
+          leadingWidget ??
+          Icon(icon, color: iconColor ?? AppColors.iconColor(context)),
+      title: Text(
+        label,
+        style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
+      ),
+      trailing:
+          trailing ??
+          Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
       onTap: onTap,
     );
   }
@@ -2318,14 +2699,48 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.user?['full_name'] ?? '');
     _usernameCtrl = TextEditingController(text: widget.user?['username'] ?? '');
-    _bioCtrl = TextEditingController(text: widget.user?['bio'] as String? ?? '');
-    _linkCtrl = TextEditingController(text: widget.user?['website_url'] as String? ?? '');
-    _instagramCtrl = TextEditingController(text: _stripPrefix(widget.user?['instagram_url'] as String? ?? '', 'https://instagram.com/'));
-    _kickCtrl      = TextEditingController(text: _stripPrefix(widget.user?['kick_url']      as String? ?? '', 'https://kick.com/'));
-    _twitchCtrl    = TextEditingController(text: _stripPrefix(widget.user?['twitch_url']    as String? ?? '', 'https://twitch.tv/'));
-    _facebookCtrl  = TextEditingController(text: _stripPrefix(widget.user?['facebook_url']  as String? ?? '', 'https://facebook.com/'));
-    _youtubeCtrl   = TextEditingController(text: _stripPrefix(widget.user?['youtube_url']   as String? ?? '', 'https://youtube.com/@'));
-    _tiktokCtrl    = TextEditingController(text: _stripPrefix(widget.user?['tiktok_url']    as String? ?? '', 'https://tiktok.com/@'));
+    _bioCtrl = TextEditingController(
+      text: widget.user?['bio'] as String? ?? '',
+    );
+    _linkCtrl = TextEditingController(
+      text: widget.user?['website_url'] as String? ?? '',
+    );
+    _instagramCtrl = TextEditingController(
+      text: _stripPrefix(
+        widget.user?['instagram_url'] as String? ?? '',
+        'https://instagram.com/',
+      ),
+    );
+    _kickCtrl = TextEditingController(
+      text: _stripPrefix(
+        widget.user?['kick_url'] as String? ?? '',
+        'https://kick.com/',
+      ),
+    );
+    _twitchCtrl = TextEditingController(
+      text: _stripPrefix(
+        widget.user?['twitch_url'] as String? ?? '',
+        'https://twitch.tv/',
+      ),
+    );
+    _facebookCtrl = TextEditingController(
+      text: _stripPrefix(
+        widget.user?['facebook_url'] as String? ?? '',
+        'https://facebook.com/',
+      ),
+    );
+    _youtubeCtrl = TextEditingController(
+      text: _stripPrefix(
+        widget.user?['youtube_url'] as String? ?? '',
+        'https://youtube.com/@',
+      ),
+    );
+    _tiktokCtrl = TextEditingController(
+      text: _stripPrefix(
+        widget.user?['tiktok_url'] as String? ?? '',
+        'https://tiktok.com/@',
+      ),
+    );
     _profileImageUrl = widget.user?['profile_image_url'] as String?;
     _usernameCtrl.addListener(_onUsernameChanged);
   }
@@ -2358,7 +2773,10 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       return;
     }
     setState(() => _usernameStatus = 'checking');
-    _usernameDebounce = Timer(const Duration(milliseconds: 600), () => _checkUsername(val));
+    _usernameDebounce = Timer(
+      const Duration(milliseconds: 600),
+      () => _checkUsername(val),
+    );
   }
 
   Future<void> _checkUsername(String val) async {
@@ -2368,13 +2786,22 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       if (excludeId != null) params['exclude_id'] = excludeId.toString();
       final data = await apiCall(
         () => http.get(
-          Uri.parse('$kBaseUrl/auth/check-username').replace(queryParameters: params),
+          Uri.parse(
+            '$kBaseUrl/auth/check-username',
+          ).replace(queryParameters: params),
         ),
       );
       if (!mounted) return;
-      setState(() => _usernameStatus = (data['available'] as bool) ? 'available' : 'taken');
+      setState(
+        () => _usernameStatus = (data['available'] as bool)
+            ? 'available'
+            : 'taken',
+      );
     } catch (e) {
-      LoggerService.instance.warning('EditProfileScreen', 'Kullanıcı adı kontrolü başarısız: $e');
+      LoggerService.instance.warning(
+        'EditProfileScreen',
+        'Kullanıcı adı kontrolü başarısız: $e',
+      );
       if (mounted) setState(() => _usernameStatus = null);
     }
   }
@@ -2415,7 +2842,10 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     final token = await StorageService.getToken();
     if (token == null) return;
 
-    setState(() { _saving = true; _uploadingAvatar = true; });
+    setState(() {
+      _saving = true;
+      _uploadingAvatar = true;
+    });
     try {
       final file = File(picked.path);
       final upload = await UploadService.uploadFile(file);
@@ -2427,7 +2857,10 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
 
       final patchResp = await http.patch(
         Uri.parse('$kBaseUrl/auth/me'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: jsonEncode(patchBody),
       );
       if (patchResp.statusCode != 200) throw Exception('Patch failed');
@@ -2438,19 +2871,29 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
         isPremium: updatedUser['is_premium'] as bool? ?? false,
-        onboardingCompleted: updatedUser['onboarding_completed'] as bool? ?? false,
+        onboardingCompleted:
+            updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,
         phoneVerified: updatedUser['phone_verified'] as bool? ?? false,
       );
       if (mounted) setState(() => _profileImageUrl = upload.url);
     } catch (e) {
-      LoggerService.instance.warning('EditProfileScreen', 'Avatar yüklenemedi: $e');
+      LoggerService.instance.warning(
+        'EditProfileScreen',
+        'Avatar yüklenemedi: $e',
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.profilePhotoUploadError)),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.profilePhotoUploadError),
+        ),
       );
     } finally {
-      if (mounted) setState(() { _saving = false; _uploadingAvatar = false; });
+      if (mounted)
+        setState(() {
+          _saving = false;
+          _uploadingAvatar = false;
+        });
     }
   }
 
@@ -2474,7 +2917,9 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       showErrorSnackbar(context, Exception(l.usernameCheckingWait));
       return;
     }
-    setState(() { _saving = true; });
+    setState(() {
+      _saving = true;
+    });
     final linkErrorMsg = AppLocalizations.of(context)!.editProfileLinkError;
     final errMessenger = ScaffoldMessenger.of(context);
     try {
@@ -2482,8 +2927,12 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       if (token == null) throw Exception('No token');
       final bio = _bioCtrl.text.trim();
       final link = _linkCtrl.text.trim();
-      if (link.isNotEmpty && !link.startsWith('http://') && !link.startsWith('https://')) {
-        errMessenger.showSnackBar(SnackBar(content: Text(linkErrorMsg), backgroundColor: Colors.red));
+      if (link.isNotEmpty &&
+          !link.startsWith('http://') &&
+          !link.startsWith('https://')) {
+        errMessenger.showSnackBar(
+          SnackBar(content: Text(linkErrorMsg), backgroundColor: Colors.red),
+        );
         setState(() => _saving = false);
         return;
       }
@@ -2492,21 +2941,34 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         final u = username.replaceAll('@', '').trim();
         return u.isEmpty ? null : '$prefix$u';
       }
+
       final updatedUser = await apiCall(
         () => http.patch(
           Uri.parse('$kBaseUrl/auth/me'),
-          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
           body: jsonEncode({
             'full_name': name,
             'username': username,
             'bio': bio.isEmpty ? null : bio,
             'website_url': normLink(link),
-            'instagram_url': buildSocial('https://instagram.com/', _instagramCtrl.text),
-            'kick_url':      buildSocial('https://kick.com/',      _kickCtrl.text),
-            'twitch_url':    buildSocial('https://twitch.tv/',     _twitchCtrl.text),
-            'facebook_url':  buildSocial('https://facebook.com/',  _facebookCtrl.text),
-            'youtube_url':   buildSocial('https://youtube.com/@',  _youtubeCtrl.text),
-            'tiktok_url':    buildSocial('https://tiktok.com/@',   _tiktokCtrl.text),
+            'instagram_url': buildSocial(
+              'https://instagram.com/',
+              _instagramCtrl.text,
+            ),
+            'kick_url': buildSocial('https://kick.com/', _kickCtrl.text),
+            'twitch_url': buildSocial('https://twitch.tv/', _twitchCtrl.text),
+            'facebook_url': buildSocial(
+              'https://facebook.com/',
+              _facebookCtrl.text,
+            ),
+            'youtube_url': buildSocial(
+              'https://youtube.com/@',
+              _youtubeCtrl.text,
+            ),
+            'tiktok_url': buildSocial('https://tiktok.com/@', _tiktokCtrl.text),
           }),
         ),
       );
@@ -2516,7 +2978,8 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
         isPremium: updatedUser['is_premium'] as bool? ?? false,
-        onboardingCompleted: updatedUser['onboarding_completed'] as bool? ?? false,
+        onboardingCompleted:
+            updatedUser['onboarding_completed'] as bool? ?? false,
         isVerified: updatedUser['is_verified'] as bool? ?? false,
         phoneVerified: updatedUser['phone_verified'] as bool? ?? false,
       );
@@ -2530,7 +2993,8 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final initial = (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?').toUpperCase();
+    final initial = (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?')
+        .toUpperCase();
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.btnEditProfile),
@@ -2603,47 +3067,59 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
-                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            Builder(builder: (ctx) {
-              final l = AppLocalizations.of(ctx)!;
-              return TextField(
-                controller: _nameCtrl,
-                decoration: InputDecoration(labelText: l.editProfileFullName),
-              );
-            }),
+            Builder(
+              builder: (ctx) {
+                final l = AppLocalizations.of(ctx)!;
+                return TextField(
+                  controller: _nameCtrl,
+                  decoration: InputDecoration(labelText: l.editProfileFullName),
+                );
+              },
+            ),
             const SizedBox(height: 14),
-            Builder(builder: (ctx) {
-              final l = AppLocalizations.of(ctx)!;
-              return TextField(
-                controller: _usernameCtrl,
-                autocorrect: false,
-                decoration: InputDecoration(
-                  labelText: l.editProfileUsername,
-                  helperText: l.validUsernameChars,
-                helperStyle: const TextStyle(fontSize: 11),
-                suffixIcon: _usernameStatus == 'checking'
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: Padding(
-                          padding: EdgeInsets.all(12),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : _usernameStatus == 'available'
-                        ? const Icon(Icons.check_circle, color: Colors.green, size: 20)
+            Builder(
+              builder: (ctx) {
+                final l = AppLocalizations.of(ctx)!;
+                return TextField(
+                  controller: _usernameCtrl,
+                  autocorrect: false,
+                  decoration: InputDecoration(
+                    labelText: l.editProfileUsername,
+                    helperText: l.validUsernameChars,
+                    helperStyle: const TextStyle(fontSize: 11),
+                    suffixIcon: _usernameStatus == 'checking'
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Padding(
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : _usernameStatus == 'available'
+                        ? const Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 20,
+                          )
                         : _usernameStatus == 'taken'
-                            ? const Icon(Icons.cancel, color: Colors.red, size: 20)
-                            : null,
-                ),
-              );
-            }),
+                        ? const Icon(Icons.cancel, color: Colors.red, size: 20)
+                        : null,
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 14),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _bioCtrl,
@@ -2722,11 +3198,19 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     if (url.startsWith(prefix)) return url.substring(prefix.length);
     // legacy: tam URL girişlerini de temizle
     final uri = Uri.tryParse(url);
-    if (uri != null && url.startsWith('http')) return uri.pathSegments.where((s) => s.isNotEmpty).join('/').replaceAll('@', '');
+    if (uri != null && url.startsWith('http'))
+      return uri.pathSegments
+          .where((s) => s.isNotEmpty)
+          .join('/')
+          .replaceAll('@', '');
     return url;
   }
 
-  Widget _socialField(TextEditingController ctrl, String label, String urlPrefix) {
+  Widget _socialField(
+    TextEditingController ctrl,
+    String label,
+    String urlPrefix,
+  ) {
     return TextField(
       controller: ctrl,
       keyboardType: TextInputType.text,
@@ -2772,7 +3256,8 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     super.initState();
     _load();
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 50) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 50) {
         if (!_loading && !_isLoadingMore && _hasMore) {
           _load(loadMore: true);
         }
@@ -2784,8 +3269,9 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) {
+      CategoryService.getCategories(
+        locale: Localizations.localeOf(context).languageCode,
+      ).then((cats) {
         if (mounted) setState(() => _categories = cats);
       });
     }
@@ -2817,12 +3303,16 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       final activeParam = widget.active ? 'true' : 'false';
       final q = _searchCtrl.text.trim();
       final cat = _categoryFilter;
-      var listingsUrl = '$kBaseUrl/listings/my?active=$activeParam&limit=20&offset=$_offset';
+      var listingsUrl =
+          '$kBaseUrl/listings/my?active=$activeParam&limit=20&offset=$_offset';
       if (q.isNotEmpty) listingsUrl += '&q=${Uri.encodeComponent(q)}';
-      if (cat.isNotEmpty) listingsUrl += '&category=${Uri.encodeComponent(cat)}';
+      if (cat.isNotEmpty)
+        listingsUrl += '&category=${Uri.encodeComponent(cat)}';
       if (_dateRange != null) {
-        listingsUrl += '&start_date=${_dateRange!.start.toIso8601String().substring(0, 10)}';
-        listingsUrl += '&end_date=${_dateRange!.end.toIso8601String().substring(0, 10)}';
+        listingsUrl +=
+            '&start_date=${_dateRange!.start.toIso8601String().substring(0, 10)}';
+        listingsUrl +=
+            '&end_date=${_dateRange!.end.toIso8601String().substring(0, 10)}';
       }
       final resp = await http.get(
         Uri.parse(listingsUrl),
@@ -2841,38 +3331,41 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         });
       }
     } catch (e) {
-      LoggerService.instance.warning('MyListingsScreen', 'İlanlar yüklenemedi: $e');
+      LoggerService.instance.warning(
+        'MyListingsScreen',
+        'İlanlar yüklenemedi: $e',
+      );
     } finally {
       if (mounted) {
         setState(() {
-        _loading = false;
-        _isLoadingMore = false;
-      });
+          _loading = false;
+          _isLoadingMore = false;
+        });
       }
     }
   }
 
   Future<void> _toggle(dynamic listing) async {
     if (!mounted) return;
-    final l   = AppLocalizations.of(context)!;
-    final id  = listing['id'] as int;
+    final l = AppLocalizations.of(context)!;
+    final id = listing['id'] as int;
     final isActive = listing['is_active'] as bool? ?? true;
 
     final costData = await ListingService.getReactivationCost(id);
     if (!mounted) return;
 
-    final isPremium    = costData?['is_premium']    as bool?  ?? false;
-    final remaining    = costData?['free_remaining'] as int?   ?? 0;
-    final cost         = costData?['cost']           as int?   ?? 10;
-    final balance      = costData?['balance']        as int?   ?? 0;
-    final canAfford    = costData?['can_afford']     as bool?  ?? false;
-    final withinWindow = costData?['within_window']  as bool?  ?? false;
+    final isPremium = costData?['is_premium'] as bool? ?? false;
+    final remaining = costData?['free_remaining'] as int? ?? 0;
+    final cost = costData?['cost'] as int? ?? 10;
+    final balance = costData?['balance'] as int? ?? 0;
+    final canAfford = costData?['can_afford'] as bool? ?? false;
+    final withinWindow = costData?['within_window'] as bool? ?? false;
 
     if (isActive) {
       // Aktif → Pasif
       if (!withinWindow) {
-        final hintText = (isPremium && remaining > 0) 
-            ? l.listingDeactivateFreeCreditHint 
+        final hintText = (isPremium && remaining > 0)
+            ? l.listingDeactivateFreeCreditHint
             : l.listingDeactivateCostHint(cost);
 
         final confirm = await showDialog<bool>(
@@ -2881,10 +3374,16 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
             title: Text(l.listingDeactivateTitle),
             content: Text('${l.listingDeactivateWarning}\n\n$hintText'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l.btnDismiss),
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(l.listingDeactivateConfirm, style: const TextStyle(color: Color(0xFFDC2626))),
+                child: Text(
+                  l.listingDeactivateConfirm,
+                  style: const TextStyle(color: Color(0xFFDC2626)),
+                ),
               ),
             ],
           ),
@@ -2910,7 +3409,10 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
               title: Text(l.listingReactivateTitle),
               content: Text(l.listingReactivateInsufficientBalance),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: Text(l.btnDismiss)),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l.btnDismiss),
+                ),
               ],
             ),
           );
@@ -2926,10 +3428,16 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
             title: Text(l.listingReactivateTitle),
             content: Text(subtitle + extraHint),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l.btnDismiss),
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(l.listingReactivateConfirm, style: const TextStyle(color: Color(0xFF6366F1))),
+                child: Text(
+                  l.listingReactivateConfirm,
+                  style: const TextStyle(color: Color(0xFF6366F1)),
+                ),
               ),
             ],
           ),
@@ -2954,7 +3462,10 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         );
       }
     } catch (e) {
-      LoggerService.instance.warning('MyListingsScreen', 'İlan durumu değiştirilemedi: $e');
+      LoggerService.instance.warning(
+        'MyListingsScreen',
+        'İlan durumu değiştirilemedi: $e',
+      );
       if (mounted) showErrorSnackbar(context, e);
     }
   }
@@ -2966,10 +3477,16 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         title: Text(AppLocalizations.of(context)!.listingDeleteDialogTitle),
         content: Text(AppLocalizations.of(context)!.listingDeleteDialogBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppLocalizations.of(context)!.btnDismiss)),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppLocalizations.of(context)!.btnDismiss),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(AppLocalizations.of(context)!.btnDeleteConfirm, style: const TextStyle(color: Color(0xFFDC2626))),
+            child: Text(
+              AppLocalizations.of(context)!.btnDeleteConfirm,
+              style: const TextStyle(color: Color(0xFFDC2626)),
+            ),
           ),
         ],
       ),
@@ -3023,11 +3540,16 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                   : null,
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onChanged: (_) {
               _searchDebounce?.cancel();
-              _searchDebounce = Timer(const Duration(milliseconds: 400), () => _load());
+              _searchDebounce = Timer(
+                const Duration(milliseconds: 400),
+                () => _load(),
+              );
             },
           ),
         ),
@@ -3041,26 +3563,38 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: FilterChip(
-                    label: Text(l.allCategories, style: const TextStyle(fontSize: 12)),
+                    label: Text(
+                      l.allCategories,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     selected: _categoryFilter.isEmpty,
-                    onSelected: (_) { setState(() => _categoryFilter = ''); _load(); },
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
-                  ),
-                ),
-                ..._categories!.map((cat) => Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
-                    selected: _categoryFilter == cat.$1,
                     onSelected: (_) {
-                      setState(() => _categoryFilter = _categoryFilter == cat.$1 ? '' : cat.$1);
+                      setState(() => _categoryFilter = '');
                       _load();
                     },
                     selectedColor: kPrimary.withValues(alpha: 0.15),
                     checkmarkColor: kPrimary,
                   ),
-                )),
+                ),
+                ..._categories!.map(
+                  (cat) => Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
+                      selected: _categoryFilter == cat.$1,
+                      onSelected: (_) {
+                        setState(
+                          () => _categoryFilter = _categoryFilter == cat.$1
+                              ? ''
+                              : cat.$1,
+                        );
+                        _load();
+                      },
+                      selectedColor: kPrimary.withValues(alpha: 0.15),
+                      checkmarkColor: kPrimary,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -3096,27 +3630,39 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
+            border: Border.all(
+              color: hasRange ? kPrimary : AppColors.border(context),
+            ),
             borderRadius: BorderRadius.circular(8),
             color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
           ),
           child: Row(
             children: [
-              Icon(Icons.calendar_today_outlined, size: 16,
-                  color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 16,
+                color: hasRange ? kPrimary : AppColors.textSecondary(context),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   hasRange
                       ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
                       : l.filterSelectDate,
-                  style: TextStyle(fontSize: 13,
-                      color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: hasRange
+                        ? kPrimary
+                        : AppColors.textSecondary(context),
+                  ),
                 ),
               ),
               if (hasRange)
                 GestureDetector(
-                  onTap: () { setState(() => _dateRange = null); _load(); },
+                  onTap: () {
+                    setState(() => _dateRange = null);
+                    _load();
+                  },
                   child: Icon(Icons.close, size: 16, color: kPrimary),
                 ),
             ],
@@ -3129,118 +3675,183 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final bool hasFilter = _searchCtrl.text.isNotEmpty || _categoryFilter.isNotEmpty || _dateRange != null;
+    final bool hasFilter =
+        _searchCtrl.text.isNotEmpty ||
+        _categoryFilter.isNotEmpty ||
+        _dateRange != null;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.active ? l.profileActiveListings : l.profilePassiveListings)),
+      appBar: AppBar(
+        title: Text(
+          widget.active ? l.profileActiveListings : l.profilePassiveListings,
+        ),
+      ),
       backgroundColor: AppColors.bg(context),
       body: Column(
         children: [
           _buildFilterBar(l),
           Expanded(
             child: _loading && _listings.isEmpty
-                ? const Center(child: CircularProgressIndicator(color: kPrimary))
+                ? const Center(
+                    child: CircularProgressIndicator(color: kPrimary),
+                  )
                 : _listings.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(hasFilter ? Icons.search_off : (widget.active ? Icons.list_alt_outlined : Icons.archive_outlined),
-                                size: 52, color: const Color(0xFFD1D5DB)),
-                            const SizedBox(height: 12),
-                            Text(
-                              hasFilter ? l.searchNoResults : (widget.active ? l.emptyActiveListings : l.emptyPassiveListings),
-                              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          hasFilter
+                              ? Icons.search_off
+                              : (widget.active
+                                    ? Icons.list_alt_outlined
+                                    : Icons.archive_outlined),
+                          size: 52,
+                          color: const Color(0xFFD1D5DB),
                         ),
-                      )
-                    : RefreshIndicator(
-                        color: kPrimary,
-                        onRefresh: () => _load(),
-                        child: ListView.separated(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.all(12),
-                          itemCount: _listings.length + (_hasMore ? 1 : 0),
-                          separatorBuilder: (_, _) => const SizedBox(height: 8),
-                          itemBuilder: (ctx, i) {
-                      if (i == _listings.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                        );
-                      }
-                      final l = _listings[i];
-                      final imgs = l['image_urls'] as List? ?? [];
-                      final rawImg = imgs.isNotEmpty ? imgs[0] as String : l['image_url'] as String?;
-                      final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
-                      return Card(
-                        margin: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          leading: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: imageUrl != null
-                                ? CachedNetworkImage(
-                  cacheManager: TeqlifCacheManager(),
-                                    imageUrl: imageUrl,
-                                    width: 60, height: 60, fit: BoxFit.cover,
-                                    placeholder: (_, _) => const SizedBox(
-                                      width: 60, height: 60,
-                                      child: Center(child: CircularProgressIndicator(strokeWidth: 1.5)),
-                                    ),
-                                    errorWidget: (_, _, _) => _imgPlaceholder())
-                                : _imgPlaceholder(),
+                        const SizedBox(height: 12),
+                        Text(
+                          hasFilter
+                              ? l.searchNoResults
+                              : (widget.active
+                                    ? l.emptyActiveListings
+                                    : l.emptyPassiveListings),
+                          style: const TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 15,
                           ),
-                          title: Text(l['title'] ?? '',
-                              maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                          subtitle: Text(_fmt(l['price']),
-                              style: const TextStyle(color: kPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  widget.active ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                  color: widget.active ? const Color(0xFF6B7280) : kPrimary,
-                                  size: 22,
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: kPrimary,
+                    onRefresh: () => _load(),
+                    child: ListView.separated(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _listings.length + (_hasMore ? 1 : 0),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (ctx, i) {
+                        if (i == _listings.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          );
+                        }
+                        final l = _listings[i];
+                        final imgs = l['image_urls'] as List? ?? [];
+                        final rawImg = imgs.isNotEmpty
+                            ? imgs[0] as String
+                            : l['image_url'] as String?;
+                        final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+                        return Card(
+                          margin: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            leading: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: imageUrl != null
+                                  ? CachedNetworkImage(
+                                      cacheManager: TeqlifCacheManager(),
+                                      imageUrl: imageUrl,
+                                      width: 60,
+                                      height: 60,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, _) => const SizedBox(
+                                        width: 60,
+                                        height: 60,
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                      errorWidget: (_, _, _) =>
+                                          _imgPlaceholder(),
+                                    )
+                                  : _imgPlaceholder(),
+                            ),
+                            title: Text(
+                              l['title'] ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            subtitle: Text(
+                              _fmt(l['price']),
+                              style: const TextStyle(
+                                color: kPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    widget.active
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    color: widget.active
+                                        ? const Color(0xFF6B7280)
+                                        : kPrimary,
+                                    size: 22,
+                                  ),
+                                  tooltip: widget.active
+                                      ? 'Pasife Al'
+                                      : 'Aktif Yap',
+                                  onPressed: () => _toggle(l),
                                 ),
-                                tooltip: widget.active ? 'Pasife Al' : 'Aktif Yap',
-                                onPressed: () => _toggle(l),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626), size: 22),
-                                tooltip: 'Sil',
-                                onPressed: () => _delete(l),
-                              ),
-                            ],
-                          ),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ListingDetailScreen(
-                                  listing: Map<String, dynamic>.from(l)),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Color(0xFFDC2626),
+                                    size: 22,
+                                  ),
+                                  tooltip: 'Sil',
+                                  onPressed: () => _delete(l),
+                                ),
+                              ],
                             ),
-                          ).then((_) => _load()),
-                        ),
-                      );
-                    },
-                        ),
-                      ),
-                ),
-              ],
-            ),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ListingDetailScreen(
+                                  listing: Map<String, dynamic>.from(l),
+                                ),
+                              ),
+                            ).then((_) => _load()),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _imgPlaceholder() => Builder(
-        builder: (context) => Container(
-          width: 60, height: 60,
-          color: AppColors.surfaceVariant(context),
-          child: Icon(Icons.image_outlined, color: AppColors.border(context)),
-        ),
-      );
+    builder: (context) => Container(
+      width: 60,
+      height: 60,
+      color: AppColors.surfaceVariant(context),
+      child: Icon(Icons.image_outlined, color: AppColors.border(context)),
+    ),
+  );
 }
 
 // ── Favorilerim ekranı ─────────────────────────────────────────────────────────
@@ -3266,12 +3877,18 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   List<dynamic> get _filteredListings {
     var result = _listings;
     if (_searchQuery.isNotEmpty) {
-      result = result.where((item) =>
-        (item['title'] as String? ?? '').toLowerCase().contains(_searchQuery.toLowerCase())
-      ).toList();
+      result = result
+          .where(
+            (item) => (item['title'] as String? ?? '').toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            ),
+          )
+          .toList();
     }
     if (_categoryFilter.isNotEmpty) {
-      result = result.where((item) => (item['category'] as String?) == _categoryFilter).toList();
+      result = result
+          .where((item) => (item['category'] as String?) == _categoryFilter)
+          .toList();
     }
     if (_dateRange != null) {
       final start = _dateRange!.start;
@@ -3296,8 +3913,9 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) {
+      CategoryService.getCategories(
+        locale: Localizations.localeOf(context).languageCode,
+      ).then((cats) {
         if (mounted) setState(() => _categories = cats);
       });
     }
@@ -3312,9 +3930,18 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   Future<void> _load() async {
     final cached = CacheService.getData('user_favorites');
     if (cached != null) {
-      if (mounted) setState(() { _listings = List.from(cached as List); _loading = false; _hasError = false; });
+      if (mounted)
+        setState(() {
+          _listings = List.from(cached as List);
+          _loading = false;
+          _hasError = false;
+        });
     } else {
-      if (mounted) setState(() { _loading = true; _hasError = false; });
+      if (mounted)
+        setState(() {
+          _loading = true;
+          _hasError = false;
+        });
     }
     try {
       final token = await StorageService.getToken();
@@ -3325,11 +3952,22 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
       );
       if (resp.statusCode == 200 && mounted) {
         final data = jsonDecode(resp.body) as List;
-        await CacheService.saveData('user_favorites', data, ttl: const Duration(minutes: 10));
-        if (mounted) setState(() { _listings = data; _hasError = false; });
+        await CacheService.saveData(
+          'user_favorites',
+          data,
+          ttl: const Duration(minutes: 10),
+        );
+        if (mounted)
+          setState(() {
+            _listings = data;
+            _hasError = false;
+          });
       }
     } catch (e) {
-      LoggerService.instance.warning('FavoritesScreen', 'Favoriler yüklenemedi: $e');
+      LoggerService.instance.warning(
+        'FavoritesScreen',
+        'Favoriler yüklenemedi: $e',
+      );
       if (mounted) setState(() => _hasError = true);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -3353,7 +3991,10 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
         await ListingService.toggleLike(id);
       }
     } catch (e) {
-      LoggerService.instance.warning('FavoritesScreen', 'Favori kaldırılamadı: $e');
+      LoggerService.instance.warning(
+        'FavoritesScreen',
+        'Favori kaldırılamadı: $e',
+      );
       ListingService.setLikeCache(id, true);
       await _load();
     }
@@ -3392,7 +4033,9 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                   : null,
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onChanged: (v) => setState(() => _searchQuery = v),
           ),
@@ -3407,24 +4050,32 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: FilterChip(
-                    label: Text(l.allCategories, style: const TextStyle(fontSize: 12)),
+                    label: Text(
+                      l.allCategories,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     selected: _categoryFilter.isEmpty,
                     onSelected: (_) => setState(() => _categoryFilter = ''),
                     selectedColor: kPrimary.withValues(alpha: 0.15),
                     checkmarkColor: kPrimary,
                   ),
                 ),
-                ..._categories!.map((cat) => Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
-                    selected: _categoryFilter == cat.$1,
-                    onSelected: (_) => setState(() =>
-                        _categoryFilter = _categoryFilter == cat.$1 ? '' : cat.$1),
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
+                ..._categories!.map(
+                  (cat) => Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
+                      selected: _categoryFilter == cat.$1,
+                      onSelected: (_) => setState(
+                        () => _categoryFilter = _categoryFilter == cat.$1
+                            ? ''
+                            : cat.$1,
+                      ),
+                      selectedColor: kPrimary.withValues(alpha: 0.15),
+                      checkmarkColor: kPrimary,
+                    ),
                   ),
-                )),
+                ),
               ],
             ),
           ),
@@ -3457,22 +4108,31 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
+            border: Border.all(
+              color: hasRange ? kPrimary : AppColors.border(context),
+            ),
             borderRadius: BorderRadius.circular(8),
             color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
           ),
           child: Row(
             children: [
-              Icon(Icons.calendar_today_outlined, size: 16,
-                  color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 16,
+                color: hasRange ? kPrimary : AppColors.textSecondary(context),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   hasRange
                       ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
                       : l.filterSelectDate,
-                  style: TextStyle(fontSize: 13,
-                      color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: hasRange
+                        ? kPrimary
+                        : AppColors.textSecondary(context),
+                  ),
                 ),
               ),
               if (hasRange)
@@ -3491,108 +4151,171 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final filtered = _filteredListings;
-    final bool hasFilter = _searchQuery.isNotEmpty || _categoryFilter.isNotEmpty || _dateRange != null;
+    final bool hasFilter =
+        _searchQuery.isNotEmpty ||
+        _categoryFilter.isNotEmpty ||
+        _dateRange != null;
     return Scaffold(
       appBar: AppBar(title: Text(l.profileFavorites)),
       backgroundColor: AppColors.bg(context),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _hasError && _listings.isEmpty
-              ? NetworkErrorWidget(onRetry: _load)
-              : _listings.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.favorite_border, size: 52, color: Color(0xFFD1D5DB)),
-                      const SizedBox(height: 12),
-                      Text(l.favoritesEmpty,
-                          style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
-                    ],
+          ? NetworkErrorWidget(onRetry: _load)
+          : _listings.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.favorite_border,
+                    size: 52,
+                    color: Color(0xFFD1D5DB),
                   ),
-                )
-              : Column(
-                  children: [
-                    if (_hasError) StaleDataBanner(onRetry: _load),
-                    _buildFavFilterBar(l),
-                    if (hasFilter && filtered.isEmpty)
-                      Expanded(
-                        child: Center(
-                          child: Text(l.searchNoResults,
-                              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+                  const SizedBox(height: 12),
+                  Text(
+                    l.favoritesEmpty,
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                if (_hasError) StaleDataBanner(onRetry: _load),
+                _buildFavFilterBar(l),
+                if (hasFilter && filtered.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        l.searchNoResults,
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 15,
                         ),
-                      )
-                    else Expanded(child: RefreshIndicator(
-                  color: kPrimary,
-                  onRefresh: _load,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (ctx, i) {
-                      final l = filtered[i];
-                      final imgs = l['image_urls'] as List? ?? [];
-                      final rawImg = imgs.isNotEmpty ? imgs[0] as String : l['image_url'] as String?;
-                      final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
-                      return Card(
-                        margin: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          leading: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: imageUrl != null
-                                ? CachedNetworkImage(
-                  cacheManager: TeqlifCacheManager(),
-                                    imageUrl: imageUrl,
-                                    width: 60, height: 60, fit: BoxFit.cover,
-                                    placeholder: (_, _) => const SizedBox(
-                                      width: 60, height: 60,
-                                      child: Center(child: CircularProgressIndicator(strokeWidth: 1.5)),
-                                    ),
-                                    errorWidget: (_, _, _) => _imgPlaceholder())
-                                : _imgPlaceholder(),
-                          ),
-                          title: Text(l['title'] ?? '',
-                              maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(_fmt(l['price']),
-                                  style: const TextStyle(color: kPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
-                              Text('@${(l['user'] as Map?)?['username'] ?? ''}',
-                                  style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
-                            ],
-                          ),
-                          isThreeLine: true,
-                          trailing: IconButton(
-                            icon: const Icon(Icons.favorite, color: Colors.red, size: 22),
-                            tooltip: AppLocalizations.of(ctx)!.removeFromFavoritesTooltip,
-                            onPressed: () => _removeFavorite(l),
-                          ),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ListingDetailScreen(
-                                  listing: Map<String, dynamic>.from(l)),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: kPrimary,
+                      onRefresh: _load,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (ctx, i) {
+                          final l = filtered[i];
+                          final imgs = l['image_urls'] as List? ?? [];
+                          final rawImg = imgs.isNotEmpty
+                              ? imgs[0] as String
+                              : l['image_url'] as String?;
+                          final imageUrl = rawImg != null
+                              ? imgUrl(rawImg)
+                              : null;
+                          return Card(
+                            margin: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          ).then((_) => _load()),
-                        ),
-                      );
-                    },
-                  ),
-                )),  // ListView.separated + RefreshIndicator + Expanded
-                  ],
-                ),   // Column
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: imageUrl != null
+                                    ? CachedNetworkImage(
+                                        cacheManager: TeqlifCacheManager(),
+                                        imageUrl: imageUrl,
+                                        width: 60,
+                                        height: 60,
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, _) => const SizedBox(
+                                          width: 60,
+                                          height: 60,
+                                          child: Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 1.5,
+                                            ),
+                                          ),
+                                        ),
+                                        errorWidget: (_, _, _) =>
+                                            _imgPlaceholder(),
+                                      )
+                                    : _imgPlaceholder(),
+                              ),
+                              title: Text(
+                                l['title'] ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _fmt(l['price']),
+                                    style: const TextStyle(
+                                      color: kPrimary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  Text(
+                                    '@${(l['user'] as Map?)?['username'] ?? ''}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF9CA3AF),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              isThreeLine: true,
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.favorite,
+                                  color: Colors.red,
+                                  size: 22,
+                                ),
+                                tooltip: AppLocalizations.of(
+                                  ctx,
+                                )!.removeFromFavoritesTooltip,
+                                onPressed: () => _removeFavorite(l),
+                              ),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ListingDetailScreen(
+                                    listing: Map<String, dynamic>.from(l),
+                                  ),
+                                ),
+                              ).then((_) => _load()),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ), // ListView.separated + RefreshIndicator + Expanded
+              ],
+            ), // Column
     );
   }
 
   Widget _imgPlaceholder() => Container(
-        width: 60, height: 60,
-        color: const Color(0xFFF3F4F6),
-        child: const Icon(Icons.image_outlined, color: Color(0xFFD1D5DB)),
-      );
+    width: 60,
+    height: 60,
+    color: const Color(0xFFF3F4F6),
+    child: const Icon(Icons.image_outlined, color: Color(0xFFD1D5DB)),
+  );
 }
 
 // ── TUCi Cüzdan Kartı ───────────────────────────────────────────────────────
@@ -3620,7 +4343,10 @@ class _TuciWalletCardState extends State<_TuciWalletCard> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _TuciWalletSheet(balance: widget.balance ?? 0, history: widget.history),
+      builder: (_) => _TuciWalletSheet(
+        balance: widget.balance ?? 0,
+        history: widget.history,
+      ),
     );
   }
 
@@ -3662,7 +4388,14 @@ class _TuciWalletCardState extends State<_TuciWalletCard> {
                 shape: BoxShape.circle,
               ),
               child: const Center(
-                child: Text('T', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white)),
+                child: Text(
+                  'T',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -3672,17 +4405,30 @@ class _TuciWalletCardState extends State<_TuciWalletCard> {
                 children: [
                   Text(
                     AppLocalizations.of(context)!.lblTuciWallet,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   widget.balance == null
                       ? const SizedBox(
-                          width: 80, height: 20,
-                          child: LinearProgressIndicator(color: Colors.white54, backgroundColor: Colors.white24),
+                          width: 80,
+                          height: 20,
+                          child: LinearProgressIndicator(
+                            color: Colors.white54,
+                            backgroundColor: Colors.white24,
+                          ),
                         )
                       : Text(
                           '${widget.balance} TUCi',
-                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                 ],
               ),
@@ -3695,13 +4441,25 @@ class _TuciWalletCardState extends State<_TuciWalletCard> {
                 padding: const EdgeInsets.only(right: 8),
                 child: _refreshing
                     ? const SizedBox(
-                        width: 20, height: 20,
-                        child: CircularProgressIndicator(color: Colors.white70, strokeWidth: 2),
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white70,
+                          strokeWidth: 2,
+                        ),
                       )
-                    : const Icon(Icons.refresh_rounded, color: Colors.white70, size: 22),
+                    : const Icon(
+                        Icons.refresh_rounded,
+                        color: Colors.white70,
+                        size: 22,
+                      ),
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white70, size: 26),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white70,
+              size: 26,
+            ),
           ],
         ),
       ),
@@ -3729,8 +4487,12 @@ class _TuciWalletSheet extends StatelessWidget {
         children: [
           // Tutamaç
           Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           const SizedBox(height: 20),
           // Bakiye
@@ -3739,7 +4501,11 @@ class _TuciWalletSheet extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 20),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFFFA500)],
+                colors: [
+                  Color(0xFFB8860B),
+                  Color(0xFFFFD700),
+                  Color(0xFFFFA500),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -3754,11 +4520,18 @@ class _TuciWalletSheet extends StatelessWidget {
             ),
             child: Column(
               children: [
-                Text(AppLocalizations.of(context)!.walletBalance, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(
+                  AppLocalizations.of(context)!.walletBalance,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   '$balance TUCi',
-                  style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ],
             ),
@@ -3768,21 +4541,33 @@ class _TuciWalletSheet extends StatelessWidget {
           if (history.isNotEmpty) ...[
             Align(
               alignment: Alignment.centerLeft,
-              child: Text(AppLocalizations.of(context)!.walletRecentTxns, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              child: Text(
+                AppLocalizations.of(context)!.walletRecentTxns,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
             ),
             const SizedBox(height: 8),
             ...history.map((t) {
               final amount = t['amount'] as int? ?? 0;
-              final label = t['label'] as String? ?? t['transaction_type'] as String? ?? '';
+              final label =
+                  t['label'] as String? ??
+                  t['transaction_type'] as String? ??
+                  '';
               final isPositive = amount > 0;
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 child: Row(
                   children: [
                     Container(
-                      width: 34, height: 34,
+                      width: 34,
+                      height: 34,
                       decoration: BoxDecoration(
-                        color: isPositive ? Colors.green.shade50 : Colors.red.shade50,
+                        color: isPositive
+                            ? Colors.green.shade50
+                            : Colors.red.shade50,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -3800,7 +4585,9 @@ class _TuciWalletSheet extends StatelessWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
-                        color: isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                        color: isPositive
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
                       ),
                     ),
                   ],
@@ -3822,8 +4609,13 @@ class _TuciWalletSheet extends StatelessWidget {
                 disabledBackgroundColor: const Color(0xFFFEF3C7),
                 disabledForegroundColor: const Color(0xFF92400E),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
                 elevation: 0,
               ),
             ),
@@ -3856,20 +4648,20 @@ class _WalletScreenState extends State<WalletScreen> {
   bool _loading = false;
 
   Map<String, String> _typeLabels(AppLocalizations l) => {
-    'airdrop':              l.walletTxnAirdrop,
-    'churn_airdrop':        l.walletTxnChurnAirdrop,
-    'receive_gift':         l.walletTxnReceiveGift,
-    'send_gift':            l.walletTxnSendGift,
-    'spend_lead_gen':       l.walletTxnSpendLeadGen,
-    'spend_ad_campaign':    l.walletTxnSpendAdCampaign,
-    'spend_ai':             l.walletTxnSpendAi,
-    'spend_retargeting':    l.walletTxnSpendRetargeting,
-    'spend_boost':          l.walletTxnSpendBoost,
-    'spend_boost_paid':     l.walletTxnSpendBoostPaid,
-    'spend_reactivation':   l.walletTxnSpendReactivation,
-    'web_topup':            l.walletTxnWebTopup,
-    'referral_bonus':       l.walletTxnReferralBonus,
-    'welcome_bonus':        l.walletTxnWelcomeBonus,
+    'airdrop': l.walletTxnAirdrop,
+    'churn_airdrop': l.walletTxnChurnAirdrop,
+    'receive_gift': l.walletTxnReceiveGift,
+    'send_gift': l.walletTxnSendGift,
+    'spend_lead_gen': l.walletTxnSpendLeadGen,
+    'spend_ad_campaign': l.walletTxnSpendAdCampaign,
+    'spend_ai': l.walletTxnSpendAi,
+    'spend_retargeting': l.walletTxnSpendRetargeting,
+    'spend_boost': l.walletTxnSpendBoost,
+    'spend_boost_paid': l.walletTxnSpendBoostPaid,
+    'spend_reactivation': l.walletTxnSpendReactivation,
+    'web_topup': l.walletTxnWebTopup,
+    'referral_bonus': l.walletTxnReferralBonus,
+    'welcome_bonus': l.walletTxnWelcomeBonus,
   };
 
   @override
@@ -3895,7 +4687,8 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Widget _buildTxnRow(dynamic t, AppLocalizations l) {
     final amount = t['amount'] as int? ?? 0;
-    final label = _typeLabels(l)[t['transaction_type'] as String? ?? ''] ??
+    final label =
+        _typeLabels(l)[t['transaction_type'] as String? ?? ''] ??
         (t['label'] as String? ?? t['transaction_type'] as String? ?? '');
     final isPos = amount > 0;
     final dateStr = t['created_at'] as String? ?? '';
@@ -3908,14 +4701,24 @@ class _WalletScreenState extends State<WalletScreen> {
     return InkWell(
       onTap: () => _showTxnDetailSheet(context, t, l),
       borderRadius: BorderRadius.circular(8),
-      child: _TxnRow(label: label, amount: amount, isPositive: isPos, date: formattedDate),
+      child: _TxnRow(
+        label: label,
+        amount: amount,
+        isPositive: isPos,
+        date: formattedDate,
+      ),
     );
   }
 
-  void _showTxnDetailSheet(BuildContext context, dynamic t, AppLocalizations l) {
+  void _showTxnDetailSheet(
+    BuildContext context,
+    dynamic t,
+    AppLocalizations l,
+  ) {
     final txnId = t['id'] as int?;
     final amount = t['amount'] as int? ?? 0;
-    final label = _typeLabels(l)[t['transaction_type'] as String? ?? ''] ??
+    final label =
+        _typeLabels(l)[t['transaction_type'] as String? ?? ''] ??
         (t['label'] as String? ?? t['transaction_type'] as String? ?? '');
     final isPos = amount > 0;
     final dateStr = t['created_at'] as String? ?? '';
@@ -3963,7 +4766,8 @@ class _WalletScreenState extends State<WalletScreen> {
               padding: const EdgeInsets.only(top: 12, bottom: 8),
               child: Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: Colors.grey[300],
                     borderRadius: BorderRadius.circular(2),
@@ -3976,8 +4780,13 @@ class _WalletScreenState extends State<WalletScreen> {
               padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
               child: Row(
                 children: [
-                  Text(l.walletAllTxnsTitle,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  Text(
+                    l.walletAllTxnsTitle,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close_rounded),
@@ -4021,12 +4830,19 @@ class _WalletScreenState extends State<WalletScreen> {
     final summary = _spendingSummary;
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.walletTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(
+          AppLocalizations.of(context)!.walletTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
         surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             icon: _loading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.refresh_rounded),
             onPressed: _loading ? null : _load,
           ),
@@ -4045,7 +4861,11 @@ class _WalletScreenState extends State<WalletScreen> {
               padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFFFA500)],
+                  colors: [
+                    Color(0xFFB8860B),
+                    Color(0xFFFFD700),
+                    Color(0xFFFFA500),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -4060,8 +4880,10 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
               child: Column(
                 children: [
-                  Text(l.walletBalance,
-                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                  Text(
+                    l.walletBalance,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     _balance != null ? '$_balance TUCi' : '—',
@@ -4080,20 +4902,32 @@ class _WalletScreenState extends State<WalletScreen> {
 
             // ── Harcama özeti ─────────────────────────────────────────
             if (summary.isNotEmpty) ...[
-              Text(l.walletSpendingSummary,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              Text(
+                l.walletSpendingSummary,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
               const SizedBox(height: 10),
-              ...summary.entries.map((e) => _SummaryRow(
-                    label: _typeLabels(l)[e.key] ?? e.key,
-                    amount: e.value,
-                  )),
+              ...summary.entries.map(
+                (e) => _SummaryRow(
+                  label: _typeLabels(l)[e.key] ?? e.key,
+                  amount: e.value,
+                ),
+              ),
               const SizedBox(height: 20),
             ],
 
             // ── İşlem geçmişi ─────────────────────────────────────────
             if (_txns.isNotEmpty) ...[
-              Text(l.walletTxnHistory,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              Text(
+                l.walletTxnHistory,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
               const SizedBox(height: 10),
               ..._txns.take(20).map((t) => _buildTxnRow(t, l)),
               if (_txns.length > 20) ...[
@@ -4106,7 +4940,9 @@ class _WalletScreenState extends State<WalletScreen> {
                     label: Text(l.walletSeeAllTxns(_txns.length)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ),
@@ -4115,8 +4951,10 @@ class _WalletScreenState extends State<WalletScreen> {
             ] else if (!_loading) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(l.walletNoTxns,
-                    style: const TextStyle(color: Colors.grey)),
+                child: Text(
+                  l.walletNoTxns,
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ),
             ],
 
@@ -4145,7 +4983,11 @@ class _WalletScreenState extends State<WalletScreen> {
                   Text(
                     l.walletComingSoonDesc,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF78350F), height: 1.5),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF78350F),
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),
@@ -4169,7 +5011,8 @@ class _SummaryRow extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 8, height: 8,
+            width: 8,
+            height: 8,
             decoration: const BoxDecoration(
               color: Color(0xFFFFD700),
               shape: BoxShape.circle,
@@ -4177,14 +5020,22 @@ class _SummaryRow extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(label,
-                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface)),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
           ),
-          Text('$amount TUCi',
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFB8860B))),
+          Text(
+            '$amount TUCi',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFFB8860B),
+            ),
+          ),
         ],
       ),
     );
@@ -4196,11 +5047,12 @@ class _TxnRow extends StatelessWidget {
   final int amount;
   final bool isPositive;
   final String date;
-  const _TxnRow(
-      {required this.label,
-      required this.amount,
-      required this.isPositive,
-      required this.date});
+  const _TxnRow({
+    required this.label,
+    required this.amount,
+    required this.isPositive,
+    required this.date,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -4209,7 +5061,8 @@ class _TxnRow extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 36, height: 36,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: isPositive
                   ? Colors.green.withValues(alpha: 0.15)
@@ -4227,13 +5080,18 @@ class _TxnRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 if (date.isNotEmpty)
-                  Text(date,
-                      style:
-                          const TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text(
+                    date,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
               ],
             ),
           ),
@@ -4302,8 +5160,8 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final l = widget.l;
-    final listing   = _detail?['listing']    as Map<String, dynamic>?;
-    final stream    = _detail?['stream']     as Map<String, dynamic>?;
+    final listing = _detail?['listing'] as Map<String, dynamic>?;
+    final stream = _detail?['stream'] as Map<String, dynamic>?;
     final giftEvent = _detail?['gift_event'] as Map<String, dynamic>?;
     final imageUrl = listing?['image_url'] as String?;
     final hasImage = imageUrl != null && imageUrl.isNotEmpty;
@@ -4323,7 +5181,8 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
             padding: const EdgeInsets.only(top: 12, bottom: 8),
             child: Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2),
@@ -4336,8 +5195,13 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
             padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
             child: Row(
               children: [
-                Text(l.walletDetailTitle,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                Text(
+                  l.walletDetailTitle,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close_rounded),
@@ -4356,9 +5220,11 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
           else if (_error)
             Padding(
               padding: const EdgeInsets.all(24),
-              child: Text(l.walletDetailLoadingError,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey)),
+              child: Text(
+                l.walletDetailLoadingError,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
             )
           else ...[
             // Listing thumbnail (collapse if none)
@@ -4389,7 +5255,10 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: widget.isPositive
                       ? Colors.green.withValues(alpha: 0.12)
@@ -4399,21 +5268,32 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                 child: Row(
                   children: [
                     Icon(
-                      widget.isPositive ? Icons.add_circle_rounded : Icons.remove_circle_rounded,
-                      color: widget.isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                      widget.isPositive
+                          ? Icons.add_circle_rounded
+                          : Icons.remove_circle_rounded,
+                      color: widget.isPositive
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
                     ),
                     const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(l.walletDetailAmount,
-                            style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(
+                          l.walletDetailAmount,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
                         Text(
                           '${widget.isPositive ? '+' : ''}${widget.amount} TUCi',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: widget.isPositive ? Colors.green.shade700 : Colors.red.shade700,
+                            color: widget.isPositive
+                                ? Colors.green.shade700
+                                : Colors.red.shade700,
                           ),
                         ),
                       ],
@@ -4431,7 +5311,10 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
               child: Column(
                 children: [
                   _DetailRow(label: l.walletDetailType, value: widget.label),
-                  _DetailRow(label: l.walletDetailDate, value: widget.formattedDate),
+                  _DetailRow(
+                    label: l.walletDetailDate,
+                    value: widget.formattedDate,
+                  ),
 
                   // Listing info
                   if (listing != null) ...[
@@ -4444,9 +5327,15 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                           : null,
                     ),
                     if ((listing['category'] as String?) != null)
-                      _DetailRow(label: 'Kategori', value: listing['category'] as String),
+                      _DetailRow(
+                        label: 'Kategori',
+                        value: listing['category'] as String,
+                      ),
                     if (listing['price'] != null)
-                      _DetailRow(label: 'Fiyat', value: '${listing['price']} ₺'),
+                      _DetailRow(
+                        label: 'Fiyat',
+                        value: '${listing['price']} ₺',
+                      ),
                     const SizedBox(height: 12),
                     _NavButton(
                       icon: Icons.storefront_rounded,
@@ -4454,11 +5343,18 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                       onTap: () async {
                         final listingId = listing['id'] as int?;
                         if (listingId == null) return;
-                        final full = await ListingService.getListingById(listingId);
+                        final full = await ListingService.getListingById(
+                          listingId,
+                        );
                         if (full != null && ctx.mounted) {
-                          Navigator.push(ctx, MaterialPageRoute(
-                            builder: (_) => ListingDetailScreen(listing: Map<String, dynamic>.from(full)),
-                          ));
+                          Navigator.push(
+                            ctx,
+                            MaterialPageRoute(
+                              builder: (_) => ListingDetailScreen(
+                                listing: Map<String, dynamic>.from(full),
+                              ),
+                            ),
+                          );
                         }
                       },
                     ),
@@ -4466,12 +5362,15 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                       _NavButton(
                         icon: Icons.person_rounded,
                         label: l.walletDetailGoOwner,
-                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                          builder: (_) => PublicProfileScreen(
-                            username: listing['owner_username'] as String,
-                            userId: listing['owner_id'] as int?,
+                        onTap: () => Navigator.push(
+                          ctx,
+                          MaterialPageRoute(
+                            builder: (_) => PublicProfileScreen(
+                              username: listing['owner_username'] as String,
+                              userId: listing['owner_id'] as int?,
+                            ),
                           ),
-                        )),
+                        ),
                       ),
                   ],
 
@@ -4486,44 +5385,59 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     _NavButton(
                       icon: Icons.bar_chart_rounded,
                       label: l.walletDetailGoStream,
-                      onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                        builder: (_) => LiveStreamAnalyticsScreen(
-                          streamId: stream['id'] as int,
+                      onTap: () => Navigator.push(
+                        ctx,
+                        MaterialPageRoute(
+                          builder: (_) => LiveStreamAnalyticsScreen(
+                            streamId: stream['id'] as int,
+                          ),
                         ),
-                      )),
+                      ),
                     ),
                     if ((stream['host_username'] as String?) != null)
                       _NavButton(
                         icon: Icons.person_rounded,
                         label: l.walletDetailGoStreamHost,
-                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                          builder: (_) => PublicProfileScreen(
-                            username: stream['host_username'] as String,
-                            userId: stream['host_id'] as int?,
+                        onTap: () => Navigator.push(
+                          ctx,
+                          MaterialPageRoute(
+                            builder: (_) => PublicProfileScreen(
+                              username: stream['host_username'] as String,
+                              userId: stream['host_id'] as int?,
+                            ),
                           ),
-                        )),
+                        ),
                       ),
                   ],
 
                   // Gift event info
                   if (giftEvent != null) ...[
                     const Divider(height: 24),
-                    _GiftNameBadge(giftName: giftEvent['gift_name'] as String? ?? '—'),
+                    _GiftNameBadge(
+                      giftName: giftEvent['gift_name'] as String? ?? '—',
+                    ),
                     const SizedBox(height: 12),
                     _DetailRow(
                       label: l.walletDetailGiftSender,
-                      value: (giftEvent['sender'] as Map?)?['username'] as String? ?? '—',
+                      value:
+                          (giftEvent['sender'] as Map?)?['username']
+                              as String? ??
+                          '—',
                     ),
                     _DetailRow(
                       label: l.walletDetailGiftReceiver,
-                      value: (giftEvent['receiver'] as Map?)?['username'] as String? ?? '—',
+                      value:
+                          (giftEvent['receiver'] as Map?)?['username']
+                              as String? ??
+                          '—',
                     ),
                     if ((giftEvent['stream'] as Map?)?['title'] != null)
                       _DetailRow(
                         label: l.walletDetailGiftStream,
                         value: (giftEvent['stream'] as Map)['title'] as String,
                       ),
-                    if (giftEvent['host_share'] != null && (giftEvent['host_share'] as int) > 0)
+                    if (giftEvent['host_share'] != null &&
+                        (giftEvent['host_share'] as int) > 0)
                       _DetailRow(
                         label: l.walletDetailGiftHostShare,
                         value: '${giftEvent['host_share']} TUCi',
@@ -4533,33 +5447,49 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                       _NavButton(
                         icon: Icons.bar_chart_rounded,
                         label: l.walletDetailGoGiftStream,
-                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                          builder: (_) => LiveStreamAnalyticsScreen(
-                            streamId: (giftEvent['stream'] as Map)['id'] as int,
+                        onTap: () => Navigator.push(
+                          ctx,
+                          MaterialPageRoute(
+                            builder: (_) => LiveStreamAnalyticsScreen(
+                              streamId:
+                                  (giftEvent['stream'] as Map)['id'] as int,
+                            ),
                           ),
-                        )),
+                        ),
                       ),
                     if ((giftEvent['sender'] as Map?)?['username'] != null)
                       _NavButton(
                         icon: Icons.person_rounded,
                         label: l.walletDetailGoGiftSender,
-                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                          builder: (_) => PublicProfileScreen(
-                            username: (giftEvent['sender'] as Map)['username'] as String,
-                            userId: (giftEvent['sender'] as Map)['id'] as int?,
+                        onTap: () => Navigator.push(
+                          ctx,
+                          MaterialPageRoute(
+                            builder: (_) => PublicProfileScreen(
+                              username:
+                                  (giftEvent['sender'] as Map)['username']
+                                      as String,
+                              userId:
+                                  (giftEvent['sender'] as Map)['id'] as int?,
+                            ),
                           ),
-                        )),
+                        ),
                       ),
                     if ((giftEvent['receiver'] as Map?)?['username'] != null)
                       _NavButton(
                         icon: Icons.person_rounded,
                         label: l.walletDetailGoGiftReceiver,
-                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                          builder: (_) => PublicProfileScreen(
-                            username: (giftEvent['receiver'] as Map)['username'] as String,
-                            userId: (giftEvent['receiver'] as Map)['id'] as int?,
+                        onTap: () => Navigator.push(
+                          ctx,
+                          MaterialPageRoute(
+                            builder: (_) => PublicProfileScreen(
+                              username:
+                                  (giftEvent['receiver'] as Map)['username']
+                                      as String,
+                              userId:
+                                  (giftEvent['receiver'] as Map)['id'] as int?,
+                            ),
                           ),
-                        )),
+                        ),
                       ),
                   ],
                 ],
@@ -4579,10 +5509,21 @@ class _GiftNameBadge extends StatelessWidget {
   const _GiftNameBadge({required this.giftName});
 
   static const _giftEmojis = {
-    'rose': '🌹', 'heart': '❤️', 'fire': '🔥', 'star': '⭐',
-    'diamond': '💎', 'crown': '👑', 'rocket': '🚀', 'trophy': '🏆',
-    'money': '💰', 'clap': '👏', 'kiss': '💋', 'gift': '🎁',
-    'ateş': '🔥', 'elmas': '💎', 'kral tacı': '👑',
+    'rose': '🌹',
+    'heart': '❤️',
+    'fire': '🔥',
+    'star': '⭐',
+    'diamond': '💎',
+    'crown': '👑',
+    'rocket': '🚀',
+    'trophy': '🏆',
+    'money': '💰',
+    'clap': '👏',
+    'kiss': '💋',
+    'gift': '🎁',
+    'ateş': '🔥',
+    'elmas': '💎',
+    'kral tacı': '👑',
   };
 
   String _displayName(AppLocalizations l) {
@@ -4616,7 +5557,9 @@ class _GiftNameBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFEC4899).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFEC4899).withValues(alpha: 0.25)),
+        border: Border.all(
+          color: const Color(0xFFEC4899).withValues(alpha: 0.25),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4641,7 +5584,11 @@ class _NavButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _NavButton({required this.icon, required this.label, required this.onTap});
+  const _NavButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -4674,7 +5621,11 @@ class _NavButton extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textTertiary(context)),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.textTertiary(context),
+                ),
               ],
             ),
           ),
@@ -4699,33 +5650,47 @@ class _DetailRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 110,
-            child: Text(label,
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary(context),
+              ),
+            ),
           ),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Flexible(
-                  child: Text(value,
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary(context))),
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
                 ),
                 if (badge != null) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF97316).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(badge!,
-                        style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFFF97316),
-                            fontWeight: FontWeight.w600)),
+                    child: Text(
+                      badge!,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFFF97316),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -4747,12 +5712,37 @@ class _SocialLinksRow extends StatelessWidget {
 
   // website_url is displayed separately above; excluded here
   static const _platforms = [
-    _SocialPlatform('instagram_url', FontAwesomeIcons.instagram,  Color(0xFFE1306C), 'instagram'),
-    _SocialPlatform('kick_url',      null,                        Color(0xFF53FC18), 'kick'),
-    _SocialPlatform('twitch_url',    FontAwesomeIcons.twitch,     Color(0xFF9146FF), 'twitch'),
-    _SocialPlatform('facebook_url',  FontAwesomeIcons.facebook,   Color(0xFF1877F2), 'facebook'),
-    _SocialPlatform('youtube_url',   FontAwesomeIcons.youtube,    Color(0xFFFF0000), 'youtube'),
-    _SocialPlatform('tiktok_url',    FontAwesomeIcons.tiktok,     Color(0xFF010101), 'tiktok'),
+    _SocialPlatform(
+      'instagram_url',
+      FontAwesomeIcons.instagram,
+      Color(0xFFE1306C),
+      'instagram',
+    ),
+    _SocialPlatform('kick_url', null, Color(0xFF53FC18), 'kick'),
+    _SocialPlatform(
+      'twitch_url',
+      FontAwesomeIcons.twitch,
+      Color(0xFF9146FF),
+      'twitch',
+    ),
+    _SocialPlatform(
+      'facebook_url',
+      FontAwesomeIcons.facebook,
+      Color(0xFF1877F2),
+      'facebook',
+    ),
+    _SocialPlatform(
+      'youtube_url',
+      FontAwesomeIcons.youtube,
+      Color(0xFFFF0000),
+      'youtube',
+    ),
+    _SocialPlatform(
+      'tiktok_url',
+      FontAwesomeIcons.tiktok,
+      Color(0xFF010101),
+      'tiktok',
+    ),
   ];
 
   @override
@@ -4776,7 +5766,9 @@ class _SocialLinksRow extends StatelessWidget {
           message: raw,
           child: GestureDetector(
             onTap: () async {
-              final uri = Uri.tryParse(raw.startsWith('http') ? raw : 'https://$raw');
+              final uri = Uri.tryParse(
+                raw.startsWith('http') ? raw : 'https://$raw',
+              );
               if (uri != null && await canLaunchUrl(uri)) {
                 AnalyticsService.logInteraction(
                   itemId: userId ?? 0,
@@ -4793,7 +5785,10 @@ class _SocialLinksRow extends StatelessWidget {
               decoration: BoxDecoration(
                 color: p.color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: p.color.withValues(alpha: 0.35), width: 1.2),
+                border: Border.all(
+                  color: p.color.withValues(alpha: 0.35),
+                  width: 1.2,
+                ),
               ),
               child: Center(
                 child: p.faIcon != null
@@ -4885,4 +5880,3 @@ class _ScoreBadge extends StatelessWidget {
     );
   }
 }
-

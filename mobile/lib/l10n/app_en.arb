@@ -101,6 +101,8 @@
   "profilePassiveListings": "My Inactive Listings",
   "profileFavorites": "My Favorites",
   "profileAccountSection": "Account",
+  "profileActivitySection": "Interactions & Activity",
+  "profilePrivacySection": "Privacy",
   "profileNotificationSettings": "Notification Settings",
   "profileBlockedUsers": "Blocked Users",
   "profileFaceId": "Sign In with Face ID",

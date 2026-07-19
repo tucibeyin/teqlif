@@ -99,6 +99,8 @@
   "profilePassiveListings": "الإعلانات المعلّقة",
   "profileFavorites": "مفضلتي",
   "profileAccountSection": "الحساب",
+  "profileActivitySection": "التفاعلات والنشاط",
+  "profilePrivacySection": "الخصوصية",
   "profileNotificationSettings": "إعدادات الإشعارات",
   "profileBlockedUsers": "المستخدمون المحظورون",
   "profileFaceId": "تسجيل الدخول بـ Face ID",

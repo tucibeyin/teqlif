@@ -842,6 +842,8 @@
   "profilePassiveListings": "Мои неактивные объявления",
   "profileFavorites": "Мои избранные",
   "profileAccountSection": "Аккаунт",
+  "profileActivitySection": "Взаимодействия и активность",
+  "profilePrivacySection": "Конфиденциальность",
   "profileNotificationSettings": "Настройки уведомлений",
   "profileBlockedUsers": "Заблокированные пользователи",
   "profileFaceId": "Войти с помощью Face ID",

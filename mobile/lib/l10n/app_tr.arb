@@ -99,6 +99,8 @@
   "profilePassiveListings": "Pasif İlanlarım",
   "profileFavorites": "Favorilerim",
   "profileAccountSection": "Hesap",
+  "profileActivitySection": "Etkileşimler & Aktivite",
+  "profilePrivacySection": "Gizlilik",
   "profileNotificationSettings": "Bildirim Ayarları",
   "profileBlockedUsers": "Engellenen Kullanıcılar",
   "profileFaceId": "Face ID ile Giriş",
