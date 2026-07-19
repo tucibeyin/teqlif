@@ -1923,6 +1923,18 @@ class CallService {
     return '${padded.substring(0, 8)}-${padded.substring(8, 12)}-${padded.substring(12, 16)}-${padded.substring(16, 20)}-${padded.substring(20, 32)}';
   }
 
+  // States where the terminal UI feedback (sound, haptic, scheduleReset) was already triggered
+  // by an upstream handler (onCallRejected / onCallMissed / onCallBusy / onCallNoAnswer).
+  // _hangUpLocally still needs to run hardware teardown for these states, but must NOT call
+  // _setState(ended) or a second _scheduleReset() — doing so cuts busy.wav short and emits
+  // the spurious "unexpected transition rejected→ended" WARN in the state machine.
+  static const _terminalPendingStatuses = {
+    CallStatus.rejected,
+    CallStatus.missed,
+    CallStatus.busy,
+    CallStatus.noAnswer,
+  };
+
   Future<void> _hangUpLocally({required CallStatus status}) async {
     _cpLog('END', '_hangUpLocally called | targetStatus=$status prevStatus=${state.value.status} callId=${state.value.callId}');
     if (_isHangingUp) {
@@ -1936,9 +1948,16 @@ class CallService {
       _cpLog('END', '_hangUpLocally SKIPPED | already ${state.value.status.name} (late WS/FCM event ignored) | targetStatus=$status');
       return;
     }
+
+    // Capture before any await — state may shift during async teardown.
+    final prevStatus = state.value.status;
+    // Terminal-pending states already have sound/haptic/scheduleReset handled upstream.
+    // Hardware teardown below is still needed; state + reset must be skipped.
+    final skipStateChange = status == CallStatus.ended && _terminalPendingStatuses.contains(prevStatus);
+
     _isHangingUp = true;
     try {
-      if (state.value.status == status) {
+      if (prevStatus == status) {
         return;
       }
       _callerStatusPollTimer?.cancel();
@@ -1952,7 +1971,7 @@ class CallService {
           ? DateTime.now().toUtc().difference(effectiveAcceptedAt.toUtc()).inMilliseconds
           : -1;
       _cpLog('END', 'call DURATION | callId=${state.value.callId} acceptedAt=${effectiveAcceptedAt?.toIso8601String() ?? "NULL"} durationMs=$callDurationMs durationSec=${callDurationMs > 0 ? callDurationMs ~/ 1000 : -1}');
-      
+
       _cpLog('END', 'disconnectRoom starting');
       await _disconnectRoom();
       _cpLog('END', 'disconnectRoom done');
@@ -1975,7 +1994,14 @@ class CallService {
         debugPrint('[CallService] setSpeakerphoneOn(false) error: $e');
       }
 
-      // 4. Bütün donanım/native işlemler bittikten sonra state'i güncelliyoruz
+      if (skipStateChange) {
+        // Hardware teardown is done. State (e.g. rejected) and its scheduleReset are already
+        // managed by the upstream handler — no second state change or reset timer needed.
+        _cpLog('END', '_hangUpLocally: teardown done | prevStatus=$prevStatus already terminal — skipping setState+scheduleReset');
+        return;
+      }
+
+      // Bütün donanım/native işlemler bittikten sonra state'i güncelliyoruz
       // Böylece UI katmanı (SwipeLiveScreen) tepki verdiğinde her şey hazır oluyor.
       _setState(state.value.copyWith(status: status));
       _scheduleReset();
