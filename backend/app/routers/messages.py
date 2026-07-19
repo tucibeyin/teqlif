@@ -99,7 +99,7 @@ async def dm_pubsub_listener() -> None:
             await r.aclose()
             return
         except Exception as exc:
-            logger.error("[DM PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
+            logger.warning("[DM PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
         finally:
             if keepalive_task and not keepalive_task.done():
                 keepalive_task.cancel()
