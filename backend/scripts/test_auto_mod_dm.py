@@ -14,14 +14,9 @@ def api_request(method, endpoint, data=None, token=None):
     url = f"{BASE_URL}{endpoint}"
     headers = {}
     if data:
-        # Check if form data or JSON based on endpoint
-        if endpoint == "/auth/login":
-            import urllib.parse
-            data = urllib.parse.urlencode(data).encode("utf-8")
-            headers["Content-Type"] = "application/x-www-form-urlencoded"
-        else:
-            data = json.dumps(data).encode("utf-8")
-            headers["Content-Type"] = "application/json"
+        # Send JSON for everything including /auth/login
+        data = json.dumps(data).encode("utf-8")
+        headers["Content-Type"] = "application/json"
     
     if token:
         headers["Authorization"] = f"Bearer {token}"
