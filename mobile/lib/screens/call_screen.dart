@@ -34,7 +34,7 @@ class _CallScreenState extends State<CallScreen> {
 
   // PiP local video position
   double _pipRight = 16;
-  double _pipBottom = 120;
+  double _pipBottom = 200;
 
   // Toast for participant joined/left/removed
   String? _toastMessage;
@@ -240,6 +240,18 @@ class _CallScreenState extends State<CallScreen> {
                 ),
               ),
 
+              // Remote video — BEFORE SafeArea so controls always render on top
+              if (cs.remoteVideoEnabled && cs.status == CallStatus.connected) ...[
+                Positioned.fill(
+                  child: _RemoteVideoView(
+                    room: CallService.instance.room,
+                  ),
+                ),
+                Positioned.fill(
+                  child: Container(color: Colors.black.withValues(alpha: 0.25)),
+                ),
+              ],
+
               SafeArea(
                 child: Stack(
                   children: [
@@ -312,65 +324,103 @@ class _CallScreenState extends State<CallScreen> {
 
                     Column(
                       children: [
-                        const SizedBox(height: 64),
+                        // Hide avatar/name/status when remote video is fullscreen
+                        if (!cs.remoteVideoEnabled || cs.status != CallStatus.connected) ...[
+                          const SizedBox(height: 64),
 
-                        // Avatar
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.isDark(context)
-                                    ? Colors.white.withValues(alpha: 0.15)
-                                    : Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 32,
-                                spreadRadius: 8,
-                              ),
-                            ],
+                          // Avatar
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.isDark(context)
+                                      ? Colors.white.withValues(alpha: 0.15)
+                                      : Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 32,
+                                  spreadRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: avatarUrl != null && avatarUrl.isNotEmpty
+                                  ? CachedNetworkImage(
+                                      imageUrl: avatarUrl,
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, _) =>
+                                          _Initials(username: username),
+                                      errorWidget: (_, _, _) =>
+                                          _Initials(username: username),
+                                    )
+                                  : _Initials(username: username),
+                            ),
                           ),
-                          child: ClipOval(
-                            child: avatarUrl != null && avatarUrl.isNotEmpty
-                                ? CachedNetworkImage(
-                                    imageUrl: avatarUrl,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, _) =>
-                                        _Initials(username: username),
-                                    errorWidget: (_, _, _) =>
-                                        _Initials(username: username),
-                                  )
-                                : _Initials(username: username),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                        // Username
-                        Text(
-                          '@$username',
-                          style: TextStyle(
-                            color: AppColors.textPrimary(context),
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700,
+                          // Username
+                          Text(
+                            '@$username',
+                            style: TextStyle(
+                              color: AppColors.textPrimary(context),
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
+                          const SizedBox(height: 10),
 
-                        // Status / timer
-                        // Timer, CallState'ten bağımsız elapsed notifier'ı dinler.
-                        // Bu sayede saniyede 3 gereksiz listener callback önlenir.
-                        ValueListenableBuilder<Duration>(
-                          valueListenable: CallService.instance.elapsed,
-                          builder: (context, elapsedDuration, _) {
-                            return Text(
-                              _statusText(cs.status, l, elapsedDuration),
-                              style: TextStyle(
-                                color: AppColors.textSecondary(context),
-                                fontSize: 16,
-                              ),
-                            );
-                          },
-                        ),
+                          // Status / timer
+                          ValueListenableBuilder<Duration>(
+                            valueListenable: CallService.instance.elapsed,
+                            builder: (context, elapsedDuration, _) {
+                              return Text(
+                                _statusText(cs.status, l, elapsedDuration),
+                                style: TextStyle(
+                                  color: AppColors.textSecondary(context),
+                                  fontSize: 16,
+                                ),
+                              );
+                            },
+                          ),
+                        ] else ...[
+                          // Video mode: show name + timer in a compact top bar
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 48), // space for minimize button
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        '@$username',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+                                        ),
+                                      ),
+                                      ValueListenableBuilder<Duration>(
+                                        valueListenable: CallService.instance.elapsed,
+                                        builder: (context, elapsed, _) => Text(
+                                          _statusText(cs.status, l, elapsed),
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13,
+                                            shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 48), // symmetric
+                              ],
+                            ),
+                          ),
+                        ],
 
                         const Spacer(),
 
@@ -555,19 +605,6 @@ class _CallScreenState extends State<CallScreen> {
                   ],
                 ),
               ),
-
-              // Remote video — fullscreen background (behind SafeArea content)
-              if (cs.remoteVideoEnabled && cs.status == CallStatus.connected) ...[
-                Positioned.fill(
-                  child: _RemoteVideoView(
-                    room: CallService.instance.room,
-                  ),
-                ),
-                // Semi-transparent overlay so controls remain readable
-                Positioned.fill(
-                  child: Container(color: Colors.black.withValues(alpha: 0.25)),
-                ),
-              ],
 
               // Local video PiP — draggable, bottom-right
               if (cs.localVideoEnabled && cs.status == CallStatus.connected)
