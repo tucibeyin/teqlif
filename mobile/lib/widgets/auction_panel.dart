@@ -26,19 +26,26 @@ import 'swipe_paginated_list.dart';
 class AuctionPanel extends ConsumerStatefulWidget {
   final int streamId;
   final bool isHost;
-  final void Function(String bidder, double amount, String? itemName)? onBidAdded;
+  final void Function(String bidder, double amount, String? itemName)?
+  onBidAdded;
   final VoidCallback? onAuctionReset;
+
   /// false ise viewer teklif butonları devre dışı kalır (mute durumu)
   final bool enabled;
+
   /// true ise Co-Host modunda çalışır: host kontrol UI'ı gösterilir,
   /// viewer teklif butonları gizlenir. Kamera/mikrofon/yayın bitirme yetkisi yoktur.
   final bool isCoHost;
+
   /// Moderatör/co-host ilanları bu user'dan yükler (null → kendi ilanları = gerçek host)
   final int? hostUserId;
+
   /// Mevcut kullanıcının adı — kazanma tespiti için
   final String? myUsername;
+
   /// İhaleyi kazandığında tetiklenir (konfeti/titreşim için)
   final VoidCallback? onWin;
+
   /// Kanıt görselini yakalayıp yüklemek için fonksiyon
   final Future<String?> Function()? captureProofImage;
 
@@ -168,8 +175,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('✅ ${l.auctionAcceptBidTitle}',
-            style: const TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(
+          '✅ ${l.auctionAcceptBidTitle}',
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -185,60 +194,76 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 children: [
                   _acceptRow(l.auctionItem, state.itemName ?? '—'),
                   const SizedBox(height: 10),
-                  _acceptRow(l.auctionWinnerPrice,
-                      '₺${_fmt(state.currentBid)}',
-                      valueColor: const Color(0xFF4ADE80),
-                      valueBold: true),
+                  _acceptRow(
+                    l.auctionWinnerPrice,
+                    '₺${_fmt(state.currentBid)}',
+                    valueColor: const Color(0xFF4ADE80),
+                    valueBold: true,
+                  ),
                   const SizedBox(height: 10),
-                  _acceptRow(l.auctionBidder,
-                      '@${state.currentBidder ?? '—'}'),
+                  _acceptRow(l.auctionBidder, '@${state.currentBidder ?? '—'}'),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Text(
               l.auctionAcceptConfirm,
-              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
+              style: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 12,
+                height: 1.5,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF334155)),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF334155)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: Text(
+                    l.auctionCancelBtn,
+                    style: const TextStyle(color: Color(0xFF94A3B8)),
+                  ),
                 ),
-                child: Text(l.auctionCancelBtn,
-                    style: const TextStyle(color: Color(0xFF94A3B8))),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF059669),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(vertical: 12)),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l.auctionContinueBtn,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(
+                    l.auctionContinueBtn,
                     style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w700)),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ]),
+            ],
+          ),
         ],
       ),
     );
     if (ok != true) return;
-    
+
     String? proofUrl;
     if (widget.captureProofImage != null) {
       proofUrl = await _showProofCaptureDialog();
@@ -248,7 +273,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     }
 
     try {
-      final newState = await AuctionService.acceptBid(widget.streamId, proofImageUrl: proofUrl);
+      final newState = await AuctionService.acceptBid(
+        widget.streamId,
+        proofImageUrl: proofUrl,
+      );
       ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
       _setMsg(l.auctionAccepted);
     } catch (e) {
@@ -281,24 +309,40 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('📷 ${l.hostAcceptSaleDialogTitle}', 
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    '📷 ${l.hostAcceptSaleDialogTitle}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEA580C).withValues(alpha: 0.15),
-                      border: Border.all(color: const Color(0xFFEA580C).withValues(alpha: 0.5)),
+                      border: Border.all(
+                        color: const Color(0xFFEA580C).withValues(alpha: 0.5),
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.camera_alt, color: Color(0xFFEA580C), size: 28),
+                        const Icon(
+                          Icons.camera_alt,
+                          color: Color(0xFFEA580C),
+                          size: 28,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            l.hostAcceptSaleDialogBody, 
-                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                            l.hostAcceptSaleDialogBody,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -306,7 +350,11 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   ),
                   const SizedBox(height: 24),
                   if (isLoading)
-                    const Center(child: CircularProgressIndicator(color: Color(0xFFEA580C)))
+                    const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFEA580C),
+                      ),
+                    )
                   else
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -315,29 +363,49 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFEA580C),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                          onPressed: widget.captureProofImage == null ? null : () async {
-                            setLocalState(() => isLoading = true);
-                            try {
-                              final url = await widget.captureProofImage!.call();
-                              if (context.mounted) Navigator.pop(ctx, url ?? '');
-                            } catch (e) {
-                              setLocalState(() => isLoading = false);
-                              _setMsg(l.errorPhotoCapture, error: true);
-                            }
-                          },
-                          child: Text(l.hostAcceptSaleBtnCapture, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          onPressed: widget.captureProofImage == null
+                              ? null
+                              : () async {
+                                  setLocalState(() => isLoading = true);
+                                  try {
+                                    final url = await widget.captureProofImage!
+                                        .call();
+                                    if (context.mounted)
+                                      Navigator.pop(ctx, url ?? '');
+                                  } catch (e) {
+                                    setLocalState(() => isLoading = false);
+                                    _setMsg(l.errorPhotoCapture, error: true);
+                                  }
+                                },
+                          child: Text(
+                            l.hostAcceptSaleBtnCapture,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFF475569)),
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: () => Navigator.pop(ctx, ''),
-                          child: Text(l.hostAcceptSaleBtnSkip, style: const TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                          child: Text(
+                            l.hostAcceptSaleBtnSkip,
+                            style: const TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -356,23 +424,34 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: Text(l.auctionEndTitle,
-            style: const TextStyle(color: Colors.white)),
-        content: Text(l.auctionEndDesc,
-            style: const TextStyle(color: Color(0xFF94A3B8))),
+        title: Text(
+          l.auctionEndTitle,
+          style: const TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          l.auctionEndDesc,
+          style: const TextStyle(color: Color(0xFF94A3B8)),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l.btnCancel,
-                  style: const TextStyle(color: Color(0xFF64748B)))),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              l.btnCancel,
+              style: const TextStyle(color: Color(0xFF64748B)),
+            ),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8))),
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             onPressed: () => Navigator.pop(ctx, true),
-            child:
-                Text(l.auctionEndBtn, style: const TextStyle(color: Colors.white)),
+            child: Text(
+              l.auctionEndBtn,
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -406,16 +485,19 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           next.currentBidder != null &&
           next.currentBid != null) {
         widget.onBidAdded?.call(
-            next.currentBidder!, next.currentBid!, next.itemName);
+          next.currentBidder!,
+          next.currentBid!,
+          next.itemName,
+        );
       }
       if (prev != null && next.isIdle && !prev.isIdle) {
         widget.onAuctionReset?.call();
       }
       // Kazanan tespiti: sadece accept_bid ile onaylanan bitişte (winnerAccepted=true)
       if (prev != null &&
-          !prev.isEnded &&
+          !prev.winnerAccepted &&
+          next.winnerAccepted && // end_auction (kesme) ile bitmişse false → konfeti yok
           next.isEnded &&
-          next.winnerAccepted &&   // end_auction (kesme) ile bitmişse false → konfeti yok
           !next.isBoughtItNow &&
           next.currentBidder != null &&
           widget.myUsername != null &&
@@ -428,7 +510,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           final buyer = next.buyerUsername ?? next.currentBidder ?? '?';
           final price = _fmt(next.currentBid);
           _setMsg(l.auctionBuyNowCompleted(buyer, price));
-        } else if (_iAmBinBuyer) {
+        } else if ((next.buyerUsername != null &&
+                next.buyerUsername == widget.myUsername) ||
+            _iAmBinBuyer) {
           _setMsg(l.auctionBuyNowCongrats);
           widget.onWin?.call();
         } else {
@@ -442,7 +526,11 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         _showBuyItNowRequestDialog(next.pendingBuyerUsername ?? '?', next);
       }
       // Viewer: talep reddedildiğinde bilgi mesajı (isPending → active geçişi)
-      if (!widget.isHost && prev != null && prev.isPending && !next.isPending && !next.isBoughtItNow) {
+      if (!widget.isHost &&
+          prev != null &&
+          prev.isPending &&
+          !next.isPending &&
+          !next.isBoughtItNow) {
         if (_iAmBinBuyer) {
           // BIN talebini başlatan viewer: diyalog kapat + red mesajı
           if (_binDialogCtx != null && _binDialogCtx!.mounted) {
@@ -456,7 +544,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         _iAmBinBuyer = false;
       }
       // Viewer: talep tamamlandığında dialog'u kapat (mesaj yukarıda)
-      if (!widget.isHost && prev != null && prev.isPending && next.isBoughtItNow) {
+      if (!widget.isHost &&
+          prev != null &&
+          prev.isPending &&
+          next.isBoughtItNow) {
         if (_binDialogCtx != null && _binDialogCtx!.mounted) {
           Navigator.of(_binDialogCtx!).pop();
           _binDialogCtx = null;
@@ -500,21 +591,24 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (state.itemName != null)
-                              Text(
-                                state.itemName!,
-                                style: const TextStyle(
+                                Text(
+                                  state.itemName!,
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 12),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                    fontSize: 12,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               if (state.currentBid != null ||
                                   state.startPrice != null)
                                 Text(
                                   '₺${_fmt(state.currentBid ?? state.startPrice)}'
                                   '${state.currentBidder != null ? ' · @${state.currentBidder}' : ''}',
                                   style: const TextStyle(
-                                      color: Color(0xFF4ADE80), fontSize: 11),
+                                    color: Color(0xFF4ADE80),
+                                    fontSize: 11,
+                                  ),
                                 ),
                             ],
                           ),
@@ -529,10 +623,14 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                                 color: Colors.amber.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                    color: Colors.amber.withValues(alpha: 0.6)),
+                                  color: Colors.amber.withValues(alpha: 0.6),
+                                ),
                               ),
-                              child: const Icon(Icons.open_in_new,
-                                  color: Colors.amber, size: 12),
+                              child: const Icon(
+                                Icons.open_in_new,
+                                color: Colors.amber,
+                                size: 12,
+                              ),
                             ),
                           ),
                       ],
@@ -555,9 +653,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               child: Text(
                 _msg!,
                 style: TextStyle(
-                    fontSize: 11,
-                    color: _msgError ? Colors.redAccent : Colors.greenAccent,
-                    shadows: const [Shadow(blurRadius: 4, color: Colors.black)]),
+                  fontSize: 11,
+                  color: _msgError ? Colors.redAccent : Colors.greenAccent,
+                  shadows: const [Shadow(blurRadius: 4, color: Colors.black)],
+                ),
               ),
             ),
         ],
@@ -597,7 +696,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       context: context,
       backgroundColor: const Color(0xFF1E293B),
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       isScrollControlled: true,
       builder: (ctx) => DraggableScrollableSheet(
         expand: false,
@@ -608,110 +708,135 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           final pageCtrl = PageController();
           final pageIdx = [0]; // mutable single-element list
           return StatefulBuilder(
-          builder: (_, setSt) {
-            return ListView(
-              controller: scrollCtrl,
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-              children: [
-                // Handle bar
-                Center(
-                  child: Container(
-                    width: 38, height: 4,
-                    decoration: BoxDecoration(
+            builder: (_, setSt) {
+              return ListView(
+                controller: scrollCtrl,
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
                         color: Colors.white24,
-                        borderRadius: BorderRadius.circular(2)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Resim slider
-                if (imageUrls.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      height: 200,
-                      child: Stack(
-                        children: [
-                          PageView.builder(
-                            controller: pageCtrl,
-                            itemCount: imageUrls.length,
-                            onPageChanged: (i) => setSt(() => pageIdx[0] = i),
-                            itemBuilder: (_, i) => CachedNetworkImage(
-                              memCacheWidth: 400, memCacheHeight: 400, imageUrl: imageUrls[i],
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              placeholder: (_, _) => const ShimmerBox(),
-                              errorWidget: (_, _, _) => Container(
-                                color: const Color(0xFF0F172A),
-                                child: const Icon(Icons.image_outlined,
-                                    color: Color(0xFF475569), size: 48),
-                              ),
-                            ),
-                          ),
-                          // Dot indicators
-                          if (imageUrls.length > 1)
-                            Positioned(
-                              bottom: 8,
-                              left: 0,
-                              right: 0,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(imageUrls.length, (i) {
-                                  final active = i == pageIdx[0];
-                                  return AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                                    width: active ? 16 : 6,
-                                    height: 6,
-                                    decoration: BoxDecoration(
-                                      color: active ? Colors.white : Colors.white38,
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            ),
-                        ],
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                const SizedBox(height: 14),
-                // Başlık
-                Text(
-                  listing['title'] ?? '',
-                  style: const TextStyle(
+                  const SizedBox(height: 16),
+                  // Resim slider
+                  if (imageUrls.isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SizedBox(
+                        height: 200,
+                        child: Stack(
+                          children: [
+                            PageView.builder(
+                              controller: pageCtrl,
+                              itemCount: imageUrls.length,
+                              onPageChanged: (i) => setSt(() => pageIdx[0] = i),
+                              itemBuilder: (_, i) => CachedNetworkImage(
+                                memCacheWidth: 400,
+                                memCacheHeight: 400,
+                                imageUrl: imageUrls[i],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                placeholder: (_, _) => const ShimmerBox(),
+                                errorWidget: (_, _, _) => Container(
+                                  color: const Color(0xFF0F172A),
+                                  child: const Icon(
+                                    Icons.image_outlined,
+                                    color: Color(0xFF475569),
+                                    size: 48,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Dot indicators
+                            if (imageUrls.length > 1)
+                              Positioned(
+                                bottom: 8,
+                                left: 0,
+                                right: 0,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(imageUrls.length, (
+                                    i,
+                                  ) {
+                                    final active = i == pageIdx[0];
+                                    return AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 3,
+                                      ),
+                                      width: active ? 16 : 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: active
+                                            ? Colors.white
+                                            : Colors.white38,
+                                        borderRadius: BorderRadius.circular(3),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 14),
+                  // Başlık
+                  Text(
+                    listing['title'] ?? '',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
-                      fontSize: 17),
-                ),
-                const SizedBox(height: 6),
-                // Fiyat
-                Text(
-                  priceStr,
-                  style: const TextStyle(
+                      fontSize: 17,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  // Fiyat
+                  Text(
+                    priceStr,
+                    style: const TextStyle(
                       color: Color(0xFF4ADE80),
                       fontWeight: FontWeight.w800,
-                      fontSize: 20),
-                ),
-                if (seller.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text('@$seller',
-                      style: const TextStyle(
-                          color: Color(0xFF64748B), fontSize: 13)),
-                ],
-                if ((listing['description'] as String?)?.isNotEmpty == true) ...[
-                  const SizedBox(height: 12),
-                  const Divider(color: Color(0xFF334155)),
-                  const SizedBox(height: 8),
-                  Text(
-                    listing['description'] as String,
-                    style: const TextStyle(
-                        color: Color(0xFF94A3B8), fontSize: 13, height: 1.5),
+                      fontSize: 20,
+                    ),
                   ),
+                  if (seller.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '@$seller',
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                  if ((listing['description'] as String?)?.isNotEmpty ==
+                      true) ...[
+                    const SizedBox(height: 12),
+                    const Divider(color: Color(0xFF334155)),
+                    const SizedBox(height: 8),
+                    Text(
+                      listing['description'] as String,
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            );
-          },
-        );
+              );
+            },
+          );
         },
       ),
     );
@@ -722,65 +847,95 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     final String label;
     final Color color;
     if (state.status == 'active') {
-      label = l.auctionStatusActive; color = Colors.green;
+      label = l.auctionStatusActive;
+      color = Colors.green;
     } else if (state.status == 'buy_it_now_pending') {
-      label = l.auctionStatusPending; color = Colors.orange;
+      label = l.auctionStatusPending;
+      color = Colors.orange;
     } else if (state.status == 'paused') {
-      label = l.auctionStatusPaused; color = Colors.amber;
+      label = l.auctionStatusPaused;
+      color = Colors.amber;
     } else if (state.status == 'ended' && state.isBoughtItNow) {
-      label = l.auctionStatusSold; color = Colors.orange;
+      label = l.auctionStatusSold;
+      color = Colors.orange;
     } else if (state.status == 'ended') {
-      label = l.auctionStatusEnded; color = Colors.red;
+      label = l.auctionStatusEnded;
+      color = Colors.red;
     } else {
-      label = l.auctionStatusIdle; color = const Color(0xFF475569);
+      label = l.auctionStatusIdle;
+      color = const Color(0xFF475569);
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration:
-          BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-      child: Text(label,
-          style: const TextStyle(
-              fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 
   Widget _hostInlineControls(AuctionState state) {
     final l = AppLocalizations.of(context)!;
     if (state.isIdle || state.isEnded) {
-      return Row(mainAxisSize: MainAxisSize.min, children: [
-        _pillIconBtn(Icons.bolt_rounded, l.quickAuctionBtn, _quickAuctionLoading ? Colors.orange.withAlpha(100) : Colors.orange, _quickAuctionLoading ? null : _startQuickAuction),
-        const SizedBox(width: 6),
-        _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog),
-      ]);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _pillIconBtn(
+            Icons.bolt_rounded,
+            l.quickAuctionBtn,
+            _quickAuctionLoading ? Colors.orange.withAlpha(100) : Colors.orange,
+            _quickAuctionLoading ? null : _startQuickAuction,
+          ),
+          const SizedBox(width: 6),
+          _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog),
+        ],
+      );
     }
     if (state.isActive) {
-      return Row(mainAxisSize: MainAxisSize.min, children: [
-        _iconBtn(Icons.pause_rounded, Colors.amber, _pauseAuction),
-        if (state.currentBidder != null) ...[
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _iconBtn(Icons.pause_rounded, Colors.amber, _pauseAuction),
+          if (state.currentBidder != null) ...[
+            const SizedBox(width: 6),
+            _acceptBtn(),
+          ],
           const SizedBox(width: 6),
-          _acceptBtn(),
+          _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
         ],
-        const SizedBox(width: 6),
-        _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
-      ]);
+      );
     }
     if (state.isPaused) {
-      return Row(mainAxisSize: MainAxisSize.min, children: [
-        _iconBtn(Icons.play_arrow_rounded, Colors.green, _resumeAuction),
-        if (state.currentBidder != null) ...[
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _iconBtn(Icons.play_arrow_rounded, Colors.green, _resumeAuction),
+          if (state.currentBidder != null) ...[
+            const SizedBox(width: 6),
+            _acceptBtn(),
+          ],
           const SizedBox(width: 6),
-          _acceptBtn(),
+          _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
         ],
-        const SizedBox(width: 6),
-        _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
-      ]);
+      );
     }
     if (state.isPending) {
-      return Row(mainAxisSize: MainAxisSize.min, children: [
-        _pillBtn(l.auctionBuyNowRejectInline, Colors.red, _buyItNowReject),
-        const SizedBox(width: 6),
-        _pillBtn(l.auctionBuyNowAcceptInline, Colors.green, _buyItNowAccept),
-      ]);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _pillBtn(l.auctionBuyNowRejectInline, Colors.red, _buyItNowReject),
+          const SizedBox(width: 6),
+          _pillBtn(l.auctionBuyNowAcceptInline, Colors.green, _buyItNowAccept),
+        ],
+      );
     }
     return const SizedBox.shrink();
   }
@@ -789,7 +944,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     final l = AppLocalizations.of(context)!;
     final enabled = widget.enabled;
     final bin = state.buyItNowPrice;
-    final showBin = enabled &&
+    final showBin =
+        enabled &&
         bin != null &&
         (state.currentBid == null || state.currentBid! < bin) &&
         !state.isPending;
@@ -804,7 +960,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
             decoration: BoxDecoration(
-              color: enabled ? const Color(0xFF16A34A) : const Color(0xFF334155),
+              color: enabled
+                  ? const Color(0xFF16A34A)
+                  : const Color(0xFF334155),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -860,9 +1018,12 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               return AlertDialog(
                 backgroundColor: const Color(0xFF1E293B),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                title: Text('⚡ ${l.auctionBuyNowTitle}',
-                    style: const TextStyle(color: Colors.white, fontSize: 16)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: Text(
+                  '⚡ ${l.auctionBuyNowTitle}',
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -872,18 +1033,20 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                     Text(
                       l.auctionApprovalWaiting,
                       style: const TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15),
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       l.auctionApprovalWaitingDesc,
                       style: const TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 12,
-                          height: 1.5),
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
@@ -895,9 +1058,12 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             return AlertDialog(
               backgroundColor: const Color(0xFF1E293B),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              title: Text('⚡ ${l.auctionBuyNowTitle}',
-                  style: const TextStyle(color: Colors.white, fontSize: 16)),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Text(
+                '⚡ ${l.auctionBuyNowTitle}',
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -908,84 +1074,92 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                       color: const Color(0xFF0F172A),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Column(children: [
-                      _acceptRow(l.auctionItem, state.itemName ?? '—'),
-                      const SizedBox(height: 10),
-                      _acceptRow(l.auctionBuyNowPrice,
+                    child: Column(
+                      children: [
+                        _acceptRow(l.auctionItem, state.itemName ?? '—'),
+                        const SizedBox(height: 10),
+                        _acceptRow(
+                          l.auctionBuyNowPrice,
                           '₺${_fmt(state.buyItNowPrice)}',
                           valueColor: Colors.orange,
-                          valueBold: true),
-                    ]),
+                          valueBold: true,
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Text(
                     l.auctionBuyNowConfirm,
                     style: const TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 12,
-                        height: 1.5),
+                      color: Color(0xFF94A3B8),
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
-              actionsPadding:
-                  const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               actions: [
-                Row(children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                            color: Color(0xFF334155)),
-                        shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12),
-                      ),
-                      child: Text(l.btnCancel,
-                          style: const TextStyle(
-                              color: Color(0xFF94A3B8))),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Colors.orange.shade700,
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFF334155)),
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 12)),
-                      onPressed: () async {
-                        setS(() => waiting = true);
-                        try {
-                          await AuctionService.buyItNow(widget.streamId);
-                          // Başarılı → bu viewer BIN alıcısı olarak işaretlenir
-                          _iAmBinBuyer = true;
-                          // Dialog ref.listen üzerinden kapanacak (host kararıyla)
-                        } on AppException catch (e) {
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          _setMsg(e.message, error: true);
-                        } catch (e, st) {
-                          LoggerService.instance.captureException(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(
+                          l.btnCancel,
+                          style: const TextStyle(color: Color(0xFF94A3B8)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade700,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () async {
+                          setS(() => waiting = true);
+                          try {
+                            await AuctionService.buyItNow(widget.streamId);
+                            // Başarılı → bu viewer BIN alıcısı olarak işaretlenir
+                            _iAmBinBuyer = true;
+                            // Dialog ref.listen üzerinden kapanacak (host kararıyla)
+                          } on AppException catch (e) {
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            _setMsg(e.message, error: true);
+                          } catch (e, st) {
+                            LoggerService.instance.captureException(
                               e,
                               stackTrace: st,
-                              tag: '_AuctionPanelState._buyItNow');
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          _setMsg(_cleanErr(e), error: true);
-                        }
-                      },
-                      child: Text(l.auctionBuyNowBuyBtn,
+                              tag: '_AuctionPanelState._buyItNow',
+                            );
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            _setMsg(_cleanErr(e), error: true);
+                          }
+                        },
+                        child: Text(
+                          l.auctionBuyNowBuyBtn,
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700)),
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
               ],
             );
           },
@@ -995,7 +1169,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     _binDialogCtx = null;
   }
 
-  Future<void> _showBuyItNowRequestDialog(String buyerUsername, AuctionState state) async {
+  Future<void> _showBuyItNowRequestDialog(
+    String buyerUsername,
+    AuctionState state,
+  ) async {
     if (!mounted || !context.mounted) return;
     final l = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
@@ -1004,8 +1181,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('⚡ ${l.auctionBuyNowRequest}',
-            style: const TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(
+          '⚡ ${l.auctionBuyNowRequest}',
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1016,51 +1195,75 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 color: const Color(0xFF0F172A),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(children: [
-                _acceptRow(l.auctionItem, state.itemName ?? '—'),
-                const SizedBox(height: 10),
-                _acceptRow(l.auctionBuyNowPrice, '₺${_fmt(state.buyItNowPrice)}',
-                    valueColor: Colors.orange, valueBold: true),
-                const SizedBox(height: 10),
-                _acceptRow(l.auctionBuyNowRequester, '@$buyerUsername'),
-              ]),
+              child: Column(
+                children: [
+                  _acceptRow(l.auctionItem, state.itemName ?? '—'),
+                  const SizedBox(height: 10),
+                  _acceptRow(
+                    l.auctionBuyNowPrice,
+                    '₺${_fmt(state.buyItNowPrice)}',
+                    valueColor: Colors.orange,
+                    valueBold: true,
+                  ),
+                  const SizedBox(height: 10),
+                  _acceptRow(l.auctionBuyNowRequester, '@$buyerUsername'),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             Text(
               l.auctionBuyNowRequestConfirm,
-              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
+              style: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 12,
+                height: 1.5,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF334155)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF334155)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: Text(
+                    l.auctionBuyNowReject,
+                    style: const TextStyle(color: Color(0xFFF87171)),
+                  ),
                 ),
-                child: Text(l.auctionBuyNowReject,
-                    style: const TextStyle(color: Color(0xFFF87171))),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange.shade700,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(vertical: 12)),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l.auctionBuyNowApprove,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(
+                    l.auctionBuyNowApprove,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ]),
+            ],
+          ),
         ],
       ),
     );
@@ -1074,11 +1277,18 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       }
 
       try {
-        await AuctionService.acceptBuyItNow(widget.streamId, proofImageUrl: proofUrl);
+        await AuctionService.acceptBuyItNow(
+          widget.streamId,
+          proofImageUrl: proofUrl,
+        );
       } on AppException catch (e) {
         _setMsg(e.message, error: true);
       } catch (e, st) {
-        LoggerService.instance.captureException(e, stackTrace: st, tag: '_AuctionPanelState._showBuyItNowRequestDialog.accept');
+        LoggerService.instance.captureException(
+          e,
+          stackTrace: st,
+          tag: '_AuctionPanelState._showBuyItNowRequestDialog.accept',
+        );
         _setMsg(_cleanErr(e), error: true);
       }
     } else if (ok == false) {
@@ -1087,7 +1297,11 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       } on AppException catch (e) {
         _setMsg(e.message, error: true);
       } catch (e, st) {
-        LoggerService.instance.captureException(e, stackTrace: st, tag: '_AuctionPanelState._showBuyItNowRequestDialog.reject');
+        LoggerService.instance.captureException(
+          e,
+          stackTrace: st,
+          tag: '_AuctionPanelState._showBuyItNowRequestDialog.reject',
+        );
         _setMsg(_cleanErr(e), error: true);
       }
     }
@@ -1098,29 +1312,43 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       context: outerContext,
       backgroundColor: const Color(0xF01E293B),
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       isScrollControlled: true,
-      builder: (_) => _BidSheetContent(streamId: widget.streamId, iAmBinBuyer: _iAmBinBuyer),
+      builder: (_) => _BidSheetContent(
+        streamId: widget.streamId,
+        iAmBinBuyer: _iAmBinBuyer,
+      ),
     );
   }
 
-  Widget _pillIconBtn(IconData icon, String label, Color color, VoidCallback? onTap) {
+  Widget _pillIconBtn(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback? onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration:
-            BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: Colors.white, size: 12),
             const SizedBox(width: 4),
-            Text(label,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700)),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
       ),
@@ -1132,34 +1360,46 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-        decoration:
-            BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
-        child: Text(label,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700)),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
 
-  Widget _acceptRow(String label, String value,
-      {Color valueColor = const Color(0xFFE2E8F0), bool valueBold = false}) {
+  Widget _acceptRow(
+    String label,
+    String value, {
+    Color valueColor = const Color(0xFFE2E8F0),
+    bool valueBold = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: const TextStyle(
-                color: Color(0xFF64748B), fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+        ),
         Flexible(
-          child: Text(value,
-              textAlign: TextAlign.end,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  color: valueColor,
-                  fontSize: 13,
-                  fontWeight:
-                      valueBold ? FontWeight.w800 : FontWeight.w600)),
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: valueColor,
+              fontSize: 13,
+              fontWeight: valueBold ? FontWeight.w800 : FontWeight.w600,
+            ),
+          ),
         ),
       ],
     );
@@ -1177,11 +1417,14 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               color: const Color(0xFF059669),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(l.auctionAcceptBtn,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700)),
+            child: Text(
+              l.auctionAcceptBtn,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         );
       },
@@ -1207,11 +1450,13 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Future<void> _buyItNowAccept() async {
     if (_binLoading) return;
-    
+
     debugPrint('[DEBUG_PROOF] _buyItNowAccept started');
     String? proofUrl;
     if (widget.captureProofImage != null) {
-      debugPrint('[DEBUG_PROOF] Calling _showProofCaptureDialog from _buyItNowAccept');
+      debugPrint(
+        '[DEBUG_PROOF] Calling _showProofCaptureDialog from _buyItNowAccept',
+      );
       proofUrl = await _showProofCaptureDialog();
       debugPrint('[DEBUG_PROOF] _showProofCaptureDialog returned: $proofUrl');
       // If proofUrl is null, user pressed outside or cancelled.
@@ -1224,27 +1469,38 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         proofUrl = null; // Skipped
       }
     } else {
-      debugPrint('[DEBUG_PROOF] widget.captureProofImage is null in _buyItNowAccept');
+      debugPrint(
+        '[DEBUG_PROOF] widget.captureProofImage is null in _buyItNowAccept',
+      );
     }
 
     setState(() => _binLoading = true);
     try {
-      debugPrint('[DEBUG_PROOF] Calling AuctionService.acceptBuyItNow with proofImageUrl: $proofUrl');
-      await AuctionService.acceptBuyItNow(widget.streamId, proofImageUrl: proofUrl);
+      debugPrint(
+        '[DEBUG_PROOF] Calling AuctionService.acceptBuyItNow with proofImageUrl: $proofUrl',
+      );
+      await AuctionService.acceptBuyItNow(
+        widget.streamId,
+        proofImageUrl: proofUrl,
+      );
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.buyItNowAccepted)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.buyItNowAccepted)));
       }
     } on AppException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (e, st) {
-      LoggerService.instance.captureException(e, stackTrace: st, tag: 'AuctionPanel._buyItNowAccept');
+      LoggerService.instance.captureException(
+        e,
+        stackTrace: st,
+        tag: 'AuctionPanel._buyItNowAccept',
+      );
     } finally {
       if (mounted) setState(() => _binLoading = false);
     }
@@ -1257,17 +1513,23 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       await AuctionService.rejectBuyItNow(widget.streamId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.auctionBuyNowRejected)),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.auctionBuyNowRejected),
+          ),
         );
       }
     } on AppException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (e, st) {
-      LoggerService.instance.captureException(e, stackTrace: st, tag: 'AuctionPanel._buyItNowReject');
+      LoggerService.instance.captureException(
+        e,
+        stackTrace: st,
+        tag: 'AuctionPanel._buyItNowReject',
+      );
     } finally {
       if (mounted) setState(() => _binLoading = false);
     }
@@ -1338,9 +1600,15 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     } on AppException catch (e) {
       _handleBidError(e.message, messenger: messenger);
     } catch (e, st) {
-      LoggerService.instance.captureException(e, stackTrace: st, tag: '_BidSheetContent._placeBid');
+      LoggerService.instance.captureException(
+        e,
+        stackTrace: st,
+        tag: '_BidSheetContent._placeBid',
+      );
       final s = e.toString();
-      final msg = s.startsWith('Exception: ') ? s.substring('Exception: '.length) : s;
+      final msg = s.startsWith('Exception: ')
+          ? s.substring('Exception: '.length)
+          : s;
       _handleBidError(msg, messenger: messenger);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -1352,20 +1620,35 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     final sm = messenger ?? ScaffoldMessenger.of(context);
 
     // Shill Bidding: "Aynı ağ üzerinden..." → 3s kırmızı buton + SnackBar
-    if (message.contains('Aynı ağ') || message.contains('shill') || message.contains('fraud')) {
+    if (message.contains('Aynı ağ') ||
+        message.contains('shill') ||
+        message.contains('fraud')) {
       setState(() => _fraudDetected = true);
       sm.showSnackBar(
         SnackBar(
-          content: Row(children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
-          ]),
+          content: Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
           backgroundColor: Colors.red.shade800,
           duration: const Duration(seconds: 4),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       // 3 saniye sonra normal renge dön
@@ -1415,7 +1698,9 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.auctionBuyNowRequestSent),
+            content: Text(
+              AppLocalizations.of(context)!.auctionBuyNowRequestSent,
+            ),
             duration: const Duration(seconds: 4),
           ),
         );
@@ -1427,11 +1712,16 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
         );
       }
     } catch (e, st) {
-      LoggerService.instance.captureException(e,
-          stackTrace: st, tag: '_BidSheetContent._buyItNow');
+      LoggerService.instance.captureException(
+        e,
+        stackTrace: st,
+        tag: '_BidSheetContent._buyItNow',
+      );
       final s = e.toString();
-      _setMsg(s.startsWith('Exception: ') ? s.substring('Exception: '.length) : s,
-          error: true);
+      _setMsg(
+        s.startsWith('Exception: ') ? s.substring('Exception: '.length) : s,
+        error: true,
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1448,15 +1738,22 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
       final isBuyer = widget.iAmBinBuyer;
       return Padding(
         padding: EdgeInsets.fromLTRB(
-            20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+          20,
+          16,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 28,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Center(
               child: Container(
-                width: 38, height: 4,
+                width: 38,
+                height: 4,
                 decoration: BoxDecoration(
-                    color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -1469,32 +1766,59 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 border: Border.all(color: Colors.orange.shade600, width: 1.5),
               ),
               child: isBuyer
-                  ? Column(children: [
-                      Text('⚡ ${l.auctionApprovalWaiting}',
-                          style: const TextStyle(color: Colors.orange, fontSize: 18,
-                              fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 8),
-                      Text(l.auctionApprovalWaitingDesc,
+                  ? Column(
+                      children: [
+                        Text(
+                          '⚡ ${l.auctionApprovalWaiting}',
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          l.auctionApprovalWaitingDesc,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-                    ])
-                  : Column(children: [
-                      Text('⏳ ${l.auctionInProgress}',
-                          style: const TextStyle(color: Colors.orange, fontSize: 18,
-                              fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 8),
-                      Text(
-                        l.auctionInProgressDesc(liveState.pendingBuyerUsername ?? '?'),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l.auctionInProgressNoBid,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                      ),
-                    ]),
+                          style: const TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        Text(
+                          '⏳ ${l.auctionInProgress}',
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          l.auctionInProgressDesc(
+                            liveState.pendingBuyerUsername ?? '?',
+                          ),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l.auctionInProgressNoBid,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
             const SizedBox(height: 20),
           ],
@@ -1506,15 +1830,22 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     if (liveState.isBoughtItNow && liveState.isEnded) {
       return Padding(
         padding: EdgeInsets.fromLTRB(
-            20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+          20,
+          16,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 28,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Center(
               child: Container(
-                width: 38, height: 4,
+                width: 38,
+                height: 4,
                 decoration: BoxDecoration(
-                    color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -1526,23 +1857,45 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.orange.shade600, width: 1.5),
               ),
-              child: Column(children: [
-                Text('🛒 ${l.auctionSold}',
-                    style: const TextStyle(color: Colors.orange, fontSize: 22,
-                        fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Text(liveState.itemName ?? '',
+              child: Column(
+                children: [
+                  Text(
+                    '🛒 ${l.auctionSold}',
+                    style: const TextStyle(
+                      color: Colors.orange,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    liveState.itemName ?? '',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 15,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Text('₺${_fmt(liveState.currentBid)}',
-                    style: const TextStyle(color: Color(0xFF4ADE80), fontSize: 20,
-                        fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text(l.auctionBoughtBy(liveState.buyerUsername ?? '?'),
-                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-              ]),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '₺${_fmt(liveState.currentBid)}',
+                    style: const TextStyle(
+                      color: Color(0xFF4ADE80),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l.auctionBoughtBy(liveState.buyerUsername ?? '?'),
+                    style: const TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 20),
           ],
@@ -1552,7 +1905,11 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+        20,
+        16,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 28,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1563,7 +1920,9 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                  color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -1571,48 +1930,71 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
           _AuctionStatusBadge(state: liveState),
           const SizedBox(height: 14),
           // Başlık + güncel fiyat
-          Row(children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    liveState.itemName ?? l.auctionBidBtn,
-                    style: const TextStyle(
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      liveState.itemName ?? l.auctionBidBtn,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
-                        fontSize: 16),
-                  ),
-                  if (liveState.currentBidder != null)
-                    Text(l.auctionHighestBidder(liveState.currentBidder!),
+                        fontSize: 16,
+                      ),
+                    ),
+                    if (liveState.currentBidder != null)
+                      Text(
+                        l.auctionHighestBidder(liveState.currentBidder!),
                         style: const TextStyle(
-                            color: Color(0xFF64748B), fontSize: 12))
-                  else
-                    Text(l.auctionFirstBid,
-                        style:
-                            const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                          color: Color(0xFF64748B),
+                          fontSize: 12,
+                        ),
+                      )
+                    else
+                      Text(
+                        l.auctionFirstBid,
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₺${_fmt(liveState.currentBid ?? liveState.startPrice)}',
+                    style: const TextStyle(
+                      color: Color(0xFF4ADE80),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 22,
+                    ),
+                  ),
+                  if (liveState.bidCount > 0)
+                    Text(
+                      l.auctionBidCount(liveState.bidCount),
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 11,
+                      ),
+                    ),
+                  if (liveState.buyItNowPrice != null)
+                    Text(
+                      '⚡ ₺${_fmt(liveState.buyItNowPrice)}',
+                      style: TextStyle(
+                        color: Colors.orange.shade400,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                 ],
               ),
-            ),
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(
-                '₺${_fmt(liveState.currentBid ?? liveState.startPrice)}',
-                style: const TextStyle(
-                    color: Color(0xFF4ADE80),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 22),
-              ),
-              if (liveState.bidCount > 0)
-                Text(l.auctionBidCount(liveState.bidCount),
-                    style: const TextStyle(
-                        color: Color(0xFF64748B), fontSize: 11)),
-              if (liveState.buyItNowPrice != null)
-                Text('⚡ ₺${_fmt(liveState.buyItNowPrice)}',
-                    style: TextStyle(
-                        color: Colors.orange.shade400, fontSize: 11,
-                        fontWeight: FontWeight.w600)),
-            ]),
-          ]),
+            ],
+          ),
           const SizedBox(height: 14),
           SmartBidPicker(
             currentHighestBid: base.toInt(),
@@ -1630,127 +2012,159 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 ? _selectedBid.toDouble()
                 : (liveState.currentBid ?? liveState.startPrice),
             onSwipeComplete: () {
-              if (_selectedBid > 0 && !_fraudDetected) _placeBid(_selectedBid.toDouble());
+              if (_selectedBid > 0 && !_fraudDetected)
+                _placeBid(_selectedBid.toDouble());
             },
           ),
           // Hemen Al butonu — buyItNowPrice varsa ve currentBid < buyItNowPrice ise göster
-          Builder(builder: (_) {
-            final bin = liveState.buyItNowPrice;
-            if (bin == null || (liveState.currentBid != null && liveState.currentBid! >= bin)) {
-              return const SizedBox.shrink();
-            }
-            return Padding(
-              padding: const EdgeInsets.only(top: 14),
-              child: GestureDetector(
-                key: const Key('auction_sheet_btn_hemen_al'),
-                onTap: _loading ? null : _buyItNow,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    color: _loading
-                        ? const Color(0xFF1E293B)
-                        : Colors.orange.shade700,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
+          Builder(
+            builder: (_) {
+              final bin = liveState.buyItNowPrice;
+              if (bin == null ||
+                  (liveState.currentBid != null &&
+                      liveState.currentBid! >= bin)) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: GestureDetector(
+                  key: const Key('auction_sheet_btn_hemen_al'),
+                  onTap: _loading ? null : _buyItNow,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: _loading
+                          ? const Color(0xFF1E293B)
+                          : Colors.orange.shade700,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
                         color: _loading
                             ? const Color(0xFF334155)
                             : Colors.orange.shade500,
-                        width: 1.5),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (_loading)
-                        const SizedBox(
-                          width: 16, height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      else ...[
-                        Text(l.auctionBuyNowBtn,
-                            style: const TextStyle(color: Colors.white,
-                                fontWeight: FontWeight.w700, fontSize: 14)),
-                        Text('₺${_fmt(bin)}',
-                            style: const TextStyle(color: Colors.white,
-                                fontWeight: FontWeight.w800, fontSize: 16)),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_loading)
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        else ...[
+                          Text(
+                            l.auctionBuyNowBtn,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            '₺${_fmt(bin)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          }),
+              );
+            },
+          ),
           const SizedBox(height: 14),
           // Özel tutar
-          Row(children: [
-            Expanded(
-              child: TextField(
-                key: const Key('auction_input_ozel_teklif'),
-                controller: _customBidCtrl,
-                keyboardType: TextInputType.number,
-                inputFormatters: [ThousandsSeparatorInputFormatter()],
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: l.auctionCustomAmountHint,
-                  hintStyle:
-                      const TextStyle(color: Color(0xFF475569), fontSize: 13),
-                  filled: true,
-                  fillColor: const Color(0xFF0F172A),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 13),
-                  border: OutlineInputBorder(
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const Key('auction_input_ozel_teklif'),
+                  controller: _customBidCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandsSeparatorInputFormatter()],
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: l.auctionCustomAmountHint,
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF475569),
+                      fontSize: 13,
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFF0F172A),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 13,
+                    ),
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF334155))),
-                  enabledBorder: OutlineInputBorder(
+                      borderSide: const BorderSide(color: Color(0xFF334155)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide:
-                          const BorderSide(color: Color(0xFF334155))),
-                  focusedBorder: OutlineInputBorder(
+                      borderSide: const BorderSide(color: Color(0xFF334155)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: kPrimary)),
+                      borderSide: const BorderSide(color: kPrimary),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                key: const Key('auction_btn_ozel_teklif_gonder'),
-                onPressed: _loading
-                    ? null
-                    : () {
-                        final raw =
-                            _customBidCtrl.text.replaceAll('.', '');
-                        final v = double.tryParse(raw);
-                        if (v == null || v <= 0) {
-                          _setMsg(l.auctionValidAmount, error: true);
-                          return;
-                        }
-                        _placeBid(v);
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A),
-                  disabledBackgroundColor: const Color(0xFF1E293B),
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                child: _loading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : Text(l.auctionBidBtn,
-                        style: const TextStyle(
+              const SizedBox(width: 10),
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  key: const Key('auction_btn_ozel_teklif_gonder'),
+                  onPressed: _loading
+                      ? null
+                      : () {
+                          final raw = _customBidCtrl.text.replaceAll('.', '');
+                          final v = double.tryParse(raw);
+                          if (v == null || v <= 0) {
+                            _setMsg(l.auctionValidAmount, error: true);
+                            return;
+                          }
+                          _placeBid(v);
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A),
+                    disabledBackgroundColor: const Color(0xFF1E293B),
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: _loading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
                             color: Colors.white,
-                            fontWeight: FontWeight.w700)),
+                          ),
+                        )
+                      : Text(
+                          l.auctionBidBtn,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
               ),
-            ),
-          ]),
+            ],
+          ),
           // Başarı / hata mesajı — alan her zaman ayrılır, içerik koşullu
           const SizedBox(height: 12),
           AnimatedOpacity(
@@ -1758,41 +2172,44 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
             duration: const Duration(milliseconds: 200),
             child: Container(
               width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: _msgError
                     ? const Color(0xFF7F1D1D).withValues(alpha: 0.5)
                     : const Color(0xFF14532D).withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                    color: _msgError
-                        ? const Color(0xFFEF4444)
-                        : const Color(0xFF4ADE80),
-                    width: 1),
-              ),
-              child: Row(children: [
-                Icon(
-                  _msgError
-                      ? Icons.error_outline_rounded
-                      : Icons.check_circle_outline_rounded,
                   color: _msgError
                       ? const Color(0xFFEF4444)
                       : const Color(0xFF4ADE80),
-                  size: 16,
+                  width: 1,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _msg ?? '',
-                    style: TextStyle(
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _msgError
+                        ? Icons.error_outline_rounded
+                        : Icons.check_circle_outline_rounded,
+                    color: _msgError
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFF4ADE80),
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _msg ?? '',
+                      style: TextStyle(
                         color: _msgError
                             ? const Color(0xFFFCA5A5)
                             : const Color(0xFF86EFAC),
-                        fontSize: 13),
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
           ),
         ],
@@ -1829,10 +2246,17 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
     final token = await StorageService.getToken();
     if (token == null) return [];
     final uri = widget.hostUserId != null
-        ? Uri.parse('$kBaseUrl/listings?user_id=${widget.hostUserId}&active=true&limit=20&offset=$offset')
-        : Uri.parse('$kBaseUrl/listings/my?active=true&limit=20&offset=$offset');
+        ? Uri.parse(
+            '$kBaseUrl/listings?user_id=${widget.hostUserId}&active=true&limit=20&offset=$offset',
+          )
+        : Uri.parse(
+            '$kBaseUrl/listings/my?active=true&limit=20&offset=$offset',
+          );
     try {
-      final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+      final resp = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
       if (resp.statusCode == 200) {
         final list = jsonDecode(resp.body) as List;
         return list.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -1851,8 +2275,10 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
     final l = AppLocalizations.of(context)!;
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
-      title: Text(l.auctionStartTitle,
-          style: const TextStyle(color: Colors.white, fontSize: 16)),
+      title: Text(
+        l.auctionStartTitle,
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+      ),
       contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       content: SizedBox(
         width: double.maxFinite,
@@ -1860,11 +2286,28 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Mod seçici
-            Row(children: [
-              Expanded(child: _modeBtn(l.auctionManualEntry, !_fromListing, () => setState(() { _fromListing = false; _selectedListing = null; }))),
-              const SizedBox(width: 8),
-              Expanded(child: _modeBtn(l.auctionFromListings, _fromListing, () => setState(() => _fromListing = true))),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: _modeBtn(
+                    l.auctionManualEntry,
+                    !_fromListing,
+                    () => setState(() {
+                      _fromListing = false;
+                      _selectedListing = null;
+                    }),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _modeBtn(
+                    l.auctionFromListings,
+                    _fromListing,
+                    () => setState(() => _fromListing = true),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 14),
             // İçerik
             if (!_fromListing) ...[
@@ -1880,67 +2323,106 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                 maxVisible: 4,
                 emptyWidget: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Text(l.auctionNoActiveListings,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                  child: Text(
+                    l.auctionNoActiveListings,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
                 itemBuilder: (ctx, lItem) {
-                  final isSelected = _selectedListing != null && _selectedListing['id'] == lItem['id'];
+                  final isSelected =
+                      _selectedListing != null &&
+                      _selectedListing['id'] == lItem['id'];
                   return GestureDetector(
                     onTap: () => setState(() => _selectedListing = lItem),
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color: isSelected ? kPrimary.withValues(alpha: 0.15) : const Color(0xFF0F172A),
+                        color: isSelected
+                            ? kPrimary.withValues(alpha: 0.15)
+                            : const Color(0xFF0F172A),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? kPrimary : const Color(0xFF334155),
+                          color: isSelected
+                              ? kPrimary
+                              : const Color(0xFF334155),
                           width: isSelected ? 1.5 : 1,
                         ),
                       ),
-                      child: Row(children: [
-                        // Küçük fotoğraf
-                        Builder(builder: (_) {
-                          final imgs = lItem['image_urls'] as List? ?? [];
-                          final rawImg = imgs.isNotEmpty ? imgs[0] as String : (lItem['image_url'] as String?);
-                          final url = rawImg != null ? imgUrl(rawImg) : null;
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: url != null && url.isNotEmpty
-                                ? CachedNetworkImage(
-                                    memCacheWidth: 400, memCacheHeight: 400, imageUrl: url,
-                                    width: 38, height: 38,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, _) => const ShimmerBox(
-                                      width: 38, height: 38,
-                                    ),
-                                    errorWidget: (_, _, _) => _lpPlaceholder())
-                                : _lpPlaceholder(),
-                          );
-                        }),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(lItem['title'] ?? '',
+                      child: Row(
+                        children: [
+                          // Küçük fotoğraf
+                          Builder(
+                            builder: (_) {
+                              final imgs = lItem['image_urls'] as List? ?? [];
+                              final rawImg = imgs.isNotEmpty
+                                  ? imgs[0] as String
+                                  : (lItem['image_url'] as String?);
+                              final url = rawImg != null
+                                  ? imgUrl(rawImg)
+                                  : null;
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: url != null && url.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        memCacheWidth: 400,
+                                        memCacheHeight: 400,
+                                        imageUrl: url,
+                                        width: 38,
+                                        height: 38,
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, _) => const ShimmerBox(
+                                          width: 38,
+                                          height: 38,
+                                        ),
+                                        errorWidget: (_, _, _) =>
+                                            _lpPlaceholder(),
+                                      )
+                                    : _lpPlaceholder(),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  lItem['title'] ?? '',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13)),
-                              if (lItem['price'] != null)
-                                Text(_fmtPrice(lItem['price']),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                if (lItem['price'] != null)
+                                  Text(
+                                    _fmtPrice(lItem['price']),
                                     style: const TextStyle(
-                                        color: Color(0xFF4ADE80), fontSize: 12)),
-                            ],
+                                      color: Color(0xFF4ADE80),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                        if (isSelected)
-                          const Icon(Icons.check_circle, color: kPrimary, size: 18),
-                      ]),
+                          if (isSelected)
+                            const Icon(
+                              Icons.check_circle,
+                              color: kPrimary,
+                              size: 18,
+                            ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -1959,19 +2441,28 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(l.btnCancel, style: const TextStyle(color: Color(0xFF64748B))),
+          child: Text(
+            l.btnCancel,
+            style: const TextStyle(color: Color(0xFF64748B)),
+          ),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           onPressed: () {
-            final binRaw = _binCtrl.text.replaceAll('.', '').replaceAll(',', '.');
+            final binRaw = _binCtrl.text
+                .replaceAll('.', '')
+                .replaceAll(',', '.');
             final binPrice = binRaw.isNotEmpty ? double.tryParse(binRaw) : null;
             if (_fromListing) {
               if (_selectedListing == null) return;
-              final raw = _priceCtrl.text.replaceAll('.', '').replaceAll(',', '.');
+              final raw = _priceCtrl.text
+                  .replaceAll('.', '')
+                  .replaceAll(',', '.');
               final price = double.tryParse(raw);
               if (price == null || price < 0) return;
               Navigator.pop(context, {
@@ -1981,7 +2472,9 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
               });
             } else {
               final item = _itemCtrl.text.trim();
-              final raw = _priceCtrl.text.replaceAll('.', '').replaceAll(',', '.');
+              final raw = _priceCtrl.text
+                  .replaceAll('.', '')
+                  .replaceAll(',', '.');
               final price = double.tryParse(raw);
               if (item.length < 2 || price == null || price < 0) return;
               Navigator.pop(context, {
@@ -1991,7 +2484,10 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
               });
             }
           },
-          child: Text(l.liveStartBtn, style: const TextStyle(color: Colors.white)),
+          child: Text(
+            l.liveStartBtn,
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       ],
     );
@@ -2003,29 +2499,43 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: active ? kPrimary.withValues(alpha: 0.2) : const Color(0xFF0F172A),
+          color: active
+              ? kPrimary.withValues(alpha: 0.2)
+              : const Color(0xFF0F172A),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-              color: active ? kPrimary : const Color(0xFF334155),
-              width: active ? 1.5 : 1),
+            color: active ? kPrimary : const Color(0xFF334155),
+            width: active ? 1.5 : 1,
+          ),
         ),
-        child: Text(label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                color: active ? kPrimary : const Color(0xFF64748B),
-                fontSize: 12,
-                fontWeight: FontWeight.w600)),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: active ? kPrimary : const Color(0xFF64748B),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
 
   Widget _lpPlaceholder() => Container(
-        width: 38, height: 38,
-        decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(6)),
-        child: const Icon(Icons.image_outlined, color: Color(0xFF475569), size: 18),
-      );
+    width: 38,
+    height: 38,
+    decoration: BoxDecoration(
+      color: const Color(0xFF334155),
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: const Icon(Icons.image_outlined, color: Color(0xFF475569), size: 18),
+  );
 
-  Widget _inputField(TextEditingController ctrl, String hint, {bool isNumber = false}) {
+  Widget _inputField(
+    TextEditingController ctrl,
+    String hint, {
+    bool isNumber = false,
+  }) {
     return TextField(
       controller: ctrl,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
@@ -2036,16 +2546,22 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
         hintStyle: const TextStyle(color: Color(0xFF475569)),
         filled: true,
         fillColor: const Color(0xFF0F172A),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF334155))),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF334155)),
+        ),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF334155))),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF334155)),
+        ),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: kPrimary)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: kPrimary),
+        ),
       ),
     );
   }
@@ -2061,11 +2577,31 @@ class _AuctionStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final (label, color, icon) = switch (state.status) {
-      'active'             => (l.auctionStatusActive,  const Color(0xFF16A34A), Icons.circle),
-      'paused'             => (l.auctionStatusPaused,  const Color(0xFFF59E0B), Icons.pause_circle),
-      'ended'              => (l.auctionStatusEnded,   const Color(0xFFEF4444), Icons.stop_circle_outlined),
-      'buy_it_now_pending' => (l.auctionStatusPending, const Color(0xFFF97316), Icons.hourglass_top),
-      _                    => (l.auctionStatusIdle,    const Color(0xFF475569), Icons.radio_button_unchecked),
+      'active' => (
+        l.auctionStatusActive,
+        const Color(0xFF16A34A),
+        Icons.circle,
+      ),
+      'paused' => (
+        l.auctionStatusPaused,
+        const Color(0xFFF59E0B),
+        Icons.pause_circle,
+      ),
+      'ended' => (
+        l.auctionStatusEnded,
+        const Color(0xFFEF4444),
+        Icons.stop_circle_outlined,
+      ),
+      'buy_it_now_pending' => (
+        l.auctionStatusPending,
+        const Color(0xFFF97316),
+        Icons.hourglass_top,
+      ),
+      _ => (
+        l.auctionStatusIdle,
+        const Color(0xFF475569),
+        Icons.radio_button_unchecked,
+      ),
     };
 
     return Row(
@@ -2119,7 +2655,10 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
       setState(() => _error = l.phoneVerifyInvalidPhone);
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final token = await StorageService.getToken();
       final resp = await http.post(
@@ -2131,14 +2670,25 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
         body: jsonEncode({'phone': phone}),
       );
       if (resp.statusCode == 202) {
-        setState(() { _sent = true; _loading = false; });
+        setState(() {
+          _sent = true;
+          _loading = false;
+        });
       } else {
-        final msg = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String?
-            ?? l.phoneVerifyError;
-        setState(() { _error = msg; _loading = false; });
+        final msg =
+            (jsonDecode(resp.body) as Map<String, dynamic>)['detail']
+                as String? ??
+            l.phoneVerifyError;
+        setState(() {
+          _error = msg;
+          _loading = false;
+        });
       }
     } catch (_) {
-      setState(() { _error = l.phoneVerifyConnectionError; _loading = false; });
+      setState(() {
+        _error = l.phoneVerifyConnectionError;
+        _loading = false;
+      });
     }
   }
 
@@ -2147,13 +2697,17 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
     final l = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        24, 8, 24, MediaQuery.of(context).viewInsets.bottom + 32,
+        24,
+        8,
+        24,
+        MediaQuery.of(context).viewInsets.bottom + 32,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 40, height: 4,
+            width: 40,
+            height: 4,
             margin: const EdgeInsets.only(bottom: 24),
             decoration: BoxDecoration(
               color: Colors.white24,
@@ -2161,27 +2715,47 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
             ),
           ),
           Container(
-            width: 64, height: 64,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               color: Colors.amber.withValues(alpha: 0.12),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
+              border: Border.all(
+                color: Colors.amber.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
             ),
-            child: const Icon(Icons.verified_user_rounded, color: Colors.amber, size: 30),
+            child: const Icon(
+              Icons.verified_user_rounded,
+              color: Colors.amber,
+              size: 30,
+            ),
           ),
           const SizedBox(height: 18),
           if (_sent) ...[
-            const Icon(Icons.mark_email_read_outlined, color: Color(0xFF0D9488), size: 40),
+            const Icon(
+              Icons.mark_email_read_outlined,
+              color: Color(0xFF0D9488),
+              size: 40,
+            ),
             const SizedBox(height: 14),
             Text(
               l.phoneVerifyEmailSentTitle,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               l.phoneVerifyEmailSentDesc,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.55),
+              style: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 13,
+                height: 1.55,
+              ),
             ),
             const SizedBox(height: 28),
             SizedBox(
@@ -2192,27 +2766,46 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
                   backgroundColor: const Color(0xFF0D9488),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: Text(l.btnOk, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                child: Text(
+                  l.btnOk,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
               ),
             ),
           ] else ...[
             Text(
               l.phoneVerifyTitle,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               l.phoneVerifyDesc,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.55),
+              style: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 13,
+                height: 1.55,
+              ),
             ),
             const SizedBox(height: 24),
             PhoneInputField(
               initialE164: widget.existingPhone,
               errorText: _error,
-              onChanged: (e164) => setState(() { _phoneE164 = e164; _error = null; }),
+              onChanged: (e164) => setState(() {
+                _phoneE164 = e164;
+                _error = null;
+              }),
               onReset: () => setState(() => _phoneE164 = null),
             ),
             const SizedBox(height: 20),
@@ -2224,21 +2817,35 @@ class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {
                   backgroundColor: Colors.amber.shade600,
                   foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _loading
                     ? const SizedBox(
-                        height: 20, width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
                       )
-                    : Text(l.auctionSendVerificationEmail,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                    : Text(
+                        l.auctionSendVerificationEmail,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 10),
             TextButton(
               onPressed: widget.onClose,
-              child: Text(l.btnCancel, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+              child: Text(
+                l.btnCancel,
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
+              ),
             ),
           ],
         ],
