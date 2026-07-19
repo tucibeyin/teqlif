@@ -1082,7 +1082,7 @@ async def invalidate_user_feed_cache(user_id: int) -> None:
     """Kullanıcı beğeni/favori/mesaj attığında feed cache'ini temizler."""
     try:
         redis = await get_redis()
-        keys = await redis.keys(f"feed:{user_id}:*")
+        keys = [k async for k in redis.scan_iter(f"feed:{user_id}:*")]
         if keys:
             await redis.delete(*keys)
         await redis.delete(f"interests:{user_id}")

@@ -395,7 +395,7 @@ async def start_call(
             await _delete_lk_room(stale_room_name)
             if stale_callee:
                 await db.refresh(stale_callee)
-                await _send_missed_call_push(stale_callee, current_user)
+                await _send_missed_call_push(stale_callee, current_user, stale_call_id)
 
             logger.info(
                 "[CALL_PROCESS][OUT] start_call: stale CALLING → missed, callee notified | stale_call_id=%d caller=%d stale_callee=%d",

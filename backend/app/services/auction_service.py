@@ -19,6 +19,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Set, Optional
 
+from app.core.logger import fire_and_forget
+
 from fastapi import WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -524,7 +526,7 @@ class AuctionService:
             _host_id = user.id if user else None
             _track_lid = int(lid_str) if lid_str else stream_id
             _track_type = "listing" if lid_str else "stream"
-            asyncio.create_task(track_user_event(
+            fire_and_forget(track_user_event(
                 event_type="auction_ended",
                 item_id=_track_lid,
                 item_type=_track_type,
@@ -683,7 +685,7 @@ class AuctionService:
         # Push bildirimler (arka planda, non-blocking)
         _price_str = f"₺{data.amount:,.0f}".replace(",", ".")
         if stream and stream.host_id:
-            asyncio.create_task(push_notification(
+            fire_and_forget(push_notification(
                 user_id=stream.host_id,
                 notif={
                     "type": "new_bid",
@@ -714,9 +716,12 @@ class AuctionService:
                         prev_item_name,
                         float(data.amount),
                         _queue_name="critical",
+                        # Bid ID bazlı job_id: ARQ aynı teklif için iki kez
+                        # retry'da bile kullanıcıya tek push gönderir.
+                        _job_id=f"outbid:{stream_id}:{prev_bidder_id}:{int(data.amount)}",
                     )
                 else:
-                    asyncio.create_task(push_notification(
+                    fire_and_forget(push_notification(
                         user_id=prev_bidder_id,
                         notif={
                             "type": "outbid",
@@ -912,8 +917,8 @@ class AuctionService:
                 "is_read": False,
                 "created_at": now_iso,
             }
-            asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{buyer_id}", buyer_dm_payload))
-            asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{user.id}", buyer_dm_payload))
+            fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"dm:{buyer_id}", buyer_dm_payload))
+            fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"dm:{user.id}", buyer_dm_payload))
         except Exception as exc:
             logger.error("[HEMEN AL KABUL] DM WS broadcast başarısız | %s", exc)
 
@@ -1192,8 +1197,8 @@ class AuctionService:
                     "is_read": False,
                     "created_at": now_iso,
                 }
-                asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{winner_user_id}", winner_dm_payload))
-                asyncio.create_task(ws_manager.publish(_DM_CHANNEL, f"dm:{user.id}", winner_dm_payload))
+                fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"dm:{winner_user_id}", winner_dm_payload))
+                fire_and_forget(ws_manager.publish(_DM_CHANNEL, f"dm:{user.id}", winner_dm_payload))
             except Exception as exc:
                 logger.error("[ACCEPT] DM WS broadcast başarısız | %s", exc)
 
@@ -1213,7 +1218,7 @@ class AuctionService:
 
         from app.database_clickhouse import track_user_event
         if winner_user_id and listing_id:
-            asyncio.create_task(track_user_event(
+            fire_and_forget(track_user_event(
                 event_type="auction_won",
                 item_id=listing_id,
                 item_type="listing",

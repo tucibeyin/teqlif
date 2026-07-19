@@ -10,6 +10,7 @@ class DirectMessage(Base):
     __tablename__ = "direct_messages"
     __table_args__ = (
         Index("ix_direct_messages_conv_created", "sender_id", "receiver_id", "created_at"),
+        Index("ix_dm_receiver_is_read", "receiver_id", "is_read"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)

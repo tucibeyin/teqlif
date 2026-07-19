@@ -178,24 +178,30 @@ async def send_gift(
     if receiver.id == current_user.id:
         raise HTTPException(status_code=400, detail="Kendinize hediye gönderemezsiniz.")
 
-    if current_user.tuci_balance < body.cost:
-        logger.warning(f"TUCi transaction failed: insufficient balance", extra={
-            "user_id": current_user.id, "required": body.cost, "current": current_user.tuci_balance
-        })
-        raise HTTPException(
-            status_code=402,
-            detail=f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance} TUCi, Gerekli: {body.cost} TUCi",
-        )
-
     # Platform komisyonu: Pro yayıncı %95, Standart %70 alır
     commission_rate = 0.95 if receiver.is_premium else 0.70
     host_share = int(body.cost * commission_rate)
 
-    # 1) Bakiye güncelle
-    await db.execute(
-        sql_text("UPDATE users SET tuci_balance = tuci_balance - :cost WHERE id = :uid"),
+    # 1) Atomik bakiye düşüşü — tek SQL ile kontrol + güncelleme.
+    # WHERE tuci_balance >= cost koşulu olmazsa iki eş zamanlı istek session
+    # cache'deki aynı bakiyeyi okuyup ikisi de geçer ve bakiye eksi olur.
+    deduct = await db.execute(
+        sql_text(
+            "UPDATE users SET tuci_balance = tuci_balance - :cost "
+            "WHERE id = :uid AND tuci_balance >= :cost "
+            "RETURNING tuci_balance"
+        ),
         {"cost": body.cost, "uid": current_user.id},
     )
+    if deduct.fetchone() is None:
+        logger.warning("TUCi transaction failed: insufficient balance", extra={
+            "user_id": current_user.id, "required": body.cost,
+        })
+        raise HTTPException(
+            status_code=402,
+            detail=f"Yetersiz TUCi bakiyesi. Gerekli: {body.cost} TUCi",
+        )
+
     await db.execute(
         sql_text("UPDATE users SET tuci_balance = tuci_balance + :share WHERE id = :uid"),
         {"share": host_share, "uid": receiver.id},
@@ -258,8 +264,8 @@ async def send_gift(
         await redis.lpush(key, payload)
         await redis.ltrim(key, 0, 199)
         await redis.expire(key, 86400)
-    except Exception:
-        pass  # Redis hatası hediye işlemini durdurmasın
+    except Exception as _redis_exc:
+        logger.warning("[WALLET] Gift log Redis yazılamadı | stream_id=%s | %s", body.stream_id, _redis_exc)
 
     await db.refresh(current_user)
     return {"ok": True, "new_balance": current_user.tuci_balance}

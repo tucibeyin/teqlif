@@ -92,6 +92,7 @@ async def send_welcome_email_task(
     except Exception as exc:
         logger.error("[Worker] Hoşgeldin e-postası gönderilemedi [%s]: %s", email, str(exc), exc_info=True)
         capture_exception(exc)
+        raise  # ARQ'nun yeniden denemesi için exception'ı yeniden fırlat
 
 
 # ── Task: FCM Push Bildirimi ─────────────────────────────────────────────────
@@ -343,13 +344,9 @@ async def flush_interactions_to_db(ctx: dict) -> None:
     try:
         redis = await get_redis()
 
-        # Kuyruğu atomik olarak al ve sıfırla
-        async with redis.pipeline(transaction=True) as pipe:
-            await pipe.lrange(QUEUE_KEY, 0, BATCH_LIMIT - 1)
-            await pipe.ltrim(QUEUE_KEY, BATCH_LIMIT, -1)
-            results = await pipe.execute()
-
-        raw_items: list[str] = results[0]
+        # LRANGE önce, LTRIM PG commit'ten sonra — önce trim edersek PG başarısız
+        # olduğunda o batch kalıcı olarak kaybolur.
+        raw_items: list[str] = await redis.lrange(QUEUE_KEY, 0, BATCH_LIMIT - 1)
         if not raw_items:
             return
 
@@ -400,6 +397,9 @@ async def flush_interactions_to_db(ctx: dict) -> None:
         async with AsyncSessionLocal() as db:
             await db.execute(sa_insert(UserInteraction), pg_rows)
             await db.commit()
+
+        # PG commit başarılı — artık Redis kuyruğundan o batch'i kaldırabiliriz.
+        await redis.ltrim(QUEUE_KEY, BATCH_LIMIT, -1)
 
         # ── ClickHouse bulk insert ─────────────────────────────────────────────
         try:
@@ -795,8 +795,8 @@ async def compute_user_interests_task(ctx: dict) -> None:
             redis = await get_redis()
             for uid in updated_users:
                 await redis.delete(f"interests:{uid}")
-                # Feed cache'lerini de temizle (pattern delete)
-                feed_keys = await redis.keys(f"feed:{uid}:*")
+                # Feed cache'lerini de temizle — SCAN kullan, KEYS O(N) Redis'i bloklar
+                feed_keys = [k async for k in redis.scan_iter(f"feed:{uid}:*")]
                 if feed_keys:
                     await redis.delete(*feed_keys)
 

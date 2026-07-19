@@ -74,7 +74,7 @@ async def invalidate_cache(namespace: str) -> int:
     try:
         redis = await get_redis()
         pattern = f"{_PREFIX}:{namespace}:*"
-        keys = await redis.keys(pattern)
+        keys = [k async for k in redis.scan_iter(pattern)]
         if keys:
             await redis.delete(*keys)
             logger.info("[CQRS] Cache INVALIDATE | ns=%s | %d key silindi", namespace, len(keys))

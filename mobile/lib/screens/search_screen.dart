@@ -66,6 +66,7 @@ class SearchScreenState extends State<SearchScreen> {
   bool _recentLoadingMore = false;
   final ScrollController _scrollCtrl = ScrollController();
   final ScrollController _forYouScrollCtrl = ScrollController();
+  StreamSubscription<List<StreamOut>>? _streamsSub;
   static const double _cardWidth = 130.0;
   @override
   void initState() {
@@ -85,6 +86,7 @@ class SearchScreenState extends State<SearchScreen> {
     _scrollCtrl.dispose();
     _forYouScrollCtrl.removeListener(_onForYouScroll);
     _forYouScrollCtrl.dispose();
+    _streamsSub?.cancel();
     super.dispose();
   }
 
@@ -251,7 +253,8 @@ class SearchScreenState extends State<SearchScreen> {
   }
 
   void _loadExploreStreams(bool bypassCache, VoidCallback onData) {
-    StreamService.getActiveStreamsStream(bypassCache: bypassCache).listen((
+    _streamsSub?.cancel();
+    _streamsSub = StreamService.getActiveStreamsStream(bypassCache: bypassCache).listen((
       streams,
     ) {
       if (mounted) setState(() => _exploreStreams = streams.take(4).toList());

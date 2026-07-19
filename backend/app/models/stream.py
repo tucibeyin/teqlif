@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Boolean, Integer, DateTime, ForeignKey, func
+from sqlalchemy import String, Boolean, Integer, DateTime, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -8,6 +8,9 @@ from app.database import Base
 
 class LiveStream(Base):
     __tablename__ = "live_streams"
+    __table_args__ = (
+        Index("ix_live_streams_is_live_started_at", "is_live", "started_at"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     room_name: Mapped[str] = mapped_column(String(120), unique=True, index=True, nullable=False)

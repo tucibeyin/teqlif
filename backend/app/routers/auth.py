@@ -665,7 +665,9 @@ async def refresh_token(
         raise BadRequestException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrTokenRequired", "refresh_token gerekli"))
 
     redis = await get_redis()
-    user_id_str = await redis.get(f"refresh:{token}")
+    # GETDEL: atomik GET + DELETE — iki eş zamanlı istek aynı token'ı kullanamaz.
+    # redis.get() + redis.delete() arasında race window vardır; GETDEL yoktur.
+    user_id_str = await redis.getdel(f"refresh:{token}")
     if not user_id_str:
         raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrTokenInvalid", "Geçersiz veya süresi dolmuş refresh token"))
 
@@ -674,8 +676,6 @@ async def refresh_token(
     if not user or not user.is_active:
         raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUserNotFound", "Kullanıcı bulunamadı"))
 
-    # Eski token'ı sil (rotation), yeni token çifti üret
-    await redis.delete(f"refresh:{token}")
     new_access = create_access_token(user.id)
     new_refresh = create_refresh_token()
     await redis.setex(f"refresh:{new_refresh}", REFRESH_TOKEN_TTL, str(user.id))

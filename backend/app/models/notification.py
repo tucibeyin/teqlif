@@ -8,8 +8,8 @@ from app.database import Base
 class Notification(Base):
     __tablename__ = "notifications"
     __table_args__ = (
-        # Cleanup cron'u ve unread count sorgusu için
         Index("ix_notifications_user_created", "user_id", "created_at"),
+        Index("ix_notifications_user_is_read", "user_id", "is_read"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
