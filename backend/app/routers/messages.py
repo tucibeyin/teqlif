@@ -74,7 +74,10 @@ async def list_conversations(
             func.max(DirectMessage.created_at).label("max_at"),
         )
         .where(
-            or_(DirectMessage.sender_id == uid, DirectMessage.receiver_id == uid)
+            or_(
+                DirectMessage.sender_id == uid, 
+                and_(DirectMessage.receiver_id == uid, DirectMessage.is_shadowbanned == False)
+            )
         )
         .group_by(
             func.least(DirectMessage.sender_id, DirectMessage.receiver_id),
@@ -93,7 +96,12 @@ async def list_conversations(
                 DirectMessage.created_at == conv_subq.c.max_at,
             ),
         )
-        .where(or_(DirectMessage.sender_id == uid, DirectMessage.receiver_id == uid))
+        .where(
+            or_(
+                DirectMessage.sender_id == uid, 
+                and_(DirectMessage.receiver_id == uid, DirectMessage.is_shadowbanned == False)
+            )
+        )
         .order_by(DirectMessage.created_at.desc())
     )
     latest_msgs = msgs_result.scalars().all()
@@ -111,6 +119,7 @@ async def list_conversations(
             .where(
                 DirectMessage.receiver_id == uid,
                 DirectMessage.is_read == False,  # noqa: E712
+                DirectMessage.is_shadowbanned == False,
             )
             .group_by(DirectMessage.sender_id)
         ),
@@ -148,6 +157,7 @@ async def unread_dm_count(
         select(func.count()).where(
             DirectMessage.receiver_id == current_user.id,
             DirectMessage.is_read == False,  # noqa: E712
+            DirectMessage.is_shadowbanned == False,
         )
     )
     count = result.scalar_one()
@@ -218,7 +228,11 @@ async def get_messages(
         .where(
             or_(
                 and_(DirectMessage.sender_id == uid, DirectMessage.receiver_id == other_user_id),
-                and_(DirectMessage.sender_id == other_user_id, DirectMessage.receiver_id == uid),
+                and_(
+                    DirectMessage.sender_id == other_user_id, 
+                    DirectMessage.receiver_id == uid,
+                    DirectMessage.is_shadowbanned == False
+                ),
             )
         )
         .order_by(DirectMessage.created_at.desc())
