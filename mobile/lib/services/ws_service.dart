@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart'; // Lifecycle dinleyicisi için eklendi
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/api.dart';
-import 'auth_service.dart';
+import 'auth_service.dart' show AuthService, RefreshOutcome;
 import 'storage_service.dart';
 
 /// Uygulamanın arka plan/ön plan durumunu dinleyen özel sınıf
@@ -40,6 +40,25 @@ class WsService {
   // WsService never imports CallService — coupling is one-way through this counter.
   static int _connectionLocks = 0;
   static bool _pendingPause = false;
+
+  // Dedup: guards against the rare case where the server-side Redis Stream
+  // listener replays a message batch after a failed position-save on reconnect.
+  // Bounded at 200 entries — each key is ~20 chars, total ~4 KB max.
+  static final Set<String> _seenKeys = {};
+  static const int _maxSeenKeys = 200;
+
+  /// Returns a dedup key for messages that carry a stable unique identifier.
+  /// Returns null for ephemeral events (typing, read receipts) — those are
+  /// idempotent and don't need deduplication.
+  static String? _dedupeKey(Map<String, dynamic> data) {
+    final type = data['type'];
+    if (type == null) return null;
+    final id = data['id'];
+    if (id != null) return '${type}_$id';
+    final callId = data['call_id'];
+    if (callId != null) return '${type}_$callId';
+    return null;
+  }
 
   static void _debounceLifecycle(AppLifecycleState state) {
     _pendingLifecycleState = state;
@@ -115,6 +134,7 @@ class WsService {
     _connectivitySub?.cancel();
     _connectivitySub = null;
     _lastCallEventTs = null;
+    _seenKeys.clear();
 
     _closeResources();
   }
@@ -201,9 +221,22 @@ class WsService {
           try {
             final data = jsonDecode(raw) as Map<String, dynamic>;
             final type = data['type'] as String?;
+
+            // Dedup: skip messages already delivered in this session.
+            final key = _dedupeKey(data);
+            if (key != null) {
+              if (_seenKeys.contains(key)) {
+                debugPrint('[WS][DEDUP] Duplikat atlandı: $key');
+                return;
+              }
+              _seenKeys.add(key);
+              if (_seenKeys.length > _maxSeenKeys) {
+                _seenKeys.remove(_seenKeys.first);
+              }
+            }
+
             if (type != null && type.startsWith('call_')) {
               debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] WsService received message type: $type');
-              // Track timestamp for WS event replay on reconnect
               _lastCallEventTs = DateTime.now().millisecondsSinceEpoch / 1000.0;
             }
             messageStream.add(data);
@@ -259,12 +292,12 @@ class WsService {
   }
 
   static Future<void> _refreshAndReconnect() async {
-    final ok = await AuthService.tryRefresh();
-    if (ok) {
+    final outcome = await AuthService.tryRefresh();
+    if (outcome == RefreshOutcome.succeeded) {
       debugPrint('[WS][${DateTime.now().toIso8601String()}] Token yenilendi, yeniden bağlanılıyor');
       _scheduleReconnect();
     } else {
-      debugPrint('[WS][${DateTime.now().toIso8601String()}] Token yenilenemedi, yeniden bağlanılmayacak');
+      debugPrint('[WS][${DateTime.now().toIso8601String()}] Token yenilenemedi ($outcome), yeniden bağlanılmayacak');
       _shouldStay = false;
     }
   }

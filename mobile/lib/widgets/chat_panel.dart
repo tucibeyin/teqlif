@@ -12,7 +12,7 @@ import '../l10n/app_localizations.dart';
 import '../models/chat.dart';
 import '../screens/public_profile_screen.dart';
 import '../services/analytics_service.dart';
-import '../services/auth_service.dart';
+import '../services/auth_service.dart' show AuthService, RefreshOutcome;
 import '../services/storage_service.dart';
 import '../utils/username_color.dart';
 
@@ -656,9 +656,9 @@ class ChatPanelState extends State<ChatPanel> {
     if (freshToken == null) return;
     if (freshToken == _token) {
       // WsService yenileyemediyse biz deneyelim
-      final ok = await AuthService.tryRefresh();
-      if (!ok) {
-        debugPrint('[CHAT WS] Token yenilenemedi');
+      final outcome = await AuthService.tryRefresh();
+      if (outcome != RefreshOutcome.succeeded) {
+        debugPrint('[CHAT WS] Token yenilenemedi ($outcome)');
         return;
       }
       _token = await StorageService.getToken();
