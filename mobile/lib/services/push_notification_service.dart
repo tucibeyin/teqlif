@@ -441,6 +441,16 @@ class PushNotificationService {
           return;
         }
 
+        // LOCK1 guard: CallKit fires ACTION_CALL_TIMEOUT ~30s after the notification was
+        // shown, even if the user already accepted via IncomingCallBar (not the native CK UI).
+        // If the call is already connected/reconnecting the timeout is stale — skip it.
+        if (isTimeout &&
+            (currentStatus == CallStatus.connected ||
+                currentStatus == CallStatus.reconnecting)) {
+          _cpLog('PUSH', 'CallEventActionCallTimeout SKIPPED | call already $currentStatus | callId=$callIdStr');
+          return;
+        }
+
         if (CallService.instance.state.value.callId != null) {
           CallService.instance.endCall();
         } else if (callIdStr.isNotEmpty) {

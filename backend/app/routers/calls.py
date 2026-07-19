@@ -446,11 +446,19 @@ async def start_call(
         "callee_token": callee_token,
     }
     await _ws_broadcast(callee_id, ws_payload)
-    await _send_call_push(callee, current_user, call.id, room_name, callee_token, db)
+    callee_ws_connected = ws_manager.subscriber_count(f"dm:{callee_id}") > 0
+    if callee_ws_connected:
+        logger.info(
+            "[CALL_PROCESS][OUT] start_call: WS connected → push skipped | call_id=%d callee=%d",
+            call.id, callee_id,
+        )
+    else:
+        await _send_call_push(callee, current_user, call.id, room_name, callee_token, db)
 
     logger.info(
-        "[CALL_PROCESS][OUT] start_call: WS+Push sent | call_id=%d callee=%d callee_voip=%s callee_fcm=%s",
+        "[CALL_PROCESS][OUT] start_call: WS+Push sent | call_id=%d callee=%d ws_connected=%s callee_voip=%s callee_fcm=%s",
         call.id, callee_id,
+        callee_ws_connected,
         "YES" if callee.voip_token else "NO",
         "YES" if callee.fcm_token else "NO",
     )
