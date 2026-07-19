@@ -9527,6 +9527,168 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'{mm}:{ss}'**
   String callHistoryDurationShort(String mm, String ss);
+
+  /// No description provided for @callCameraSwitch.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kamerayı Çevir'**
+  String get callCameraSwitch;
+
+  /// No description provided for @callCameraOn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kamera Açık'**
+  String get callCameraOn;
+
+  /// No description provided for @callCameraOff.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kamera Kapalı'**
+  String get callCameraOff;
+
+  /// No description provided for @callVideoStarted.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} kamerasını açtı'**
+  String callVideoStarted(String name);
+
+  /// No description provided for @callVideoStopped.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} kamerasını kapattı'**
+  String callVideoStopped(String name);
+
+  /// No description provided for @callInviteTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aramaya Davet Et'**
+  String get callInviteTitle;
+
+  /// No description provided for @callInviteButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet Gönder'**
+  String get callInviteButton;
+
+  /// No description provided for @callSearchFollowing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Takip ettiklerini ara...'**
+  String get callSearchFollowing;
+
+  /// No description provided for @callAlreadyInCall.
+  ///
+  /// In tr, this message translates to:
+  /// **'Zaten aramada'**
+  String get callAlreadyInCall;
+
+  /// No description provided for @callInvitePending.
+  ///
+  /// In tr, this message translates to:
+  /// **'Davet gönderildi'**
+  String get callInvitePending;
+
+  /// No description provided for @callInviteSent.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} davet gönderildi'**
+  String callInviteSent(String name);
+
+  /// No description provided for @callInviteRejected.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} daveti reddetti'**
+  String callInviteRejected(String name);
+
+  /// No description provided for @callInviteTimeout.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} yanıt vermedi'**
+  String callInviteTimeout(String name);
+
+  /// No description provided for @callParticipantJoined.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} aramaya katıldı'**
+  String callParticipantJoined(String name);
+
+  /// No description provided for @callParticipantLeft.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} aramadan ayrıldı'**
+  String callParticipantLeft(String name);
+
+  /// No description provided for @callParticipantRemovedSelf.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aramadan çıkarıldınız'**
+  String get callParticipantRemovedSelf;
+
+  /// No description provided for @callParticipantRemovedOther.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} aramadan çıkarıldı'**
+  String callParticipantRemovedOther(String name);
+
+  /// No description provided for @callGroupInviteTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif Aramaya Davet'**
+  String get callGroupInviteTitle;
+
+  /// No description provided for @callGroupInviteFrom.
+  ///
+  /// In tr, this message translates to:
+  /// **'{inviter} seni aramaya çağırıyor'**
+  String callGroupInviteFrom(String inviter);
+
+  /// No description provided for @callJoinButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'Katıl'**
+  String get callJoinButton;
+
+  /// No description provided for @callDeclineInviteButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reddet'**
+  String get callDeclineInviteButton;
+
+  /// No description provided for @callParticipantCount.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} Katılımcı'**
+  String callParticipantCount(int count);
+
+  /// No description provided for @callMaxParticipantsReached.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arama kapasitesi dolu (maks {max})'**
+  String callMaxParticipantsReached(int max);
+
+  /// No description provided for @callRemoveParticipantTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aramadan Çıkar'**
+  String get callRemoveParticipantTitle;
+
+  /// No description provided for @callRemoveParticipantConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} kişisini aramadan çıkarmak istiyor musunuz?'**
+  String callRemoveParticipantConfirm(String name);
+
+  /// No description provided for @callRemoveParticipantButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çıkar'**
+  String get callRemoveParticipantButton;
+
+  /// No description provided for @callCurrentParticipants.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şu an aramada'**
+  String get callCurrentParticipants;
 }
 
 class _AppLocalizationsDelegate

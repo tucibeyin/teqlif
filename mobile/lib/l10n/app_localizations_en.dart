@@ -5279,4 +5279,109 @@ class AppLocalizationsEn extends AppLocalizations {
   String callHistoryDurationShort(String mm, String ss) {
     return '$mm:$ss';
   }
+
+  @override
+  String get callCameraSwitch => 'Switch Camera';
+
+  @override
+  String get callCameraOn => 'Camera On';
+
+  @override
+  String get callCameraOff => 'Camera Off';
+
+  @override
+  String callVideoStarted(String name) {
+    return '$name turned on camera';
+  }
+
+  @override
+  String callVideoStopped(String name) {
+    return '$name turned off camera';
+  }
+
+  @override
+  String get callInviteTitle => 'Invite to Call';
+
+  @override
+  String get callInviteButton => 'Send Invite';
+
+  @override
+  String get callSearchFollowing => 'Search people you follow...';
+
+  @override
+  String get callAlreadyInCall => 'Already in a call';
+
+  @override
+  String get callInvitePending => 'Invite sent';
+
+  @override
+  String callInviteSent(String name) {
+    return 'Invite sent to $name';
+  }
+
+  @override
+  String callInviteRejected(String name) {
+    return '$name declined the invite';
+  }
+
+  @override
+  String callInviteTimeout(String name) {
+    return '$name didn\'t respond';
+  }
+
+  @override
+  String callParticipantJoined(String name) {
+    return '$name joined the call';
+  }
+
+  @override
+  String callParticipantLeft(String name) {
+    return '$name left the call';
+  }
+
+  @override
+  String get callParticipantRemovedSelf => 'You were removed from the call';
+
+  @override
+  String callParticipantRemovedOther(String name) {
+    return '$name was removed from the call';
+  }
+
+  @override
+  String get callGroupInviteTitle => 'Active Call Invite';
+
+  @override
+  String callGroupInviteFrom(String inviter) {
+    return '$inviter is inviting you to a call';
+  }
+
+  @override
+  String get callJoinButton => 'Join';
+
+  @override
+  String get callDeclineInviteButton => 'Decline';
+
+  @override
+  String callParticipantCount(int count) {
+    return '$count Participants';
+  }
+
+  @override
+  String callMaxParticipantsReached(int max) {
+    return 'Call is full (max $max)';
+  }
+
+  @override
+  String get callRemoveParticipantTitle => 'Remove from Call';
+
+  @override
+  String callRemoveParticipantConfirm(String name) {
+    return 'Remove $name from the call?';
+  }
+
+  @override
+  String get callRemoveParticipantButton => 'Remove';
+
+  @override
+  String get callCurrentParticipants => 'Currently in call';
 }

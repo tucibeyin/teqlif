@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:proximity_sensor/proximity_sensor.dart';
+import 'package:livekit_client/livekit_client.dart';
 import '../l10n/app_localizations.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../services/call_service.dart';
+import '../models/call_participant.dart';
 import 'messages_screen.dart';
 
 void _cpLog(String phase, String msg) {
@@ -30,6 +32,14 @@ class _CallScreenState extends State<CallScreen> {
   bool _hasPopped = false;
   late StreamSubscription<int> _proximitySubscription;
 
+  // PiP local video position
+  double _pipRight = 16;
+  double _pipBottom = 120;
+
+  // Toast for participant joined/left/removed
+  String? _toastMessage;
+  Timer? _toastTimer;
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +51,7 @@ class _CallScreenState extends State<CallScreen> {
       if (mounted) _onStateChange();
     });
     CallService.instance.state.addListener(_onStateChange);
+    CallService.instance.state.addListener(_onParticipantStateChange);
     _proximitySubscription = ProximitySensor.events.listen((int event) {
       if (mounted) {
         final isNear = event > 0;
@@ -98,8 +109,97 @@ class _CallScreenState extends State<CallScreen> {
       _cpLog('UI', 'CallScreen proximity cancel sync error | $e');
     }
     CallService.instance.state.removeListener(_onStateChange);
+    CallService.instance.state.removeListener(_onParticipantStateChange);
+    _toastTimer?.cancel();
     // isCallScreenVisible → Navigator.pop tetikler didPop → CallRouteObserver false set eder.
     super.dispose();
+  }
+
+  List<CallParticipant> _prevParticipants = [];
+
+  void _onParticipantStateChange() {
+    final cs = CallService.instance.state.value;
+    final current = cs.participants;
+
+    // Detect joined
+    for (final p in current) {
+      if (!_prevParticipants.any((pp) => pp.userId == p.userId)) {
+        _showToast('${p.username} aramaya katıldı');
+      }
+    }
+    // Detect left/removed
+    for (final p in _prevParticipants) {
+      if (!current.any((pp) => pp.userId == p.userId)) {
+        _showToast('${p.username} aramadan ayrıldı');
+      }
+    }
+    _prevParticipants = List.from(current);
+  }
+
+  void _showToast(String message) {
+    _cpLog('UI', 'CallScreen toast | $message');
+    _toastTimer?.cancel();
+    if (mounted) {
+      setState(() => _toastMessage = message);
+      _toastTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _toastMessage = null);
+      });
+    }
+  }
+
+  void _showInviteModal(BuildContext context, CallState cs) {
+    if (cs.callId == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => InviteToCallModal(callId: cs.callId!),
+    );
+  }
+
+  void _showRemoveParticipantSheet(BuildContext context, CallParticipant p, CallState cs) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('@${p.username}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.person_remove, color: Colors.red),
+                title: const Text('Aramadan Çıkar', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Aramadan Çıkar'),
+                      content: Text('${p.username} kişisini aramadan çıkarmak istiyor musunuz?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _cpLog('UI', 'Remove participant confirmed | userId=${p.userId}');
+                            CallService.instance.removeParticipant(p.userId).catchError((e) {
+                              _cpLog('UI', 'removeParticipant ERROR | $e');
+                            });
+                          },
+                          child: const Text('Çıkar', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   String _formatElapsed(Duration d) {
@@ -157,6 +257,9 @@ class _CallScreenState extends State<CallScreen> {
                           _cpLog('UI', 'CallScreen minimize tapped → pop');
                           _uiLog('CALL_SCREEN', 'MINIMIZE_TAP', 'callId=${CallService.instance.state.value.callId}');
                           _hasPopped = true;
+                          // Prevent overlay from auto-pushing call screen back when
+                          // isCallScreenVisible drops to false during the pop.
+                          CallService.instance.preventCallScreenAutoOpen.value = true;
                           Navigator.of(context).pop();
                         },
                       ),
@@ -316,14 +419,21 @@ class _CallScreenState extends State<CallScreen> {
                                           CallService.instance.toggleMute(),
                                     ),
                                     _ControlButton(
-                                      icon: FontAwesomeIcons.video,
-                                      label: l.callVideo,
-                                      color: AppColors.isDark(context)
+                                      icon: cs.localVideoEnabled
+                                          ? FontAwesomeIcons.videoSlash
+                                          : FontAwesomeIcons.video,
+                                      label: cs.localVideoEnabled
+                                          ? l.callCameraOff
+                                          : l.callCameraOn,
+                                      color: cs.localVideoEnabled
+                                          ? const Color(0xFF22C55E).withValues(alpha: 0.25)
+                                          : AppColors.isDark(context)
                                           ? Colors.white.withValues(alpha: 0.2)
-                                          : Colors.black.withValues(
-                                              alpha: 0.05,
-                                            ),
-                                      onTap: () {}, // Disabled for now
+                                          : Colors.black.withValues(alpha: 0.05),
+                                      onTap: () {
+                                        _cpLog('UI', 'Camera toggle tap | localVideo=${cs.localVideoEnabled}');
+                                        CallService.instance.toggleCamera();
+                                      },
                                     ),
                                     _ControlButton(
                                       icon: FontAwesomeIcons.volumeHigh,
@@ -363,6 +473,9 @@ class _CallScreenState extends State<CallScreen> {
                                         final id = cs.otherUserId;
                                         final username = cs.otherUsername ?? '';
                                         if (id != null) {
+                                          // Prevent overlay from re-pushing call screen when
+                                          // pushReplacement drops isCallScreenVisible to false.
+                                          CallService.instance.preventCallScreenAutoOpen.value = true;
                                           Navigator.pushReplacement(
                                             context,
                                             MaterialPageRoute(
@@ -424,10 +537,11 @@ class _CallScreenState extends State<CallScreen> {
                                       label: l.callAddPerson,
                                       color: AppColors.isDark(context)
                                           ? Colors.white.withValues(alpha: 0.2)
-                                          : Colors.black.withValues(
-                                              alpha: 0.05,
-                                            ),
-                                      onTap: () {}, // Disabled
+                                          : Colors.black.withValues(alpha: 0.05),
+                                      onTap: () {
+                                        _cpLog('UI', 'Invite person tap | callId=${cs.callId}');
+                                        _showInviteModal(context, cs);
+                                      },
                                     )
                                   else
                                     const SizedBox(width: 60), // Placeholder
@@ -441,6 +555,105 @@ class _CallScreenState extends State<CallScreen> {
                   ],
                 ),
               ),
+
+              // Remote video — fullscreen background (behind SafeArea content)
+              if (cs.remoteVideoEnabled && cs.status == CallStatus.connected) ...[
+                Positioned.fill(
+                  child: _RemoteVideoView(
+                    room: CallService.instance.room,
+                  ),
+                ),
+                // Semi-transparent overlay so controls remain readable
+                Positioned.fill(
+                  child: Container(color: Colors.black.withValues(alpha: 0.25)),
+                ),
+              ],
+
+              // Local video PiP — draggable, bottom-right
+              if (cs.localVideoEnabled && cs.status == CallStatus.connected)
+                Positioned(
+                  right: _pipRight,
+                  bottom: _pipBottom,
+                  child: GestureDetector(
+                    onPanUpdate: (d) {
+                      setState(() {
+                        _pipRight = (_pipRight - d.delta.dx).clamp(8.0, 200.0);
+                        _pipBottom = (_pipBottom - d.delta.dy).clamp(80.0, 500.0);
+                      });
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SizedBox(
+                        width: 100,
+                        height: 140,
+                        child: _LocalVideoView(
+                          room: CallService.instance.room,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Camera switch button — top-right when local video active
+              if (cs.localVideoEnabled && cs.status == CallStatus.connected)
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: SafeArea(
+                    child: GestureDetector(
+                      onTap: () {
+                        _cpLog('UI', 'Camera switch tap');
+                        CallService.instance.switchCamera();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.flip_camera_ios,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Participant avatar strip — top center when group call active
+              if (cs.status == CallStatus.connected && cs.participants.isNotEmpty)
+                Positioned(
+                  top: 60,
+                  left: 0,
+                  right: 0,
+                  child: _ParticipantStrip(
+                    participants: cs.participants,
+                    onLongPress: (p) => _showRemoveParticipantSheet(context, p, cs),
+                  ),
+                ),
+
+              // Toast — bottom center, 3s auto-dismiss
+              if (_toastMessage != null)
+                Positioned(
+                  bottom: 160,
+                  left: 32,
+                  right: 32,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Text(
+                        _toastMessage!,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
 
               // Proximity black overlay
               if (_isNear)
@@ -535,6 +748,282 @@ class _Initials extends StatelessWidget {
           fontSize: 48,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+// ── Remote video fullscreen view ─────────────────────────────────────────────
+
+class _RemoteVideoView extends StatelessWidget {
+  final Room? room;
+  const _RemoteVideoView({this.room});
+
+  @override
+  Widget build(BuildContext context) {
+    final room = this.room;
+    if (room == null) return const SizedBox.shrink();
+    final remote = room.remoteParticipants.values.firstOrNull;
+    if (remote == null) return const SizedBox.shrink();
+    final pub = remote.videoTrackPublications
+        .where((p) => p.subscribed && p.track != null)
+        .firstOrNull;
+    if (pub?.track == null) return const SizedBox.shrink();
+    return VideoTrackRenderer(pub!.track as VideoTrack);
+  }
+}
+
+// ── Local video PiP view ──────────────────────────────────────────────────────
+
+class _LocalVideoView extends StatelessWidget {
+  final Room? room;
+  const _LocalVideoView({this.room});
+
+  @override
+  Widget build(BuildContext context) {
+    final room = this.room;
+    if (room == null) return const SizedBox.shrink();
+    final pub = room.localParticipant?.videoTrackPublications
+        .where((p) => p.track != null)
+        .firstOrNull;
+    if (pub?.track == null) return const SizedBox.shrink();
+    return VideoTrackRenderer(pub!.track as VideoTrack, mirrorMode: VideoViewMirrorMode.mirror);
+  }
+}
+
+// ── Participant avatar strip ──────────────────────────────────────────────────
+
+class _ParticipantStrip extends StatelessWidget {
+  final List<CallParticipant> participants;
+  final void Function(CallParticipant) onLongPress;
+
+  const _ParticipantStrip({
+    required this.participants,
+    required this.onLongPress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = participants.take(3).toList();
+    final extra = participants.length - 3;
+    return Center(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final p in shown)
+            GestureDetector(
+              onLongPress: () => onLongPress(p),
+              child: Tooltip(
+                message: '@${p.username}',
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: ClipOval(
+                    child: p.avatar != null && p.avatar!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: imgUrl(p.avatar!),
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            color: Colors.grey.shade700,
+                            alignment: Alignment.center,
+                            child: Text(
+                              p.username.isNotEmpty ? p.username[0].toUpperCase() : '?',
+                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          if (extra > 0)
+            Container(
+              margin: const EdgeInsets.only(left: 4),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black.withValues(alpha: 0.5),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              alignment: Alignment.center,
+              child: Text('+$extra', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── InviteToCallModal ─────────────────────────────────────────────────────────
+
+class InviteToCallModal extends StatefulWidget {
+  final int callId;
+  const InviteToCallModal({super.key, required this.callId});
+
+  @override
+  State<InviteToCallModal> createState() => _InviteToCallModalState();
+}
+
+class _InviteToCallModalState extends State<InviteToCallModal> {
+  final TextEditingController _search = TextEditingController();
+  List<Map<String, dynamic>> _following = [];
+  List<Map<String, dynamic>> _filtered = [];
+  bool _loading = true;
+  final Map<int, String> _inviteState = {}; // userId → 'pending'|'sent'
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFollowing();
+    _search.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _search.removeListener(_onSearch);
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _search.text.toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? _following
+          : _following.where((u) {
+              final name = (u['username'] as String? ?? '').toLowerCase();
+              return name.contains(q);
+            }).toList();
+    });
+  }
+
+  Future<void> _loadFollowing() async {
+    try {
+      final data = await CallService.instance.fetchFollowingForInvite();
+      if (mounted) {
+        setState(() {
+          _following = data;
+          _filtered = data;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        left: 24,
+        right: 24,
+        top: 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border(context),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Aramaya Davet Et',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _search,
+            decoration: InputDecoration(
+              hintText: 'Takip ettiklerini ara...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else if (_filtered.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text('Kimse bulunamadı', style: TextStyle(color: AppColors.textSecondary(context))),
+              ),
+            )
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _filtered.length,
+                itemBuilder: (_, i) {
+                  final u = _filtered[i];
+                  final uid = u['id'] as int;
+                  final username = u['username'] as String? ?? '';
+                  final avatar = u['avatar'] as String?;
+                  final state = _inviteState[uid];
+                  final isInThisCall = u['in_this_call'] == true;
+                  final isInOtherCall = u['in_other_call'] == true;
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: (avatar != null && avatar.isNotEmpty)
+                          ? CachedNetworkImageProvider(imgUrl(avatar))
+                          : null,
+                      child: (avatar == null || avatar.isEmpty)
+                          ? Text(username.isNotEmpty ? username[0].toUpperCase() : '?')
+                          : null,
+                    ),
+                    title: Text('@$username'),
+                    trailing: isInThisCall
+                        ? Text('Aramada', style: TextStyle(color: Colors.grey, fontSize: 12))
+                        : isInOtherCall
+                        ? Text('Meşgul', style: TextStyle(color: Colors.red, fontSize: 12))
+                        : state == 'pending'
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : state == 'sent'
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : TextButton(
+                            onPressed: () async {
+                              setState(() => _inviteState[uid] = 'pending');
+                              try {
+                                await CallService.instance.inviteToCall(uid);
+                                if (mounted) setState(() => _inviteState[uid] = 'sent');
+                              } catch (e) {
+                                if (mounted) setState(() => _inviteState.remove(uid));
+                              }
+                            },
+                            child: const Text('Davet Gönder'),
+                          ),
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }

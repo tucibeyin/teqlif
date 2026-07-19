@@ -1235,6 +1235,74 @@ async def auto_close_stream_if_host_absent_task(
         raise
 
 
+async def invite_timeout_task(ctx: dict, call_id: int, invitee_id: int, participant_id: int) -> None:
+    """
+    30 saniye sonra hâlâ 'invited' durumundaysa participant'ı 'timeout' yapar
+    ve daveti başlatana WS call_participant_timeout mesajı gönderir.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models.call import CallParticipant
+        from app.models.user import User
+        from sqlalchemy import select
+        from app.utils.call_redis import release_invite_lock
+        from app.services.call_ws import send_to_user
+        from app.constants import ws_types
+        from datetime import datetime, timezone
+
+        logger.info(
+            "[CALL_GROUP][TIMEOUT] invite_timeout_task ENTER | call_id=%d invitee=%d cp_id=%d",
+            call_id, invitee_id, participant_id,
+        )
+
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(CallParticipant).where(
+                    CallParticipant.id == participant_id,
+                    CallParticipant.status == "invited",
+                )
+            )
+            cp = result.scalar_one_or_none()
+
+            if not cp:
+                logger.info(
+                    "[CALL_GROUP][TIMEOUT] invite_timeout_task SKIPPED | cp_id=%d (already resolved)",
+                    participant_id,
+                )
+                return
+
+            invited_by = cp.invited_by
+            cp.status = "timeout"
+            cp.left_at = datetime.now(timezone.utc)
+            await db.commit()
+
+            await release_invite_lock(call_id, invitee_id)
+
+            invitee = await db.get(User, invitee_id)
+            username = invitee.username if invitee else str(invitee_id)
+
+            if invited_by:
+                await send_to_user(invited_by, {
+                    "type": ws_types.CALL_PARTICIPANT_TIMEOUT,
+                    "call_id": call_id,
+                    "user_id": invitee_id,
+                    "username": username,
+                })
+
+            logger.info(
+                "[CALL_GROUP][TIMEOUT] invite_timeout_task DONE | call_id=%d invitee=%d invited_by=%s",
+                call_id, invitee_id, invited_by,
+            )
+
+    except Exception as exc:
+        logger.error(
+            "[CALL_GROUP][TIMEOUT] invite_timeout_task ERROR | call_id=%d invitee=%d | %s",
+            call_id, invitee_id, exc, exc_info=True,
+        )
+        capture_exception(exc)
+        raise
+
+
 async def delayed_call_timeout_task(ctx: dict, call_id: int, caller_id: int, callee_id: int) -> None:
     """
     POST /start ile başlayan ancak 35-40sn içinde 'accept', 'reject', 'end' 
@@ -2786,6 +2854,7 @@ class WorkerSettings:
         auto_close_stream_if_host_absent_task,
         delayed_close_stream_task,
         delayed_call_timeout_task,
+        invite_timeout_task,
         cleanup_ghost_calls_task,
         apns_feedback_cleanup_task,
         send_telegram_notification_task,

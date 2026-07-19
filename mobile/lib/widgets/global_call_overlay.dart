@@ -109,6 +109,7 @@ class _GlobalCallOverlayState extends State<GlobalCallOverlay> {
                           if (ctx != null) {
                             if (_cs.isCallScreenVisible.value) return;
                             _uiLog('PILL', 'TAP', 'callId=${_cs.state.value.callId} user=${_cs.state.value.otherUsername}');
+                            _cs.preventCallScreenAutoOpen.value = false;
                             _cs.isCallScreenVisible.value = true;
                             Navigator.of(ctx).push(
                               MaterialPageRoute(

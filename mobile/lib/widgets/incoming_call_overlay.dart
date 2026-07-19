@@ -109,6 +109,41 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
         _cpLog('UI', 'call_missed WS → onCallMissed | callId=$missedCallId');
         CallService.instance.onCallMissed(callId: missedCallId);
         break;
+
+      // ── Grup Arama ────────────────────────────────────────────────────────
+      case 'call_group_invite':
+        _cpLog('UI', 'call_group_invite WS → onGroupInviteReceived | callId=${data['call_id']}');
+        CallService.instance.onGroupInviteReceived(data);
+        // setState to show incoming group invite UI
+        if (mounted) setState(() {});
+        break;
+      case 'call_participant_joined':
+        _cpLog('UI', 'call_participant_joined | userId=${data['user_id']} username=${data['username']}');
+        CallService.instance.onParticipantJoined(data);
+        if (mounted) setState(() {});
+        break;
+      case 'call_participant_left':
+        _cpLog('UI', 'call_participant_left | userId=${data['user_id']}');
+        CallService.instance.onParticipantLeft(data);
+        if (mounted) setState(() {});
+        break;
+      case 'call_participant_removed':
+        _cpLog('UI', 'call_participant_removed | userId=${data['user_id']} selfRemoved=${data['self_removed']}');
+        CallService.instance.onParticipantRemoved(data);
+        if (mounted) setState(() {});
+        break;
+      case 'call_participant_rejected':
+        _cpLog('UI', 'call_participant_rejected | userId=${data['user_id']}');
+        CallService.instance.onParticipantRejected(data);
+        break;
+      case 'call_participant_timeout':
+        _cpLog('UI', 'call_participant_timeout | userId=${data['user_id']}');
+        CallService.instance.onParticipantTimeout(data);
+        break;
+      case 'call_participant_invited':
+        _cpLog('UI', 'call_participant_invited | inviteeId=${data['invitee_id']}');
+        break;
+
       default:
         break;
     }
@@ -263,10 +298,10 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
                         onTap: _openIncomingScreen,
                         onAccept: _openCallScreenAndAccept,
                         onReject: () {
-                          final _rCallId = CallService.instance.state.value.callId;
-                          final _rCaller = CallService.instance.state.value.otherUsername;
-                          _cpLog('UI', 'IncomingCallBar → user REJECT tap | callId=$_rCallId caller=$_rCaller');
-                          _uiLog('INCOMING_BAR', 'REJECT_TAP', 'callId=$_rCallId caller=$_rCaller');
+                          final rCallId = CallService.instance.state.value.callId;
+                          final rCaller = CallService.instance.state.value.otherUsername;
+                          _cpLog('UI', 'IncomingCallBar → user REJECT tap | callId=$rCallId caller=$rCaller');
+                          _uiLog('INCOMING_BAR', 'REJECT_TAP', 'callId=$rCallId caller=$rCaller');
                           setState(() => _isBarDismissed = true);
                           CallService.instance.rejectCall();
                         },
@@ -276,6 +311,27 @@ class _IncomingCallOverlayState extends State<IncomingCallOverlay> {
                         },
                       ),
               ),
+            ),
+          ),
+
+        // Group invite banner
+        if (CallService.instance.state.value.pendingGroupInvite != null)
+          Positioned(
+            bottom: 80,
+            left: 16,
+            right: 16,
+            child: _GroupInviteBanner(
+              invite: CallService.instance.state.value.pendingGroupInvite!,
+              onAccept: () async {
+                _cpLog('UI', 'GroupInviteBanner ACCEPT tap');
+                await CallService.instance.acceptGroupInvite();
+                _openCallScreen();
+              },
+              onDecline: () {
+                _cpLog('UI', 'GroupInviteBanner DECLINE tap');
+                CallService.instance.rejectGroupInvite();
+                setState(() {});
+              },
             ),
           ),
       ],
@@ -637,6 +693,88 @@ class _BarButton extends StatelessWidget {
                 color: color,
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+// ── Group Invite Banner ───────────────────────────────────────────────────────
+
+class _GroupInviteBanner extends StatelessWidget {
+  final dynamic invite; // GroupInvite
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  const _GroupInviteBanner({
+    required this.invite,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final inviterUsername = invite.inviterUsername as String;
+    final inviterAvatar = invite.inviterAvatar as String?;
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(20),
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1C1E),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: Colors.grey.shade800,
+              backgroundImage: (inviterAvatar != null && inviterAvatar.isNotEmpty)
+                  ? CachedNetworkImageProvider(imgUrl(inviterAvatar))
+                  : null,
+              child: (inviterAvatar == null || inviterAvatar.isEmpty)
+                  ? Text(inviterUsername.isNotEmpty ? inviterUsername[0].toUpperCase() : '?',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Aktif Aramaya Davet', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  Text('@$inviterUsername sizi aramaya çağırıyor',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onDecline,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                child: const Icon(Icons.close, color: Colors.white, size: 18),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: onAccept,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
+                child: const Icon(Icons.call, color: Colors.white, size: 18),
               ),
             ),
           ],

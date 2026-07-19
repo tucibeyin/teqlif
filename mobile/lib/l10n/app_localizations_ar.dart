@@ -5250,4 +5250,109 @@ class AppLocalizationsAr extends AppLocalizations {
   String callHistoryDurationShort(String mm, String ss) {
     return '$mm:$ss';
   }
+
+  @override
+  String get callCameraSwitch => 'تبديل الكاميرا';
+
+  @override
+  String get callCameraOn => 'الكاميرا مفتوحة';
+
+  @override
+  String get callCameraOff => 'الكاميرا مغلقة';
+
+  @override
+  String callVideoStarted(String name) {
+    return '$name فتح الكاميرا';
+  }
+
+  @override
+  String callVideoStopped(String name) {
+    return '$name أغلق الكاميرا';
+  }
+
+  @override
+  String get callInviteTitle => 'دعوة للمكالمة';
+
+  @override
+  String get callInviteButton => 'إرسال دعوة';
+
+  @override
+  String get callSearchFollowing => 'ابحث عمن تتابعهم...';
+
+  @override
+  String get callAlreadyInCall => 'في مكالمة بالفعل';
+
+  @override
+  String get callInvitePending => 'تم إرسال الدعوة';
+
+  @override
+  String callInviteSent(String name) {
+    return 'تم إرسال دعوة لـ $name';
+  }
+
+  @override
+  String callInviteRejected(String name) {
+    return '$name رفض الدعوة';
+  }
+
+  @override
+  String callInviteTimeout(String name) {
+    return '$name لم يستجب';
+  }
+
+  @override
+  String callParticipantJoined(String name) {
+    return '$name انضم إلى المكالمة';
+  }
+
+  @override
+  String callParticipantLeft(String name) {
+    return '$name غادر المكالمة';
+  }
+
+  @override
+  String get callParticipantRemovedSelf => 'تم إزالتك من المكالمة';
+
+  @override
+  String callParticipantRemovedOther(String name) {
+    return 'تم إزالة $name من المكالمة';
+  }
+
+  @override
+  String get callGroupInviteTitle => 'دعوة لمكالمة نشطة';
+
+  @override
+  String callGroupInviteFrom(String inviter) {
+    return '$inviter يدعوك للانضمام إلى مكالمة';
+  }
+
+  @override
+  String get callJoinButton => 'انضم';
+
+  @override
+  String get callDeclineInviteButton => 'رفض';
+
+  @override
+  String callParticipantCount(int count) {
+    return '$count مشاركين';
+  }
+
+  @override
+  String callMaxParticipantsReached(int max) {
+    return 'المكالمة ممتلئة (الحد الأقصى $max)';
+  }
+
+  @override
+  String get callRemoveParticipantTitle => 'إزالة من المكالمة';
+
+  @override
+  String callRemoveParticipantConfirm(String name) {
+    return 'هل تريد إزالة $name من المكالمة؟';
+  }
+
+  @override
+  String get callRemoveParticipantButton => 'إزالة';
+
+  @override
+  String get callCurrentParticipants => 'في المكالمة الآن';
 }

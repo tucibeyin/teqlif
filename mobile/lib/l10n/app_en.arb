@@ -2844,5 +2844,94 @@
       "mm": {"type": "String"},
       "ss": {"type": "String"}
     }
-  }
+  },
+
+  "callCameraSwitch": "Switch Camera",
+  "callCameraOn": "Camera On",
+  "callCameraOff": "Camera Off",
+  "callVideoStarted": "{name} turned on camera",
+  "@callVideoStarted": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callVideoStopped": "{name} turned off camera",
+  "@callVideoStopped": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+
+  "callInviteTitle": "Invite to Call",
+  "callInviteButton": "Send Invite",
+  "callSearchFollowing": "Search people you follow...",
+  "callAlreadyInCall": "Already in a call",
+  "callInvitePending": "Invite sent",
+  "callInviteSent": "Invite sent to {name}",
+  "@callInviteSent": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callInviteRejected": "{name} declined the invite",
+  "@callInviteRejected": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callInviteTimeout": "{name} didn't respond",
+  "@callInviteTimeout": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callParticipantJoined": "{name} joined the call",
+  "@callParticipantJoined": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callParticipantLeft": "{name} left the call",
+  "@callParticipantLeft": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callParticipantRemovedSelf": "You were removed from the call",
+  "callParticipantRemovedOther": "{name} was removed from the call",
+  "@callParticipantRemovedOther": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callGroupInviteTitle": "Active Call Invite",
+  "callGroupInviteFrom": "{inviter} is inviting you to a call",
+  "@callGroupInviteFrom": {
+    "placeholders": {
+      "inviter": {"type": "String"}
+    }
+  },
+  "callJoinButton": "Join",
+  "callDeclineInviteButton": "Decline",
+  "callParticipantCount": "{count} Participants",
+  "@callParticipantCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "callMaxParticipantsReached": "Call is full (max {max})",
+  "@callMaxParticipantsReached": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "callRemoveParticipantTitle": "Remove from Call",
+  "callRemoveParticipantConfirm": "Remove {name} from the call?",
+  "@callRemoveParticipantConfirm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callRemoveParticipantButton": "Remove",
+  "callCurrentParticipants": "Currently in call"
 }

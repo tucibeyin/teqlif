@@ -5282,4 +5282,109 @@ class AppLocalizationsTr extends AppLocalizations {
   String callHistoryDurationShort(String mm, String ss) {
     return '$mm:$ss';
   }
+
+  @override
+  String get callCameraSwitch => 'Kamerayı Çevir';
+
+  @override
+  String get callCameraOn => 'Kamera Açık';
+
+  @override
+  String get callCameraOff => 'Kamera Kapalı';
+
+  @override
+  String callVideoStarted(String name) {
+    return '$name kamerasını açtı';
+  }
+
+  @override
+  String callVideoStopped(String name) {
+    return '$name kamerasını kapattı';
+  }
+
+  @override
+  String get callInviteTitle => 'Aramaya Davet Et';
+
+  @override
+  String get callInviteButton => 'Davet Gönder';
+
+  @override
+  String get callSearchFollowing => 'Takip ettiklerini ara...';
+
+  @override
+  String get callAlreadyInCall => 'Zaten aramada';
+
+  @override
+  String get callInvitePending => 'Davet gönderildi';
+
+  @override
+  String callInviteSent(String name) {
+    return '$name davet gönderildi';
+  }
+
+  @override
+  String callInviteRejected(String name) {
+    return '$name daveti reddetti';
+  }
+
+  @override
+  String callInviteTimeout(String name) {
+    return '$name yanıt vermedi';
+  }
+
+  @override
+  String callParticipantJoined(String name) {
+    return '$name aramaya katıldı';
+  }
+
+  @override
+  String callParticipantLeft(String name) {
+    return '$name aramadan ayrıldı';
+  }
+
+  @override
+  String get callParticipantRemovedSelf => 'Aramadan çıkarıldınız';
+
+  @override
+  String callParticipantRemovedOther(String name) {
+    return '$name aramadan çıkarıldı';
+  }
+
+  @override
+  String get callGroupInviteTitle => 'Aktif Aramaya Davet';
+
+  @override
+  String callGroupInviteFrom(String inviter) {
+    return '$inviter seni aramaya çağırıyor';
+  }
+
+  @override
+  String get callJoinButton => 'Katıl';
+
+  @override
+  String get callDeclineInviteButton => 'Reddet';
+
+  @override
+  String callParticipantCount(int count) {
+    return '$count Katılımcı';
+  }
+
+  @override
+  String callMaxParticipantsReached(int max) {
+    return 'Arama kapasitesi dolu (maks $max)';
+  }
+
+  @override
+  String get callRemoveParticipantTitle => 'Aramadan Çıkar';
+
+  @override
+  String callRemoveParticipantConfirm(String name) {
+    return '$name kişisini aramadan çıkarmak istiyor musunuz?';
+  }
+
+  @override
+  String get callRemoveParticipantButton => 'Çıkar';
+
+  @override
+  String get callCurrentParticipants => 'Şu an aramada';
 }

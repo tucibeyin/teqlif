@@ -23,6 +23,7 @@ import '../services/storage_service.dart';
 import 'push_notification_service.dart';
 import 'ws_service.dart';
 import '../models/call_event.dart';
+import '../models/call_participant.dart';
 
 void _cpLog(String phase, String msg) {
   debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][$phase] $msg');
@@ -70,6 +71,10 @@ class CallState {
   final bool isSpeaker;
   final bool permPermanentlyDenied;
   final bool isPoorConnection;
+  final bool localVideoEnabled;
+  final bool remoteVideoEnabled;
+  final List<CallParticipant> participants;
+  final GroupInvite? pendingGroupInvite;
 
   const CallState({
     this.status = CallStatus.idle,
@@ -87,6 +92,10 @@ class CallState {
     this.isSpeaker = false,
     this.permPermanentlyDenied = false,
     this.isPoorConnection = false,
+    this.localVideoEnabled = false,
+    this.remoteVideoEnabled = false,
+    this.participants = const [],
+    this.pendingGroupInvite,
   });
 
   CallState copyWith({
@@ -105,6 +114,10 @@ class CallState {
     bool? isSpeaker,
     bool? permPermanentlyDenied,
     bool? isPoorConnection,
+    bool? localVideoEnabled,
+    bool? remoteVideoEnabled,
+    List<CallParticipant>? participants,
+    GroupInvite? Function()? pendingGroupInvite,
   }) {
     return CallState(
       status: status ?? this.status,
@@ -123,6 +136,12 @@ class CallState {
       permPermanentlyDenied:
           permPermanentlyDenied ?? this.permPermanentlyDenied,
       isPoorConnection: isPoorConnection ?? this.isPoorConnection,
+      localVideoEnabled: localVideoEnabled ?? this.localVideoEnabled,
+      remoteVideoEnabled: remoteVideoEnabled ?? this.remoteVideoEnabled,
+      participants: participants ?? this.participants,
+      pendingGroupInvite: pendingGroupInvite != null
+          ? pendingGroupInvite()
+          : this.pendingGroupInvite,
     );
   }
 }
@@ -1713,6 +1732,26 @@ class CallService {
           _setState(state.value.copyWith(isSpeaker: false));
         }
       }
+    } else if (event is LocalTrackPublishedEvent) {
+      if (event.publication.kind == TrackType.VIDEO) {
+        _cpLog('LK', 'LocalTrackPublished VIDEO');
+        _setState(state.value.copyWith(localVideoEnabled: true));
+      }
+    } else if (event is TrackPublishedEvent) {
+      if (event.publication.kind == TrackType.VIDEO) {
+        _cpLog('LK', 'RemoteTrackPublished VIDEO | participant=${event.participant.identity}');
+        _setState(state.value.copyWith(remoteVideoEnabled: true));
+      }
+    } else if (event is LocalTrackUnpublishedEvent) {
+      if (event.publication.kind == TrackType.VIDEO) {
+        _cpLog('LK', 'LocalTrackUnpublished VIDEO');
+        _setState(state.value.copyWith(localVideoEnabled: false));
+      }
+    } else if (event is TrackUnpublishedEvent) {
+      if (event.publication.kind == TrackType.VIDEO) {
+        _cpLog('LK', 'RemoteTrackUnpublished VIDEO | participant=${event.participant.identity}');
+        _setState(state.value.copyWith(remoteVideoEnabled: false));
+      }
     } else if (event is ParticipantConnectionQualityUpdatedEvent) {
       if (event.participant == _room?.localParticipant) {
         final isPoor =
@@ -2070,6 +2109,7 @@ class CallService {
       _cpLog('END', '_lastEndedCallId set | callId=$_lastEndedCallId');
     }
 
+    preventCallScreenAutoOpen.value = false;
     _setState(const CallState());
     _cpLog('END', 'reset() done → state=idle');
   }
@@ -2243,5 +2283,241 @@ class CallService {
         // Handled by IncomingCallOverlay via the raw stream.
         _cpLog('EVENT', 'processEvent: delegated to overlay | type=${data["type"]}');
     }
+  }
+
+  // ── Following list for invite modal ───────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> fetchFollowingForInvite() async {
+    try {
+      final data = await _get('/users/me/following?limit=100');
+      final items = data['items'] as List<dynamic>? ?? [];
+      return items.map((u) => Map<String, dynamic>.from(u as Map)).toList();
+    } catch (e) {
+      _cpLog('GROUP', 'fetchFollowingForInvite ERROR | $e');
+      return [];
+    }
+  }
+
+  Room? get room => _room;
+
+  // ── Video ──────────────────────────────────────────────────────────────────
+
+  Future<void> toggleCamera() async {
+    final room = _room;
+    if (room == null || state.value.status != CallStatus.connected) {
+      _cpLog('VIDEO', 'toggleCamera: SKIPPED | room=${room != null} status=${state.value.status.name}');
+      return;
+    }
+    final enabled = state.value.localVideoEnabled;
+    _cpLog('VIDEO', 'toggleCamera | current=$enabled → ${!enabled}');
+    try {
+      await room.localParticipant?.setCameraEnabled(!enabled);
+      // State updated via TrackPublishedEvent / TrackUnpublishedEvent in _onRoomEvent
+    } catch (e) {
+      _cpLog('VIDEO', 'toggleCamera ERROR | $e');
+    }
+  }
+
+  Future<void> switchCamera() async {
+    final room = _room;
+    if (room == null || !state.value.localVideoEnabled) {
+      _cpLog('VIDEO', 'switchCamera: SKIPPED | roomNull=${room == null} videoEnabled=${state.value.localVideoEnabled}');
+      return;
+    }
+    _cpLog('VIDEO', 'switchCamera invoked');
+    try {
+      final pub = room.localParticipant?.videoTrackPublications
+          .firstWhere((p) => p.source == TrackSource.camera);
+      if (pub?.track is LocalVideoTrack) {
+        final cameras = await Hardware.instance.videoInputs();
+        _cpLog('VIDEO', 'switchCamera | available=${cameras.length}');
+        if (cameras.length < 2) return;
+        final currentId = (pub!.track as LocalVideoTrack).mediaStreamTrack.getSettings()['deviceId'] as String?;
+        final next = cameras.firstWhere(
+          (c) => c.deviceId != currentId,
+          orElse: () => cameras.first,
+        );
+        await (pub.track as LocalVideoTrack).switchCamera(next.deviceId);
+        _cpLog('VIDEO', 'switchCamera OK | device=${next.label}');
+      }
+    } catch (e) {
+      _cpLog('VIDEO', 'switchCamera ERROR | $e');
+    }
+  }
+
+  // ── Grup Arama: Davet Gönder ───────────────────────────────────────────────
+
+  Future<void> inviteToCall(int inviteeId) async {
+    final callId = state.value.callId;
+    if (callId == null) {
+      _cpLog('GROUP', 'inviteToCall: SKIPPED | callId=null');
+      return;
+    }
+    _cpLog('GROUP', 'inviteToCall | callId=$callId inviteeId=$inviteeId');
+    try {
+      await _post('/calls/$callId/invite', {'invitee_id': inviteeId});
+      _cpLog('GROUP', 'inviteToCall OK | callId=$callId inviteeId=$inviteeId');
+    } catch (e) {
+      _cpLog('GROUP', 'inviteToCall ERROR | $e');
+      rethrow;
+    }
+  }
+
+  // ── Grup Arama: Gelen Davet Kabul / Red ───────────────────────────────────
+
+  Future<void> acceptGroupInvite() async {
+    final invite = state.value.pendingGroupInvite;
+    if (invite == null) {
+      _cpLog('GROUP', 'acceptGroupInvite: SKIPPED | no pending invite');
+      return;
+    }
+    _cpLog('GROUP', 'acceptGroupInvite | callId=${invite.callId} participantId=${invite.participantId}');
+    try {
+      final myId = await StorageService.getCurrentUserId();
+      if (myId == null) throw AppException('No user id', code: 'NO_USER', statusCode: 401);
+
+      final resp = await _post('/calls/${invite.callId}/participants/$myId/accept');
+
+      // Clear pending invite
+      _setState(state.value.copyWith(pendingGroupInvite: () => null));
+
+      // Join the LiveKit room
+      await _joinRoom(
+        livekitUrl: invite.livekitUrl,
+        token: invite.livekitToken,
+      );
+
+      // Load participants from response
+      final rawParticipants = resp['participants'] as List<dynamic>? ?? [];
+      final participants = rawParticipants
+          .map((p) => CallParticipant.fromJson(p as Map<String, dynamic>))
+          .toList();
+
+      _setState(state.value.copyWith(
+        callId: invite.callId,
+        roomName: invite.roomName,
+        status: CallStatus.connecting,
+        participants: participants,
+      ));
+
+      _cpLog('GROUP', 'acceptGroupInvite OK | callId=${invite.callId} participants=${participants.length}');
+    } catch (e) {
+      _cpLog('GROUP', 'acceptGroupInvite ERROR | $e');
+      rethrow;
+    }
+  }
+
+  Future<void> rejectGroupInvite() async {
+    final invite = state.value.pendingGroupInvite;
+    if (invite == null) {
+      _cpLog('GROUP', 'rejectGroupInvite: SKIPPED | no pending invite');
+      return;
+    }
+    _cpLog('GROUP', 'rejectGroupInvite | callId=${invite.callId}');
+    try {
+      final myId = await StorageService.getCurrentUserId();
+      if (myId == null) return;
+      await _post('/calls/${invite.callId}/participants/$myId/reject');
+      _setState(state.value.copyWith(pendingGroupInvite: () => null));
+      _cpLog('GROUP', 'rejectGroupInvite OK | callId=${invite.callId}');
+    } catch (e) {
+      _cpLog('GROUP', 'rejectGroupInvite ERROR (non-fatal) | $e');
+    }
+  }
+
+  // ── Grup Arama: Katılımcı Çıkar ───────────────────────────────────────────
+
+  Future<void> removeParticipant(int userId) async {
+    final callId = state.value.callId;
+    if (callId == null) return;
+    _cpLog('GROUP', 'removeParticipant | callId=$callId userId=$userId');
+    try {
+      await _post('/calls/$callId/participants/$userId/remove');
+      // Local state update handled by WS call_participant_removed broadcast
+      _cpLog('GROUP', 'removeParticipant OK | callId=$callId userId=$userId');
+    } catch (e) {
+      _cpLog('GROUP', 'removeParticipant ERROR | $e');
+      rethrow;
+    }
+  }
+
+  // ── WS Handlers: Grup Arama Eventleri ─────────────────────────────────────
+
+  void onGroupInviteReceived(Map<String, dynamic> data) {
+    _cpLog('GROUP', 'onGroupInviteReceived | data=${data.keys.toList()}');
+    try {
+      final invite = GroupInvite.fromJson(data);
+      _setState(state.value.copyWith(pendingGroupInvite: () => invite));
+      _cpLog('GROUP', 'onGroupInviteReceived: pendingGroupInvite set | callId=${invite.callId} inviter=${invite.inviterUsername}');
+    } catch (e) {
+      _cpLog('GROUP', 'onGroupInviteReceived PARSE ERROR | $e');
+    }
+  }
+
+  void onParticipantJoined(Map<String, dynamic> data) {
+    final userId = data['user_id'] as int?;
+    final username = data['username'] as String? ?? '';
+    final avatar = data['avatar'] as String?;
+    _cpLog('GROUP', 'onParticipantJoined | userId=$userId username=$username');
+    if (userId == null) return;
+
+    final existing = state.value.participants;
+    if (existing.any((p) => p.userId == userId)) return;
+
+    final updated = [
+      ...existing,
+      CallParticipant(
+        userId: userId,
+        username: username,
+        avatar: avatar,
+        role: 'guest',
+        status: 'joined',
+      ),
+    ];
+    _setState(state.value.copyWith(participants: updated));
+  }
+
+  void onParticipantLeft(Map<String, dynamic> data) {
+    final userId = data['user_id'] as int?;
+    _cpLog('GROUP', 'onParticipantLeft | userId=$userId');
+    if (userId == null) return;
+    final updated = state.value.participants
+        .where((p) => p.userId != userId)
+        .toList();
+    _setState(state.value.copyWith(participants: updated));
+  }
+
+  void onParticipantRemoved(Map<String, dynamic> data) {
+    final userId = data['user_id'] as int?;
+    final selfRemoved = data['self_removed'] as bool? ?? false;
+    _cpLog('GROUP', 'onParticipantRemoved | userId=$userId selfRemoved=$selfRemoved');
+
+    if (selfRemoved) {
+      // We were kicked — hang up
+      _cpLog('GROUP', 'onParticipantRemoved: self → _hangUpLocally(ended)');
+      _hangUpLocally(status: CallStatus.ended);
+      return;
+    }
+
+    if (userId != null) {
+      final updated = state.value.participants
+          .where((p) => p.userId != userId)
+          .toList();
+      _setState(state.value.copyWith(participants: updated));
+    }
+  }
+
+  void onParticipantRejected(Map<String, dynamic> data) {
+    final userId = data['user_id'] as int?;
+    final username = data['username'] as String? ?? '?';
+    _cpLog('GROUP', 'onParticipantRejected | userId=$userId username=$username');
+    // Toast is shown by UI layer listening to WS stream directly
+  }
+
+  void onParticipantTimeout(Map<String, dynamic> data) {
+    final userId = data['user_id'] as int?;
+    final username = data['username'] as String? ?? '?';
+    _cpLog('GROUP', 'onParticipantTimeout | userId=$userId username=$username');
+    // Toast is shown by UI layer listening to WS stream directly
   }
 }

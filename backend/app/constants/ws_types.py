@@ -48,3 +48,19 @@ GIFT = "gift"  # Tüm odaya broadcast — gönderen, gift_name, cost
 # ── Hype Meter (Heyecan Ölçer) ───────────────────────────────────────────────
 HYPE_UPDATE = "hype_update"   # Tüm odaya: {"type": "hype_update", "score": 85}
 HYPE_ALERT  = "hype_alert"    # Sadece host'a: {"type": "hype_alert", "message": "..."}
+
+# ── Grup Sesli/Görüntülü Arama ────────────────────────────────────────────────
+# Davete çağrılan kişiye
+CALL_GROUP_INVITE         = "call_group_invite"
+# Odadakilere — "X kişiye davet gönderildi" bildirimi
+CALL_PARTICIPANT_INVITED  = "call_participant_invited"
+# Odadakilere — katılımcı aramaya dahil oldu
+CALL_PARTICIPANT_JOINED   = "call_participant_joined"
+# Odadakilere — katılımcı aramayı kapattı
+CALL_PARTICIPANT_LEFT     = "call_participant_left"
+# Daveti başlatana — davetli kişi reddetti
+CALL_PARTICIPANT_REJECTED = "call_participant_rejected"
+# Daveti başlatana — davetli kişi 30s içinde yanıt vermedi
+CALL_PARTICIPANT_TIMEOUT  = "call_participant_timeout"
+# Odadakilere + çıkarılan kişiye — initiator tarafından çıkarıldı
+CALL_PARTICIPANT_REMOVED  = "call_participant_removed"

@@ -5330,4 +5330,109 @@ class AppLocalizationsRu extends AppLocalizations {
   String callHistoryDurationShort(String mm, String ss) {
     return '$mm:$ss';
   }
+
+  @override
+  String get callCameraSwitch => 'Переключить камеру';
+
+  @override
+  String get callCameraOn => 'Камера включена';
+
+  @override
+  String get callCameraOff => 'Камера выключена';
+
+  @override
+  String callVideoStarted(String name) {
+    return '$name включил камеру';
+  }
+
+  @override
+  String callVideoStopped(String name) {
+    return '$name выключил камеру';
+  }
+
+  @override
+  String get callInviteTitle => 'Пригласить в звонок';
+
+  @override
+  String get callInviteButton => 'Отправить приглашение';
+
+  @override
+  String get callSearchFollowing => 'Поиск среди подписок...';
+
+  @override
+  String get callAlreadyInCall => 'Уже в звонке';
+
+  @override
+  String get callInvitePending => 'Приглашение отправлено';
+
+  @override
+  String callInviteSent(String name) {
+    return 'Приглашение отправлено $name';
+  }
+
+  @override
+  String callInviteRejected(String name) {
+    return '$name отклонил приглашение';
+  }
+
+  @override
+  String callInviteTimeout(String name) {
+    return '$name не ответил';
+  }
+
+  @override
+  String callParticipantJoined(String name) {
+    return '$name присоединился к звонку';
+  }
+
+  @override
+  String callParticipantLeft(String name) {
+    return '$name покинул звонок';
+  }
+
+  @override
+  String get callParticipantRemovedSelf => 'Вас удалили из звонка';
+
+  @override
+  String callParticipantRemovedOther(String name) {
+    return '$name был удалён из звонка';
+  }
+
+  @override
+  String get callGroupInviteTitle => 'Приглашение в активный звонок';
+
+  @override
+  String callGroupInviteFrom(String inviter) {
+    return '$inviter приглашает вас в звонок';
+  }
+
+  @override
+  String get callJoinButton => 'Присоединиться';
+
+  @override
+  String get callDeclineInviteButton => 'Отклонить';
+
+  @override
+  String callParticipantCount(int count) {
+    return '$count участника';
+  }
+
+  @override
+  String callMaxParticipantsReached(int max) {
+    return 'Звонок заполнен (макс. $max)';
+  }
+
+  @override
+  String get callRemoveParticipantTitle => 'Удалить из звонка';
+
+  @override
+  String callRemoveParticipantConfirm(String name) {
+    return 'Удалить $name из звонка?';
+  }
+
+  @override
+  String get callRemoveParticipantButton => 'Удалить';
+
+  @override
+  String get callCurrentParticipants => 'Сейчас в звонке';
 }

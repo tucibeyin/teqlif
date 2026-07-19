@@ -2807,5 +2807,94 @@
       "mm": {"type": "String"},
       "ss": {"type": "String"}
     }
-  }
+  },
+
+  "callCameraSwitch": "Kamerayı Çevir",
+  "callCameraOn": "Kamera Açık",
+  "callCameraOff": "Kamera Kapalı",
+  "callVideoStarted": "{name} kamerasını açtı",
+  "@callVideoStarted": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callVideoStopped": "{name} kamerasını kapattı",
+  "@callVideoStopped": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+
+  "callInviteTitle": "Aramaya Davet Et",
+  "callInviteButton": "Davet Gönder",
+  "callSearchFollowing": "Takip ettiklerini ara...",
+  "callAlreadyInCall": "Zaten aramada",
+  "callInvitePending": "Davet gönderildi",
+  "callInviteSent": "{name} davet gönderildi",
+  "@callInviteSent": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callInviteRejected": "{name} daveti reddetti",
+  "@callInviteRejected": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callInviteTimeout": "{name} yanıt vermedi",
+  "@callInviteTimeout": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callParticipantJoined": "{name} aramaya katıldı",
+  "@callParticipantJoined": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callParticipantLeft": "{name} aramadan ayrıldı",
+  "@callParticipantLeft": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callParticipantRemovedSelf": "Aramadan çıkarıldınız",
+  "callParticipantRemovedOther": "{name} aramadan çıkarıldı",
+  "@callParticipantRemovedOther": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callGroupInviteTitle": "Aktif Aramaya Davet",
+  "callGroupInviteFrom": "{inviter} seni aramaya çağırıyor",
+  "@callGroupInviteFrom": {
+    "placeholders": {
+      "inviter": {"type": "String"}
+    }
+  },
+  "callJoinButton": "Katıl",
+  "callDeclineInviteButton": "Reddet",
+  "callParticipantCount": "{count} Katılımcı",
+  "@callParticipantCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "callMaxParticipantsReached": "Arama kapasitesi dolu (maks {max})",
+  "@callMaxParticipantsReached": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "callRemoveParticipantTitle": "Aramadan Çıkar",
+  "callRemoveParticipantConfirm": "{name} kişisini aramadan çıkarmak istiyor musunuz?",
+  "@callRemoveParticipantConfirm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "callRemoveParticipantButton": "Çıkar",
+  "callCurrentParticipants": "Şu an aramada"
 }

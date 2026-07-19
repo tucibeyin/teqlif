@@ -20,11 +20,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, text
 
 from app.database import get_db, AsyncSessionLocal
-from app.models.call import Call
+from app.models.call import Call, CallParticipant
 from app.models.user import User
+from app.models.follow import Follow
 from app.models.notification import Notification
 from app.utils.auth import get_current_user
 from app.utils.i18n import _get_t, get_locale
+from app.utils.call_redis import (
+    add_participant_redis, remove_participant_redis,
+    get_participants_redis, is_participant_redis,
+    acquire_invite_lock, release_invite_lock,
+)
+from app.services.call_ws import broadcast_to_call_participants, send_to_user
+from app.constants import ws_types
 from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
 from app.core.task_queue import get_pool
@@ -896,3 +904,387 @@ async def get_call_history(
         "per_page": per_page,
         "has_more": has_more,
     }
+
+
+# ── Grup Arama: Katılımcı Yönetimi ───────────────────────────────────────────
+
+async def _participant_list_payload(call_id: int, db: AsyncSession) -> list[dict]:
+    """Return joined participants as a list of dicts (for API responses and WS payloads)."""
+    result = await db.execute(
+        select(CallParticipant, User)
+        .join(User, User.id == CallParticipant.user_id)
+        .where(
+            CallParticipant.call_id == call_id,
+            CallParticipant.status == "joined",
+        )
+    )
+    rows = result.all()
+    return [
+        {
+            "user_id": cp.user_id,
+            "username": u.username,
+            "avatar": u.profile_image_thumb_url or u.profile_image_url,
+            "role": cp.role,
+            "status": cp.status,
+        }
+        for cp, u in rows
+    ]
+
+
+# ── POST /api/calls/{call_id}/invite ─────────────────────────────────────────
+
+@router.post("/{call_id}/invite")
+async def invite_to_call(
+    call_id: int,
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    invitee_id: int = body.get("invitee_id")
+    logger.info("[CALL_GROUP][INVITE] invite_to_call ENTER | call_id=%d by=%d invitee=%s", call_id, current_user.id, invitee_id)
+    if not invitee_id or invitee_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Invalid invitee_id")
+
+    call = await db.get(Call, call_id)
+    if not call or call.status != "active":
+        raise HTTPException(status_code=404, detail="Active call not found")
+
+    # Requester must be a current participant (caller, callee, or joined guest)
+    is_in_call = (
+        current_user.id in (call.caller_id, call.callee_id)
+        or await is_participant_redis(call_id, current_user.id)
+    )
+    if not is_in_call:
+        raise HTTPException(status_code=403, detail="Not in this call")
+
+    # Requester must follow invitee
+    follows = await db.scalar(
+        select(Follow).where(
+            Follow.follower_id == current_user.id,
+            Follow.followed_id == invitee_id,
+            Follow.status == "accepted",
+        )
+    )
+    if not follows:
+        raise HTTPException(status_code=403, detail="You must follow this user to invite them")
+
+    invitee = await db.get(User, invitee_id)
+    if not invitee:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check max participants
+    current_count = len(await get_participants_redis(call_id))
+    if current_count >= call.max_participants:
+        raise HTTPException(status_code=409, detail="Call is full")
+
+    # Invitee must not already be in another active call
+    invitee_busy = await db.scalar(
+        select(Call).where(
+            or_(Call.caller_id == invitee_id, Call.callee_id == invitee_id),
+            Call.status.in_(["calling", "active"])
+        )
+    )
+    if invitee_busy:
+        raise HTTPException(status_code=409, detail="User is busy in another call")
+
+    # Invitee must not already be a participant of THIS call
+    existing = await db.scalar(
+        select(CallParticipant).where(
+            CallParticipant.call_id == call_id,
+            CallParticipant.user_id == invitee_id,
+            CallParticipant.status.in_(["invited", "ringing", "joined"]),
+        )
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="User already invited or in call")
+
+    # Race condition guard: only one in-flight invite per user+call
+    if not await acquire_invite_lock(call_id, invitee_id):
+        raise HTTPException(status_code=409, detail="Invite already pending for this user")
+
+    now = datetime.now(timezone.utc)
+    livekit_token = _make_livekit_token(call.room_name, invitee)
+
+    cp = CallParticipant(
+        call_id=call_id,
+        user_id=invitee_id,
+        role="guest",
+        status="invited",
+        invited_by=current_user.id,
+        livekit_token=livekit_token,
+        invited_at=now,
+    )
+    db.add(cp)
+    await db.commit()
+    await db.refresh(cp)
+
+    # Schedule timeout task (30s)
+    pool = get_pool()
+    if pool:
+        await pool.enqueue_job(
+            "invite_timeout_task",
+            call_id,
+            invitee_id,
+            cp.id,
+            _defer_by=timedelta(seconds=30),
+            _job_id=f"invite_timeout_{call_id}_{invitee_id}",
+        )
+        logger.info("[CALL_GROUP][INVITE] ARQ timeout task enqueued | call_id=%d invitee=%d", call_id, invitee_id)
+
+    # WS: invite notification to invitee
+    ws_invite_payload = {
+        "type": ws_types.CALL_GROUP_INVITE,
+        "call_id": call_id,
+        "room_name": call.room_name,
+        "livekit_url": settings.livekit_url,
+        "livekit_token": livekit_token,
+        "inviter_id": current_user.id,
+        "inviter_username": current_user.username,
+        "inviter_avatar": current_user.profile_image_thumb_url or current_user.profile_image_url or "",
+        "participant_id": cp.id,
+    }
+    await send_to_user(invitee_id, ws_invite_payload)
+
+    # FCM fallback — send regular (not VoIP) push if invitee is not WS-connected
+    invitee_online = await ws_manager.is_dm_online(invitee_id)
+    if not invitee_online and invitee.fcm_token:
+        logger.info("[CALL_GROUP][INVITE] invitee offline → FCM push | call_id=%d invitee=%d", call_id, invitee_id)
+        try:
+            await send_push(
+                token=invitee.fcm_token,
+                title=current_user.username,
+                body="Sizi aktif bir aramaya davet ediyor",
+                notif_type="call_group_invite",
+                extra_data={
+                    "call_id": str(call_id),
+                    "room_name": call.room_name,
+                    "livekit_url": settings.livekit_url,
+                    "livekit_token": livekit_token,
+                    "inviter_id": str(current_user.id),
+                    "inviter_username": current_user.username,
+                    "inviter_avatar": current_user.profile_image_thumb_url or current_user.profile_image_url or "",
+                    "participant_id": str(cp.id),
+                },
+            )
+        except Exception as fcm_err:
+            logger.warning("[CALL_GROUP][INVITE] FCM push failed (non-fatal) | %s", fcm_err)
+
+    # WS: notify existing participants that an invite was sent
+    await broadcast_to_call_participants(call_id, {
+        "type": ws_types.CALL_PARTICIPANT_INVITED,
+        "call_id": call_id,
+        "invitee_id": invitee_id,
+        "invitee_username": invitee.username,
+        "inviter_id": current_user.id,
+    })
+
+    logger.info("[CALL_GROUP][INVITE] invite OK | call_id=%d by=%d invitee=%d cp_id=%d", call_id, current_user.id, invitee_id, cp.id)
+    return {"participant_id": cp.id, "invitee_id": invitee_id, "status": "invited"}
+
+
+# ── POST /api/calls/{call_id}/participants/{user_id}/accept ───────────────────
+
+@router.post("/{call_id}/participants/{user_id}/accept")
+async def accept_group_invite(
+    call_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    logger.info("[CALL_GROUP][ACCEPT] accept_group_invite ENTER | call_id=%d user=%d", call_id, user_id)
+
+    call = await db.get(Call, call_id)
+    if not call or call.status != "active":
+        raise HTTPException(status_code=404, detail="Active call not found")
+
+    result = await db.execute(
+        select(CallParticipant).where(
+            CallParticipant.call_id == call_id,
+            CallParticipant.user_id == user_id,
+            CallParticipant.status == "invited",
+        ).with_for_update()
+    )
+    cp = result.scalar_one_or_none()
+    if not cp:
+        raise HTTPException(status_code=404, detail="Invite not found or already responded")
+
+    now = datetime.now(timezone.utc)
+    cp.status = "joined"
+    cp.joined_at = now
+    await db.commit()
+
+    # Track in Redis
+    await add_participant_redis(call_id, user_id)
+
+    # Cancel invite timeout task
+    pool = get_pool()
+    if pool:
+        try:
+            await pool.abort_job(f"invite_timeout_{call_id}_{user_id}")
+        except Exception as e:
+            logger.debug("[CALL_GROUP][ACCEPT] abort_job failed (non-fatal): %s", e)
+
+    # Release invite lock
+    await release_invite_lock(call_id, user_id)
+
+    # Broadcast joined event to all participants
+    await broadcast_to_call_participants(call_id, {
+        "type": ws_types.CALL_PARTICIPANT_JOINED,
+        "call_id": call_id,
+        "user_id": user_id,
+        "username": current_user.username,
+        "avatar": current_user.profile_image_thumb_url or current_user.profile_image_url or "",
+    })
+
+    participants = await _participant_list_payload(call_id, db)
+
+    logger.info("[CALL_GROUP][ACCEPT] accept OK | call_id=%d user=%d", call_id, user_id)
+    return {
+        "livekit_token": cp.livekit_token,
+        "livekit_url": settings.livekit_url,
+        "room_name": call.room_name,
+        "participants": participants,
+    }
+
+
+# ── POST /api/calls/{call_id}/participants/{user_id}/reject ───────────────────
+
+@router.post("/{call_id}/participants/{user_id}/reject")
+async def reject_group_invite(
+    call_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    logger.info("[CALL_GROUP][REJECT] reject_group_invite ENTER | call_id=%d user=%d", call_id, user_id)
+
+    result = await db.execute(
+        select(CallParticipant).where(
+            CallParticipant.call_id == call_id,
+            CallParticipant.user_id == user_id,
+            CallParticipant.status.in_(["invited", "ringing"]),
+        ).with_for_update()
+    )
+    cp = result.scalar_one_or_none()
+    if not cp:
+        return {"ok": True}  # idempotent
+
+    invited_by = cp.invited_by
+    cp.status = "rejected"
+    cp.left_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    # Cancel timeout task
+    pool = get_pool()
+    if pool:
+        try:
+            await pool.abort_job(f"invite_timeout_{call_id}_{user_id}")
+        except Exception as e:
+            logger.debug("[CALL_GROUP][REJECT] abort_job (non-fatal): %s", e)
+
+    await release_invite_lock(call_id, user_id)
+
+    # Notify inviter
+    if invited_by:
+        await send_to_user(invited_by, {
+            "type": ws_types.CALL_PARTICIPANT_REJECTED,
+            "call_id": call_id,
+            "user_id": user_id,
+            "username": current_user.username,
+        })
+
+    logger.info("[CALL_GROUP][REJECT] reject OK | call_id=%d user=%d invited_by=%s", call_id, user_id, invited_by)
+    return {"ok": True}
+
+
+# ── POST /api/calls/{call_id}/participants/{user_id}/remove ──────────────────
+
+@router.post("/{call_id}/participants/{user_id}/remove")
+async def remove_participant(
+    call_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    logger.info("[CALL_GROUP][REMOVE] remove_participant ENTER | call_id=%d by=%d target=%d", call_id, current_user.id, user_id)
+
+    call = await db.get(Call, call_id)
+    if not call or call.status != "active":
+        raise HTTPException(status_code=404, detail="Active call not found")
+
+    # Only the initiator (original caller) can remove participants
+    if current_user.id != call.caller_id:
+        raise HTTPException(status_code=403, detail="Only the call initiator can remove participants")
+
+    result = await db.execute(
+        select(CallParticipant).where(
+            CallParticipant.call_id == call_id,
+            CallParticipant.user_id == user_id,
+            CallParticipant.status == "joined",
+        ).with_for_update()
+    )
+    cp = result.scalar_one_or_none()
+    if not cp:
+        raise HTTPException(status_code=404, detail="Participant not found")
+
+    now = datetime.now(timezone.utc)
+    cp.status = "removed"
+    cp.left_at = now
+    await db.commit()
+
+    await remove_participant_redis(call_id, user_id)
+
+    removed_user = await db.get(User, user_id)
+
+    # Notify the removed user first (special personal message)
+    await send_to_user(user_id, {
+        "type": ws_types.CALL_PARTICIPANT_REMOVED,
+        "call_id": call_id,
+        "user_id": user_id,
+        "removed_by": current_user.id,
+        "self_removed": True,
+    })
+
+    # Broadcast to remaining participants
+    await broadcast_to_call_participants(call_id, {
+        "type": ws_types.CALL_PARTICIPANT_REMOVED,
+        "call_id": call_id,
+        "user_id": user_id,
+        "username": removed_user.username if removed_user else None,
+        "removed_by": current_user.id,
+        "self_removed": False,
+    }, exclude_user_id=user_id)
+
+    logger.info("[CALL_GROUP][REMOVE] remove OK | call_id=%d target=%d by=%d", call_id, user_id, current_user.id)
+    return {"ok": True}
+
+
+# ── GET /api/calls/{call_id}/participants ─────────────────────────────────────
+
+@router.get("/{call_id}/participants")
+async def get_call_participants(
+    call_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    call = await db.get(Call, call_id)
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+
+    # Must be a participant or the call's original caller/callee
+    is_authorized = (
+        current_user.id in (call.caller_id, call.callee_id)
+        or await is_participant_redis(call_id, current_user.id)
+    )
+    if not is_authorized:
+        raise HTTPException(status_code=403, detail="Not a participant of this call")
+
+    participants = await _participant_list_payload(call_id, db)
+    logger.debug("[CALL_GROUP][PARTICIPANTS] get | call_id=%d user=%d count=%d", call_id, current_user.id, len(participants))
+    return {"participants": participants}
