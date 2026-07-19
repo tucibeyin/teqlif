@@ -172,83 +172,24 @@ manager = _Manager()
 
 
 async def pubsub_listener():
-    """Her worker için tek seferlik başlatılan arka plan görevi.
+    """Her worker için tek seferlik başlatılan arka plan görevi (Redis Stream)."""
+    from app.core.stream_listener import stream_listener
 
-    Redis bağlantısı koptuğunda otomatik olarak yeniden bağlanır.
-    """
-    import redis
-    import redis.asyncio as aioredis
-    from app.config import settings
+    async def _on_message(data: dict) -> None:
+        stream_id = data.pop("_stream_id")
+        await manager.local_broadcast(stream_id, data)
 
-    delay = 1.0
-    while True:
-        r = aioredis.from_url(settings.redis_url, decode_responses=True)
-        pubsub = r.pubsub()
-        keepalive_task: asyncio.Task | None = None
-        try:
-            await pubsub.subscribe(_PUBSUB_CHANNEL)
-            logger.info("[PUBSUB] Dinleyici başladı (worker)")
-            delay = 1.0  # başarılı bağlantıda sıfırla
-
-            async def _keepalive(ps: aioredis.client.PubSub, conn: aioredis.Redis) -> None:
-                while True:
-                    await asyncio.sleep(25)
-                    try:
-                        await ps.ping()
-                    except Exception:
-                        try:
-                            await conn.aclose()
-                        except Exception:
-                            pass
-                        break
-
-            keepalive_task = asyncio.create_task(_keepalive(pubsub, r))
-
-            while True:
-                try:
-                    async for message in pubsub.listen():
-                        if message["type"] in ("pong", "subscribe", "unsubscribe"):
-                            continue
-                        if message["type"] != "message":
-                            continue
-                        try:
-                            data = json.loads(message["data"])
-                            stream_id = data.pop("_stream_id")
-                            await manager.local_broadcast(stream_id, data)
-                        except Exception as exc:
-                            logger.error("[PUBSUB] Mesaj işleme hatası: %s", exc)
-                    break
-                except redis.exceptions.TimeoutError:
-                    continue
-                except Exception:
-                    raise
-        except asyncio.CancelledError:
-            if keepalive_task:
-                keepalive_task.cancel()
-            await pubsub.unsubscribe(_PUBSUB_CHANNEL)
-            await r.aclose()
-            return
-        except Exception as exc:
-            logger.error("[PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
-        finally:
-            if keepalive_task and not keepalive_task.done():
-                keepalive_task.cancel()
-            try:
-                await pubsub.unsubscribe(_PUBSUB_CHANNEL)
-                await r.aclose()
-            except Exception:
-                pass
-        await asyncio.sleep(delay)
-        delay = min(delay * 2, 30.0)  # exponential backoff, max 30s
+    await stream_listener(_PUBSUB_CHANNEL, _on_message)
 
 
 async def publish_auction(stream_id: int, payload: dict):
-    """Tüm worker'lara Redis pub/sub üzerinden yayınla + outbox stream'e yaz."""
+    """Tüm worker'lara Redis Stream üzerinden yayınla + client replay için outbox'a yaz."""
     from app.core.auction_outbox import outbox_publish
+    from app.core.stream_listener import STREAM_MAXLEN
     redis = await get_redis()
     data = json.dumps({"_stream_id": stream_id, **payload})
-    await redis.publish(_PUBSUB_CHANNEL, data)
-    # Outbox: reconnect'te replay için stream'e yaz (pub/sub'a paralel, bağımsız)
+    await redis.xadd(_PUBSUB_CHANNEL, {"data": data}, maxlen=STREAM_MAXLEN, approximate=True)
+    # Outbox: WebSocket reconnect'te client-side replay için ayrı per-auction stream
     await outbox_publish(stream_id, {"type": WS.AUCTION_STATE, **payload})
     logger.info(
         "[PUBSUB] YAYINLANDI | stream_id=%s status=%s | bu_worker_ws=%s",

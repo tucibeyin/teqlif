@@ -11,6 +11,7 @@ Flow:
   GET  /history      → paginated call history for the current user
 """
 import asyncio
+import secrets
 import time
 from datetime import datetime, timezone, timedelta
 
@@ -424,7 +425,7 @@ async def start_call(
         logger.warning("[CALL_PROCESS][OUT] start_call REJECTED | reason=USER_BUSY caller=%d callee=%d", current_user.id, callee_id)
         raise AppException(status_code=409, message="User is busy", code="USER_BUSY")
 
-    room_name = f"call_{current_user.id}_{callee_id}_{int(time.time() * 1000)}"
+    room_name = f"call_{current_user.id}_{callee_id}_{int(time.time() * 1000)}_{secrets.token_hex(4)}"
     call = Call(caller_id=current_user.id, callee_id=callee_id, room_name=room_name, status="calling")
     db.add(call)
     await db.commit()

@@ -20,11 +20,8 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-import redis
-import redis.asyncio as aioredis
 from sqlalchemy import select
 
-from app.config import settings
 from app.core.auto_mod import auto_mod, analyze_text_all
 from app.core.rate_limit import check_chat_rate_limit
 from app.core.logger import get_logger
@@ -82,139 +79,26 @@ async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> Non
         )
 
 
-# ── Pub/Sub dinleyicileri (arka plan görevleri) ──────────────────────────────
+# ── Stream dinleyicileri (arka plan görevleri) ───────────────────────────────
 async def chat_pubsub_listener() -> None:
-    """Her worker için tek seferlik başlatılan chat pub/sub dinleyicisi.
+    """Her worker için chat stream dinleyicisi (Redis Stream, pub/sub yerine)."""
+    from app.core.stream_listener import stream_listener
 
-    Redis bağlantısı koptuğunda otomatik olarak yeniden bağlanır.
-    """
-    delay = 1.0
-    while True:
-        r = aioredis.from_url(settings.redis_url, decode_responses=True)
-        pubsub = r.pubsub()
-        keepalive_task: asyncio.Task | None = None
-        try:
-            await pubsub.subscribe(_CHAT_CHANNEL)
-            logger.info("[CHAT PUBSUB] Dinleyici başladı (worker)")
-            delay = 1.0
+    async def _on_message(data: dict) -> None:
+        topic = data.pop("_topic")
+        asyncio.create_task(ws_manager.broadcast_local(topic, data))
 
-            async def _keepalive(ps: aioredis.client.PubSub, conn: aioredis.Redis) -> None:
-                while True:
-                    await asyncio.sleep(25)
-                    try:
-                        await ps.ping()
-                    except Exception:
-                        # Bağlantı koptu — listen() döngüsünü kırmak için kapat
-                        try:
-                            await conn.aclose()
-                        except Exception:
-                            pass
-                        break
-
-            keepalive_task = asyncio.create_task(_keepalive(pubsub, r))
-
-            while True:
-                try:
-                    async for message in pubsub.listen():
-                        if message["type"] in ("pong", "subscribe", "unsubscribe"):
-                            continue
-                        if message["type"] != "message":
-                            continue
-                        try:
-                            data = json.loads(message["data"])
-                            topic = data.pop("_topic")
-                            asyncio.create_task(ws_manager.broadcast_local(topic, data))
-                        except Exception as exc:
-                            logger.warning("[CHAT PUBSUB] Mesaj işleme hatası: %s", exc)
-                    break
-                except redis.exceptions.TimeoutError:
-                    continue
-                except Exception:
-                    raise
-        except asyncio.CancelledError:
-            if keepalive_task:
-                keepalive_task.cancel()
-            await pubsub.unsubscribe(_CHAT_CHANNEL)
-            await r.aclose()
-            return
-        except Exception as exc:
-            logger.error("[CHAT PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
-        finally:
-            if keepalive_task and not keepalive_task.done():
-                keepalive_task.cancel()
-            try:
-                await pubsub.unsubscribe(_CHAT_CHANNEL)
-                await r.aclose()
-            except Exception:
-                pass
-        await asyncio.sleep(delay)
-        delay = min(delay * 2, 30.0)
+    await stream_listener(_CHAT_CHANNEL, _on_message)
 
 
 async def moderation_pubsub_listener() -> None:
-    """Her worker için moderasyon event dinleyicisi.
+    """Her worker için moderasyon stream dinleyicisi (Redis Stream, pub/sub yerine)."""
+    from app.core.stream_listener import stream_listener
 
-    Redis bağlantısı koptuğunda otomatik olarak yeniden bağlanır.
-    """
-    delay = 1.0
-    while True:
-        r = aioredis.from_url(settings.redis_url, decode_responses=True)
-        pubsub = r.pubsub()
-        keepalive_task: asyncio.Task | None = None
-        try:
-            await pubsub.subscribe(MOD_CHANNEL)
-            logger.info("[MOD PUBSUB] Dinleyici başladı (worker)")
-            delay = 1.0
+    async def _on_message(data: dict) -> None:
+        await _dispatch_mod_event(data)
 
-            async def _keepalive(ps: aioredis.client.PubSub, conn: aioredis.Redis) -> None:
-                while True:
-                    await asyncio.sleep(25)
-                    try:
-                        await ps.ping()
-                    except Exception:
-                        try:
-                            await conn.aclose()
-                        except Exception:
-                            pass
-                        break
-
-            keepalive_task = asyncio.create_task(_keepalive(pubsub, r))
-
-            while True:
-                try:
-                    async for message in pubsub.listen():
-                        if message["type"] in ("pong", "subscribe", "unsubscribe"):
-                            continue
-                        if message["type"] != "message":
-                            continue
-                        try:
-                            data = json.loads(message["data"])
-                            await _dispatch_mod_event(data)
-                        except Exception as exc:
-                            logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
-                    break
-                except redis.exceptions.TimeoutError:
-                    continue
-                except Exception:
-                    raise
-        except asyncio.CancelledError:
-            if keepalive_task:
-                keepalive_task.cancel()
-            await pubsub.unsubscribe(MOD_CHANNEL)
-            await r.aclose()
-            return
-        except Exception as exc:
-            logger.error("[MOD PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
-        finally:
-            if keepalive_task and not keepalive_task.done():
-                keepalive_task.cancel()
-            try:
-                await pubsub.unsubscribe(MOD_CHANNEL)
-                await r.aclose()
-            except Exception:
-                pass
-        await asyncio.sleep(delay)
-        delay = min(delay * 2, 30.0)
+    await stream_listener(MOD_CHANNEL, _on_message)
 
 
 async def _dispatch_mod_event(data: dict) -> None:

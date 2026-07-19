@@ -7,8 +7,6 @@ import os
 import shutil
 import tempfile
 import uuid
-import redis
-import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, WebSocket, WebSocketDisconnect
 from app.core.rate_limit import limiter, get_user_id_or_ip
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,67 +47,16 @@ async def _broadcast_dm(user_id: int, payload: dict) -> None:
 
 
 async def dm_pubsub_listener() -> None:
-    """Per-worker background task that delivers DM broadcasts from Redis."""
-    delay = 1.0
-    while True:
-        r = aioredis.from_url(settings.redis_url, decode_responses=True)
-        pubsub = r.pubsub()
-        keepalive_task: asyncio.Task | None = None
-        try:
-            await pubsub.subscribe(_DM_CHANNEL)
-            logger.info("[DM PUBSUB] Dinleyici başladı (worker)")
-            delay = 1.0
+    """Per-worker background task that delivers DM broadcasts from Redis Stream."""
+    from app.core.stream_listener import stream_listener
 
-            async def _keepalive(ps: aioredis.client.PubSub, conn: aioredis.Redis) -> None:
-                while True:
-                    await asyncio.sleep(25)
-                    try:
-                        await ps.ping()
-                    except Exception:
-                        try:
-                            await conn.aclose()
-                        except Exception:
-                            pass
-                        break
+    async def _on_message(data: dict) -> None:
+        topic = data.pop("_topic")
+        asyncio.create_task(ws_manager.broadcast_local(topic, data))
 
-            keepalive_task = asyncio.create_task(_keepalive(pubsub, r))
+    await stream_listener(_DM_CHANNEL, _on_message)
 
-            while True:
-                try:
-                    async for message in pubsub.listen():
-                        if message["type"] in ("pong", "subscribe", "unsubscribe"):
-                            continue
-                        if message["type"] != "message":
-                            continue
-                        try:
-                            data = json.loads(message["data"])
-                            topic = data.pop("_topic")
-                            asyncio.create_task(ws_manager.broadcast_local(topic, data))
-                        except Exception as exc:
-                            logger.warning("[DM PUBSUB] Mesaj işleme hatası: %s", exc)
-                    break
-                except redis.exceptions.TimeoutError:
-                    continue
-                except Exception:
-                    raise
-        except asyncio.CancelledError:
-            if keepalive_task:
-                keepalive_task.cancel()
-            await pubsub.unsubscribe(_DM_CHANNEL)
-            await r.aclose()
-            return
-        except Exception as exc:
-            logger.warning("[DM PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
-        finally:
-            if keepalive_task and not keepalive_task.done():
-                keepalive_task.cancel()
-            try:
-                await pubsub.unsubscribe(_DM_CHANNEL)
-                await r.aclose()
-            except Exception:
-                pass
-        await asyncio.sleep(delay)
-        delay = min(delay * 2, 30.0)
+
 
 
 @router.get("/conversations", response_model=List[ConversationOut])

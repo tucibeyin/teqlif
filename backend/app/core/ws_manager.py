@@ -30,10 +30,11 @@ Topic tabanlı birleşik WebSocket bağlantı yönetimi. Tüm WS tipleri
   await ws_manager.shutdown()
 
 ── Yatay Ölçekleme (Multi-Worker) ──────────────────────────────────────────
-  ws_manager.publish() → Redis channel'a yayınlar
-  Her worker'ın pub/sub listener'ı Redis'ten alır
+  ws_manager.publish() → Redis Stream'e XADD yapar
+  Her worker'ın stream_listener'ı kendi pozisyonundan XREAD eder
   → ws_manager.broadcast_local(topic, data) çağırır
   Bu sayede mesaj tüm worker'lardaki abonelere ulaşır.
+  Pub/Sub'dan farkı: worker yeniden bağlandığında kaçırılan mesajlar replay edilir.
 """
 
 import asyncio
@@ -169,31 +170,34 @@ class GlobalWSManager:
 
     async def publish(
         self,
-        redis_channel: str,
+        stream_name: str,
         topic: str,
         payload: dict,
     ) -> None:
         """
-        Mesajı Redis Pub/Sub aracılığıyla tüm yatay worker'lara yayar.
+        Mesajı Redis Stream'e yazarak tüm yatay worker'lara yayar.
 
-        Her worker'ın ilgili pub/sub dinleyicisi Redis'ten mesajı alır ve
-        broadcast_local(topic, data) çağırarak kendi bağlantılarına dağıtır.
+        Her worker'ın stream_listener'ı kendi okuma pozisyonundan XREAD eder
+        ve broadcast_local(topic, data) çağırarak kendi bağlantılarına dağıtır.
+        Pub/Sub'un aksine worker yeniden bağlandığında kaçırılan mesajlar
+        position'dan itibaren replay edilir — kayıp mesaj olmaz.
 
         Parametreler:
-            redis_channel: Redis kanalı adı ("chat_broadcast" vb.)
-            topic:         Hedef WS topic'i ("chat:299" vb.)
-            payload:       İstemciye gönderilecek mesaj
+            stream_name: Redis Stream adı ("dm_broadcast" vb.)
+            topic:       Hedef WS topic'i ("dm:{user_id}" vb.)
+            payload:     İstemciye gönderilecek mesaj
 
         Hata durumunda loglayıp sessizce devam eder — publisher bloklanmaz.
         """
         try:
+            from app.core.stream_listener import STREAM_MAXLEN
             redis = await get_redis()
             data = json.dumps({"_topic": topic, **payload})
-            await redis.publish(redis_channel, data)
+            await redis.xadd(stream_name, {"data": data}, maxlen=STREAM_MAXLEN, approximate=True)
         except Exception as exc:
             logger.error(
-                "[WS GATEWAY] Redis publish hatası | channel=%s topic=%s | %s",
-                redis_channel, topic, exc, exc_info=True,
+                "[WS GATEWAY] Redis stream yazma hatası | stream=%s topic=%s | %s",
+                stream_name, topic, exc, exc_info=True,
             )
 
     # ── Call Event Replay (WS kayıp event recovery) ──────────────────────

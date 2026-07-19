@@ -57,10 +57,11 @@ async def publish_mod_event(
     target_user_id: int,
     **extra,
 ) -> None:
-    """Tüm worker'lara moderasyon eventi yayınla.
+    """Tüm worker'lara moderasyon eventi yayınla (Redis Stream üzerinden).
 
     extra kwargs payload'a düz olarak eklenir (örn: username=, promoted_by=).
     """
+    from app.core.stream_listener import STREAM_MAXLEN
     redis = await get_redis()
     data = json.dumps({
         "_stream_id": stream_id,
@@ -68,7 +69,7 @@ async def publish_mod_event(
         "user_id": target_user_id,
         **extra,
     })
-    await redis.publish(MOD_CHANNEL, data)
+    await redis.xadd(MOD_CHANNEL, {"data": data}, maxlen=STREAM_MAXLEN, approximate=True)
 
 
 # ── LiveKit yardımcısı ───────────────────────────────────────────────────────
