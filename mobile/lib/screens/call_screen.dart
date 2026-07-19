@@ -32,6 +32,32 @@ class _CallScreenState extends State<CallScreen> {
   bool _hasPopped = false;
   late StreamSubscription<int> _proximitySubscription;
 
+  bool _isTogglingMic = false;
+  bool _isTogglingCamera = false;
+
+  Future<void> _handleMicToggle() async {
+    if (_isTogglingMic) return;
+    setState(() => _isTogglingMic = true);
+    try {
+      await CallService.instance.toggleMute();
+      await Future.delayed(const Duration(milliseconds: 500));
+    } finally {
+      if (mounted) setState(() => _isTogglingMic = false);
+    }
+  }
+
+  Future<void> _handleCameraToggle() async {
+    if (_isTogglingCamera) return;
+    setState(() => _isTogglingCamera = true);
+    try {
+      _cpLog('UI', 'Camera toggle tap | localVideo=${CallService.instance.state.value.localVideoEnabled}');
+      await CallService.instance.toggleCamera();
+      await Future.delayed(const Duration(milliseconds: 500));
+    } finally {
+      if (mounted) setState(() => _isTogglingCamera = false);
+    }
+  }
+
   // PiP local video position (left/top from screen origin, lazy-init on first build)
   Offset? _pipPos;
 
@@ -464,8 +490,8 @@ class _CallScreenState extends State<CallScreen> {
                                           : Colors.black.withValues(
                                               alpha: 0.05,
                                             ),
-                                      onTap: () =>
-                                          CallService.instance.toggleMute(),
+                                      isLoading: _isTogglingMic,
+                                      onTap: _handleMicToggle,
                                     ),
                                     _ControlButton(
                                       icon: cs.localVideoEnabled
@@ -479,10 +505,8 @@ class _CallScreenState extends State<CallScreen> {
                                           : AppColors.isDark(context)
                                           ? Colors.white.withValues(alpha: 0.2)
                                           : Colors.black.withValues(alpha: 0.05),
-                                      onTap: () {
-                                        _cpLog('UI', 'Camera toggle tap | localVideo=${cs.localVideoEnabled}');
-                                        CallService.instance.toggleCamera();
-                                      },
+                                      isLoading: _isTogglingCamera,
+                                      onTap: _handleCameraToggle,
                                     ),
                                     _ControlButton(
                                       icon: FontAwesomeIcons.volumeHigh,
@@ -741,41 +765,55 @@ class _ControlButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
+  final bool isLoading;
 
   const _ControlButton({
     required this.icon,
     required this.label,
     required this.color,
     required this.onTap,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Center(
-              child: FaIcon(
-                icon,
-                color: AppColors.textPrimary(context),
-                size: 22,
+      onTap: isLoading ? null : onTap,
+      child: Opacity(
+        opacity: isLoading ? 0.5 : 1.0,
+        child: Column(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Center(
+                child: isLoading
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.textPrimary(context),
+                        ),
+                      )
+                    : FaIcon(
+                        icon,
+                        color: AppColors.textPrimary(context),
+                        size: 22,
+                      ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 13,
+            const SizedBox(height: 10),
+            Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 13,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

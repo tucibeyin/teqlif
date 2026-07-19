@@ -208,7 +208,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen>
                       final filter = _filters[_tabs.index];
                       _fetchPage(filter, refresh: true);
                     },
-                    child: const Text('Retry'),
+                    child: Text(l.callHistoryRetry),
                   ),
                 ],
               ),
@@ -332,7 +332,7 @@ class _CallTile extends StatelessWidget {
     return '$m:$s';
   }
 
-  String _formatTime(DateTime? dt) {
+  String _formatTime(AppLocalizations l, DateTime? dt) {
     if (dt == null) return '';
     final now = DateTime.now();
     final local = dt.toLocal();
@@ -343,9 +343,9 @@ class _CallTile extends StatelessWidget {
     final timeStr = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 
     if (diffDays == 0) {
-      return 'Bugün $timeStr';
+      return '${l.callHistoryToday} $timeStr';
     } else if (diffDays == 1) {
-      return 'Dün $timeStr';
+      return '${l.callHistoryYesterday} $timeStr';
     } else {
       final d = local.day.toString().padLeft(2, '0');
       final m = local.month.toString().padLeft(2, '0');
@@ -357,11 +357,12 @@ class _CallTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final l = AppLocalizations.of(context)!;
 
     final isMissed = item.isMissed || item.status == 'missed';
     final isOutgoing = item.isOutgoing;
     final duration = _formatDuration(item.durationSeconds);
-    final timeLabel = _formatTime(item.startedAt);
+    final timeLabel = _formatTime(l, item.startedAt);
 
     // Direction icon + color
     final (IconData dirIcon, Color dirColor) = switch (item.status) {
@@ -373,11 +374,11 @@ class _CallTile extends StatelessWidget {
 
     // Status label
     final String statusLabel = switch (item.status) {
-      'missed' => 'Missed',
-      'rejected' => isOutgoing ? 'Declined' : 'You declined',
+      'missed' => l.callHistoryStatusMissed,
+      'rejected' => isOutgoing ? l.callHistoryStatusDeclined : l.callHistoryStatusYouDeclined,
       'ended' when (item.durationSeconds ?? 0) > 0 => duration,
-      'ended' => isOutgoing ? 'No answer' : 'Not answered',
-      'calling' => 'Cancelled',
+      'ended' => isOutgoing ? l.callHistoryStatusNoAnswer : l.callHistoryStatusNotAnswered,
+      'calling' => l.callHistoryStatusCancelled,
       _ => item.status,
     };
 
@@ -434,7 +435,7 @@ class _CallTile extends StatelessWidget {
         ],
       ),
       title: Text(
-        item.otherUsername ?? 'Unknown',
+        item.otherUsername ?? l.callHistoryUnknown,
         style: TextStyle(
           fontWeight: isMissed ? FontWeight.bold : FontWeight.normal,
           color: isMissed ? Colors.red : null,

@@ -2841,27 +2841,33 @@
   "callHistoryDurationShort": "{mm}:{ss}",
   "@callHistoryDurationShort": {
     "placeholders": {
-      "mm": {"type": "String"},
-      "ss": {"type": "String"}
+      "mm": {
+        "type": "String"
+      },
+      "ss": {
+        "type": "String"
+      }
     }
   },
-
   "callCameraSwitch": "Switch Camera",
   "callCameraOn": "Camera On",
   "callCameraOff": "Camera Off",
   "callVideoStarted": "{name} turned on camera",
   "@callVideoStarted": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callVideoStopped": "{name} turned off camera",
   "@callVideoStopped": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "callInviteTitle": "Invite to Call",
   "callInviteButton": "Send Invite",
   "callSearchFollowing": "Search people you follow...",
@@ -2870,45 +2876,59 @@
   "callInviteSent": "Invite sent to {name}",
   "@callInviteSent": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callInviteRejected": "{name} declined the invite",
   "@callInviteRejected": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callInviteTimeout": "{name} didn't respond",
   "@callInviteTimeout": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantJoined": "{name} joined the call",
   "@callParticipantJoined": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantLeft": "{name} left the call",
   "@callParticipantLeft": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantRemovedSelf": "You were removed from the call",
   "callParticipantRemovedOther": "{name} was removed from the call",
   "@callParticipantRemovedOther": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callGroupInviteTitle": "Active Call Invite",
   "callGroupInviteFrom": "{inviter} is inviting you to a call",
   "@callGroupInviteFrom": {
     "placeholders": {
-      "inviter": {"type": "String"}
+      "inviter": {
+        "type": "String"
+      }
     }
   },
   "callJoinButton": "Join",
@@ -2916,22 +2936,38 @@
   "callParticipantCount": "{count} Participants",
   "@callParticipantCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "callMaxParticipantsReached": "Call is full (max {max})",
   "@callMaxParticipantsReached": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "callRemoveParticipantTitle": "Remove from Call",
   "callRemoveParticipantConfirm": "Remove {name} from the call?",
   "@callRemoveParticipantConfirm": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callRemoveParticipantButton": "Remove",
-  "callCurrentParticipants": "Currently in call"
+  "callCurrentParticipants": "Currently in call",
+  "callHistoryToday": "Today",
+  "callHistoryYesterday": "Yesterday",
+  "callHistoryRetry": "Retry",
+  "callHistoryUnknown": "Unknown",
+  "callHistoryStatusMissed": "Missed",
+  "callHistoryStatusDeclined": "Declined",
+  "callHistoryStatusYouDeclined": "You declined",
+  "callHistoryStatusNoAnswer": "No answer",
+  "callHistoryStatusNotAnswered": "Not answered",
+  "callHistoryStatusCancelled": "Cancelled"
 }

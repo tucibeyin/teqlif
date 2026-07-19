@@ -9689,6 +9689,66 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Şu an aramada'**
   String get callCurrentParticipants;
+
+  /// No description provided for @callHistoryToday.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bugün'**
+  String get callHistoryToday;
+
+  /// No description provided for @callHistoryYesterday.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dün'**
+  String get callHistoryYesterday;
+
+  /// No description provided for @callHistoryRetry.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeniden Dene'**
+  String get callHistoryRetry;
+
+  /// No description provided for @callHistoryUnknown.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilinmiyor'**
+  String get callHistoryUnknown;
+
+  /// No description provided for @callHistoryStatusMissed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cevapsız'**
+  String get callHistoryStatusMissed;
+
+  /// No description provided for @callHistoryStatusDeclined.
+  ///
+  /// In tr, this message translates to:
+  /// **'Reddedildi'**
+  String get callHistoryStatusDeclined;
+
+  /// No description provided for @callHistoryStatusYouDeclined.
+  ///
+  /// In tr, this message translates to:
+  /// **'Siz reddettiniz'**
+  String get callHistoryStatusYouDeclined;
+
+  /// No description provided for @callHistoryStatusNoAnswer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cevap yok'**
+  String get callHistoryStatusNoAnswer;
+
+  /// No description provided for @callHistoryStatusNotAnswered.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cevaplanmadı'**
+  String get callHistoryStatusNotAnswered;
+
+  /// No description provided for @callHistoryStatusCancelled.
+  ///
+  /// In tr, this message translates to:
+  /// **'İptal edildi'**
+  String get callHistoryStatusCancelled;
 }
 
 class _AppLocalizationsDelegate

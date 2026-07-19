@@ -5384,4 +5384,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get callCurrentParticipants => 'Currently in call';
+
+  @override
+  String get callHistoryToday => 'Today';
+
+  @override
+  String get callHistoryYesterday => 'Yesterday';
+
+  @override
+  String get callHistoryRetry => 'Retry';
+
+  @override
+  String get callHistoryUnknown => 'Unknown';
+
+  @override
+  String get callHistoryStatusMissed => 'Missed';
+
+  @override
+  String get callHistoryStatusDeclined => 'Declined';
+
+  @override
+  String get callHistoryStatusYouDeclined => 'You declined';
+
+  @override
+  String get callHistoryStatusNoAnswer => 'No answer';
+
+  @override
+  String get callHistoryStatusNotAnswered => 'Not answered';
+
+  @override
+  String get callHistoryStatusCancelled => 'Cancelled';
 }

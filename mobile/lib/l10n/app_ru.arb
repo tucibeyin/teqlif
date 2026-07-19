@@ -2806,27 +2806,33 @@
   "callHistoryDurationShort": "{mm}:{ss}",
   "@callHistoryDurationShort": {
     "placeholders": {
-      "mm": {"type": "String"},
-      "ss": {"type": "String"}
+      "mm": {
+        "type": "String"
+      },
+      "ss": {
+        "type": "String"
+      }
     }
   },
-
   "callCameraSwitch": "Переключить камеру",
   "callCameraOn": "Камера включена",
   "callCameraOff": "Камера выключена",
   "callVideoStarted": "{name} включил камеру",
   "@callVideoStarted": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callVideoStopped": "{name} выключил камеру",
   "@callVideoStopped": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "callInviteTitle": "Пригласить в звонок",
   "callInviteButton": "Отправить приглашение",
   "callSearchFollowing": "Поиск среди подписок...",
@@ -2835,45 +2841,59 @@
   "callInviteSent": "Приглашение отправлено {name}",
   "@callInviteSent": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callInviteRejected": "{name} отклонил приглашение",
   "@callInviteRejected": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callInviteTimeout": "{name} не ответил",
   "@callInviteTimeout": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantJoined": "{name} присоединился к звонку",
   "@callParticipantJoined": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantLeft": "{name} покинул звонок",
   "@callParticipantLeft": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantRemovedSelf": "Вас удалили из звонка",
   "callParticipantRemovedOther": "{name} был удалён из звонка",
   "@callParticipantRemovedOther": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callGroupInviteTitle": "Приглашение в активный звонок",
   "callGroupInviteFrom": "{inviter} приглашает вас в звонок",
   "@callGroupInviteFrom": {
     "placeholders": {
-      "inviter": {"type": "String"}
+      "inviter": {
+        "type": "String"
+      }
     }
   },
   "callJoinButton": "Присоединиться",
@@ -2881,22 +2901,38 @@
   "callParticipantCount": "{count} участника",
   "@callParticipantCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "callMaxParticipantsReached": "Звонок заполнен (макс. {max})",
   "@callMaxParticipantsReached": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "callRemoveParticipantTitle": "Удалить из звонка",
   "callRemoveParticipantConfirm": "Удалить {name} из звонка?",
   "@callRemoveParticipantConfirm": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callRemoveParticipantButton": "Удалить",
-  "callCurrentParticipants": "Сейчас в звонке"
+  "callCurrentParticipants": "Сейчас в звонке",
+  "callHistoryToday": "Сегодня",
+  "callHistoryYesterday": "Вчера",
+  "callHistoryRetry": "Повторить",
+  "callHistoryUnknown": "Неизвестно",
+  "callHistoryStatusMissed": "Пропущенный",
+  "callHistoryStatusDeclined": "Отклонено",
+  "callHistoryStatusYouDeclined": "Вы отклонили",
+  "callHistoryStatusNoAnswer": "Нет ответа",
+  "callHistoryStatusNotAnswered": "Не отвечено",
+  "callHistoryStatusCancelled": "Отменено"
 }

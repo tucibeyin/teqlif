@@ -2804,27 +2804,33 @@
   "callHistoryDurationShort": "{mm}:{ss}",
   "@callHistoryDurationShort": {
     "placeholders": {
-      "mm": {"type": "String"},
-      "ss": {"type": "String"}
+      "mm": {
+        "type": "String"
+      },
+      "ss": {
+        "type": "String"
+      }
     }
   },
-
   "callCameraSwitch": "Kamerayı Çevir",
   "callCameraOn": "Kamera Açık",
   "callCameraOff": "Kamera Kapalı",
   "callVideoStarted": "{name} kamerasını açtı",
   "@callVideoStarted": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callVideoStopped": "{name} kamerasını kapattı",
   "@callVideoStopped": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "callInviteTitle": "Aramaya Davet Et",
   "callInviteButton": "Davet Gönder",
   "callSearchFollowing": "Takip ettiklerini ara...",
@@ -2833,45 +2839,59 @@
   "callInviteSent": "{name} davet gönderildi",
   "@callInviteSent": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callInviteRejected": "{name} daveti reddetti",
   "@callInviteRejected": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callInviteTimeout": "{name} yanıt vermedi",
   "@callInviteTimeout": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantJoined": "{name} aramaya katıldı",
   "@callParticipantJoined": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantLeft": "{name} aramadan ayrıldı",
   "@callParticipantLeft": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantRemovedSelf": "Aramadan çıkarıldınız",
   "callParticipantRemovedOther": "{name} aramadan çıkarıldı",
   "@callParticipantRemovedOther": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callGroupInviteTitle": "Aktif Aramaya Davet",
   "callGroupInviteFrom": "{inviter} seni aramaya çağırıyor",
   "@callGroupInviteFrom": {
     "placeholders": {
-      "inviter": {"type": "String"}
+      "inviter": {
+        "type": "String"
+      }
     }
   },
   "callJoinButton": "Katıl",
@@ -2879,22 +2899,38 @@
   "callParticipantCount": "{count} Katılımcı",
   "@callParticipantCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "callMaxParticipantsReached": "Arama kapasitesi dolu (maks {max})",
   "@callMaxParticipantsReached": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "callRemoveParticipantTitle": "Aramadan Çıkar",
   "callRemoveParticipantConfirm": "{name} kişisini aramadan çıkarmak istiyor musunuz?",
   "@callRemoveParticipantConfirm": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callRemoveParticipantButton": "Çıkar",
-  "callCurrentParticipants": "Şu an aramada"
+  "callCurrentParticipants": "Şu an aramada",
+  "callHistoryToday": "Bugün",
+  "callHistoryYesterday": "Dün",
+  "callHistoryRetry": "Yeniden Dene",
+  "callHistoryUnknown": "Bilinmiyor",
+  "callHistoryStatusMissed": "Cevapsız",
+  "callHistoryStatusDeclined": "Reddedildi",
+  "callHistoryStatusYouDeclined": "Siz reddettiniz",
+  "callHistoryStatusNoAnswer": "Cevap yok",
+  "callHistoryStatusNotAnswered": "Cevaplanmadı",
+  "callHistoryStatusCancelled": "İptal edildi"
 }

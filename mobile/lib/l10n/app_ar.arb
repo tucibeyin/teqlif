@@ -2805,27 +2805,33 @@
   "callHistoryDurationShort": "{mm}:{ss}",
   "@callHistoryDurationShort": {
     "placeholders": {
-      "mm": {"type": "String"},
-      "ss": {"type": "String"}
+      "mm": {
+        "type": "String"
+      },
+      "ss": {
+        "type": "String"
+      }
     }
   },
-
   "callCameraSwitch": "تبديل الكاميرا",
   "callCameraOn": "الكاميرا مفتوحة",
   "callCameraOff": "الكاميرا مغلقة",
   "callVideoStarted": "{name} فتح الكاميرا",
   "@callVideoStarted": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callVideoStopped": "{name} أغلق الكاميرا",
   "@callVideoStopped": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "callInviteTitle": "دعوة للمكالمة",
   "callInviteButton": "إرسال دعوة",
   "callSearchFollowing": "ابحث عمن تتابعهم...",
@@ -2834,45 +2840,59 @@
   "callInviteSent": "تم إرسال دعوة لـ {name}",
   "@callInviteSent": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callInviteRejected": "{name} رفض الدعوة",
   "@callInviteRejected": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callInviteTimeout": "{name} لم يستجب",
   "@callInviteTimeout": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantJoined": "{name} انضم إلى المكالمة",
   "@callParticipantJoined": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantLeft": "{name} غادر المكالمة",
   "@callParticipantLeft": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callParticipantRemovedSelf": "تم إزالتك من المكالمة",
   "callParticipantRemovedOther": "تم إزالة {name} من المكالمة",
   "@callParticipantRemovedOther": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callGroupInviteTitle": "دعوة لمكالمة نشطة",
   "callGroupInviteFrom": "{inviter} يدعوك للانضمام إلى مكالمة",
   "@callGroupInviteFrom": {
     "placeholders": {
-      "inviter": {"type": "String"}
+      "inviter": {
+        "type": "String"
+      }
     }
   },
   "callJoinButton": "انضم",
@@ -2880,22 +2900,38 @@
   "callParticipantCount": "{count} مشاركين",
   "@callParticipantCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "callMaxParticipantsReached": "المكالمة ممتلئة (الحد الأقصى {max})",
   "@callMaxParticipantsReached": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "callRemoveParticipantTitle": "إزالة من المكالمة",
   "callRemoveParticipantConfirm": "هل تريد إزالة {name} من المكالمة؟",
   "@callRemoveParticipantConfirm": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "callRemoveParticipantButton": "إزالة",
-  "callCurrentParticipants": "في المكالمة الآن"
+  "callCurrentParticipants": "في المكالمة الآن",
+  "callHistoryToday": "اليوم",
+  "callHistoryYesterday": "أمس",
+  "callHistoryRetry": "إعادة المحاولة",
+  "callHistoryUnknown": "غير معروف",
+  "callHistoryStatusMissed": "مكالمة فائتة",
+  "callHistoryStatusDeclined": "مرفوضة",
+  "callHistoryStatusYouDeclined": "أنت رفضت",
+  "callHistoryStatusNoAnswer": "لا يوجد رد",
+  "callHistoryStatusNotAnswered": "لم يتم الرد",
+  "callHistoryStatusCancelled": "ألغيت"
 }

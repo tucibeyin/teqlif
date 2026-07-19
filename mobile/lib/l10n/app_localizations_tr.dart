@@ -5387,4 +5387,34 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get callCurrentParticipants => 'Şu an aramada';
+
+  @override
+  String get callHistoryToday => 'Bugün';
+
+  @override
+  String get callHistoryYesterday => 'Dün';
+
+  @override
+  String get callHistoryRetry => 'Yeniden Dene';
+
+  @override
+  String get callHistoryUnknown => 'Bilinmiyor';
+
+  @override
+  String get callHistoryStatusMissed => 'Cevapsız';
+
+  @override
+  String get callHistoryStatusDeclined => 'Reddedildi';
+
+  @override
+  String get callHistoryStatusYouDeclined => 'Siz reddettiniz';
+
+  @override
+  String get callHistoryStatusNoAnswer => 'Cevap yok';
+
+  @override
+  String get callHistoryStatusNotAnswered => 'Cevaplanmadı';
+
+  @override
+  String get callHistoryStatusCancelled => 'İptal edildi';
 }

@@ -5435,4 +5435,34 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get callCurrentParticipants => 'Сейчас в звонке';
+
+  @override
+  String get callHistoryToday => 'Сегодня';
+
+  @override
+  String get callHistoryYesterday => 'Вчера';
+
+  @override
+  String get callHistoryRetry => 'Повторить';
+
+  @override
+  String get callHistoryUnknown => 'Неизвестно';
+
+  @override
+  String get callHistoryStatusMissed => 'Пропущенный';
+
+  @override
+  String get callHistoryStatusDeclined => 'Отклонено';
+
+  @override
+  String get callHistoryStatusYouDeclined => 'Вы отклонили';
+
+  @override
+  String get callHistoryStatusNoAnswer => 'Нет ответа';
+
+  @override
+  String get callHistoryStatusNotAnswered => 'Не отвечено';
+
+  @override
+  String get callHistoryStatusCancelled => 'Отменено';
 }

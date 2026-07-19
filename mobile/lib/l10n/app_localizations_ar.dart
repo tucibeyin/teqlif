@@ -5355,4 +5355,34 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get callCurrentParticipants => 'في المكالمة الآن';
+
+  @override
+  String get callHistoryToday => 'اليوم';
+
+  @override
+  String get callHistoryYesterday => 'أمس';
+
+  @override
+  String get callHistoryRetry => 'إعادة المحاولة';
+
+  @override
+  String get callHistoryUnknown => 'غير معروف';
+
+  @override
+  String get callHistoryStatusMissed => 'مكالمة فائتة';
+
+  @override
+  String get callHistoryStatusDeclined => 'مرفوضة';
+
+  @override
+  String get callHistoryStatusYouDeclined => 'أنت رفضت';
+
+  @override
+  String get callHistoryStatusNoAnswer => 'لا يوجد رد';
+
+  @override
+  String get callHistoryStatusNotAnswered => 'لم يتم الرد';
+
+  @override
+  String get callHistoryStatusCancelled => 'ألغيت';
 }
