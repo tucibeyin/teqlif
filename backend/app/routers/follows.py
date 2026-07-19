@@ -219,6 +219,7 @@ async def get_following(
             "id": u.id,
             "username": u.username,
             "full_name": u.full_name,
+            "avatar": u.profile_image_thumb_url or u.profile_image_url,
             "is_following": u.id in following_ids,
             "is_me": current_user is not None and u.id == current_user.id,
         }

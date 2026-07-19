@@ -364,7 +364,7 @@ class CallService {
     CallStatus.connecting: {CallStatus.connected, CallStatus.ended, CallStatus.idle, CallStatus.reconnecting},
     CallStatus.connected: {CallStatus.ended, CallStatus.reconnecting, CallStatus.idle},
     CallStatus.reconnecting: {CallStatus.connected, CallStatus.ended, CallStatus.idle},
-    CallStatus.ended: {CallStatus.idle},
+    CallStatus.ended: {CallStatus.idle, CallStatus.calling},
     CallStatus.rejected: {CallStatus.idle},
     CallStatus.missed: {CallStatus.idle},
     CallStatus.noAnswer: {CallStatus.idle},
@@ -529,6 +529,10 @@ class CallService {
   }) async {
     _cpLog('OUT', 'startCall ENTERED | calleeId=$calleeId calleeUsername=$calleeUsername');
     _resetTimer?.cancel();
+    // If previous call just ended and reset timer was pending, clear elapsed now.
+    if (state.value.status == CallStatus.ended) {
+      elapsed.value = Duration.zero;
+    }
     if (hasActiveCall) {
       _cpLog('OUT', 'startCall BLOCKED | hasActiveCall=true currentStatus=${state.value.status}');
       return;
@@ -893,6 +897,10 @@ class CallService {
         _cpLog('IN', '_activateCalleeAudio: audioSessionActivated received | waitMs=$waitMs');
         _cpLog('HW', 'didActivateAudioSession RECEIVED | waitMs=$waitMs');
         _callkitAudioReady = null;
+      }
+      if (state.value.status == CallStatus.ended || state.value.status == CallStatus.idle) {
+        _cpLog('IN', '_activateCalleeAudio: call already ended after audio wait — aborting | status=${state.value.status.name}');
+        return;
       }
     } else if (Platform.isAndroid && state.value.callId != null) {
       final uuid = _formatToUuid(state.value.callId!.toString());
@@ -2309,7 +2317,7 @@ class CallService {
       final myId = await StorageService.getCurrentUserId();
       if (myId == null) return [];
       _cpLog('GROUP', 'fetchFollowingForInvite | userId=$myId');
-      final items = await _getList('/users/$myId/following');
+      final items = await _getList('/follows/$myId/following');
       _cpLog('GROUP', 'fetchFollowingForInvite | count=${items.length}');
       return items.map((u) => Map<String, dynamic>.from(u as Map)).toList();
     } catch (e) {
