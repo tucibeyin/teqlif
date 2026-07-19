@@ -676,8 +676,15 @@ class CallService {
       _activeIncomingCallId = incomingCallId; // Synchronously set BEFORE first await
     }
 
-    if (incomingCallId != null && incomingCallId == _lastEndedCallId) {
-      _cpLog('IN', 'ghostCall BLOCKED | incoming=$incomingCallId == lastEnded=$_lastEndedCallId');
+    if (incomingCallId != null && _lastEndedCallId != null && incomingCallId <= _lastEndedCallId!) {
+      _cpLog('IN', 'ghostCall BLOCKED | incoming=$incomingCallId <= lastEnded=$_lastEndedCallId (stale FCM/delayed push)');
+      try {
+        final formattedUuid = _formatToUuid(incomingCallId.toString());
+        await FlutterCallkitIncoming.endCall(formattedUuid);
+        _cpLog('IN', 'ghostCall BLOCKED → notification dismissed | callId=$incomingCallId uuid=$formattedUuid');
+      } catch (e) {
+        _cpLog('IN', 'ghostCall BLOCKED endCall ERROR | $e');
+      }
       _activeIncomingCallId = null; // Blocked — reset so next real call can proceed
       return;
     }
