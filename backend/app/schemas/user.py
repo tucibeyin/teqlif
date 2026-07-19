@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 import re
 
 
@@ -38,6 +38,19 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     login_identifier: str
     password: str
+
+    @model_validator(mode='before')
+    @classmethod
+    def _accept_legacy_username(cls, data: dict) -> dict:
+        # Accept 'username' or 'email' as aliases for 'login_identifier'.
+        # External tools (Postman, Python scripts, monitoring) may use the old
+        # field name; silently map them so they get a 200 instead of a 422.
+        if isinstance(data, dict) and 'login_identifier' not in data:
+            for alias in ('username', 'email'):
+                if alias in data:
+                    data = {**data, 'login_identifier': data[alias]}
+                    break
+        return data
 
 
 class UserOut(BaseModel):
