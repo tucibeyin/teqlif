@@ -41,21 +41,19 @@ except Exception:
 _BAD_WORDS_DIR = os.path.join(os.path.dirname(__file__), "bad_words")
 _SUPPORTED_LANGS = ("tr", "en", "ar")
 
-# Normalize'da temizlenecek karakter sınıfı: noktalama, boşluk ve ayırıcılar
-_STRIP_RE = re.compile(r"[\s\.,\-_\*\+|\\/:;'\"!?@#$%^&()\[\]{}<>~`​­]+")
+# Normalize'da temizlenecek karakter sınıfı: noktalama ve ayırıcılar (BOŞLUKLAR HARİÇ)
+_PUNCT_RE = re.compile(r"[\.,\-_\*\+|\\/:;'\"!?@#$%^&()\[\]{}<>~`​­]+")
 
 
 # ── Metin normalleştirme ──────────────────────────────────────────────────────
 
 def normalize_text(text: str) -> str:
     """
-    Metni küçük harfe çevirip noktalama, boşluk ve ayırıcı karakterleri kaldırır.
-
-    Örnek:
-        "S.i.k.t.i.r  git!" → "siktirgo"  (substring eşleşmesi için)
+    Metni küçük harfe çevirip SADECE noktalama işaretlerini kaldırır.
+    Boşluklar kelime ayrımı için yerinde kalır.
     """
     text = text.lower()
-    text = _STRIP_RE.sub("", text)
+    text = _PUNCT_RE.sub("", text)
     return text
 
 
@@ -71,7 +69,8 @@ def _load_bad_words(language: str) -> frozenset[str]:
     try:
         with open(path, encoding="utf-8") as f:
             words: list[str] = json.load(f)
-        normalized = frozenset(normalize_text(w) for w in words if w.strip())
+        # Sözlükteki kelimeleri boşluksuz yalın hale getiriyoruz
+        normalized = frozenset(w.lower().replace(" ", "").strip() for w in words if w.strip())
         logger.info("[AUTO_MOD] %s: %d kelime yüklendi", language, len(normalized))
         return normalized
     except FileNotFoundError:
@@ -86,36 +85,48 @@ def _load_bad_words(language: str) -> frozenset[str]:
 
 def analyze_text(text: str, language: str = "tr") -> bool:
     """
-    Metni normalize edip belirtilen dil sözlüğünde substring eşleşmesi arar.
-
-    Args:
-        text:     Kontrol edilecek ham metin.
-        language: Dil kodu — 'tr', 'en', 'ar'. Bilinmiyorsa 'tr' kullanılır.
-
-    Returns:
-        True  → yasaklı kelime bulundu (mesaj gizlenmeli).
-        False → temiz veya sözlük boş.
+    Metni normalize edip tam kelime (token) eşleşmesi veya bitişik eşleşme arar.
+    False-positive önlemek için 'tam kelime' kullanılır.
     """
     normalized = normalize_text(text)
     if not normalized:
         return False
-    words = _load_bad_words(language)
-    return any(word in normalized for word in words)
+    
+    tokens = set(normalized.split())
+    stripped_all = normalized.replace(" ", "")
+    bad_words = _load_bad_words(language)
+    
+    # 1. Normal boşluklu kelimelerden herhangi biri küfür mü?
+    if not tokens.isdisjoint(bad_words):
+        return True
+    
+    # 2. Kullanıcı kelimeyi aralara boşluk koyarak (s i k) mi yazmış?
+    if stripped_all in bad_words:
+        return True
+        
+    return False
 
 
 def analyze_text_all(text: str) -> bool:
     """
-    Tüm desteklenen dillerde (tr, en, ar) içerik kontrolü yapar.
+    Tüm desteklenen dillerde içerik kontrolü yapar.
     Herhangi bir dilde eşleşme bulunursa True döner.
-    Çok dilli kullanıcı tabanı için tercih edilen yol.
     """
     normalized = normalize_text(text)
     if not normalized:
         return False
-    return any(
-        any(word in normalized for word in _load_bad_words(lang))
-        for lang in _SUPPORTED_LANGS
-    )
+        
+    tokens = set(normalized.split())
+    stripped_all = normalized.replace(" ", "")
+    
+    for lang in _SUPPORTED_LANGS:
+        bad_words = _load_bad_words(lang)
+        if not tokens.isdisjoint(bad_words):
+            return True
+        if stripped_all in bad_words:
+            return True
+            
+    return False
 
 
 # ── Geriye dönük uyumluluk — eski kod auto_mod.contains_profanity() kullanıyor ──
