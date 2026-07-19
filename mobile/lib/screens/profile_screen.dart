@@ -2307,8 +2307,8 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
           _SettingsSection(
             title: l.profilePrivacySection,
             items: [
-              SwitchListTile(
-                secondary: Icon(
+              ListTile(
+                leading: Icon(
                   Icons.lock_outline,
                   color: AppColors.iconColor(context),
                 ),
@@ -2361,9 +2361,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     ),
                   ],
                 ),
-                value: _isPrivate,
-                activeThumbColor: kPrimary,
-                onChanged: _togglePrivateAccount,
+                trailing: Switch(
+                  value: _isPrivate,
+                  activeColor: kPrimary,
+                  onChanged: _togglePrivateAccount,
+                ),
               ),
               _SettingsTile(
                 icon: Icons.block_outlined,
@@ -2393,9 +2395,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 onTap: () => _showChangePasswordDialog(context),
               ),
               if (_biometricAvailable)
-                SwitchListTile(
+                ListTile(
                   key: const Key('settings_switch_face_id'),
-                  secondary: Icon(
+                  leading: Icon(
                     Icons.face_outlined,
                     color: AppColors.iconColor(context),
                   ),
@@ -2413,9 +2415,11 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                       color: AppColors.textSecondary(context),
                     ),
                   ),
-                  value: _biometricEnabled,
-                  activeThumbColor: kPrimary,
-                  onChanged: _toggleBiometric,
+                  trailing: Switch(
+                    value: _biometricEnabled,
+                    activeColor: kPrimary,
+                    onChanged: _toggleBiometric,
+                  ),
                 ),
               _SettingsTile(
                 icon: Icons.notifications_outlined,
@@ -2428,9 +2432,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   ),
                 ),
               ),
-              SwitchListTile(
+              ListTile(
                 key: const Key('settings_switch_karanlik_mod'),
-                secondary: Icon(
+                leading: Icon(
                   Icons.dark_mode_outlined,
                   color: AppColors.iconColor(context),
                 ),
@@ -2448,12 +2452,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                     color: AppColors.textSecondary(context),
                   ),
                 ),
-                value: ThemeProvider.instance.isDark,
-                activeThumbColor: kPrimary,
-                onChanged: (_) async {
-                  await ThemeProvider.instance.toggle();
-                  if (mounted) setState(() {});
-                },
+                trailing: Switch(
+                  value: ThemeProvider.instance.isDark,
+                  activeColor: kPrimary,
+                  onChanged: (_) async {
+                    await ThemeProvider.instance.toggle();
+                    if (mounted) setState(() {});
+                  },
+                ),
               ),
               ListTile(
                 key: const Key('settings_tile_dil'),

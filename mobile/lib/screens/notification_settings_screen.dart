@@ -39,13 +39,41 @@ class _NotificationSettingsScreenState
   TimeOfDay _quietTo = const TimeOfDay(hour: 8, minute: 0);
 
   Map<String, (String, String, IconData)> _buildLabels(AppLocalizations l) => {
-    'messages': (l.notifSettingsMessagesTitle, l.notifSettingsMessagesDesc, Icons.chat_bubble_outline),
-    'follows': (l.notifSettingsFollowsTitle, l.notifSettingsFollowsDesc, Icons.person_add_outlined),
-    'auction_won': (l.notifSettingsAuctionWonTitle, l.notifSettingsAuctionWonDesc, Icons.emoji_events_outlined),
-    'stream_started': (l.notifSettingsStreamStartedTitle, l.notifSettingsStreamStartedDesc, Icons.live_tv_outlined),
-    'new_listing': (l.notifSettingsNewListingTitle, l.notifSettingsNewListingDesc, Icons.storefront_outlined),
-    'new_bid': (l.notifSettingsNewBidTitle, l.notifSettingsNewBidDesc, Icons.gavel_outlined),
-    'outbid': (l.notifSettingsOutbidTitle, l.notifSettingsOutbidDesc, Icons.trending_up_outlined),
+    'messages': (
+      l.notifSettingsMessagesTitle,
+      l.notifSettingsMessagesDesc,
+      Icons.chat_bubble_outline,
+    ),
+    'follows': (
+      l.notifSettingsFollowsTitle,
+      l.notifSettingsFollowsDesc,
+      Icons.person_add_outlined,
+    ),
+    'auction_won': (
+      l.notifSettingsAuctionWonTitle,
+      l.notifSettingsAuctionWonDesc,
+      Icons.emoji_events_outlined,
+    ),
+    'stream_started': (
+      l.notifSettingsStreamStartedTitle,
+      l.notifSettingsStreamStartedDesc,
+      Icons.live_tv_outlined,
+    ),
+    'new_listing': (
+      l.notifSettingsNewListingTitle,
+      l.notifSettingsNewListingDesc,
+      Icons.storefront_outlined,
+    ),
+    'new_bid': (
+      l.notifSettingsNewBidTitle,
+      l.notifSettingsNewBidDesc,
+      Icons.gavel_outlined,
+    ),
+    'outbid': (
+      l.notifSettingsOutbidTitle,
+      l.notifSettingsOutbidDesc,
+      Icons.trending_up_outlined,
+    ),
   };
 
   @override
@@ -76,7 +104,8 @@ class _NotificationSettingsScreenState
             _quietEnabled = (data['quiet_hours_enabled'] as bool?) ?? false;
             _quietFrom = _parseTime(data['quiet_from'] as String? ?? '22:00');
             _quietTo = _parseTime(data['quiet_to'] as String? ?? '08:00');
-            _receiveBlastNotifications = (data['receive_blast_notifications'] as bool?) ?? true;
+            _receiveBlastNotifications =
+                (data['receive_blast_notifications'] as bool?) ?? true;
             _loading = false;
           });
         }
@@ -207,7 +236,10 @@ class _NotificationSettingsScreenState
             Text(
               AppLocalizations.of(context)!.notifProUpgradeDesc,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary(context),
+              ),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -216,12 +248,17 @@ class _NotificationSettingsScreenState
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   AppLocalizations.of(context)!.btnGoPro,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ),
@@ -253,41 +290,47 @@ class _NotificationSettingsScreenState
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!))
-              : ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  children: [
-                    // ── Temel bildirimler ──────────────────────────────────
-                    ..._prefs.keys.map((key) {
-                      final info = labels[key]!;
-                      return _NotifTile(
-                        key: Key('notif_tile_$key'),
-                        icon: info.$3,
-                        label: info.$1,
-                        subtitle: info.$2,
-                        value: _prefs[key]!,
-                        onChanged: (v) => _toggle(key, v),
-                      );
-                    }),
-                    const SizedBox(height: 12),
-                    // ── Pro Bildirim Ayarları ─────────────────────────────
-                    _ProSection(
-                      isPremium: widget.isPremium,
-                      bidThreshold: _bidThreshold,
-                      quietEnabled: _quietEnabled,
-                      quietFrom: _quietFrom,
-                      quietTo: _quietTo,
-                      receiveBlastNotifications: _receiveBlastNotifications,
-                      onBidThreshold: widget.isPremium ? _setBidThreshold : null,
-                      onQuietEnabled: widget.isPremium ? _setQuietEnabled : null,
-                      onPickFrom: widget.isPremium ? () => _pickTime(isFrom: true) : null,
-                      onPickTo: widget.isPremium ? () => _pickTime(isFrom: false) : null,
-                      onBlastNotifChanged: widget.isPremium ? _setBlastNotifications : null,
-                      onUpgradeTap: _showUpgradeSheet,
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+          ? Center(child: Text(_error!))
+          : ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                // ── Temel bildirimler ──────────────────────────────────
+                ..._prefs.keys.map((key) {
+                  final info = labels[key]!;
+                  return _NotifTile(
+                    key: Key('notif_tile_$key'),
+                    icon: info.$3,
+                    label: info.$1,
+                    subtitle: info.$2,
+                    value: _prefs[key]!,
+                    onChanged: (v) => _toggle(key, v),
+                  );
+                }),
+                const SizedBox(height: 12),
+                // ── Pro Bildirim Ayarları ─────────────────────────────
+                _ProSection(
+                  isPremium: widget.isPremium,
+                  bidThreshold: _bidThreshold,
+                  quietEnabled: _quietEnabled,
+                  quietFrom: _quietFrom,
+                  quietTo: _quietTo,
+                  receiveBlastNotifications: _receiveBlastNotifications,
+                  onBidThreshold: widget.isPremium ? _setBidThreshold : null,
+                  onQuietEnabled: widget.isPremium ? _setQuietEnabled : null,
+                  onPickFrom: widget.isPremium
+                      ? () => _pickTime(isFrom: true)
+                      : null,
+                  onPickTo: widget.isPremium
+                      ? () => _pickTime(isFrom: false)
+                      : null,
+                  onBlastNotifChanged: widget.isPremium
+                      ? _setBlastNotifications
+                      : null,
+                  onUpgradeTap: _showUpgradeSheet,
                 ),
+                const SizedBox(height: 24),
+              ],
+            ),
     );
   }
 }
@@ -356,7 +399,11 @@ class _ProSection extends StatelessWidget {
                 ),
                 child: const Text(
                   '👑 PRO',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -375,7 +422,9 @@ class _ProSection extends StatelessWidget {
                       Icon(
                         Icons.tune_outlined,
                         size: 20,
-                        color: isPremium ? kPrimary : AppColors.iconColor(context),
+                        color: isPremium
+                            ? kPrimary
+                            : AppColors.iconColor(context),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -401,7 +450,11 @@ class _ProSection extends StatelessWidget {
                         ),
                       ),
                       if (!isPremium)
-                        Icon(Icons.lock_outline, size: 16, color: AppColors.textTertiary(context)),
+                        Icon(
+                          Icons.lock_outline,
+                          size: 16,
+                          color: AppColors.textTertiary(context),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -411,28 +464,39 @@ class _ProSection extends StatelessWidget {
                     children: _thresholds.map((v) {
                       final isSelected = bidThreshold == v;
                       return GestureDetector(
-                        onTap: isPremium ? () => onBidThreshold?.call(v) : onUpgradeTap,
+                        onTap: isPremium
+                            ? () => onBidThreshold?.call(v)
+                            : onUpgradeTap,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 7,
+                          ),
                           decoration: BoxDecoration(
-                            color: isSelected ? kPrimary : AppColors.bg(context),
+                            color: isSelected
+                                ? kPrimary
+                                : AppColors.bg(context),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isSelected ? kPrimary : AppColors.border(context),
+                              color: isSelected
+                                  ? kPrimary
+                                  : AppColors.border(context),
                               width: isSelected ? 1.5 : 1,
                             ),
                           ),
                           child: Text(
-                            v == 0 ? AppLocalizations.of(context)!.lblStatusOff : '₺$v',
+                            v == 0
+                                ? AppLocalizations.of(context)!.lblStatusOff
+                                : '₺$v',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: isSelected
                                   ? Colors.white
                                   : (isPremium
-                                      ? AppColors.textPrimary(context)
-                                      : AppColors.textTertiary(context)),
+                                        ? AppColors.textPrimary(context)
+                                        : AppColors.textTertiary(context)),
                             ),
                           ),
                         ),
@@ -455,7 +519,9 @@ class _ProSection extends StatelessWidget {
                     Icons.campaign_outlined,
                     size: 20,
                     color: isPremium
-                        ? (receiveBlastNotifications ? kPrimary : AppColors.iconColor(context))
+                        ? (receiveBlastNotifications
+                              ? kPrimary
+                              : AppColors.iconColor(context))
                         : AppColors.iconColor(context),
                   ),
                   const SizedBox(width: 10),
@@ -482,7 +548,11 @@ class _ProSection extends StatelessWidget {
                     ),
                   ),
                   if (!isPremium)
-                    Icon(Icons.lock_outline, size: 16, color: AppColors.textTertiary(context))
+                    Icon(
+                      Icons.lock_outline,
+                      size: 16,
+                      color: AppColors.textTertiary(context),
+                    )
                   else
                     Switch(
                       value: receiveBlastNotifications,
@@ -507,7 +577,9 @@ class _ProSection extends StatelessWidget {
                       Icon(
                         Icons.bedtime_outlined,
                         size: 20,
-                        color: isPremium && quietEnabled ? kPrimary : AppColors.iconColor(context),
+                        color: isPremium && quietEnabled
+                            ? kPrimary
+                            : AppColors.iconColor(context),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -533,7 +605,11 @@ class _ProSection extends StatelessWidget {
                         ),
                       ),
                       if (!isPremium)
-                        Icon(Icons.lock_outline, size: 16, color: AppColors.textTertiary(context))
+                        Icon(
+                          Icons.lock_outline,
+                          size: 16,
+                          color: AppColors.textTertiary(context),
+                        )
                       else
                         Switch(
                           value: quietEnabled,
@@ -548,7 +624,9 @@ class _ProSection extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _TimePicker(
-                            label: AppLocalizations.of(context)!.notificationStart,
+                            label: AppLocalizations.of(
+                              context,
+                            )!.notificationStart,
                             time: quietFrom,
                             onTap: onPickFrom,
                           ),
@@ -556,7 +634,9 @@ class _ProSection extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _TimePicker(
-                            label: AppLocalizations.of(context)!.notificationEnd,
+                            label: AppLocalizations.of(
+                              context,
+                            )!.notificationEnd,
                             time: quietTo,
                             onTap: onPickTo,
                           ),
@@ -635,7 +715,11 @@ class _TimePicker extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.edit_outlined, size: 14, color: AppColors.textTertiary(context)),
+                Icon(
+                  Icons.edit_outlined,
+                  size: 14,
+                  color: AppColors.textTertiary(context),
+                ),
               ],
             ),
           ],
@@ -672,9 +756,13 @@ class _NotifTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border(context)),
       ),
-      child: SwitchListTile(
+      child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        secondary: Icon(icon, color: value ? kPrimary : AppColors.iconColor(context), size: 22),
+        leading: Icon(
+          icon,
+          color: value ? kPrimary : AppColors.iconColor(context),
+          size: 22,
+        ),
         title: Text(
           label,
           style: TextStyle(
@@ -685,11 +773,16 @@ class _NotifTile extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary(context),
+          ),
         ),
-        value: value,
-        activeThumbColor: kPrimary,
-        onChanged: onChanged,
+        trailing: Switch(
+          value: value,
+          activeColor: kPrimary,
+          onChanged: onChanged,
+        ),
       ),
     );
   }
