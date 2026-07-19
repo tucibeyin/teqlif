@@ -36,7 +36,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.environ.get("TEST_BASE_URL", "http://localhost:8000")
 CALL_WAIT_SECONDS = 6     # seconds to wait for UI to react before prompting
 ACCEPT_DELAY = 2.0        # seconds after call rings before AUTO accept
 END_DELAY = 4.0           # seconds of connected state before AUTO end
@@ -634,7 +634,12 @@ def main() -> None:
     parser.add_argument("--android-log", type=str, default="",  help="Path to file for Android adb logcat output (if pre-captured)")
     parser.add_argument("--ios-log",     type=str, default="",  help="Path to iOS Xcode console log file")
     parser.add_argument("--adb-device",  type=str, default="",  help="ADB device serial for targeted logcat")
+    parser.add_argument("--url",         type=str, default="",  help="Backend base URL (e.g. https://www.teqlif.com)")
     args = parser.parse_args()
+
+    if args.url:
+        global BASE_URL
+        BASE_URL = args.url.rstrip("/")
 
     print("=" * 60)
     print("  Teqlif UI Call Test Suite")
