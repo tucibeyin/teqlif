@@ -9,13 +9,24 @@ import 'package:flutter/foundation.dart';
 
 final _log = LoggerService.instance;
 
+/// Describes WHY a token refresh attempt failed.
+///
+/// - [succeeded]     — new tokens saved, caller can retry the original request
+/// - [noToken]       — no refresh token in storage; user was never logged in
+///                     or was already explicitly logged out → do NOT signal logout
+/// - [networkError]  — transient failure (no connectivity, server 5xx, timeout)
+///                     → do NOT signal logout; the session may still be valid
+/// - [revoked]       — backend returned 401 on the refresh endpoint; the
+///                     refresh token is genuinely invalid → signal logout
+enum RefreshOutcome { succeeded, noToken, networkError, revoked }
+
 class AuthService {
   // Her iki token da geçersizleştiğinde login ekranına yönlendirme sinyali
   static final StreamController<void> authFailedStream =
       StreamController<void>.broadcast();
 
   // Aynı anda birden fazla refresh isteği olmasın (race condition önlemi)
-  static Completer<bool>? _refreshInProgress;
+  static Completer<RefreshOutcome>? _refreshInProgress;
   static Future<Map<String, String>> _headers({bool auth = false}) async {
     final headers = {'Content-Type': 'application/json'};
     if (auth) {
@@ -124,41 +135,48 @@ class AuthService {
     return user;
   }
 
-  /// Access token süresi dolduğunda yeni token çifti alır.
+  /// Access token süresi dolduğunda yeni token çifti almayı dener.
   /// Aynı anda birden fazla çağrı olursa ilk çağrının sonucunu beklerler (mutex).
-  /// Başarısız olursa false döner (logout gerekli).
-  static Future<bool> tryRefresh() async {
+  /// Dönüş değeri [RefreshOutcome] — caller neden başarısız olduğunu bilir ve
+  /// yalnızca gerçek bir revoke durumunda logout sinyali verir.
+  static Future<RefreshOutcome> tryRefresh() async {
     // Halihazırda refresh yapılıyorsa sonucunu bekle
     if (_refreshInProgress != null) {
       return _refreshInProgress!.future;
     }
 
     final rt = await StorageService.getRefreshToken();
-    if (rt == null) return false;
+    // Refresh token yoksa kullanıcı zaten logout — logout sinyali gerekmez
+    if (rt == null) return RefreshOutcome.noToken;
 
-    _refreshInProgress = Completer<bool>();
+    _refreshInProgress = Completer<RefreshOutcome>();
     try {
       final resp = await http.post(
         Uri.parse('$kBaseUrl/auth/refresh'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh_token': rt}),
       );
-      if (resp.statusCode != 200) {
-        _refreshInProgress!.complete(false);
+      if (resp.statusCode == 200) {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        await StorageService.saveToken(body['access_token'] as String);
+        await StorageService.saveRefreshToken(body['refresh_token'] as String);
+        _refreshInProgress!.complete(RefreshOutcome.succeeded);
         _refreshInProgress = null;
-        return false;
+        return RefreshOutcome.succeeded;
       }
-      final body = jsonDecode(resp.body) as Map<String, dynamic>;
-      await StorageService.saveToken(body['access_token'] as String);
-      await StorageService.saveRefreshToken(body['refresh_token'] as String);
-      _refreshInProgress!.complete(true);
+      // 401 = backend refresh token'ı açıkça reddetti → gerçek revoke
+      // Diğer kodlar (500, 503, vb.) geçici sorun → logout tetikleme
+      final outcome = resp.statusCode == 401
+          ? RefreshOutcome.revoked
+          : RefreshOutcome.networkError;
+      _refreshInProgress!.complete(outcome);
       _refreshInProgress = null;
-      return true;
+      return outcome;
     } catch (e, st) {
       _log.captureException(e, stackTrace: st, tag: 'AuthService.tryRefresh');
-      _refreshInProgress!.complete(false);
+      _refreshInProgress!.complete(RefreshOutcome.networkError);
       _refreshInProgress = null;
-      return false;
+      return RefreshOutcome.networkError;
     }
   }
   

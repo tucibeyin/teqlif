@@ -3,12 +3,12 @@ import 'package:http/http.dart' as http;
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
 import 'package:flutter/foundation.dart';
-import '../services/auth_service.dart';
+import '../services/auth_service.dart' show AuthService, RefreshOutcome;
 
 const String kBaseUrl = 'https://www.teqlif.com/api';
 
 // AuthService.tryRefresh() mutex'ini kullanarak çift refresh'i önler
-Future<bool> _tryRefreshOnce() => AuthService.tryRefresh();
+Future<RefreshOutcome> _tryRefreshOnce() => AuthService.tryRefresh();
 const String kBaseHost = 'https://www.teqlif.com';
 
 /// /uploads/... → https://teqlif.com/uploads/...
@@ -131,12 +131,17 @@ Future<Map<String, dynamic>> apiCall(
       if (response.statusCode == 401 && !retried) {
         final urlStr = response.request?.url.toString() ?? '';
         final isAuthEndpoint = urlStr.contains('/api/auth/login') || urlStr.contains('/api/auth/register');
-        
+
         if (!isAuthEndpoint) {
-          final refreshed = await _tryRefreshOnce();
-          if (refreshed) return apiCall(request, retried: true);
-          // Her iki token da geçersiz → global logout sinyali
-          AuthService.authFailedStream.add(null);
+          final outcome = await _tryRefreshOnce();
+          if (outcome == RefreshOutcome.succeeded) return apiCall(request, retried: true);
+          // Yalnızca backend token'ı açıkça reddettiyse logout sinyali ver.
+          // noToken  → kullanıcı zaten logout, tekrar logout gerekmez
+          // networkError → geçici bağlantı/sunucu sorunu, oturum geçerli olabilir
+          // revoked  → backend refresh 401 döndü, oturum gerçekten sona erdi
+          if (outcome == RefreshOutcome.revoked) {
+            AuthService.authFailedStream.add(null);
+          }
         }
       }
       _parseErrorBody(body, response.statusCode);
@@ -180,12 +185,13 @@ Future<List<dynamic>> apiCallList(
     if (response.statusCode == 401 && !retried) {
       final urlStr = response.request?.url.toString() ?? '';
       final isAuthEndpoint = urlStr.contains('/api/auth/login') || urlStr.contains('/api/auth/register');
-      
+
       if (!isAuthEndpoint) {
-        final refreshed = await _tryRefreshOnce();
-        if (refreshed) return apiCallList(request, retried: true);
-        // Her iki token da geçersiz → global logout sinyali
-        AuthService.authFailedStream.add(null);
+        final outcome = await _tryRefreshOnce();
+        if (outcome == RefreshOutcome.succeeded) return apiCallList(request, retried: true);
+        if (outcome == RefreshOutcome.revoked) {
+          AuthService.authFailedStream.add(null);
+        }
       }
     }
 
