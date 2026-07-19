@@ -346,6 +346,15 @@ class CallService {
     );
   }
 
+  Future<List<dynamic>> _getList(String path) async {
+    final headers = await _authHeaders();
+    final response = await http.get(Uri.parse('$kBaseUrl$path'), headers: headers);
+    if (response.statusCode != 200) {
+      throw Exception('GET $path failed: ${response.statusCode}');
+    }
+    return jsonDecode(response.body) as List<dynamic>;
+  }
+
   // WhatsApp-style explicit transition table.
   // Log-only guard (no hard block) during hardening phase — prevents blind drift.
   static const Map<CallStatus, Set<CallStatus>> _allowedTransitions = {
@@ -2297,8 +2306,11 @@ class CallService {
 
   Future<List<Map<String, dynamic>>> fetchFollowingForInvite() async {
     try {
-      final data = await _get('/users/me/following?limit=100');
-      final items = data['items'] as List<dynamic>? ?? [];
+      final myId = await StorageService.getCurrentUserId();
+      if (myId == null) return [];
+      _cpLog('GROUP', 'fetchFollowingForInvite | userId=$myId');
+      final items = await _getList('/users/$myId/following');
+      _cpLog('GROUP', 'fetchFollowingForInvite | count=${items.length}');
       return items.map((u) => Map<String, dynamic>.from(u as Map)).toList();
     } catch (e) {
       _cpLog('GROUP', 'fetchFollowingForInvite ERROR | $e');
