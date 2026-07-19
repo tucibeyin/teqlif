@@ -291,10 +291,11 @@ class CallService {
 
   Future<Map<String, String>> _authHeaders() async {
     final token = await StorageService.getToken();
-    // If token is null the request would go out without Authorization, get a
-    // 401, and apiCall()'s refresh+logout path would fire — logging the user
-    // out during an active call. Throw early so the request is never sent and
-    // the logout path in apiCall() is bypassed entirely.
+    // StorageService.getToken() returns from in-memory cache first; the null
+    // path is only reached when the cache is empty AND all storage retries
+    // failed (genuine logout, first cold-start before any login, or severe
+    // Keystore corruption). Fail fast here — never send a tokenless request
+    // that would bounce as a 401 and trigger the refresh→logout chain.
     if (token == null) {
       throw AppException('Oturum bilgisi bulunamadı', code: 'NO_TOKEN', statusCode: 401);
     }

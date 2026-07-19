@@ -11,6 +11,23 @@ class StorageService {
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
+  // In-memory token cache.
+  //
+  // Android EncryptedSharedPreferences (= Keystore-backed) can transiently
+  // return null for existing keys when the device is locked, in Doze mode,
+  // or on certain OEM Keystore implementations.  Without a cache every
+  // apiCall() reads from storage, so a single transient null propagates as:
+  //   getToken()==null → no Authorization header → backend 401
+  //   → tryRefresh() → getRefreshToken()==null (same transient)
+  //   → refreshed=false → authFailedStream → logout + deleteAll()
+  //   → tokens are now permanently gone
+  //
+  // The cache is populated on the first successful storage read and on every
+  // save/refresh. It lives for the process lifetime (resets on app restart,
+  // which always re-reads from storage on the next authenticated call).
+  static String? _cachedToken;
+  static String? _cachedRefreshToken;
+
   // ── Kasa (Cache) key sabitleri ────────────────────────────────────────────
   static const cacheMessages      = 'cache_messages';
   static const cacheNotifications = 'cache_notifications';
@@ -87,20 +104,34 @@ class StorageService {
   static const _userPrivateKey = 'teqlif_is_private';
 
   static Future<void> saveToken(String token) async {
+    _cachedToken = token;
     await _secureStorage.write(key: _tokenKey, value: token);
   }
 
   static Future<String?> getToken() async {
-    return _secureStorage.read(key: _tokenKey);
+    if (_cachedToken != null) return _cachedToken;
+    // Retry up to 3 times for Android Keystore transient null reads.
+    for (var i = 0; i < 3; i++) {
+      final v = await _secureStorage.read(key: _tokenKey);
+      if (v != null) { _cachedToken = v; return v; }
+      if (i < 2) await Future.delayed(const Duration(milliseconds: 50));
+    }
+    return null;
   }
 
   static Future<void> saveRefreshToken(String token) async {
+    _cachedRefreshToken = token;
     await _secureStorage.write(key: _refreshTokenKey, value: token);
   }
 
   static Future<String?> getRefreshToken() async {
-    final rt = await _secureStorage.read(key: _refreshTokenKey);
-    return rt;
+    if (_cachedRefreshToken != null) return _cachedRefreshToken;
+    for (var i = 0; i < 3; i++) {
+      final v = await _secureStorage.read(key: _refreshTokenKey);
+      if (v != null) { _cachedRefreshToken = v; return v; }
+      if (i < 2) await Future.delayed(const Duration(milliseconds: 50));
+    }
+    return null;
   }
 
   static Future<void> saveUserInfo({
@@ -203,6 +234,8 @@ class StorageService {
   }
 
   static Future<void> clear() async {
+    _cachedToken = null;
+    _cachedRefreshToken = null;
     await Future.wait([
       _secureStorage.deleteAll(),
       SharedPreferences.getInstance().then((p) => p.clear()),
