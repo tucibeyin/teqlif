@@ -90,7 +90,11 @@ def main():
         
     print("\n[3] Veritabanı durumu kontrol ediliyor...")
     try:
-        sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+        backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        sys.path.append(backend_dir)
+        # Change current working directory so Pydantic finds .env
+        os.chdir(backend_dir)
+        
         from app.database import async_session_maker
         from app.models.message import DirectMessage
         
