@@ -1689,6 +1689,14 @@ class CallService {
           Hardware.instance.setSpeakerphoneOn(false);
           _setState(state.value.copyWith(isSpeaker: false));
         }
+      } else if (event.track.kind == TrackType.VIDEO) {
+        _cpLog('LK', 'TrackSubscribed VIDEO | participant=${event.participant.identity}');
+        _setState(state.value.copyWith(remoteVideoEnabled: true));
+      }
+    } else if (event is TrackUnsubscribedEvent) {
+      if (event.track.kind == TrackType.VIDEO) {
+        _cpLog('LK', 'TrackUnsubscribed VIDEO | participant=${event.participant.identity}');
+        _setState(state.value.copyWith(remoteVideoEnabled: false));
       }
     } else if (event is TrackUnmutedEvent) {
       // Android caller pre-publishes a MUTED audio track during calling state.
@@ -1740,7 +1748,7 @@ class CallService {
     } else if (event is TrackPublishedEvent) {
       if (event.publication.kind == TrackType.VIDEO) {
         _cpLog('LK', 'RemoteTrackPublished VIDEO | participant=${event.participant.identity}');
-        _setState(state.value.copyWith(remoteVideoEnabled: true));
+        // remoteVideoEnabled is set in TrackSubscribedEvent when track is actually receivable
       }
     } else if (event is LocalTrackUnpublishedEvent) {
       if (event.publication.kind == TrackType.VIDEO) {
