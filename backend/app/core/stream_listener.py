@@ -47,7 +47,7 @@ import random
 import time
 from typing import Awaitable, Callable
 
-from app.utils.redis_client import get_redis
+from app.utils.redis_client import get_redis_stream
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -128,7 +128,7 @@ async def stream_listener(
 
     while True:
         try:
-            r = await get_redis()
+            r = await get_redis_stream()
 
             # On first-ever start use "$" (only new messages).
             # On restart use the saved position (deliver missed messages).

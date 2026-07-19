@@ -3,6 +3,7 @@ from app.config import settings
 
 _redis: aioredis.Redis | None = None
 _redis_binary: aioredis.Redis | None = None
+_redis_stream: aioredis.Redis | None = None
 
 
 async def get_redis() -> aioredis.Redis:
@@ -10,6 +11,25 @@ async def get_redis() -> aioredis.Redis:
     if _redis is None:
         _redis = aioredis.from_url(settings.redis_url, decode_responses=True)
     return _redis
+
+
+async def get_redis_stream() -> aioredis.Redis:
+    """Dedicated client for XREAD BLOCK commands.
+
+    redis-py 5+ async raises TimeoutError on blocking reads when socket_timeout
+    is shorter than the BLOCK duration. This client sets socket_timeout=10s
+    (> _BLOCK_MS=5s) so XREAD BLOCK 5000 always completes before the timeout.
+    socket_connect_timeout=5 keeps the initial handshake snappy.
+    """
+    global _redis_stream
+    if _redis_stream is None:
+        _redis_stream = aioredis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_timeout=10,
+            socket_connect_timeout=5,
+        )
+    return _redis_stream
 
 
 async def get_redis_binary() -> aioredis.Redis:
