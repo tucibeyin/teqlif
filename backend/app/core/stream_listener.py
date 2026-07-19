@@ -20,6 +20,15 @@ Fan-out semantics:
   messages, only the one that has the target WebSocket connection actually
   delivers it.
 
+Dead-Letter Queue (DLQ):
+  When on_message() raises, the raw entry is written to `dlq:{stream_name}`
+  before the position advances.  This makes every processing failure visible
+  and inspectable without blocking delivery of subsequent messages.
+
+  Inspect via redis-cli:
+    XLEN dlq:dm_broadcast
+    XREVRANGE dlq:dm_broadcast + - COUNT 10
+
 Usage:
     from app.core.stream_listener import stream_listener
 
@@ -35,6 +44,7 @@ import asyncio
 import json
 import os
 import random
+import time
 from typing import Awaitable, Callable
 
 from app.utils.redis_client import get_redis
@@ -42,12 +52,56 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Messages retained per stream (approximate — Redis trims lazily).
-# 500 covers several minutes of high-traffic bursts; increase if needed.
+# Messages retained per main stream (approximate — Redis trims lazily).
 STREAM_MAXLEN = 500
+
+# DLQ retains the last N failed entries per stream so the key never grows
+# unboundedly, but there is always a recent window to inspect.
+_DLQ_MAXLEN = 1_000
+_DLQ_TTL    = 7 * 86_400   # 7 days — long enough for on-call to investigate
 
 _BLOCK_MS  = 5_000   # XREAD block timeout — implicit keepalive
 _MAX_DELAY = 30.0    # exponential backoff ceiling
+
+
+async def _write_dlq(
+    r,
+    stream_name: str,
+    msg_id: str,
+    raw_data: str,
+    exc: Exception,
+) -> None:
+    """Write a failed message to the dead-letter queue for this stream.
+
+    Never raises — a DLQ write failure is logged at ERROR (Sentry) but must
+    not interrupt delivery of the next message.
+    """
+    dlq_key = f"dlq:{stream_name}"
+    try:
+        await r.xadd(
+            dlq_key,
+            {
+                "original_id":  msg_id,
+                "stream":        stream_name,
+                "data":          raw_data,
+                "error":         str(exc)[:1000],
+                "worker_pid":    str(os.getpid()),
+                "failed_at":     str(int(time.time())),
+            },
+            maxlen=_DLQ_MAXLEN,
+            approximate=True,
+        )
+        await r.expire(dlq_key, _DLQ_TTL)
+        logger.warning(
+            "[DLQ:%s] Başarısız mesaj kaydedildi | original_id=%s | hata=%s",
+            stream_name, msg_id, exc,
+        )
+    except Exception as dlq_exc:
+        # DLQ itself failed — escalate to Sentry so on-call knows
+        logger.error(
+            "[DLQ:%s] DLQ yazılamadı | original_id=%s | dlq_hata=%s | asıl_hata=%s",
+            stream_name, msg_id, dlq_exc, exc,
+        )
 
 
 async def stream_listener(
@@ -57,9 +111,15 @@ async def stream_listener(
     """
     Per-worker background task that reads messages from a Redis Stream.
 
-    - Reconnects automatically with jitter + exponential backoff.
-    - Escalates to logger.error after 5 consecutive failures (Sentry alert).
-    - Saves read position to Redis after every batch so restarts are safe.
+    Delivery guarantees:
+      - At-least-once: position is saved after every batch; a crash between
+        delivery and save replays only that batch (client dedup handles this).
+      - Failed messages go to dlq:{stream_name} instead of being silently
+        dropped, giving ops full visibility.
+
+    Reconnection:
+      - Exponential backoff with jitter (prevents thundering herd on Redis restart).
+      - Escalates to logger.error (→ Sentry) after 5 consecutive failures.
     """
     worker_id = str(os.getpid())
     pos_key = f"stream_pos:{stream_name}:{worker_id}"
@@ -89,19 +149,19 @@ async def stream_listener(
 
                 for _, messages in result:
                     for msg_id, fields in messages:
+                        raw_data = fields.get("data", "{}")
                         try:
-                            data = json.loads(fields["data"])
+                            data = json.loads(raw_data)
                             await on_message(data)
                         except Exception as exc:
-                            logger.warning(
-                                "[STREAM:%s] Mesaj işleme hatası | id=%s | %s",
-                                stream_name, msg_id, exc,
-                            )
-                        last_id = msg_id  # advance position even on error
+                            # Do not re-raise — advance position so one bad
+                            # message never blocks the rest of the stream.
+                            await _write_dlq(r, stream_name, msg_id, raw_data, exc)
+                        last_id = msg_id
 
                 # Persist position after each batch — best-effort, non-fatal.
-                # If this write fails, worst case: a few messages are reprocessed
-                # on the next restart (idempotent broadcast_local handles that).
+                # Failure here means a few messages may be reprocessed on the
+                # next restart; client-side dedup (WsService._seenKeys) handles that.
                 try:
                     await r.set(pos_key, last_id, ex=86400)
                 except Exception:
