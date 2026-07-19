@@ -446,7 +446,7 @@ async def start_call(
         "callee_token": callee_token,
     }
     await _ws_broadcast(callee_id, ws_payload)
-    callee_ws_connected = ws_manager.subscriber_count(f"dm:{callee_id}") > 0
+    callee_ws_connected = await ws_manager.is_dm_online(callee_id)
     if callee_ws_connected:
         logger.info(
             "[CALL_PROCESS][OUT] start_call: WS connected → push skipped | call_id=%d callee=%d",

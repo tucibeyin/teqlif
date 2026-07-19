@@ -161,7 +161,21 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
           SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 64),
+                // Swipe-down / minimize indicator
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 12, 0, 4),
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 32,
+                      color: AppColors.textSecondary(context)
+                          .withValues(alpha: 0.55),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
 
                 // Title
                 Text(

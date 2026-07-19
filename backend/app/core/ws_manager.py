@@ -246,6 +246,40 @@ class GlobalWSManager:
             logger.warning("[WS GATEWAY] replay_call_events FAILED | user_id=%s | %s", user_id, exc)
             return 0
 
+    # ── DM Online Status (cross-worker VoIP push guard) ──────────────────
+    #
+    # subscriber_count() is local-only. In a multi-worker uvicorn setup the
+    # iOS WS may be on Worker A while POST /calls/start lands on Worker B —
+    # Worker B sees count=0 and fires the VoIP push, causing a foreground
+    # native CallKit flash. These Redis-backed methods give a global view.
+
+    _WS_DM_TTL = 90  # covers the ~35-40s ping-timeout reconnect window
+
+    async def mark_dm_online(self, user_id: int) -> None:
+        try:
+            r = await get_redis()
+            await r.setex(f"ws_dm_online:{user_id}", self._WS_DM_TTL, 1)
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] mark_dm_online failed | user=%d | %s", user_id, exc)
+
+    async def mark_dm_offline(self, user_id: int) -> None:
+        try:
+            r = await get_redis()
+            await r.delete(f"ws_dm_online:{user_id}")
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] mark_dm_offline failed | user=%d | %s", user_id, exc)
+
+    async def is_dm_online(self, user_id: int) -> bool:
+        """Local check first (fast path), then Redis for cross-worker accuracy."""
+        if self.subscriber_count(f"dm:{user_id}") > 0:
+            return True
+        try:
+            r = await get_redis()
+            return bool(await r.exists(f"ws_dm_online:{user_id}"))
+        except Exception as exc:
+            logger.warning("[WS GATEWAY] is_dm_online failed | user=%d | %s", user_id, exc)
+            return False  # safe fallback: push gönder
+
     # ── Graceful Shutdown ─────────────────────────────────────────────────
 
     async def shutdown(self) -> None:

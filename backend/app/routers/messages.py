@@ -758,6 +758,7 @@ async def messages_ws(websocket: WebSocket):
 
     ws_manager.connect(websocket, f"dm:{user_id}")
     ws_manager.connect(websocket, "global")   # feed eventleri (stream_ended vb.)
+    await ws_manager.mark_dm_online(user_id)
     logger.info("[DM WS] BAĞLANDI | user_id=%s since_ts=%s", user_id, since_ts)
 
     # Call event replay: yeniden bağlanmada kaçırılan call eventlerini gönder
@@ -799,5 +800,6 @@ async def messages_ws(websocket: WebSocket):
         logger.warning("[DM WS] HATA | user_id=%s | %s", user_id, exc)
     finally:
         ws_manager.disconnect(websocket, f"dm:{user_id}", "global")
+        await ws_manager.mark_dm_offline(user_id)
         await release_ws_session(user_id)
         logger.info("[DM WS] AYRILDI | user_id=%s", user_id)
