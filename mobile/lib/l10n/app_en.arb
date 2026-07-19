@@ -2571,8 +2571,8 @@
   "trustScoreLow": "New Member",
   "trustScoreMedium": "Trusted",
   "trustScoreHigh": "Highly Trusted",
-  "influenceRankLabel": "Influence Score",
-  "influenceRankHint": "Influence score based on the follower network. The higher the score, the broader your reach. Updated weekly.",
+  "influenceRankLabel": "Influencer Score",
+  "influenceRankHint": "Influencer score based on the follower network. The higher the score, the broader your reach. Updated weekly.",
   "influenceRankValue": "Rank #{rank}",
   "@influenceRankValue": {
     "placeholders": {

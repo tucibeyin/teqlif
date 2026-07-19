@@ -2536,8 +2536,8 @@
   "trustScoreLow": "Новый участник",
   "trustScoreMedium": "Надёжный",
   "trustScoreHigh": "Очень надёжный",
-  "influenceRankLabel": "Оценка Влияния",
-  "influenceRankHint": "Оценка влияния на основе сети подписчиков. Чем выше балл, тем шире ваш охват. Обновляется еженедельно.",
+  "influenceRankLabel": "Оценка Influencer",
+  "influenceRankHint": "Оценка Influencer на основе сети подписчиков. Чем выше балл, тем шире ваш охват. Обновляется еженедельно.",
   "influenceRankValue": "Место #{rank}",
   "@influenceRankValue": {
     "placeholders": {

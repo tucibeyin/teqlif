@@ -4818,11 +4818,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get trustScoreHigh => 'Çok Güvenilir';
 
   @override
-  String get influenceRankLabel => 'Etki Skoru';
+  String get influenceRankLabel => 'Influencer Skoru';
 
   @override
   String get influenceRankHint =>
-      'Platformdaki takipçi ağına göre hesaplanan etki skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.';
+      'Platformdaki takipçi ağına göre hesaplanan influencer skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.';
 
   @override
   String influenceRankValue(int rank) {

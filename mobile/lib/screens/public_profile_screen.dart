@@ -299,8 +299,41 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: Text('@${widget.username}'),
         actions: [
+          if (_user != null && !_isOwnProfile) ...[
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline),
+              onPressed: () {
+                final uid = (_user!['id'] as int?) ?? widget.userId ?? 0;
+                final name = (_user!['full_name'] as String?) ?? widget.username;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => DirectChatScreen(
+                      otherUserId: uid,
+                      displayName: name,
+                      otherHandle: widget.username,
+                    ),
+                  ),
+                );
+              },
+            ),
+            if (_followStatus == 'accepted')
+              IconButton(
+                icon: const Icon(Icons.call),
+                onPressed: () {
+                  if (CallService.instance.hasActiveCall) return;
+                  final uid = (_user!['id'] as int?) ?? widget.userId ?? 0;
+                  CallService.instance.startCall(
+                    calleeId: uid,
+                    calleeUsername: widget.username,
+                    calleeAvatar: _user?['profile_image_thumb_url'] as String?,
+                  );
+                },
+              ),
+          ],
           Builder(
             builder: (btnCtx) => IconButton(
               icon: const Icon(Icons.share_outlined),
@@ -360,14 +393,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '@${widget.username}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
                 const SizedBox(height: 6),
                 // ── Verified, PRO, Rank ─────────────────────
                 Wrap(
@@ -423,75 +448,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           ),
                         ),
                       ),
-                    if (_user!['is_premium'] == true)
-                      GestureDetector(
-                        onTap: () {
-                          showDialog<void>(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('PRO', style: TextStyle(fontWeight: FontWeight.w700)),
-                              content: RichText(
-                                text: TextSpan(
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: AppColors.textPrimary(context),
-                                  ),
-                                  children: [
-                                    TextSpan(text: AppLocalizations.of(context)!.badgeProHintPrefix),
-                                    const TextSpan(
-                                      text: 'teqlif PRO',
-                                      style: TextStyle(
-                                        color: Color(0xFFEAB308),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    TextSpan(text: AppLocalizations.of(context)!.badgeProHintSuffix),
-                                  ],
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Tamam'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const FaIcon(
-                                FontAwesomeIcons.crown,
-                                size: 10,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                AppLocalizations.of(context)!.pro,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     if (_user?['influence_rank'] != null && (_user!['influence_rank'] as int) > 0)
                       _ProfileBadge(
                         icon: FontAwesomeIcons.rankingStar,
@@ -500,6 +456,22 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         color: const Color(0xFF8B5CF6),
                         hint: AppLocalizations.of(context)!.influenceRankHint,
                       ),
+                    if (_user?['trust_score'] != null)
+                      Builder(builder: (ctx) {
+                        final ts = (_user!['trust_score'] as num).toInt();
+                        final loc = AppLocalizations.of(ctx)!;
+                        return _ProfileBadge(
+                          icon: FontAwesomeIcons.shieldHalved,
+                          title: loc.trustScoreLabel,
+                          value: '$ts / 100',
+                          color: ts >= 70
+                              ? const Color(0xFF10B981)
+                              : ts >= 35
+                                  ? const Color(0xFF3B82F6)
+                                  : const Color(0xFF9CA3AF),
+                          hint: loc.trustScoreHint,
+                        );
+                      }),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -508,10 +480,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
                 // Rating badge
                 _buildRatingBadge(hasRating, avgRaw),
-                const SizedBox(height: 8),
-
-                // Trust score rozeti
-                _buildTrustBadge(context),
                 const SizedBox(height: 12),
 
                 // Stats row
@@ -687,107 +655,58 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           ),
                         ),
                       ),
-                      // ── Mesaj Gönder ────────────────────────────────────
+                      // ── Takip Et / Takip Ediliyor ──────────────────────
                       GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => DirectChatScreen(
-                              otherUserId: userId,
-                              displayName: fullName,
-                              otherHandle: widget.username,
-                            ),
-                          ),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(11),
+                        onTap: _followLoading ? null : _toggleFollow,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant(context),
+                            color: _followStatus != 'none'
+                                ? AppColors.surfaceVariant(context)
+                                : const Color(0xFF6366F1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.chat_bubble_outline,
-                                size: 18,
-                                color: AppColors.textPrimary(context),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // ── Ara (sadece takip ediliyorsa) ────────────────────
-                      if (_followStatus == 'accepted') ...[
-                        GestureDetector(
-                          onTap: () {
-                            debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] public_profile_screen CALL BUTTON TAPPED | userId=$userId');
-                            if (CallService.instance.hasActiveCall) {
-                              debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] public_profile_screen: hasActiveCall → overlay will open CallScreen');
-                              return;
-                            }
-                            // CallScreen'i overlay açar: status → calling olunca _onCallState tetiklenir.
-                            CallService.instance.startCall(
-                              calleeId: userId,
-                              calleeUsername: widget.username,
-                              calleeAvatar: _user?['profile_image_thumb_url'] as String?,
-                            );
-                            debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] public_profile_screen startCall fired — overlay will navigate to CallScreen');
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(11),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceVariant(context),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.call,
-                              size: 18,
-                              color: AppColors.textPrimary(context),
-                            ),
-                          ),
-                        ),
-                      ],
-                      // ── Takip Et / Takip Ediliyor ──────────────────────
-                      // ── Takip Et / Takip Ediliyor (Sadece İkon) ──────────
-                      Tooltip(
-                        message: _followStatus == 'accepted'
-                            ? l.pubProfileFollowingLabel
-                            : _followStatus == 'pending'
-                                ? l.requested
-                                : l.pubProfileFollowLabel,
-                        child: GestureDetector(
-                          onTap: _followLoading ? null : _toggleFollow,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.all(11), // Kare form için eşit padding
-                            decoration: BoxDecoration(
-                              color: _followStatus != 'none'
-                                  ? AppColors.surfaceVariant(context)
-                                  : const Color(0xFF6366F1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: _followLoading
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Icon(
-                                    _followStatus == 'accepted'
-                                        ? Icons.person_remove_outlined
-                                        : _followStatus == 'pending'
-                                            ? Icons.access_time
-                                            : Icons.person_add_outlined,
-                                    size: 18, // Diğer ikonlarla uyumlu boyut (Call = 18)
-                                    color: _followStatus != 'none'
-                                        ? AppColors.textPrimary(context)
-                                        : Colors.white,
+                          child: _followLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
                                   ),
-                          ),
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _followStatus == 'accepted'
+                                          ? Icons.person_remove_outlined
+                                          : _followStatus == 'pending'
+                                              ? Icons.access_time
+                                              : Icons.person_add_outlined,
+                                      size: 18,
+                                      color: _followStatus != 'none'
+                                          ? AppColors.textPrimary(context)
+                                          : Colors.white,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _followStatus == 'accepted'
+                                          ? l.pubProfileFollowingLabel
+                                          : _followStatus == 'pending'
+                                              ? l.requested
+                                              : l.pubProfileFollowLabel,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: _followStatus != 'none'
+                                            ? AppColors.textPrimary(context)
+                                            : Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
                     ],
@@ -1011,8 +930,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     final rawImg = _user?['profile_image_url'] as String?;
     final isLive = (_user?['is_live'] as bool?) ?? false;
     final streamId = _user?['active_stream_id'] as int?;
+    final isPremium = (_user?['is_premium'] as bool?) ?? false;
 
-    final avatar = CircleAvatar(
+    Widget avatarWidget = CircleAvatar(
       radius: 44,
       backgroundColor: kPrimary.withValues(alpha: 0.15),
       backgroundImage: rawImg != null ? NetworkImage(imgUrl(rawImg)) : null,
@@ -1029,12 +949,42 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
 
     if (isLive && streamId != null) {
-      return _LiveAvatarRing(
+      avatarWidget = _LiveAvatarRing(
         onTap: () => _goToLiveStream(streamId),
-        child: avatar,
+        child: avatarWidget,
       );
     }
-    return avatar;
+
+    if (!isPremium) return avatarWidget;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        avatarWidget,
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+              ),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.surface(context),
+                width: 2,
+              ),
+            ),
+            child: const FaIcon(
+              FontAwesomeIcons.crown,
+              size: 12,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _goToLiveStream(int streamId) {
@@ -1109,38 +1059,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         ),
       ),
     );
-  }
-
-  Widget _buildTrustBadge(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    final rawScore = _user?['trust_score'];
-    final rawRank = _user?['influence_rank'];
-    if (rawScore == null && rawRank == null) return const SizedBox.shrink();
-
-    final badges = <Widget>[];
-
-    if (rawScore != null) {
-      final score = (rawScore as num).toInt();
-      final tsColor = score >= 70
-          ? const Color(0xFF10B981)
-          : score >= 35
-          ? const Color(0xFF3B82F6)
-          : const Color(0xFF9CA3AF);
-      badges.add(
-        _ProfileBadge(
-          icon: FontAwesomeIcons.shieldHalved,
-          title: l.trustScoreLabel,
-          value: '$score / 100',
-          color: tsColor,
-          hint: l.trustScoreHint,
-        ),
-      );
-    }
-
-    // Rank score moved to the top header
-
-    if (badges.isEmpty) return const SizedBox.shrink();
-    return Wrap(spacing: 6, runSpacing: 4, children: badges);
   }
 
   Widget _statCell(String label, dynamic count) => Builder(

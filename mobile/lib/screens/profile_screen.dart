@@ -612,6 +612,24 @@ class ProfileScreenState extends State<ProfileScreen> {
                                 color: const Color(0xFF8B5CF6),
                               ),
                             ],
+                            if (_user?['trust_score'] != null) ...[
+                              const SizedBox(width: 6),
+                              Builder(builder: (ctx) {
+                                final ts = (_user!['trust_score'] as num).toInt();
+                                final l = AppLocalizations.of(ctx)!;
+                                return _ScoreBadge(
+                                  icon: FontAwesomeIcons.shieldHalved,
+                                  title: l.trustScoreLabel,
+                                  value: '$ts / 100',
+                                  hint: l.trustScoreHint,
+                                  color: ts >= 70
+                                      ? const Color(0xFF10B981)
+                                      : ts >= 35
+                                          ? const Color(0xFF3B82F6)
+                                          : const Color(0xFF9CA3AF),
+                                );
+                              }),
+                            ],
                           ],
                         ),
                         if (email.isNotEmpty)
@@ -633,30 +651,6 @@ class ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ],
-                        // Güven skoru + etki sıralaması rozetleri
-                        Builder(builder: (ctx) {
-                          final l = AppLocalizations.of(ctx)!;
-                          final ts = _user?['trust_score'] as int?;
-                          if (ts == null) return const SizedBox.shrink();
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children: [
-                                _ScoreBadge(
-                                  icon: FontAwesomeIcons.shieldHalved,
-                                  title: l.trustScoreLabel,
-                                  value: '$ts / 100',
-                                  hint: l.trustScoreHint,
-                                  color: ts >= 70
-                                      ? const Color(0xFF10B981)
-                                      : ts >= 35 ? const Color(0xFF3B82F6) : const Color(0xFF9CA3AF),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
                         if ((_user?['website_url'] as String?)?.isNotEmpty == true) ...[
                           const SizedBox(height: 4),
                           GestureDetector(

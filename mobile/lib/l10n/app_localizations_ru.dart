@@ -4865,11 +4865,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get trustScoreHigh => 'Очень надёжный';
 
   @override
-  String get influenceRankLabel => 'Оценка Влияния';
+  String get influenceRankLabel => 'Оценка Influencer';
 
   @override
   String get influenceRankHint =>
-      'Оценка влияния на основе сети подписчиков. Чем выше балл, тем шире ваш охват. Обновляется еженедельно.';
+      'Оценка Influencer на основе сети подписчиков. Чем выше балл, тем шире ваш охват. Обновляется еженедельно.';
 
   @override
   String influenceRankValue(int rank) {

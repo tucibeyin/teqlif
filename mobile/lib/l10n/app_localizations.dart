@@ -8709,13 +8709,13 @@ abstract class AppLocalizations {
   /// No description provided for @influenceRankLabel.
   ///
   /// In tr, this message translates to:
-  /// **'Etki Skoru'**
+  /// **'Influencer Skoru'**
   String get influenceRankLabel;
 
   /// No description provided for @influenceRankHint.
   ///
   /// In tr, this message translates to:
-  /// **'Platformdaki takipçi ağına göre hesaplanan etki skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.'**
+  /// **'Platformdaki takipçi ağına göre hesaplanan influencer skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.'**
   String get influenceRankHint;
 
   /// No description provided for @influenceRankValue.

@@ -2534,8 +2534,8 @@
   "trustScoreLow": "Yeni Üye",
   "trustScoreMedium": "Güvenilir",
   "trustScoreHigh": "Çok Güvenilir",
-  "influenceRankLabel": "Etki Skoru",
-  "influenceRankHint": "Platformdaki takipçi ağına göre hesaplanan etki skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.",
+  "influenceRankLabel": "Influencer Skoru",
+  "influenceRankHint": "Platformdaki takipçi ağına göre hesaplanan influencer skoru. Skor ne kadar yüksekse, etki alanın o kadar geniş demektir. Haftalık güncellenir.",
   "influenceRankValue": "#{rank}. sıra",
   "@influenceRankValue": {
     "placeholders": {

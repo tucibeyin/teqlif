@@ -4815,11 +4815,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trustScoreHigh => 'Highly Trusted';
 
   @override
-  String get influenceRankLabel => 'Influence Score';
+  String get influenceRankLabel => 'Influencer Score';
 
   @override
   String get influenceRankHint =>
-      'Influence score based on the follower network. The higher the score, the broader your reach. Updated weekly.';
+      'Influencer score based on the follower network. The higher the score, the broader your reach. Updated weekly.';
 
   @override
   String influenceRankValue(int rank) {

@@ -4787,11 +4787,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get trustScoreHigh => 'موثوق جداً';
 
   @override
-  String get influenceRankLabel => 'نقاط التأثير';
+  String get influenceRankLabel => 'Influencer نقاط';
 
   @override
   String get influenceRankHint =>
-      'نقاط التأثير بناءً على شبكة المتابعين. كلما زادت النقاط، كان نطاق وصولك أوسع. يتجدد أسبوعياً.';
+      'Influencer نقاط بناءً على شبكة المتابعين. كلما زادت النقاط، كان نطاق وصولك أوسع. يتجدد أسبوعياً.';
 
   @override
   String influenceRankValue(int rank) {
