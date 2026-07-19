@@ -361,21 +361,22 @@ async def send_message(
         )
 
     # Create notification for receiver
-    await push_notification(
-        data.receiver_id,
-        {
-            "type": "message",
-            "i18n": {
-                "title_key": "notifMessage",
-                "title_params": {"username": current_user.username},
+    if not is_shadowbanned:
+        await push_notification(
+            data.receiver_id,
+            {
+                "type": "message",
+                "i18n": {
+                    "title_key": "notifMessage",
+                    "title_params": {"username": current_user.username},
+                },
+                "body": data.content[:100],
+                "related_id": uid,
+                "sender_username": current_user.username,
+                "sender_image_url": current_user.profile_image_thumb_url,
             },
-            "body": data.content[:100],
-            "related_id": uid,
-            "sender_username": current_user.username,
-            "sender_image_url": current_user.profile_image_thumb_url,
-        },
-        pref_key="messages",
-    )
+            pref_key="messages",
+        )
 
     return out
 
