@@ -13,7 +13,7 @@ class StartStreamCommand:
     async def execute(self, user_id: int, title: str, category: str = None, listing_id: int = None, thumbnail_url: str = None) -> dict:
         import uuid
         from app.config import settings
-        from app.services.stream_service import make_livekit_token
+        from app.use_cases.streams.stream_utils import make_livekit_token
 
         logger.info("[StartStreamCommand] Başlatıldı | user_id=%s title=%s", user_id, title)
         
