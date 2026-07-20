@@ -120,21 +120,8 @@ async def send_push_notification_task(
         await send_push(fcm_token, title, body, badge=badge, notif_type=notif_type, extra_data=extra_data, image_url=image_url)
         logger.info("[Worker] Push bildirimi gönderildi | token=%s…", fcm_token[:12])
     except InvalidFCMTokenError:
-        # Token geçersiz/silinmiş — DB'den temizle, retry yapma
-        logger.warning("[Worker] Geçersiz FCM token temizleniyor | token=%s…", fcm_token[:12])
-        try:
-            from app.database import AsyncSessionLocal
-            from app.models.user import User
-            from sqlalchemy import update as sa_update
-            async with AsyncSessionLocal() as db:
-                await db.execute(
-                    sa_update(User).where(User.fcm_token == fcm_token).values(fcm_token=None)
-                )
-                await db.commit()
-            logger.info("[Worker] FCM token temizlendi | token=%s…", fcm_token[:12])
-        except Exception as db_exc:
-            logger.error("[Worker] FCM token temizlenemedi | %s", db_exc)
-        # raise edilmez — ARQ retry yapmasın, kalıcı hata
+        # raise edilmez — ARQ retry yapmasın, kalıcı hata, event_bus temizler
+        pass
     except Exception as exc:
         logger.error(
             "[Worker] Push bildirimi gönderilemedi | token=%s… | %s",
@@ -2949,7 +2936,9 @@ class WorkerSettings:
     @staticmethod
     async def on_startup(ctx: dict) -> None:
         from app.logging_config import setup_logging
+        from app.core.task_queue import set_pool
         setup_logging()
+        set_pool(ctx["redis"])
 
 
 class WorkerSettingsCritical:
@@ -2986,4 +2975,6 @@ class WorkerSettingsCritical:
     @staticmethod
     async def on_startup(ctx: dict) -> None:
         from app.logging_config import setup_logging
+        from app.core.task_queue import set_pool
         setup_logging()
+        set_pool(ctx["redis"])

@@ -184,11 +184,18 @@ async def push_notification(
             else:
                 # Worker başlatılmamışsa (geliştirme ortamı) direkt gönder
                 logger.warning("[PUSH] ARQ pool yok — direkt gönderiliyor | user_id=%s", user_id)
-                await send_push(
-                    user.fcm_token, notif.get("title", ""), notif.get("body"),
-                    badge=badge, notif_type=notif.get("type"),
-                    extra_data=extra_data or None, image_url=image_url,
-                )
+                try:
+                    await send_push(
+                        user.fcm_token, notif.get("title", ""), notif.get("body"),
+                        badge=badge, notif_type=notif.get("type"),
+                        extra_data=extra_data or None, image_url=image_url,
+                    )
+                except Exception as exc:
+                    from app.services.firebase_service import InvalidFCMTokenError
+                    if isinstance(exc, InvalidFCMTokenError):
+                        logger.warning("[PUSH] Geçersiz token EventBus tarafından temizlenecek | user_id=%s", user_id)
+                    else:
+                        raise
 
     # Push to WS connections — GlobalWSManager ile paralel fan-out
     notif_payload = {

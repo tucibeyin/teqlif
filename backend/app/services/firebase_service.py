@@ -108,7 +108,10 @@ async def send_push(
         try:
             from firebase_admin import exceptions as fb_exceptions
             if isinstance(exc, fb_exceptions.NotFoundError):
-                logger.warning("[FCM] Geçersiz token: %s…", token[:12])
+                logger.warning("[FCM] Geçersiz token (Event fırlatılıyor): %s…", token[:12])
+                from app.core.event_bus import event_bus
+                from app.core.events import TokenInvalidatedEvent
+                event_bus.publish(TokenInvalidatedEvent(token=token))
                 raise InvalidFCMTokenError(token) from exc
         except ImportError:
             pass

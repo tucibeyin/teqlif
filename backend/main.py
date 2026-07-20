@@ -16,8 +16,8 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.config import settings
 from app.logging_config import setup_logging
 from app.core.exceptions import AppException
+from app.core.error_handlers import setup_exception_handlers
 from app.core.idempotency import _IdempotencyReplay
-from app.core.logger import capture_exception
 from app.routers import auth, streams, webhooks, auction, chat, moderation, stories, onboarding
 from app.routers import search_alerts
 from app.services.auction_service import pubsub_listener
@@ -221,113 +221,7 @@ app.middleware("http")(security_headers)
 
 
 # ── Global Exception Handlers ────────────────────────────────────────────────
-
-@app.exception_handler(_IdempotencyReplay)
-async def idempotency_replay_handler(request: Request, exc: _IdempotencyReplay):
-    return exc.response
-
-
-@app.exception_handler(AppException)
-async def app_exception_handler(request: Request, exc: AppException):
-    """
-    Projeye özel AppException ve alt sınıflarını (NotFoundException,
-    DatabaseException vb.) standart formatta döner.
-    TooManyRequestsException için Retry-After header'ı eklenir.
-    """
-    headers = {}
-    retry_after = getattr(exc, "retry_after", None)
-    if retry_after:
-        headers["Retry-After"] = str(retry_after)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "success": False,
-            "error": {
-                "code": exc.error_code,
-                "message": exc.message,
-                **({"email": getattr(exc, "email")} if getattr(exc, "email", None) else {})
-            },
-        },
-        headers=headers or None,
-    )
-
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    """
-    FastAPI'nin yerleşik HTTPException'larını (raise HTTPException(404, ...))
-    standart formata dönüştürür. Geriye dönük uyumluluk korunur.
-    """
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "success": False,
-            "error": {
-                "code": f"HTTP_{exc.status_code}",
-                "message": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
-            },
-        },
-    )
-
-
-@app.exception_handler(Exception)
-async def unhandled_exception_handler(request: Request, exc: Exception):
-    """
-    Hiçbir handler'ın yakalamadığı beklenmedik hataları loglar ve
-    Sentry'e iletir. Kullanıcıya hiçbir zaman iç detay sızdırılmaz.
-    """
-    # Middleware'den yükselen HTTPException'lar: beklenen iş mantığı hataları,
-    # bug değil — Sentry'ye gönderme, mevcut HTTP handler'a yönlendir.
-    if isinstance(exc, HTTPException):
-        return await http_exception_handler(request, exc)
-
-    logger.error(
-        "Beklenmedik hata: %s %s | %s",
-        request.method,
-        request.url.path,
-        traceback.format_exc(),
-    )
-    capture_exception(exc)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "success": False,
-            "error": {
-                "code": "INTERNAL_ERROR",
-                "message": f"Sunucu hatası: {str(exc)}",
-            },
-        },
-    )
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    try:
-        errors = exc.errors()
-    except Exception:
-        errors = str(exc)
-    # ctx içindeki ValueError gibi serialize edilemeyen nesneleri string'e çevir
-    def _safe(obj):
-        if isinstance(obj, dict):
-            return {k: _safe(v) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [_safe(i) for i in obj]
-        if isinstance(obj, (str, int, float, bool, type(None))):
-            return obj
-        return str(obj)
-    safe_errors = _safe(errors)
-    logger.error("[422] %s %s | errors=%s", request.method, request.url.path, safe_errors)
-    return JSONResponse(
-        status_code=422,
-        content={
-            "success": False,
-            "error": {
-                "code": "VALIDATION_ERROR",
-                "message": "Geçersiz istek verisi",
-                "details": safe_errors,
-            },
-        },
-    )
+setup_exception_handlers(app)
 
 
 app.add_middleware(AntiBotMiddleware)

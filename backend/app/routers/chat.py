@@ -434,36 +434,30 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
                 stream_id, exc,
             )
 
-        # ── 9. Mesaj döngüsü ─────────────────────────────────────────────────
-        while True:
-            try:
-                text = await asyncio.wait_for(websocket.receive_text(), timeout=_WS_RECEIVE_TIMEOUT_SECS)
-            except asyncio.TimeoutError:
-                logger.warning("[CHAT WS] İstemci ping timeout | stream_id=%s user_id=%s", stream_id, user_id)
-                break
-            except WebSocketDisconnect:
-                break
-            if not text or text.strip() == "ping":
-                continue
-            try:
-                payload = json.loads(text)
-                await _handle_ws_message(
-                    websocket=websocket,
-                    payload=payload,
-                    svc=svc,
-                    stream_id=stream_id,
-                    user_id=user_id,
-                    username=username,
-                    profile_image_url=profile_image_url,
-                    is_host=is_host,
-                    host_id=host_id,
-                    room_name=room_name,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "[CHAT WS] Mesaj işleme hatası | stream_id=%s | %s",
-                    stream_id, exc,
-                )
+        # ── 9. Mesaj döngüsü (Gateway üzerinden) ─────────────────────────────
+        from app.core.ws_gateway import ws_gateway as gateway
+        
+        async def on_message(payload: dict):
+            await _handle_ws_message(
+                websocket=websocket,
+                payload=payload,
+                svc=svc,
+                stream_id=stream_id,
+                user_id=user_id,
+                username=username,
+                profile_image_url=profile_image_url,
+                is_host=is_host,
+                host_id=host_id,
+                room_name=room_name,
+            )
+
+        await gateway.run_message_loop(
+            websocket=websocket,
+            user_id=user_id,
+            topic=str(stream_id),
+            on_message=on_message,
+            timeout_secs=_WS_RECEIVE_TIMEOUT_SECS,
+        )
 
     except WebSocketDisconnect:
         pass
