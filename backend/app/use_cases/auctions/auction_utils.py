@@ -13,7 +13,7 @@ from app.models.listing import Listing
 from app.models.user import User
 from app.models.auction import Auction
 from app.models.purchase import Purchase
-from app.models.direct_message import DirectMessage
+from app.models.message import DirectMessage
 from app.models.enums import ListingStatus
 from app.schemas.auction import AuctionStart, BidIn
 from app.utils.redis_client import get_redis
