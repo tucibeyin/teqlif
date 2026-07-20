@@ -29,7 +29,7 @@ import 'edit_listing_screen.dart';
 import 'messages_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/listing_detail_provider.dart';
-import '../models/listing_status.dart';
+import '../models/enums.dart';
 import 'ad_report_screen.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
