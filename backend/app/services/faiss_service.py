@@ -115,7 +115,6 @@ async def rebuild_index() -> None:
             text("""
                 SELECT id, embedding FROM listings
                 WHERE status = 'active'
-                  AND is_deleted = FALSE
                   AND embedding IS NOT NULL
                 ORDER BY id
             """)

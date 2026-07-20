@@ -76,7 +76,7 @@ async def store_listing_phash(listing_id: int, image_url: str) -> None:
             text("""
                 SELECT id, user_id FROM listings
                 WHERE image_phash = :phash
-                  AND is_deleted = FALSE
+                  AND status = 'active'
                   AND id != :lid
                 LIMIT 1
             """),

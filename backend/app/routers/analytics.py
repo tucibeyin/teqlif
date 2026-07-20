@@ -1052,8 +1052,8 @@ async def pro_insights(
             SELECT
                 COUNT(*)                                                         AS total_listings,
                 COUNT(*) FILTER (WHERE status = 'active')             AS active_listings,
-                COALESCE(AVG(price) FILTER (WHERE NOT is_deleted), 0)            AS avg_price,
-                COUNT(*) FILTER (WHERE created_at >= :d30 AND NOT is_deleted)    AS new_last_30d
+                COALESCE(AVG(price) FILTER (WHERE status != 'deleted'), 0)            AS avg_price,
+                COUNT(*) FILTER (WHERE created_at >= :d30 AND status != 'deleted')    AS new_last_30d
             FROM listings WHERE user_id = :uid
         """), {"uid": uid, "d30": d30})
         lrow = rows.fetchone()
@@ -2511,7 +2511,7 @@ async def category_velocity(
         INNER JOIN (
             SELECT category,
                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) AS p50
-            FROM listings WHERE category = :cat AND is_deleted = FALSE
+            FROM listings WHERE category = :cat AND status != 'deleted'
             GROUP BY category
         ) pct ON pct.category = l.category
         WHERE a.status = 'completed'
