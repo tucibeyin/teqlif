@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime, timezone
 from typing import Optional, Tuple
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
@@ -72,16 +72,20 @@ def _row_dict(
         "description": listing.description,
         "price": listing.price,
         "category": listing.category,
+        "brand": listing.brand,
+        "condition": listing.condition,
         "image_url": listing.image_url,
         "image_urls": listing.image_urls,
         "thumbnail_url": listing.thumbnail_url,
         "video_url": listing.video_url,
         "location": listing.location,
-        "latitude": listing.latitude,
-        "longitude": listing.longitude,
         "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
         "created_at": listing.created_at,
+        "updated_at": listing.updated_at,
         "deactivated_at": listing.deactivated_at,
+        "expires_at": listing.expires_at,
+        "is_highlight": listing.is_highlight,
+        "buy_it_now_price": listing.buy_it_now_price,
         "likes_count": likes_count,
         "is_liked": is_liked,
         "impression_count": impression_count,
@@ -91,10 +95,13 @@ def _row_dict(
         "seller": {
             "id": user.id,
             "username": user.username,
-            "avatar_url": user.avatar_url,
+            "full_name": user.full_name,
+            "avatar_url": user.profile_image_url,
+            "profile_image_url": user.profile_image_url,
+            "profile_image_thumb_url": user.profile_image_thumb_url,
+            "is_premium": user.is_premium,
             "badge": seller_badge,
             "trust_score": seller_trust_score,
             "influence_rank": seller_influence_rank,
-            "online_status": "online" if user.last_seen and (datetime.now(timezone.utc) - user.last_seen.replace(tzinfo=timezone.utc)).total_seconds() < 300 else "offline",
         },
     }
