@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from fastapi.testclient import TestClient
-from app.main import app
+from main import app
 from app.utils.auth import create_access_token
 
 def test_listing_router():
