@@ -3,7 +3,7 @@ from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException, BadRequestException
 from app.models.user import User
 from app.models.block import UserBlock
-from app.schemas.user import BlockStatusOut
+from app.schemas.block import BlockStatusOut
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
