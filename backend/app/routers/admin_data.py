@@ -121,7 +121,7 @@ async def get_recent_users(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(check_admin_access),
 ):
-    base_q = select(User).where(User.deleted_at.is_(None))
+    base_q = select(User).where(User.status != UserStatus.DELETED)
     if search:
         term = f"%{search}%"
         base_q = base_q.where(
@@ -165,7 +165,7 @@ async def get_recent_users(
                 "is_premium": u.is_premium,
                 "plan_type": u.plan_type,
                 "is_shadowbanned": u.is_shadowbanned,
-                "deleted_at": u.deleted_at.isoformat() if u.deleted_at else None,
+                "deleted_at": None,
                 "tuci_balance": u.tuci_balance,
                 "fcm_token": bool(u.fcm_token),
                 "created_at": u.created_at,
@@ -409,14 +409,13 @@ async def delete_user(
     if user.email == settings.admin_email:
         raise BadRequestException("Sistem yöneticisi silinemez.")
 
-    if user.deleted_at is not None:
+    if user.status == UserStatus.DELETED:
         raise BadRequestException("Kullanıcı zaten silinmiş.")
 
     now = datetime.now(timezone.utc)
 
     # Soft delete: hesabı kapat, token geçersiz kıl
-    user.deleted_at = now
-    user.status = 'passive'
+    user.status = UserStatus.DELETED
     user.fcm_token  = None   # push bildirimlerini durdur
 
     # Kullanıcının tüm aktif ilanlarını pasife çek
@@ -472,9 +471,8 @@ async def purge_user(
     user.bio          = None
     user.website_url  = None
     user.fcm_token    = None
-    user.status = 'passive'
+    user.status = UserStatus.DELETED
     user.email_verified = False
-    user.deleted_at   = user.deleted_at or now
 
     await db.commit()
 
