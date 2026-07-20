@@ -57,10 +57,16 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
 
     async def __aenter__(self):
         self.session = self.session_factory()
-        # Gelecekte eklenecek repoları burada inject edeceğiz:
         self.users = UserRepository(self.session)
-        # Her repo'ya session vermek için BaseRepository yapısı update edilmelidir.
-        # userRepository şimdilik db'yi argüman alıyordu, onu da düzenleyeceğiz.
+        
+        from app.repositories.listing_repository import ListingRepository
+        from app.repositories.stream_repository import StreamRepository
+        from app.repositories.message_repository import MessageRepository
+        
+        self.listings = ListingRepository(self.session)
+        self.streams = StreamRepository(self.session)
+        self.messages = MessageRepository(self.session)
+        
         await super().__aenter__()
         return self
 
