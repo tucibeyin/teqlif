@@ -20,11 +20,16 @@ class GetUserProfileQuery:
             profile_data = {
                 "id": target.id,
                 "username": target.username,
+                "full_name": target.full_name,
                 "bio": target.bio,
-                "avatar_url": target.avatar_url,
+                "avatar_url": target.profile_image_url,
+                "profile_image_url": target.profile_image_url,
+                "profile_image_thumb_url": target.profile_image_thumb_url,
+                "is_premium": target.is_premium,
+                "is_private": target.is_private,
                 "created_at": target.created_at,
-                "follower_count": target.follower_count,
-                "following_count": target.following_count,
+                "follower_count": 0,
+                "following_count": 0,
                 "is_following": False,
                 "is_blocked": False,
                 "active_listings_count": 0,
@@ -56,6 +61,17 @@ class GetUserProfileQuery:
                         raise NotFoundException("Kullanıcı bulunamadı")
 
             from sqlalchemy import func
+            from app.models.follow import Follow
+
+            follower_count = await self.uow.session.scalar(
+                select(func.count(Follow.follower_id)).where(Follow.followed_id == target.id)
+            )
+            following_count = await self.uow.session.scalar(
+                select(func.count(Follow.followed_id)).where(Follow.follower_id == target.id)
+            )
+            profile_data["follower_count"] = follower_count or 0
+            profile_data["following_count"] = following_count or 0
+
             count_res = await self.uow.session.execute(
                 select(func.count(Listing.id)).where(Listing.user_id == target.id, Listing.status == ListingStatus.ACTIVE)
             )
