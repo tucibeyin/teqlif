@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Optional, Tuple
 
@@ -53,7 +54,22 @@ async def _fetch_seller_meta(
         logger.warning("[SellerMeta] Redis fetch başarısız — badge/trending boş dönüyor: %s", exc)
         return {}, set(), set(), {}, {}
 
+
+def _parse_image_urls(image_urls_raw) -> list:
+    """image_urls DB'de JSON string olarak saklanır, list olarak döndürür."""
+    if image_urls_raw is None:
+        return []
+    if isinstance(image_urls_raw, list):
+        return image_urls_raw
+    try:
+        parsed = json.loads(image_urls_raw)
+        return parsed if isinstance(parsed, list) else []
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
 def _row_dict(
+
     listing: Listing,
     user: User,
     likes_count: int = 0,
@@ -75,7 +91,7 @@ def _row_dict(
         "brand": listing.brand,
         "condition": listing.condition,
         "image_url": listing.image_url,
-        "image_urls": listing.image_urls,
+        "image_urls": _parse_image_urls(listing.image_urls),
         "thumbnail_url": listing.thumbnail_url,
         "video_url": listing.video_url,
         "location": listing.location,
