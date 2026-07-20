@@ -26,6 +26,14 @@ from app.services.like_service import LikeService
 from app.use_cases.feed.queries.swipe_live_queries import SwipeLiveQueries
 from app.core.uow import SqlAlchemyUnitOfWork
 
+from app.use_cases.streams.commands.start_stream import StartStreamCommand
+from app.use_cases.streams.commands.join_stream import JoinStreamCommand
+from app.use_cases.streams.commands.lifecycle_commands import ConfirmLiveCommand, CancelPendingStreamCommand
+from app.use_cases.streams.commands.misc_commands import EndStreamCommand, UpdateThumbnailCommand
+from app.use_cases.streams.commands.cohost_commands import InviteCohostCommand, AcceptCohostInviteCommand, RemoveCohostCommand, LeaveCohostCommand
+from app.use_cases.streams.queries.get_viewers import GetViewersQuery
+from app.use_cases.streams.queries.misc_queries import GetFollowedLiveStreamsQuery, GetActiveStreamsQuery
+
 router = APIRouter(prefix="/api/streams", tags=["streams"])
 
 
@@ -215,13 +223,6 @@ async def start_stream(
     current_user: User = Depends(get_current_user),
 ):
     from app.use_cases.streams.commands.start_stream import StartStreamCommand
-from app.use_cases.streams.commands.join_stream import JoinStreamCommand
-from app.use_cases.streams.commands.lifecycle_commands import ConfirmLiveCommand, CancelPendingStreamCommand
-from app.use_cases.streams.commands.misc_commands import EndStreamCommand, UpdateThumbnailCommand
-from app.use_cases.streams.commands.cohost_commands import InviteCohostCommand, AcceptCohostInviteCommand, RemoveCohostCommand, LeaveCohostCommand
-from app.use_cases.streams.queries.get_viewers import GetViewersQuery
-from app.use_cases.streams.queries.misc_queries import GetFollowedLiveStreamsQuery, GetActiveStreamsQuery
-from app.core.uow import SqlAlchemyUnitOfWork
     from app.core.uow import SqlAlchemyUnitOfWork
     
     uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)

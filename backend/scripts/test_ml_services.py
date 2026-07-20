@@ -1,5 +1,10 @@
 import asyncio
 import logging
+import os
+import sys
+
+# Add backend directory to PYTHONPATH
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.services.ml.turkish_nlp import stem_word, build_stemmed_tsquery
 from app.services.ml.nsfw_service import moderate_text
