@@ -37,9 +37,6 @@ from sqlalchemy import select
 
 from app.core.uow import AbstractUnitOfWork
 
-class FeedQueries:
-    def __init__(self, uow: AbstractUnitOfWork):
-        self.uow = uow
 
 
 logger = logging.getLogger(__name__)
@@ -53,6 +50,10 @@ AD_SLOTS = [2, 7, 12]
 
 
 # ── Kategori ağırlık hesabı ───────────────────────────────────────────────────
+
+class FeedQueries:
+    def __init__(self, uow: AbstractUnitOfWork):
+        self.uow = uow
 
     async def get_user_interests(self, user_id: int,) -> dict[str, float]:
         """Kullanıcının category → score sözlüğünü döndürür. Redis'ten okur, yoksa DB'den."""
