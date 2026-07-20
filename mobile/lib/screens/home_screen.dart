@@ -14,8 +14,11 @@ import '../services/api_service.dart';
 import '../services/city_service.dart';
 import '../services/image_cache_manager.dart';
 
-import '../services/listing_service.dart';
 import '../services/storage_service.dart';
+import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/inputs/teq_text_field.dart';
+import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../services/listing_service.dart';
 import '../widgets/shimmer_loading.dart';
 import '../utils/once.dart';
 import 'auth/category_onboarding_screen.dart';
@@ -646,29 +649,20 @@ class HomeScreenState extends State<HomeScreen> {
           // ── Arama kutusu ─────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: TextField(
+            child: TeqTextField(
               controller: _searchController,
               onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                hintText: l.searchHintTextListing,
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          _onSearchChanged('');
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: AppColors.inputFill(context),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              ),
+              hintText: l.searchHintTextListing,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                      },
+                    )
+                  : null,
             ),
           ),
 
@@ -730,12 +724,12 @@ class HomeScreenState extends State<HomeScreen> {
                                 style: const TextStyle(color: Colors.grey),
                               ),
                               const SizedBox(height: 8),
-                              TextButton(
+                              TeqButton.text(
                                 key: const Key(
                                   'home_btn_filtreleri_temizle_bos',
                                 ),
+                                text: l.btnClearFilters,
                                 onPressed: _clearAll,
-                                child: Text(l.btnClearFilters),
                               ),
                             ],
                           ),
@@ -1122,11 +1116,10 @@ class _GridItemState extends State<_GridItem> {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 204 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l.notInterestedConfirmed),
-            duration: const Duration(seconds: 2),
-          ),
+        TeqSnackBar.show(
+          context,
+          message: l.notInterestedConfirmed,
+          type: TeqSnackBarType.info,
         );
         widget.onRemove?.call();
       }

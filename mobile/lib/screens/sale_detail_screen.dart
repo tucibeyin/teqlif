@@ -10,12 +10,22 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
 import 'messages_screen.dart';
-import '../../widgets/async_button.dart';
 
-class SaleDetailScreen extends StatelessWidget {
+import '../../ui_library/components/cards/teq_card.dart';
+import '../../ui_library/components/buttons/teq_button.dart';
+import '../../ui_library/components/overlays/teq_snackbar.dart';
+
+class SaleDetailScreen extends StatefulWidget {
   final Map<String, dynamic> sale;
 
   const SaleDetailScreen({super.key, required this.sale});
+
+  @override
+  State<SaleDetailScreen> createState() => _SaleDetailScreenState();
+}
+
+class _SaleDetailScreenState extends State<SaleDetailScreen> {
+  bool _isListingLoading = false;
 
   String _formatDate(String? iso) {
     if (iso == null) return '-';
@@ -30,6 +40,7 @@ class SaleDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sale = widget.sale;
     final l = AppLocalizations.of(context)!;
     final itemName = sale['item_name'] as String? ?? l.purchaseUnknownItem;
     final buyerUsername = sale['buyer_username'] as String? ?? l.saleUnknownBuyer;
@@ -84,12 +95,8 @@ class SaleDetailScreen extends StatelessWidget {
             ],
 
             // Item details card
-            Container(
+            TeqCard(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.card(context),
-                borderRadius: BorderRadius.circular(12),
-              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -150,33 +157,22 @@ class SaleDetailScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Alıcı Profiline Git
-            ElevatedButton.icon(
-              icon: const Icon(Icons.person, color: Colors.white),
-              label: Text(AppLocalizations.of(context)!.saleDetailGoToBuyer, style: TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
+            TeqButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => PublicProfileScreen(username: buyerUsername)),
                 );
               },
+              text: AppLocalizations.of(context)!.saleDetailGoToBuyer,
+              icon: Icons.person,
+              type: TeqButtonType.primary,
             ),
             const SizedBox(height: 10),
 
             // Alıcıya Mesaj Gönder
             if (buyerId != null)
-              ElevatedButton.icon(
-                icon: const Icon(Icons.message_rounded, color: Colors.white),
-                label: Text(l.saleMessageBuyer, style: const TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6B21A8),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
+              TeqButton(
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -191,6 +187,10 @@ class SaleDetailScreen extends StatelessWidget {
                     ),
                   );
                 },
+                text: l.saleMessageBuyer,
+                icon: Icons.message_rounded,
+                type: TeqButtonType.primary,
+                customColor: const Color(0xFF6B21A8),
               ),
 
             const SizedBox(height: 10),
@@ -199,34 +199,25 @@ class SaleDetailScreen extends StatelessWidget {
             if (listingId != null)
               SizedBox(
                 width: double.infinity,
-                child: AsyncOutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.border(context)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
+                child: TeqButton(
                   onPressed: () async {
+                    setState(() => _isListingLoading = true);
                     final listing = await ListingService.getListingById(listingId);
                     if (!context.mounted) return;
+                    setState(() => _isListingLoading = false);
                     if (listing != null) {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing)),
                       );
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l.purchaseListingNotFound)),
-                      );
+                      TeqSnackBar.show(context, message: l.purchaseListingNotFound, type: TeqSnackBarType.error);
                     }
                   },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.article, color: AppColors.textSecondary(context)),
-                      const SizedBox(width: 8),
-                      Text(l.purchaseViewListing, style: TextStyle(color: AppColors.textPrimary(context))),
-                    ],
-                  ),
+                  text: l.purchaseViewListing,
+                  icon: Icons.article,
+                  type: TeqButtonType.outline,
+                  isLoading: _isListingLoading,
                 ),
               ),
 

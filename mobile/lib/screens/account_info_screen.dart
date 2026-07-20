@@ -4,11 +4,13 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
-import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/phone_input_field.dart';
+import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/inputs/teq_text_field.dart';
+import '../ui_library/components/buttons/teq_button.dart';
 
 class AccountInfoScreen extends StatefulWidget {
   const AccountInfoScreen({super.key});
@@ -62,11 +64,10 @@ class _AccountInfoScreenState extends State<AccountInfoScreen> with WidgetsBindi
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errorGenericRetry),
-            behavior: SnackBarBehavior.floating,
-          ),
+        TeqSnackBar.show(
+          context,
+          message: AppLocalizations.of(context)!.errorGenericRetry,
+          type: TeqSnackBarType.error,
         );
       }
     }
@@ -314,8 +315,10 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
       if (resp.statusCode == 200) {
         Navigator.pop(context);
         widget.onChanged();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.accountInfoEmailUpdated), backgroundColor: const Color(0xFF0D9488)),
+        TeqSnackBar.show(
+          context,
+          message: l.accountInfoEmailUpdated,
+          type: TeqSnackBarType.success,
         );
       } else {
         final msg = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? 'Hata';
@@ -349,23 +352,22 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
             style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
           ),
           const SizedBox(height: 20),
-          TextField(
+          TeqTextField(
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
-            enabled: !_codeSent,
-            style: TextStyle(color: AppColors.textPrimary(context)),
-            decoration: _inputDec(context, l.accountInfoNewEmail, Icons.email_outlined),
+            readOnly: _codeSent,
+            labelText: l.accountInfoNewEmail,
+            prefixIcon: Icon(Icons.email_outlined, size: 18, color: AppColors.iconColor(context)),
             onChanged: (_) { if (_error != null) setState(() => _error = null); },
           ),
           if (_codeSent) ...[
             const SizedBox(height: 12),
-            TextField(
+            TeqTextField(
               controller: _codeCtrl,
               keyboardType: TextInputType.number,
               maxLength: 6,
-              style: TextStyle(color: AppColors.textPrimary(context), letterSpacing: 6, fontSize: 18),
-              textAlign: TextAlign.center,
-              decoration: _inputDec(context, l.accountInfoVerifyCode, Icons.lock_outline, counterText: ''),
+              labelText: l.accountInfoVerifyCode,
+              prefixIcon: Icon(Icons.lock_outline, size: 18, color: AppColors.iconColor(context)),
               onChanged: (_) { if (_error != null) setState(() => _error = null); },
             ),
           ],
@@ -374,30 +376,18 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
             Text(_error!, style: const TextStyle(color: Color(0xFFEF4444), fontSize: 13)),
           ],
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _loading ? null : (_codeSent ? _verifyCode : _requestCode),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: _loading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(
-                      _codeSent ? l.accountInfoVerifyCodeBtn : l.accountInfoSendCode,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                    ),
-            ),
+          TeqButton(
+            text: _codeSent ? l.accountInfoVerifyCodeBtn : l.accountInfoSendCode,
+            onPressed: _loading ? null : (_codeSent ? _verifyCode : _requestCode),
+            isLoading: _loading,
+            isExpanded: true,
           ),
           if (_codeSent) ...[
             const SizedBox(height: 8),
             Center(
-              child: TextButton(
+              child: TeqButton.text(
+                text: l.accountInfoDifferentEmail,
                 onPressed: _loading ? null : () => setState(() { _codeSent = false; _codeCtrl.clear(); _error = null; }),
-                child: Text(l.accountInfoDifferentEmail, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13)),
               ),
             ),
           ],
@@ -406,18 +396,6 @@ class _EmailChangeSheetState extends State<_EmailChangeSheet> {
     );
   }
 
-  InputDecoration _inputDec(BuildContext context, String label, IconData icon, {String? counterText}) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
-      prefixIcon: Icon(icon, size: 18, color: AppColors.iconColor(context)),
-      filled: true,
-      fillColor: AppColors.bg(context),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      counterText: counterText,
-    );
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -498,18 +476,10 @@ class _PhoneSheetState extends State<_PhoneSheet> {
               style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13, height: 1.55),
             ),
             const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () { Navigator.pop(context); widget.onChanged(); },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(l.accountInfoOk, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-              ),
+            TeqButton(
+              text: l.accountInfoOk,
+              onPressed: () { Navigator.pop(context); widget.onChanged(); },
+              isExpanded: true,
             ),
           ] else ...[
             Align(
@@ -537,25 +507,16 @@ class _PhoneSheetState extends State<_PhoneSheet> {
               onReset: () => setState(() => _phoneE164 = null),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _send,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _loading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(l.accountInfoPhoneSendVerify, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-              ),
+            TeqButton(
+              text: l.accountInfoPhoneSendVerify,
+              onPressed: _loading ? null : _send,
+              isLoading: _loading,
+              isExpanded: true,
             ),
             const SizedBox(height: 10),
-            TextButton(
+            TeqButton.text(
+              text: l.accountInfoCancel,
               onPressed: widget.onClose,
-              child: Text(l.accountInfoCancel, style: TextStyle(color: AppColors.textSecondary(context))),
             ),
           ],
         ],

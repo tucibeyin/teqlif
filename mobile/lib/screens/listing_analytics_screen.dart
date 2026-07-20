@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../ui_library/components/buttons/teq_button.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/api.dart';
@@ -192,7 +194,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
             style: TextStyle(color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 16),
-          TextButton(onPressed: _load, child: Text(l.btnRetry)),
+          TeqButton.text(onPressed: _load, text: l.btnRetry, isExpanded: false),
         ],
       ),
     );

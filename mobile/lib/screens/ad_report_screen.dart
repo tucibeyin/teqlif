@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/analytics_service.dart';
+import '../ui_library/components/buttons/teq_button.dart';
 
 class AdReportScreen extends StatefulWidget {
   final int campaignId;
@@ -29,7 +30,10 @@ class _AdReportScreenState extends State<AdReportScreen>
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _loadReport();
   }
@@ -61,20 +65,29 @@ class _AdReportScreenState extends State<AdReportScreen>
 
   String _statusLabel(String? s, AppLocalizations l) {
     switch (s) {
-      case 'active':    return l.adReportStatusActive;
-      case 'completed': return l.adReportStatusCompleted;
-      case 'paused':    return l.adReportStatusPaused;
-      case 'cancelled': return l.adReportStatusCancelled;
-      default:          return s ?? '—';
+      case 'active':
+        return l.adReportStatusActive;
+      case 'completed':
+        return l.adReportStatusCompleted;
+      case 'paused':
+        return l.adReportStatusPaused;
+      case 'cancelled':
+        return l.adReportStatusCancelled;
+      default:
+        return s ?? '—';
     }
   }
 
   Color _statusColor(String? s) {
     switch (s) {
-      case 'active':    return const Color(0xFF10B981);
-      case 'completed': return const Color(0xFF6366F1);
-      case 'paused':    return const Color(0xFFF59E0B);
-      default:          return const Color(0xFF64748B);
+      case 'active':
+        return const Color(0xFF10B981);
+      case 'completed':
+        return const Color(0xFF6366F1);
+      case 'paused':
+        return const Color(0xFFF59E0B);
+      default:
+        return const Color(0xFF64748B);
     }
   }
 
@@ -98,8 +111,8 @@ class _AdReportScreenState extends State<AdReportScreen>
         child: _loading
             ? _buildLoading()
             : _hasError
-                ? _buildError()
-                : _buildReport(),
+            ? _buildError()
+            : _buildReport(),
       ),
     );
   }
@@ -129,7 +142,11 @@ class _AdReportScreenState extends State<AdReportScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, color: Color(0xFF475569), size: 52),
+            const Icon(
+              Icons.wifi_off_rounded,
+              color: Color(0xFF475569),
+              size: 52,
+            ),
             const SizedBox(height: 16),
             Text(
               l.adReportLoadError,
@@ -141,7 +158,10 @@ class _AdReportScreenState extends State<AdReportScreen>
               label: l.btnRetry,
               color: kPrimary,
               onTap: () {
-                setState(() { _loading = true; _hasError = false; });
+                setState(() {
+                  _loading = true;
+                  _hasError = false;
+                });
                 _loadReport();
               },
             ),
@@ -160,12 +180,12 @@ class _AdReportScreenState extends State<AdReportScreen>
   Widget _buildReport() {
     final l = AppLocalizations.of(context)!;
     final r = _report!;
-    final status      = r['status'] as String?;
+    final status = r['status'] as String?;
     final impressions = r['impressions'] as int? ?? 0;
-    final clicks      = r['clicks'] as int? ?? 0;
-    final ctr         = r['ctr'];
-    final ctrD        = ctr != null ? (ctr as num).toDouble() : 0.0;
-    final activeDays  = _activeDays(r['created_at']);
+    final clicks = r['clicks'] as int? ?? 0;
+    final ctr = r['ctr'];
+    final ctrD = ctr != null ? (ctr as num).toDouble() : 0.0;
+    final activeDays = _activeDays(r['created_at']);
 
     return FadeTransition(
       opacity: _fadeAnim,
@@ -187,17 +207,23 @@ class _AdReportScreenState extends State<AdReportScreen>
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: _statusColor(status).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: _statusColor(status).withValues(alpha: 0.40)),
+                      border: Border.all(
+                        color: _statusColor(status).withValues(alpha: 0.40),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 7, height: 7,
+                          width: 7,
+                          height: 7,
                           decoration: BoxDecoration(
                             color: _statusColor(status),
                             shape: BoxShape.circle,
@@ -270,7 +296,11 @@ class _AdReportScreenState extends State<AdReportScreen>
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: _CtrInsight(ctr: ctrD, clicks: clicks, impressions: impressions),
+              child: _CtrInsight(
+                ctr: ctrD,
+                clicks: clicks,
+                impressions: impressions,
+              ),
             ),
           ),
 
@@ -330,11 +360,18 @@ class _AdHeader extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: () => Navigator.pop(context),
-                child: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF64748B), size: 18),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Color(0xFF64748B),
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: kPrimary.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(20),
@@ -406,7 +443,11 @@ class _MetricCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withValues(alpha: 0.20)),
         boxShadow: [
-          BoxShadow(color: color.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: FittedBox(
@@ -417,7 +458,8 @@ class _MetricCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 32, height: 32,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
@@ -427,16 +469,32 @@ class _MetricCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800, height: 1.1),
+              style: TextStyle(
+                color: color,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                height: 1.1,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, height: 1.3),
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 11,
+                height: 1.3,
+              ),
             ),
             if (hint != null) ...[
               const SizedBox(height: 3),
-              Text(hint!, style: TextStyle(color: color.withValues(alpha: 0.7), fontSize: 10, fontWeight: FontWeight.w500)),
+              Text(
+                hint!,
+                style: TextStyle(
+                  color: color.withValues(alpha: 0.7),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ],
         ),
@@ -452,12 +510,16 @@ class _CtrInsight extends StatelessWidget {
   final int clicks;
   final int impressions;
 
-  const _CtrInsight({required this.ctr, required this.clicks, required this.impressions});
+  const _CtrInsight({
+    required this.ctr,
+    required this.clicks,
+    required this.impressions,
+  });
 
   String _insight(AppLocalizations l) {
     if (impressions == 0) return l.adReportInsightNoImpressions;
-    if (ctr >= 5)   return l.adReportInsightGreat(ctr.round());
-    if (ctr >= 2)   return l.adReportInsightGood(clicks, impressions);
+    if (ctr >= 5) return l.adReportInsightGreat(ctr.round());
+    if (ctr >= 2) return l.adReportInsightGood(clicks, impressions);
     if (ctr >= 0.5) return l.adReportInsightLow(clicks, impressions);
     return l.adReportInsightVeryLow(clicks, impressions);
   }
@@ -471,7 +533,10 @@ class _CtrInsight extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [kPrimary.withValues(alpha: 0.16), const Color(0xFF1E1B4B).withValues(alpha: 0.75)],
+          colors: [
+            kPrimary.withValues(alpha: 0.16),
+            const Color(0xFF1E1B4B).withValues(alpha: 0.75),
+          ],
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kPrimary.withValues(alpha: 0.28)),
@@ -482,16 +547,38 @@ class _CtrInsight extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 28, height: 28,
-                decoration: BoxDecoration(color: kPrimary.withValues(alpha: 0.25), shape: BoxShape.circle),
-                child: Icon(Icons.auto_awesome_rounded, color: kPrimary, size: 14),
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: kPrimary.withValues(alpha: 0.25),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: kPrimary,
+                  size: 14,
+                ),
               ),
               const SizedBox(width: 8),
-              Text(l.adReportSmartAnalysis, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+              Text(
+                l.adReportSmartAnalysis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
-          Text(_insight(l), style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13, height: 1.55)),
+          Text(
+            _insight(l),
+            style: const TextStyle(
+              color: Color(0xFFCBD5E1),
+              fontSize: 13,
+              height: 1.55,
+            ),
+          ),
         ],
       ),
     );
@@ -504,23 +591,19 @@ class _AdButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _AdButton({required this.label, required this.color, required this.onTap});
+  const _AdButton({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 0,
-        ),
-        child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-      ),
+    return TeqButton(
+      text: label,
+      onPressed: onTap,
+      customColor: color,
+      size: TeqButtonSize.large,
     );
   }
 }
@@ -546,29 +629,42 @@ class _AdvancedMetrics extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF334155).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: const Color(0xFF334155).withValues(alpha: 0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l.adReportSmartAnalysis, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(
+            l.adReportSmartAnalysis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 12),
-          Row(children: [
-            if (bestHour != null) Expanded(
-              child: _MiniStat(
-                icon: Icons.schedule,
-                label: l.adMetricBestHour,
-                value: '$bestHour:00',
-              ),
-            ),
-            if (catAvgCtr != null) Expanded(
-              child: _MiniStat(
-                icon: Icons.bar_chart,
-                label: l.adMetricCategoryAvgCtr,
-                value: '%${(catAvgCtr as num).toStringAsFixed(1)}',
-              ),
-            ),
-          ]),
+          Row(
+            children: [
+              if (bestHour != null)
+                Expanded(
+                  child: _MiniStat(
+                    icon: Icons.schedule,
+                    label: l.adMetricBestHour,
+                    value: '$bestHour:00',
+                  ),
+                ),
+              if (catAvgCtr != null)
+                Expanded(
+                  child: _MiniStat(
+                    icon: Icons.bar_chart,
+                    label: l.adMetricCategoryAvgCtr,
+                    value: '%${(catAvgCtr as num).toStringAsFixed(1)}',
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -579,7 +675,11 @@ class _MiniStat extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _MiniStat({required this.icon, required this.label, required this.value});
+  const _MiniStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -587,9 +687,20 @@ class _MiniStat extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: const Color(0xFF818CF8)),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 9), textAlign: TextAlign.center),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white60, fontSize: 9),
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }

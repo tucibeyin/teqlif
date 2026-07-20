@@ -9,10 +9,12 @@ import '../../services/auth_service.dart';
 import '../../services/biometric_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/storage_service.dart';
-import '../../utils/error_helper.dart';
 import 'register_screen.dart';
 import 'verify_screen.dart';
 import 'forgot_password_screen.dart';
+import '../../ui_library/components/inputs/teq_text_field.dart';
+import '../../ui_library/components/buttons/teq_button.dart';
+import '../../ui_library/components/overlays/teq_snackbar.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -39,18 +41,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; });
+    setState(() {
+      _loading = true;
+    });
     try {
       await AuthService.login(
         identifier: _identifierCtrl.text.trim(),
         password: _passCtrl.text,
       );
-      
+
       // Giriş yapıldıktan sonra kullanıcının DB'deki locale bilgisini çek ve senkronize et
       try {
         final user = await AuthService.me();
         if (user.locale != null && user.locale!.isNotEmpty && mounted) {
-          ref.read(localeProvider.notifier).setLocaleLocally(Locale(user.locale!));
+          ref
+              .read(localeProvider.notifier)
+              .setLocaleLocally(Locale(user.locale!));
         }
       } catch (_) {}
 
@@ -66,18 +72,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (e is AppException && e.code == 'EMAIL_NOT_VERIFIED' && mounted) {
-        final email = e.extra['email']?.toString() ?? _identifierCtrl.text.trim();
-        try { await AuthService.resendCode(email); } catch (_) {}
+        final email =
+            e.extra['email']?.toString() ?? _identifierCtrl.text.trim();
+        try {
+          await AuthService.resendCode(email);
+        } catch (_) {}
         if (mounted) {
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => VerifyScreen(email: email, resent: true)),
+            MaterialPageRoute(
+              builder: (_) => VerifyScreen(email: email, resent: true),
+            ),
           );
         }
       } else if (mounted) {
-        showErrorSnackbar(context, e);
+        TeqSnackBar.show(
+          context,
+          message: e.toString(),
+          type: TeqSnackBarType.error,
+        );
       }
     } finally {
-      if (mounted) setState(() { _loading = false; });
+      if (mounted)
+        setState(() {
+          _loading = false;
+        });
     }
   }
 
@@ -93,21 +111,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Text(l.profileFaceId),
           ],
         ),
-        content: Text(
-          l.loginFaceIdDesc,
-          style: const TextStyle(fontSize: 14),
-        ),
+        content: Text(l.loginFaceIdDesc, style: const TextStyle(fontSize: 14)),
         actions: [
-          TextButton(
-            key: const Key('login_biometric_btn_simdi_degil'),
+          TeqButton.text(
+            text: l.btnNotNow,
             onPressed: () => Navigator.pop(context, false),
-            child: Text(l.btnNotNow, style: const TextStyle(color: Color(0xFF6B7280))),
+            customColor: const Color(0xFF6B7280),
+            isExpanded: false,
           ),
-          ElevatedButton(
-            key: const Key('login_biometric_btn_etkinlestir'),
-            style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+          TeqButton(
+            text: l.btnEnable,
             onPressed: () => Navigator.pop(context, true),
-            child: Text(l.btnEnable, style: const TextStyle(color: Colors.white)),
+            isExpanded: false,
           ),
         ],
       ),
@@ -145,93 +160,73 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 32),
                       Text(
                         l.loginWelcome,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         l.loginSubtitle,
-                        style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary(context),
+                        ),
                       ),
                       const SizedBox(height: 28),
                       Form(
                         key: _formKey,
                         child: Column(
                           children: [
-                            TextFormField(
-                              key: const Key('login_input_identifier'),
+                            TeqTextField(
                               controller: _identifierCtrl,
                               keyboardType: TextInputType.visiblePassword,
-                              autocorrect: false,
-                              textInputAction: TextInputAction.next,
-                              onFieldSubmitted: (_) => _passFocus.requestFocus(),
-                              decoration: InputDecoration(labelText: l.fieldLoginIdentifier),
-                              validator: (v) =>
-                                  v == null || v.isEmpty ? l.fieldLoginIdentifierHint : null,
+                              labelText: l.fieldLoginIdentifier,
+                              validator: (v) => v == null || v.isEmpty
+                                  ? l.fieldLoginIdentifierHint
+                                  : null,
                             ),
                             const SizedBox(height: 14),
-                            TextFormField(
-                              key: const Key('login_input_password'),
+                            TeqTextField(
                               controller: _passCtrl,
-                              focusNode: _passFocus,
                               obscureText: _obscure,
-                              enableSuggestions: false,
-                              autocorrect: false,
-                              smartDashesType: SmartDashesType.disabled,
-                              smartQuotesType: SmartQuotesType.disabled,
-                              textInputAction: TextInputAction.done,
-                              onFieldSubmitted: (_) => _submit(),
-                              decoration: InputDecoration(
-                                labelText: l.fieldPassword,
-                                suffixIcon: IconButton(
-                                  key: const Key('login_btn_password_visibility'),
-                                  icon: Icon(_obscure
+                              keyboardType: TextInputType.visiblePassword,
+                              labelText: l.fieldPassword,
+                              suffixIcon: IconButton(
+                                key: const Key('login_btn_password_visibility'),
+                                icon: Icon(
+                                  _obscure
                                       ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined),
-                                  onPressed: () =>
-                                      setState(() => _obscure = !_obscure),
+                                      : Icons.visibility_outlined,
                                 ),
+                                onPressed: () =>
+                                    setState(() => _obscure = !_obscure),
                               ),
-                              validator: (v) =>
-                                  v == null || v.isEmpty ? l.fieldPasswordHint : null,
+                              validator: (v) => v == null || v.isEmpty
+                                  ? l.fieldPasswordHint
+                                  : null,
                             ),
                             const SizedBox(height: 8),
                             Align(
                               alignment: Alignment.centerRight,
-                              child: TextButton(
+                              child: TeqButton.text(
+                                text: l.forgotPassword,
+                                isExpanded: false,
                                 onPressed: () {
                                   Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen(),
+                                    ),
                                   );
                                 },
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: Text(
-                                  l.forgotPassword,
-                                  style: const TextStyle(
-                                    color: kPrimary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
                               ),
                             ),
                             const SizedBox(height: 24),
-                            ElevatedButton(
-                              key: const Key('login_btn_submit'),
-                              onPressed: _loading ? null : _submit,
-                              child: _loading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(l.btnLogin),
+                            TeqButton(
+                              text: l.btnLogin,
+                              isLoading: _loading,
+                              onPressed: _submit,
                             ),
                           ],
                         ),
@@ -242,13 +237,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         children: [
                           Text(
                             l.loginNoAccount,
-                            style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
+                            style: TextStyle(
+                              color: AppColors.textSecondary(context),
+                              fontSize: 14,
+                            ),
                           ),
                           GestureDetector(
                             key: const Key('login_link_kayit_ol'),
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
-                                  builder: (_) => const RegisterScreen()),
+                                builder: (_) => const RegisterScreen(),
+                              ),
                             ),
                             child: Text(
                               l.loginRegisterLink,
@@ -273,23 +272,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.language_outlined,
-                          size: 14, color: AppColors.textSecondary(context)),
+                      Icon(
+                        Icons.language_outlined,
+                        size: 14,
+                        color: AppColors.textSecondary(context),
+                      ),
                       const SizedBox(width: 5),
                       Text(
                         l.settingsLanguage,
                         style: TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary(context)),
+                          fontSize: 12,
+                          color: AppColors.textSecondary(context),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   SegmentedButton<String>(
                     segments: [
-                      ButtonSegment(value: 'tr', label: Text(AppLocalizations.of(context)!.langTR)),
-                      ButtonSegment(value: 'en', label: Text(AppLocalizations.of(context)!.langEN)),
-                      ButtonSegment(value: 'ar', label: Text(AppLocalizations.of(context)!.langAR)),
-                      ButtonSegment(value: 'ru', label: Text(AppLocalizations.of(context)!.langRU)),
+                      ButtonSegment(
+                        value: 'tr',
+                        label: Text(AppLocalizations.of(context)!.langTR),
+                      ),
+                      ButtonSegment(
+                        value: 'en',
+                        label: Text(AppLocalizations.of(context)!.langEN),
+                      ),
+                      ButtonSegment(
+                        value: 'ar',
+                        label: Text(AppLocalizations.of(context)!.langAR),
+                      ),
+                      ButtonSegment(
+                        value: 'ru',
+                        label: Text(AppLocalizations.of(context)!.langRU),
+                      ),
                     ],
                     selected: {currentLocale.languageCode},
                     showSelectedIcon: false,

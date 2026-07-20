@@ -6,6 +6,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
 import '../l10n/app_localizations.dart';
+import '../ui_library/components/buttons/teq_button.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   final bool isPremium;
@@ -242,25 +243,10 @@ class _NotificationSettingsScreenState
               ),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  AppLocalizations.of(context)!.btnGoPro,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
+            TeqButton(
+              text: AppLocalizations.of(context)!.btnGoPro,
+              onPressed: () => Navigator.pop(context),
+              isExpanded: true,
             ),
           ],
         ),

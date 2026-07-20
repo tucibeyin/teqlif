@@ -1,3 +1,4 @@
+import '../../ui_library/components/overlays/teq_snackbar.dart';
 import 'package:flutter/material.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
@@ -49,12 +50,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       
       if (!mounted) return;
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.passwordResetSuccess),
-          backgroundColor: Colors.green,
-        ),
-      );
+      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.passwordResetSuccess, type: TeqSnackBarType.info);
       
       // Başarılı olunca Login ekranına dön
       Navigator.of(context).pop();

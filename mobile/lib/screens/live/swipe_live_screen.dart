@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import '../../ui_library/components/overlays/teq_snackbar.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -1029,9 +1030,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.genericErrorDetail(e.toString()))),
-        );
+        TeqSnackBar.show(context, message: AppLocalizations.of(context)!.genericErrorDetail(e.toString()));
       }
     }
   }

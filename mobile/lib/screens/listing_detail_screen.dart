@@ -15,7 +15,6 @@ import '../services/image_cache_manager.dart';
 import '../services/share_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
-import '../widgets/async_button.dart';
 import '../models/listing_offer.dart';
 import '../services/cache_service.dart';
 import '../services/listing_service.dart';
@@ -31,6 +30,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/listing_detail_provider.dart';
 import '../models/enums.dart';
 import 'ad_report_screen.dart';
+
+import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/overlays/teq_dialog.dart';
+import '../ui_library/components/inputs/teq_text_field.dart';
+import '../ui_library/components/buttons/teq_button.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
@@ -443,25 +447,15 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             ? l.listingDeactivateFreeCreditHint
             : l.listingDeactivateCostHint(cost);
 
-        final confirm = await showDialog<bool>(
+        final confirm = await TeqDialog.show<bool>(
           context: context,
-          builder: (_) => AlertDialog(
-            title: Text(l.listingDeactivateTitle),
-            content: Text('${l.listingDeactivateWarning}\n\n$hintText'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(l.btnDismiss),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  l.listingDeactivateConfirm,
-                  style: const TextStyle(color: Color(0xFFDC2626)),
-                ),
-              ),
-            ],
-          ),
+          title: l.listingDeactivateTitle,
+          message: '${l.listingDeactivateWarning}\n\n$hintText',
+          primaryButtonText: l.listingDeactivateConfirm,
+          onPrimaryPressed: () => Navigator.pop(context, true),
+          secondaryButtonText: l.btnDismiss,
+          onSecondaryPressed: () => Navigator.pop(context, false),
+          isDestructive: true,
         );
         if (confirm != true) return;
       }
@@ -469,18 +463,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       // Pasif → Aktif
       if (!withinWindow) {
         if (!canAfford) {
-          await showDialog<void>(
+          await TeqDialog.show<void>(
             context: context,
-            builder: (_) => AlertDialog(
-              title: Text(l.listingReactivateTitle),
-              content: Text(l.listingReactivateInsufficientBalance),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(l.btnDismiss),
-                ),
-              ],
-            ),
+            title: l.listingReactivateTitle,
+            message: l.listingReactivateInsufficientBalance,
+            primaryButtonText: l.btnDismiss,
+            onPrimaryPressed: () => Navigator.pop(context),
           );
           return;
         }
@@ -495,25 +483,14 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         }
         if (!isPremium) subtitle += '\n\n${l.listingReactivateProUpsell}';
 
-        final confirm = await showDialog<bool>(
+        final confirm = await TeqDialog.show<bool>(
           context: context,
-          builder: (_) => AlertDialog(
-            title: Text(l.listingReactivateTitle),
-            content: Text(subtitle),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(l.btnDismiss),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  l.listingReactivateConfirm,
-                  style: const TextStyle(color: Color(0xFF6366F1)),
-                ),
-              ),
-            ],
-          ),
+          title: l.listingReactivateTitle,
+          message: subtitle,
+          primaryButtonText: l.listingReactivateConfirm,
+          onPrimaryPressed: () => Navigator.pop(context, true),
+          secondaryButtonText: l.btnDismiss,
+          onSecondaryPressed: () => Navigator.pop(context, false),
         );
         if (confirm != true) return;
       }
@@ -532,17 +509,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             .setStatus(
               newActive ? ListingStatus.active : ListingStatus.passive,
             );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              newActive ? l.listingActivated : l.listingDeactivated,
-            ),
-          ),
+        TeqSnackBar.show(
+          context,
+          message: newActive ? l.listingActivated : l.listingDeactivated,
+          type: TeqSnackBarType.success,
         );
       } else if (resp['statusCode'] == 402 && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.listingReactivateInsufficientBalance)),
-        );
+        TeqSnackBar.show(context, message: l.listingReactivateInsufficientBalance, type: TeqSnackBarType.error);
       }
     } catch (_) {}
   }
@@ -679,9 +652,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final l = AppLocalizations.of(context)!;
     final amount = _parseFormattedPrice(_offerCtrl.text);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.offerInvalidAmount)));
+      TeqSnackBar.show(context, message: l.offerInvalidAmount, type: TeqSnackBarType.warning);
       return;
     }
     setState(() => _offerSubmitting = true);
@@ -698,17 +669,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         interactionType: 'listing_offer_submit',
         pricePoint: amount.toDouble(),
       );
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.offerSuccess)));
+      TeqSnackBar.show(context, message: l.offerSuccess, type: TeqSnackBarType.success);
       final offers = await ListingService.getOffers(id);
       if (mounted && context.mounted) _offersNotifier.value = offers;
     } catch (e) {
       if (!mounted || !context.mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg.isNotEmpty ? msg : l.offerError)),
-      );
+      TeqSnackBar.show(context, message: msg.isNotEmpty ? msg : l.offerError, type: TeqSnackBarType.error);
     } finally {
       if (mounted && context.mounted) setState(() => _offerSubmitting = false);
     }
@@ -762,15 +729,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final l = AppLocalizations.of(context)!;
 
     if (_myUserId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.listingMsgLoginRequired)));
+      TeqSnackBar.show(context, message: l.listingMsgLoginRequired, type: TeqSnackBarType.warning);
       return;
     }
     if (_myUserId == otherId) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.listingMsgOwnListing)));
+      TeqSnackBar.show(context, message: l.listingMsgOwnListing, type: TeqSnackBarType.warning);
       return;
     }
 
@@ -796,30 +759,18 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   void _confirmDelete(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    showDialog(
+    TeqDialog.show(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(l.dialogDeleteListingTitle),
-        content: Text(l.listingDeleteConfirmContent),
-        actions: [
-          TextButton(
-            key: const Key('listing_detail_dialog_btn_vazgec'),
-            onPressed: () => Navigator.pop(context),
-            child: Text(l.btnDismiss),
-          ),
-          TextButton(
-            key: const Key('listing_detail_dialog_btn_sil'),
-            onPressed: () async {
-              Navigator.pop(context);
-              await _deleteListing(context);
-            },
-            child: Text(
-              l.listingDeleteConfirmYes,
-              style: const TextStyle(color: Color(0xFFDC2626)),
-            ),
-          ),
-        ],
-      ),
+      title: l.dialogDeleteListingTitle,
+      message: l.listingDeleteConfirmContent,
+      primaryButtonText: l.listingDeleteConfirmYes,
+      onPrimaryPressed: () async {
+        Navigator.pop(context);
+        await _deleteListing(context);
+      },
+      secondaryButtonText: l.btnDismiss,
+      onSecondaryPressed: () => Navigator.pop(context),
+      isDestructive: true,
     );
   }
 
@@ -843,11 +794,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
             jsonDecode(resp.body)['detail'] ??
             AppLocalizations.of(context)?.errSomethingWentWrong ??
             'Error';
-        messenger.showSnackBar(SnackBar(content: Text(detail)));
+        TeqSnackBar.show(context, message: detail, type: TeqSnackBarType.error);
       }
     } catch (_) {
       if (mounted && context.mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(connErr)));
+        TeqSnackBar.show(context, message: connErr, type: TeqSnackBarType.error);
       }
     }
   }
@@ -927,29 +878,16 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       final secs = (apiResult['seconds_remaining'] as num?)?.toInt() ?? 86400;
       setState(() => _cooldownSeconds = secs);
       _startCooldownTimer();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_formatCooldown(secs))));
+      TeqSnackBar.show(context, message: _formatCooldown(secs), type: TeqSnackBarType.warning);
     } else if (apiResult != null && apiResult.containsKey('error')) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(apiResult['error'] as String)));
+      TeqSnackBar.show(context, message: apiResult['error'] as String, type: TeqSnackBarType.error);
     } else if (apiResult != null) {
       CacheService.clearData('user_wallet_data');
       setState(() => _cooldownSeconds = 86400);
       _startCooldownTimer();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.audienceMassSendSuccess),
-          backgroundColor: const Color(0xFF14B8A6),
-        ),
-      );
+      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.audienceMassSendSuccess, type: TeqSnackBarType.success);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.audienceMassSendError),
-        ),
-      );
+      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.audienceMassSendError, type: TeqSnackBarType.error);
     }
   }
 
@@ -1049,33 +987,25 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 widget.listing['campaign_id'] = _campaignId;
                 widget.listing['is_sponsored'] = true;
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid,
-                  ),
-                  backgroundColor: const Color(0xFFF97316),
-                ),
+              TeqSnackBar.show(
+                context,
+                message: wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid,
+                type: TeqSnackBarType.success,
               );
             } else {
               final body = jsonDecode(resp.body) as Map<String, dynamic>;
               final msg = body['detail'] ?? ll.boostErrorDefault;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(msg.toString()),
-                  backgroundColor: resp.statusCode == 402
-                      ? const Color(0xFFDC2626)
-                      : null,
-                ),
+              TeqSnackBar.show(
+                context,
+                message: msg.toString(),
+                type: TeqSnackBarType.error,
               );
             }
           } catch (_) {
             if (mounted && context.mounted) {
               final ll = AppLocalizations.of(ctx)!;
               Navigator.pop(dlgCtx);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(ll.boostErrorConnection)));
+              TeqSnackBar.show(context, message: ll.boostErrorConnection, type: TeqSnackBarType.error);
             }
           }
         }
@@ -1141,17 +1071,17 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
               ],
             ),
             actions: [
-              TextButton(
+              TeqButton(
                 onPressed: () => Navigator.pop(dlgCtx, false),
-                child: Text(dl.btnCancel),
+                text: dl.btnCancel,
+                type: TeqButtonType.text,
+                isExpanded: false,
               ),
-              AsyncElevatedButton(
+              TeqButton(
                 onPressed: performBoost,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF97316),
-                  foregroundColor: Colors.white,
-                ),
-                child: Text(dl.boostDialogStart),
+                text: dl.boostDialogStart,
+                type: TeqButtonType.primary,
+                isExpanded: false,
               ),
             ],
           );
@@ -1217,20 +1147,19 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
               ],
             ),
             actions: [
-              TextButton(
+              TeqButton(
                 onPressed: () => Navigator.pop(dlgCtx, false),
-                child: Text(dl.btnCancel),
+                text: dl.btnCancel,
+                type: TeqButtonType.text,
+                isExpanded: false,
               ),
-              ElevatedButton(
+              TeqButton(
                 onPressed: tuciBalance >= 50
                     ? () => Navigator.pop(dlgCtx, true)
                     : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey.shade300,
-                ),
-                child: Text(dl.boostDialogPaidConfirm),
+                text: dl.boostDialogPaidConfirm,
+                type: TeqButtonType.primary,
+                isExpanded: false,
               ),
             ],
           );
@@ -1308,38 +1237,20 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                 onChanged: (v) => setModalState(() => selectedReason = v),
               ),
               const SizedBox(height: 12),
-              TextField(
+              TeqTextField(
                 key: const Key('listing_detail_report_input_aciklama'),
                 controller: noteCtrl,
                 maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: l.listingReportNoteHint,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                ),
+                hintText: l.listingReportNoteHint,
               ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                child: AsyncElevatedButton(
+                child: TeqButton(
                   key: const Key('listing_detail_report_btn_gonder'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
                   onPressed: () async {
                     if (selectedReason == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l.listingReportSelectRequired)),
-                      );
+                      TeqSnackBar.show(context, message: l.listingReportSelectRequired, type: TeqSnackBarType.warning);
                       return;
                     }
                     final note = noteCtrl.text.trim();
@@ -1348,7 +1259,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     Navigator.pop(ctx);
                     await _submitReport(reason);
                   },
-                  child: Text(l.listingReportSubmitBtn),
+                  text: l.listingReportSubmitBtn,
+                  type: TeqButtonType.primary,
                 ),
               ),
             ],
@@ -1374,24 +1286,18 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       if (!mounted || !context.mounted) return;
       final l = AppLocalizations.of(context)!;
       if (resp.statusCode == 200) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.listingReportSuccess)));
+        TeqSnackBar.show(context, message: l.listingReportSuccess, type: TeqSnackBarType.success);
       } else {
         final detail =
             jsonDecode(resp.body)['detail'] ??
             AppLocalizations.of(context)?.errSomethingWentWrong ??
             'Error';
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(detail)));
+        TeqSnackBar.show(context, message: detail, type: TeqSnackBarType.error);
       }
     } catch (_) {
       if (mounted && context.mounted) {
         final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.errorConnection)));
+        TeqSnackBar.show(context, message: l.errorConnection, type: TeqSnackBarType.error);
       }
     }
   }
@@ -1849,13 +1755,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     Row(
                       children: [
                         Expanded(
-                          child: TextField(
+                          child: TeqTextField(
                             key: const Key('listing_detail_offer_input'),
                             controller: _offerCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [_PriceInputFormatter()],
-                            enabled:
-                                _isActive, // İlan pasifse giriş engellensin
+                            readOnly: !_isActive,
                             onChanged: (val) {
                               final parsed = _parseFormattedPrice(val);
                               if (parsed != null && parsed > 0) {
@@ -1866,54 +1771,20 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                 _offerTypedAmount = null;
                               }
                             },
-                            decoration: InputDecoration(
-                              hintText: l.offerAmountHint,
-                              prefixText: '₺ ',
-                              isDense: true,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
-                            ),
+                            hintText: l.offerAmountHint,
+                            prefixText: '₺ ',
                           ),
                         ),
                         const SizedBox(width: 8),
-                        ElevatedButton(
+                        TeqButton(
                           key: const Key('listing_detail_offer_btn'),
                           onPressed: (_offerSubmitting || !_isActive)
                               ? null
                               : _placeOffer,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kPrimary,
-                            foregroundColor: Colors.white,
-                            minimumSize: Size
-                                .zero, // global tema override: Row içinde sonsuz genişliği önler
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 13,
-                            ),
-                          ),
-                          child: _offerSubmitting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  l.offerBtn,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                          text: l.offerBtn,
+                          type: TeqButtonType.primary,
+                          isExpanded: false,
+                          isLoading: _offerSubmitting,
                         ),
                       ],
                     ),
@@ -2077,7 +1948,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                           return Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              ElevatedButton.icon(
+                              TeqButton(
                                 onPressed:
                                     (_massNotificationSending ||
                                         _cooldownLoading)
@@ -2085,45 +1956,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                     : _cooldownSeconds > 0
                                     ? () => _openMassNotificationReport(context)
                                     : () => _sendMassNotification(context),
-                                icon:
-                                    (_massNotificationSending ||
-                                        _cooldownLoading)
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : _cooldownSeconds > 0
-                                    ? const Icon(Icons.auto_graph, size: 18)
-                                    : const Text(
-                                        '📢',
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                label: Text(
-                                  _cooldownLoading
-                                      ? ''
-                                      : _cooldownSeconds > 0
-                                      ? l.btnViewNotificationReport
-                                      : l.btnSendMassNotification,
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF14B8A6),
-                                  foregroundColor: Colors.white,
-                                  disabledBackgroundColor: const Color(
-                                    0x6614B8A6,
-                                  ),
-                                  minimumSize: const Size(double.infinity, 50),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  textStyle: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
+                                text: _cooldownSeconds > 0
+                                    ? l.btnViewNotificationReport
+                                    : '📢 ${l.btnSendMassNotification}',
+                                type: TeqButtonType.primary,
+                                size: TeqButtonSize.large,
+                                customColor: const Color(0xFF14B8A6),
+                                isLoading: _massNotificationSending || _cooldownLoading,
                               ),
                               if (_cooldownSeconds > 0)
                                 Padding(
@@ -2139,65 +1978,19 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                 ),
                               const SizedBox(height: 8),
                               _campaignId != null
-                                  ? ElevatedButton.icon(
+                                  ? TeqButton(
                                       onPressed: () => _openAdReport(context),
-                                      icon: const Text(
-                                        '📊',
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                      label: Text(l.boostBtnReport),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF6366F1,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        minimumSize: const Size(
-                                          double.infinity,
-                                          50,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        textStyle: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
+                                      text: '📊 ${l.boostBtnReport}',
+                                      type: TeqButtonType.primary,
+                                      size: TeqButtonSize.large,
+                                      customColor: const Color(0xFF6366F1),
                                     )
-                                  : AsyncElevatedButton(
+                                  : TeqButton(
                                       onPressed: () => _boostListing(context),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFFF97316,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        minimumSize: const Size(
-                                          double.infinity,
-                                          50,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        textStyle: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Text(
-                                            '🔥',
-                                            style: TextStyle(fontSize: 16),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(l.boostBtnStart),
-                                        ],
-                                      ),
+                                      text: '🔥 ${l.boostBtnStart}',
+                                      type: TeqButtonType.primary,
+                                      size: TeqButtonSize.large,
+                                      customColor: const Color(0xFFF97316),
                                     ),
                             ],
                           );
@@ -2212,23 +2005,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                   children: [
                     // Mesaj gönder butonu (expanded — sola yaslanır)
                     Expanded(
-                      child: ElevatedButton.icon(
+                      child: TeqButton(
                         key: const Key('listing_detail_btn_mesaj_gonder'),
                         onPressed: _openChat,
-                        icon: const Icon(Icons.chat_bubble_outline, size: 20),
-                        label: Text(l.listingSendMessage),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimary,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        icon: Icons.chat_bubble_outline,
+                        text: l.listingSendMessage,
+                        type: TeqButtonType.primary,
+                        size: TeqButtonSize.large,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -2729,18 +2512,12 @@ class _TrustChip extends StatelessWidget {
   });
 
   void _showInfo(BuildContext context) {
-    showDialog<void>(
+    TeqDialog.show<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        content: Text(hint),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tamam'),
-          ),
-        ],
-      ),
+      title: title,
+      message: hint,
+      primaryButtonText: 'Tamam',
+      onPrimaryPressed: () => Navigator.pop(context),
     );
   }
 
@@ -2996,27 +2773,13 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
                   bottom: 8.0,
                   left: 32.0,
                 ),
-                child: TextField(
+                child: TeqTextField(
                   controller: _countCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: AppLocalizations.of(
-                      context,
-                    )!.audiencePersonCountHint,
-                    hintStyle: const TextStyle(color: Color(0xFF64748B)),
-                    filled: true,
-                    fillColor: const Color(0xFF0F172A),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
+                  hintText: AppLocalizations.of(
+                    context,
+                  )!.audiencePersonCountHint,
                 ),
               ),
             const SizedBox(height: 16),
@@ -3122,28 +2885,23 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        TeqButton(
           onPressed: () => Navigator.pop(context, null),
-          child: Text(
-            AppLocalizations.of(context)!.btnCancel,
-            style: const TextStyle(color: Color(0xFF64748B)),
-          ),
+          text: AppLocalizations.of(context)!.btnCancel,
+          type: TeqButtonType.text,
+          isExpanded: false,
         ),
-        FilledButton(
+        TeqButton(
           onPressed: hasEnoughBalance && actualCount > 0
               ? () => Navigator.pop(context, {
                   'count': actualCount,
                   'cost': tuciCost,
                 })
               : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF14B8A6),
-            disabledBackgroundColor: const Color(0x6614B8A6),
-          ),
-          child: Text(
-            AppLocalizations.of(context)!.btnSend,
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
+          text: AppLocalizations.of(context)!.btnSend,
+          type: TeqButtonType.primary,
+          customColor: const Color(0xFF14B8A6),
+          isExpanded: false,
         ),
       ],
     );

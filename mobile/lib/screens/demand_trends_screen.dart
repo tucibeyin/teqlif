@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../ui_library/components/cards/teq_card.dart';
+
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
@@ -217,10 +219,9 @@ class _TrendCard extends StatelessWidget {
         ? 1
         : weekly.map((w) => (w['count'] as num?)?.toInt() ?? 0).reduce((a, b) => a > b ? a : b);
 
-    return Card(
+    return TeqCard(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 1,
+
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(

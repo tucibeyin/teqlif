@@ -1,3 +1,4 @@
+import '../ui_library/components/overlays/teq_snackbar.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -27,6 +28,9 @@ import '../services/category_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
+import '../ui_library/components/inputs/teq_text_field.dart';
+import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/cards/teq_card.dart';
 import '../utils/error_helper.dart';
 
 import 'my_ratings_screen.dart';
@@ -34,7 +38,6 @@ import '../utils/start_stream_helper.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/stale_data_banner.dart';
-import '../widgets/async_button.dart';
 import '../utils/once.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
@@ -778,27 +781,16 @@ class ProfileScreenState extends State<ProfileScreen> {
                   // Profili Düzenle butonu
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: OutlinedButton(
+                    child: TeqButton.outline(
                       key: const Key('profile_btn_profil_duzenle'),
+                      text: AppLocalizations.of(context)!.btnEditProfile,
+                      size: TeqButtonSize.small,
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => _EditProfileScreen(user: _user),
                         ),
                       ).then((_) => _load(bypassCache: true)),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 36),
-                        side: BorderSide(color: AppColors.border(context)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        foregroundColor: AppColors.textPrimary(context),
-                        textStyle: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      child: Text(AppLocalizations.of(context)!.btnEditProfile),
                     ),
                   ),
                   // Separator
@@ -1024,42 +1016,19 @@ class _ListingFilterState extends State<ListingFilter> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: TextField(
+                child: TeqTextField(
                   controller: widget.searchCtrl,
                   onChanged: widget.onSearchChanged,
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: AppLocalizations.of(
-                      context,
-                    )!.profileSearchListingHint,
-                    hintStyle: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textTertiary(context),
-                    ),
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: widget.searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: widget.onSearchCleared,
-                          )
-                        : null,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AppColors.border(context)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: AppColors.border(context)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: kPrimary),
-                    ),
-                    filled: true,
-                    fillColor: AppColors.surface(context),
-                  ),
+                  hintText: AppLocalizations.of(
+                    context,
+                  )!.profileSearchListingHint,
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: widget.searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: widget.onSearchCleared,
+                        )
+                      : null,
                 ),
               ),
               if (widget.categories.isNotEmpty)
@@ -1429,21 +1398,13 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       } else {
         setState(() => _isPrivate = !val);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context)!.errorGenericRetry),
-            ),
-          );
+          TeqSnackBar.show(context, message: AppLocalizations.of(context)!.errorGenericRetry, type: TeqSnackBarType.info);
         }
       }
     } catch (_) {
       setState(() => _isPrivate = !val);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.errNetworkRetry),
-          ),
-        );
+        TeqSnackBar.show(context, message: AppLocalizations.of(context)!.errNetworkRetry, type: TeqSnackBarType.info);
       }
     }
   }
@@ -1477,11 +1438,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
     if (!mounted) return;
     setState(() => _shareLoading = false);
     if (code == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.profileInviteCodeError),
-        ),
-      );
+      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.profileInviteCodeError, type: TeqSnackBarType.info);
       return;
     }
 
@@ -1684,26 +1641,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               SizedBox(
                 width: double.infinity,
                 height: 54,
-                child: ElevatedButton.icon(
+                child: TeqButton(
+                  text: l.profileInviteShareBtn,
+                  icon: Icons.share_rounded,
+                  size: TeqButtonSize.large,
                   onPressed: () {
                     Navigator.pop(ctx);
                     ShareService.show(context, text: shareText, origin: origin);
                   },
-                  icon: const Icon(Icons.share_rounded),
-                  label: Text(
-                    l.profileInviteShareBtn,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
                 ),
               ),
               SizedBox(height: MediaQuery.of(context).padding.bottom),
@@ -1760,57 +1705,30 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(
+                TeqTextField(
                   controller: currentPassCtrl,
                   obscureText: true,
-                  enableSuggestions: false,
-                  autocorrect: false,
-                  smartDashesType: SmartDashesType.disabled,
-                  smartQuotesType: SmartQuotesType.disabled,
-                  decoration: InputDecoration(
-                    labelText: l.fieldCurrentPassword,
-                    labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
-                  ),
+                  labelText: l.fieldCurrentPassword,
                 ),
                 const SizedBox(height: 10),
-                TextField(
+                TeqTextField(
                   controller: newPassCtrl,
                   obscureText: true,
-                  enableSuggestions: false,
-                  autocorrect: false,
-                  smartDashesType: SmartDashesType.disabled,
-                  smartQuotesType: SmartQuotesType.disabled,
-                  decoration: InputDecoration(
-                    labelText: l.fieldNewPassword,
-                    labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
-                  ),
+                  labelText: l.fieldNewPassword,
                 ),
                 const SizedBox(height: 10),
-                TextField(
+                TeqTextField(
                   controller: confirmPassCtrl,
                   obscureText: true,
-                  enableSuggestions: false,
-                  autocorrect: false,
-                  smartDashesType: SmartDashesType.disabled,
-                  smartQuotesType: SmartQuotesType.disabled,
-                  decoration: InputDecoration(
-                    labelText: l.fieldNewPasswordConfirm,
-                    labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
-                  ),
+                  labelText: l.fieldNewPasswordConfirm,
                 ),
                 if (codeSent) ...[
                   const SizedBox(height: 10),
-                  TextField(
+                  TeqTextField(
                     controller: codeCtrl,
                     keyboardType: TextInputType.number,
                     maxLength: 6,
-                    decoration: InputDecoration(
-                      labelText: l.fieldEmailCode,
-                      labelStyle: TextStyle(
-                        color: AppColors.textSecondary(ctx),
-                      ),
-                      counterText: '',
-                    ),
+                    labelText: l.fieldEmailCode,
                   ),
                 ],
                 if (error != null) ...[
@@ -1827,14 +1745,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ),
           ),
           actions: [
-            TextButton(
+            TeqButton.text(
+              text: l.btnCancel,
               onPressed: loading ? null : () => Navigator.pop(ctx),
-              child: Text(
-                l.btnCancel,
-                style: TextStyle(color: AppColors.textSecondary(ctx)),
-              ),
             ),
-            ElevatedButton(
+            TeqButton(
+              text: codeSent ? l.btnChangePassword : l.btnSendCode,
+              isLoading: loading,
+              isExpanded: false,
               onPressed: loading
                   ? null
                   : () async {
@@ -1926,8 +1844,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                           );
                           if (ctx.mounted) Navigator.pop(ctx);
                           if (mounted) {
-                            messenger.showSnackBar(
-                              SnackBar(content: Text(l.msgPasswordChanged)),
+                            TeqSnackBar.show(
+                              context,
+                              message: l.msgPasswordChanged,
+                              type: TeqSnackBarType.success,
                             );
                           }
                         } on AppException catch (e) {
@@ -1947,20 +1867,6 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                         }
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-              child: loading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(
-                      codeSent ? l.btnChangePassword : l.btnSendCode,
-                      style: const TextStyle(color: Colors.white),
-                    ),
             ),
           ],
         ),
@@ -1993,17 +1899,10 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
               ),
               const SizedBox(height: 16),
-              TextField(
+              TeqTextField(
                 controller: passCtrl,
                 obscureText: true,
-                enableSuggestions: false,
-                autocorrect: false,
-                smartDashesType: SmartDashesType.disabled,
-                smartQuotesType: SmartQuotesType.disabled,
-                decoration: InputDecoration(
-                  labelText: l.fieldPassword,
-                  hintText: l.fieldPasswordConfirmHint,
-                ),
+                labelText: l.fieldPassword,
               ),
               if (error != null) ...[
                 const SizedBox(height: 8),
@@ -2018,21 +1917,14 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
             ],
           ),
           actions: [
-            TextButton(
+            TeqButton.text(
+              text: l.btnCancel,
               onPressed: () => Navigator.pop(ctx),
-              child: Text(
-                l.btnCancel,
-                style: const TextStyle(color: Color(0xFF6B7280)),
-              ),
             ),
-            AsyncElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                minimumSize: const Size(0, 38),
-              ),
+            TeqButton(
+              text: l.btnDeleteAccount,
+              customColor: const Color(0xFFEF4444),
+              isExpanded: false,
               onPressed: () async {
                 if (passCtrl.text.isEmpty) {
                   setS(() => error = l.fieldPassword);
@@ -2056,10 +1948,6 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                   setS(() => error = l.errorNetworkMessage);
                 }
               },
-              child: Text(
-                l.btnDeleteAccount,
-                style: const TextStyle(color: Colors.white),
-              ),
             ),
           ],
         ),
@@ -2079,6 +1967,18 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       body: ListView(
         children: [
           const SizedBox(height: 8),
+          _SettingsSection(
+            title: 'Dev Tools',
+            items: [
+              _SettingsTile(
+                icon: Icons.developer_mode,
+                label: 'Teq UI Kütüphanesi Testi',
+                onTap: () {
+                  Navigator.pushNamed(context, '/teq-test');
+                },
+              ),
+            ],
+          ),
           // ── Pro Araçlar ───────────────────────────────────────────────────
           _SettingsSection(
             title: l.settingsProTools,
@@ -2344,12 +2244,9 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                               ),
                             ),
                             actions: [
-                              TextButton(
+                              TeqButton.text(
+                                text: l.btnOk,
                                 onPressed: () => Navigator.pop(context),
-                                child: Text(
-                                  l.btnOk,
-                                  style: const TextStyle(color: kPrimary),
-                                ),
                               ),
                             ],
                           ),
@@ -2891,11 +2788,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         'Avatar yüklenemedi: $e',
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.profilePhotoUploadError),
-        ),
-      );
+      TeqSnackBar.show(context, message: AppLocalizations.of(context)!.profilePhotoUploadError, type: TeqSnackBarType.info);
     } finally {
       if (mounted)
         setState(() {
@@ -2938,8 +2831,10 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       if (link.isNotEmpty &&
           !link.startsWith('http://') &&
           !link.startsWith('https://')) {
-        errMessenger.showSnackBar(
-          SnackBar(content: Text(linkErrorMsg), backgroundColor: Colors.red),
+        TeqSnackBar.show(
+          context,
+          message: linkErrorMsg,
+          type: TeqSnackBarType.error,
         );
         setState(() => _saving = false);
         return;
@@ -3007,15 +2902,9 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.btnEditProfile),
         actions: [
-          TextButton(
+          TeqButton.text(
+            text: AppLocalizations.of(context)!.btnSave,
             onPressed: _saving ? null : _save,
-            child: Text(
-              AppLocalizations.of(context)!.btnSave,
-              style: TextStyle(
-                color: _saving ? Colors.grey : kPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ),
         ],
       ),
@@ -3089,9 +2978,9 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             Builder(
               builder: (ctx) {
                 final l = AppLocalizations.of(ctx)!;
-                return TextField(
+                return TeqTextField(
                   controller: _nameCtrl,
-                  decoration: InputDecoration(labelText: l.editProfileFullName),
+                  labelText: l.editProfileFullName,
                 );
               },
             ),
@@ -3099,32 +2988,29 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             Builder(
               builder: (ctx) {
                 final l = AppLocalizations.of(ctx)!;
-                return TextField(
+                return TeqTextField(
                   controller: _usernameCtrl,
                   autocorrect: false,
-                  decoration: InputDecoration(
-                    labelText: l.editProfileUsername,
-                    helperText: l.validUsernameChars,
-                    helperStyle: const TextStyle(fontSize: 11),
-                    suffixIcon: _usernameStatus == 'checking'
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: Padding(
-                              padding: EdgeInsets.all(12),
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : _usernameStatus == 'available'
-                        ? const Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
-                            size: 20,
-                          )
-                        : _usernameStatus == 'taken'
-                        ? const Icon(Icons.cancel, color: Colors.red, size: 20)
-                        : null,
-                  ),
+                  labelText: l.editProfileUsername,
+                  helperText: l.validUsernameChars,
+                  suffixIcon: _usernameStatus == 'checking'
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : _usernameStatus == 'available'
+                      ? const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 20,
+                        )
+                      : _usernameStatus == 'taken'
+                      ? const Icon(Icons.cancel, color: Colors.red, size: 20)
+                      : null,
                 );
               },
             ),
@@ -3133,23 +3019,13 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
               valueListenable: _bioCtrl,
               builder: (_, val, _) {
                 final l = AppLocalizations.of(context)!;
-                return TextField(
+                return TeqTextField(
                   controller: _bioCtrl,
                   maxLength: 60,
                   maxLines: 2,
-                  decoration: InputDecoration(
-                    labelText: l.editProfileBio,
-                    hintText: l.editProfileBioHint,
-                    helperText: l.editProfileBioHelper,
-                    helperStyle: const TextStyle(fontSize: 11),
-                    counterText: '${val.text.length}/60',
-                    counterStyle: TextStyle(
-                      fontSize: 11,
-                      color: val.text.length >= 60
-                          ? Colors.red
-                          : AppColors.textTertiary(context),
-                    ),
-                  ),
+                  labelText: l.editProfileBio,
+                  hintText: l.editProfileBioHint,
+                  helperText: l.editProfileBioHelper,
                 );
               },
             ),
@@ -3157,17 +3033,13 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             Builder(
               builder: (context) {
                 final l = AppLocalizations.of(context)!;
-                return TextField(
+                return TeqTextField(
                   controller: _linkCtrl,
                   keyboardType: TextInputType.url,
                   autocorrect: false,
-                  decoration: InputDecoration(
-                    labelText: l.editProfileLink,
-                    hintText: l.editProfileLinkHint,
-                    prefixIcon: const Icon(Icons.link_rounded, size: 20),
-                    helperText: l.editProfileLinkHelper,
-                    helperStyle: const TextStyle(fontSize: 11),
-                  ),
+                  labelText: l.editProfileLink,
+                  hintText: l.editProfileLinkHint,
+                  helperText: l.editProfileLinkHelper,
                 );
               },
             ),
@@ -3219,18 +3091,12 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     String label,
     String urlPrefix,
   ) {
-    return TextField(
+    return TeqTextField(
       controller: ctrl,
       keyboardType: TextInputType.text,
       autocorrect: false,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: 'kullaniciadi',
-        hintStyle: const TextStyle(fontSize: 12),
-        prefixIcon: const Icon(Icons.link_rounded, size: 18),
-        prefixText: urlPrefix,
-        prefixStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-      ),
+      labelText: label,
+      hintText: 'kullaniciadi',
     );
   }
 }
@@ -3383,16 +3249,14 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
             title: Text(l.listingDeactivateTitle),
             content: Text('${l.listingDeactivateWarning}\n\n$hintText'),
             actions: [
-              TextButton(
+              TeqButton.text(
+                text: l.btnDismiss,
                 onPressed: () => Navigator.pop(context, false),
-                child: Text(l.btnDismiss),
               ),
-              TextButton(
+              TeqButton.text(
+                text: l.listingDeactivateConfirm,
+                customColor: const Color(0xFFDC2626),
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  l.listingDeactivateConfirm,
-                  style: const TextStyle(color: Color(0xFFDC2626)),
-                ),
               ),
             ],
           ),
@@ -3418,9 +3282,9 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
               title: Text(l.listingReactivateTitle),
               content: Text(l.listingReactivateInsufficientBalance),
               actions: [
-                TextButton(
+                TeqButton.text(
+                  text: l.btnDismiss,
                   onPressed: () => Navigator.pop(context),
-                  child: Text(l.btnDismiss),
                 ),
               ],
             ),
@@ -3437,16 +3301,14 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
             title: Text(l.listingReactivateTitle),
             content: Text(subtitle + extraHint),
             actions: [
-              TextButton(
+              TeqButton.text(
+                text: l.btnDismiss,
                 onPressed: () => Navigator.pop(context, false),
-                child: Text(l.btnDismiss),
               ),
-              TextButton(
+              TeqButton.text(
+                text: l.listingReactivateConfirm,
+                customColor: const Color(0xFF6366F1),
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  l.listingReactivateConfirm,
-                  style: const TextStyle(color: Color(0xFF6366F1)),
-                ),
               ),
             ],
           ),
@@ -3466,9 +3328,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         await _load();
       } else if (resp.statusCode == 402 && mounted) {
         final l2 = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l2.listingReactivateInsufficientBalance)),
-        );
+        TeqSnackBar.show(context, message: l2.listingReactivateInsufficientBalance, type: TeqSnackBarType.info);
       }
     } catch (e) {
       LoggerService.instance.warning(
@@ -3486,16 +3346,14 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         title: Text(AppLocalizations.of(context)!.listingDeleteDialogTitle),
         content: Text(AppLocalizations.of(context)!.listingDeleteDialogBody),
         actions: [
-          TextButton(
+          TeqButton.text(
+            text: AppLocalizations.of(context)!.btnDismiss,
             onPressed: () => Navigator.pop(context, false),
-            child: Text(AppLocalizations.of(context)!.btnDismiss),
           ),
-          TextButton(
+          TeqButton.text(
+            text: AppLocalizations.of(context)!.btnDeleteConfirm,
+            customColor: const Color(0xFFDC2626),
             onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              AppLocalizations.of(context)!.btnDeleteConfirm,
-              style: const TextStyle(color: Color(0xFFDC2626)),
-            ),
           ),
         ],
       ),
@@ -3533,26 +3391,19 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: TextField(
+          child: TeqTextField(
             controller: _searchCtrl,
-            decoration: InputDecoration(
-              hintText: l.searchHintTextListing,
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _searchCtrl.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        _load();
-                      },
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
+            hintText: l.searchHintTextListing,
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: _searchCtrl.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      _load();
+                    },
+                  )
+                : null,
             onChanged: (_) {
               _searchDebounce?.cancel();
               _searchDebounce = Timer(
@@ -3755,11 +3606,8 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                             ? imgs[0] as String
                             : l['image_url'] as String?;
                         final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
-                        return Card(
-                          margin: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+                        return TeqCard(
+                          padding: EdgeInsets.zero,
                           child: ListTile(
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -4026,27 +3874,20 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: TextField(
+          child: TeqTextField(
             controller: _searchCtrl,
-            decoration: InputDecoration(
-              hintText: l.searchHintTextListing,
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
             onChanged: (v) => setState(() => _searchQuery = v),
+            hintText: l.searchHintTextListing,
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  )
+                : null,
           ),
         ),
         if (_categories != null && _categories!.isNotEmpty)
@@ -4226,11 +4067,8 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                           final imageUrl = rawImg != null
                               ? imgUrl(rawImg)
                               : null;
-                          return Card(
-                            margin: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                          return TeqCard(
+                            padding: EdgeInsets.zero,
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -4608,25 +4446,11 @@ class _TuciWalletSheet extends StatelessWidget {
           // Satın Al butonu
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: TeqButton(
+              text: l.walletBuyBtn,
+              icon: Icons.schedule_rounded,
+              isDisabled: true, // onPressed is null
               onPressed: null,
-              icon: const Icon(Icons.schedule_rounded),
-              label: Text(l.walletBuyBtn),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFEF3C7),
-                foregroundColor: const Color(0xFF92400E),
-                disabledBackgroundColor: const Color(0xFFFEF3C7),
-                disabledForegroundColor: const Color(0xFF92400E),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                ),
-                elevation: 0,
-              ),
             ),
           ),
         ],
@@ -5851,9 +5675,9 @@ class _ScoreBadge extends StatelessWidget {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
         content: Text(hint),
         actions: [
-          TextButton(
+          TeqButton.text(
+            text: 'Tamam',
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tamam'),
           ),
         ],
       ),

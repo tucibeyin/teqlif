@@ -12,6 +12,9 @@ import '../services/api_service.dart';
 import '../services/feed_telemetry_service.dart';
 import '../services/image_cache_manager.dart';
 import '../services/storage_service.dart';
+import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/inputs/teq_text_field.dart';
+import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../services/stream_service.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/shimmer_loading.dart';
@@ -118,18 +121,16 @@ class SearchScreenState extends State<SearchScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: TeqButton.outline(
                     onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      MaterialLocalizations.of(context).cancelButtonLabel,
-                    ),
+                    text: MaterialLocalizations.of(context).cancelButtonLabel,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton(
+                  child: TeqButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: Text(l.searchAlertCreate),
+                    text: l.searchAlertCreate,
                   ),
                 ),
               ],
@@ -152,14 +153,14 @@ class SearchScreenState extends State<SearchScreen> {
       );
       if (mounted) {
         if (resp.statusCode == 201) {
-          messenger.showSnackBar(SnackBar(content: Text(l.searchAlertCreated)));
+          TeqSnackBar.show(context, message: l.searchAlertCreated, type: TeqSnackBarType.success);
         } else {
-          messenger.showSnackBar(SnackBar(content: Text(l.searchAlertFailed)));
+          TeqSnackBar.show(context, message: l.searchAlertFailed, type: TeqSnackBarType.error);
         }
       }
     } catch (_) {
       if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(l.searchAlertFailed)));
+        TeqSnackBar.show(context, message: l.searchAlertFailed, type: TeqSnackBarType.error);
       }
     } finally {
       if (mounted) setState(() => _alertCreating = false);
@@ -478,52 +479,43 @@ class SearchScreenState extends State<SearchScreen> {
             // ── Arama kutusu ─────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: TextField(
+              child: TeqTextField(
                 key: const Key('search_input_arama'),
                 controller: _controller,
-                decoration: InputDecoration(
-                  hintText: l.searchAiHint,
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  suffixIcon: _hasQuery
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: _alertCreating
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(
-                                      Icons.notifications_none,
-                                      size: 20,
+                hintText: l.searchAiHint,
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _hasQuery
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: _alertCreating
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
                                     ),
-                              tooltip: AppLocalizations.of(
-                                context,
-                              )!.searchAlertTooltip,
-                              onPressed: _alertCreating
-                                  ? null
-                                  : () => _showAlertSheet(context),
-                            ),
-                            IconButton(
-                              key: const Key('search_btn_arama_temizle'),
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: _controller.clear,
-                            ),
-                          ],
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: AppColors.inputFill(context),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                ),
+                                  )
+                                : const Icon(
+                                    Icons.notifications_none,
+                                    size: 20,
+                                  ),
+                            tooltip: AppLocalizations.of(
+                              context,
+                            )!.searchAlertTooltip,
+                            onPressed: _alertCreating
+                                ? null
+                                : () => _showAlertSheet(context),
+                          ),
+                          IconButton(
+                            key: const Key('search_btn_arama_temizle'),
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: _controller.clear,
+                          ),
+                        ],
+                      )
+                    : null,
               ),
             ),
             // ── İçerik ───────────────────────────────────────────────

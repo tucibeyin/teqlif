@@ -9,6 +9,10 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../core/app_exception.dart';
+import '../ui_library/components/cards/teq_card.dart';
+import '../ui_library/components/inputs/teq_text_field.dart';
+import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../services/analytics_service.dart';
 import '../services/cache_service.dart';
 import '../services/captcha_service.dart';
@@ -48,7 +52,6 @@ class _EditListingScreenState extends State<EditListingScreen> {
   static const int _maxImages = 10;
   static const int _maxVideoDurationSecs = 15;
 
-
   @override
   void initState() {
     super.initState();
@@ -77,9 +80,9 @@ class _EditListingScreenState extends State<EditListingScreen> {
           _categories = cats;
           final initialCat = widget.listing['category'];
           if (initialCat != null && cats.any((c) => c.$1 == initialCat)) {
-             _selectedCategory = initialCat;
+            _selectedCategory = initialCat;
           } else if (cats.isNotEmpty) {
-             _selectedCategory = cats.first.$1;
+            _selectedCategory = cats.first.$1;
           }
         });
       }
@@ -90,7 +93,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
           _cities = c;
           final initialCity = widget.listing['location'];
           if (initialCity != null && c.contains(initialCity)) {
-             _selectedCity = initialCity;
+            _selectedCity = initialCity;
           }
         });
       }
@@ -102,10 +105,12 @@ class _EditListingScreenState extends State<EditListingScreen> {
     final token = await StorageService.getToken();
     if (token == null) return;
     try {
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/auth/me'),
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 5));
+      final resp = await http
+          .get(
+            Uri.parse('$kBaseUrl/auth/me'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 5));
       if (!mounted) return;
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -119,7 +124,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
   Future<void> _loadAiCredits() async {
     final credits = await AnalyticsService.getAiPriceCredits();
     if (!mounted) return;
-    setState(() => _aiCreditsRemaining = (credits?['remaining'] as num?)?.toInt() ?? 20);
+    setState(
+      () =>
+          _aiCreditsRemaining = (credits?['remaining'] as num?)?.toInt() ?? 20,
+    );
   }
 
   @override
@@ -134,8 +142,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
     final title = _titleCtrl.text.trim();
     final desc = _descCtrl.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.createNeedTitle)),
+      TeqSnackBar.show(
+        context,
+        message: AppLocalizations.of(context)!.createNeedTitle,
+        type: TeqSnackBarType.warning,
       );
       return;
     }
@@ -150,8 +160,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
       );
       if (!mounted) return;
       if (result == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.aiPriceError)),
+        TeqSnackBar.show(
+          context,
+          message: AppLocalizations.of(context)!.aiPriceError,
+          type: TeqSnackBarType.error,
         );
         return;
       }
@@ -160,23 +172,18 @@ class _EditListingScreenState extends State<EditListingScreen> {
         // TUCi harcandı — badge'i serverdan taze al
         CacheService.clearData('user_wallet_data');
         _loadAiCredits();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(AppLocalizations.of(context)!.tuciSpent(tuciSpent)),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ));
+        TeqSnackBar.show(
+          context,
+          message: AppLocalizations.of(context)!.tuciSpent(tuciSpent),
+          type: TeqSnackBarType.info,
+        );
       } else if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
         setState(() => _aiCreditsRemaining = _aiCreditsRemaining! - 1);
       }
       _showPriceEstimateSheet(result);
     } on AiInsufficientTuciException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e.detail),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFFEF4444),
-        duration: const Duration(seconds: 4),
-      ));
+      TeqSnackBar.show(context, message: e.detail, type: TeqSnackBarType.error);
     } finally {
       if (mounted) setState(() => _aiLoading = false);
     }
@@ -199,14 +206,14 @@ class _EditListingScreenState extends State<EditListingScreen> {
     Color confidenceColor = confidence == 'high'
         ? const Color(0xFF22C55E)
         : confidence == 'medium'
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFF64748B);
+        ? const Color(0xFFF59E0B)
+        : const Color(0xFF64748B);
 
     String confidenceLabel = confidence == 'high'
         ? '● Yüksek güven'
         : confidence == 'medium'
-            ? '● Orta güven'
-            : '● Düşük güven';
+        ? '● Orta güven'
+        : '● Düşük güven';
 
     showModalBottomSheet(
       context: context,
@@ -265,20 +272,30 @@ class _EditListingScreenState extends State<EditListingScreen> {
                         ),
                         Text(
                           '$foundSimilar benzer ürün analiz edildi',
-                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: confidenceColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       confidenceLabel,
-                      style: TextStyle(color: confidenceColor, fontSize: 11, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        color: confidenceColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
@@ -290,7 +307,9 @@ class _EditListingScreenState extends State<EditListingScreen> {
                   Expanded(
                     child: _PriceMetricCard(
                       icon: '🎯',
-                      label: AppLocalizations.of(context)!.listingSuggestedStart,
+                      label: AppLocalizations.of(
+                        context,
+                      )!.listingSuggestedStart,
                       value: fmt(suggested),
                       accent: const Color(0xFF6366F1),
                     ),
@@ -309,7 +328,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
               if (minClose != null && maxClose != null) ...[
                 const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(12),
@@ -317,11 +339,31 @@ class _EditListingScreenState extends State<EditListingScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _MiniStat(label: AppLocalizations.of(context)!.listingLowest, value: fmt(minClose), color: const Color(0xFFEF4444)),
-                      Container(width: 1, height: 32, color: const Color(0xFF334155)),
-                      _MiniStat(label: AppLocalizations.of(context)!.listingAverage, value: fmt(estimated), color: const Color(0xFF94A3B8)),
-                      Container(width: 1, height: 32, color: const Color(0xFF334155)),
-                      _MiniStat(label: AppLocalizations.of(context)!.listingHighest, value: fmt(maxClose), color: const Color(0xFF22C55E)),
+                      _MiniStat(
+                        label: AppLocalizations.of(context)!.listingLowest,
+                        value: fmt(minClose),
+                        color: const Color(0xFFEF4444),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 32,
+                        color: const Color(0xFF334155),
+                      ),
+                      _MiniStat(
+                        label: AppLocalizations.of(context)!.listingAverage,
+                        value: fmt(estimated),
+                        color: const Color(0xFF94A3B8),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 32,
+                        color: const Color(0xFF334155),
+                      ),
+                      _MiniStat(
+                        label: AppLocalizations.of(context)!.listingHighest,
+                        value: fmt(maxClose),
+                        color: const Color(0xFF22C55E),
+                      ),
                     ],
                   ),
                 ),
@@ -333,7 +375,9 @@ class _EditListingScreenState extends State<EditListingScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF6366F1).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,11 +415,16 @@ class _EditListingScreenState extends State<EditListingScreen> {
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF6366F1),
                       padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text(
                       'Önerilen Fiyatı Uygula',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),
@@ -408,8 +457,12 @@ class _EditListingScreenState extends State<EditListingScreen> {
       await ctrl.dispose();
       if (dur.inSeconds > _maxVideoDurationSecs) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)!.videoTooLong(_maxVideoDurationSecs, dur.inSeconds))),
+          TeqSnackBar.show(
+            context,
+            message: AppLocalizations.of(
+              context,
+            )!.videoTooLong(_maxVideoDurationSecs, dur.inSeconds),
+            type: TeqSnackBarType.warning,
           );
         }
         return;
@@ -429,8 +482,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
     } catch (e, st) {
       debugPrint('[CreateListing] Video upload HATA: $e\n$st');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_uploadError(e))),
+        TeqSnackBar.show(
+          context,
+          message: _uploadError(e),
+          type: TeqSnackBarType.error,
         );
         _removeVideo();
         return;
@@ -465,7 +520,11 @@ class _EditListingScreenState extends State<EditListingScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.videocam_outlined),
-              title: Text(AppLocalizations.of(context)!.createPickCamera(_maxVideoDurationSecs)),
+              title: Text(
+                AppLocalizations.of(
+                  context,
+                )!.createPickCamera(_maxVideoDurationSecs),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _pickVideo(ImageSource.camera);
@@ -480,8 +539,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
   Future<void> _pickImages(ImageSource source) async {
     if (_images.length >= _maxImages) {
       final l = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.listingMaxPhotos)),
+      TeqSnackBar.show(
+        context,
+        message: l.listingMaxPhotos,
+        type: TeqSnackBarType.warning,
       );
       return;
     }
@@ -540,8 +601,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_videoUploading) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.videoUploading)),
+      TeqSnackBar.show(
+        context,
+        message: AppLocalizations.of(context)!.videoUploading,
+        type: TeqSnackBarType.info,
       );
       return;
     }
@@ -565,8 +628,10 @@ class _EditListingScreenState extends State<EditListingScreen> {
           debugPrint('UPLOAD EXCEPTION: $e');
           if (mounted) {
             final l = AppLocalizations.of(context)!;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l.createListingPhotoUploadFailed(e.toString()))),
+            TeqSnackBar.show(
+              context,
+              message: l.createListingPhotoUploadFailed(e.toString()),
+              type: TeqSnackBarType.error,
             );
           }
         }
@@ -605,23 +670,26 @@ class _EditListingScreenState extends State<EditListingScreen> {
 
       if (!mounted) return;
       final l = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l.msgListingPublished),
-          backgroundColor: kPrimary,
-        ),
+      TeqSnackBar.show(
+        context,
+        message: l.msgListingPublished,
+        type: TeqSnackBarType.success,
       );
       Navigator.pop(context, true);
     } on AppException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_mapError(e))),
+      TeqSnackBar.show(
+        context,
+        message: _mapError(e),
+        type: TeqSnackBarType.error,
       );
     } catch (_) {
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.createListingConnError)),
+        TeqSnackBar.show(
+          context,
+          message: l.createListingConnError,
+          type: TeqSnackBarType.error,
         );
       }
     } finally {
@@ -632,8 +700,11 @@ class _EditListingScreenState extends State<EditListingScreen> {
   /// Upload hatalarını kullanıcı dostu Türkçe mesaja çevirir.
   String _uploadError(Object e) {
     final s = e.toString();
-    if (s.contains('HTTP 413')) return 'Video dosyası çok büyük. Daha kısa bir video deneyin.';
-    if (s.contains('HTTP 502') || s.contains('HTTP 503') || s.contains('HTTP 504')) {
+    if (s.contains('HTTP 413'))
+      return 'Video dosyası çok büyük. Daha kısa bir video deneyin.';
+    if (s.contains('HTTP 502') ||
+        s.contains('HTTP 503') ||
+        s.contains('HTTP 504')) {
       return 'Sunucu şu an meşgul, lütfen tekrar deneyin.';
     }
     if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
@@ -673,281 +744,346 @@ class _EditListingScreenState extends State<EditListingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Photo picker section
-              _SectionCard(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l.createListingPhotoCount(_images.length, _maxImages),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                      if (_images.length < _maxImages)
-                        TextButton.icon(
-                          key: const Key('create_listing_btn_fotograf_ekle'),
-                          onPressed: _showImageSourceSheet,
-                          icon: const Icon(Icons.add_photo_alternate_outlined,
-                              size: 18),
-                          label: Text(l.btnAdd),
-                        ),
-                    ],
-                  ),
-                  if (_images.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 90,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _images.length + (_images.length < _maxImages ? 1 : 0),
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (ctx, i) {
-                          if (i == _images.length) {
-                            // Add button at end
-                            return Builder(
-                              builder: (context) => GestureDetector(
-                              onTap: _showImageSourceSheet,
-                              child: Container(
-                                width: 90,
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: AppColors.border(context)),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(Icons.add, color: AppColors.textSecondary(context)),
-                              ),
-                            ));
-                          }
-                          return Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: _images[i] is String
-                                  ? Image.network(
-                                      imgUrl(_images[i] as String),
-                                      width: 90,
-                                      height: 90,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Image.file(
-                                      _images[i] as File,
-                                      width: 90,
-                                      height: 90,
-                                      fit: BoxFit.cover,
-                                    ),
-                              ),
-                              Positioned(
-                                top: 2,
-                                right: 2,
-                                child: GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _images.removeAt(i)),
-                                  child: Container(
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black54,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    padding: const EdgeInsets.all(2),
-                                    child: const Icon(Icons.close,
-                                        color: Colors.white, size: 14),
-                                  ),
-                                ),
-                              ),
-                              if (i == 0)
-                                Positioned(
-                                  bottom: 2,
-                                  left: 2,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: kPrimary,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(l.photoCover,
-                                        style: const TextStyle(
-                                            color: Colors.white, fontSize: 10)),
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      key: const Key('create_listing_gesture_fotograf_ekle_bos'),
-                      onTap: _showImageSourceSheet,
-                      child: Builder(
-                        builder: (context) => Container(
-                        height: 90,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                              color: AppColors.border(context),
-                              style: BorderStyle.solid),
-                          borderRadius: BorderRadius.circular(8),
-                          color: AppColors.surfaceVariant(context),
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.add_photo_alternate_outlined,
-                                  color: AppColors.textSecondary(context), size: 28),
-                              const SizedBox(height: 4),
-                              Text(l.btnAddPhoto,
-                                  style: TextStyle(
-                                      color: AppColors.textSecondary(context), fontSize: 12)),
-                            ],
+              TeqCard(
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          l.createListingPhotoCount(_images.length, _maxImages),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
                         ),
-                      ),),
+                        if (_images.length < _maxImages)
+                          TextButton.icon(
+                            key: const Key('create_listing_btn_fotograf_ekle'),
+                            onPressed: _showImageSourceSheet,
+                            icon: const Icon(
+                              Icons.add_photo_alternate_outlined,
+                              size: 18,
+                            ),
+                            label: Text(l.btnAdd),
+                          ),
+                      ],
                     ),
+                    if (_images.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 90,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount:
+                              _images.length +
+                              (_images.length < _maxImages ? 1 : 0),
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (ctx, i) {
+                            if (i == _images.length) {
+                              // Add button at end
+                              return Builder(
+                                builder: (context) => GestureDetector(
+                                  onTap: _showImageSourceSheet,
+                                  child: Container(
+                                    width: 90,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: AppColors.border(context),
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.add,
+                                      color: AppColors.textSecondary(context),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            return Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: _images[i] is String
+                                      ? Image.network(
+                                          imgUrl(_images[i] as String),
+                                          width: 90,
+                                          height: 90,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Image.file(
+                                          _images[i] as File,
+                                          width: 90,
+                                          height: 90,
+                                          fit: BoxFit.cover,
+                                        ),
+                                ),
+                                Positioned(
+                                  top: 2,
+                                  right: 2,
+                                  child: GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _images.removeAt(i)),
+                                    child: Container(
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black54,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(2),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (i == 0)
+                                  Positioned(
+                                    bottom: 2,
+                                    left: 2,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: kPrimary,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        l.photoCover,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        key: const Key(
+                          'create_listing_gesture_fotograf_ekle_bos',
+                        ),
+                        onTap: _showImageSourceSheet,
+                        child: Builder(
+                          builder: (context) => Container(
+                            height: 90,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: AppColors.border(context),
+                                style: BorderStyle.solid,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              color: AppColors.surfaceVariant(context),
+                            ),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.add_photo_alternate_outlined,
+                                    color: AppColors.textSecondary(context),
+                                    size: 28,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    l.btnAddPhoto,
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary(context),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
               const SizedBox(height: 12),
               // Video section
-              _SectionCard(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(l.videoLabel(_maxVideoDurationSecs), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      if (_video == null && _videoUploadUrl == null && !_videoUploading)
-                        TextButton.icon(
-                          onPressed: _showVideoSourceSheet,
-                          icon: const Icon(Icons.videocam_outlined, size: 18),
-                          label: Text(l.btnAdd),
-                        ),
-                    ],
-                  ),
-                  if (_video != null || _videoUploadUrl != null) ...[
-                    const SizedBox(height: 8),
+              TeqCard(
+                child: Column(
+                  children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.black87,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: _videoUploading
-                              ? const Padding(
-                                  padding: EdgeInsets.all(8),
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 22),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _videoUploading ? l.lblLoading : l.lblVideoReady,
-                            style: const TextStyle(fontSize: 13),
+                        Text(
+                          l.videoLabel(_maxVideoDurationSecs),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: _removeVideo,
-                          child: const Icon(Icons.close, size: 18, color: Colors.grey),
-                        ),
+                        if (_video == null &&
+                            _videoUploadUrl == null &&
+                            !_videoUploading)
+                          TextButton.icon(
+                            onPressed: _showVideoSourceSheet,
+                            icon: const Icon(Icons.videocam_outlined, size: 18),
+                            label: Text(l.btnAdd),
+                          ),
                       ],
                     ),
+                    if (_video != null || _videoUploadUrl != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.black87,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: _videoUploading
+                                ? const Padding(
+                                    padding: EdgeInsets.all(8),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _videoUploading ? l.lblLoading : l.lblVideoReady,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _removeVideo,
+                            child: const Icon(
+                              Icons.close,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
               const SizedBox(height: 12),
-              _SectionCard(
-                children: [
-                  TextFormField(
-                    key: const Key('create_listing_input_baslik'),
-                    controller: _titleCtrl,
-                    decoration: InputDecoration(labelText: l.fieldListingTitle, hintText: l.fieldListingTitleHint),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? l.fieldListingTitleHint : null,
-                  ),
-                  const SizedBox(height: 14),
-                  DropdownButtonFormField<String>(
-                    key: const Key('create_listing_select_kategori'),
-                    // ignore: deprecated_member_use
-                    value: _selectedCategory,
-                    decoration: InputDecoration(labelText: l.fieldCategory, hintText: l.fieldCategoryHint),
-                    items: _categories
-                        .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedCategory = v ?? _selectedCategory),
-                    validator: (v) => v == null ? l.fieldCategoryHint : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    key: const Key('create_listing_input_fiyat'),
-                    controller: _priceCtrl,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [_ThousandSeparatorFormatter()],
-                    decoration: InputDecoration(
+              TeqCard(
+                child: Column(
+                  children: [
+                    TeqTextField(
+                      key: const Key('create_listing_input_baslik'),
+                      controller: _titleCtrl,
+                      labelText: l.fieldListingTitle,
+                      hintText: l.fieldListingTitleHint,
+                      validator: (v) => v == null || v.isEmpty
+                          ? l.fieldListingTitleHint
+                          : null,
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      key: const Key('create_listing_select_kategori'),
+                      // ignore: deprecated_member_use
+                      value: _selectedCategory,
+                      decoration: InputDecoration(
+                        labelText: l.fieldCategory,
+                        hintText: l.fieldCategoryHint,
+                      ),
+                      items: _categories
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c.$1,
+                              child: Text(c.$2),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(
+                        () => _selectedCategory = v ?? _selectedCategory,
+                      ),
+                      validator: (v) => v == null ? l.fieldCategoryHint : null,
+                    ),
+                    const SizedBox(height: 14),
+                    TeqTextField(
+                      key: const Key('create_listing_input_fiyat'),
+                      controller: _priceCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [_ThousandSeparatorFormatter()],
                       labelText: l.fieldPrice,
                       hintText: l.fieldPriceHint,
                       prefixText: '₺ ',
+                      validator: (v) =>
+                          v == null || v.isEmpty ? l.fieldPriceHint : null,
                     ),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? l.fieldPriceHint : null,
-                  ),
-                  const SizedBox(height: 10),
-                  _AiPriceButton(
-                    loading: _aiLoading,
-                    isPro: _isPro,
-                    creditsRemaining: _aiCreditsRemaining,
-                    onTap: _fetchAiPriceEstimate,
-                  ),
-                  const SizedBox(height: 14),
-                  DropdownButtonFormField<String>(
-                    key: const Key('create_listing_select_konum'),
-                    // ignore: deprecated_member_use
-                    value: _selectedCity,
-                    decoration: InputDecoration(labelText: l.fieldLocation),
-                    hint: Text(l.fieldLocationHint),
-                    items: [
-                      DropdownMenuItem(value: null, child: Text('-- ${l.fieldLocationHint} --')),
-                      ..._cities.map((c) => DropdownMenuItem(value: c, child: Text(c))),
-                    ],
-                    onChanged: (v) => setState(() => _selectedCity = v),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    _AiPriceButton(
+                      loading: _aiLoading,
+                      isPro: _isPro,
+                      creditsRemaining: _aiCreditsRemaining,
+                      onTap: _fetchAiPriceEstimate,
+                    ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      key: const Key('create_listing_select_konum'),
+                      // ignore: deprecated_member_use
+                      value: _selectedCity,
+                      decoration: InputDecoration(labelText: l.fieldLocation),
+                      hint: Text(l.fieldLocationHint),
+                      items: [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text('-- ${l.fieldLocationHint} --'),
+                        ),
+                        ..._cities.map(
+                          (c) => DropdownMenuItem(value: c, child: Text(c)),
+                        ),
+                      ],
+                      onChanged: (v) => setState(() => _selectedCity = v),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
-              _SectionCard(
-                children: [
-                  TextFormField(
-                    key: const Key('create_listing_input_aciklama'),
-                    controller: _descCtrl,
-                    maxLines: 5,
-                    keyboardType: TextInputType.multiline,
-                    textInputAction: TextInputAction.newline,
-                    decoration: InputDecoration(
+              TeqCard(
+                child: Column(
+                  children: [
+                    TeqTextField(
+                      key: const Key('create_listing_input_aciklama'),
+                      controller: _descCtrl,
+                      maxLines: 5,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.newline,
                       labelText: l.fieldDescription,
                       hintText: l.fieldDescriptionHint,
-                      alignLabelWithHint: true,
+                      validator: (v) => v == null || v.isEmpty
+                          ? l.fieldDescriptionHint
+                          : null,
                     ),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? l.fieldDescriptionHint : null,
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: TeqButton(
                   key: const Key('create_listing_btn_yayinla'),
                   onPressed: _submitting ? null : _submit,
-                  child: _submitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2),
-                        )
-                      : Text(l.btnUpdateListing),
+                  text: l.btnUpdateListing,
+                  isLoading: _submitting,
                 ),
               ),
               const SizedBox(height: 24),
@@ -962,7 +1098,9 @@ class _EditListingScreenState extends State<EditListingScreen> {
 class _ThousandSeparatorFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final digits = newValue.text.replaceAll('.', '');
     if (digits.isEmpty) return newValue.copyWith(text: '');
     final formatted = _addDots(digits);
@@ -989,7 +1127,12 @@ class _AiPriceButton extends StatelessWidget {
   final bool isPro;
   final int? creditsRemaining;
   final VoidCallback onTap;
-  const _AiPriceButton({required this.loading, required this.isPro, required this.onTap, this.creditsRemaining});
+  const _AiPriceButton({
+    required this.loading,
+    required this.isPro,
+    required this.onTap,
+    this.creditsRemaining,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1029,7 +1172,11 @@ class _AiPriceButton extends StatelessWidget {
                   const SizedBox(width: 10),
                   const Text(
                     'Analiz ediliyor…',
-                    style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ]
               : [
@@ -1049,7 +1196,10 @@ class _AiPriceButton extends StatelessWidget {
                   if (isPro) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(20),
@@ -1057,10 +1207,15 @@ class _AiPriceButton extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.workspace_premium_rounded, size: 10,
-                              color: (creditsRemaining == null || creditsRemaining! > 0)
-                                  ? const Color(0xFF34D399)
-                                  : const Color(0xFFF59E0B)),
+                          Icon(
+                            Icons.workspace_premium_rounded,
+                            size: 10,
+                            color:
+                                (creditsRemaining == null ||
+                                    creditsRemaining! > 0)
+                                ? const Color(0xFF34D399)
+                                : const Color(0xFFF59E0B),
+                          ),
                           const SizedBox(width: 3),
                           Text(
                             creditsRemaining == null || creditsRemaining! > 0
@@ -1069,7 +1224,9 @@ class _AiPriceButton extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
-                              color: (creditsRemaining == null || creditsRemaining! > 0)
+                              color:
+                                  (creditsRemaining == null ||
+                                      creditsRemaining! > 0)
                                   ? const Color(0xFF34D399)
                                   : const Color(0xFFF59E0B),
                               letterSpacing: 0.3,
@@ -1102,13 +1259,9 @@ class _PriceMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return TeqCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withValues(alpha: 0.25)),
-      ),
+      color: const Color(0xFF1E293B),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1116,7 +1269,10 @@ class _PriceMetricCard extends StatelessWidget {
             children: [
               Text(icon, style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 6),
-              Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+              Text(
+                label,
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -1138,42 +1294,30 @@ class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  const _MiniStat({required this.label, required this.value, required this.color});
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+        ),
         const SizedBox(height: 3),
-        Text(value, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
-      ],
-    );
-  }
-}
-
-// ── Section Card ──────────────────────────────────────────────────────────────
-
-class _SectionCard extends StatelessWidget {
-  final List<Widget> children;
-  const _SectionCard({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface(context),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
           ),
-        ],
-      ),
-      child: Column(children: children),
+        ),
+      ],
     );
   }
 }

@@ -10,6 +10,10 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../config/api.dart';
 import '../services/storage_service.dart';
+import '../ui_library/components/buttons/teq_button.dart';
+import '../ui_library/components/inputs/teq_text_field.dart';
+import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/overlays/teq_dialog.dart';
 import '../services/notification_service.dart';
 import '../l10n/app_localizations.dart';
 import 'messages_screen.dart';
@@ -243,9 +247,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     } catch (_) {
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.pubProfileActionFailed)));
+        TeqSnackBar.show(context, message: l.pubProfileActionFailed, type: TeqSnackBarType.error);
       }
     } finally {}
   }
@@ -403,18 +405,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     if (_user!['is_verified'] == true)
                       GestureDetector(
                         onTap: () {
-                          showDialog<void>(
+                          TeqDialog.show(
                             context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('Verified', style: TextStyle(fontWeight: FontWeight.w700)),
-                              content: Text(AppLocalizations.of(context)!.badgeVerifiedHint),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Tamam'),
-                                ),
-                              ],
-                            ),
+                            title: 'Verified',
+                            message: AppLocalizations.of(context)!.badgeVerifiedHint,
+                            primaryButtonText: 'Tamam',
+                            onPrimaryPressed: () => Navigator.pop(context),
                           );
                         },
                         behavior: HitTestBehavior.opaque,
@@ -555,8 +551,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     label: l.publicProfileEditProfile,
                     icon: Icons.edit_outlined,
                     primary: false,
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l.pubProfileEditComingSoon)),
+                    onPressed: () => TeqSnackBar.show(
+                      context,
+                      message: l.pubProfileEditComingSoon,
+                      type: TeqSnackBarType.info,
                     ),
                   ),
                 ] else if (userId != 0) ...[
@@ -1201,18 +1199,14 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
       } else {
         if (mounted) {
           final l = AppLocalizations.of(context)!;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l.ratingSaveFailed)));
+          TeqSnackBar.show(context, message: l.ratingSaveFailed, type: TeqSnackBarType.error);
           setState(() => _saving = false);
         }
       }
     } catch (_) {
       if (mounted) {
         final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.errorConnection)));
+        TeqSnackBar.show(context, message: l.errorConnection, type: TeqSnackBarType.error);
         setState(() => _saving = false);
       }
     }
@@ -1285,28 +1279,11 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
           // Comment field
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: TextField(
+            child: TeqTextField(
               controller: _commentCtrl,
               maxLines: 3,
               maxLength: 500,
-              decoration: InputDecoration(
-                hintText: l.ratingCommentHint,
-                hintStyle: TextStyle(
-                  color: AppColors.textTertiary(context),
-                  fontSize: 14,
-                ),
-                filled: true,
-                fillColor: AppColors.inputFill(context),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.all(14),
-                counterStyle: TextStyle(
-                  color: AppColors.textTertiary(context),
-                  fontSize: 11,
-                ),
-              ),
+              hintText: l.ratingCommentHint,
             ),
           ),
           const SizedBox(height: 16),
@@ -1317,46 +1294,18 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
             child: Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: TeqButton.outline(
                     onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      side: BorderSide(color: AppColors.border(context)),
-                    ),
-                    child: Text(l.btnCancel),
+                    text: l.btnCancel,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   flex: 2,
-                  child: ElevatedButton(
+                  child: TeqButton(
                     onPressed: (_selected == 0 || _saving) ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: kPrimary.withValues(alpha: 0.4),
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            l.btnSave,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
+                    text: isUpdate ? l.btnUpdate : l.btnSave,
+                    isLoading: _saving,
                   ),
                 ),
               ],
@@ -1903,18 +1852,12 @@ class _ProfileBadge extends StatelessWidget {
   });
 
   void _showInfo(BuildContext context) {
-    showDialog<void>(
+    TeqDialog.show(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        content: Text(hint),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tamam'),
-          ),
-        ],
-      ),
+      title: title,
+      message: hint,
+      primaryButtonText: 'Tamam',
+      onPrimaryPressed: () => Navigator.pop(context),
     );
   }
 

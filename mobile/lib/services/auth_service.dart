@@ -5,7 +5,6 @@ import '../config/api.dart';
 import '../core/logger_service.dart';
 import '../models/user.dart';
 import 'storage_service.dart';
-import 'package:flutter/foundation.dart';
 
 final _log = LoggerService.instance;
 

@@ -1,3 +1,4 @@
+import '../ui_library/components/overlays/teq_snackbar.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +8,7 @@ import '../config/app_colors.dart';
 import '../services/storage_service.dart';
 import 'public_profile_screen.dart';
 import '../l10n/app_localizations.dart';
+import '../ui_library/components/buttons/teq_button.dart';
 
 class BlockedUsersScreen extends StatefulWidget {
   const BlockedUsersScreen({super.key});
@@ -64,9 +66,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.blockedActionFailed)),
-        );
+        TeqSnackBar.show(context, message: AppLocalizations.of(context)!.blockedActionFailed, type: TeqSnackBarType.info);
       }
     }
   }
@@ -160,26 +160,12 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                             fontSize: 12,
                             color: AppColors.textSecondary(context)),
                       ),
-                      trailing: OutlinedButton(
+                      trailing: TeqButton.outline(
                         key: Key('blocked_btn_engel_kaldir_${u['id']}'),
                         onPressed: () => _unblock(username, u['id'] as int),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFEF4444),
-                          side: const BorderSide(color: Color(0xFFFCA5A5)),
-                          backgroundColor: const Color(0xFFFEF2F2),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Text(
-                          l.blockedUnblock,
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
+                        text: l.blockedUnblock,
+                        size: TeqButtonSize.small,
+                        customColor: const Color(0xFFEF4444),
                       ),
                     );
                   },

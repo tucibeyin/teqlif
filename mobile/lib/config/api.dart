@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
-import 'package:flutter/foundation.dart';
 import '../services/auth_service.dart' show AuthService, RefreshOutcome;
 
 const String kBaseUrl = 'https://www.teqlif.com/api';

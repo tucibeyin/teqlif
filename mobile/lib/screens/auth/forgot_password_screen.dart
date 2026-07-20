@@ -3,8 +3,10 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
-import '../../utils/error_helper.dart';
 import 'reset_password_screen.dart';
+import '../../ui_library/components/inputs/teq_text_field.dart';
+import '../../ui_library/components/buttons/teq_button.dart';
+import '../../ui_library/components/overlays/teq_snackbar.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -27,21 +29,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    
+
     final email = _emailCtrl.text.trim();
-    
+
     try {
       final lang = AppLocalizations.of(context)!.localeName;
       await AuthService.requestPasswordReset(email, lang: lang);
       if (!mounted) return;
-      
+
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => ResetPasswordScreen(email: email),
-        ),
+        MaterialPageRoute(builder: (_) => ResetPasswordScreen(email: email)),
       );
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      if (mounted)
+        TeqSnackBar.show(
+          context,
+          message: e.toString(),
+          type: TeqSnackBarType.error,
+        );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -50,7 +55,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -76,7 +81,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       color: kPrimary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.lock_reset, size: 48, color: kPrimary),
+                    child: const Icon(
+                      Icons.lock_reset,
+                      size: 48,
+                      color: kPrimary,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   Text(
@@ -97,15 +106,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  TextFormField(
+                  TeqTextField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _submit(),
-                    style: TextStyle(color: AppColors.textPrimary(context)),
-                    decoration: InputDecoration(hintText: AppLocalizations.of(context)!.hintExampleEmail,
-                      prefixIcon: Icon(Icons.email_outlined),
-                    ),
+                    hintText: AppLocalizations.of(context)!.hintExampleEmail,
+                    prefixIcon: const Icon(Icons.email_outlined),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'E-posta boş olamaz';
                       if (!v.contains('@')) return 'Geçerli bir e-posta girin';
@@ -113,21 +118,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _loading ? null : _submit,
-                      child: _loading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(l.sendResetCode),
-                    ),
+                  TeqButton(
+                    text: l.sendResetCode,
+                    isLoading: _loading,
+                    onPressed: _submit,
                   ),
                 ],
               ),

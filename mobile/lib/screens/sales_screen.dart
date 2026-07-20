@@ -9,6 +9,8 @@ import '../../utils/price_formatter.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../config/api.dart';
+import '../../ui_library/components/cards/teq_card.dart';
+import '../../ui_library/components/inputs/teq_text_field.dart';
 import 'sale_detail_screen.dart';
 
 class SalesScreen extends StatefulWidget {
@@ -32,12 +34,17 @@ class _SalesScreenState extends State<SalesScreen> {
     var result = _sales;
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      result = result.where((item) =>
-        (item['item_name'] as String? ?? '').toLowerCase().contains(q)
-      ).toList();
+      result = result
+          .where(
+            (item) =>
+                (item['item_name'] as String? ?? '').toLowerCase().contains(q),
+          )
+          .toList();
     }
     if (_categoryFilter.isNotEmpty) {
-      result = result.where((item) => (item['category'] as String?) == _categoryFilter).toList();
+      result = result
+          .where((item) => (item['category'] as String?) == _categoryFilter)
+          .toList();
     }
     if (_dateRange != null) {
       final start = _dateRange!.start;
@@ -62,8 +69,9 @@ class _SalesScreenState extends State<SalesScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_categories == null) {
-      CategoryService.getCategories(locale: Localizations.localeOf(context).languageCode)
-          .then((cats) {
+      CategoryService.getCategories(
+        locale: Localizations.localeOf(context).languageCode,
+      ).then((cats) {
         if (mounted) setState(() => _categories = cats);
       });
     }
@@ -117,24 +125,19 @@ class _SalesScreenState extends State<SalesScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: TextField(
+          child: TeqTextField(
             controller: _searchCtrl,
-            decoration: InputDecoration(
-              hintText: l.searchHintTextListing,
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
+            hintText: l.searchHintTextListing,
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  )
+                : null,
             onChanged: (v) => setState(() => _searchQuery = v),
           ),
         ),
@@ -148,24 +151,32 @@ class _SalesScreenState extends State<SalesScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: FilterChip(
-                    label: Text(l.allCategories, style: const TextStyle(fontSize: 12)),
+                    label: Text(
+                      l.allCategories,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     selected: _categoryFilter.isEmpty,
                     onSelected: (_) => setState(() => _categoryFilter = ''),
                     selectedColor: kPrimary.withValues(alpha: 0.15),
                     checkmarkColor: kPrimary,
                   ),
                 ),
-                ..._categories!.map((cat) => Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: FilterChip(
-                    label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
-                    selected: _categoryFilter == cat.$1,
-                    onSelected: (_) => setState(() =>
-                        _categoryFilter = _categoryFilter == cat.$1 ? '' : cat.$1),
-                    selectedColor: kPrimary.withValues(alpha: 0.15),
-                    checkmarkColor: kPrimary,
+                ..._categories!.map(
+                  (cat) => Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      label: Text(cat.$2, style: const TextStyle(fontSize: 12)),
+                      selected: _categoryFilter == cat.$1,
+                      onSelected: (_) => setState(
+                        () => _categoryFilter = _categoryFilter == cat.$1
+                            ? ''
+                            : cat.$1,
+                      ),
+                      selectedColor: kPrimary.withValues(alpha: 0.15),
+                      checkmarkColor: kPrimary,
+                    ),
                   ),
-                )),
+                ),
               ],
             ),
           ),
@@ -198,22 +209,31 @@ class _SalesScreenState extends State<SalesScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            border: Border.all(color: hasRange ? kPrimary : AppColors.border(context)),
+            border: Border.all(
+              color: hasRange ? kPrimary : AppColors.border(context),
+            ),
             borderRadius: BorderRadius.circular(8),
             color: hasRange ? kPrimary.withValues(alpha: 0.08) : null,
           ),
           child: Row(
             children: [
-              Icon(Icons.calendar_today_outlined, size: 16,
-                  color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 16,
+                color: hasRange ? kPrimary : AppColors.textSecondary(context),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   hasRange
                       ? '${_fmtDate(_dateRange!.start)} – ${_fmtDate(_dateRange!.end)}'
                       : l.filterSelectDate,
-                  style: TextStyle(fontSize: 13,
-                      color: hasRange ? kPrimary : AppColors.textSecondary(context)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: hasRange
+                        ? kPrimary
+                        : AppColors.textSecondary(context),
+                  ),
                 ),
               ),
               if (hasRange)
@@ -232,7 +252,10 @@ class _SalesScreenState extends State<SalesScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final filtered = _filteredSales;
-    final bool hasFilter = _searchQuery.isNotEmpty || _categoryFilter.isNotEmpty || _dateRange != null;
+    final bool hasFilter =
+        _searchQuery.isNotEmpty ||
+        _categoryFilter.isNotEmpty ||
+        _dateRange != null;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -245,176 +268,223 @@ class _SalesScreenState extends State<SalesScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _sales.isEmpty
-              ? Center(
-                  child: Text(
-                    l.saleEmptyState,
-                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16),
-                  ),
-                )
-              : Column(
-                  children: [
-                    _buildFilterBar(l),
-                    if (hasFilter && filtered.isEmpty)
-                      Expanded(
-                        child: Center(
-                          child: Text(l.searchNoResults,
-                              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+          ? Center(
+              child: Text(
+                l.saleEmptyState,
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 16,
+                ),
+              ),
+            )
+          : Column(
+              children: [
+                _buildFilterBar(l),
+                if (hasFilter && filtered.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        l.searchNoResults,
+                        style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 15,
                         ),
-                      )
-                    else
-                      Expanded(
-                        child: RefreshIndicator(
-                          color: kPrimary,
-                          onRefresh: _loadSales,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final item = filtered[index];
-                              final itemName = item['item_name'] as String? ?? l.purchaseUnknownItem;
-                              final price = (item['final_price'] as num?)?.toDouble() ?? 0.0;
-                              final buyer = item['buyer_username'] as String? ?? l.saleUnknownBuyer;
-                              final category = item['category'] as String?;
-                              final thumbnailUrl = item['thumbnail_url'] as String? ?? item['image_url'] as String?;
-                              final isBuyItNow = (item['is_bought_it_now'] as bool?) ?? false;
-                              final endedAt = item['ended_at'] as String?;
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: kPrimary,
+                      onRefresh: _loadSales,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final item = filtered[index];
+                          final itemName =
+                              item['item_name'] as String? ??
+                              l.purchaseUnknownItem;
+                          final price =
+                              (item['final_price'] as num?)?.toDouble() ?? 0.0;
+                          final buyer =
+                              item['buyer_username'] as String? ??
+                              l.saleUnknownBuyer;
+                          final category = item['category'] as String?;
+                          final thumbnailUrl =
+                              item['thumbnail_url'] as String? ??
+                              item['image_url'] as String?;
+                          final isBuyItNow =
+                              (item['is_bought_it_now'] as bool?) ?? false;
+                          final endedAt = item['ended_at'] as String?;
 
-                              return Card(
-                                color: AppColors.card(context),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                margin: const EdgeInsets.only(bottom: 12),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => SaleDetailScreen(sale: item),
-                                      ),
-                                    );
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Row(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: thumbnailUrl != null && thumbnailUrl.isNotEmpty
-                                              ? CachedNetworkImage(
-                                                  imageUrl: imgUrl(thumbnailUrl),
-                                                  width: 72,
-                                                  height: 72,
-                                                  fit: BoxFit.cover,
-                                                  errorWidget: (_, _, _) => _placeholderBox(),
-                                                  placeholder: (_, _) => _placeholderBox(),
-                                                )
-                                              : _placeholderBox(),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                itemName,
-                                                style: TextStyle(
-                                                  color: AppColors.textPrimary(context),
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 15,
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                '@$buyer',
-                                                style: TextStyle(
-                                                  color: AppColors.textSecondary(context),
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                children: [
-                                                  if (category != null) ...[
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: kPrimary.withValues(alpha: 0.12),
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: Text(
-                                                        _categories?.firstWhere(
-                                                          (p) => p.$1 == category,
-                                                          orElse: () => (category, category),
-                                                        ).$2 ?? category,
-                                                        style: const TextStyle(color: kPrimary, fontSize: 11),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                  ],
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                    decoration: BoxDecoration(
-                                                      color: isBuyItNow
-                                                          ? const Color(0xFF16A34A).withValues(alpha: 0.12)
-                                                          : const Color(0xFFF97316).withValues(alpha: 0.12),
-                                                      borderRadius: BorderRadius.circular(4),
-                                                    ),
-                                                    child: Text(
-                                                      isBuyItNow ? l.saleTypeBuyNow : l.saleTypeBid,
-                                                      style: TextStyle(
-                                                        color: isBuyItNow
-                                                            ? const Color(0xFF16A34A)
-                                                            : const Color(0xFFF97316),
-                                                        fontSize: 11,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              if (endedAt != null) ...[
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  _formatDate(endedAt),
-                                                  style: TextStyle(
-                                                    color: AppColors.textTertiary(context),
-                                                    fontSize: 11,
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            Text(
-                                              fmtPrice(price),
-                                              style: const TextStyle(
-                                                color: Color(0xFF4ADE80),
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Icon(Icons.chevron_right, color: AppColors.iconSecondary(context)),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                          return TeqCard(
+                            color: AppColors.card(context),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => SaleDetailScreen(sale: item),
                                 ),
                               );
                             },
-                          ),
-                        ),
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child:
+                                      thumbnailUrl != null &&
+                                          thumbnailUrl.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: imgUrl(thumbnailUrl),
+                                          width: 72,
+                                          height: 72,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (_, _, _) =>
+                                              _placeholderBox(),
+                                          placeholder: (_, _) =>
+                                              _placeholderBox(),
+                                        )
+                                      : _placeholderBox(),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        itemName,
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary(context),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '@$buyer',
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary(
+                                            context,
+                                          ),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          if (category != null) ...[
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: kPrimary.withValues(
+                                                  alpha: 0.12,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                _categories
+                                                        ?.firstWhere(
+                                                          (p) =>
+                                                              p.$1 == category,
+                                                          orElse: () => (
+                                                            category,
+                                                            category,
+                                                          ),
+                                                        )
+                                                        .$2 ??
+                                                    category,
+                                                style: const TextStyle(
+                                                  color: kPrimary,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                          ],
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isBuyItNow
+                                                  ? const Color(
+                                                      0xFF16A34A,
+                                                    ).withValues(alpha: 0.12)
+                                                  : const Color(
+                                                      0xFFF97316,
+                                                    ).withValues(alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              isBuyItNow
+                                                  ? l.saleTypeBuyNow
+                                                  : l.saleTypeBid,
+                                              style: TextStyle(
+                                                color: isBuyItNow
+                                                    ? const Color(0xFF16A34A)
+                                                    : const Color(0xFFF97316),
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (endedAt != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _formatDate(endedAt),
+                                          style: TextStyle(
+                                            color: AppColors.textTertiary(
+                                              context,
+                                            ),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      fmtPrice(price),
+                                      style: const TextStyle(
+                                        color: Color(0xFF4ADE80),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Icon(
+                                      Icons.chevron_right,
+                                      color: AppColors.iconSecondary(context),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 
@@ -423,7 +493,11 @@ class _SalesScreenState extends State<SalesScreen> {
       width: 72,
       height: 72,
       color: AppColors.card(context).withValues(alpha: 0.5),
-      child: Icon(Icons.storefront_outlined, color: AppColors.iconSecondary(context), size: 32),
+      child: Icon(
+        Icons.storefront_outlined,
+        color: AppColors.iconSecondary(context),
+        size: 32,
+      ),
     );
   }
 }

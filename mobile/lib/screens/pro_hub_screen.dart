@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../ui_library/components/buttons/teq_button.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -686,7 +687,7 @@ class _UpgradeSheet extends StatelessWidget {
                 gradient: const LinearGradient(colors: [Color(0xFF0891B2), Color(0xFF06B6D4)]),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: ElevatedButton(
+              child: TeqButton(
                 onPressed: () {
                   Navigator.pop(context);
                   launchUrl(
@@ -694,23 +695,18 @@ class _UpgradeSheet extends StatelessWidget {
                     mode: LaunchMode.inAppWebView,
                   );
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(
-                  l.proUpgradeBtn,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Colors.white),
-                ),
+                text: l.proUpgradeBtn,
+                customColor: Colors.transparent,
+                isExpanded: true,
               ),
             ),
           ),
           const SizedBox(height: 10),
-          TextButton(
+          TeqButton.text(
             onPressed: () => Navigator.pop(context),
-            child: Text(l.btnDismiss, style: TextStyle(color: AppColors.textSecondary(context))),
+            text: l.btnDismiss,
+            customColor: AppColors.textSecondary(context),
+            isExpanded: false,
           ),
         ],
       ),
@@ -775,14 +771,11 @@ class _CreditsSummaryCard extends StatelessWidget {
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                child: TeqButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text(AppLocalizations.of(context)!.proHubGotIt, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                  text: AppLocalizations.of(context)!.proHubGotIt,
+                  customColor: const Color(0xFF6366F1),
+                  isExpanded: true,
                 ),
               ),
             ],

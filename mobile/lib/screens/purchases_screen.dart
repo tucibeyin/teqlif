@@ -11,6 +11,10 @@ import '../../config/theme.dart';
 import '../../config/api.dart';
 import 'purchase_detail_screen.dart';
 
+import '../../ui_library/components/cards/teq_card.dart';
+import '../../ui_library/components/inputs/teq_text_field.dart';
+import '../../ui_library/components/overlays/teq_snackbar.dart';
+
 class PurchasesScreen extends StatefulWidget {
   const PurchasesScreen({super.key});
 
@@ -90,13 +94,7 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
         setState(() {
           _loading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.purchaseLoadError),
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        TeqSnackBar.show(context, message: AppLocalizations.of(context)!.purchaseLoadError, type: TeqSnackBarType.error);
       }
     }
   }
@@ -117,24 +115,19 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: TextField(
+          child: TeqTextField(
             controller: _searchCtrl,
-            decoration: InputDecoration(
-              hintText: l.searchHintTextListing,
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            ),
+            hintText: l.searchHintTextListing,
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      _searchCtrl.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  )
+                : null,
             onChanged: (v) => setState(() => _searchQuery = v),
           ),
         ),
@@ -279,12 +272,9 @@ class _PurchasesScreenState extends State<PurchasesScreen> {
                               final isBuyItNow = (item['is_bought_it_now'] as bool?) ?? false;
                               final endedAt = item['ended_at'] as String?;
 
-                              return Card(
-                                color: AppColors.card(context),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                              return TeqCard(
                                 margin: const EdgeInsets.only(bottom: 12),
+                                padding: EdgeInsets.zero,
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(12),
                                   onTap: () {

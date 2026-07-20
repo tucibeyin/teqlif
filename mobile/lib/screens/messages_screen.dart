@@ -41,6 +41,8 @@ import '../l10n/app_localizations.dart';
 import '../widgets/network_error_widget.dart';
 import '../widgets/stale_data_banner.dart';
 import '../services/call_service.dart';
+import '../ui_library/components/inputs/teq_text_field.dart';
+import '../ui_library/components/overlays/teq_snackbar.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -337,13 +339,9 @@ class _MessagesTabState extends State<_MessagesTab> {
           (c) => (c['user_id'] as int?) == otherId,
         ),
       );
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.msgDeleteConversationSuccess)));
+      TeqSnackBar.show(context, message: l.msgDeleteConversationSuccess);
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.msgDeleteConversationFailed)));
+      TeqSnackBar.show(context, message: l.msgDeleteConversationFailed);
     }
   }
 
@@ -646,8 +644,10 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     return switch (type) {
       'message' => username.isNotEmpty ? l.notifMessage(username) : title,
       'follow' => username.isNotEmpty ? l.notifFollow(username) : title,
-      'follow_request' => username.isNotEmpty ? l.notifFollowRequestTitle(username) : title,
-      'follow_accepted' => username.isNotEmpty ? l.notifFollowAcceptedTitle(username) : title,
+      'follow_request' =>
+        username.isNotEmpty ? l.notifFollowRequestTitle(username) : title,
+      'follow_accepted' =>
+        username.isNotEmpty ? l.notifFollowAcceptedTitle(username) : title,
       'stream_started' =>
         username.isNotEmpty ? l.notifStreamStarted(username) : title,
       'new_bid' => username.isNotEmpty ? l.notifNewBid(username) : title,
@@ -1309,16 +1309,12 @@ class _DirectChatScreenState extends State<DirectChatScreen>
           if (detail != null && detail.isNotEmpty) errMsg = detail;
         } catch (_) {}
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(errMsg)));
+          TeqSnackBar.show(context, message: errMsg);
         }
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.attachSendFailed)));
+        TeqSnackBar.show(context, message: l.attachSendFailed);
       }
     } finally {
       if (mounted) setState(() => _uploadingMedia = false);
@@ -1412,9 +1408,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final raw = await picked.readAsBytes();
     if (raw.length > 5 * 1024 * 1024) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.attachFileTooLarge)));
+      TeqSnackBar.show(context, message: l.attachFileTooLarge);
       return;
     }
     final compressed = await FlutterImageCompress.compressWithList(
@@ -1442,9 +1436,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final info = await VideoCompress.getMediaInfo(picked.path);
     if ((info.duration ?? 0) / 1000 > 15) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.attachVideoTooLong)));
+      TeqSnackBar.show(context, message: l.attachVideoTooLong);
       return;
     }
     if (!mounted) return;
@@ -1463,9 +1455,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     ScaffoldMessenger.of(context).clearSnackBars();
     final file = result?.file;
     if (file == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.attachSendFailed)));
+      TeqSnackBar.show(context, message: l.attachSendFailed);
       return;
     }
     final bytes = await file.readAsBytes();
@@ -1502,9 +1492,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final bytes = f.bytes;
     if (bytes == null) return;
     if (bytes.length > 5 * 1024 * 1024) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.attachFileTooLarge)));
+      TeqSnackBar.show(context, message: l.attachFileTooLarge);
       return;
     }
     final ext = f.extension?.toLowerCase() ?? '';
@@ -1557,9 +1545,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       if (micStatus.isPermanentlyDenied) {
         await openAppSettings();
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.voiceRecordFailed)));
+        TeqSnackBar.show(context, message: l.voiceRecordFailed);
       }
     }
   }
@@ -1615,9 +1601,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       if (mounted) setState(() => _audioPlaying = true);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.voicePlayFailed)));
+        TeqSnackBar.show(context, message: l.voicePlayFailed);
       }
     }
   }
@@ -1635,9 +1619,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
       await OpenFilex.open(file.path);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.attachOpenFailed)));
+        TeqSnackBar.show(context, message: l.attachOpenFailed);
       }
     }
   }
@@ -1897,15 +1879,11 @@ class _DirectChatScreenState extends State<DirectChatScreen>
     final ok = await NotificationService.deleteMessage(messageId);
     if (!mounted) return;
     if (!ok) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.msgDeleteMessageFailed)));
+      TeqSnackBar.show(context, message: l.msgDeleteMessageFailed);
       // Başarısız olursa listeyi yeniden yükle
       _loadMessages();
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l.msgDeleteMessageSuccess)));
+      TeqSnackBar.show(context, message: l.msgDeleteMessageSuccess);
     }
   }
 
@@ -2035,9 +2013,13 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             icon: const Icon(Icons.call, size: 22),
             tooltip: l.callVoiceCall,
             onPressed: () {
-              debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}');
+              debugPrint(
+                '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen CALL BUTTON TAPPED | otherUserId=${widget.otherUserId}',
+              );
               if (CallService.instance.hasActiveCall) {
-                debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen: hasActiveCall → overlay will open CallScreen');
+                debugPrint(
+                  '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen: hasActiveCall → overlay will open CallScreen',
+                );
                 return;
               }
               // CallScreen'i overlay açar: status → calling olunca _onCallState tetiklenir.
@@ -2046,7 +2028,9 @@ class _DirectChatScreenState extends State<DirectChatScreen>
                 calleeUsername: widget.otherHandle,
                 calleeAvatar: widget.otherAvatarUrl,
               );
-              debugPrint('[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen startCall fired — overlay will navigate to CallScreen');
+              debugPrint(
+                '[CALL_PROCESS][${DateTime.now().toIso8601String()}][UI] messages_screen startCall fired — overlay will navigate to CallScreen',
+              );
             },
           ),
         ],
@@ -2273,7 +2257,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
         ),
         // Metin alanı
         Expanded(
-          child: TextField(
+          child: TeqTextField(
             key: const Key('chat_input_mesaj'),
             controller: _textCtrl,
             textCapitalization: TextCapitalization.sentences,
@@ -2281,20 +2265,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             maxLines: null,
             minLines: 1,
             onChanged: _onTextChanged,
-            decoration: InputDecoration(
-              hintText: l.msgWriteHint,
-              hintStyle: TextStyle(color: AppColors.textTertiary(context)),
-              filled: true,
-              fillColor: AppColors.inputFill(context),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-                borderSide: BorderSide.none,
-              ),
-            ),
+            hintText: l.msgWriteHint,
           ),
         ),
         const SizedBox(width: 6),
