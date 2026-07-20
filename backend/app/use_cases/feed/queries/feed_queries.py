@@ -1012,7 +1012,7 @@ class FeedQueries:
         # ── Sponsored enjeksiyonu (yalnızca page 0) ───────────────────────────────
         if page == 0:
             try:
-                ad_items = await self._get_sponsored_listings(, user_id=user_id, exclude_user_id=user_id)
+                ad_items = await self._get_sponsored_listings(user_id=user_id, exclude_user_id=user_id)
                 result = _inject_ads(result, ad_items)
             except Exception as exc:
                 logger.warning("[MixedRecent] Sponsored enjeksiyonu atlandı: %s", exc)
