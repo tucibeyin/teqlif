@@ -21,10 +21,14 @@ from arq.connections import RedisSettings
 from app.models.enums import ListingStatus
 from app.config import settings
 from app.core.logger import get_logger, capture_exception
+from app.core.di import init_di
 from app.tasks.analytics_tasks import process_churn_and_airdrop, cleanup_hype_highlights_task
 from app.tasks.listing_tasks import deactivate_expired_listings_task, delete_expired_inactive_listings_task
 
 logger = get_logger(__name__)
+
+# ARQ worker için DI Container'ı başlat
+init_di()
 
 
 # ── Task: E-posta Gönderimi ──────────────────────────────────────────────────

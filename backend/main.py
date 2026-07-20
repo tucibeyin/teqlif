@@ -145,6 +145,11 @@ async def _seed_cities():
 async def lifespan(app: FastAPI):
     from app.database import init_extensions
     from app.database_clickhouse import init_clickhouse, close_clickhouse, start_flush_loop, stop_flush_loop
+    from app.core.di import init_di
+    
+    # DI Container'i başlat
+    init_di()
+    
     await init_extensions()
     try:
         async with engine.begin() as conn:

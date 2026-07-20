@@ -14,23 +14,18 @@ class InvalidFCMTokenError(Exception):
         super().__init__(f"Invalid FCM token: {token[:12]}…")
 
 
-def _get_firebase_app():
-    from app.config import settings
-    if not settings.firebase_service_account:
-        logger.error("[FCM] firebase_service_account ayarlanmamış — push devre dışı")
-        return None
-    try:
-        import firebase_admin
-        from firebase_admin import credentials
-        if not firebase_admin._apps:
-            cred = credentials.Certificate(settings.firebase_service_account)
-            firebase_admin.initialize_app(cred)
-            logger.info("[FCM] Firebase başarıyla başlatıldı")
-        return firebase_admin.get_app()
-    except Exception as exc:
-        logger.error("[FCM] Firebase init failed: %s", exc, exc_info=True)
-        capture_exception(exc)
-        return None
+import asyncio
+from app.core.logger import get_logger
+from app.core.di import container
+from app.core.ports.push_notification_port import PushNotificationPort
+
+logger = get_logger(__name__)
+
+class InvalidFCMTokenError(Exception):
+    """Geriye dönük uyumluluk için bırakıldı."""
+    def __init__(self, token: str):
+        self.token = token
+        super().__init__(f"Invalid FCM token: {token[:12]}…")
 
 
 async def send_push(
@@ -43,77 +38,27 @@ async def send_push(
     image_url: str | None = None,
     is_silent: bool = False,
 ) -> None:
+    """
+    Eski servis fonksiyonu, geriye dönük uyumluluk (Facade) amacıyla korunmuştur.
+    Tüm iş mantığı app.core.ports.PushNotificationPort'a (FirebaseAdapter) delege edilmiştir.
+    """
     if not token:
-        logger.error("[FCM] send_push çağrıldı ama token boş")
+        logger.error("[FCM Facade] send_push çağrıldı ama token boş")
         return
 
-    # context manager kullan — __aenter__/__aexit__ manuel değil
+    data: dict[str, str] = {}
+    if notif_type:
+        data["type"] = notif_type
+    if extra_data:
+        data.update(extra_data)
+
     try:
-        async with fcm_breaker:
-            app = _get_firebase_app()
-            if app is None:
-                logger.error("[FCM] Firebase app yok — push gönderilemiyor")
-                raise RuntimeError("Firebase app not initialized")
-
-            from firebase_admin import messaging
-            data: dict[str, str] = {}
-            if notif_type:
-                data["type"] = notif_type
-            if extra_data:
-                data.update(extra_data)
-
-            is_call = notif_type == "incoming_call"
-            hide_notification = is_call or is_silent
-            
-            # APNs HATA ÇÖZÜMÜ: Görünmez bildirimlerde öncelik (priority) 5 olmak ZORUNDADIR.
-            apns_priority = "5" if hide_notification else "10"
-
-            msg = messaging.Message(
-                # Calls: data-only so the Flutter background handler fires and
-                # shows our custom local notification with action buttons.
-                notification=None if hide_notification else messaging.Notification(title=title, body=body, image=image_url),
-                data=data,
-                token=token,
-                android=messaging.AndroidConfig(
-                    priority="high", # Android'de data-only mesajlar için "high" kalabilir, Doze modunu delmek için faydalıdır.
-                    notification=None if hide_notification else (
-                        messaging.AndroidNotification(image=image_url) if image_url else None
-                    ),
-                ),
-                apns=messaging.APNSConfig(
-                    headers={"apns-priority": apns_priority}, # Dinamik öncelik ataması yapıldı
-                    payload=messaging.APNSPayload(
-                        aps=messaging.Aps(
-                            content_available=True,
-                            sound=None if hide_notification else "default",
-                            badge=badge,
-                            alert=messaging.ApsAlert(
-                                title=title,
-                                body=body,
-                            ) if not hide_notification else None, # Kodu biraz daha temizledik
-                        )
-                    ),
-                ),
-            )
-            result = await asyncio.get_event_loop().run_in_executor(
-                None, messaging.send, msg
-            )
-            logger.info("[FCM] Push başarılı | message_id=%s | token=%s…", result, token[:12])
-
-    except CircuitOpenError:
-        logger.warning("[FCM] Circuit AÇIK — push atlandı | token=%s…", token[:12])
-        return
+        # DI Container üzerinden port'u alıyoruz.
+        # init_di() main.py veya worker tarafından daha önce çağrılmış olmalı.
+        push_port = container.resolve(PushNotificationPort)
+        success = await push_port.send_notification(token, title, body, data)
+        if not success:
+            logger.warning("[FCM Facade] Push gönderimi başarısız döndü.")
     except Exception as exc:
-        # Token geçersiz/silinmiş → özel hata fırlat, worker DB'den temizler
-        try:
-            from firebase_admin import exceptions as fb_exceptions
-            if isinstance(exc, fb_exceptions.NotFoundError):
-                logger.warning("[FCM] Geçersiz token (Event fırlatılıyor): %s…", token[:12])
-                from app.core.event_bus import event_bus
-                from app.core.events import TokenInvalidatedEvent
-                event_bus.publish(TokenInvalidatedEvent(token=token))
-                raise InvalidFCMTokenError(token) from exc
-        except ImportError:
-            pass
-        logger.error("[FCM] Push başarısız | token=%s… | hata=%s", token[:12], exc, exc_info=True)
+        logger.error("[FCM Facade] Adapter çağrısı sırasında hata: %s", exc)
         raise

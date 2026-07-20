@@ -32,3 +32,13 @@ def inject(interface: Type[T]):
     def _dependency() -> T:
         return container.resolve(interface)
     return _dependency
+
+def init_di():
+    """
+    Uygulama başlarken DI Container'a tüm interface ve adapter'ları kaydeder.
+    """
+    from app.core.ports.push_notification_port import PushNotificationPort
+    from app.infrastructure.adapters.firebase_adapter import FirebaseAdapter
+    
+    container.register(PushNotificationPort, FirebaseAdapter())
+
