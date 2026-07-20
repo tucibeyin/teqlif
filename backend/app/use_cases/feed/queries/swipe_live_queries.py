@@ -36,11 +36,6 @@ from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
-from app.core.uow import AbstractUnitOfWork
-
-class SwipeLiveQueries:
-    def __init__(self, uow: AbstractUnitOfWork):
-        self.uow = uow
 
 
 CONFIG_CACHE_TTL = 120   # 2 dakika (daha sık güncelleme → seans içi davranış yansır)
@@ -48,6 +43,12 @@ AFFINITY_CACHE_TTL = 900  # 15 dakika (worker tarafından yazılır)
 
 # ----------------------------  PUBLIC API  -----------------------------------
 
+
+from app.core.uow import AbstractUnitOfWork
+
+class SwipeLiveQueries:
+    def __init__(self, uow: AbstractUnitOfWork):
+        self.uow = uow
 
     async def get_swipe_live_config(self, user_id: int,) -> dict:
         """Kullanıcıya özel SwipeLive konfigürasyonunu döndürür (Redis önbellekli)."""
