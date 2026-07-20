@@ -20,4 +20,11 @@ class CategoryStatus(str, enum.Enum):
 
 class SearchAlertStatus(str, enum.Enum):
     ACTIVE = "active"
-    PASSIVE = "passive"
+    PAUSED = "paused"
+    DELETED = "deleted"
+
+class StreamStatus(str, enum.Enum):
+    SCHEDULED = "scheduled"
+    LIVE = "live"
+    ENDED = "ended"
+    CANCELLED = "cancelled"
