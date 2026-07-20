@@ -10,7 +10,7 @@ class StartStreamCommand:
     def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
-    async def execute(self, user_id: int, title: str) -> dict:
+    async def execute(self, user_id: int, title: str, category: str = None, listing_id: int = None, thumbnail_url: str = None) -> dict:
         logger.info("[StartStreamCommand] Başlatıldı | user_id=%s title=%s", user_id, title)
         
         if not title.strip():
@@ -24,7 +24,10 @@ class StartStreamCommand:
             stream_data = {
                 "user_id": user_id,
                 "title": title.strip(),
-                "status": StreamStatus.LIVE
+                "status": StreamStatus.LIVE,
+                "category": category,
+                "listing_id": listing_id,
+                "thumbnail_url": thumbnail_url
             }
             new_stream = await self.uow.streams.create(obj_in=stream_data)
             
