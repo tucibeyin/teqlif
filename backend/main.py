@@ -20,7 +20,7 @@ from app.core.error_handlers import setup_exception_handlers
 from app.core.idempotency import _IdempotencyReplay
 from app.routers import auth, streams, webhooks, auction, chat, moderation, stories, onboarding
 from app.routers import search_alerts
-from app.services.auction_service import pubsub_listener
+from app.use_cases.auctions.auction_utils import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers.messages import dm_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics, leads, wallet
