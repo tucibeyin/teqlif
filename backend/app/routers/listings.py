@@ -111,7 +111,37 @@ async def get_swipe_feed(
     return await query.execute(limit=limit)
 
 
+@router.get("/my")
+async def get_my_listings(
+    request: Request,
+    active: Optional[str] = None,
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    limit: int = 1000,
+    offset: int = 0,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Giriş yapmış kullanıcının kendi ilanlarını döner."""
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    is_active = (active.lower() == "true") if active else None
+    query_handler = GetMyListingsQuery(uow)
+    return await query_handler.execute(
+        current_user=current_user,
+        active=is_active,
+        q=q,
+        category=category,
+        limit=limit,
+        offset=offset,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
 @router.get("/{listing_id}")
+
 async def get_listing(
     request: Request,
     listing_id: int,
