@@ -63,9 +63,11 @@ async def list_blocked_users(
 async def block_user(
     username: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    return await UserService(db).block(username, current_user)
+    from app.core.uow import SqlAlchemyUnitOfWork
+    from app.use_cases.users.block_user_use_case import BlockUserUseCase
+    uow = SqlAlchemyUnitOfWork()
+    return await BlockUserUseCase(uow).execute(username, current_user)
 
 
 @router.delete("/{username}/block", response_model=BlockStatusOut)

@@ -20,4 +20,9 @@ class UserRepository(BaseRepository[User]):
         result = await self.session.execute(select(User).filter(User.fcm_token == fcm_token))
         return result.scalars().first()
 
+    async def add_block(self, blocker_id: int, blocked_id: int) -> None:
+        from app.models.block import UserBlock
+        block = UserBlock(blocker_id=blocker_id, blocked_id=blocked_id)
+        self.session.add(block)
+
 user_repository = UserRepository()
