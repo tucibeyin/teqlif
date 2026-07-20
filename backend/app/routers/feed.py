@@ -38,7 +38,7 @@ async def get_feed(
     - seed: oturum başında üretilmeli, scroll boyunca aynı kalmalı
     """
     user_id = current_user.id if current_user else None
-    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_personalized_feed(user_id, page, seed)
+    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_personalized_feed(user_id, page, seed, db)
 
 
 @router.get("/personalized")
@@ -93,7 +93,7 @@ async def get_recent_mixed_feed(
     Misafirler: sadece son ilanlar, enjeksiyon yok.
     """
     user_id = current_user.id if current_user else None
-    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_mixed_recent_feed(user_id, page)
+    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_mixed_recent_feed(user_id, page, db)
 
 
 @router.get("/for-you")
