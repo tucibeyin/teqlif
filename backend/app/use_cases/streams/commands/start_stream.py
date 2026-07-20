@@ -11,6 +11,10 @@ class StartStreamCommand:
         self.uow = uow
 
     async def execute(self, user_id: int, title: str, category: str = None, listing_id: int = None, thumbnail_url: str = None) -> dict:
+        import uuid
+        from app.config import settings
+        from app.services.stream_service import make_livekit_token
+
         logger.info("[StartStreamCommand] Başlatıldı | user_id=%s title=%s", user_id, title)
         
         if not title.strip():
@@ -18,15 +22,18 @@ class StartStreamCommand:
             raise BadRequestException("Yayın başlığı boş olamaz")
 
         async with self.uow:
-            # 1. Kullanıcının halihazırda açık yayını var mı kontrolü
-            # existing = await self.uow.streams.get_active_stream(user_id) vs.
+            user = await self.uow.users.get(user_id)
+            if not user:
+                raise BadRequestException("Kullanıcı bulunamadı")
+
+            room_name = f"stream_{user_id}_{uuid.uuid4().hex[:8]}"
             
             stream_data = {
-                "user_id": user_id,
+                "room_name": room_name,
+                "host_id": user_id,
                 "title": title.strip(),
-                "status": StreamStatus.LIVE,
-                "category": category,
-                "listing_id": listing_id,
+                "is_live": False,
+                "category": category if category else "diger",
                 "thumbnail_url": thumbnail_url
             }
             new_stream = await self.uow.streams.create(obj_in=stream_data)
@@ -44,5 +51,13 @@ class StartStreamCommand:
             
             await self.uow.commit()
 
+        token = make_livekit_token(room_name, user, can_publish=True)
         logger.info("[StartStreamCommand] Başarılı | stream_id=%s", new_stream.id)
-        return {"id": new_stream.id, "status": "live"}
+        
+        return {
+            "stream_id": new_stream.id,
+            "room_name": room_name,
+            "livekit_url": settings.livekit_url,
+            "token": token,
+            "category": category if category else "diger",
+        }
