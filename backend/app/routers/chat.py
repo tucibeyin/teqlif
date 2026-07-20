@@ -26,11 +26,11 @@ from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.purchase import Purchase
 from app.use_cases.chat.chat_utils import (
-    ChatService,
     publish_chat,
     chat_pubsub_listener,        # noqa: F401 — main.py bu ismi buradan import eder
     moderation_pubsub_listener,  # noqa: F401 — main.py bu ismi buradan import eder
 )
+from app.use_cases.chat.commands.chat_commands import ChatCommands
 from app.services.moderation_service import kick_key
 from app.utils.auth import decode_token
 from app.utils.redis_client import get_redis
@@ -120,7 +120,7 @@ async def _handle_ws_message(
     *,
     websocket: WebSocket,
     payload: dict,
-    svc: "ChatService",
+    svc: "ChatCommands",
     stream_id: int,
     user_id: int,
     username: str,
@@ -146,7 +146,7 @@ async def _handle_chat_message(
     *,
     websocket: WebSocket,
     payload: dict,
-    svc: "ChatService",
+    svc: "ChatCommands",
     stream_id: int,
     user_id: int,
     username: str,
@@ -382,7 +382,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
         stream_id, user_id, ws_manager.subscriber_count(chat_topic),
     )
 
-    svc = ChatService()
+    svc = ChatCommands()
 
     try:
         # ── 7. İzleyici sayacı ve katılma bildirimi ───────────────────────────
