@@ -129,11 +129,31 @@ async def create_listing(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await ListingService(db).create_listing(payload, current_user)
+    from app.core.uow import SqlAlchemyUnitOfWork
+    from app.use_cases.listings.commands.create_listing import CreateListingCommand
+
+    # UoW başlat ve Command'a ver
+    uow = SqlAlchemyUnitOfWork()
+    command = CreateListingCommand(uow)
+    
+    # Payload verilerini açarak gönder
+    result = await command.execute(
+        user_id=current_user.id,
+        title=payload.get("title", ""),
+        description=payload.get("description"),
+        price=payload.get("price"),
+        category=payload.get("category", "diger"),
+        location=payload.get("location"),
+        image_url=payload.get("image_url"),
+        image_urls=payload.get("image_urls")
+    )
+
+    # Eski yan etkiler (Gelecekte EventBus ile Projector'lara taşınacak, şimdilik kırılmasın diye burada)
     pool = get_pool()
     if pool:
         await pool.enqueue_job("generate_listing_embedding_task", result["id"])
     await invalidate_cache("listings:search")
+    
     return result
 
 
