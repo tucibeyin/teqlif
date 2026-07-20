@@ -23,9 +23,19 @@ class MockStreamRepository:
         self.streams.append(stream)
         return stream
 
+class MockUser:
+    def __init__(self, id, username="test_user"):
+        self.id = id
+        self.username = username
+
+class MockUserRepository:
+    async def get(self, user_id):
+        return MockUser(id=user_id)
+
 class MockUoW(SqlAlchemyUnitOfWork):
     def __init__(self):
         self.streams = MockStreamRepository()
+        self.users = MockUserRepository()
     async def __aenter__(self):
         return self
     async def __aexit__(self, exc_type, exc_val, traceback):
@@ -41,7 +51,7 @@ async def test_stream_auction_cqrs():
 
     # Senaryo 1: Başarılı Yayın Başlatma
     result = await start_cmd.execute(user_id=1, title="iPhone 13 Açık Artırması!")
-    if result["status"] == "live":
+    if result.get("stream_id") == 1:
         print("✅ Senaryo 1: Başarılı canlı yayın başlatma ve Event tetikleme test edildi.")
     else:
         print("❌ Senaryo 1 Başarısız")
