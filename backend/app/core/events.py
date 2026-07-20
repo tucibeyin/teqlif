@@ -13,3 +13,12 @@ class DirectMessageCreatedEvent(DomainEvent):
     sender_id: int
     receiver_id: int
     content: str
+
+@dataclass
+class ListingCreatedEvent(DomainEvent):
+    """CQRS: İlan oluşturulduğunda Projector'lara ve Notifier'lara haber verir."""
+    listing_id: int
+    user_id: int
+    title: str
+    category: str
+    price: float | None
