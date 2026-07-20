@@ -64,12 +64,28 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         from app.repositories.message_repository import MessageRepository
         from app.repositories.favorite_repository import FavoriteRepository
         from app.repositories.category_repository import CategoryRepository
+        from app.repositories.auction_repository import AuctionRepository
+        from app.repositories.bid_repository import BidRepository
+        from app.repositories.tuci_transaction_repository import TuciTransactionRepository
+        from app.repositories.user_repository import UserRepository
+        from app.repositories.follow_repository import FollowRepository
+        from app.repositories.block_repository import BlockRepository
+        from app.repositories.story_repository import StoryRepository
+        from app.repositories.ad_campaign_repository import AdCampaignRepository
         
         self.listings = ListingRepository(self.session)
         self.streams = StreamRepository(self.session)
         self.messages = MessageRepository(self.session)
         self.favorites = FavoriteRepository(self.session)
         self.categories = CategoryRepository(self.session)
+        self.auctions = AuctionRepository(self.session)
+        self.bids = BidRepository(self.session)
+        self.transactions = TuciTransactionRepository(self.session)
+        self.users = UserRepository(self.session)
+        self.follows = FollowRepository(self.session)
+        self.blocks = BlockRepository(self.session)
+        self.stories = StoryRepository(self.session)
+        self.ads = AdCampaignRepository(self.session)
         
         await super().__aenter__()
         return self

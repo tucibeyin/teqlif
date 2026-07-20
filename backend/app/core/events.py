@@ -22,3 +22,17 @@ class ListingCreatedEvent(DomainEvent):
     title: str
     category: str
     price: float | None
+
+@dataclass
+class StreamStartedEvent(DomainEvent):
+    """CQRS: Yayın başladığında izleyici sayılarını vb. tutan Projector'ı tetikler."""
+    stream_id: int
+    user_id: int
+    title: str
+
+@dataclass
+class BidPlacedEvent(DomainEvent):
+    """CQRS: Teklif verildiğinde yayıncıya ve diğer izleyicilere gerçek zamanlı haber verir."""
+    auction_id: int
+    user_id: int
+    amount: float
