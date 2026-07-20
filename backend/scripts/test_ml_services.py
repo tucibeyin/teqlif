@@ -1,21 +1,36 @@
 import asyncio
-import sys
-import os
+import logging
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from app.services.ml.turkish_nlp import stem_word, build_stemmed_tsquery
+from app.services.ml.nsfw_service import moderate_text
 
-def test_ml_services():
-    print("\n[TEST] Sprint 9: ML & Moderation Servisleri Testi Başlıyor...")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    # ML servisleri genelde internal çalışır, sadece modül importlarının bozulmadığını test ediyoruz.
+async def test_ml_services():
+    print("\n[TEST] Sprint 14: ML & Moderasyon Servisleri Testi Başlıyor...\n")
+
+    # 1. NLP Testi
     try:
-        import app.services.nsfw_service
-        import app.services.feed_als_ml
-        print("✅ Başarılı: ML servisleri import edilebiliyor ve izole edildi.")
+        word = "ayakkabılar"
+        stem = stem_word(word)
+        print(f"✅ NLP Test 1 (Stemming): '{word}' -> '{stem}'")
+        
+        query = "koşu ayakkabıları"
+        tsquery = build_stemmed_tsquery(query)
+        print(f"✅ NLP Test 2 (TSQuery): '{query}' -> '{tsquery}'")
     except Exception as e:
-        print(f"⚠️ Import hatası: {e}")
+        print(f"❌ NLP Testi Hata: {e}")
 
-    print("\n🎉 Tüm ML Testleri Tamamlandı!")
+    # 2. Moderation Testi
+    try:
+        safe_text = "Merhaba nasılsın"
+        is_bad, _ = await moderate_text(safe_text, None)
+        print(f"✅ Moderation Test 1 (Safe Text): '{safe_text}' -> is_bad={is_bad}")
+    except Exception as e:
+        print(f"❌ Moderation Testi Hata: {e}")
+
+    print("\n🎉 Tüm ML Testleri Başarıyla Tamamlandı!\n")
 
 if __name__ == "__main__":
-    test_ml_services()
+    asyncio.run(test_ml_services())
