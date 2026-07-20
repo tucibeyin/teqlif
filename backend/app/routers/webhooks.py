@@ -160,7 +160,7 @@ async def _on_host_left(room_name: str, identity: str, disconnected_at: float) -
             "[STREAMS] Host %d sn görüntü göndermedi — yayın otomatik kapatılıyor | stream_id=%s",
             _HOST_GRACE_SECONDS, stream_id,
         )
-        from app.services.stream_service import force_close_stream
+        from app.use_cases.streams.commands.force_close_stream import force_close_stream
         await force_close_stream(db, room_name)
 
 
@@ -217,11 +217,11 @@ async def _delayed_close_stream(room_name: str) -> None:
         logger.warning("LiveKit API check failed for %s, proceeding to close stream", room_name)
 
     async for db in get_db():
-        from app.services.stream_service import force_close_stream
+        from app.use_cases.streams.commands.force_close_stream import force_close_stream
         await force_close_stream(db, room_name)
 
 
 async def _close_stream(db: AsyncSession, room_name: str) -> None:
     """Geriye dönük uyumluluk için ince sarmalayıcı."""
-    from app.services.stream_service import force_close_stream
+    from app.use_cases.streams.commands.force_close_stream import force_close_stream
     await force_close_stream(db, room_name)

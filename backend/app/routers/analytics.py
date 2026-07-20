@@ -22,7 +22,7 @@ from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
 from app.database_clickhouse import get_clickhouse_client
 from app.models.market_index import ExchangeRates
-from app.services.ner_service import extract_ner
+from app.services.ml.ner_service import extract_ner
 from app.utils.i18n import _get_t, get_locale
 
 AI_PRICE_ESTIMATE_COST = 5   # TUCi (standart kullanıcılar ve PRO limit aşınca)
@@ -462,7 +462,7 @@ async def ai_price_credits(current_user: User = Depends(get_current_user)):
 @router.get("/reactivation-credits")
 async def reactivation_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
-    from app.services.listing_service import (
+    from app.use_cases.listings.queries.listing_utils import (
         _get_reactivation_used,
         _reactivation_next_billing,
         _REACTIVATION_FREE_MONTHLY,
@@ -556,7 +556,7 @@ async def price_estimate(
                 detail=f"Yetersiz TUCi bakiyesi. Gerekli: {AI_PRICE_ESTIMATE_COST} TUCi, Mevcut: {current_user.tuci_balance} TUCi",
             )
 
-    from app.services.ml_service import generate_embedding
+    from app.services.ml.ml_service import generate_embedding
 
     # 1. Embedding: kategori etiketi + başlık + açıklama (Redis Caching)
     import hashlib
@@ -1801,7 +1801,7 @@ def _classify_search_intent(query: str, category: str, result_count: int) -> str
       exploratory   — genel keşif
     """
     try:
-        from app.services.ner_service import extract_ner
+        from app.services.ml.ner_service import extract_ner
         ner = extract_ner(query, "", category or "")
         if ner.get("brand") or ner.get("model_name"):
             return "navigational"

@@ -21,7 +21,7 @@ from app.models.user import User
 from app.models.stream import LiveStream
 from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinTokenOut, SwipeLiveConfig
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
-from app.services.stream_service import StreamService
+
 from app.services.like_service import LikeService
 from app.services.swipe_live_service import get_swipe_live_config
 
@@ -214,6 +214,13 @@ async def start_stream(
     current_user: User = Depends(get_current_user),
 ):
     from app.use_cases.streams.commands.start_stream import StartStreamCommand
+from app.use_cases.streams.commands.join_stream import JoinStreamCommand
+from app.use_cases.streams.commands.lifecycle_commands import ConfirmLiveCommand, CancelPendingStreamCommand
+from app.use_cases.streams.commands.misc_commands import EndStreamCommand, UpdateThumbnailCommand
+from app.use_cases.streams.commands.cohost_commands import InviteCohostCommand, AcceptCohostInviteCommand, RemoveCohostCommand, LeaveCohostCommand
+from app.use_cases.streams.queries.get_viewers import GetViewersQuery
+from app.use_cases.streams.queries.misc_queries import GetFollowedLiveStreamsQuery, GetActiveStreamsQuery
+from app.core.uow import SqlAlchemyUnitOfWork
     from app.core.uow import SqlAlchemyUnitOfWork
     
     uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
@@ -234,7 +241,8 @@ async def confirm_live(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).confirm_live(stream_id, current_user, background_tasks)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await ConfirmLiveCommand(uow).execute(stream_id, current_user, background_tasks)
 
 
 @router.delete("/{stream_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
@@ -243,7 +251,8 @@ async def cancel_stream(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    await StreamService(db).cancel_pending(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    await CancelPendingStreamCommand(uow).execute(stream_id, current_user)
 
 
 @router.post("/{stream_id}/end", status_code=status.HTTP_200_OK)
@@ -252,7 +261,8 @@ async def end_stream(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).end(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await EndStreamCommand(uow).execute(stream_id, current_user)
 
 
 @router.get("/{stream_id}/viewers")
@@ -261,7 +271,8 @@ async def get_viewers(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).get_viewers(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await GetViewersQuery(uow).execute(stream_id, current_user)
 
 
 @router.post("/{stream_id}/join", response_model=JoinTokenOut)
@@ -270,7 +281,8 @@ async def join_stream(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).join(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await JoinStreamCommand(uow).execute(stream_id, current_user)
 
 
 @router.post("/{stream_id}/like", status_code=status.HTTP_200_OK)
@@ -330,7 +342,8 @@ async def update_thumbnail(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).update_thumbnail(stream_id, current_user, file)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await UpdateThumbnailCommand(uow).execute(stream_id, current_user, file)
 
 
 @router.post("/{stream_id}/cohost/invite", status_code=status.HTTP_200_OK)
@@ -340,7 +353,8 @@ async def invite_cohost(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).invite_cohost(stream_id, body.target_username, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await InviteCohostCommand(uow).execute(stream_id, body.target_username, current_user)
 
 
 @router.post("/{stream_id}/cohost/accept", response_model=StreamTokenOut)
@@ -349,7 +363,8 @@ async def accept_cohost(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).accept_cohost_invite(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await AcceptCohostInviteCommand(uow).execute(stream_id, current_user)
 
 
 @router.post("/{stream_id}/cohost/remove", status_code=status.HTTP_200_OK)
@@ -359,7 +374,8 @@ async def remove_cohost(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).remove_cohost(stream_id, body.target_username, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await RemoveCohostCommand(uow).execute(stream_id, body.target_username, current_user)
 
 
 @router.post("/{stream_id}/cohost/leave", status_code=status.HTTP_200_OK)
@@ -368,7 +384,8 @@ async def leave_cohost(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).leave_cohost(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await LeaveCohostCommand(uow).execute(stream_id, current_user)
 
 
 @router.get("/suggested-streamers")
@@ -505,7 +522,8 @@ async def get_followed_live_streams(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await StreamService(db).get_followed_live_streams(current_user.id)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await GetFollowedLiveStreamsQuery(uow).execute(current_user.id)
 
 
 @router.get("/recommended", response_model=list[StreamOut])
@@ -514,7 +532,8 @@ async def get_recommended_streams(
     db: AsyncSession = Depends(get_db),
 ):
     """Category affinity'ye göre kişiselleştirilmiş aktif yayınlar (max 8)."""
-    return await StreamService(db).get_recommended_streams(current_user.id)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await GetActiveStreamsQuery(uow).execute(current_user.id)
 
 
 @router.get("/swipe-live-config", response_model=SwipeLiveConfig)
@@ -535,7 +554,8 @@ async def get_active_streams(
     current_user_id: Optional[int] = Depends(_optional_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    return await StreamService(db).get_active_streams(current_user_id)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await GetActiveStreamsQuery(uow).execute(current_user_id)
 
 
 @router.get("/{stream_id}/raid-targets")

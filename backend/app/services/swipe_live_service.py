@@ -28,8 +28,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database_clickhouse import get_clickhouse_client
 from app.services.feed_service import get_user_interests
-from app.services.stream_service import StreamService
-from app.services.swipe_live_ml import get_als_scores
+from app.use_cases.streams.queries.misc_queries import GetActiveStreamsQuery
+from app.core.uow import SqlAlchemyUnitOfWork
+from app.services.ml.swipe_live_ml import get_als_scores
 from app.utils.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,10 @@ async def invalidate_config_cache(user_id: int) -> None:
 
 async def _build_config(user_id: int, db: AsyncSession) -> dict:
     # 1. Aktif yayınlar
-    streams = await StreamService(db).get_active_streams(user_id)
+    from app.use_cases.streams.queries.misc_queries import GetActiveStreamsQuery
+    from app.core.uow import SqlAlchemyUnitOfWork
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    streams = await GetActiveStreamsQuery(uow).execute(user_id)
 
     # 2. Kategori ilgi skorları
     interests: dict[str, float] = await get_user_interests(user_id, db)

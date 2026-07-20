@@ -30,7 +30,7 @@ from app.models.enums import ListingStatus
 from app.database_clickhouse import get_clickhouse_client
 from app.models.listing import Listing
 from app.models.user import User
-from app.services.listing_service import _row_dict
+from app.use_cases.listings.queries.listing_utils import _row_dict
 from app.services.like_service import LikeService
 from app.utils.redis_client import get_redis
 

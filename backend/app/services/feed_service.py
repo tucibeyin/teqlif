@@ -27,9 +27,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import ListingStatus
 from app.utils.redis_client import get_redis
-from app.services.listing_service import _row_dict, _fetch_seller_meta
+from app.use_cases.listings.queries.listing_utils import _row_dict, _fetch_seller_meta
 from app.services.like_service import LikeService
-from app.services.feed_als_ml import get_als_scores
+from app.services.ml.feed_als_ml import get_als_scores
 from app.models.listing import Listing
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign

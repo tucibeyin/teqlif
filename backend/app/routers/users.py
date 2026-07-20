@@ -23,7 +23,10 @@ from app.models.user import User
 from app.models.referral import Referral
 from app.schemas.block import BlockedUserOut, BlockStatusOut
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
-from app.services.user_service import UserService
+from app.use_cases.users.commands.block_commands import BlockUserCommand, UnblockUserCommand
+from app.use_cases.users.queries.get_blocked_users import GetBlockedUsersQuery
+from app.use_cases.users.queries.get_user_profile import GetUserProfileQuery
+from app.core.uow import SqlAlchemyUnitOfWork
 from app.services.referral_service import apply_referral
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -56,7 +59,8 @@ async def list_blocked_users(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await UserService(db).list_blocked(current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await GetBlockedUsersQuery(uow).execute(current_user)
 
 
 @router.post("/{username}/block", response_model=BlockStatusOut)
@@ -76,7 +80,8 @@ async def unblock_user(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await UserService(db).unblock(username, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await UnblockUserCommand(uow).execute(username, current_user)
 
 
 @router.post("/apply-referral")
@@ -257,4 +262,5 @@ async def get_user_profile(
     current_user: Optional[User] = Depends(_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await UserService(db).get_profile(username, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    return await GetUserProfileQuery(uow).execute(username, current_user)

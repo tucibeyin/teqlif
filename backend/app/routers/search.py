@@ -14,7 +14,7 @@ from app.models.stream import LiveStream
 from app.models.block import UserBlock
 from app.models.user_interest import UserInterest
 from app.utils.auth import bearer_scheme, decode_token
-from app.services.ml_service import generate_embedding
+from app.services.ml.ml_service import generate_embedding
 from app.core.rate_limit import limiter
 
 router = APIRouter(prefix="/api/search", tags=["search"])
@@ -29,7 +29,7 @@ def _build_prefix_tsquery(q: str) -> str:
     Her kelime için kök + orijinal form ile prefix FTS query üretir.
     snowballstemmer Türkçe stemming: "ayakkabıları" → "ayakkabı:* & ayakkabıları:*"
     """
-    from app.services.turkish_nlp import build_stemmed_tsquery
+    from app.services.ml.turkish_nlp import build_stemmed_tsquery
     return build_stemmed_tsquery(q)
 
 
@@ -448,7 +448,7 @@ async def search_listings(
             params["uid"] = current_user_id
 
         # FAISS → hızlı candidate set, pgvector → hassas sıralama
-        from app.services.faiss_service import faiss_search
+        from app.services.ml.faiss_service import faiss_search
         candidate_ids = await faiss_search(vector, k=80)
 
         if candidate_ids:

@@ -966,7 +966,7 @@ async def generate_embedding_task(ctx: dict, text: str) -> list[float]:
     PyTorch modeli thread-blocking yaptığı için FastAPI'den ayrı çalışmalıdır.
     """
     try:
-        from app.services.ml_service import generate_embedding
+        from app.services.ml.ml_service import generate_embedding
         return generate_embedding(text)
     except Exception as exc:
         logger.error("[Worker] generate_embedding_task başarısız: %s", exc)
@@ -987,7 +987,7 @@ async def generate_listing_embedding_task(ctx: dict, listing_id: int) -> None:
         from sqlalchemy import select, update as sa_update
         from app.database import AsyncSessionLocal
         from app.models.listing import Listing
-        from app.services.ml_service import generate_embedding
+        from app.services.ml.ml_service import generate_embedding
 
         async with AsyncSessionLocal() as db:
             listing = await db.scalar(
@@ -1041,7 +1041,7 @@ async def backfill_listing_embeddings_task(ctx: dict) -> None:
         from sqlalchemy import select, update as sa_update
         from app.database import AsyncSessionLocal
         from app.models.listing import Listing
-        from app.services.ml_service import generate_embedding
+        from app.services.ml.ml_service import generate_embedding
 
         async with AsyncSessionLocal() as db:
             rows = (await db.scalars(
@@ -1141,7 +1141,7 @@ async def cleanup_stale_streams_task(ctx: dict) -> None:
                 logger.warning("[Worker] Stale stream cleanup: LiveKit API erişilemedi | %s", lk_exc)
                 return
 
-            from app.services.stream_service import force_close_stream as _close_stream
+            from app.use_cases.streams.commands.force_close_stream import force_close_stream as _close_stream
             for stream in streams:
                 num_participants = active_rooms.get(stream.room_name)
                 # Oda yok VEYA boş → kapat
@@ -1190,7 +1190,7 @@ async def auto_close_stream_if_host_absent_task(
     try:
         from app.utils.redis_client import get_redis
         from app.database import AsyncSessionLocal
-        from app.services.stream_service import force_close_stream
+        from app.use_cases.streams.commands.force_close_stream import force_close_stream
 
         redis = await get_redis()
         reconnect_raw = await redis.get(f"live:host_reconnect:{stream_id}")
@@ -1626,7 +1626,7 @@ async def delayed_close_stream_task(ctx: dict, room_name: str) -> None:
         from livekit.api.room_service import RoomService, ListRoomsRequest
         from app.config import settings
         from app.database import AsyncSessionLocal
-        from app.services.stream_service import force_close_stream
+        from app.use_cases.streams.commands.force_close_stream import force_close_stream
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -2152,7 +2152,7 @@ async def train_swipe_live_als_task(ctx: dict) -> None:
     Kullanıcı ve stream vektörlerini Redis'e yazar (25 saat TTL).
     """
     try:
-        from app.services.swipe_live_ml import train_swipe_live_als
+        from app.services.ml.swipe_live_ml import train_swipe_live_als
         await train_swipe_live_als()
         logger.info("[Worker] train_swipe_live_als_task tamamlandı")
     except Exception as exc:
@@ -2169,7 +2169,7 @@ async def train_feed_als_task(ctx: dict) -> None:
     SwipeLive ALS'den 30 dk sonra çalışır — yük çakışmasını önler.
     """
     try:
-        from app.services.feed_als_ml import train_feed_als
+        from app.services.ml.feed_als_ml import train_feed_als
         await train_feed_als()
         logger.info("[Worker] train_feed_als_task tamamlandı")
     except Exception as exc:
@@ -2257,7 +2257,7 @@ async def clip_visual_backfill_task(ctx: dict) -> None:
     Batch: 30 ilan/çalıştırma.
     """
     try:
-        from app.services.clip_service import backfill_clip_embeddings
+        from app.services.ml.clip_service import backfill_clip_embeddings
         count = await backfill_clip_embeddings(batch_size=30)
         logger.info("[Worker] clip_visual_backfill_task tamamlandı | işlenen=%d", count)
     except ImportError:
@@ -2270,7 +2270,7 @@ async def clip_visual_backfill_task(ctx: dict) -> None:
 async def compute_listing_phash_task(ctx: dict, listing_id: int, image_url: str) -> None:
     """İlan primary görselinden pHash hesapla, DB'ye yaz, kopya varsa logla."""
     try:
-        from app.services.image_mod_service import store_listing_phash
+        from app.services.ml.image_mod_service import store_listing_phash
         await store_listing_phash(listing_id, image_url)
     except Exception as exc:
         logger.error("[Worker] compute_listing_phash_task başarısız | listing_id=%s | %s", listing_id, exc, exc_info=True)
@@ -2280,7 +2280,7 @@ async def compute_listing_phash_task(ctx: dict, listing_id: int, image_url: str)
 async def backfill_phash_task(ctx: dict) -> None:
     """image_phash NULL olan ilanlar için toplu pHash hesaplama (50 ilan/çalıştırma)."""
     try:
-        from app.services.image_mod_service import backfill_phash
+        from app.services.ml.image_mod_service import backfill_phash
         count = await backfill_phash(batch_size=50)
         logger.info("[Worker] backfill_phash_task tamamlandı | işlenen=%d", count)
     except Exception as exc:
@@ -2291,7 +2291,7 @@ async def backfill_phash_task(ctx: dict) -> None:
 async def nsfw_check_task(ctx: dict, listing_id: int) -> None:
     """Tek ilanın tüm görsellerini NSFW için kontrol et."""
     try:
-        from app.services.nsfw_service import check_listing_nsfw
+        from app.services.ml.nsfw_service import check_listing_nsfw
         await check_listing_nsfw(listing_id)
     except Exception as exc:
         logger.error("[Worker] nsfw_check_task başarısız | listing_id=%s | %s", listing_id, exc, exc_info=True)
@@ -2301,7 +2301,7 @@ async def nsfw_check_task(ctx: dict, listing_id: int) -> None:
 async def nsfw_backfill_task(ctx: dict) -> None:
     """nsfw_checked_at NULL olan ilanlar için toplu NSFW kontrolü (20 ilan/çalıştırma)."""
     try:
-        from app.services.nsfw_service import nsfw_backfill
+        from app.services.ml.nsfw_service import nsfw_backfill
         count = await nsfw_backfill(batch_size=20)
         logger.info("[Worker] nsfw_backfill_task tamamlandı | işlenen=%d", count)
     except Exception as exc:
@@ -2312,7 +2312,7 @@ async def nsfw_backfill_task(ctx: dict) -> None:
 async def rebuild_faiss_index_task(ctx: dict) -> None:
     """Tüm aktif listing embedding'lerinden FAISS IVFFlat index yeniden kur."""
     try:
-        from app.services.faiss_service import rebuild_index
+        from app.services.ml.faiss_service import rebuild_index
         await rebuild_index()
     except Exception as exc:
         logger.error("[Worker] rebuild_faiss_index_task başarısız | %s", exc, exc_info=True)
@@ -2637,7 +2637,7 @@ async def train_churn_model_task(ctx: dict) -> None:
     Model yoksa mevcut heuristik çalışmaya devam eder.
     """
     try:
-        from app.services.churn_ml_service import train_churn_model
+        from app.services.ml.churn_ml_service import train_churn_model
         trained = await train_churn_model()
         if trained:
             logger.info("[ChurnML] Model başarıyla eğitildi")
