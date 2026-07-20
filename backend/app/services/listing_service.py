@@ -159,7 +159,7 @@ def _row_dict(
         "thumbnail_url": listing.thumbnail_url,
         "video_url": listing.video_url,
         "created_at": listing.created_at.isoformat() if listing.created_at else None,
-        "status": listing.status.value if listing.status else "active",
+        "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
         "user": {
             "id": user.id,
             "username": user.username,
@@ -838,7 +838,7 @@ class ListingService:
         if reactivating and is_free and not is_free_due_to_window:
             await _increment_reactivation(current_user.id, current_user.premium_since)
 
-        return {"status": listing.status.value}
+        return {"status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status)}
 
     # ── İlan Sil (soft delete) ───────────────────────────────────────────────
     async def delete_listing(self, listing_id: int, current_user: User) -> dict:

@@ -1055,7 +1055,7 @@ async def backfill_listing_embeddings_task(ctx: dict) -> None:
         async with AsyncSessionLocal() as db:
             rows = (await db.scalars(
                 select(Listing)
-                .where(Listing.embedding.is_(None), Listing.is_deleted.is_(False))
+                .where(Listing.embedding.is_(None), Listing.status != "deleted")
                 .order_by(Listing.id)
                 .limit(20)
             )).all()
@@ -2056,7 +2056,7 @@ async def send_budget_match_notifications_task(ctx: dict, listing_id: int) -> No
         async with AsyncSessionLocal() as db:
             res = await db.execute(select(Listing).where(Listing.id == listing_id))
             listing = res.scalar_one_or_none()
-            if not listing or listing.status != ListingStatus.ACTIVE or listing.is_deleted:
+            if not listing or listing.status != ListingStatus.ACTIVE:
                 return
 
             min_price = listing.price * 0.7
@@ -2571,8 +2571,8 @@ async def compute_trust_scores_task(ctx: dict) -> None:
                     u.id,
                     EXTRACT(DAY FROM (NOW() - u.created_at))::int  AS account_age_days,
                     COUNT(l.id) FILTER (WHERE l.status = 'active') AS active_listings,
-                    COUNT(l.id) FILTER (WHERE l.is_deleted)                      AS deleted_listings,
-                    COUNT(l.id)                                                    AS total_listings
+                    COUNT(l.id) FILTER (WHERE l.status = 'deleted') AS deleted_listings,
+                    COUNT(l.id)                                    AS total_listings
                 FROM users u
                 LEFT JOIN listings l ON l.user_id = u.id
                 GROUP BY u.id

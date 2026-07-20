@@ -127,7 +127,7 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
             await db.execute(
                 update(Listing)
                 .where(Listing.id.in_(listing_ids))
-                .values(is_deleted=True)
+                .values(status=ListingStatus.DELETED)
             )
             await db.commit()
             logger.info("[ListingTasks] %d pasif ilan silindi | ids=%s", len(listing_ids), listing_ids[:10])

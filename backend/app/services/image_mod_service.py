@@ -106,7 +106,7 @@ async def backfill_phash(batch_size: int = 50) -> int:
         rows = (await db.scalars(
             select(Listing)
             .where(
-                Listing.is_deleted.is_(False),
+                Listing.status != "deleted",
                 Listing.image_url.isnot(None),
                 text("image_phash IS NULL"),
             )

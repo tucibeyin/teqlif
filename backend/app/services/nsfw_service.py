@@ -96,7 +96,7 @@ async def check_listing_nsfw(listing_id: int) -> None:
 
     async with AsyncSessionLocal() as db:
         listing = await db.scalar(
-            select(Listing).where(Listing.id == listing_id, Listing.is_deleted.is_(False))
+            select(Listing).where(Listing.id == listing_id, Listing.status != "deleted")
         )
         if not listing:
             return
@@ -168,7 +168,7 @@ async def nsfw_backfill(batch_size: int = 20) -> int:
         rows = (await db.scalars(
             select(Listing)
             .where(
-                Listing.is_deleted.is_(False),
+                Listing.status != "deleted",
                 Listing.image_url.isnot(None),
                 text("nsfw_checked_at IS NULL"),
             )

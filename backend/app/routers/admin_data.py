@@ -160,7 +160,7 @@ async def get_recent_users(
                 "username": u.username,
                 "email": u.email,
                 "full_name": u.full_name,
-                "status": u.status.value if u.status else "active",
+                "status": u.status.value if hasattr(u.status, 'value') else (u.status if u.status else "active"),
                 "is_verified": u.is_verified,
                 "is_premium": u.is_premium,
                 "plan_type": u.plan_type,
@@ -302,7 +302,7 @@ async def get_admin_listings(limit: int = 50, db: AsyncSession = Depends(get_db)
         user = await db.get(User, l.user_id)
         data.append({
             "id": l.id, "title": l.title, "price": l.price,
-            "status": l.status.value,
+            "status": l.status.value if hasattr(l.status, 'value') else str(l.status),
             "username": user.username if user else "Bilinmiyor", "created_at": l.created_at
         })
     return data

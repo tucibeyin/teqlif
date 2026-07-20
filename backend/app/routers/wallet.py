@@ -117,7 +117,7 @@ async def get_transaction_detail(
                 "category": listing.category,
                 "price": listing.price,
                 "image_url": listing.image_url,
-                "status": listing.status.value if listing.status else "active",
+                "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
                 "owner_id": listing.user_id,
                 "owner_username": owner.username if owner else None,
                 "owner_avatar": owner.profile_image_thumb_url if owner else None,

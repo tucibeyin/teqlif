@@ -453,9 +453,10 @@ if os.path.exists(frontend_dir):
             return HTMLResponse("<h1>404 — İlan bulunamadı</h1>", status_code=404)
         listing_id = lid
         async with AsyncSessionLocal() as db:
-            listing = await db.scalar(
-                select(Listing).where(Listing.id == listing_id, Listing.is_deleted.is_(False))
+            result = await db.execute(
+                select(Listing).where(Listing.id == listing_id, Listing.status != "deleted")
             )
+            listing = result.scalar_one_or_none()
         if not listing:
             return HTMLResponse(
                 "<h1>404 — İlan bulunamadı</h1>", status_code=404
@@ -607,7 +608,7 @@ async def sitemap_xml():
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Listing.id, Listing.created_at)
-            .where(Listing.is_active.is_(True))
+            .where(Listing.status == "active")
             .order_by(Listing.created_at.desc())
         )
         listings = result.all()

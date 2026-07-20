@@ -89,7 +89,7 @@ async def backfill_clip_embeddings(batch_size: int = 30) -> int:
         rows = (await db.scalars(
             select(Listing)
             .where(
-                Listing.is_deleted.is_(False),
+                Listing.status != "deleted",
                 Listing.image_url.isnot(None),
                 text("visual_embedding IS NULL"),
             )
