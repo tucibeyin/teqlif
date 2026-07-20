@@ -8,7 +8,9 @@ from sqlalchemy.sql import text
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger, capture_exception
 from app.core.exceptions import NotFoundException, DatabaseException
-from app.models.listing import Listing, ListingStatus, ListingImpression
+from app.models.listing import Listing
+from app.models.enums import ListingStatus
+from app.models.listing_impression import ListingImpression
 from app.models.enums import StreamStatus
 from app.models.ad_campaign import AdCampaign
 from app.models.wallet import TuciTransaction

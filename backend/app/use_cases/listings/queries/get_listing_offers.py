@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
-from app.models.listing import ListingOffer
+from app.models.listing_offer import ListingOffer
 from app.models.user import User
 
 class GetListingOffersQuery:

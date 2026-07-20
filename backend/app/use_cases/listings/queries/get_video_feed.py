@@ -1,6 +1,7 @@
 from sqlalchemy import select, func
 from app.core.uow import AbstractUnitOfWork
-from app.models.listing import Listing, ListingStatus
+from app.models.listing import Listing
+from app.models.enums import ListingStatus
 from app.models.user import User
 
 class GetVideoFeedQuery:

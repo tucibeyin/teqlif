@@ -2,7 +2,9 @@ from typing import Optional
 from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.exceptions import NotFoundException
-from app.models.listing import Listing, ListingStatus, ListingImpression
+from app.models.listing import Listing
+from app.models.enums import ListingStatus
+from app.models.listing_impression import ListingImpression
 from app.models.user import User
 from app.models.ad_campaign import AdCampaign
 from app.services.like_service import LikeService

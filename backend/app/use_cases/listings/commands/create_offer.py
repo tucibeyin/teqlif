@@ -3,7 +3,9 @@ from sqlalchemy import select
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger, capture_exception
 from app.core.exceptions import NotFoundException, BadRequestException, DatabaseException
-from app.models.listing import Listing, ListingStatus, ListingOffer
+from app.models.listing import Listing
+from app.models.enums import ListingStatus
+from app.models.listing_offer import ListingOffer
 from app.models.user import User
 
 logger = get_logger(__name__)
