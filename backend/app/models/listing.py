@@ -35,7 +35,7 @@ class Listing(Base):
     buy_it_now_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     last_sold_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, index=True)
     last_start_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    status: Mapped[ListingStatus] = mapped_column(SQLEnum(ListingStatus), default=ListingStatus.ACTIVE, index=True)
+    status: Mapped[ListingStatus] = mapped_column(SQLEnum(ListingStatus, values_callable=lambda obj: [e.value for e in obj]), default=ListingStatus.ACTIVE, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     search_vector: Mapped[Optional[Any]] = mapped_column(TSVECTOR, nullable=True)

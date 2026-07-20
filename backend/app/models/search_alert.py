@@ -20,7 +20,7 @@ class SearchAlert(Base):
     category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     query: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     max_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    status: Mapped[SearchAlertStatus] = mapped_column(SQLEnum(SearchAlertStatus), default=SearchAlertStatus.ACTIVE, nullable=False, index=True)
+    status: Mapped[SearchAlertStatus] = mapped_column(SQLEnum(SearchAlertStatus, values_callable=lambda obj: [e.value for e in obj]), default=SearchAlertStatus.ACTIVE, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

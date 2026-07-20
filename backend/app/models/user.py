@@ -16,7 +16,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[UserStatus] = mapped_column(SQLEnum(UserStatus), default=UserStatus.ACTIVE, index=True)
+    status: Mapped[UserStatus] = mapped_column(SQLEnum(UserStatus, values_callable=lambda obj: [e.value for e in obj]), default=UserStatus.ACTIVE, index=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     fcm_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     voip_token: Mapped[str | None] = mapped_column(String(500), nullable=True)

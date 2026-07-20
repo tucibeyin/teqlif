@@ -12,4 +12,4 @@ class Category(Base):
     key: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     label: Mapped[str] = mapped_column(String(100), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
-    status: Mapped[CategoryStatus] = mapped_column(SQLEnum(CategoryStatus), default=CategoryStatus.ACTIVE, index=True)
+    status: Mapped[CategoryStatus] = mapped_column(SQLEnum(CategoryStatus, values_callable=lambda obj: [e.value for e in obj]), default=CategoryStatus.ACTIVE, index=True)
