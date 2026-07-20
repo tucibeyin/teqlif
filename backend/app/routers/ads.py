@@ -344,8 +344,9 @@ async def get_sponsored_listings(
     Aktif kampanyalardan sponsorlu ilanları döndürür.
     Web feed'ine enjekte etmek için kullanılır.
     """
-    from app.services.feed_service import _get_sponsored_listings
-    return await _get_sponsored_listings(db)
+    from app.use_cases.feed.queries.feed_queries import FeedQueries
+    from app.core.uow import SqlAlchemyUnitOfWork
+    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db))._get_sponsored_listings()
 
 
 # ── Kampanya Performans Raporu ─────────────────────────────────────────────────

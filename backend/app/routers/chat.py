@@ -25,7 +25,7 @@ from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.purchase import Purchase
-from app.services.chat_service import (
+from app.use_cases.chat.chat_utils import (
     ChatService,
     publish_chat,
     chat_pubsub_listener,        # noqa: F401 — main.py bu ismi buradan import eder

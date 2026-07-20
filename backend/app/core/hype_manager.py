@@ -129,7 +129,7 @@ class HypeManager:
 
     async def _decay_loop(self) -> None:
         from app.constants import ws_types as WS
-        from app.services.chat_service import publish_chat
+        from app.use_cases.chat.chat_utils import publish_chat
         from app.core.ws_manager import ws_manager as _ws_manager
 
         while True:

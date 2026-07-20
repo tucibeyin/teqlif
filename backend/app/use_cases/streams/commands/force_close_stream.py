@@ -10,7 +10,7 @@ from app.core.logger import get_logger
 logger = get_logger(__name__)
 
 async def force_close_stream(db: AsyncSession, room_name: str) -> None:
-    from app.services.auction_service import AuctionService
+    from app.use_cases.auctions.commands.auction_commands import AuctionCommands
 
     result = await db.execute(
         select(LiveStream).where(
@@ -27,7 +27,8 @@ async def force_close_stream(db: AsyncSession, room_name: str) -> None:
     stream.ended_at = datetime.now(timezone.utc)
 
     try:
-        auction_svc = AuctionService(db)
+        from app.core.uow import SqlAlchemyUnitOfWork
+        auction_svc = AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db))
         await auction_svc.end_auction(stream_id, force_system=True)
     except Exception:
         logger.error("force_close_stream: Auction kapatılamadı | stream_id=%s", stream_id, exc_info=True)
@@ -41,7 +42,7 @@ async def force_close_stream(db: AsyncSession, room_name: str) -> None:
 
     try:
         from app.core.ws_manager import ws_manager
-        from app.services.chat_service import publish_chat
+        from app.use_cases.chat.chat_utils import publish_chat
         await publish_chat(stream_id, {"type": WS.STREAM_ENDED})
         await ws_manager.publish(
             "chat_broadcast", "global",

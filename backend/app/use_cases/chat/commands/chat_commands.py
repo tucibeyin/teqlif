@@ -1,3 +1,6 @@
+
+from app.use_cases.chat.chat_utils import chat_key, publish_chat, update_viewer_count
+from app.core.uow import AbstractUnitOfWork
 """
 Chat servisi — Pub/Sub altyapısı ve mesaj iş mantığını router'dan ayırır.
 
@@ -39,66 +42,24 @@ _MAX_HISTORY = 50
 
 
 # ── Redis key ────────────────────────────────────────────────────────────────
-def chat_key(stream_id: int) -> str:
-    return f"chat:{stream_id}:messages"
+
 
 
 # ── Pub/Sub yayın yardımcısı ─────────────────────────────────────────────────
-async def publish_chat(stream_id: int, payload: dict) -> None:
-    """Chat mesajını Redis Pub/Sub aracılığıyla tüm worker'lara yayar."""
-    await ws_manager.publish(_CHAT_CHANNEL, f"chat:{stream_id}", payload)
+
 
 
 # ── Viewer count ─────────────────────────────────────────────────────────────
 _VIEWER_TTL = 12 * 3600  # 12 saat — yayın crash'lansa bile key otomatik silinir
 
-async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> None:
-    """Redis'teki izleyici sayısını günceller ve tüm istemcilere yayınlar."""
-    try:
-        redis = await get_redis()
-        key = f"live:viewers:{room_name}"
-        peak_key = f"live:peak_viewers:{room_name}"
-        if delta > 0:
-            count = await redis.incr(key)
-            await redis.expire(key, _VIEWER_TTL)
-            peak_raw = await redis.get(peak_key)
-            current_peak = int(peak_raw) if peak_raw else 0
-            if count > current_peak:
-                await redis.setex(peak_key, _VIEWER_TTL, count)
-        else:
-            count = await redis.decr(key)
-            if count < 0:
-                await redis.set(key, 0)
-                count = 0
-            await redis.expire(key, _VIEWER_TTL)
-        await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
-    except Exception:
-        logger.error(
-            "[CHAT] Viewer count güncellenemedi | room=%s stream_id=%s delta=%s",
-            room_name, stream_id, delta, exc_info=True,
-        )
+
 
 
 # ── Stream dinleyicileri (arka plan görevleri) ───────────────────────────────
-async def chat_pubsub_listener() -> None:
-    """Her worker için chat stream dinleyicisi (Redis Stream, pub/sub yerine)."""
-    from app.core.stream_listener import stream_listener
-
-    async def _on_message(data: dict) -> None:
-        topic = data.pop("_topic")
-        asyncio.create_task(ws_manager.broadcast_local(topic, data))
-
-    await stream_listener(_CHAT_CHANNEL, _on_message)
 
 
-async def moderation_pubsub_listener() -> None:
-    """Her worker için moderasyon stream dinleyicisi (Redis Stream, pub/sub yerine)."""
-    from app.core.stream_listener import stream_listener
 
-    async def _on_message(data: dict) -> None:
-        await _dispatch_mod_event(data)
 
-    await stream_listener(MOD_CHANNEL, _on_message)
 
 
 async def _dispatch_mod_event(data: dict) -> None:
@@ -146,7 +107,9 @@ async def _dispatch_mod_event(data: dict) -> None:
 
 
 # ── Servis sınıfı ────────────────────────────────────────────────────────────
-class ChatService:
+class ChatCommands:
+    def __init__(self, uow=None):
+        self.uow = uow
     """
     WebSocket chat bağlantısının iş mantığı operasyonlarını barındıran servis.
 

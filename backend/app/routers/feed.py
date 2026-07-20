@@ -11,7 +11,8 @@ from app.database import get_db
 from app.utils.auth import get_current_user, get_current_user_optional
 from app.models.user import User
 from app.models.listing import Listing
-from app.services.feed_service import get_personalized_feed, get_foryou_feed, get_mixed_recent_feed
+from app.use_cases.feed.queries.feed_queries import FeedQueries
+from app.core.uow import SqlAlchemyUnitOfWork
 from app.services.recommendation_service import (
     get_personalized_feed as get_ch_personalized_feed,
     get_user_category_affinity,
@@ -37,7 +38,7 @@ async def get_feed(
     - seed: oturum başında üretilmeli, scroll boyunca aynı kalmalı
     """
     user_id = current_user.id if current_user else None
-    return await get_personalized_feed(user_id, page, seed, db)
+    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_personalized_feed(user_id, page, seed)
 
 
 @router.get("/personalized")
@@ -92,7 +93,7 @@ async def get_recent_mixed_feed(
     Misafirler: sadece son ilanlar, enjeksiyon yok.
     """
     user_id = current_user.id if current_user else None
-    return await get_mixed_recent_feed(user_id, page, db)
+    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_mixed_recent_feed(user_id, page)
 
 
 @router.get("/for-you")
@@ -108,7 +109,7 @@ async def get_for_you_feed(
     - varsa pgvector cosine distance ile en yakın ilanlar
     - Sayfa başına 20 ilan, maks 5 sayfa (100 ilan havuzu Redis'te 5 dk önbelleklenir)
     """
-    return await get_foryou_feed(current_user.id, page, db)
+    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_foryou_feed(current_user.id, page)
 
 
 class FeedSignalPayload(BaseModel):

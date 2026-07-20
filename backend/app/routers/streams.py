@@ -23,7 +23,8 @@ from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinToken
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
 
 from app.services.like_service import LikeService
-from app.services.swipe_live_service import get_swipe_live_config
+from app.use_cases.feed.queries.swipe_live_queries import SwipeLiveQueries
+from app.core.uow import SqlAlchemyUnitOfWork
 
 router = APIRouter(prefix="/api/streams", tags=["streams"])
 
@@ -546,7 +547,7 @@ async def swipe_live_config(
     Yayınları kullanıcı ilgi + ClickHouse davranış skoruna göre sıralar,
     listings_per_group ve tercih edilen ilan kategorilerini döndürür.
     """
-    return await get_swipe_live_config(current_user.id, db)
+    return await SwipeLiveQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_swipe_live_config(current_user.id)
 
 
 @router.get("/active", response_model=list[StreamOut])

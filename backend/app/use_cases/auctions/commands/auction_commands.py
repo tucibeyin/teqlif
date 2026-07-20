@@ -1,3 +1,6 @@
+
+from app.core.uow import AbstractUnitOfWork
+from app.use_cases.auctions.auction_utils import manager, _log_fraud_attempt, fmt_price, auction_key, publish_auction, _require_host
 """
 Açık artırma servisi — iş mantığını router'dan ayırır.
 
@@ -211,12 +214,7 @@ async def get_bids(stream_id: int, db: AsyncSession, limit: int = 50) -> list:
     return result.scalars().all()
 
 
-async def get_auction_state(stream_id: int) -> dict:
-    """Redis'ten mevcut açık artırma durumunu okur."""
-    redis = await get_redis()
-    data = await redis.hgetall(auction_key(stream_id))
-    if not data:
-        return {"status": "idle", "bid_count": 0}
+
     listing_id_raw = data.get("listing_id")
     bin_raw = data.get("buy_it_now_price")
     result = {
@@ -338,7 +336,7 @@ return {1, prev, buyer_username, buyer_id}
 
 
 # ── Servis sınıfı ────────────────────────────────────────────────────────────
-class AuctionService:
+class AuctionCommands:
     """
     Tüm açık artırma iş mantığını barındıran servis sınıfı.
 
@@ -347,15 +345,15 @@ class AuctionService:
         state = await service.start(stream_id, data, current_user)
     """
 
-    def __init__(self, db: AsyncSession):
-        self.db = db
+    def __init__(self, uow):
+        self.uow = uow
 
     # ── Yardımcı: stream & host doğrulama ───────────────────────────────────
     async def _require_host(self, stream_id: int, user: User) -> LiveStream:
         from app.services.moderation_service import mod_key
         from app.utils.redis_client import get_redis
 
-        result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+        result = await self.uow.session.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if not stream:
             raise NotFoundException("Yayın bulunamadı")
@@ -371,106 +369,7 @@ class AuctionService:
 
     # ── Durum ────────────────────────────────────────────────────────────────
     @staticmethod
-    async def get_state(stream_id: int) -> dict:
-        return await get_auction_state(stream_id)
-
-    # ── Başlat ───────────────────────────────────────────────────────────────
-    async def start(self, stream_id: int, data: AuctionStart, user: User, host_ip: str | None = None) -> dict:
-        await self._require_host(stream_id, user)
-        redis = await get_redis()
-        key = auction_key(stream_id)
-
-        existing_status = await redis.hget(key, "status")
-        if existing_status == "active":
-            raise BadRequestException("Zaten aktif bir açık artırma var")
-
-        listing_id_val = data.listing_id
-        start_price = float(data.start_price)
-        if listing_id_val:
-            listing = await self.db.scalar(
-                select(Listing).where(Listing.id == listing_id_val, Listing.status != ListingStatus.DELETED)  # noqa: E712
-            )
-            if not listing:
-                raise NotFoundException("İlan bulunamadı")
-            item_name = listing.title
-        else:
-            item_name = data.item_name
-            listing_id_val = None
-
-        bin_price = float(data.buy_it_now_price) if data.buy_it_now_price else None
-        await redis.hset(key, mapping={
-            "status": "active",
-            "item_name": item_name,
-            "start_price": str(start_price),
-            "buy_it_now_price": str(bin_price) if bin_price else "",
-            "current_bid": str(start_price),
-            "current_bidder_id": "",
-            "current_bidder_name": "",
-            "bid_count": "0",
-            "host_id": str(user.id),
-            "host_ip": host_ip or "",
-            "stream_id": str(stream_id),
-            "listing_id": str(listing_id_val) if listing_id_val else "",
-        })
-        await redis.expire(key, 24 * 3600)
-
-        state = await get_auction_state(stream_id)
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
-        logger.info(
-            "[AÇIK ARTIRMA] BAŞLADI | stream_id=%s item=%r start_price=%s | ws_hedef=%s",
-            stream_id, data.item_name, data.start_price, manager.conn_count(stream_id),
-        )
-        return state
-
-    # ── Duraklat ─────────────────────────────────────────────────────────────
-    async def pause(self, stream_id: int, user: User) -> dict:
-        await self._require_host(stream_id, user)
-        redis = await get_redis()
-        key = auction_key(stream_id)
-
-        if await redis.hget(key, "status") != "active":
-            raise BadRequestException("Açık artırma aktif değil")
-
-        await redis.hset(key, "status", "paused")
-        state = await get_auction_state(stream_id)
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
-        logger.info("[AÇIK ARTIRMA] DURAKLATILDI | stream_id=%s | ws_hedef=%s",
-                    stream_id, manager.conn_count(stream_id))
-        return state
-
-    # ── Devam Ettir ──────────────────────────────────────────────────────────
-    async def resume(self, stream_id: int, user: User) -> dict:
-        await self._require_host(stream_id, user)
-        redis = await get_redis()
-        key = auction_key(stream_id)
-
-        if await redis.hget(key, "status") != "paused":
-            raise BadRequestException("Açık artırma duraklatılmamış")
-
-        await redis.hset(key, "status", "active")
-        state = await get_auction_state(stream_id)
-        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
-        logger.info("[AÇIK ARTIRMA] DEVAM ETTİ | stream_id=%s | ws_hedef=%s",
-                    stream_id, manager.conn_count(stream_id))
-        return state
-
-    # ── Bitir ────────────────────────────────────────────────────────────────
-    async def end_auction(self, stream_id: int, user: Optional[User] = None, force_system: bool = False, proof_image_url: Optional[str] = None) -> dict:
-        if not force_system:
-            if not user:
-                from app.core.exceptions import ForbiddenException
-                raise ForbiddenException("Kullanıcı belirtilmedi")
-            await self._require_host(stream_id, user)
-            
-        logger.info(f"[DEBUG_PROOF] end_auction called for stream {stream_id}. proof_image_url={proof_image_url}")
-            
-        redis = await get_redis()
-        key = auction_key(stream_id)
-
-        data = await redis.hgetall(key)
-        if not data or data.get("status") not in ("active", "paused"):
-            if force_system:
-                return {} # Sistem çağırdıysa sessizce dön
+     # Sistem çağırdıysa sessizce dön
             raise BadRequestException("Aktif açık artırma yok")
 
         winner_id_str = data.get("current_bidder_id", "")
@@ -493,21 +392,21 @@ class AuctionService:
                 ended_at=datetime.now(timezone.utc),
                 proof_image_url=proof_image_url,
             )
-            self.db.add(auction)
+            self.uow.session.add(auction)
 
             if lid_str and data.get("current_bidder_id"):
                 from sqlalchemy import update
                 from app.models.listing import Listing
-                await self.db.execute(
+                await self.uow.session.execute(
                     update(Listing).where(Listing.id == int(lid_str)).values(
                         last_sold_price=final_price,
                         last_start_price=float(data.get("start_price", 0))
                     )
                 )
             try:
-                await self.db.commit()
+                await self.uow.session.commit()
             except Exception as exc:
-                await self.db.rollback()
+                await self.uow.session.rollback()
                 logger.error(
                     "[AÇIK ARTIRMA] end DB commit HATASI | stream_id=%s | %s",
                     stream_id, exc, exc_info=True,
@@ -579,7 +478,7 @@ class AuctionService:
         if not allowed:
             raise TooManyRequestsException("Teklif hızınız çok yüksek. Lütfen bekleyin.")
 
-        result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+        result = await self.uow.session.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if stream and stream.host_id == user.id:
             raise BadRequestException("Host kendi açık artırmasına teklif veremez")
@@ -645,11 +544,11 @@ class AuctionService:
             bidder_username=user.username,
             amount=data.amount,
         )
-        self.db.add(new_bid)
+        self.uow.session.add(new_bid)
         try:
-            await self.db.commit()
+            await self.uow.session.commit()
         except Exception as exc:
-            await self.db.rollback()
+            await self.uow.session.rollback()
             logger.error(
                 "[TEKLİF] DB commit HATASI | stream_id=%s user=%s amount=%s | %s",
                 stream_id, user.username, data.amount, exc, exc_info=True,
@@ -749,7 +648,7 @@ class AuctionService:
     async def request_buy_it_now(self, stream_id: int, user: User) -> dict:
         from app.routers.moderation import mute_key
 
-        result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+        result = await self.uow.session.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if not stream:
             raise NotFoundException("Yayın bulunamadı")
@@ -851,7 +750,7 @@ class AuctionService:
         try:
             listing: Listing | None = None
             if listing_id:
-                listing_result = await self.db.execute(
+                listing_result = await self.uow.session.execute(
                     select(Listing).where(Listing.id == listing_id).with_for_update()
                 )
                 listing = listing_result.scalar_one_or_none()
@@ -871,8 +770,8 @@ class AuctionService:
                 ended_at=datetime.now(timezone.utc),
                 proof_image_url=proof_image_url,
             )
-            self.db.add(auction)
-            await self.db.flush()
+            self.uow.session.add(auction)
+            await self.uow.session.flush()
 
             if listing:
                 listing.status = ListingStatus.PASSIVE
@@ -884,7 +783,7 @@ class AuctionService:
                 price=bin_price,
                 purchase_type="BUY_IT_NOW",
             )
-            self.db.add(purchase)
+            self.uow.session.add(purchase)
 
             winner_dm_content = dm_content + f"\n📋 teqlif://auction/{auction.id}"
             dm = DirectMessage(
@@ -892,11 +791,11 @@ class AuctionService:
                 receiver_id=buyer_id,
                 content=winner_dm_content,
             )
-            self.db.add(dm)
-            await self.db.commit()
+            self.uow.session.add(dm)
+            await self.uow.session.commit()
 
         except Exception as exc:
-            await self.db.rollback()
+            await self.uow.session.rollback()
             await redis.hset(key, "status", "buy_it_now_pending")
             logger.error(
                 "[HEMEN AL KABUL] DB commit HATASI | stream_id=%s | %s",
@@ -1005,7 +904,7 @@ class AuctionService:
         await redis.rpush(_CHAT_KEY, json.dumps(chat_msg))
         await redis.ltrim(_CHAT_KEY, -50, -1)
         await redis.expire(_CHAT_KEY, 24 * 3600)
-        from app.services.chat_service import publish_chat
+        from app.use_cases.chat.chat_utils import publish_chat
         await publish_chat(stream_id, chat_msg)
 
         logger.info(
@@ -1080,7 +979,7 @@ class AuctionService:
 
         listing: Listing | None = None
         if listing_id:
-            listing_result = await self.db.execute(
+            listing_result = await self.uow.session.execute(
                 select(Listing).where(Listing.id == listing_id).with_for_update()
             )
             listing = listing_result.scalar_one_or_none()
@@ -1106,15 +1005,15 @@ class AuctionService:
                 ended_at=datetime.now(timezone.utc),
                 proof_image_url=proof_image_url,
             )
-            self.db.add(_a)
-            await self.db.flush()
+            self.uow.session.add(_a)
+            await self.uow.session.flush()
             auction = _a
             return _a
 
         async def _compensate_auction():
             if auction and auction.id:
-                await self.db.delete(auction)
-                await self.db.flush()
+                await self.uow.session.delete(auction)
+                await self.uow.session.flush()
             # Redis state'i geri yükle
             await redis.hset(key, "status", original_status)
 
@@ -1145,10 +1044,10 @@ class AuctionService:
                     price=final_price,
                     purchase_type="AUCTION_WIN",
                 )
-                self.db.add(purchase)
+                self.uow.session.add(purchase)
             from app.models.analytics import UserInteraction
             if listing_id:
-                self.db.add(UserInteraction(
+                self.uow.session.add(UserInteraction(
                     user_id=winner_user_id,
                     item_id=listing_id,
                     item_type="listing",
@@ -1160,15 +1059,15 @@ class AuctionService:
                 receiver_id=winner_user_id,
                 content=_winner_dm_content,
             )
-            self.db.add(_dm)
+            self.uow.session.add(_dm)
             dm = _dm
 
         await saga.step("create_purchase_dm", do=_create_purchase_and_dm, compensate=None)
 
         try:
-            await self.db.commit()
+            await self.uow.session.commit()
         except Exception as exc:
-            await self.db.rollback()
+            await self.uow.session.rollback()
             # Redis state'i geri yükle (DB commit başarısız oldu)
             await redis.hset(key, "status", original_status)
             logger.error("[ACCEPT] DB commit HATASI | stream_id=%s | %s", stream_id, exc, exc_info=True)
@@ -1267,7 +1166,7 @@ class AuctionService:
         }
         if listing_id:
             chat_msg["url"] = f"/ilan/{listing_id}"
-        from app.services.chat_service import publish_chat
+        from app.use_cases.chat.chat_utils import publish_chat
         _CHAT_KEY = f"chat:{stream_id}:messages"
         # History'ye is_auction_result bayrağı olmadan kaydet —
         # servis yeniden başlayıp history replay edildiğinde tekrar

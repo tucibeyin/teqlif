@@ -6,7 +6,7 @@ from app.models.stream import LiveStream
 from app.models.user import User
 from app.core.logger import get_logger, capture_exception
 from app.use_cases.streams.stream_utils import delete_livekit_room
-from app.services.chat_service import publish_chat
+from app.use_cases.chat.chat_utils import publish_chat
 from app.constants import ws_types as WS
 from app.config import settings
 

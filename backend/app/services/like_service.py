@@ -179,7 +179,7 @@ class LikeService:
 
         # WebSocket broadcast — non-critical (hata yayını engellemesin)
         try:
-            from app.services.chat_service import publish_chat
+            from app.use_cases.chat.chat_utils import publish_chat
             await publish_chat(stream_id, {
                 "type": WS.STREAM_LIKE,
                 "user_id": user_id,

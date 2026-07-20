@@ -12,7 +12,7 @@ from app.models.tuci_transaction import TuciTransaction
 from app.models.listing import Listing
 from app.models.stream import LiveStream
 from app.models.gift_event import GiftEvent
-from app.services.chat_service import publish_chat
+from app.use_cases.chat.chat_utils import publish_chat
 from app.utils.auth import get_current_user
 from app.utils.redis_client import get_redis
 

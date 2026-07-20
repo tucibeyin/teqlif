@@ -4,7 +4,7 @@ from app.core.exceptions import NotFoundException, BadRequestException, Forbidde
 from app.models.stream import LiveStream
 from app.models.user import User
 from app.utils.redis_client import get_redis
-from app.services.chat_service import publish_chat
+from app.use_cases.chat.chat_utils import publish_chat
 from app.constants import ws_types as WS
 from app.core.logger import get_logger
 
