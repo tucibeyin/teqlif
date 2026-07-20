@@ -368,9 +368,21 @@ class AuctionCommands:
         return stream
 
     # ── Durum ────────────────────────────────────────────────────────────────
-    @staticmethod
-     # Sistem çağırdıysa sessizce dön
+    async def end_auction(
+        self, stream_id: int, user: User, proof_image_url: Optional[str] = None, system_end: bool = False
+    ):
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        key = f"auction:state:{stream_id}"
+        state_data = await redis.get(key)
+        
+        if not state_data:
+            if system_end:
+                return  # Sistem çağırdıysa sessizce dön
             raise BadRequestException("Aktif açık artırma yok")
+            
+        import json
+        data = json.loads(state_data)
 
         winner_id_str = data.get("current_bidder_id", "")
         final_price = float(data["current_bid"]) if data.get("current_bid") else float(data.get("start_price", 0))

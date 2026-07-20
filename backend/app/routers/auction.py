@@ -28,13 +28,7 @@ from app.use_cases.auctions.commands.auction_commands import AuctionCommands
 from app.use_cases.auctions.queries.auction_queries import GetBidsQuery, GetAuctionStateQuery
 from app.use_cases.auctions.auction_utils import manager, pubsub_listener
 from app.core.uow import SqlAlchemyUnitOfWork
-#
-    AuctionService,
-    manager,
-    pubsub_listener,  # noqa: F401 — main.py bu ismi buradan import eder
-    get_auction_state,
-    get_bids,
-)
+
 from app.constants import ws_types as WS
 
 _WS_AUTH_TIMEOUT_SECS    = 5.0   # ilk auth mesajı için bekleme süresi
