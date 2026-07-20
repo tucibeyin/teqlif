@@ -42,7 +42,7 @@ async def test_central_error_handlers():
     test_router = APIRouter()
     @test_router.get("/api/test-domain-error")
     async def trigger_domain_error():
-        raise AppException(status_code=400, error_code="TEST_ERROR", message="Bu bir test hatasıdır.")
+        raise AppException(status_code=400, code="TEST_ERROR", message="Bu bir test hatasıdır.")
         
     app.include_router(test_router)
     
