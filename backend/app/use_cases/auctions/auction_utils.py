@@ -11,7 +11,7 @@ from sqlalchemy import select, func, text
 from app.models.stream import LiveStream
 from app.models.listing import Listing
 from app.models.user import User
-from app.models.auction import Auction, AuctionBid
+from app.models.auction import Auction
 from app.models.purchase import Purchase
 from app.models.direct_message import DirectMessage
 from app.models.enums import ListingStatus

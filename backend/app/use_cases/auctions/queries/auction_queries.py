@@ -2,7 +2,7 @@
 from app.core.uow import AbstractUnitOfWork
 from app.use_cases.auctions.auction_utils import auction_key
 from app.utils.redis_client import get_redis
-from app.models.auction import AuctionBid
+from app.models.bid import Bid
 from app.models.user import User
 from sqlalchemy import select
 
@@ -13,10 +13,10 @@ class GetBidsQuery:
     async def execute(self, stream_id: int, limit: int = 50) -> list:
         async with self.uow:
             query = (
-                select(AuctionBid, User)
-                .join(User, User.id == AuctionBid.bidder_id)
-                .where(AuctionBid.stream_id == stream_id)
-                .order_by(AuctionBid.created_at.desc())
+                select(Bid, User)
+                .join(User, User.id == Bid.bidder_id)
+                .where(Bid.stream_id == stream_id)
+                .order_by(Bid.created_at.desc())
                 .limit(limit)
             )
             res = await self.uow.session.execute(query)
@@ -26,7 +26,7 @@ class GetBidsQuery:
                     "id": bid.id,
                     "bidder_id": u.id,
                     "bidder_username": u.username,
-                    "bid_amount": bid.bid_amount,
+                    "bid_amount": bid.amount,
                     "created_at": bid.created_at.isoformat() if bid.created_at else None,
                 })
             return out
