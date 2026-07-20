@@ -13,7 +13,7 @@ from app.models.enums import ListingStatus
 from app.models.listing_impression import ListingImpression
 from app.models.enums import StreamStatus
 from app.models.ad_campaign import AdCampaign
-from app.models.wallet import TuciTransaction
+from app.models.tuci_transaction import TuciTransaction
 from app.models.user import User
 
 logger = get_logger(__name__)
