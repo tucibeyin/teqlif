@@ -61,7 +61,8 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self.users = UserRepository(self.session)
         # Her repo'ya session vermek için BaseRepository yapısı update edilmelidir.
         # userRepository şimdilik db'yi argüman alıyordu, onu da düzenleyeceğiz.
-        return super().__aenter__()
+        await super().__aenter__()
+        return self
 
     async def __aexit__(self, exc_type, exc_val, traceback):
         try:
