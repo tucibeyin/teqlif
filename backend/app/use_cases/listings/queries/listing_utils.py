@@ -4,7 +4,8 @@ from typing import Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
-from app.models.listing import Listing, ListingImpression
+from app.models.listing import Listing
+from app.models.listing_impression import ListingImpression
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
