@@ -26,11 +26,11 @@ class TransferTuciCommand:
             # Şimdilik bakiye yeterli varsayalım veya DB'de trigger ile kontrol edilsin
             
             # 2. İşlemleri UoW ile kaydet
-            t1 = TuciTransaction(user_id=sender_id, amount=-amount, transaction_type="transfer_out", reference_id=receiver_id)
-            t2 = TuciTransaction(user_id=receiver_id, amount=amount, transaction_type="transfer_in", reference_id=sender_id)
+            t1_data = {"user_id": sender_id, "amount": -amount, "transaction_type": "transfer_out", "reference_id": receiver_id}
+            t2_data = {"user_id": receiver_id, "amount": amount, "transaction_type": "transfer_in", "reference_id": sender_id}
             
-            await self.uow.transactions.create(obj_in=t1.__dict__) # Stub implementation
-            await self.uow.transactions.create(obj_in=t2.__dict__) # Stub implementation
+            await self.uow.transactions.create(obj_in=t1_data) # Stub implementation
+            await self.uow.transactions.create(obj_in=t2_data) # Stub implementation
             
             from app.core.event_bus import event_bus
             from app.core.events import DomainEvent

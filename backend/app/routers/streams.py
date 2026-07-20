@@ -222,8 +222,8 @@ async def start_stream(
         user_id=current_user.id,
         title=data.title,
         category=data.category,
-        listing_id=data.listing_id,
-        thumbnail_url=data.thumbnail_url
+        listing_id=getattr(data, "listing_id", None),
+        thumbnail_url=getattr(data, "thumbnail_url", None)
     )
 
 
