@@ -17,7 +17,8 @@ class MockUserRepository:
         if username == "not_found_user":
             return None
             
-        mock_user = User(id=2, username=username, status="ACTIVE")
+        from app.models.enums import UserStatus
+        mock_user = User(id=2, username=username, status=UserStatus.ACTIVE)
         return mock_user
         
     async def add_block(self, blocker_id, blocked_id):
