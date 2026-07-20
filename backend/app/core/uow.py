@@ -62,10 +62,14 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         from app.repositories.listing_repository import ListingRepository
         from app.repositories.stream_repository import StreamRepository
         from app.repositories.message_repository import MessageRepository
+        from app.repositories.favorite_repository import FavoriteRepository
+        from app.repositories.category_repository import CategoryRepository
         
         self.listings = ListingRepository(self.session)
         self.streams = StreamRepository(self.session)
         self.messages = MessageRepository(self.session)
+        self.favorites = FavoriteRepository(self.session)
+        self.categories = CategoryRepository(self.session)
         
         await super().__aenter__()
         return self
