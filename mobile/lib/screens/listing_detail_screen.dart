@@ -27,24 +27,34 @@ import 'profile_screen.dart';
 import 'public_profile_screen.dart';
 import 'edit_listing_screen.dart';
 import 'messages_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/listing_detail_provider.dart';
+import '../models/listing_status.dart';
 import 'ad_report_screen.dart';
 
-class ListingDetailScreen extends StatefulWidget {
+class ListingDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
   const ListingDetailScreen({super.key, required this.listing});
 
   @override
-  State<ListingDetailScreen> createState() => _ListingDetailScreenState();
+  ConsumerState<ListingDetailScreen> createState() =>
+      _ListingDetailScreenState();
 }
 
-class _ListingDetailScreenState extends State<ListingDetailScreen>
+class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     with SingleTickerProviderStateMixin {
   int _currentImg = 0;
   late final PageController _pageCtrl;
   late final List<String> _images;
   int? _myUserId;
   bool _isFavorited = false;
-  bool _isActive = true;
+
+  bool get _isActive {
+    final id = widget.listing['id'] as int?;
+    if (id == null) return true;
+    return ref.watch(listingDetailProvider(id)).canReceiveOffers;
+  }
+
   int? _campaignId;
 
   // Toplu Kitle Bildirimi (Mass Notification)
@@ -96,13 +106,27 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     if (_images.isEmpty && widget.listing['image_url'] != null) {
       _images.add(imgUrl(widget.listing['image_url'] as String));
     }
-    _isActive = widget.listing['is_active'] as bool? ?? true;
+
+    // Provider'ı mevcut JSON verisiyle başlat
+    final listingId = widget.listing['id'] as int?;
+    if (listingId != null) {
+      Future.microtask(() {
+        if (mounted) {
+          ref
+              .read(listingDetailProvider(listingId).notifier)
+              .initFromData(widget.listing);
+        }
+      });
+    }
+
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
     _isLiked = widget.listing['is_liked'] as bool? ?? false;
     _videoUrl = widget.listing['video_url'] as String?;
     _campaignId = widget.listing['campaign_id'] as int?;
     if (_videoUrl != null) {
-      _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(imgUrl(_videoUrl!)));
+      _videoCtrl = VideoPlayerController.networkUrl(
+        Uri.parse(imgUrl(_videoUrl!)),
+      );
       _videoCtrl!.initialize().then((_) {
         if (!mounted || !context.mounted) return;
         _chewieCtrl = ChewieController(
@@ -191,7 +215,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   void _startCooldownTimer() {
     _cooldownTimer?.cancel();
     _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || !context.mounted) { _cooldownTimer?.cancel(); return; }
+      if (!mounted || !context.mounted) {
+        _cooldownTimer?.cancel();
+        return;
+      }
       setState(() {
         if (_cooldownSeconds > 0) {
           _cooldownSeconds--;
@@ -205,7 +232,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   String _formatCooldown(int totalSeconds) {
     final l = AppLocalizations.of(context)!;
     if (totalSeconds >= 3600) {
-      return l.massNotifCooldownHours(totalSeconds ~/ 3600, (totalSeconds % 3600) ~/ 60);
+      return l.massNotifCooldownHours(
+        totalSeconds ~/ 3600,
+        (totalSeconds % 3600) ~/ 60,
+      );
     } else if (totalSeconds >= 60) {
       return l.massNotifCooldownMinutes(totalSeconds ~/ 60);
     } else {
@@ -357,8 +387,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           headers: {'Authorization': 'Bearer $token'},
         );
         if (mounted && context.mounted) {
-          setState(() { _isFavorited = false; _isLiked = false; });
-          if (id != null) AnalyticsService.logInteraction(itemId: id, itemType: 'listing', interactionType: 'listing_unfavorite', pricePoint: pricePoint);
+          setState(() {
+            _isFavorited = false;
+            _isLiked = false;
+          });
+          if (id != null)
+            AnalyticsService.logInteraction(
+              itemId: id,
+              itemType: 'listing',
+              interactionType: 'listing_unfavorite',
+              pricePoint: pricePoint,
+            );
         }
       } else {
         await http.post(
@@ -366,8 +405,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           headers: {'Authorization': 'Bearer $token'},
         );
         if (mounted && context.mounted) {
-          setState(() { _isFavorited = true; _isLiked = true; });
-          if (id != null) AnalyticsService.logInteraction(itemId: id, itemType: 'listing', interactionType: 'listing_favorite', pricePoint: pricePoint);
+          setState(() {
+            _isFavorited = true;
+            _isLiked = true;
+          });
+          if (id != null)
+            AnalyticsService.logInteraction(
+              itemId: id,
+              itemType: 'listing',
+              interactionType: 'listing_favorite',
+              pricePoint: pricePoint,
+            );
         }
       }
     } catch (_) {}
@@ -375,24 +423,24 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
   Future<void> _toggleActive() async {
     if (!mounted || !context.mounted) return;
-    final l  = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context)!;
     final id = widget.listing['id'] as int;
 
     final costData = await ListingService.getReactivationCost(id);
     if (!mounted || !context.mounted) return;
 
-    final isPremium    = costData?['is_premium']    as bool? ?? false;
-    final remaining    = costData?['free_remaining'] as int?  ?? 0;
-    final cost         = costData?['cost']           as int?  ?? 10;
-    final balance      = costData?['balance']        as int?  ?? 0;
-    final canAfford    = costData?['can_afford']     as bool? ?? false;
-    final withinWindow = costData?['within_window']  as bool? ?? false;
+    final isPremium = costData?['is_premium'] as bool? ?? false;
+    final remaining = costData?['free_remaining'] as int? ?? 0;
+    final cost = costData?['cost'] as int? ?? 10;
+    final balance = costData?['balance'] as int? ?? 0;
+    final canAfford = costData?['can_afford'] as bool? ?? false;
+    final withinWindow = costData?['within_window'] as bool? ?? false;
 
     if (_isActive) {
       // Aktif → Pasif
       if (!withinWindow) {
-        final hintText = (isPremium && remaining > 0) 
-            ? l.listingDeactivateFreeCreditHint 
+        final hintText = (isPremium && remaining > 0)
+            ? l.listingDeactivateFreeCreditHint
             : l.listingDeactivateCostHint(cost);
 
         final confirm = await showDialog<bool>(
@@ -401,10 +449,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             title: Text(l.listingDeactivateTitle),
             content: Text('${l.listingDeactivateWarning}\n\n$hintText'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l.btnDismiss),
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(l.listingDeactivateConfirm, style: const TextStyle(color: Color(0xFFDC2626))),
+                child: Text(
+                  l.listingDeactivateConfirm,
+                  style: const TextStyle(color: Color(0xFFDC2626)),
+                ),
               ),
             ],
           ),
@@ -421,7 +475,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               title: Text(l.listingReactivateTitle),
               content: Text(l.listingReactivateInsufficientBalance),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: Text(l.btnDismiss)),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l.btnDismiss),
+                ),
               ],
             ),
           );
@@ -444,10 +501,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             title: Text(l.listingReactivateTitle),
             content: Text(subtitle),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.btnDismiss)),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l.btnDismiss),
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: Text(l.listingReactivateConfirm, style: const TextStyle(color: Color(0xFF6366F1))),
+                child: Text(
+                  l.listingReactivateConfirm,
+                  style: const TextStyle(color: Color(0xFF6366F1)),
+                ),
               ),
             ],
           ),
@@ -459,18 +522,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     final token = await StorageService.getToken();
     if (token == null) return;
     try {
-      final resp = await http.patch(
-        Uri.parse('$kBaseUrl/listings/$id/toggle'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (resp.statusCode == 200 && mounted) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final resp = await ListingService.toggleStatus(id);
+      if (resp['statusCode'] == 200 && mounted) {
+        final data = resp['body'] as Map<String, dynamic>;
         final newActive = data['is_active'] as bool? ?? !_isActive;
-        setState(() => _isActive = newActive);
+        ref
+            .read(listingDetailProvider(id).notifier)
+            .setStatus(
+              newActive ? ListingStatus.active : ListingStatus.passive,
+            );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(newActive ? l.listingActivated : l.listingDeactivated)),
+          SnackBar(
+            content: Text(
+              newActive ? l.listingActivated : l.listingDeactivated,
+            ),
+          ),
         );
-      } else if (resp.statusCode == 402 && mounted) {
+      } else if (resp['statusCode'] == 402 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l.listingReactivateInsufficientBalance)),
         );
@@ -480,7 +548,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
   @override
   void dispose() {
-    final durationSec = DateTime.now().difference(_enteredAt).inSeconds.toDouble();
+    final durationSec = DateTime.now()
+        .difference(_enteredAt)
+        .inSeconds
+        .toDouble();
     final listingId = widget.listing['id'] as int?;
     final rawPrice = widget.listing['price'];
     final pricePoint = rawPrice != null ? (rawPrice as num).toDouble() : null;
@@ -593,10 +664,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       final token = await StorageService.getToken();
       final headers = <String, String>{};
       if (token != null) headers['Authorization'] = 'Bearer $token';
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/$lid/similar'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 8));
+      final resp = await http
+          .get(Uri.parse('$kBaseUrl/listings/$lid/similar'), headers: headers)
+          .timeout(const Duration(seconds: 8));
       if (resp.statusCode == 200 && mounted) {
         final data = jsonDecode(resp.body) as List;
         setState(() => _similarListings = data.cast<Map<String, dynamic>>());
@@ -608,9 +678,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     final l = AppLocalizations.of(context)!;
     final amount = _parseFormattedPrice(_offerCtrl.text);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.offerInvalidAmount)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.offerInvalidAmount)));
       return;
     }
     setState(() => _offerSubmitting = true);
@@ -627,9 +697,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         interactionType: 'listing_offer_submit',
         pricePoint: amount.toDouble(),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.offerSuccess)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.offerSuccess)));
       final offers = await ListingService.getOffers(id);
       if (mounted && context.mounted) _offersNotifier.value = offers;
     } catch (e) {
@@ -691,15 +761,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     final l = AppLocalizations.of(context)!;
 
     if (_myUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.listingMsgLoginRequired)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.listingMsgLoginRequired)));
       return;
     }
     if (_myUserId == otherId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.listingMsgOwnListing)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.listingMsgOwnListing)));
       return;
     }
 
@@ -714,8 +784,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       MaterialPageRoute(
         builder: (_) => DirectChatScreen(
           otherUserId: otherId,
-          displayName: user['full_name'] as String? ??
-              user['username'] as String? ?? '',
+          displayName:
+              user['full_name'] as String? ?? user['username'] as String? ?? '',
           otherHandle: user['username'] as String? ?? '',
           listingId: widget.listing['id'] as int?,
         ),
@@ -742,7 +812,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               Navigator.pop(context);
               await _deleteListing(context);
             },
-            child: Text(l.listingDeleteConfirmYes, style: const TextStyle(color: Color(0xFFDC2626))),
+            child: Text(
+              l.listingDeleteConfirmYes,
+              style: const TextStyle(color: Color(0xFFDC2626)),
+            ),
           ),
         ],
       ),
@@ -765,7 +838,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       if (resp.statusCode == 200) {
         nav.pop(true);
       } else {
-        final detail = jsonDecode(resp.body)['detail'] ?? AppLocalizations.of(context)?.errSomethingWentWrong ?? 'Error';
+        final detail =
+            jsonDecode(resp.body)['detail'] ??
+            AppLocalizations.of(context)?.errSomethingWentWrong ??
+            'Error';
         messenger.showSnackBar(SnackBar(content: Text(detail)));
       }
     } catch (_) {
@@ -783,12 +859,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       MaterialPageRoute(
         builder: (_) => AdReportScreen(
           campaignId: campaignId,
-          listingTitle: widget.listing['title'] as String? ?? AppLocalizations.of(context)!.lblListingUpper,
+          listingTitle:
+              widget.listing['title'] as String? ??
+              AppLocalizations.of(context)!.lblListingUpper,
         ),
       ),
     );
   }
-
 
   Future<void> _sendMassNotification(BuildContext context) async {
     setState(() => _massNotificationSending = true);
@@ -798,7 +875,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     final est = await AnalyticsService.estimateAudienceForListing(listingId);
     if (est == null || !mounted || !context.mounted) {
       setState(() => _massNotificationSending = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceCalcError)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.audienceCalcError),
+        ),
+      );
       return;
     }
 
@@ -806,7 +887,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     if (maxAudience == 0) {
       if (!mounted || !context.mounted) return;
       setState(() => _massNotificationSending = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceNoPotentialFound)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.audienceNoPotentialFound),
+        ),
+      );
       return;
     }
 
@@ -841,35 +926,42 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       final secs = (apiResult['seconds_remaining'] as num?)?.toInt() ?? 86400;
       setState(() => _cooldownSeconds = secs);
       _startCooldownTimer();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_formatCooldown(secs))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_formatCooldown(secs))));
     } else if (apiResult != null && apiResult.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiResult['error'] as String)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(apiResult['error'] as String)));
     } else if (apiResult != null) {
       CacheService.clearData('user_wallet_data');
       setState(() => _cooldownSeconds = 86400);
       _startCooldownTimer();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context)!.audienceMassSendSuccess),
-        backgroundColor: const Color(0xFF14B8A6),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.audienceMassSendSuccess),
+          backgroundColor: const Color(0xFF14B8A6),
+        ),
+      );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.audienceMassSendError)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.audienceMassSendError),
+        ),
+      );
     }
   }
-
 
   void _openMassNotificationReport(BuildContext ctx) {
     final listingId = widget.listing['id'] as int?;
     Navigator.push(
       ctx,
       MaterialPageRoute(
-        builder: (_) => RetargetingScreen(initialIndex: 1, listingId: listingId),
+        builder: (_) =>
+            RetargetingScreen(initialIndex: 1, listingId: listingId),
       ),
     );
   }
-
 
   Future<void> _boostListing(BuildContext ctx) async {
     final boostMessenger = ScaffoldMessenger.of(context);
@@ -879,9 +971,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     int limit = 0;
     bool isPro = false;
     int tuciBalance = 0;
-    
+
     // Check loading state while fetching data — spinner shown by AsyncElevatedButton
-    
+
     try {
       final token = await StorageService.getToken();
       final cr = await http.get(
@@ -891,13 +983,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       if (cr.statusCode == 200) {
         final d = jsonDecode(cr.body) as Map<String, dynamic>;
         remaining = (d['remaining'] as num).toInt();
-        limit     = (d['limit'] as num).toInt();
-        isPro     = d['is_pro'] == true;
+        limit = (d['limit'] as num).toInt();
+        isPro = d['is_pro'] == true;
         // TUCi bakiyesini de çek
         final tokenInner = await StorageService.getToken();
         final ur = await http.get(
           Uri.parse('$kBaseUrl/users/me'),
-          headers: {if (tokenInner != null) 'Authorization': 'Bearer $tokenInner'},
+          headers: {
+            if (tokenInner != null) 'Authorization': 'Bearer $tokenInner',
+          },
         );
         if (ur.statusCode == 200) {
           final ud = jsonDecode(ur.body) as Map<String, dynamic>;
@@ -910,21 +1004,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
     // Pro değilse bilgilendir
     if (!isPro) {
-      boostMessenger.showSnackBar(SnackBar(
-        content: Text(l.boostOnlyPro),
-        backgroundColor: const Color(0xFFF97316),
-      ));
+      boostMessenger.showSnackBar(
+        SnackBar(
+          content: Text(l.boostOnlyPro),
+          backgroundColor: const Color(0xFFF97316),
+        ),
+      );
       return;
     }
 
     // Ücretli veya ücretsiz boost dialog'ını göster
     final bool isFreeMode = remaining > 0;
 
-        showDialog<void>(
+    showDialog<void>(
       context: context,
       builder: (dlgCtx) {
         final dl = AppLocalizations.of(dlgCtx)!;
-        
+
         Future<void> performBoost() async {
           final token = await StorageService.getToken();
           try {
@@ -952,41 +1048,71 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 widget.listing['campaign_id'] = _campaignId;
                 widget.listing['is_sponsored'] = true;
               });
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid),
-                backgroundColor: const Color(0xFFF97316),
-              ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    wasFree ? ll.boostSuccessFree : ll.boostSuccessPaid,
+                  ),
+                  backgroundColor: const Color(0xFFF97316),
+                ),
+              );
             } else {
               final body = jsonDecode(resp.body) as Map<String, dynamic>;
               final msg = body['detail'] ?? ll.boostErrorDefault;
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(msg.toString()),
-                backgroundColor: resp.statusCode == 402 ? const Color(0xFFDC2626) : null,
-              ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(msg.toString()),
+                  backgroundColor: resp.statusCode == 402
+                      ? const Color(0xFFDC2626)
+                      : null,
+                ),
+              );
             }
           } catch (_) {
             if (mounted && context.mounted) {
               final ll = AppLocalizations.of(ctx)!;
               Navigator.pop(dlgCtx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(ll.boostErrorConnection)),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(ll.boostErrorConnection)));
             }
           }
         }
+
         if (isFreeMode) {
           // Ücretsiz boost dialog'ı
           return AlertDialog(
-            title: Text(dl.boostDialogTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+            title: Text(
+              dl.boostDialogTitle,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(dl.boostDialogPlanLabel, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(
+                  dl.boostDialogPlanLabel,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(height: 10),
-                _BoostRow(icon: Icons.account_balance_wallet_outlined, label: dl.boostDialogTotalBudget, value: dl.boostDialogTotalBudgetValue),
-                _BoostRow(icon: Icons.ads_click, label: dl.boostDialogCpc, value: dl.boostDialogCpcValue),
-                _BoostRow(icon: Icons.touch_app_outlined, label: dl.boostDialogEstClicks, value: dl.boostDialogEstClicksValue),
+                _BoostRow(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: dl.boostDialogTotalBudget,
+                  value: dl.boostDialogTotalBudgetValue,
+                ),
+                _BoostRow(
+                  icon: Icons.ads_click,
+                  label: dl.boostDialogCpc,
+                  value: dl.boostDialogCpcValue,
+                ),
+                _BoostRow(
+                  icon: Icons.touch_app_outlined,
+                  label: dl.boostDialogEstClicks,
+                  value: dl.boostDialogEstClicksValue,
+                ),
                 const SizedBox(height: 12),
                 Text(
                   dl.boostDialogFeedHint,
@@ -994,20 +1120,30 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF7ED),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     dl.boostDialogCredits(remaining, limit),
-                    style: const TextStyle(fontSize: 12, color: Color(0xFFF97316), fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFF97316),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: Text(dl.btnCancel)),
+              TextButton(
+                onPressed: () => Navigator.pop(dlgCtx, false),
+                child: Text(dl.btnCancel),
+              ),
               AsyncElevatedButton(
                 onPressed: performBoost,
                 style: ElevatedButton.styleFrom(
@@ -1023,9 +1159,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           return AlertDialog(
             title: Row(
               children: [
-                const Icon(Icons.monetization_on_rounded, color: Color(0xFF6366F1), size: 20),
+                const Icon(
+                  Icons.monetization_on_rounded,
+                  color: Color(0xFF6366F1),
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                Text(dl.boostDialogPaidTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  dl.boostDialogPaidTitle,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
               ],
             ),
             content: Column(
@@ -1034,32 +1177,53 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEF2F2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     dl.boostDialogPaidBadge(limit),
-                    style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626), fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFFDC2626),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(dl.boostDialogPaidDesc, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                Text(
+                  dl.boostDialogPaidDesc,
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                ),
                 const SizedBox(height: 12),
-                _BoostRow(icon: Icons.price_change_outlined, label: dl.boostDialogPaidCost, value: dl.boostDialogPaidCostValue),
+                _BoostRow(
+                  icon: Icons.price_change_outlined,
+                  label: dl.boostDialogPaidCost,
+                  value: dl.boostDialogPaidCostValue,
+                ),
                 _BoostRow(
                   icon: Icons.account_balance_wallet_outlined,
                   label: dl.boostDialogPaidBalance,
                   value: '$tuciBalance TUCi',
-                  valueColor: tuciBalance >= 50 ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                  valueColor: tuciBalance >= 50
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFFDC2626),
                 ),
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: Text(dl.btnCancel)),
+              TextButton(
+                onPressed: () => Navigator.pop(dlgCtx, false),
+                child: Text(dl.btnCancel),
+              ),
               ElevatedButton(
-                onPressed: tuciBalance >= 50 ? () => Navigator.pop(dlgCtx, true) : null,
+                onPressed: tuciBalance >= 50
+                    ? () => Navigator.pop(dlgCtx, true)
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6366F1),
                   foregroundColor: Colors.white,
@@ -1087,15 +1251,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
           padding: EdgeInsets.only(
-            left: 20, right: 20, top: 20,
+            left: 20,
+            right: 20,
+            top: 20,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('🚩 ${l.listingReportTitle}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text(
+                '🚩 ${l.listingReportTitle}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 key: const Key('listing_detail_report_select_neden'),
@@ -1103,15 +1274,35 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 value: selectedReason,
                 hint: Text(l.listingReportSelectHint),
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
                 items: [
-                  DropdownMenuItem(value: l.listingReportMisleading, child: Text(l.listingReportMisleading)),
-                  DropdownMenuItem(value: l.listingReportIllegal, child: Text(l.listingReportIllegal)),
-                  DropdownMenuItem(value: l.listingReportSpam, child: Text(l.listingReportSpam)),
-                  DropdownMenuItem(value: l.listingReportInappropriate, child: Text(l.listingReportInappropriate)),
-                  DropdownMenuItem(value: l.listingReportFraud, child: Text(l.listingReportFraud)),
+                  DropdownMenuItem(
+                    value: l.listingReportMisleading,
+                    child: Text(l.listingReportMisleading),
+                  ),
+                  DropdownMenuItem(
+                    value: l.listingReportIllegal,
+                    child: Text(l.listingReportIllegal),
+                  ),
+                  DropdownMenuItem(
+                    value: l.listingReportSpam,
+                    child: Text(l.listingReportSpam),
+                  ),
+                  DropdownMenuItem(
+                    value: l.listingReportInappropriate,
+                    child: Text(l.listingReportInappropriate),
+                  ),
+                  DropdownMenuItem(
+                    value: l.listingReportFraud,
+                    child: Text(l.listingReportFraud),
+                  ),
                 ],
                 onChanged: (v) => setModalState(() => selectedReason = v),
               ),
@@ -1122,8 +1313,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 maxLines: 3,
                 decoration: InputDecoration(
                   hintText: l.listingReportNoteHint,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1134,7 +1330,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kPrimary,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: () async {
                     if (selectedReason == null) {
@@ -1144,7 +1342,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                       return;
                     }
                     final note = noteCtrl.text.trim();
-                    final reason = selectedReason! + (note.isNotEmpty ? ': $note' : '');
+                    final reason =
+                        selectedReason! + (note.isNotEmpty ? ': $note' : '');
                     Navigator.pop(ctx);
                     await _submitReport(reason);
                   },
@@ -1165,25 +1364,33 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     try {
       final resp = await http.post(
         Uri.parse('$kBaseUrl/reports'),
-        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
         body: jsonEncode({'listing_id': id, 'reason': reason}),
       );
       if (!mounted || !context.mounted) return;
       final l = AppLocalizations.of(context)!;
       if (resp.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.listingReportSuccess)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.listingReportSuccess)));
       } else {
-        final detail = jsonDecode(resp.body)['detail'] ?? AppLocalizations.of(context)?.errSomethingWentWrong ?? 'Error';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
+        final detail =
+            jsonDecode(resp.body)['detail'] ??
+            AppLocalizations.of(context)?.errSomethingWentWrong ??
+            'Error';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(detail)));
       }
     } catch (_) {
       if (mounted && context.mounted) {
         final l = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.errorConnection)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.errorConnection)));
       }
     }
   }
@@ -1245,14 +1452,19 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               onPressed: () async {
                 final updated = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => EditListingScreen(listing: listing)),
+                  MaterialPageRoute(
+                    builder: (_) => EditListingScreen(listing: listing),
+                  ),
                 );
                 if (updated == true) {
                   if (!context.mounted) return;
                   // Reload by pushing loader
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (_) => ListingDeepLinkLoader(listingId: listing['id'])),
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ListingDeepLinkLoader(listingId: listing['id']),
+                    ),
                   );
                 }
               },
@@ -1260,7 +1472,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             IconButton(
               key: const Key('listing_detail_btn_aktif_toggle'),
               icon: Icon(
-                _isActive ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                _isActive
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
                 color: _isActive ? const Color(0xFF6B7280) : kPrimary,
               ),
               tooltip: _isActive ? l.btnDeactivate : l.btnActivate,
@@ -1276,15 +1490,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             IconButton(
               key: const Key('listing_detail_btn_favorile'),
               icon: Icon(
-                (_isFavorited || _isLiked) ? Icons.favorite : Icons.favorite_border,
-                color: (_isFavorited || _isLiked) ? Colors.red : const Color(0xFF9CA3AF),
+                (_isFavorited || _isLiked)
+                    ? Icons.favorite
+                    : Icons.favorite_border,
+                color: (_isFavorited || _isLiked)
+                    ? Colors.red
+                    : const Color(0xFF9CA3AF),
               ),
               tooltip: _isFavorited ? l.btnRemoveFavorite : l.btnAddFavorite,
               onPressed: _toggleFavorite,
             ),
             IconButton(
               key: const Key('listing_detail_btn_sikayet'),
-              icon: const Icon(Icons.flag_outlined, color: Color(0xFF9CA3AF), size: 22),
+              icon: const Icon(
+                Icons.flag_outlined,
+                color: Color(0xFF9CA3AF),
+                size: 22,
+              ),
               tooltip: l.listingReportTooltip,
               onPressed: () => _openReport(context),
             ),
@@ -1309,7 +1531,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                   Text(
                     listing['title'] ?? '',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -1325,67 +1549,80 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                         ),
                       ),
                       // Fiyat yanı — beğeni sayısı, kişisel beğeni durumu ve (varsa) unique erişim
-                      if (_likesCount > 0 || _isLiked || listing['impression_count'] != null)
-                        Builder(builder: (ctx) {
-                          final l = AppLocalizations.of(ctx)!;
-                          return Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (listing['impression_count'] != null) ...[
-                                Icon(
-                                  Icons.people_outline,
-                                  color: AppColors.textSecondary(context),
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  l.listingReach(listing['impression_count'] as int),
-                                  style: TextStyle(
+                      if (_likesCount > 0 ||
+                          _isLiked ||
+                          listing['impression_count'] != null)
+                        Builder(
+                          builder: (ctx) {
+                            final l = AppLocalizations.of(ctx)!;
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (listing['impression_count'] != null) ...[
+                                  Icon(
+                                    Icons.people_outline,
                                     color: AppColors.textSecondary(context),
-                                    fontSize: 13,
+                                    size: 16,
                                   ),
-                                ),
-                                if (_likesCount > 0 || _isLiked)
-                                  const SizedBox(width: 12),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    l.listingReach(
+                                      listing['impression_count'] as int,
+                                    ),
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary(context),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  if (_likesCount > 0 || _isLiked)
+                                    const SizedBox(width: 12),
+                                ],
+                                if (_likesCount > 0 || _isLiked) ...[
+                                  Icon(
+                                    _isLiked
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: _isLiked
+                                        ? Colors.red
+                                        : Colors.red.withValues(alpha: 0.5),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$_likesCount',
+                                    style: TextStyle(
+                                      color: _isLiked
+                                          ? Colors.red
+                                          : AppColors.textSecondary(context),
+                                      fontSize: 13,
+                                      fontWeight: _isLiked
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ],
                               ],
-                            if (_likesCount > 0 || _isLiked) ...[
-                              Icon(
-                                _isLiked ? Icons.favorite : Icons.favorite_border,
-                                color: _isLiked
-                                    ? Colors.red
-                                    : Colors.red.withValues(alpha: 0.5),
-                                size: 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$_likesCount',
-                                style: TextStyle(
-                                  color: _isLiked
-                                      ? Colors.red
-                                      : AppColors.textSecondary(context),
-                                  fontSize: 13,
-                                  fontWeight: _isLiked
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                              ],
-                            ],
-                          );
-                        }),
+                            );
+                          },
+                        ),
                     ],
                   ),
                   if (listing['location'] != null) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 16, color: AppColors.textSecondary(context)),
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 16,
+                          color: AppColors.textSecondary(context),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           listing['location'],
                           style: TextStyle(
-                              color: AppColors.textSecondary(context), fontSize: 13),
+                            color: AppColors.textSecondary(context),
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -1405,17 +1642,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(l.listingDescriptionLabel,
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary(context))),
+                    Text(
+                      l.listingDescriptionLabel,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       listing['description'],
                       style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary(context),
-                          height: 1.5),
+                        fontSize: 14,
+                        color: AppColors.textSecondary(context),
+                        height: 1.5,
+                      ),
                     ),
                   ],
                 ),
@@ -1430,10 +1672,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l.listingInfo,
-                      style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary(context))),
+                  Text(
+                    l.listingInfo,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   _infoRow('Kategori', listing['category'] ?? '-'),
                   if (listing['location'] != null)
@@ -1464,9 +1710,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                               .substring(0, 1)
                               .toUpperCase(),
                           style: const TextStyle(
-                              color: kPrimary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 18),
+                            color: kPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1481,32 +1728,70 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                                 children: [
                                   if (user['is_verified'] == true)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 1,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF2563EB),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
-                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                        const FaIcon(FontAwesomeIcons.circleCheck, size: 8, color: Colors.white),
-                                        const SizedBox(width: 3),
-                                        Text(AppLocalizations.of(context)!.badgeVerified,
-                                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
-                                      ]),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const FaIcon(
+                                            FontAwesomeIcons.circleCheck,
+                                            size: 8,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.badgeVerified,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   if (user['is_premium'] == true)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 1,
+                                      ),
                                       decoration: BoxDecoration(
                                         gradient: const LinearGradient(
-                                          colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                                          colors: [
+                                            Color(0xFF0891B2),
+                                            Color(0xFF06B6D4),
+                                          ],
                                         ),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
-                                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                                        FaIcon(FontAwesomeIcons.crown, size: 8, color: Colors.white),
-                                        SizedBox(width: 3),
-                                        Text('PRO', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
-                                      ]),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          FaIcon(
+                                            FontAwesomeIcons.crown,
+                                            size: 8,
+                                            color: Colors.white,
+                                          ),
+                                          SizedBox(width: 3),
+                                          Text(
+                                            'PRO',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                 ],
                               ),
@@ -1515,19 +1800,26 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                             Text(
                               user['full_name'] ?? user['username'] ?? '',
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 14),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
                             Text(
                               '@${user['username'] ?? ''}',
                               style: TextStyle(
-                                  color: AppColors.textSecondary(context), fontSize: 12),
+                                color: AppColors.textSecondary(context),
+                                fontSize: 12,
+                              ),
                             ),
                             _SellerTrustRow(user: user),
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_right,
-                          color: AppColors.textSecondary(context), size: 20),
+                      Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textSecondary(context),
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),
@@ -1561,7 +1853,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                             controller: _offerCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [_PriceInputFormatter()],
-                            enabled: _isActive, // İlan pasifse giriş engellensin
+                            enabled:
+                                _isActive, // İlan pasifse giriş engellensin
                             onChanged: (val) {
                               final parsed = _parseFormattedPrice(val);
                               if (parsed != null && parsed > 0) {
@@ -1580,7 +1873,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12,
+                                horizontal: 12,
+                                vertical: 12,
                               ),
                             ),
                           ),
@@ -1588,28 +1882,36 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                         const SizedBox(width: 8),
                         ElevatedButton(
                           key: const Key('listing_detail_offer_btn'),
-                          onPressed: (_offerSubmitting || !_isActive) ? null : _placeOffer,
+                          onPressed: (_offerSubmitting || !_isActive)
+                              ? null
+                              : _placeOffer,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: kPrimary,
                             foregroundColor: Colors.white,
-                            minimumSize: Size.zero, // global tema override: Row içinde sonsuz genişliği önler
+                            minimumSize: Size
+                                .zero, // global tema override: Row içinde sonsuz genişliği önler
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 13,
+                              horizontal: 16,
+                              vertical: 13,
                             ),
                           ),
                           child: _offerSubmitting
                               ? const SizedBox(
-                                  width: 18, height: 18,
+                                  width: 18,
+                                  height: 18,
                                   child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2,
+                                    color: Colors.white,
+                                    strokeWidth: 2,
                                   ),
                                 )
                               : Text(
                                   l.offerBtn,
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                         ),
                       ],
@@ -1673,7 +1975,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Text(
                   AppLocalizations.of(context)!.similarListings,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               SizedBox(
@@ -1685,12 +1990,19 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                   itemBuilder: (ctx, i) {
                     final item = _similarListings[i];
                     final imgs = item['image_urls'] as List? ?? [];
-                    final rawPhoto = imgs.isNotEmpty ? imgs[0] as String : item['image_url'] as String?;
+                    final rawPhoto = imgs.isNotEmpty
+                        ? imgs[0] as String
+                        : item['image_url'] as String?;
                     final photo = rawPhoto != null ? imgUrl(rawPhoto) : null;
                     return GestureDetector(
-                      onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                        builder: (_) => ListingDetailScreen(listing: Map<String, dynamic>.from(item)),
-                      )),
+                      onTap: () => Navigator.push(
+                        ctx,
+                        MaterialPageRoute(
+                          builder: (_) => ListingDetailScreen(
+                            listing: Map<String, dynamic>.from(item),
+                          ),
+                        ),
+                      ),
                       child: Container(
                         width: 110,
                         margin: const EdgeInsets.only(right: 10),
@@ -1704,9 +2016,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           children: [
                             Expanded(
                               child: photo != null
-                                ? CachedNetworkImage(cacheManager: TeqlifCacheManager(), imageUrl: photo,
- fit: BoxFit.cover, width: double.infinity)
-                                : Container(color: AppColors.surfaceVariant(context)),
+                                  ? CachedNetworkImage(
+                                      cacheManager: TeqlifCacheManager(),
+                                      imageUrl: photo,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                    )
+                                  : Container(
+                                      color: AppColors.surfaceVariant(context),
+                                    ),
                             ),
                             Padding(
                               padding: const EdgeInsets.all(6),
@@ -1715,14 +2033,21 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                                 children: [
                                   Text(
                                     item['title'] ?? '',
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   if (item['price'] != null)
                                     Text(
                                       '${(item['price'] as num).toInt()} ₺',
-                                      style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: kPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                 ],
                               ),
@@ -1741,82 +2066,144 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       ),
       bottomNavigationBar: isMine
           ? (!_isActive && _campaignId == null)
-              ? const SizedBox.shrink()
-              : SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Builder(builder: (ctx) {
-                    final l = AppLocalizations.of(ctx)!;
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: (_massNotificationSending || _cooldownLoading)
-                              ? null
-                              : _cooldownSeconds > 0
-                                  ? () => _openMassNotificationReport(context)
-                                  : () => _sendMassNotification(context),
-                          icon: (_massNotificationSending || _cooldownLoading)
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : _cooldownSeconds > 0
-                                  ? const Icon(Icons.auto_graph, size: 18)
-                                  : const Text('📢', style: TextStyle(fontSize: 16)),
-                          label: Text(_cooldownLoading ? '' : _cooldownSeconds > 0 ? l.btnViewNotificationReport : l.btnSendMassNotification),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF14B8A6),
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: const Color(0x6614B8A6),
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        if (_cooldownSeconds > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 5),
-                            child: Text(
-                              _formatCooldown(_cooldownSeconds),
-                              style: const TextStyle(color: Colors.white54, fontSize: 11),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        const SizedBox(height: 8),
-                        _campaignId != null
-                            ? ElevatedButton.icon(
-                                onPressed: () => _openAdReport(context),
-                                icon: const Text('📊', style: TextStyle(fontSize: 16)),
-                                label: Text(l.boostBtnReport),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF6366F1),
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size(double.infinity, 50),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ? const SizedBox.shrink()
+                : SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Builder(
+                        builder: (ctx) {
+                          final l = AppLocalizations.of(ctx)!;
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed:
+                                    (_massNotificationSending ||
+                                        _cooldownLoading)
+                                    ? null
+                                    : _cooldownSeconds > 0
+                                    ? () => _openMassNotificationReport(context)
+                                    : () => _sendMassNotification(context),
+                                icon:
+                                    (_massNotificationSending ||
+                                        _cooldownLoading)
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : _cooldownSeconds > 0
+                                    ? const Icon(Icons.auto_graph, size: 18)
+                                    : const Text(
+                                        '📢',
+                                        style: TextStyle(fontSize: 16),
+                                      ),
+                                label: Text(
+                                  _cooldownLoading
+                                      ? ''
+                                      : _cooldownSeconds > 0
+                                      ? l.btnViewNotificationReport
+                                      : l.btnSendMassNotification,
                                 ),
-                              )
-                            : AsyncElevatedButton(
-                                onPressed: () => _boostListing(context),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFF97316),
+                                  backgroundColor: const Color(0xFF14B8A6),
                                   foregroundColor: Colors.white,
+                                  disabledBackgroundColor: const Color(
+                                    0x6614B8A6,
+                                  ),
                                   minimumSize: const Size(double.infinity, 50),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Text('🔥', style: TextStyle(fontSize: 16)),
-                                    const SizedBox(width: 8),
-                                    Text(l.boostBtnStart),
-                                  ],
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                      ],
-                    );
-                  }),
-              ),
-            )
+                              if (_cooldownSeconds > 0)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 5),
+                                  child: Text(
+                                    _formatCooldown(_cooldownSeconds),
+                                    style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 11,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                              _campaignId != null
+                                  ? ElevatedButton.icon(
+                                      onPressed: () => _openAdReport(context),
+                                      icon: const Text(
+                                        '📊',
+                                        style: TextStyle(fontSize: 16),
+                                      ),
+                                      label: Text(l.boostBtnReport),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF6366F1,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                        minimumSize: const Size(
+                                          double.infinity,
+                                          50,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        textStyle: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    )
+                                  : AsyncElevatedButton(
+                                      onPressed: () => _boostListing(context),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFFF97316,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                        minimumSize: const Size(
+                                          double.infinity,
+                                          50,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        textStyle: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Text(
+                                            '🔥',
+                                            style: TextStyle(fontSize: 16),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(l.boostBtnStart),
+                                        ],
+                                      ),
+                                    ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  )
           : SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -1834,9 +2221,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           foregroundColor: Colors.white,
                           minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           textStyle: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -1849,9 +2239,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                         minimumSize: const Size(56, 50),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         side: BorderSide(
-                          color: _isLiked ? Colors.red : AppColors.border(context),
+                          color: _isLiked
+                              ? Colors.red
+                              : AppColors.border(context),
                           width: 1.5,
                         ),
                       ),
@@ -1905,8 +2298,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           height: 260,
           color: AppColors.surfaceVariant(context),
           child: Center(
-            child: Icon(Icons.image_outlined,
-                size: 64, color: AppColors.border(context)),
+            child: Icon(
+              Icons.image_outlined,
+              size: 64,
+              color: AppColors.border(context),
+            ),
           ),
         ),
       );
@@ -1948,15 +2344,20 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.broken_image_outlined,
-                              size: 48, color: AppColors.border(ctx)),
+                          Icon(
+                            Icons.broken_image_outlined,
+                            size: 48,
+                            color: AppColors.border(ctx),
+                          ),
                           const SizedBox(height: 8),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               _images[imgIdx],
                               style: TextStyle(
-                                  fontSize: 9, color: AppColors.textTertiary(ctx)),
+                                fontSize: 9,
+                                color: AppColors.textTertiary(ctx),
+                              ),
                               textAlign: TextAlign.center,
                               maxLines: 3,
                             ),
@@ -1972,17 +2373,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         ),
         if (total > 1 && _currentImg > 0)
           Positioned(
-            left: 8, top: 0, bottom: 0,
+            left: 8,
+            top: 0,
+            bottom: 0,
             child: Center(child: _arrowBtn(Icons.chevron_left, -1)),
           ),
         if (total > 1 && _currentImg < total - 1)
           Positioned(
-            right: 8, top: 0, bottom: 0,
+            right: 8,
+            top: 0,
+            bottom: 0,
             child: Center(child: _arrowBtn(Icons.chevron_right, 1)),
           ),
         if (total > 1)
           Positioned(
-            bottom: 10, right: 12,
+            bottom: 10,
+            right: 12,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -2012,8 +2418,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                     } else {
                       scale = 1.0;
                     }
-                    final opacity =
-                        t < 0.6 ? 1.0 : 1.0 - ((t - 0.6) / 0.4).clamp(0.0, 1.0);
+                    final opacity = t < 0.6
+                        ? 1.0
+                        : 1.0 - ((t - 0.6) / 0.4).clamp(0.0, 1.0);
                     return Opacity(
                       opacity: opacity,
                       child: Transform.scale(
@@ -2022,7 +2429,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           Icons.favorite,
                           color: Colors.white,
                           size: 90,
-                          shadows: [Shadow(color: Colors.black38, blurRadius: 24)],
+                          shadows: [
+                            Shadow(color: Colors.black38, blurRadius: 24),
+                          ],
                         ),
                       ),
                     );
@@ -2036,41 +2445,51 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   Widget _arrowBtn(IconData icon, int dir) => GestureDetector(
-        onTap: () => _pageCtrl.animateToPage(
-          _currentImg + dir,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.ease,
-        ),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: const BoxDecoration(
-            color: Colors.black45,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: Colors.white, size: 22),
-        ),
-      );
+    onTap: () => _pageCtrl.animateToPage(
+      _currentImg + dir,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.ease,
+    ),
+    child: Container(
+      width: 36,
+      height: 36,
+      decoration: const BoxDecoration(
+        color: Colors.black45,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: Colors.white, size: 22),
+    ),
+  );
 
   Widget _infoRow(String label, String value) => Builder(
-        builder: (context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 90,
-              child: Text(label,
-                  style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13)),
+    builder: (context) => Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 13,
+              ),
             ),
-            Expanded(
-              child: Text(value,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w500, fontSize: 13,
-                      color: AppColors.textPrimary(context))),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                color: AppColors.textPrimary(context),
+              ),
             ),
-          ],
-        ),
-      ));
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _buildOfferRow(BuildContext context, ListingOffer offer) {
     return InkWell(
@@ -2110,7 +2529,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                   Text(
                     '@${offer.username}',
                     style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
                     ),
                   ),
                   Text(
@@ -2190,8 +2610,10 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text('${_current + 1} / ${widget.images.length}',
-            style: const TextStyle(color: Colors.white)),
+        title: Text(
+          '${_current + 1} / ${widget.images.length}',
+          style: const TextStyle(color: Colors.white),
+        ),
       ),
       body: PageView.builder(
         controller: _ctrl,
@@ -2204,7 +2626,11 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
               cacheManager: TeqlifCacheManager(),
               fit: BoxFit.contain,
               placeholder: (_, _) => const Center(
-                  child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2)),
+                child: CircularProgressIndicator(
+                  color: Colors.white54,
+                  strokeWidth: 2,
+                ),
+              ),
               errorWidget: (_, _, _) => const Icon(
                 Icons.broken_image_outlined,
                 color: Colors.white54,
@@ -2252,9 +2678,9 @@ class _SellerTrustRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l     = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context)!;
     final trust = user['trust_score'] as int?;
-    final rank  = user['influence_rank'] as int?;
+    final rank = user['influence_rank'] as int?;
     if (trust == null && rank == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 4),
@@ -2270,8 +2696,8 @@ class _SellerTrustRow extends StatelessWidget {
               color: trust >= 70
                   ? const Color(0xFF10B981)
                   : trust >= 35
-                      ? const Color(0xFF3B82F6)
-                      : const Color(0xFF9CA3AF),
+                  ? const Color(0xFF3B82F6)
+                  : const Color(0xFF9CA3AF),
             ),
           if (rank != null)
             _TrustChip(
@@ -2330,11 +2756,22 @@ class _TrustChip extends StatelessWidget {
         children: [
           FaIcon(icon, size: 10, color: color),
           const SizedBox(width: 3),
-          Text(value, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(width: 2),
           GestureDetector(
             onTap: () => _showInfo(context),
-            child: Icon(Icons.help_outline, size: 11, color: color.withValues(alpha: 0.55)),
+            child: Icon(
+              Icons.help_outline,
+              size: 11,
+              color: color.withValues(alpha: 0.55),
+            ),
           ),
         ],
       ),
@@ -2372,7 +2809,9 @@ class _ListingDeepLinkLoaderState extends State<ListingDeepLinkLoader> {
       if (resp.statusCode == 200) {
         final listing = jsonDecode(resp.body) as Map<String, dynamic>;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing)),
+          MaterialPageRoute(
+            builder: (_) => ListingDetailScreen(listing: listing),
+          ),
         );
       } else {
         Navigator.of(context).pop();
@@ -2384,9 +2823,7 @@ class _ListingDeepLinkLoaderState extends State<ListingDeepLinkLoader> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
 
@@ -2398,7 +2835,12 @@ class _BoostRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _BoostRow({required this.icon, required this.label, required this.value, this.valueColor});
+  const _BoostRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2410,11 +2852,17 @@ class _BoostRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(label, style: const TextStyle(fontSize: 13)),
           const Spacer(),
-          Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: valueColor)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+            ),
+          ),
         ],
       ),
     );
-
   }
 }
 
@@ -2432,7 +2880,8 @@ class _MassNotificationDialog extends StatefulWidget {
   });
 
   @override
-  State<_MassNotificationDialog> createState() => _MassNotificationDialogState();
+  State<_MassNotificationDialog> createState() =>
+      _MassNotificationDialogState();
 }
 
 class _MassNotificationDialogState extends State<_MassNotificationDialog> {
@@ -2442,7 +2891,9 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
   @override
   void initState() {
     super.initState();
-    final defaultCount = widget.maxAudience < widget.perBlastCap ? widget.maxAudience : widget.perBlastCap;
+    final defaultCount = widget.maxAudience < widget.perBlastCap
+        ? widget.maxAudience
+        : widget.perBlastCap;
     _countCtrl = TextEditingController(text: defaultCount.toString());
     _countCtrl.addListener(_onCountChanged);
   }
@@ -2476,12 +2927,17 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
   Widget build(BuildContext context) {
     int requestedCount = int.tryParse(_countCtrl.text) ?? 0;
     if (!_useCustomCount) {
-      requestedCount = widget.maxAudience < widget.perBlastCap ? widget.maxAudience : widget.perBlastCap;
+      requestedCount = widget.maxAudience < widget.perBlastCap
+          ? widget.maxAudience
+          : widget.perBlastCap;
     }
-    if (requestedCount > widget.maxAudience) requestedCount = widget.maxAudience;
+    if (requestedCount > widget.maxAudience)
+      requestedCount = widget.maxAudience;
 
     final actualCount = requestedCount;
-    final freeUsed = widget.creditsLeft < actualCount ? widget.creditsLeft : actualCount;
+    final freeUsed = widget.creditsLeft < actualCount
+        ? widget.creditsLeft
+        : actualCount;
     final paidCount = actualCount - freeUsed;
     final tuciCost = paidCount * 10;
     final bool hasEnoughBalance = widget.tuciBalance >= tuciCost;
@@ -2489,117 +2945,204 @@ class _MassNotificationDialogState extends State<_MassNotificationDialog> {
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(AppLocalizations.of(context)!.massAudienceNotification, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(
+        AppLocalizations.of(context)!.massAudienceNotification,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              AppLocalizations.of(context)!.listingBlastDialogBody(widget.maxAudience),
-            style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
-          ),
-          const SizedBox(height: 16),
-          // Checkbox for custom count
-          Row(
-            children: [
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: Checkbox(
-                  value: _useCustomCount,
-                  activeColor: const Color(0xFF14B8A6),
-                  side: const BorderSide(color: Color(0xFF64748B)),
-                  onChanged: (val) {
-                    setState(() => _useCustomCount = val ?? false);
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(child: Text(AppLocalizations.of(context)!.audienceSendToX, style: const TextStyle(color: Color(0xFFCBD5E1)))),
-            ],
-          ),
-          if (_useCustomCount)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, left: 32.0),
-              child: TextField(
-                controller: _countCtrl,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: AppLocalizations.of(context)!.audiencePersonCountHint,
-                  hintStyle: const TextStyle(color: Color(0xFF64748B)),
-                  filled: true,
-                  fillColor: const Color(0xFF0F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
+              AppLocalizations.of(
+                context,
+              )!.listingBlastDialogBody(widget.maxAudience),
+              style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
             ),
-          const SizedBox(height: 16),
-          // Calculation Card
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0x3314B8A6),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0x5514B8A6)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 16),
+            // Checkbox for custom count
+            Row(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(AppLocalizations.of(context)!.audienceNotificationWillGoTo, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-                    Text(AppLocalizations.of(context)!.audienceCountPeople(actualCount), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                  ],
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Checkbox(
+                    value: _useCustomCount,
+                    activeColor: const Color(0xFF14B8A6),
+                    side: const BorderSide(color: Color(0xFF64748B)),
+                    onChanged: (val) {
+                      setState(() => _useCustomCount = val ?? false);
+                    },
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(AppLocalizations.of(context)!.audienceMonthlyFreeRights, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-                    Text(AppLocalizations.of(context)!.audienceFreeSlots(freeUsed), style: const TextStyle(color: Color(0xFF2DD4BF), fontWeight: FontWeight.bold, fontSize: 13)),
-                  ],
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 4),
-                  child: Divider(color: Color(0x5514B8A6)),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(AppLocalizations.of(context)!.audienceTotalCost, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    Text('$tuciCost TUCi', style: TextStyle(color: hasEnoughBalance ? const Color(0xFF2DD4BF) : const Color(0xFFEF4444), fontWeight: FontWeight.w800)),
-                  ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context)!.audienceSendToX,
+                    style: const TextStyle(color: Color(0xFFCBD5E1)),
+                  ),
                 ),
               ],
             ),
-          ),
-          if (!hasEnoughBalance)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text(AppLocalizations.of(context)!.audienceInsufficientTuci, style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.bold)),
+            if (_useCustomCount)
+              Padding(
+                padding: const EdgeInsets.only(
+                  top: 8.0,
+                  bottom: 8.0,
+                  left: 32.0,
+                ),
+                child: TextField(
+                  controller: _countCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(
+                      context,
+                    )!.audiencePersonCountHint,
+                    hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                    filled: true,
+                    fillColor: const Color(0xFF0F172A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+            // Calculation Card
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0x3314B8A6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0x5514B8A6)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.audienceNotificationWillGoTo,
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.audienceCountPeople(actualCount),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.audienceMonthlyFreeRights,
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.audienceFreeSlots(freeUsed),
+                        style: const TextStyle(
+                          color: Color(0xFF2DD4BF),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Divider(color: Color(0x5514B8A6)),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.audienceTotalCost,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '$tuciCost TUCi',
+                        style: TextStyle(
+                          color: hasEnoughBalance
+                              ? const Color(0xFF2DD4BF)
+                              : const Color(0xFFEF4444),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
+            if (!hasEnoughBalance)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  AppLocalizations.of(context)!.audienceInsufficientTuci,
+                  style: const TextStyle(
+                    color: Color(0xFFEF4444),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, null),
-          child: Text(AppLocalizations.of(context)!.btnCancel, style: const TextStyle(color: Color(0xFF64748B))),
+          child: Text(
+            AppLocalizations.of(context)!.btnCancel,
+            style: const TextStyle(color: Color(0xFF64748B)),
+          ),
         ),
         FilledButton(
           onPressed: hasEnoughBalance && actualCount > 0
-              ? () => Navigator.pop(context, {'count': actualCount, 'cost': tuciCost})
+              ? () => Navigator.pop(context, {
+                  'count': actualCount,
+                  'cost': tuciCost,
+                })
               : null,
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF14B8A6),
             disabledBackgroundColor: const Color(0x6614B8A6),
           ),
-          child: Text(AppLocalizations.of(context)!.btnSend, style: const TextStyle(fontWeight: FontWeight.w700)),
+          child: Text(
+            AppLocalizations.of(context)!.btnSend,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
         ),
       ],
     );

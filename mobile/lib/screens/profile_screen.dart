@@ -50,6 +50,7 @@ import 'purchases_screen.dart';
 import 'sales_screen.dart';
 import '../services/share_service.dart';
 import '../services/wallet_service.dart';
+import '../models/listing_status.dart';
 import 'faq_screen.dart';
 import 'call_history_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -1191,7 +1192,8 @@ class _ListingGridItem extends StatelessWidget {
     final price = _fmt(listing['price']);
 
     final isSponsored = listing['is_sponsored'] == true;
-    final isPassive = listing['is_active'] == false;
+    final status = ListingStatusExtension.fromJson(listing);
+    final isPassive = status == ListingStatus.passive;
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -3355,7 +3357,8 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     if (!mounted) return;
     final l = AppLocalizations.of(context)!;
     final id = listing['id'] as int;
-    final isActive = listing['is_active'] as bool? ?? true;
+    final status = ListingStatusExtension.fromJson(listing);
+    final isActive = status == ListingStatus.active;
 
     final costData = await ListingService.getReactivationCost(id);
     if (!mounted) return;
@@ -5328,7 +5331,9 @@ class _TxnDetailSheetState extends State<_TxnDetailSheet> {
                     _DetailRow(
                       label: l.walletDetailListing,
                       value: listing['title'] as String? ?? '—',
-                      badge: (listing['is_active'] == false)
+                      badge:
+                          (ListingStatusExtension.fromJson(listing) ==
+                              ListingStatus.passive)
                           ? l.walletDetailListingInactive
                           : null,
                     ),

@@ -152,4 +152,24 @@ class ListingService {
       rethrow;
     }
   }
+
+  static Future<Map<String, dynamic>> toggleStatus(int listingId) async {
+    try {
+      final resp = await http.patch(
+        Uri.parse('$kBaseUrl/listings/$listingId/toggle'),
+        headers: await _headers(auth: true),
+      );
+      if (resp.statusCode == 200 || resp.statusCode == 402) {
+        return {
+          'statusCode': resp.statusCode,
+          'body': await compute(jsonDecode, resp.body),
+        };
+      }
+      throw AppException('Toggle failed', statusCode: resp.statusCode);
+    } catch (e, st) {
+      debugPrint('[ListingService] toggleStatus hatası: $e');
+      await Sentry.captureException(e, stackTrace: st);
+      rethrow;
+    }
+  }
 }
