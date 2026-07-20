@@ -50,7 +50,7 @@ import 'purchases_screen.dart';
 import 'sales_screen.dart';
 import '../services/share_service.dart';
 import '../services/wallet_service.dart';
-import '../models/listing_status.dart';
+import '../models/enums.dart';
 import 'faq_screen.dart';
 import 'call_history_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';

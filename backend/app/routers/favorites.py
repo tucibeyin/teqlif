@@ -2,6 +2,7 @@ import json
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from app.models.enums import ListingStatus
 from app.database import get_db
 from app.models.favorite import Favorite
 from app.models.like import ListingLike
@@ -24,7 +25,7 @@ def _listing_dict(l: Listing, u: User, likes_count: int = 0, is_liked: bool = Fa
         "image_url": l.image_url,
         "image_urls": json.loads(l.image_urls) if l.image_urls else [],
         "created_at": l.created_at.isoformat() if l.created_at else None,
-        "is_active": l.is_active,
+        "status": l.status.value,
         "user": {"id": u.id, "username": u.username, "full_name": u.full_name},
         "likes_count": likes_count,
         "is_liked": is_liked,
@@ -37,7 +38,7 @@ async def get_favorites(current_user: User = Depends(get_current_user), db: Asyn
         select(Listing, User, Favorite)
         .join(Favorite, Favorite.listing_id == Listing.id)
         .join(User, User.id == Listing.user_id)
-        .where(Favorite.user_id == current_user.id, Listing.is_deleted == False)  # noqa: E712
+        .where(Favorite.user_id == current_user.id, Listing.status != ListingStatus.DELETED)  # noqa: E712
         .order_by(Favorite.created_at.desc())
     )).all()
 
@@ -77,7 +78,7 @@ async def check_favorite(listing_id: int, current_user: User = Depends(get_curre
 
 @router.post("/{listing_id}")
 async def add_favorite(listing_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    listing = await db.scalar(select(Listing).where(Listing.id == listing_id, Listing.is_deleted == False))  # noqa: E712
+    listing = await db.scalar(select(Listing).where(Listing.id == listing_id, Listing.status != ListingStatus.DELETED))  # noqa: E712
     if not listing:
         raise NotFoundException("İlan bulunamadı")
     if listing.user_id == current_user.id:

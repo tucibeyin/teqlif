@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import uuid
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, WebSocket, WebSocketDisconnect
+from app.models.enums import UserStatus
 from app.core.rate_limit import limiter, get_user_id_or_ip
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func, or_, and_, delete
@@ -690,7 +691,7 @@ async def messages_ws(websocket: WebSocket):
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
-            if not user or not user.is_active:
+            if not user or user.status != UserStatus.ACTIVE:
                 try:
                     await websocket.close(code=4001)
                 except Exception:

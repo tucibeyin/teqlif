@@ -20,6 +20,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
+from app.models.enums import ListingStatus
 from app.models.like import ListingLike, StoryLike, StreamLike
 from app.models.listing import Listing
 from app.models.story import Story
@@ -46,7 +47,7 @@ class LikeService:
         # İlan kontrolü
         listing_exists = await self.db.scalar(
             select(Listing.id).where(
-                Listing.id == listing_id, Listing.is_deleted == False  # noqa: E712
+                Listing.id == listing_id, Listing.status != ListingStatus.DELETED  # noqa: E712
             )
         )
         if not listing_exists:

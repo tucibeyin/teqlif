@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, text as sa_text
 
+from app.models.enums import UserStatus
 from app.database import get_db
 from app.models.user import User
 from app.models.referral import Referral
@@ -43,7 +44,7 @@ async def _optional_user(
     if not user_id:
         return None
     result = await db.execute(
-        select(User).where(User.id == user_id, User.is_active == True)  # noqa: E712
+        select(User).where(User.id == user_id, User.status == UserStatus.ACTIVE)  # noqa: E712
     )
     return result.scalar_one_or_none()
 
@@ -167,13 +168,13 @@ async def get_suggested_sellers(
             COALESCE(fol.follower_count, 0)                 AS follower_count
         FROM users u
         INNER JOIN listings l ON l.user_id = u.id
-            AND l.is_active = TRUE AND l.is_deleted = FALSE
+            AND l.status = 'active' AND l.status != 'deleted'
         LEFT JOIN (
             SELECT followed_id, COUNT(*) AS follower_count
             FROM follows GROUP BY followed_id
         ) fol ON fol.followed_id = u.id
         WHERE u.id != :uid
-          AND u.is_active = TRUE
+          AND u.status = 'active'
           AND u.id NOT IN (
               SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
               UNION

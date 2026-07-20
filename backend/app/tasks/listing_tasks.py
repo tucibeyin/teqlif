@@ -18,6 +18,7 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.enums import ListingStatus
 from app.core.logger import get_logger, capture_exception
 from app.database import AsyncSessionLocal
 from app.models.listing import Listing
@@ -44,8 +45,8 @@ async def deactivate_expired_listings_task(ctx: dict) -> None:
             result = await db.execute(
                 select(Listing)
                 .where(
-                    Listing.is_active == True,       # noqa: E712
-                    Listing.is_deleted == False,     # noqa: E712
+                    Listing.status == ListingStatus.ACTIVE,       # noqa: E712
+                    Listing.status != ListingStatus.DELETED,     # noqa: E712
                     Listing.expires_at == None,      # noqa: E711 — highlight değil
                     Listing.created_at < cutoff,
                 )
@@ -63,7 +64,7 @@ async def deactivate_expired_listings_task(ctx: dict) -> None:
             await db.execute(
                 update(Listing)
                 .where(Listing.id.in_(listing_ids))
-                .values(is_active=False, deactivated_at=now)
+                .values(status = 'passive', deactivated_at=now)
             )
             await db.commit()
             logger.info("[ListingTasks] %d ilan pasife alındı | ids=%s", len(listing_ids), listing_ids[:10])
@@ -99,8 +100,8 @@ async def delete_expired_inactive_listings_task(ctx: dict) -> None:
             result = await db.execute(
                 select(Listing)
                 .where(
-                    Listing.is_active == False,       # noqa: E712
-                    Listing.is_deleted == False,      # noqa: E712
+                    Listing.status == ListingStatus.PASSIVE,       # noqa: E712
+                    Listing.status != ListingStatus.DELETED,      # noqa: E712
                     Listing.deactivated_at != None,   # noqa: E711 — otomatik pasife alınanlar
                     Listing.deactivated_at < cutoff,
                 )

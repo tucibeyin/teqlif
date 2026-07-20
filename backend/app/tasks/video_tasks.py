@@ -62,10 +62,10 @@ async def _insert_highlight_record(room_id: int, host_id: int, video_path: str) 
         await db.execute(
             text("""
                 INSERT INTO listings
-                    (user_id, title, video_url, is_active, is_deleted,
+                    (user_id, title, video_url, status,
                      is_highlight, active_room_id, expires_at, created_at)
                 VALUES
-                    (:uid, :title, :vurl, TRUE, FALSE,
+                    (:uid, :title, :vurl, 'active',
                      TRUE, :rid, :exp, NOW())
                 ON CONFLICT DO NOTHING
             """),

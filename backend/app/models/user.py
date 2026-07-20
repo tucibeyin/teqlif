@@ -3,7 +3,8 @@ from typing import Any, Optional
 from sqlalchemy import String, Boolean, DateTime, Float, Integer, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column
 from pgvector.sqlalchemy import Vector
-
+from sqlalchemy import Enum as SQLEnum
+from app.models.enums import UserStatus
 from app.database import Base
 
 
@@ -15,7 +16,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    status: Mapped[UserStatus] = mapped_column(SQLEnum(UserStatus), default=UserStatus.ACTIVE, index=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     fcm_token: Mapped[str | None] = mapped_column(String(500), nullable=True)
     voip_token: Mapped[str | None] = mapped_column(String(500), nullable=True)

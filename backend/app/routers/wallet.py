@@ -5,6 +5,7 @@ from sqlalchemy import select, desc, text as sql_text
 
 import json
 import logging
+from app.models.enums import ListingStatus
 from app.database import get_db
 from app.models.user import User
 from app.models.tuci_transaction import TuciTransaction
@@ -116,7 +117,7 @@ async def get_transaction_detail(
                 "category": listing.category,
                 "price": listing.price,
                 "image_url": listing.image_url,
-                "is_active": listing.is_active,
+                "status": (listing.status == ListingStatus.ACTIVE).value,
                 "owner_id": listing.user_id,
                 "owner_username": owner.username if owner else None,
                 "owner_avatar": owner.profile_image_thumb_url if owner else None,

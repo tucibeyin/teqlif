@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, Depends
 from sqlalchemy import select
+from app.models.enums import CategoryStatus
 from app.database import AsyncSessionLocal
 from app.models.category import Category
 from app.models.user import User
@@ -27,7 +28,7 @@ async def list_categories(
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Category)
-            .where(Category.is_active == True)  # noqa: E712
+            .where(Category.status == CategoryStatus.ACTIVE)  # noqa: E712
             .order_by(Category.sort_order)
         )
         cats = result.scalars().all()

@@ -228,7 +228,7 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
             text("""
                 UPDATE users
                 SET tuci_balance = tuci_balance + :amount
-                WHERE id = ANY(:uids) AND is_active = TRUE
+                WHERE id = ANY(:uids) AND status = 'active'
             """),
             {"amount": _AIRDROP_AMOUNT, "uids": uid_list},
         )
@@ -248,7 +248,7 @@ async def _apply_airdrops(user_ids: set[int]) -> list[dict]:
             text("""
                 SELECT id, fcm_token
                 FROM users
-                WHERE id = ANY(:uids) AND is_active = TRUE
+                WHERE id = ANY(:uids) AND status = 'active'
             """),
             {"uids": uid_list},
         )

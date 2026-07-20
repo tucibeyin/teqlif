@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, case, update as sa_update
 
+from app.models.enums import UserStatus
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS, ForgotPassword, ResetPassword
@@ -180,7 +181,7 @@ async def login(request: Request, data: UserLogin, response: Response, db: Async
     if not user or not verify_password(data.password, user.hashed_password):
         raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrInvalidCredentials", "E-posta veya şifre hatalı"))
 
-    if not user.is_active:
+    if user.status != UserStatus.ACTIVE:
         raise ForbiddenException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrAccountDisabled", "Hesabınız devre dışı"))
 
     if not user.email_verified:
@@ -673,7 +674,7 @@ async def refresh_token(
 
     result = await db.execute(select(User).where(User.id == int(user_id_str)))
     user = result.scalar_one_or_none()
-    if not user or not user.is_active:
+    if not user or user.status != UserStatus.ACTIVE:
         raise UnauthorizedException(_msg(request if "request" in locals() else None, locals().get("data"), "apiErrUserNotFound", "Kullanıcı bulunamadı"))
 
     new_access = create_access_token(user.id)

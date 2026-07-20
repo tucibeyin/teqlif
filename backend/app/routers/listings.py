@@ -16,6 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_cache.decorator import cache
 
+from app.models.enums import ListingStatus
 from app.database import get_db
 from app.models.user import User
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
@@ -272,7 +273,7 @@ async def get_similar_listings(
     İlan embedding'i yoksa boş liste döner.
     """
     row = await db.execute(
-        text("SELECT embedding, category FROM listings WHERE id = :id AND is_active = TRUE AND is_deleted = FALSE"),
+        text("SELECT embedding, category FROM listings WHERE id = :id AND status = 'active'"),
         {"id": listing_id},
     )
     target = row.first()
@@ -303,8 +304,8 @@ async def get_similar_listings(
             FROM listings l
             JOIN users u ON u.id = l.user_id
             WHERE l.id != :lid
-              AND l.is_active = TRUE
-              AND l.is_deleted = FALSE
+              AND l.status = 'active'
+              AND l.status != 'deleted'
               AND l.embedding IS NOT NULL
               AND (l.embedding <=> CAST(:vec AS vector)) < 0.7
               {block_clause}
@@ -366,8 +367,8 @@ async def estimate_audience_for_listing(
     category = listing.category or ""
     
     listing_q = select(Listing.id).where(
-        Listing.is_deleted == False,
-        Listing.is_active == True,
+        Listing.status != ListingStatus.DELETED,
+        Listing.status == ListingStatus.ACTIVE,
     )
     if category:
         listing_q = listing_q.where(Listing.category == category)

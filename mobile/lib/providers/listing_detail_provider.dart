@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/listing_status.dart';
+import '../models/enums.dart';
 import '../services/listing_service.dart';
 
 class ListingDetailState {

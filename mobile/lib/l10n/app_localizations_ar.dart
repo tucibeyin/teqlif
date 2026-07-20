@@ -310,6 +310,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileAccountSection => 'الحساب';
 
   @override
+  String get profileActivitySection => 'التفاعلات والنشاط';
+
+  @override
+  String get profilePrivacySection => 'الخصوصية';
+
+  @override
   String get profileNotificationSettings => 'إعدادات الإشعارات';
 
   @override
@@ -1305,6 +1311,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get auctionBidBtn => 'قدّم عرضاً';
+
+  @override
+  String auctionSwipeToBid(String price) {
+    return 'اسحب لتقديم $price';
+  }
+
+  @override
+  String get auctionSwipeToBidNoPrice => 'اسحب لتقديم عرض';
 
   @override
   String auctionBidReceived(String amount) {

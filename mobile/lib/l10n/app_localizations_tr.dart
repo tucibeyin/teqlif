@@ -309,6 +309,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profileAccountSection => 'Hesap';
 
   @override
+  String get profileActivitySection => 'Etkileşimler & Aktivite';
+
+  @override
+  String get profilePrivacySection => 'Gizlilik';
+
+  @override
   String get profileNotificationSettings => 'Bildirim Ayarları';
 
   @override
@@ -1315,6 +1321,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get auctionBidBtn => 'Teklif Ver';
+
+  @override
+  String auctionSwipeToBid(String price) {
+    return '$price Teklif Vermek için Kaydırın';
+  }
+
+  @override
+  String get auctionSwipeToBidNoPrice => 'Teklif Vermek için Kaydırın';
 
   @override
   String auctionBidReceived(String amount) {

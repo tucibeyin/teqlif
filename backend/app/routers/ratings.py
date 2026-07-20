@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.enums import UserStatus
 from app.database import get_db
 from app.models.follow import Follow
 from app.models.rating import Rating
@@ -24,7 +25,7 @@ async def _optional_user(
     if not user_id:
         return None
     result = await db.execute(
-        select(User).where(User.id == user_id, User.is_active == True)  # noqa: E712
+        select(User).where(User.id == user_id, User.status == UserStatus.ACTIVE)  # noqa: E712
     )
     return result.scalar_one_or_none()
 
@@ -131,7 +132,7 @@ async def upsert_rating(
 
     # Hedef kullanıcı var mı?
     target = await db.scalar(
-        select(User).where(User.id == user_id, User.is_active == True)  # noqa: E712
+        select(User).where(User.id == user_id, User.status == UserStatus.ACTIVE)  # noqa: E712
     )
     if not target:
         raise NotFoundException("Kullanıcı bulunamadı")

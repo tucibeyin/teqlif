@@ -10,6 +10,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
+from app.models.enums import SearchAlertStatus
 from app.database import get_db
 from app.models.search_alert import SearchAlert
 from app.models.user import User
@@ -36,7 +37,7 @@ async def list_alerts(
 ):
     result = await db.execute(
         select(SearchAlert)
-        .where(SearchAlert.user_id == current_user.id, SearchAlert.is_active == True)  # noqa: E712
+        .where(SearchAlert.user_id == current_user.id, SearchAlert.status == SearchAlertStatus.ACTIVE)  # noqa: E712
         .order_by(SearchAlert.created_at.desc())
     )
     alerts = result.scalars().all()
@@ -64,7 +65,7 @@ async def create_alert(
     count_result = await db.execute(
         select(func.count()).where(
             SearchAlert.user_id == current_user.id,
-            SearchAlert.is_active == True,  # noqa: E712
+            SearchAlert.status == SearchAlertStatus.ACTIVE,  # noqa: E712
         )
     )
     active_count = count_result.scalar_one()
@@ -99,5 +100,5 @@ async def delete_alert(
     if alert.user_id != current_user.id:
         raise ForbiddenException("Bu alarma erişim yetkiniz yok")
 
-    alert.is_active = False
+    alert.status = 'passive'
     await db.commit()

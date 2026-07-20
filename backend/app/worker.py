@@ -18,6 +18,7 @@ import json
 from arq import cron
 from arq.connections import RedisSettings
 
+from app.models.enums import ListingStatus
 from app.config import settings
 from app.core.logger import get_logger, capture_exception
 from app.tasks.analytics_tasks import process_churn_and_airdrop, cleanup_hype_highlights_task
@@ -1741,7 +1742,7 @@ async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
                 rows = await db.execute(sa_text(f"""
                     SELECT u.id, u.fcm_token, u.notification_prefs, u.username
                     FROM users u
-                    WHERE u.is_active = TRUE
+                    WHERE u.status = 'active'
                       AND u.fcm_token IS NOT NULL
                       AND u.preference_embedding IS NOT NULL
                       AND u.id != :host_id
@@ -1764,7 +1765,7 @@ async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
                     FROM users u
                     INNER JOIN user_interests ui
                         ON ui.user_id = u.id AND ui.category = :category
-                    WHERE u.is_active = TRUE
+                    WHERE u.status = 'active'
                       AND u.fcm_token IS NOT NULL
                       AND u.id != :host_id
                       AND NOT EXISTS (
@@ -1949,7 +1950,7 @@ async def compute_trending_categories_task(ctx: dict) -> None:
                 fallback_rows = await db.execute(sql_text("""
                     SELECT category, COUNT(*) AS cnt
                     FROM listings
-                    WHERE is_active = TRUE AND is_deleted = FALSE AND category IS NOT NULL
+                    WHERE status = 'active' AND category IS NOT NULL
                     GROUP BY category
                     ORDER BY cnt DESC
                     LIMIT 3
@@ -2055,7 +2056,7 @@ async def send_budget_match_notifications_task(ctx: dict, listing_id: int) -> No
         async with AsyncSessionLocal() as db:
             res = await db.execute(select(Listing).where(Listing.id == listing_id))
             listing = res.scalar_one_or_none()
-            if not listing or not listing.is_active or listing.is_deleted:
+            if not listing or listing.status != ListingStatus.ACTIVE or listing.is_deleted:
                 return
 
             min_price = listing.price * 0.7
@@ -2067,7 +2068,7 @@ async def send_budget_match_notifications_task(ctx: dict, listing_id: int) -> No
                         SELECT id FROM users
                         WHERE max_budget >= :min_price
                           AND id != :owner_id
-                          AND is_active = TRUE
+                          AND status = 'active'
                           AND preference_embedding IS NOT NULL
                           AND preference_embedding <=> '{emb_str}'::vector < 0.45
                         ORDER BY preference_embedding <=> '{emb_str}'::vector
@@ -2079,7 +2080,7 @@ async def send_budget_match_notifications_task(ctx: dict, listing_id: int) -> No
                 rows = await db.execute(
                     sql_text("""
                         SELECT id FROM users
-                        WHERE max_budget >= :min_price AND id != :owner_id AND is_active = TRUE
+                        WHERE max_budget >= :min_price AND id != :owner_id AND status = 'active'
                         ORDER BY max_budget DESC LIMIT 60
                     """),
                     {"min_price": min_price, "owner_id": listing.user_id},
@@ -2453,9 +2454,9 @@ async def hesitation_retarget_task(ctx: dict) -> None:
 
         async with AsyncSessionLocal() as db:
             rows = await db.execute(sql_text("""
-                SELECT id, title, price, is_active, is_deleted
+                SELECT id, title, price, status
                 FROM listings
-                WHERE id = ANY(:ids) AND is_active = TRUE AND is_deleted = FALSE
+                WHERE id = ANY(:ids) AND status = 'active'
             """), {"ids": listing_ids})
             listings = {row[0]: {"title": row[1], "price": row[2]} for row in rows.fetchall()}
 
@@ -2569,7 +2570,7 @@ async def compute_trust_scores_task(ctx: dict) -> None:
                 SELECT
                     u.id,
                     EXTRACT(DAY FROM (NOW() - u.created_at))::int  AS account_age_days,
-                    COUNT(l.id) FILTER (WHERE l.is_active AND NOT l.is_deleted) AS active_listings,
+                    COUNT(l.id) FILTER (WHERE l.status = 'active') AS active_listings,
                     COUNT(l.id) FILTER (WHERE l.is_deleted)                      AS deleted_listings,
                     COUNT(l.id)                                                    AS total_listings
                 FROM users u

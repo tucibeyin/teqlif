@@ -309,6 +309,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAccountSection => 'Account';
 
   @override
+  String get profileActivitySection => 'Interactions & Activity';
+
+  @override
+  String get profilePrivacySection => 'Privacy';
+
+  @override
   String get profileNotificationSettings => 'Notification Settings';
 
   @override
@@ -1315,6 +1321,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auctionBidBtn => 'Place Bid';
+
+  @override
+  String auctionSwipeToBid(String price) {
+    return 'Swipe to bid $price';
+  }
+
+  @override
+  String get auctionSwipeToBidNoPrice => 'Swipe to bid';
 
   @override
   String auctionBidReceived(String amount) {

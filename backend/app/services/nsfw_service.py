@@ -2,7 +2,7 @@
 NSFW Görsel Moderasyon — NudeNet ile uygunsuz içerik tespiti
 
 NudeNet classifier ilan fotoğraflarını analiz eder.
-  nsfw_score >= 0.85 → is_active = False (otomatik kaldır + warn log)
+  nsfw_score >= 0.85 → status = 'passive' (otomatik kaldır + warn log)
   nsfw_score >= 0.60 → flag (warn log, manuel inceleme)
   nsfw_score <  0.60 → temiz
 
@@ -124,7 +124,7 @@ async def check_listing_nsfw(listing_id: int) -> None:
             "nsfw_checked_at": datetime.now(timezone.utc),
         }
         if max_score >= _NSFW_AUTO_DEACTIVATE:
-            updates["is_active"] = False
+            updates["status"] = ListingStatus.SUSPENDED.value
             logger.warning(
                 "[NSFW] İlan otomatik pasife alındı | listing_id=%d score=%.3f",
                 listing_id, max_score,

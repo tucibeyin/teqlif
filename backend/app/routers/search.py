@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_, func, text as sa_text
 
+from app.models.enums import ListingStatus, UserStatus
 from app.database import get_db
 from app.models.user import User
 from app.models.listing import Listing
@@ -56,7 +57,7 @@ async def search_users(
     query = (
         select(User)
         .where(
-            User.is_active == True,  # noqa: E712
+            User.status == UserStatus.ACTIVE,  # noqa: E712
             or_(
                 User.username.ilike(term),
                 User.full_name.ilike(term),
@@ -170,7 +171,7 @@ async def explore(
         listing_q = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
-            .where(Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
+            .where(Listing.status == ListingStatus.ACTIVE)  # noqa: E712
             .order_by(Listing.created_at.desc())
             .limit(20)
         )
@@ -208,7 +209,7 @@ async def search_all(
     user_q = (
         select(User)
         .where(
-            User.is_active == True,  # noqa: E712
+            User.status == UserStatus.ACTIVE,  # noqa: E712
             or_(User.username.ilike(term), User.full_name.ilike(term)),
         )
         .offset(offset)
@@ -251,8 +252,8 @@ async def search_all(
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(
-                Listing.is_active == True,  # noqa: E712
-                Listing.is_deleted == False,  # noqa: E712
+                Listing.status == ListingStatus.ACTIVE,  # noqa: E712
+                Listing.status != ListingStatus.DELETED,  # noqa: E712
                 or_(Listing.title.ilike(term), Listing.description.ilike(term)),
             )
             .order_by(Listing.created_at.desc())
@@ -291,8 +292,8 @@ async def search_all(
                 u.id AS uid, u.username, u.full_name
             FROM listings l
             JOIN users u ON u.id = l.user_id
-            WHERE l.is_active = TRUE
-              AND l.is_deleted = FALSE
+            WHERE l.status = 'active'
+              AND l.status != 'deleted'
               AND l.embedding IS NOT NULL
               AND (l.embedding <=> CAST(:vec AS vector)) < :threshold
               {block_clause}
@@ -327,8 +328,8 @@ async def search_all(
             select(Listing, User, func.coalesce(rank, 0.0).label("rank"))
             .join(User, User.id == Listing.user_id)
             .where(
-                Listing.is_active == True,  # noqa: E712
-                Listing.is_deleted == False,  # noqa: E712
+                Listing.status == ListingStatus.ACTIVE,  # noqa: E712
+                Listing.status != ListingStatus.DELETED,  # noqa: E712
                 or_(
                     fts_cond,
                     # search_vector NULL → sadece başlık ILIKE (description gürültü yaratır)
@@ -401,8 +402,8 @@ async def search_listings(
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(
-                Listing.is_active == True,  # noqa: E712
-                Listing.is_deleted == False,  # noqa: E712
+                Listing.status == ListingStatus.ACTIVE,  # noqa: E712
+                Listing.status != ListingStatus.DELETED,  # noqa: E712
                 or_(Listing.title.ilike(term), Listing.description.ilike(term)),
             )
             .order_by(Listing.created_at.desc())
@@ -460,8 +461,8 @@ async def search_listings(
                 FROM listings l
                 JOIN users u ON u.id = l.user_id
                 WHERE l.id = ANY(:candidate_ids)
-                  AND l.is_active = TRUE
-                  AND l.is_deleted = FALSE
+                  AND l.status = 'active'
+                  AND l.status != 'deleted'
                   AND l.embedding IS NOT NULL
                   {block_clause}
                 ORDER BY (
@@ -480,8 +481,8 @@ async def search_listings(
                     u.id AS uid, u.username, u.full_name
                 FROM listings l
                 JOIN users u ON u.id = l.user_id
-                WHERE l.is_active = TRUE
-                  AND l.is_deleted = FALSE
+                WHERE l.status = 'active'
+                  AND l.status != 'deleted'
                   AND l.embedding IS NOT NULL
                   AND (l.embedding <=> CAST(:vec AS vector)) < :threshold
                   {block_clause}
@@ -549,8 +550,8 @@ async def search_listings(
             u.id AS uid, u.username, u.full_name
         FROM listings l
         JOIN users u ON u.id = l.user_id
-        WHERE l.is_active = TRUE
-          AND l.is_deleted = FALSE
+        WHERE l.status = 'active'
+          AND l.status != 'deleted'
           AND (
               l.search_vector @@ to_tsquery('turkish', :tsq_prefix)
               OR (l.search_vector IS NULL AND l.title ILIKE :term)

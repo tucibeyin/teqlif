@@ -205,8 +205,7 @@ async def get_hesitated_listings(
             SELECT l.id, l.title, l.price, l.image_urls, l.image_url
             FROM listings l
             WHERE l.id = ANY(:ids)
-              AND l.is_active = true
-              AND l.is_deleted = false
+              AND l.status = 'active'
         """),
         {"ids": listing_ids},
     )

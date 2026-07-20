@@ -19,6 +19,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Set, Optional
 
+from app.models.enums import ListingStatus
 from app.core.logger import fire_and_forget
 
 from fastapi import WebSocket
@@ -387,7 +388,7 @@ class AuctionService:
         start_price = float(data.start_price)
         if listing_id_val:
             listing = await self.db.scalar(
-                select(Listing).where(Listing.id == listing_id_val, Listing.is_deleted == False)  # noqa: E712
+                select(Listing).where(Listing.id == listing_id_val, Listing.status != ListingStatus.DELETED)  # noqa: E712
             )
             if not listing:
                 raise NotFoundException("İlan bulunamadı")
@@ -874,7 +875,7 @@ class AuctionService:
             await self.db.flush()
 
             if listing:
-                listing.is_active = False
+                listing.status = ListingStatus.PASSIVE
 
             purchase = Purchase(
                 buyer_id=buyer_id,
@@ -1120,11 +1121,11 @@ class AuctionService:
         await saga.step("create_auction", do=_create_auction, compensate=_compensate_auction)
 
         if listing:
-            _prev_active = listing.is_active
+            _prev_active = (listing.status == ListingStatus.ACTIVE)
             async def _deactivate_listing():
-                listing.is_active = False
+                listing.status = ListingStatus.PASSIVE
             async def _reactivate_listing():
-                listing.is_active = _prev_active
+                (listing.status == ListingStatus.ACTIVE) = _prev_active
             await saga.step("deactivate_listing", do=_deactivate_listing, compensate=_reactivate_listing)
 
         async def _create_purchase_and_dm():

@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from app.models.enums import UserStatus
 import re
 
 
@@ -58,7 +59,7 @@ class UserOut(BaseModel):
     email: str
     username: str
     full_name: str
-    is_active: bool
+    status: UserStatus
     is_verified: bool
     locale: Optional[str] = None
     is_private: bool = False

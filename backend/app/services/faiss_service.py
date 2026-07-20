@@ -114,7 +114,7 @@ async def rebuild_index() -> None:
         result = await db.execute(
             text("""
                 SELECT id, embedding FROM listings
-                WHERE is_active = TRUE
+                WHERE status = 'active'
                   AND is_deleted = FALSE
                   AND embedding IS NOT NULL
                 ORDER BY id

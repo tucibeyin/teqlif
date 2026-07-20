@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select, func, text as sql_text
 
+from app.models.enums import UserStatus
 from app.constants import ws_types as WS
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
@@ -310,7 +311,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
-            if not user or not user.is_active:
+            if not user or user.status != UserStatus.ACTIVE:
                 await websocket.close(code=_WS_CODE_UNAUTHORIZED)
                 return
             username = user.username

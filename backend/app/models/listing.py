@@ -4,6 +4,8 @@ from sqlalchemy import String, Float, DateTime, ForeignKey, Boolean, Text, Index
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import Enum as SQLEnum
+from app.models.enums import ListingStatus
 from app.database import Base
 
 
@@ -12,8 +14,8 @@ class Listing(Base):
     __table_args__ = (
         Index('ix_listings_search_vector', 'search_vector', postgresql_using='gin'),
         Index('ix_listings_embedding_hnsw', 'embedding', postgresql_using='hnsw', postgresql_with={'m': 16, 'ef_construction': 64}, postgresql_ops={'embedding': 'vector_cosine_ops'}),
-        Index('ix_listings_feed_organic', 'category', 'is_active', 'is_deleted', text('created_at DESC')),
-        Index('ix_listings_feed_recent', 'is_active', 'is_deleted', text('created_at DESC')),
+        Index('ix_listings_feed_organic', 'category', 'status', text('created_at DESC')),
+        Index('ix_listings_feed_recent', 'status', text('created_at DESC')),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -33,8 +35,7 @@ class Listing(Base):
     buy_it_now_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     last_sold_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, index=True)
     last_start_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[ListingStatus] = mapped_column(SQLEnum(ListingStatus), default=ListingStatus.ACTIVE, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     search_vector: Mapped[Optional[Any]] = mapped_column(TSVECTOR, nullable=True)

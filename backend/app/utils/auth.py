@@ -9,6 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.models.enums import UserStatus
 from app.config import settings
 from app.database import get_db
 
@@ -101,7 +102,7 @@ async def get_current_user(
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
-    if not user or not user.is_active or user.deleted_at is not None:
+    if not user or user.status != UserStatus.ACTIVE or user.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı")
 
     return user
@@ -125,4 +126,4 @@ async def get_current_user_optional(
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    return user if user and user.is_active and user.deleted_at is None else None
+    return user if user and (user.status == UserStatus.ACTIVE) and user.deleted_at is None else None

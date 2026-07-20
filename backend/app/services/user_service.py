@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 
+from app.models.enums import ListingStatus, UserStatus
 from app.models.user import User
 from app.models.listing import Listing
 from app.models.follow import Follow
@@ -55,7 +56,7 @@ class UserService:
     # ── Kullanıcı Engelle ─────────────────────────────────────────────────────
     async def block(self, username: str, current_user: User) -> BlockStatusOut:
         result = await self.db.execute(
-            select(User).where(User.username == username, User.is_active == True)  # noqa: E712
+            select(User).where(User.username == username, User.status == UserStatus.ACTIVE)  # noqa: E712
         )
         target = result.scalar_one_or_none()
         if not target:
@@ -84,7 +85,7 @@ class UserService:
     # ── Engeli Kaldır ────────────────────────────────────────────────────────
     async def unblock(self, username: str, current_user: User) -> BlockStatusOut:
         result = await self.db.execute(
-            select(User).where(User.username == username, User.is_active == True)  # noqa: E712
+            select(User).where(User.username == username, User.status == UserStatus.ACTIVE)  # noqa: E712
         )
         target = result.scalar_one_or_none()
         if not target:
@@ -114,7 +115,7 @@ class UserService:
     # ── Kullanıcı Profili ────────────────────────────────────────────────────
     async def get_profile(self, username: str, current_user: Optional[User]) -> dict:
         result = await self.db.execute(
-            select(User).where(User.username == username, User.is_active == True)  # noqa: E712
+            select(User).where(User.username == username, User.status == UserStatus.ACTIVE)  # noqa: E712
         )
         user = result.scalar_one_or_none()
         if not user:
@@ -130,7 +131,7 @@ class UserService:
             self.db.scalar(
                 select(func.count()).where(
                     Listing.user_id == user.id,
-                    Listing.is_active == True,  # noqa: E712
+                    Listing.status == ListingStatus.ACTIVE,  # noqa: E712
                 )
             ),
             self.db.scalar(

@@ -25,6 +25,7 @@ import numpy as np
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.enums import ListingStatus
 from app.utils.redis_client import get_redis
 from app.services.listing_service import _row_dict, _fetch_seller_meta
 from app.services.like_service import LikeService
@@ -114,7 +115,7 @@ async def get_personalized_feed(
     rows_result = await db.execute(
         select(Listing, User)
         .join(User, User.id == Listing.user_id)
-        .where(Listing.id.in_(listing_ids), Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
+        .where(Listing.id.in_(listing_ids), Listing.status == ListingStatus.ACTIVE)  # noqa: E712
     )
     rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
 
@@ -234,7 +235,7 @@ async def _score_and_rank(
         redis = await get_redis()
         seller_res = await db.execute(text(
             "SELECT DISTINCT l.user_id FROM listings l "
-            "WHERE l.is_active = TRUE AND l.is_deleted = FALSE "
+            "WHERE l.status = 'active' "
             "AND l.user_id != :uid AND l.category = ANY(:cats) LIMIT 120"
         ), {"uid": user_id, "cats": top_cat_names})
         seller_ids = [r[0] for r in seller_res.all()]
@@ -276,8 +277,8 @@ async def _score_and_rank(
             (
                 SELECT l.id
                 FROM listings l
-                WHERE l.is_active = TRUE
-                  AND l.is_deleted = FALSE
+                WHERE l.status = 'active'
+                  AND l.status != 'deleted'
                   AND l.embedding IS NOT NULL
                   AND l.user_id != :uid
                   {ni_filter}
@@ -297,8 +298,8 @@ async def _score_and_rank(
             (
                 SELECT l.id
                 FROM listings l
-                WHERE l.is_active = TRUE
-                  AND l.is_deleted = FALSE
+                WHERE l.status = 'active'
+                  AND l.status != 'deleted'
                   AND l.user_id != :uid
                   AND l.category IN :top_cats
                   {ni_filter}
@@ -312,7 +313,7 @@ async def _score_and_rank(
                 SELECT l.id
                 FROM listings l
                 INNER JOIN follows f ON f.followed_id = l.user_id AND f.follower_id = :uid
-                WHERE l.is_active = TRUE AND l.is_deleted = FALSE
+                WHERE l.status = 'active'
                   AND l.user_id != :uid
                   {ni_filter}
                   {budget_clause}
@@ -325,8 +326,8 @@ async def _score_and_rank(
                 SELECT l.id
                 FROM listings l
                 LEFT JOIN listing_likes ll ON ll.listing_id = l.id
-                WHERE l.is_active = TRUE
-                  AND l.is_deleted = FALSE
+                WHERE l.status = 'active'
+                  AND l.status != 'deleted'
                   AND l.user_id != :uid
                   AND l.category NOT IN :top_cats
                   {ni_filter}
@@ -438,8 +439,8 @@ async def _popular_feed(offset: int, limit: int, db: AsyncSession, exclude_user_
                 SELECT l.id
                 FROM listings l
                 LEFT JOIN listing_likes ll ON ll.listing_id = l.id
-                WHERE l.is_active = TRUE
-                  AND l.is_deleted = FALSE
+                WHERE l.status = 'active'
+                  AND l.status != 'deleted'
                   {date_filter}
                   {uid_filter}
                 GROUP BY l.id
@@ -515,8 +516,8 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
         .join(User, User.id == Listing.user_id)
         .where(
             Listing.id.in_(listing_ids),
-            Listing.is_active == True,  # noqa: E712
-            Listing.is_deleted == False,  # noqa: E712
+            Listing.status == ListingStatus.ACTIVE,  # noqa: E712
+            Listing.status != ListingStatus.DELETED,  # noqa: E712
         )
     )
     rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
@@ -643,8 +644,8 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                 SELECT l.id,
                        (1.0 - (l.embedding <=> CAST(:vec AS vector))) AS sim_score
                 FROM listings l
-                WHERE l.is_active = TRUE
-                  AND l.is_deleted = FALSE
+                WHERE l.status = 'active'
+                  AND l.status != 'deleted'
                   AND l.embedding IS NOT NULL
                   AND l.user_id != :uid
                   {ni_filter}
@@ -656,7 +657,7 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
                 SELECT l.id, 0.0 AS sim_score
                 FROM listings l
                 INNER JOIN follows f ON f.followed_id = l.user_id AND f.follower_id = :uid
-                WHERE l.is_active = TRUE AND l.is_deleted = FALSE
+                WHERE l.status = 'active'
                   AND l.user_id != :uid
                   {ni_filter}
                   {budget_clause}
@@ -786,7 +787,7 @@ async def _get_user_top_categories(user_id: int, db: AsyncSession, n: int = 5) -
             JOIN listings l ON l.id = li.listing_id
             WHERE li.user_id = :uid
               AND li.seen_at > NOW() - INTERVAL '30 days'
-              AND l.is_deleted = FALSE
+              AND l.status != 'deleted'
             GROUP BY l.category
             ORDER BY cnt DESC
             LIMIT :n
@@ -834,8 +835,8 @@ async def _get_sponsored_listings(
         .where(
             AdCampaign.id.in_(campaign_ids),
             AdCampaign.status == "active",
-            Listing.is_active == True,   # noqa: E712
-            Listing.is_deleted == False,  # noqa: E712
+            Listing.status == ListingStatus.ACTIVE,   # noqa: E712
+            Listing.status != ListingStatus.DELETED,  # noqa: E712
             *([Listing.user_id != exclude_user_id] if exclude_user_id else []),
         )
     )
@@ -944,8 +945,8 @@ async def get_mixed_recent_feed(
         text(f"""
             SELECT l.id
             FROM listings l
-            WHERE l.is_active = TRUE
-              AND l.is_deleted = FALSE
+            WHERE l.status = 'active'
+              AND l.status != 'deleted'
             ORDER BY l.created_at DESC
             LIMIT :lim OFFSET :off
         """),
@@ -960,8 +961,8 @@ async def get_mixed_recent_feed(
         .join(User, User.id == Listing.user_id)
         .where(
             Listing.id.in_(base_ids),
-            Listing.is_active == True,    # noqa: E712
-            Listing.is_deleted == False,  # noqa: E712
+            Listing.status == ListingStatus.ACTIVE,    # noqa: E712
+            Listing.status != ListingStatus.DELETED,  # noqa: E712
         )
     )
     rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
@@ -1023,8 +1024,8 @@ async def _fetch_interest_items(
     res = await db.execute(
         text(f"""
             SELECT l.id FROM listings l
-            WHERE l.is_active = TRUE
-              AND l.is_deleted = FALSE
+            WHERE l.status = 'active'
+              AND l.status != 'deleted'
               AND l.category = ANY(:cats)
               {excl}
             ORDER BY RANDOM()
@@ -1041,8 +1042,8 @@ async def _fetch_interest_items(
         .join(User, User.id == Listing.user_id)
         .where(
             Listing.id.in_(ids),
-            Listing.is_active == True,    # noqa: E712
-            Listing.is_deleted == False,  # noqa: E712
+            Listing.status == ListingStatus.ACTIVE,    # noqa: E712
+            Listing.status != ListingStatus.DELETED,  # noqa: E712
         )
     )
     rows = {listing.id: (listing, user) for listing, user in rows_result.all()}

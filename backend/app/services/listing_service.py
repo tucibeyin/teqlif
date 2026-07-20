@@ -19,6 +19,7 @@ from datetime import datetime, timezone, date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, delete, text as sql_text
 
+from app.models.enums import ListingStatus, SearchAlertStatus
 from app.models.listing import Listing
 from app.models.listing_offer import ListingOffer
 from app.models.user import User
@@ -158,7 +159,7 @@ def _row_dict(
         "thumbnail_url": listing.thumbnail_url,
         "video_url": listing.video_url,
         "created_at": listing.created_at.isoformat() if listing.created_at else None,
-        "is_active": listing.is_active,
+        "status": (listing.status == ListingStatus.ACTIVE).value,
         "user": {
             "id": user.id,
             "username": user.username,
@@ -190,7 +191,7 @@ async def _trigger_search_alerts(listing_id: int, category: Optional[str], price
         from app.routers.notifications import push_notification
 
         async with AsyncSessionLocal() as db:
-            q = select(SearchAlert).where(SearchAlert.is_active == True)  # noqa: E712
+            q = select(SearchAlert).where(SearchAlert.status == SearchAlertStatus.ACTIVE)  # noqa: E712
             if category:
                 q = q.where((SearchAlert.category == category) | (SearchAlert.category.is_(None)))
             if price is not None:
@@ -268,8 +269,8 @@ class ListingService:
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(
-                Listing.is_active == True,    # noqa: E712
-                Listing.is_deleted == False,  # noqa: E712
+                Listing.status == ListingStatus.ACTIVE,    # noqa: E712
+                Listing.status != ListingStatus.DELETED,  # noqa: E712
                 or_(Listing.expires_at == None, Listing.expires_at > datetime.now(timezone.utc)),  # noqa: E711
             )
         )
@@ -352,10 +353,10 @@ class ListingService:
         query = (
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
-            .where(Listing.user_id == current_user.id, Listing.is_deleted == False)  # noqa: E712
+            .where(Listing.user_id == current_user.id, Listing.status != ListingStatus.DELETED)  # noqa: E712
         )
         if active is not None:
-            query = query.where(Listing.is_active == active)  # noqa: E712
+            query = query.where(Listing.status == ListingStatus.ACTIVE if active else Listing.status != ListingStatus.ACTIVE)  # noqa: E712
         if category:
             query = query.where(Listing.category == category)
         if q:
@@ -422,7 +423,7 @@ class ListingService:
         result = await self.db.execute(
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
-            .where(Listing.id == listing_id, Listing.is_deleted == False)  # noqa: E712
+            .where(Listing.id == listing_id, Listing.status != ListingStatus.DELETED)  # noqa: E712
         )
         row = result.first()
         if not row:
@@ -621,7 +622,7 @@ class ListingService:
         result = await self.db.execute(
             select(Listing).where(
                 Listing.id == listing_id,
-                Listing.is_deleted == False,  # noqa: E712
+                Listing.status != ListingStatus.DELETED,  # noqa: E712
             )
         )
         listing = result.scalar_one_or_none()
@@ -730,14 +731,14 @@ class ListingService:
             select(Listing).where(
                 Listing.id == listing_id,
                 Listing.user_id == current_user.id,
-                Listing.is_deleted == False,  # noqa: E712
+                Listing.status != ListingStatus.DELETED,  # noqa: E712
             )
         )
         listing = result.scalar_one_or_none()
         if not listing:
             raise NotFoundException("İlan bulunamadı")
 
-        reactivating = not listing.is_active  # pasif → aktif geçişi mi?
+        reactivating = listing.status != ListingStatus.ACTIVE  # pasif → aktif geçişi mi?
 
         is_free = False
         is_free_due_to_window = False
@@ -769,14 +770,14 @@ class ListingService:
                             },
                         )
 
-            listing.is_active = True
+            listing.status = ListingStatus.ACTIVE
             if not is_free_due_to_window:
                 listing.created_at = datetime.now(timezone.utc)
             listing.deactivated_at = None
 
         else:
             # ── Pasife alma: kampanya + izlenim temizliği (rozet korunur) ──
-            listing.is_active = False
+            listing.status = ListingStatus.PASSIVE
 
         try:
             if reactivating and not is_free:
@@ -837,7 +838,7 @@ class ListingService:
         if reactivating and is_free and not is_free_due_to_window:
             await _increment_reactivation(current_user.id, current_user.premium_since)
 
-        return {"is_active": listing.is_active}
+        return {"status": listing.status.value}
 
     # ── İlan Sil (soft delete) ───────────────────────────────────────────────
     async def delete_listing(self, listing_id: int, current_user: User) -> dict:
@@ -858,8 +859,8 @@ class ListingService:
         _video_url    = listing.video_url
         _owner_id     = listing.user_id
 
-        listing.is_deleted = True
-        listing.is_active = False
+        listing.status = ListingStatus.DELETED
+        listing.status = ListingStatus.PASSIVE
         try:
             await self.db.commit()
         except Exception as exc:
@@ -891,7 +892,7 @@ class ListingService:
     async def create_offer(self, listing_id: int, current_user: User, amount: float) -> dict:
         # İlanın var olduğunu doğrula
         result = await self.db.execute(
-            select(Listing).where(Listing.id == listing_id, Listing.is_deleted == False)  # noqa: E712
+            select(Listing).where(Listing.id == listing_id, Listing.status != ListingStatus.DELETED)  # noqa: E712
         )
         listing = result.scalar_one_or_none()
         if not listing:
@@ -932,8 +933,8 @@ class ListingService:
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(
-                Listing.is_active == True,    # noqa: E712
-                Listing.is_deleted == False,  # noqa: E712
+                Listing.status == ListingStatus.ACTIVE,    # noqa: E712
+                Listing.status != ListingStatus.DELETED,  # noqa: E712
                 (Listing.video_url.isnot(None)) | (Listing.image_url.isnot(None)),
             )
             .order_by(func.random())
@@ -961,8 +962,8 @@ class ListingService:
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
             .where(
-                Listing.is_active == True,     # noqa: E712
-                Listing.is_deleted == False,   # noqa: E712
+                Listing.status == ListingStatus.ACTIVE,     # noqa: E712
+                Listing.status != ListingStatus.DELETED,   # noqa: E712
                 Listing.video_url.isnot(None),
             )
             .order_by(func.random())
@@ -987,7 +988,7 @@ class ListingService:
     async def get_listing_offers(self, listing_id: int) -> list:
         # İlanın varlığını kontrol et
         listing_exists = await self.db.execute(
-            select(Listing.id).where(Listing.id == listing_id, Listing.is_deleted == False)  # noqa: E712
+            select(Listing.id).where(Listing.id == listing_id, Listing.status != ListingStatus.DELETED)  # noqa: E712
         )
         if not listing_exists.scalar_one_or_none():
             raise NotFoundException("İlan bulunamadı")

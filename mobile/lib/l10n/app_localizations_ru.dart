@@ -310,6 +310,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get profileAccountSection => 'Аккаунт';
 
   @override
+  String get profileActivitySection => 'Взаимодействия и активность';
+
+  @override
+  String get profilePrivacySection => 'Конфиденциальность';
+
+  @override
   String get profileNotificationSettings => 'Настройки уведомлений';
 
   @override
@@ -1330,6 +1336,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get auctionBidBtn => 'Разместить ставку';
+
+  @override
+  String auctionSwipeToBid(String price) {
+    return 'Проведите, чтобы поставить $price';
+  }
+
+  @override
+  String get auctionSwipeToBidNoPrice => 'Проведите, чтобы сделать ставку';
 
   @override
   String auctionBidReceived(String amount) {

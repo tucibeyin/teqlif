@@ -8,6 +8,7 @@ from sqlalchemy import select, func, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, Dict, Optional, List
 
+from app.models.enums import ListingStatus
 from app.database import get_db
 from app.models.analytics import AnalyticsEvent
 from app.models.auction import Auction
@@ -1050,7 +1051,7 @@ async def pro_insights(
         rows = await db.execute(sql_text("""
             SELECT
                 COUNT(*)                                                         AS total_listings,
-                COUNT(*) FILTER (WHERE is_active AND NOT is_deleted)             AS active_listings,
+                COUNT(*) FILTER (WHERE status = 'active')             AS active_listings,
                 COALESCE(AVG(price) FILTER (WHERE NOT is_deleted), 0)            AS avg_price,
                 COUNT(*) FILTER (WHERE created_at >= :d30 AND NOT is_deleted)    AS new_last_30d
             FROM listings WHERE user_id = :uid
@@ -1104,7 +1105,7 @@ async def pro_insights(
     funnel: dict = {}
     try:
         listing_ids_result = await db.execute(
-            select(Listing.id).where(Listing.user_id == uid, Listing.is_deleted == False)  # noqa: E712
+            select(Listing.id).where(Listing.user_id == uid, Listing.status != ListingStatus.DELETED)  # noqa: E712
         )
         listing_ids = [r[0] for r in listing_ids_result.fetchall()]
 
@@ -1151,7 +1152,7 @@ async def pro_insights(
     try:
         _hl_q = (
             select(Listing.id, Listing.title, Listing.price, Listing.category)
-            .where(Listing.user_id == uid, Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
+            .where(Listing.user_id == uid, Listing.status == ListingStatus.ACTIVE)  # noqa: E712
         )
         if _sd: _hl_q = _hl_q.where(Listing.created_at >= _sd)
         if _ed: _hl_q = _hl_q.where(Listing.created_at < _ed)
@@ -1221,7 +1222,7 @@ async def pro_insights(
     try:
         _pi_q = (
             select(Listing.id, Listing.title, Listing.price, Listing.category, Listing.embedding)
-            .where(Listing.user_id == uid, Listing.is_active == True, Listing.is_deleted == False,  # noqa: E712
+            .where(Listing.user_id == uid, Listing.status == ListingStatus.ACTIVE,  # noqa: E712
                    Listing.price.is_not(None))
         )
         if _sd: _pi_q = _pi_q.where(Listing.created_at >= _sd)
@@ -1242,7 +1243,7 @@ async def pro_insights(
                             SELECT price FROM listings
                             WHERE user_id != :uid
                               AND category = :cat
-                              AND is_active AND NOT is_deleted
+                              AND status = 'active'
                               AND price > :lo AND price < :hi
                               AND embedding IS NOT NULL
                             ORDER BY embedding <=> CAST(:emb AS vector)
@@ -1260,7 +1261,7 @@ async def pro_insights(
                 cat_r = await db.execute(sql_text("""
                     SELECT AVG(price), STDDEV(price) FROM listings
                     WHERE category = :cat AND user_id != :uid
-                      AND is_active AND NOT is_deleted
+                      AND status = 'active'
                       AND price > :lo AND price < :hi
                 """), {"cat": ml.category, "uid": uid,
                        "lo": price_lo, "hi": price_hi})
@@ -1385,7 +1386,7 @@ async def pro_insights(
         # Tereddüt fiyat noktası: alıcıların yazdığı fiyat lisans fiyatının çok altındaysa somut öneri
         try:
             seller_lid_rows = await db.execute(sql_text(
-                "SELECT id, title, price FROM listings WHERE user_id = :uid AND is_active = true AND is_deleted = false LIMIT 20"
+                "SELECT id, title, price FROM listings WHERE user_id = :uid AND status = 'active' LIMIT 20"
             ), {"uid": uid})
             seller_listings = {r.id: {"title": r.title, "price": float(r.price or 0)} for r in seller_lid_rows.fetchall()}
             if seller_listings:
@@ -1585,7 +1586,7 @@ async def conversion_breakdown(
             AND a.ended_at >= NOW() - INTERVAL '90 days'
             AND a.status = 'completed'
         WHERE l.user_id = :uid
-          AND l.is_deleted = FALSE
+          AND l.status != 'deleted'
         GROUP BY l.category
         HAVING COUNT(a.id) > 0
         ORDER BY conv_rate DESC, total_auctions DESC
@@ -1722,7 +1723,7 @@ async def my_feed_stats(
     result = await db.execute(
         select(Listing.id, Listing.title).where(
             Listing.user_id == current_user.id,
-            Listing.is_deleted == False,  # noqa: E712
+            Listing.status != ListingStatus.DELETED,  # noqa: E712
         )
     )
     listings = result.fetchall()
@@ -1895,7 +1896,7 @@ async def video_roi(
 
     listing_q = select(Listing.id, Listing.title, Listing.video_url, Listing.image_urls, Listing.image_url).where(
         Listing.user_id == current_user.id,
-        Listing.is_deleted == False,  # noqa: E712
+        Listing.status != ListingStatus.DELETED,  # noqa: E712
     )
     if category:
         listing_q = listing_q.where(Listing.category == category)
@@ -2001,7 +2002,7 @@ async def gallery_stats(
 
     listing_q = select(Listing.id, Listing.title, Listing.image_urls).where(
         Listing.user_id == current_user.id,
-        Listing.is_deleted == False,  # noqa: E712
+        Listing.status != ListingStatus.DELETED,  # noqa: E712
     )
     if category:
         listing_q = listing_q.where(Listing.category == category)
@@ -2088,7 +2089,7 @@ async def video_performance(
 
     listing_q = select(Listing.id, Listing.title).where(
         Listing.user_id == current_user.id,
-        Listing.is_deleted == False,  # noqa: E712
+        Listing.status != ListingStatus.DELETED,  # noqa: E712
         Listing.video_url.isnot(None),
     )
     if category:
@@ -2247,7 +2248,7 @@ async def get_pro_metrics(
     listings_result = await db.execute(sql_text("""
         SELECT id, category, EXTRACT(HOUR FROM created_at) AS hr 
         FROM listings 
-        WHERE user_id = :uid AND is_active = TRUE AND is_deleted = FALSE
+        WHERE user_id = :uid AND status = 'active'
     """), {"uid": uid})
     active_listings = listings_result.fetchall()
     
@@ -2392,7 +2393,7 @@ async def competitor_radar(
         rows = (await db.execute(sql_text("""
             SELECT id, title, price, user_id
             FROM listings
-            WHERE is_active = TRUE AND is_deleted = FALSE
+            WHERE status = 'active'
               AND category = :cat AND id != :lid AND user_id != :uid
               AND price IS NOT NULL
             ORDER BY ABS(price - :price) ASC
@@ -2404,7 +2405,7 @@ async def competitor_radar(
         rows = (await db.execute(sql_text("""
             SELECT l.id, l.title, l.price, l.user_id
             FROM listings l
-            WHERE l.is_active = TRUE AND l.is_deleted = FALSE
+            WHERE l.status = 'active'
               AND l.embedding IS NOT NULL
               AND l.id != :lid AND l.user_id != :uid
               AND l.price IS NOT NULL
@@ -2525,7 +2526,7 @@ async def category_velocity(
     # Mevcut aktif rakip sayısı
     active_count = await db.scalar(sql_text("""
         SELECT COUNT(*) FROM listings
-        WHERE category = :cat AND is_active = TRUE AND is_deleted = FALSE
+        WHERE category = :cat AND status = 'active'
           AND id != COALESCE(:lid, 0)
     """), {"cat": category, "lid": listing_id or 0})
 

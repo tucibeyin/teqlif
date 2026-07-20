@@ -696,6 +696,18 @@ abstract class AppLocalizations {
   /// **'Hesap'**
   String get profileAccountSection;
 
+  /// No description provided for @profileActivitySection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Etkileşimler & Aktivite'**
+  String get profileActivitySection;
+
+  /// No description provided for @profilePrivacySection.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gizlilik'**
+  String get profilePrivacySection;
+
   /// No description provided for @profileNotificationSettings.
   ///
   /// In tr, this message translates to:
@@ -2585,6 +2597,18 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Teklif Ver'**
   String get auctionBidBtn;
+
+  /// No description provided for @auctionSwipeToBid.
+  ///
+  /// In tr, this message translates to:
+  /// **'{price} Teklif Vermek için Kaydırın'**
+  String auctionSwipeToBid(String price);
+
+  /// No description provided for @auctionSwipeToBidNoPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif Vermek için Kaydırın'**
+  String get auctionSwipeToBidNoPrice;
 
   /// No description provided for @auctionBidReceived.
   ///

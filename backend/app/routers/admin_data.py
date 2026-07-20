@@ -5,6 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone, timedelta
 
+from app.models.enums import ListingStatus, UserStatus
 from app.database import get_db
 from app.models.user import User
 from app.models.stream import LiveStream
@@ -36,7 +37,7 @@ async def check_admin_access(current_user: User = Depends(get_current_user)):
 class AdminUserUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[str] = None
-    is_active: Optional[bool] = None
+    status: Optional[str] = None
 
 class AdminPasswordReset(BaseModel):
     new_password: str
@@ -55,15 +56,15 @@ async def get_dashboard(db: AsyncSession = Depends(get_db), admin: User = Depend
     today = datetime.now(timezone.utc).date()
 
     total_users = (await db.execute(select(func.count(User.id)))).scalar() or 0
-    active_users = (await db.execute(select(func.count(User.id)).where(User.is_active == True))).scalar() or 0  # noqa: E712
-    banned_users = (await db.execute(select(func.count(User.id)).where(User.is_active == False))).scalar() or 0  # noqa: E712
+    active_users = (await db.execute(select(func.count(User.id)).where(User.status == UserStatus.ACTIVE))).scalar() or 0  # noqa: E712
+    banned_users = (await db.execute(select(func.count(User.id)).where(User.status == UserStatus.PASSIVE))).scalar() or 0  # noqa: E712
     tomorrow = today + timedelta(days=1)
     today_users = (await db.execute(
         select(func.count(User.id)).where(User.created_at >= today, User.created_at < tomorrow)
     )).scalar() or 0
 
     active_listings = (await db.execute(
-        select(func.count(Listing.id)).where(Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
+        select(func.count(Listing.id)).where(Listing.status == ListingStatus.ACTIVE)  # noqa: E712
     )).scalar() or 0
 
     active_streams = (await db.execute(
@@ -139,7 +140,7 @@ async def get_recent_users(
     if user_ids:
         listing_counts_res = await db.execute(
             select(Listing.user_id, func.count(Listing.id))
-            .where(Listing.user_id.in_(user_ids), Listing.is_deleted == False)  # noqa: E712
+            .where(Listing.user_id.in_(user_ids), Listing.status != ListingStatus.DELETED)  # noqa: E712
             .group_by(Listing.user_id)
         )
         listing_counts = dict(listing_counts_res.all())
@@ -159,7 +160,7 @@ async def get_recent_users(
                 "username": u.username,
                 "email": u.email,
                 "full_name": u.full_name,
-                "is_active": u.is_active,
+                "status": u.status.value if u.status else "active",
                 "is_verified": u.is_verified,
                 "is_premium": u.is_premium,
                 "plan_type": u.plan_type,
@@ -182,7 +183,7 @@ async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession
         raise NotFoundException("Kullanıcı bulunamadı")
     if data.full_name is not None: user.full_name = data.full_name
     if data.email is not None: user.email = data.email
-    if data.is_active is not None: user.is_active = data.is_active
+    if data.status is not None: user.status = UserStatus(data.status)
     await db.commit()
     return {"message": "Bilgiler güncellendi."}
 
@@ -301,7 +302,7 @@ async def get_admin_listings(limit: int = 50, db: AsyncSession = Depends(get_db)
         user = await db.get(User, l.user_id)
         data.append({
             "id": l.id, "title": l.title, "price": l.price,
-            "is_active": l.is_active, "is_deleted": getattr(l, "is_deleted", False),
+            "status": l.status.value,
             "username": user.username if user else "Bilinmiyor", "created_at": l.created_at
         })
     return data
@@ -310,7 +311,7 @@ async def get_admin_listings(limit: int = 50, db: AsyncSession = Depends(get_db)
 async def admin_toggle_listing(listing_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     listing = await db.get(Listing, listing_id)
     if not listing: raise NotFoundException("İlan bulunamadı")
-    listing.is_active = not listing.is_active
+    listing.status = ListingStatus.PASSIVE if listing.status == ListingStatus.ACTIVE else ListingStatus.ACTIVE
     await db.commit()
     return {"message": "İlan durumu değiştirildi."}
 
@@ -318,8 +319,8 @@ async def admin_toggle_listing(listing_id: int, db: AsyncSession = Depends(get_d
 async def admin_delete_listing(listing_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     listing = await db.get(Listing, listing_id)
     if not listing: raise NotFoundException("İlan bulunamadı")
-    listing.is_deleted = True
-    listing.is_active = False
+    listing.status = ListingStatus.DELETED
+    listing.status = ListingStatus.PASSIVE
     await db.commit()
     return {"message": "İlan silindi."}
 
@@ -387,7 +388,7 @@ async def create_user(
         email=data.email,
         full_name=data.full_name,
         hashed_password=hash_password(data.password),
-        is_active=True
+        status = 'active'
     )
     db.add(new_user)
     await db.commit()
@@ -415,14 +416,14 @@ async def delete_user(
 
     # Soft delete: hesabı kapat, token geçersiz kıl
     user.deleted_at = now
-    user.is_active  = False
+    user.status = 'passive'
     user.fcm_token  = None   # push bildirimlerini durdur
 
     # Kullanıcının tüm aktif ilanlarını pasife çek
     await db.execute(
         Listing.__table__.update()
         .where(Listing.user_id == user_id)
-        .values(is_active=False)
+        .values(status = 'passive')
     )
 
     await db.commit()
@@ -471,7 +472,7 @@ async def purge_user(
     user.bio          = None
     user.website_url  = None
     user.fcm_token    = None
-    user.is_active    = False
+    user.status = 'passive'
     user.email_verified = False
     user.deleted_at   = user.deleted_at or now
 
@@ -655,7 +656,7 @@ async def admin_send_push(data: PushRequest, db: AsyncSession = Depends(get_db),
         logger.info("[ADMIN] Push gönderildi | user=%s | admin=%s", user.username, admin.email)
         return {"sent": 1}
     else:
-        res = await db.execute(select(User.fcm_token).where(User.fcm_token.isnot(None), User.is_active == True))  # noqa: E712
+        res = await db.execute(select(User.fcm_token).where(User.fcm_token.isnot(None), User.status == UserStatus.ACTIVE))  # noqa: E712
         tokens = [r[0] for r in res.all() if r[0]]
         sent = 0
         for token in tokens:

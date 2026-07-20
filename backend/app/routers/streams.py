@@ -179,7 +179,7 @@ async def audience_insights(
         }
 
     rows = await db.execute(
-        sql_text("SELECT id, max_budget, is_premium FROM users WHERE id = ANY(:ids) AND is_active = TRUE"),
+        sql_text("SELECT id, max_budget, is_premium FROM users WHERE id = ANY(:ids) AND status = 'active'"),
         {"ids": list(viewer_ids)},
     )
     user_data = rows.fetchall()
@@ -429,7 +429,7 @@ async def get_suggested_streamers(
                   AND category = ANY({cats_literal})
             ) cat_match ON cat_match.host_id = u.id
             WHERE u.id != :uid
-              AND u.is_active = TRUE
+              AND u.status = 'active'
               AND u.id NOT IN (
                   SELECT blocked_id FROM user_blocks WHERE blocker_id = :uid
                   UNION

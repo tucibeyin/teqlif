@@ -525,7 +525,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       final resp = await ListingService.toggleStatus(id);
       if (resp['statusCode'] == 200 && mounted) {
         final data = resp['body'] as Map<String, dynamic>;
-        final newActive = data['is_active'] as bool? ?? !_isActive;
+        final newStatus = data['status'] as String? ?? 'active';
+        final newActive = newStatus == 'active';
         ref
             .read(listingDetailProvider(id).notifier)
             .setStatus(

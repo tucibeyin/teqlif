@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
 import asyncio
 
+from app.models.enums import UserStatus
 from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.notification import Notification
@@ -294,7 +295,7 @@ async def notifications_ws(websocket: WebSocket):
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(User).where(User.id == user_id))
             user = result.scalar_one_or_none()
-            if not user or not user.is_active:
+            if not user or user.status != UserStatus.ACTIVE:
                 await websocket.close(code=4001)
                 return
     except Exception as exc:

@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.enums import ListingStatus
 from app.database import get_db, AsyncSessionLocal
 from app.models.listing import Listing
 from app.models.user import User
@@ -121,8 +122,8 @@ async def audience_size(
     send-blast ile aynı mantık kullanılır — tahmin yoktur.
     """
     listing_q = select(Listing.id).where(
-        Listing.is_deleted == False,  # noqa: E712
-        Listing.is_active == True,    # noqa: E712
+        Listing.status != ListingStatus.DELETED,  # noqa: E712
+        Listing.status == ListingStatus.ACTIVE,    # noqa: E712
     )
     if category:
         listing_q = listing_q.where(Listing.category == category)
@@ -261,8 +262,8 @@ async def send_blast(
 
     # ── Kategorideki listing ID'leri ─────────────────────────────────────────
     listing_q = select(Listing.id).where(
-        Listing.is_deleted == False,
-        Listing.is_active == True,
+        Listing.status != ListingStatus.DELETED,
+        Listing.status == ListingStatus.ACTIVE,
     )
     if body.category:
         listing_q = listing_q.where(Listing.category == body.category)

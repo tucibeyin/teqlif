@@ -26,6 +26,7 @@ from typing import Optional
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.enums import ListingStatus
 from app.database_clickhouse import get_clickhouse_client
 from app.models.listing import Listing
 from app.models.user import User
@@ -201,7 +202,7 @@ async def get_personalized_feed(
     cat_result = await db.execute(
         text("""
             SELECT DISTINCT category FROM listings
-            WHERE is_active = TRUE AND is_deleted = FALSE AND category IS NOT NULL
+            WHERE status = 'active' AND category IS NOT NULL
             LIMIT 50
         """)
     )
@@ -247,8 +248,8 @@ async def _ids_from_categories(
 ) -> list[int]:
     """Belirtilen kategorilerden (veya hariç) rastgele aktif ilan ID'leri döndürür."""
     clauses = [
-        "l.is_active = TRUE",
-        "l.is_deleted = FALSE",
+        "l.status = 'active'",
+        "l.status != 'deleted'",
         "l.user_id != :uid",
     ]
     params: dict = {"uid": user_id, "lim": limit}
@@ -275,8 +276,8 @@ async def _cold_start_feed(user_id: int, db: AsyncSession, limit: int) -> list[d
             SELECT l.id
             FROM listings l
             LEFT JOIN listing_likes ll ON ll.listing_id = l.id
-            WHERE l.is_active = TRUE
-              AND l.is_deleted = FALSE
+            WHERE l.status = 'active'
+              AND l.status != 'deleted'
               AND l.user_id != :uid
               AND l.created_at > NOW() - INTERVAL '30 days'
             GROUP BY l.id
@@ -299,8 +300,8 @@ async def _hydrate(user_id: int, listing_ids: list[int], db: AsyncSession) -> li
         .join(User, User.id == Listing.user_id)
         .where(
             Listing.id.in_(listing_ids),
-            Listing.is_active == True,    # noqa: E712
-            Listing.is_deleted == False,  # noqa: E712
+            Listing.status == ListingStatus.ACTIVE,    # noqa: E712
+            Listing.status != ListingStatus.DELETED,  # noqa: E712
         )
     )
     rows = {listing.id: (listing, user) for listing, user in rows_result.all()}

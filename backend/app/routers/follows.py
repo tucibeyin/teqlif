@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.models.enums import UserStatus
 from app.database import get_db
 from app.models.follow import Follow
 from app.models.user import User
@@ -25,7 +26,7 @@ async def _optional_user(
     if not user_id:
         return None
     result = await db.execute(
-        select(User).where(User.id == user_id, User.is_active == True)  # noqa: E712
+        select(User).where(User.id == user_id, User.status == UserStatus.ACTIVE)  # noqa: E712
     )
     return result.scalar_one_or_none()
 @router.get("/requests")
@@ -36,7 +37,7 @@ async def get_follow_requests(
     rows = await db.execute(
         select(User)
         .join(Follow, Follow.follower_id == User.id)
-        .where(Follow.followed_id == current_user.id, Follow.status == "pending", User.is_active == True)
+        .where(Follow.followed_id == current_user.id, Follow.status == "pending", User.status == UserStatus.ACTIVE)
         .order_by(Follow.created_at.desc())
     )
     users = rows.scalars().all()
@@ -59,7 +60,7 @@ async def get_sent_follow_requests(
     rows = await db.execute(
         select(User)
         .join(Follow, Follow.followed_id == User.id)
-        .where(Follow.follower_id == current_user.id, Follow.status == "pending", User.is_active == True)
+        .where(Follow.follower_id == current_user.id, Follow.status == "pending", User.status == UserStatus.ACTIVE)
         .order_by(Follow.created_at.desc())
     )
     users = rows.scalars().all()
@@ -85,7 +86,7 @@ async def follow_user(
         raise BadRequestException(_msg(request, None, "errFollowSelf", "Kendinizi takip edemezsiniz"))
 
     target = await db.scalar(
-        select(User).where(User.id == user_id, User.is_active == True)  # noqa: E712
+        select(User).where(User.id == user_id, User.status == UserStatus.ACTIVE)  # noqa: E712
     )
     if not target:
         raise NotFoundException(_msg(request, None, "errUserNotFound", "Kullanıcı bulunamadı"))
@@ -161,7 +162,7 @@ async def get_followers(
     rows = await db.execute(
         select(User)
         .join(Follow, Follow.follower_id == User.id)
-        .where(Follow.followed_id == user_id, Follow.status == "accepted", User.is_active == True)  # noqa: E712
+        .where(Follow.followed_id == user_id, Follow.status == "accepted", User.status == UserStatus.ACTIVE)  # noqa: E712
         .order_by(Follow.created_at.desc())
     )
     users = rows.scalars().all()
@@ -198,7 +199,7 @@ async def get_following(
     rows = await db.execute(
         select(User)
         .join(Follow, Follow.followed_id == User.id)
-        .where(Follow.follower_id == user_id, Follow.status == "accepted", User.is_active == True)  # noqa: E712
+        .where(Follow.follower_id == user_id, Follow.status == "accepted", User.status == UserStatus.ACTIVE)  # noqa: E712
         .order_by(Follow.created_at.desc())
     )
     users = rows.scalars().all()

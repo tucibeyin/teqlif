@@ -18,6 +18,7 @@ from sqlalchemy import select
 
 from sqlalchemy import text as sql_text
 
+from app.models.enums import ListingStatus
 from app.database import get_db
 from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
@@ -140,7 +141,7 @@ async def create_campaign(
         select(Listing).where(
             Listing.id == body.listing_id,
             Listing.user_id == current_user.id,
-            Listing.is_deleted == False,  # noqa: E712
+            Listing.status != ListingStatus.DELETED,  # noqa: E712
         )
     )
     if not listing:

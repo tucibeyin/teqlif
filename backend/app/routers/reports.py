@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from app.models.enums import ListingStatus
 from app.database import get_db
 from app.models.report import Report
 from app.models.listing import Listing
@@ -22,7 +23,7 @@ async def report_listing(
     if not listing_id or not reason:
         raise BadRequestException("listing_id ve reason zorunludur")
 
-    listing = await db.scalar(select(Listing).where(Listing.id == listing_id, Listing.is_active.is_(True)))
+    listing = await db.scalar(select(Listing).where(Listing.id == listing_id, Listing.status == ListingStatus.ACTIVE))
     if not listing:
         raise NotFoundException("İlan bulunamadı")
     if listing.user_id == current_user.id:
