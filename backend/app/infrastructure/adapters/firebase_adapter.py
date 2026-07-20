@@ -69,7 +69,7 @@ class FirebaseAdapter(PushNotificationPort):
         except Exception as exc:
             try:
                 from firebase_admin import exceptions as fb_exceptions
-                if isinstance(exc, fb_exceptions.NotFoundError):
+                if isinstance(exc, (fb_exceptions.NotFoundError, fb_exceptions.InvalidArgumentError)):
                     logger.warning("[FirebaseAdapter] Geçersiz token (Event fırlatılıyor): %s…", token[:12])
                     from app.core.event_bus import event_bus
                     from app.core.events import TokenInvalidatedEvent
