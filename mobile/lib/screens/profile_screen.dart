@@ -1967,18 +1967,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
       body: ListView(
         children: [
           const SizedBox(height: 8),
-          _SettingsSection(
-            title: 'Dev Tools',
-            items: [
-              _SettingsTile(
-                icon: Icons.developer_mode,
-                label: 'Teq UI Kütüphanesi Testi',
-                onTap: () {
-                  Navigator.pushNamed(context, '/teq-test');
-                },
-              ),
-            ],
-          ),
+
           // ── Pro Araçlar ───────────────────────────────────────────────────
           _SettingsSection(
             title: l.settingsProTools,
