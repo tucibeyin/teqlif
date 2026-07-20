@@ -15,7 +15,7 @@ def test_listing_router():
 
     # 1. Test kullanıcısı için sahte bir token oluşturalım
     test_user_id = 1
-    token = create_access_token(data={"sub": str(test_user_id), "is_admin": False})
+    token = create_access_token(test_user_id)
     headers = {"Authorization": f"Bearer {token}"}
 
     # 2. İlan oluşturma (POST /api/listings)
