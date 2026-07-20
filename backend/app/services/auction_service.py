@@ -1125,7 +1125,7 @@ class AuctionService:
             async def _deactivate_listing():
                 listing.status = ListingStatus.PASSIVE
             async def _reactivate_listing():
-                (listing.status == ListingStatus.ACTIVE) = _prev_active
+                listing.status = ListingStatus.ACTIVE if _prev_active else ListingStatus.PASSIVE
             await saga.step("deactivate_listing", do=_deactivate_listing, compensate=_reactivate_listing)
 
         async def _create_purchase_and_dm():
