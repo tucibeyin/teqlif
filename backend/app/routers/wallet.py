@@ -90,6 +90,29 @@ async def get_balance(
     }
 
 
+@router.post("/transfer")
+async def transfer_tuci(
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.use_cases.wallet.commands.transfer_tuci import TransferTuciCommand
+    from app.core.uow import SqlAlchemyUnitOfWork
+    
+    recipient_id = data.get("recipient_id")
+    amount = data.get("amount")
+    note = data.get("note", "")
+    
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    cmd = TransferTuciCommand(uow)
+    return await cmd.execute(
+        sender_id=current_user.id,
+        recipient_id=recipient_id,
+        amount=amount,
+        note=note
+    )
+
+
 @router.get("/transaction/{txn_id}")
 async def get_transaction_detail(
     txn_id: int,

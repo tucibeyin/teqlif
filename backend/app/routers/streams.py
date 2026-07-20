@@ -213,7 +213,18 @@ async def start_stream(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await StreamService(db).start(data, current_user, background_tasks)
+    from app.use_cases.streams.commands.start_stream import StartStreamCommand
+    from app.core.uow import SqlAlchemyUnitOfWork
+    
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    cmd = StartStreamCommand(uow)
+    return await cmd.execute(
+        user_id=current_user.id,
+        title=data.title,
+        category=data.category,
+        listing_id=data.listing_id,
+        thumbnail_url=data.thumbnail_url
+    )
 
 
 @router.post("/{stream_id}/confirm-live", status_code=status.HTTP_200_OK)

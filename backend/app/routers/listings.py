@@ -20,6 +20,11 @@ from app.models.enums import ListingStatus
 from app.database import get_db
 from app.models.user import User
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
+from app.use_cases.listings.commands.create_listing import CreateListingCommand
+from app.use_cases.listings.commands.update_listing import UpdateListingCommand
+from app.use_cases.listings.commands.delete_listing import DeleteListingCommand
+from app.use_cases.listings.queries.search_listings_query import SearchListingsQuery
+from app.core.uow import SqlAlchemyUnitOfWork
 from app.services.listing_service import (
     ListingService,
     _get_reactivation_used,
@@ -65,11 +70,16 @@ async def get_listings(
         cached = await cache_get("listings:search", params)
         if cached is not None:
             return cached
-    result = await ListingService(db).get_listings(user_id, category, location, q, current_user_id, limit, offset)
+            
+    query_uc = SearchListingsQuery()
+    result = await query_uc.execute(db, user_id, category, location, q, current_user_id, limit, offset)
+    
     if use_cache:
         await cache_set("listings:search", params, result, ttl=30)
     return result
 
+
+from app.use_cases.listings.queries.get_user_listings_query import GetUserListingsQuery
 
 @router.get("/my")
 @router.get("/my-listings")
@@ -84,7 +94,8 @@ async def get_my_listings(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ListingService(db).get_my_listings(current_user, active, q, category, limit, offset, start_date, end_date)
+    query_uc = GetUserListingsQuery()
+    return await query_uc.execute(db, current_user.id, active, q, category, limit, offset, start_date, end_date)
 
 
 def _listing_key_builder(func, namespace="", *, request=None, response=None, args=None, kwargs=None):
@@ -162,9 +173,19 @@ async def update_listing(
     listing_id: int,
     payload: dict,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db), # db depends still here but we use uow
 ):
-    result = await ListingService(db).update_listing(listing_id, payload, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    cmd = UpdateListingCommand(uow)
+    
+    result = await cmd.execute(
+        listing_id=listing_id, 
+        user_id=current_user.id,
+        title=payload.get("title"),
+        description=payload.get("description"),
+        price=payload.get("price")
+    )
+    
     await invalidate_cache("listings:search")
     return result
 
@@ -232,7 +253,9 @@ async def delete_listing(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ListingService(db).delete_listing(listing_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    cmd = DeleteListingCommand(uow)
+    return await cmd.execute(listing_id=listing_id, user_id=current_user.id)
 
 
 @router.post("/{listing_id}/offers")
