@@ -1561,6 +1561,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                             controller: _offerCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [_PriceInputFormatter()],
+                            enabled: _isActive, // İlan pasifse giriş engellensin
                             onChanged: (val) {
                               final parsed = _parseFormattedPrice(val);
                               if (parsed != null && parsed > 0) {
@@ -1587,7 +1588,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                         const SizedBox(width: 8),
                         ElevatedButton(
                           key: const Key('listing_detail_offer_btn'),
-                          onPressed: _offerSubmitting ? null : _placeOffer,
+                          onPressed: (_offerSubmitting || !_isActive) ? null : _placeOffer,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: kPrimary,
                             foregroundColor: Colors.white,
