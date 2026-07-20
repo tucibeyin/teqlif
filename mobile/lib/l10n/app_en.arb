@@ -539,6 +539,15 @@
   "auctionBuyNowRejectInline": "Reject",
   "auctionStartBtn": "▶ Start",
   "auctionBidBtn": "Place Bid",
+  "auctionSwipeToBid": "Swipe to bid {price}",
+  "@auctionSwipeToBid": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionSwipeToBidNoPrice": "Swipe to bid",
   "auctionBidReceived": "₺{amount} bid received!",
   "@auctionBidReceived": {
     "placeholders": {

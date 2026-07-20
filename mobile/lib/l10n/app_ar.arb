@@ -538,6 +538,15 @@
   "auctionBuyNowRejectInline": "رفض",
   "auctionStartBtn": "▶ ابدأ",
   "auctionBidBtn": "قدّم عرضاً",
+  "auctionSwipeToBid": "اسحب لتقديم {price}",
+  "@auctionSwipeToBid": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionSwipeToBidNoPrice": "اسحب لتقديم عرض",
   "auctionBidReceived": "تم استلام عرضك ₺{amount}!",
   "@auctionBidReceived": {
     "placeholders": {

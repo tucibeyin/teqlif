@@ -538,6 +538,15 @@
   "errorInsufficientBalance": "Bakiyeniz yetersiz. Lütfen bakiye yükleyin.",
   "auctionStartBtn": "▶ Başlat",
   "auctionBidBtn": "Teklif Ver",
+  "auctionSwipeToBid": "{price} Teklif Vermek için Kaydırın",
+  "@auctionSwipeToBid": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionSwipeToBidNoPrice": "Teklif Vermek için Kaydırın",
   "auctionBidReceived": "₺{amount} teklifiniz alındı!",
   "@auctionBidReceived": {
     "placeholders": {

@@ -2003,8 +2003,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
           const SizedBox(height: 14),
           SwipeToBidButton(
             text: _selectedBid > 0
-                ? '₺${_fmt(_selectedBid.toDouble())} ${l.auctionBidBtn}'
-                : l.auctionBidBtn,
+                ? l.auctionSwipeToBid('₺${_fmt(_selectedBid.toDouble())}')
+                : l.auctionSwipeToBidNoPrice,
             isLoading: _loading,
             isInvalid: _fraudDetected,
             itemId: liveState.listingId,

@@ -1165,6 +1165,15 @@
   "auctionBuyNowRejectInline": "Отклонить",
   "auctionStartBtn": "▶ Старт",
   "auctionBidBtn": "Разместить ставку",
+  "auctionSwipeToBid": "Проведите, чтобы поставить {price}",
+  "@auctionSwipeToBid": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "auctionSwipeToBidNoPrice": "Проведите, чтобы сделать ставку",
   "auctionBidReceived": "Ставка ₺{amount} принята!",
   "@auctionBidReceived": {
     "placeholders": {
