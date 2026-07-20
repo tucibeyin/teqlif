@@ -57,7 +57,6 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
 
     async def __aenter__(self):
         self.session = self.session_factory()
-        self.users = UserRepository(self.session)
         
         from app.repositories.listing_repository import ListingRepository
         from app.repositories.stream_repository import StreamRepository
