@@ -159,7 +159,7 @@ def _row_dict(
         "thumbnail_url": listing.thumbnail_url,
         "video_url": listing.video_url,
         "created_at": listing.created_at.isoformat() if listing.created_at else None,
-        "status": (listing.status == ListingStatus.ACTIVE).value,
+        "status": listing.status.value if listing.status else "active",
         "user": {
             "id": user.id,
             "username": user.username,
