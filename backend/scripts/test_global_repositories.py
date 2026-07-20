@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.listing import Listing
 from app.models.stream import LiveStream
-from app.models.message import Message
+from app.models.message import DirectMessage
 
 async def test_global_repositories():
     print("\n[TEST] Global Repositories ve UoW Testi Başlıyor...")
