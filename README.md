@@ -8,7 +8,7 @@
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=flat-square&logo=flutter&logoColor=white)](https://flutter.dev)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-asyncpg-336791?style=flat-square&logo=postgresql&white)](https://postgresql.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-asyncpg-336791?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![Redis](https://img.shields.io/badge/Redis-Pub%2FSub-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io)
 [![LiveKit](https://img.shields.io/badge/LiveKit-WebRTC-00A0E3?style=flat-square)](https://livekit.io)
 [![Grafana](https://img.shields.io/badge/Grafana-Monitoring-F46800?style=flat-square&logo=grafana&logoColor=white)](https://grafana.com)
@@ -18,13 +18,11 @@
 
 ---
 
-> **Note:** This is the comprehensive **ARC42 End-to-End Architectural Documentation** of the Teqlif Platform, detailing everything from the UI layer down to the Database, AI engines, and Observability infrastructure.
+> **Note:** This is the comprehensive **ARC42 End-to-End Architectural Documentation** of the Teqlif Platform, enhanced with GitHub-native Mermaid diagrams, ER schemas, and data flow visuals.
 
 ## 1. Introduction and Vision
 
 **Teqlif** is a hyper-scalable, multi-platform C2C marketplace tailored for the Turkish ecosystem. It bridges the gap between traditional e-commerce and interactive entertainment by integrating **low-latency live streaming, real-time auctions, 1-on-1 VoIP calls, and an embedded virtual economy (Tuci).** 
-
-The system relies heavily on an asynchronous event-driven architecture and uses bespoke Machine Learning algorithms to automate curation, security, and search, delivering a seamless experience across iOS, Android, and Web.
 
 ---
 
@@ -63,12 +61,6 @@ graph TB
         FAISS["FAISS Index\n(Vector Search)"]
     end
 
-    subgraph OBSERVE["🔭 Observability"]
-        PROM["Prometheus"]
-        GRAF["Grafana"]
-        SENTRY["Sentry (Tracing)"]
-    end
-
     MOB --> EDGE
     WEB --> EDGE
     EDGE --> API
@@ -78,110 +70,330 @@ graph TB
     API <--> DATA
     WORKER <--> AI_ML
     WORKER <--> DATA
-    
-    API --> OBSERVE
-    WORKER --> OBSERVE
-    MOB --> LK
-    API --> LK
+    MOB <-->|"WebRTC"| LK
 ```
 
 ---
 
-## 3. Mobile Client Architecture (Flutter)
+## 3. Data Flow & Core Processes
 
-The mobile application is built with **Flutter 3.x** and strictly adheres to a reactive, state-driven architecture using **Riverpod**.
+<details>
+<summary><strong>🔨 Real-time Auction — Bid Flow</strong></summary>
 
-### 3.1 Design System: Teq UILibrary
-To achieve a premium, unique aesthetic, standard Material UI components were entirely stripped out. The app uses a custom-built design system located in `lib/ui_library/`:
-- **Tokens & Themes:** `TeqColors`, `TeqSpacing`, `TeqTypography`, `TeqTheme` (Dark/Light mode).
-- **Core Components:** `TeqButton` (micro-animated states), `TeqTextField` (custom validations), `TeqCard`.
-- **Overlays:** `TeqSnackbar` (non-blocking, floating notifications), `TeqBottomSheet`, `TeqDialog`.
+```mermaid
+sequenceDiagram
+    actor User
+    participant API as FastAPI Router
+    participant RL as Rate Limiter (SlowAPI)
+    participant REDIS as Redis (Lua Script)
+    participant PG as PostgreSQL
+    participant PS as Pub/Sub
+    participant WS as WebSocket Manager
+    participant Others as All Viewers
 
-### 3.2 State Management & Networking
-- **Riverpod (`flutter_riverpod`):** Manages local state, caching, and dependency injection.
-- **WebSocket Manager (`ws_service.dart`):** Maintains persistent bi-directional communication. Automatically handles reconnects, JWT token refreshes, and routes incoming Redis PubSub events to the `ChatPanel` and `AuctionPanel`.
-- **Live Streams (`livekit_client`):** Connects to the WebRTC SFU. Handles camera/mic publishing for hosts, and `TrackSubscribedEvent` rendering for viewers.
-- **Swipe UX:** The `SwipeLiveScreen` uses a lazy-loading `PageView` to replicate the vertical swipe discovery feed seen in TikTok.
+    User->>API: POST /api/auction/{id}/bid
+    API->>RL: Rate limit check (2/s)
+    API->>REDIS: Atomic Lua Script (auction active? bid > current?)
+    alt Invalid bid
+        REDIS-->>User: 400 Bad Request
+    end
+    REDIS->>PG: Write bid record
+    PG-->>REDIS: OK
+    REDIS->>PS: PUBLISH auction_broadcast
+    PS->>WS: pubsub_listener triggered
+    WS->>Others: 🔔 New bid broadcasted (sub-second)
+```
+</details>
 
-### 3.3 Background Capabilities
-- **VoIP & CallKit (`apns_service.py` + Flutter CallKit):** Uses Apple PushKit for high-priority background wakes. When a 1-on-1 call starts, the app wakes up and displays the native incoming call UI even if the app is fully terminated.
-- **Firebase Cloud Messaging (FCM):** Standard push notifications for auction alerts and messages.
+<details>
+<summary><strong>🔴 Live Stream Connection Flow</strong></summary>
+
+```mermaid
+sequenceDiagram
+    actor Host
+    actor Viewer
+    participant API as FastAPI
+    participant LK as LiveKit Server
+    participant WS as WebSocket
+
+    Host->>API: POST /api/streams (start broadcast)
+    API->>LK: Create room + Host token
+    LK-->>API: room_id + token
+    Host->>LK: room.connect(token) (Publish Video/Audio)
+
+    Viewer->>API: POST /api/streams/{id}/join
+    API->>LK: Get viewer token
+    Viewer->>LK: room.connect(token) (TrackSubscribedEvent)
+    Viewer->>WS: WebSocket /ws/stream/{id}
+    WS-->>Viewer: viewer_count, chat, auction events
+```
+</details>
+
+<details>
+<summary><strong>💬 WebSocket Broadcast Architecture</strong></summary>
+
+```mermaid
+graph LR
+    subgraph SOURCES["Source Events"]
+        BID["New Bid"]
+        CHAT["New Message"]
+        MOD["Moderation (kick/mute)"]
+    end
+
+    subgraph REDIS["Redis Pub/Sub"]
+        AB["auction_broadcast"]
+        CB["chat_broadcast"]
+    end
+
+    subgraph MAIN["Async Listeners (FastAPI)"]
+        PL["pubsub_listener"]
+        CL["chat_pubsub_listener"]
+    end
+
+    subgraph CLIENTS["Connected Clients"]
+        M1["📱 Mobile #1"]
+        W1["🌐 Web #1"]
+    end
+
+    BID --> AB
+    CHAT --> CB
+    MOD --> CB
+    AB --> PL
+    CB --> CL
+    PL --> M1 & W1
+    CL --> M1 & W1
+```
+</details>
+
+<details>
+<summary><strong>📞 VoIP 1-on-1 Call Signaling</strong></summary>
+
+```mermaid
+sequenceDiagram
+    actor Caller
+    participant API as FastAPI
+    participant LK as LiveKit
+    participant APNS as Apple PushKit
+    actor Callee
+    
+    Caller->>API: POST /api/calls/start
+    API->>LK: Create Private Room
+    API->>APNS: High Priority VoIP Push
+    APNS->>Callee: Wake up device (Native Call Screen)
+    Callee->>LK: Answers & Connects to WebRTC Room
+```
+</details>
 
 ---
 
-## 4. Backend Services (Python / FastAPI)
+## 4. Artificial Intelligence & Machine Learning (AI/ML)
 
-The backend is built on **FastAPI** with `asyncio`, prioritizing non-blocking I/O operations for massive concurrency.
+Teqlif goes beyond standard CRUD by integrating multiple specialized AI pipelines natively into the Python backend.
 
-### 4.1 Core Domain Services
-- **Auction Engine (`auction_service.py`):** Utilizes **Redis Lua Scripts** to ensure atomic bidding. When a bid arrives, Lua checks the current highest bid in memory and updates it atomically to prevent race conditions, entirely bypassing PostgreSQL row locks for 10x throughput.
-- **Wallet & Economy (`wallet.py`, `tcmb_service.py`):** Manages the virtual currency "Tuci". Connects daily to the Central Bank of Turkey (TCMB) to sync fiat exchange rates for precise checkout accounting.
-- **Ads & Leads (`ads.py`, `leads.py`):** A self-serve advertising network allowing sellers to promote listings. Generates B2B/C2C leads dynamically.
-- **Analytics / Pro Hub (`analytics_processor.py`):** Aggregates complex SQL Window functions to deliver live charts (Competitor Radar, Pricing Trends) to the frontend.
+| Model / Algorithm | Purpose & Capability |
+|---|---|
+| **Semantic Search (FAISS)** | Uses `sentence-transformers` (all-MiniLM-L6-v2) to convert listings into dense vectors for L2 distance similarity queries, far outperforming standard SQL. |
+| **Multimodal Search (CLIP)** | Integrates **OpenAI CLIP** allowing users to search via images (image-to-text / text-to-image). |
+| **Recommendation Engine (ALS)** | Employs **Alternating Least Squares (ALS)** for collaborative filtering to personalize the user's home feed based on implicit feedback (clicks, bids). |
+| **Turkish NLP & NER** | Custom pipeline to extract Brands, Locations, and Specs from unstructured Turkish listing texts. |
+| **Churn Prediction** | Analyzes engagement drops to predict which users might leave, triggering retention campaigns. |
+| **Image Moderation (pHash & NSFW)** | Automated scanning for NSFW content and perceptual hashing to instantly block spam duplicate uploads. |
+| **Trust Scoring** | Graph-based algorithm evaluating a user's network to assign a public Trust/Influence Score. |
 
-### 4.2 Background Processing (ARQ)
-Instead of Celery, the system uses **ARQ** (built on `asyncio` and Redis). 
-- Scheduled crons handle: Expiring old listings, syncing exchange rates, rebuilding ML indexes, and processing video compressions without blocking the API loop.
+<details>
+<summary><strong>🧠 ML Feed Generation (ALS + FAISS)</strong></summary>
 
-### 4.3 Database Schema (PostgreSQL)
-20+ strictly normalized tables managed via **Alembic**.
-- Tables include: `users`, `listings`, `auctions`, `bids`, `streams`, `messages`, `analytics_events`, `purchases`, `wallet_transactions`.
-- **Soft Deletes:** Enforced via `status` Enum (`'active'`, `'deleted'`) across all tables to preserve referential integrity for ML training and analytics.
-
----
-
-## 5. Artificial Intelligence & Machine Learning (AI/ML)
-
-Teqlif goes beyond standard CRUD by integrating multiple specialized AI pipelines directly into the backend architecture.
-
-| Model / Algorithm | Location | Purpose & Capability |
-|---|---|---|
-| **Semantic Search** | `faiss_service.py`<br/>`ml_service.py` | Uses `sentence-transformers` (all-MiniLM-L6-v2) to convert listings into dense vectors. **FAISS** is used to query these vectors for sub-millisecond "Similar Listings" and intelligent text search, far outperforming standard SQL `pg_trgm`. |
-| **Multimodal Search** | `clip_service.py` | Integrates **OpenAI CLIP**. Allows users to search for listings using an image as input, mapping both text and images into the same embedding space. |
-| **Recommendation Feed** | `feed_als_ml.py` | Employs **Alternating Least Squares (ALS)** collaborative filtering. Analyzes user clicks, likes, and bids (Implicit Feedback) to build a highly personalized home feed matrix. |
-| **Turkish NLP & NER** | `ner_service.py`<br/>`turkish_nlp.py` | A custom Natural Language Processing pipeline that performs Named Entity Recognition specifically tailored for the Turkish language to extract Brands, Locations, and Specs from unstructured listing descriptions. |
-| **Churn Prediction** | `churn_ml_service.py` | A predictive model analyzing engagement drops (login frequency, stream views) to flag users at risk of leaving, automatically triggering retention (retargeting) campaigns. |
-| **Auto-Moderation** | `nsfw_service.py`<br/>`image_mod_service.py` | Automated scanning of uploaded images for NSFW content. Employs perceptual hashing (**pHash**) to instantly block duplicate/spam image uploads across the platform. |
-| **Trust Scoring** | `influence_service.py` | Graph-based algorithm evaluating a user's network (followers, ratings, successful sales) to assign an "Influence/Trust Score". |
-
----
-
-## 6. Observability, Monitoring, & Security
-
-A robust system is blind without observability. Teqlif incorporates a full DevOps monitoring suite.
-
-### 6.1 Observability Stack
-- **Prometheus & Grafana (`prometheus_fastapi_instrumentator`):** Middleware intercepts all API requests to expose `/metrics`. Grafana dashboards track Request Latency, 4xx/5xx Error Rates, WebSocket Connection Counts, and LiveKit active rooms.
-- **Sentry (`sentry-sdk`):** Integrated both in Flutter and FastAPI. Captures unhandled exceptions, provides Exception Group Tracebacks, and traces API bottlenecks (Performance Tracing).
-- **Logging:** Structured JSON logging (`logger=teqlif`) output to Systemd journal and files for ELK/Loki ingestion.
-
-### 6.2 Security Layers
-- **Rate Limiting (`slowapi`):** Strict Redis-backed IP rate limits (e.g., 2 bids per second per user).
-- **Bot Mitigation:** Cloudflare Turnstile validates human interaction during Login and Registration.
-- **XSS & Content Sanitization:** The `SecurityMiddleware` and `Sanitizer` pass all string inputs through `bleach` to strip malicious HTML/JS. `better-profanity` censors harmful words in live chats.
-- **Authentication:** Standard JWT (HMAC-SHA256) via `python-jose`. Passwords hashed with `bcrypt`.
+```mermaid
+sequenceDiagram
+    actor User
+    participant API as FastAPI
+    participant RD as Redis (Cache)
+    participant ALS as feed_als_ml
+    participant PG as PostgreSQL
+    
+    User->>API: GET /api/feed
+    API->>RD: Check cached personalized feed
+    alt Cache Miss
+        API->>ALS: Generate recommendations for User
+        ALS->>PG: Fetch user interaction matrix
+        ALS-->>API: List of recommended Listing IDs
+        API->>RD: Cache for 5 mins
+    end
+    API->>PG: Fetch listing details
+    API-->>User: JSON Feed
+```
+</details>
 
 ---
 
-## 7. Deployment & DevOps
+## 5. Mobile Client Architecture (Flutter)
 
-### 7.1 Infrastructure (VPS)
-Deployed on dedicated Ubuntu instances:
-- **Nginx:** Handles SSL Termination (Let's Encrypt), static file serving, and reverse proxying to Uvicorn.
-- **Systemd:** Manages daemon services (`teqlif-backend.service`, `teqlif-worker.service`).
-- **LiveKit Cloud:** WebRTC Selective Forwarding Unit (SFU) is delegated to LiveKit Cloud for global edge distribution, keeping the VPS bandwidth strictly for API data.
+The mobile application relies on **Flutter 3.x** and **Riverpod** for state management, entirely powered by the custom **Teq UILibrary**.
 
-### 7.2 CI/CD
-- **Fastlane:** Automates the Flutter build process (APK/AAB/IPA generation), increments version numbers, and pushes artifacts to App Store Connect and Google Play Console.
-- **Git / Alembic:** Schema migrations are strictly version-controlled. `alembic upgrade head` is baked into the deployment pipeline to prevent schema drift.
+<details>
+<summary><strong>🧭 Navigation Map</strong></summary>
+
+```mermaid
+flowchart TD
+    SPLASH["SplashScreen\n(JWT check)"]
+
+    SPLASH -->|Session exists| MAIN
+    SPLASH -->|No session| LOGIN
+
+    subgraph AUTH["🔐 Auth Flow"]
+        LOGIN["LoginScreen"] --> REG["RegisterScreen"]
+        LOGIN --> GOOGLE["Google OAuth"]
+    end
+
+    AUTH --> MAIN
+
+    subgraph MAIN["🏠 MainScreen — BottomNav"]
+        HOME["Tab 0\nHomeScreen\n(Listings + Stories)"]
+        SEARCH["Tab 1\nSearchScreen"]
+        NEW["Tab 2\nCreateListingScreen"]
+        LIVE["Tab 3\nLiveListScreen"]
+        PROFILE["Tab 4\nProfileScreen"]
+    end
+
+    HOME --> DETAIL["ListingDetailScreen\n+ AuctionPanel (WS)"]
+    SEARCH --> SWIPE["SwipeLiveScreen\n(TikTok-style PageView)"]
+    LIVE --> SWIPE
+    PROFILE --> HOST["HostStreamScreen\n(Camera + Microphone)"]
+    DETAIL --> PUBLIC["PublicProfileScreen"]
+    PUBLIC --> VIEWER["ViewerStreamScreen\n(Single stream)"]
+```
+</details>
+
+<details>
+<summary><strong>🎨 Teq UILibrary & Structure</strong></summary>
+
+```text
+mobile/lib/
+├── config/                 # theme.dart (TeqColors, TeqTypography)
+├── models/                 # 17+ strongly-typed Dart models (Listing, StreamOut)
+├── services/               # API logic (auth_service, ws_service, auction_service)
+├── providers/              # Riverpod State Providers
+├── screens/                # Flutter UI Screens (SwipeLiveScreen, HostStreamScreen)
+└── ui_library/             # 🛠 THE TEQ DESIGN SYSTEM
+    ├── teq_button.dart     # Micro-animated interactions
+    ├── teq_snackbar.dart   # Non-blocking overlays
+    └── teq_card.dart       # Standardized premium containers
+```
+</details>
 
 ---
 
-## 8. Summary of Third-Party Libraries
+## 6. Database Schema (PostgreSQL)
 
-- **Backend (Python):** `fastapi`, `uvicorn`, `sqlalchemy`, `asyncpg`, `alembic`, `redis`, `arq`, `livekit-api`, `firebase-admin`, `sentry-sdk`, `slowapi`, `bleach`, `faiss-cpu`, `sentence-transformers`, `torch`.
-- **Frontend (Flutter):** `flutter_riverpod`, `livekit_client`, `web_socket_channel`, `firebase_messaging`, `sentry_flutter`, `shimmer`, `wakelock_plus`.
+The system utilizes an advanced, strictly normalized PostgreSQL schema with over 20 tables. All relationships are managed asynchronously via `asyncpg` and SQLAlchemy 2.0. Soft deletes are enforced using the `status` Enum (`'active'`, `'deleted'`) to protect ML integrity.
+
+<details>
+<summary><strong>🗄 View Entity-Relationship (ER) Diagram</strong></summary>
+
+```mermaid
+erDiagram
+    users {
+        int id PK
+        string username UK
+        string email UK
+        string hashed_password
+        bool is_verified
+        datetime created_at
+    }
+
+    listings {
+        int id PK
+        int user_id FK
+        decimal price
+        string status "Enum: active, deleted"
+        bool is_live
+        vector embedding "FAISS/pgvector"
+    }
+
+    auctions {
+        int id PK
+        int listing_id FK
+        decimal current_price
+        int current_winner_id FK
+        datetime end_time
+    }
+
+    bids {
+        int id PK
+        int auction_id FK
+        int user_id FK
+        decimal amount
+    }
+
+    streams {
+        int id PK
+        int host_id FK
+        string livekit_room_id
+        int viewer_count
+    }
+    
+    analytics {
+        int id PK
+        int user_id FK
+        string event_type
+        json metadata
+    }
+    
+    wallet_transactions {
+        int id PK
+        int user_id FK
+        decimal tuci_amount
+        decimal fiat_amount
+    }
+
+    users ||--o{ listings : "creates"
+    users ||--o{ streams : "broadcasts"
+    users ||--o{ bids : "places"
+    users ||--o{ wallet_transactions : "owns"
+    listings ||--o| auctions : "hosts"
+    auctions ||--o{ bids : "receives"
+    users ||--o{ analytics : "generates"
+```
+</details>
 
 ---
 
+## 7. Global API Map
+
+<details>
+<summary><strong>🌐 View Core Endpoints</strong></summary>
+
+| Category | Method | Endpoint | Description |
+|---|---|---|---|
+| **Auth** | `POST` | `/api/auth/register` | Register (Cloudflare Turnstile CAPTCHA required) |
+| | `POST` | `/api/auth/login` | Retrieve JWT |
+| **Listings** | `GET` | `/api/listings` | Fetch feed (Uses FAISS / ALS if authenticated) |
+| | `POST` | `/api/listings/{id}/offer` | Submit a direct price offer |
+| **Auctions** | `POST` | `/api/auction/{id}/bid` | **Place bid** (Redis Lua script, Rate Limit: 2/s) |
+| | `WS` | `/ws/auction/{stream_id}` | Live bid broadcast stream |
+| **Streams** | `POST` | `/api/streams` | Start broadcast (Provisions LiveKit token) |
+| | `WS` | `/ws/stream/{id}` | Chat & Viewer count syncing |
+| **Calls** | `POST` | `/api/calls/start` | Initiates 1-on-1 VoIP call (APNs PushKit) |
+| **Wallet** | `GET` | `/api/wallet/sync` | Sync Tuci/Fiat rates via TCMB |
+
+</details>
+
+---
+
+## 8. Observability, Security & Deployment
+
+### 8.1 Observability Stack
+- **Prometheus & Grafana:** Middleware intercepts all FastAPI requests. Grafana dashboards track Request Latency, Error Rates, WebSocket loads, and LiveKit active rooms.
+- **Sentry (`sentry-sdk`):** Integrated in both Flutter and FastAPI for distributed error tracing and performance bottleneck tracking.
+
+### 8.2 Security Guardrails
+- **Rate Limiting (`slowapi`):** Strict Redis-backed IP rate limits.
+- **XSS Mitigation (`bleach`):** `SecurityMiddleware` passes all inputs through Bleach to strip malicious scripts. `better-profanity` cleans live chat streams.
+- **Access Control:** Role-Based Access Control via JWT. Ownership checks (e.g., *does this user own this listing?*) enforce multi-tenant isolation.
+
+### 8.3 Deployment (CI/CD)
+- **Infrastructure:** Dedicated Ubuntu VPS running Nginx (SSL), Systemd for FastAPI & ARQ Worker.
+- **CI/CD:** `fastlane` automates Flutter iOS/Android builds and store submissions. `alembic upgrade head` secures DB drift.
+
+---
 *End of ARC42 Documentation.*
