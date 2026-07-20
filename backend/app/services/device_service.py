@@ -12,14 +12,13 @@ class DeviceService:
         """EventBus'tan gelen geçersiz token olayını dinler ve DB'den temizler."""
         logger.info("[DeviceService] Geçersiz token temizleniyor: %s…", event.token[:12])
         try:
-            from app.database import AsyncSessionLocal
-            from app.repositories.user_repository import user_repository
+            from app.core.uow import SqlAlchemyUnitOfWork
             
-            async with AsyncSessionLocal() as db:
-                user = await user_repository.get_by_fcm_token(db, event.token)
+            async with SqlAlchemyUnitOfWork() as uow:
+                user = await uow.users.get_by_fcm_token(event.token)
                 if user:
                     user.fcm_token = None
-                    await db.commit()
+                    await uow.commit()
             logger.info("[DeviceService] FCM token başarıyla temizlendi.")
         except Exception as exc:
             logger.error("[DeviceService] Token temizleme hatası: %s", exc)
