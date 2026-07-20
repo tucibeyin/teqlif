@@ -107,9 +107,8 @@ async def transfer_tuci(
     cmd = TransferTuciCommand(uow)
     return await cmd.execute(
         sender_id=current_user.id,
-        recipient_id=recipient_id,
-        amount=amount,
-        note=note
+        receiver_id=recipient_id,
+        amount=amount
     )
 
 
