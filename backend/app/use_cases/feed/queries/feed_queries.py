@@ -219,11 +219,11 @@ class FeedQueries:
         if user_embedding:
             freshness_w = 0.22 if 6 <= hour <= 10 else 0.15
             social_w    = 0.12 if 19 <= hour <= 23 else 0.08
-            cat_w, quality_w, explore_w, host_w, conv_w, seen_w = 0.30, 0.20, 0.04, 0.04, 0.06, 0.25
+            cat_w, quality_w, content_quality_w, explore_w, host_w, conv_w, seen_w = 0.30, 0.15, 0.08, 0.04, 0.04, 0.06, 0.25
         else:
             freshness_w = 0.28 if 6 <= hour <= 10 else 0.20
             social_w    = 0.14 if 19 <= hour <= 23 else 0.10
-            cat_w, quality_w, explore_w, host_w, conv_w, seen_w = 0.40, 0.25, 0.05, 0.05, 0.08, 0.30
+            cat_w, quality_w, content_quality_w, explore_w, host_w, conv_w, seen_w = 0.40, 0.18, 0.08, 0.05, 0.05, 0.08, 0.30
 
         # Top-5 kategori ve skorları
         top_cats = sorted(interests.items(), key=lambda x: x[1], reverse=True)[:5]
@@ -391,6 +391,7 @@ class FeedQueries:
                         ({cat_affinity_expr}) * {cat_w}
                         + {pgvec_score_term}
                         + LEAST(LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0, 1.0) * {quality_w}
+                        + COALESCE(l.quality_score, 0.5) * {content_quality_w}
                         + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 604800.0) * {freshness_w}
                         + COALESCE(soc.is_followed, 0.0) * {social_w}
                         + ({exploration_expr}) * {explore_w}
@@ -711,9 +712,10 @@ class FeedQueries:
                         c.id,
                         l.category,
                         c.sim_score * 0.45
-                        + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 1209600.0) * 0.15
+                        + EXP(-EXTRACT(EPOCH FROM (NOW() - l.created_at)) / 1209600.0) * 0.12
                         + COALESCE(soc.social_bonus, 0.0) * 0.12
-                        + LEAST(LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0, 1.0) * 0.10
+                        + LEAST(LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0, 1.0) * 0.07
+                        + COALESCE(l.quality_score, 0.5) * 0.08
                         - COALESCE(imp.seen_decay, 0.0) * 0.20
                         AS sql_score
                     FROM all_candidates c

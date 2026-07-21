@@ -1116,6 +1116,132 @@ async def generate_listing_embedding_task(ctx: dict, listing_id: int) -> None:
 
 # ── Task: Embedding Backfill ─────────────────────────────────────────────────
 
+async def compute_listing_quality_score_task(ctx: dict, listing_id: int) -> None:
+    """
+    İlan oluşturulduğunda/güncellendiğinde anında rule-based quality_score atar.
+    ML modeli varsa onu kullanır; yoksa kural tabanlı skora döner (~1ms).
+    """
+    try:
+        from sqlalchemy import select, update as sa_update
+        from app.database import AsyncSessionLocal
+        from app.models.listing import Listing
+        from app.services.ml.quality_service import predict_quality
+
+        async with AsyncSessionLocal() as db:
+            listing = await db.scalar(select(Listing).where(Listing.id == listing_id))
+            if not listing:
+                return
+            score = predict_quality(listing)
+            await db.execute(
+                sa_update(Listing).where(Listing.id == listing_id).values(quality_score=score)
+            )
+            await db.commit()
+        logger.info("[Worker] quality_score güncellendi | listing_id=%d score=%.4f", listing_id, score)
+    except Exception as exc:
+        logger.error("[Worker] compute_listing_quality_score başarısız | id=%d | %s", listing_id, exc, exc_info=True)
+        capture_exception(exc)
+        raise
+
+
+async def backfill_listing_quality_scores_task(ctx: dict) -> None:
+    """
+    Her saat çalışır; quality_score'u NULL olan aktif ilanlar için rule-based skor üretir.
+    Batch 50 ilan — ML modeli yokken başlangıç doldurması için.
+    """
+    try:
+        from sqlalchemy import select, update as sa_update
+        from app.database import AsyncSessionLocal
+        from app.models.listing import Listing
+        from app.services.ml.quality_service import predict_quality
+
+        async with AsyncSessionLocal() as db:
+            rows = (await db.scalars(
+                select(Listing)
+                .where(Listing.quality_score.is_(None), Listing.status != "deleted")
+                .order_by(Listing.id)
+                .limit(50)
+            )).all()
+
+            if not rows:
+                return
+
+            count = 0
+            for listing in rows:
+                try:
+                    score = predict_quality(listing)
+                    await db.execute(
+                        sa_update(Listing).where(Listing.id == listing.id).values(quality_score=score)
+                    )
+                    count += 1
+                except Exception as e:
+                    logger.warning("[Worker] backfill_quality_score: id=%d hata: %s", listing.id, e)
+
+            await db.commit()
+            if count:
+                logger.info("[Worker] backfill_listing_quality_scores: %d ilan skorlandı", count)
+
+    except Exception as exc:
+        logger.error("[Worker] backfill_listing_quality_scores başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+
+
+async def train_listing_quality_model_task(ctx: dict) -> None:
+    """
+    Her Pazar 02:30'da çalışır.
+    Son 3+ günlük engagement verisiyle GradientBoostingRegressor eğitir.
+    Eğitim tamamlanınca tüm aktif ilanları yeni modelle yeniden skorlar (batch 200).
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services.ml.quality_service import train_quality_model, predict_quality
+        from app.models.listing import Listing
+        from sqlalchemy import select, update as sa_update
+
+        async with AsyncSessionLocal() as db:
+            n = await train_quality_model(db)
+
+        if n < 50:
+            logger.warning("[Worker] train_listing_quality_model: yetersiz veri (%d), yeniden skorlama atlandı", n)
+            return
+
+        # Tüm aktif ilanları yeni modelle yeniden skorla (200'er batch)
+        async with AsyncSessionLocal() as db:
+            offset = 0
+            total = 0
+            while True:
+                rows = (await db.scalars(
+                    select(Listing)
+                    .where(Listing.status != "deleted")
+                    .order_by(Listing.id)
+                    .limit(200)
+                    .offset(offset)
+                )).all()
+                if not rows:
+                    break
+                for listing in rows:
+                    try:
+                        score = predict_quality(listing)
+                        await db.execute(
+                            sa_update(Listing).where(Listing.id == listing.id).values(quality_score=score)
+                        )
+                        total += 1
+                    except Exception:
+                        pass
+                await db.commit()
+                offset += 200
+                if len(rows) < 200:
+                    break
+
+        logger.info(
+            "[Worker] train_listing_quality_model tamamlandı | eğitim=%d yeniden_skorlanan=%d",
+            n, total,
+        )
+    except Exception as exc:
+        logger.error("[Worker] train_listing_quality_model başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 async def backfill_listing_embeddings_task(ctx: dict) -> None:
     """
     Her saat çalışır; embedding'i NULL olan aktif ilanlar için
@@ -2920,6 +3046,9 @@ class WorkerSettings:
         train_feed_als_task,
         sync_swipelive_interests_task,
         backfill_listing_embeddings_task,
+        compute_listing_quality_score_task,
+        backfill_listing_quality_scores_task,
+        train_listing_quality_model_task,
         optimize_notification_timing_task,
         clip_visual_backfill_task,
         compute_listing_phash_task,
@@ -3003,6 +3132,10 @@ class WorkerSettings:
         cron(sync_swipelive_interests_task, minute={0, 20, 40}),
         # Her saat başı — embedding'i olmayan ilanlar için backfill (20'şer batch)
         cron(backfill_listing_embeddings_task, minute=30),
+        # Her saat :45'inde — quality_score'u olmayan ilanları rule-based skorla
+        cron(backfill_listing_quality_scores_task, minute=45),
+        # Her Pazar 02:30 — listing kalite modeli haftalık eğitim
+        cron(train_listing_quality_model_task, weekday=6, hour=2, minute=30),
         # Her 2 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
         # Her gün 06:00 — bid_hesitation → fiyat düşüş retarget bildirimi
