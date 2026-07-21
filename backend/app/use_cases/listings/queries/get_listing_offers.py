@@ -25,7 +25,7 @@ class GetListingOffersQuery:
                 "user": {
                     "id": user.id,
                     "username": user.username,
-                    "avatar_url": user.avatar_url
+                    "avatar_url": user.profile_image_url
                 }
             }
             for offer, user in rows
