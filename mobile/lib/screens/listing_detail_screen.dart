@@ -1290,6 +1290,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final user = listing['user'] as Map<String, dynamic>?;
     final isMine = _myUserId != null && user?['id'] == _myUserId;
 
+    // autoDispose provider'ı isMine ve _isLoggedIn durumundan bağımsız canlı tut.
+    // _isActive/_isPassive/_isListingInitialized getterları koşullu branch'larda çağrılıyor;
+    // hiç izleyici olmazsa provider dispose olup isInitialized sıfırlanır.
+    final _listingDetailId = widget.listing['id'] as int?;
+    if (_listingDetailId != null) ref.watch(listingDetailProvider(_listingDetailId));
+
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
