@@ -462,7 +462,7 @@ async def ai_price_credits(current_user: User = Depends(get_current_user)):
 @router.get("/reactivation-credits")
 async def reactivation_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
-    from app.use_cases.listings.queries.listing_utils import (
+    from app.use_cases.listings.queries.get_reactivation_cost import (
         _get_reactivation_used,
         _reactivation_next_billing,
         _REACTIVATION_FREE_MONTHLY,

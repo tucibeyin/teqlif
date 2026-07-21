@@ -39,7 +39,7 @@ def _reactivation_next_billing(premium_since: datetime) -> date:
     except ValueError:
         return date(y, m + 1, 1) - timedelta(days=1)
 
-async def _get_reactivation_used(user_id: int, premium_since: Optional[datetime], uow: AbstractUnitOfWork) -> int:
+async def _get_reactivation_used(user_id: int, premium_since: Optional[datetime], uow: "AbstractUnitOfWork | None" = None) -> int:
     if not premium_since:
         return 0
     # Placeholder for Redis fetch
