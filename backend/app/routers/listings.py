@@ -1,12 +1,20 @@
+import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request, Query as FastApiQuery
+from fastapi import APIRouter, Depends, HTTPException, Request, Query as FastApiQuery
+from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
+from app.models.enums import ListingStatus
+from app.models.listing import Listing
+from app.models.mass_notification import MassNotificationCampaign
+from app.models.tuci_transaction import TuciTransaction
 from app.models.user import User
 from app.utils.auth import get_current_user, get_current_user_optional, bearer_scheme, decode_token
 from app.use_cases.listings.commands.create_listing import CreateListingCommand
@@ -21,6 +29,7 @@ from app.use_cases.listings.queries.get_video_feed import GetVideoFeedQuery
 from app.use_cases.listings.queries.get_swipe_feed import GetSwipeFeedQuery
 from app.use_cases.listings.queries.get_listing_offers import GetListingOffersQuery
 from app.use_cases.listings.queries.get_reactivation_cost import GetReactivationCostQuery
+from app.use_cases.listings.queries.listing_utils import _parse_image_urls
 from app.services.like_service import LikeService
 from app.schemas.listing import ListingOfferCreate
 from app.core.task_queue import get_pool
@@ -245,3 +254,302 @@ async def get_listing_offers(
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
     return await GetListingOffersQuery(uow).execute(listing_id)
+
+
+# ── Similar Listings ──────────────────────────────────────────────────────────
+
+@router.get("/{listing_id}/similar")
+async def similar_listings(
+    listing_id: int,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+):
+    listing = await db.scalar(
+        select(Listing).where(Listing.id == listing_id)
+    )
+    if not listing:
+        return []
+    result = await db.execute(
+        select(Listing)
+        .where(
+            Listing.id != listing_id,
+            Listing.category == listing.category,
+            Listing.status == ListingStatus.ACTIVE,
+        )
+        .order_by(Listing.created_at.desc())
+        .limit(limit)
+    )
+    items = result.scalars().all()
+    return [
+        {
+            "id": item.id,
+            "title": item.title,
+            "price": item.price,
+            "image_url": item.image_url,
+            "image_urls": _parse_image_urls(item.image_urls),
+            "thumbnail_url": item.thumbnail_url,
+            "category": item.category,
+            "location": item.location,
+            "status": item.status.value if hasattr(item.status, "value") else str(item.status),
+        }
+        for item in items
+    ]
+
+
+# ── Notification Cooldown ─────────────────────────────────────────────────────
+
+_BLAST_COOLDOWN_SECS = 86400  # 24 saat
+
+
+@router.get("/{listing_id}/notification-cooldown")
+async def notification_cooldown(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    last_sent = await db.scalar(
+        select(MassNotificationCampaign.created_at)
+        .where(
+            MassNotificationCampaign.listing_id == listing_id,
+            MassNotificationCampaign.user_id == current_user.id,
+        )
+        .order_by(MassNotificationCampaign.created_at.desc())
+        .limit(1)
+    )
+    if last_sent:
+        aware = last_sent.replace(tzinfo=timezone.utc) if last_sent.tzinfo is None else last_sent
+        elapsed = int((datetime.now(timezone.utc) - aware).total_seconds())
+        remaining = max(0, _BLAST_COOLDOWN_SECS - elapsed)
+        return {"seconds_remaining": remaining}
+    return {"seconds_remaining": 0}
+
+
+# ── Audience Estimate ─────────────────────────────────────────────────────────
+
+@router.get("/{listing_id}/audience-estimate")
+async def audience_estimate(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.routers.leads import (
+        _get_blast_used,
+        _PER_BLAST_CAP_PRO, _PER_BLAST_CAP_STANDARD,
+        _BLAST_LIMIT_PRO, _BLAST_LIMIT_STANDARD,
+        COST_PER_PERSON,
+    )
+
+    listing = await db.scalar(
+        select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
+    )
+    if not listing:
+        raise HTTPException(404, "İlan bulunamadı")
+
+    cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
+    limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
+    used  = await _get_blast_used(current_user.id, current_user.premium_since)
+    credits_remaining = max(0, limit - used)
+
+    # ClickHouse ile görüntüleyenleri çek, başarısız olursa listing_impressions'a düş
+    viewer_ids: list[int] = []
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        vid_result = await ch.query("""
+            SELECT DISTINCT user_id
+            FROM user_events
+            WHERE item_id = %(lid)s
+              AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
+              AND timestamp >= now() - INTERVAL 30 DAY
+              AND user_id != %(uid)s
+              AND user_id != 0
+            LIMIT 500
+        """, parameters={"lid": listing_id, "uid": current_user.id})
+        viewer_ids = [int(r[0]) for r in vid_result.result_rows]
+    except Exception as exc:
+        logging.getLogger(__name__).warning("[AudienceEstimate] ClickHouse başarısız, listing_impressions'a düşüyorum: %s", exc)
+        rows = await db.execute(
+            text("SELECT DISTINCT user_id FROM listing_impressions WHERE listing_id = :lid AND user_id != :uid LIMIT 500"),
+            {"lid": listing_id, "uid": current_user.id},
+        )
+        viewer_ids = [r[0] for r in rows.fetchall()]
+
+    reachable = 0
+    if viewer_ids:
+        token_count = await db.scalar(text("""
+            SELECT COUNT(*) FROM users
+            WHERE id = ANY(:ids)
+              AND fcm_token IS NOT NULL AND fcm_token != ''
+              AND id NOT IN (SELECT follower_id FROM follows WHERE followed_id = :me)
+        """), {"ids": viewer_ids, "me": current_user.id})
+        reachable = int(token_count or 0)
+
+    actual_cap     = min(reachable, cap)
+    free_used      = min(credits_remaining, actual_cap)
+    paid_count     = actual_cap - free_used
+    estimated_cost = paid_count * COST_PER_PERSON
+
+    return {
+        "audience_size":           reachable,
+        "blast_credits_remaining": credits_remaining,
+        "per_blast_cap":           cap,
+        "tuci_balance":            current_user.tuci_balance,
+        "estimated_cost":          estimated_cost,
+    }
+
+
+# ── Send Mass Notification ────────────────────────────────────────────────────
+
+class MassNotificationRequest(BaseModel):
+    estimated_cost: int = Field(default=0, ge=0)
+    recipient_count: int | None = Field(default=None, ge=1)
+
+
+@router.post("/{listing_id}/send-mass-notification", status_code=202)
+async def send_mass_notification(
+    listing_id: int,
+    body: MassNotificationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.routers.leads import (
+        _get_blast_used, _increment_blast,
+        _PER_BLAST_CAP_PRO, _PER_BLAST_CAP_STANDARD,
+        _BLAST_LIMIT_PRO, _BLAST_LIMIT_STANDARD,
+        COST_PER_PERSON,
+    )
+
+    # Cooldown kontrolü
+    last_sent = await db.scalar(
+        select(MassNotificationCampaign.created_at)
+        .where(
+            MassNotificationCampaign.listing_id == listing_id,
+            MassNotificationCampaign.user_id == current_user.id,
+        )
+        .order_by(MassNotificationCampaign.created_at.desc())
+        .limit(1)
+    )
+    if last_sent:
+        aware = last_sent.replace(tzinfo=timezone.utc) if last_sent.tzinfo is None else last_sent
+        elapsed = int((datetime.now(timezone.utc) - aware).total_seconds())
+        remaining = max(0, _BLAST_COOLDOWN_SECS - elapsed)
+        if remaining > 0:
+            raise HTTPException(429, detail={"code": "cooldown", "seconds_remaining": remaining})
+
+    listing = await db.scalar(
+        select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
+    )
+    if not listing:
+        raise HTTPException(404, "İlan bulunamadı")
+
+    cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
+    limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
+    used  = await _get_blast_used(current_user.id, current_user.premium_since)
+    credits_remaining = max(0, limit - used)
+
+    desired = body.recipient_count or cap
+    max_paid_authorized = body.estimated_cost // COST_PER_PERSON
+    actual_count = min(desired, credits_remaining + max_paid_authorized, cap)
+    free_used    = min(credits_remaining, actual_count)
+    paid_count   = actual_count - free_used
+    tuci_cost    = paid_count * COST_PER_PERSON
+
+    if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
+        raise HTTPException(402, f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance}, Gerekli: {tuci_cost}")
+
+    # Hedef kullanıcıları ClickHouse veya listing_impressions'dan çek
+    viewer_ids: list[int] = []
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        result = await ch.query("""
+            SELECT DISTINCT user_id
+            FROM user_events
+            WHERE item_id = %(lid)s
+              AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
+              AND timestamp >= now() - INTERVAL 30 DAY
+              AND user_id != %(uid)s
+              AND user_id != 0
+            LIMIT 500
+        """, parameters={"lid": listing_id, "uid": current_user.id})
+        viewer_ids = [int(r[0]) for r in result.result_rows]
+    except Exception as exc:
+        logging.getLogger(__name__).warning("[MassNotif] ClickHouse başarısız: %s", exc)
+        rows = await db.execute(
+            text("SELECT DISTINCT user_id FROM listing_impressions WHERE listing_id = :lid AND user_id != :uid LIMIT 500"),
+            {"lid": listing_id, "uid": current_user.id},
+        )
+        viewer_ids = [r[0] for r in rows.fetchall()]
+
+    if not viewer_ids:
+        return {"sent": 0, "spent": 0, "message": "Henüz yeterli izleyici verisi yok."}
+
+    token_rows = (await db.execute(text("""
+        SELECT fcm_token FROM users
+        WHERE id = ANY(:ids)
+          AND fcm_token IS NOT NULL AND fcm_token != ''
+          AND id NOT IN (SELECT follower_id FROM follows WHERE followed_id = :me)
+        LIMIT :cap
+    """), {"ids": viewer_ids, "me": current_user.id, "cap": actual_count})).fetchall()
+    fcm_tokens = [r[0] for r in token_rows]
+
+    if not fcm_tokens:
+        return {"sent": 0, "spent": 0, "message": "Bildirim gönderilebilecek kullanıcı bulunamadı."}
+
+    from app.services.firebase_service import send_push, InvalidFCMTokenError
+
+    async def _send_one(token: str) -> None:
+        try:
+            await send_push(
+                token=token,
+                title="Hâlâ ilgilendin mi? 👀",
+                body=f"{listing.title} — hâlâ satışta!",
+                data={"type": "new_listing", "listing_id": str(listing_id)},
+                extra_data={"url": f"/listing/{listing_id}"},
+            )
+        except InvalidFCMTokenError:
+            pass
+        except Exception as exc:
+            logging.getLogger(__name__).warning("[MassNotif] Push başarısız: %s", exc)
+
+    sent = 0
+    for i in range(0, len(fcm_tokens), 50):
+        chunk = fcm_tokens[i: i + 50]
+        await asyncio.gather(*[_send_one(t) for t in chunk])
+        sent += len(chunk)
+
+    # Kampanya kaydı
+    campaign = MassNotificationCampaign(
+        user_id=current_user.id,
+        listing_id=listing_id,
+        target_count=len(fcm_tokens),
+        sent_count=sent,
+        spent_tuci=tuci_cost,
+        spent_free_credits=free_used,
+    )
+    db.add(campaign)
+
+    if tuci_cost > 0:
+        await db.execute(
+            text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            {"cost": tuci_cost, "uid": current_user.id},
+        )
+        db.add(TuciTransaction(
+            user_id=current_user.id,
+            amount=-tuci_cost,
+            transaction_type="spend_mass_notification",
+            reference_id=listing_id,
+            reference_type="listing",
+        ))
+
+    await db.commit()
+
+    if free_used > 0:
+        await _increment_blast(current_user.id, count=free_used, premium_since=current_user.premium_since)
+
+    logging.getLogger(__name__).info(
+        "[MassNotif] Gönderildi | seller=%d | listing=%d | sent=%d | free=%d | paid=%d | cost=%d TUCi",
+        current_user.id, listing_id, sent, free_used, paid_count, tuci_cost,
+    )
+
+    return {"sent": sent, "spent": tuci_cost, "message": f"{sent} kişiye bildirim gönderildi."}
