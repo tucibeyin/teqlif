@@ -857,7 +857,7 @@ class FeedQueries:
             counts = await redis.mget(*freq_keys)
             candidates = [
                 row for row, cnt in zip(candidates, counts)
-                if cnt is None or int(cnt) < _AD_FREQ_CAP
+                if cnt is None or int(cnt) < self._AD_FREQ_CAP
             ]
             if not candidates:
                 return []
@@ -874,7 +874,7 @@ class FeedQueries:
         def _ad_score(campaign: AdCampaign, listing: Listing) -> float:
             score = float(campaign.cpc_bid)
             if user_cats and listing.category in user_cats:
-                score *= _CAT_MATCH_BOOST
+                score *= self._CAT_MATCH_BOOST
             return score
 
         scored = sorted(candidates, key=lambda t: _ad_score(t[0], t[1]), reverse=True)
@@ -994,9 +994,9 @@ class FeedQueries:
             if interests:
                 top_cats = list(interests.keys())[:3]
                 interest_items = await self._fetch_interest_items(
-                    user_id, top_cats, base_ids, len(_INTEREST_SLOTS)
+                    user_id, top_cats, base_ids, len(self._INTEREST_SLOTS)
                 )
-                result = self._inject_at_slots(result, interest_items, _INTEREST_SLOTS)
+                result = self._inject_at_slots(result, interest_items, self._INTEREST_SLOTS)
 
         # Organik + interest ilan izlenimlerini kaydet (sponsored hariç)
         if user_id:
