@@ -2261,6 +2261,7 @@ class _DirectChatScreenState extends State<DirectChatScreen>
             key: const Key('chat_input_mesaj'),
             controller: _textCtrl,
             textCapitalization: TextCapitalization.sentences,
+            keyboardType: TextInputType.multiline,
             textInputAction: TextInputAction.newline,
             maxLines: null,
             minLines: 1,
