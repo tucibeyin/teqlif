@@ -65,6 +65,10 @@ class _CallScreenState extends State<CallScreen> {
   String? _toastMessage;
   Timer? _toastTimer;
 
+  bool _isControlsExpanded = true;
+  Timer? _autoHideTimer;
+  bool _wasVideoMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -90,8 +94,39 @@ class _CallScreenState extends State<CallScreen> {
     });
   }
 
+  void _startAutoHideTimer() {
+    _autoHideTimer?.cancel();
+    _autoHideTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted && _isControlsExpanded) setState(() => _isControlsExpanded = false);
+    });
+  }
+
+  void _cancelAutoHideTimer() {
+    _autoHideTimer?.cancel();
+    _autoHideTimer = null;
+  }
+
+  void _toggleControls() {
+    setState(() => _isControlsExpanded = !_isControlsExpanded);
+    if (_isControlsExpanded) {
+      _startAutoHideTimer();
+    } else {
+      _cancelAutoHideTimer();
+    }
+  }
+
   void _onStateChange() {
     final s = CallService.instance.state.value.status;
+    final isVideoNow = CallService.instance.state.value.remoteVideoEnabled &&
+        s == CallStatus.connected;
+    if (isVideoNow && !_wasVideoMode) {
+      _wasVideoMode = true;
+      _startAutoHideTimer();
+    } else if (!isVideoNow && _wasVideoMode) {
+      _wasVideoMode = false;
+      _cancelAutoHideTimer();
+      if (!_isControlsExpanded && mounted) setState(() => _isControlsExpanded = true);
+    }
     // elapsed artık CallState'te değil — ayrı notifier'da. _onStateChange'de kullanılmaz.
     final acceptedAt = CallService.instance.state.value.acceptedAt;
     _cpLog('UI', 'CallScreen._onStateChange | status=${s.name} hasActiveCall=${CallService.instance.hasActiveCall} hasPopped=$_hasPopped');
@@ -136,6 +171,7 @@ class _CallScreenState extends State<CallScreen> {
     CallService.instance.state.removeListener(_onStateChange);
     CallService.instance.state.removeListener(_onParticipantStateChange);
     _toastTimer?.cancel();
+    _autoHideTimer?.cancel();
     // isCallScreenVisible → Navigator.pop tetikler didPop → CallRouteObserver false set eder.
     super.dispose();
   }
@@ -244,6 +280,7 @@ class _CallScreenState extends State<CallScreen> {
             ? imgUrl(cs.otherAvatar)
             : null;
         final username = cs.otherUsername ?? '';
+        final isVideoMode = cs.remoteVideoEnabled && cs.status == CallStatus.connected;
 
         return Scaffold(
           backgroundColor: Colors.black,
@@ -276,6 +313,15 @@ class _CallScreenState extends State<CallScreen> {
                   child: Container(color: Colors.black.withValues(alpha: 0.25)),
                 ),
               ],
+
+              // Tap anywhere on video to toggle controls (only in video mode)
+              if (isVideoMode)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _toggleControls,
+                  ),
+                ),
 
               SafeArea(
                 child: Stack(
@@ -473,60 +519,86 @@ class _CallScreenState extends State<CallScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (cs.status == CallStatus.connected) ...[
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    _ControlButton(
-                                      icon: cs.isMuted
-                                          ? FontAwesomeIcons.microphoneSlash
-                                          : FontAwesomeIcons.microphone,
-                                      label: cs.isMuted
-                                          ? l.callUnmute
-                                          : l.callMute,
-                                      color: AppColors.isDark(context)
-                                          ? Colors.white.withValues(alpha: 0.2)
-                                          : Colors.black.withValues(
-                                              alpha: 0.05,
-                                            ),
-                                      isLoading: _isTogglingMic,
-                                      onTap: _handleMicToggle,
+                              // Chevron — video modunda her zaman görünür
+                              if (isVideoMode)
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: _toggleControls,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: AnimatedRotation(
+                                      turns: _isControlsExpanded ? 0.5 : 0.0,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                      child: Icon(
+                                        Icons.keyboard_arrow_down,
+                                        size: 22,
+                                        color: AppColors.textSecondary(context),
+                                      ),
                                     ),
-                                    _ControlButton(
-                                      icon: cs.localVideoEnabled
-                                          ? FontAwesomeIcons.videoSlash
-                                          : FontAwesomeIcons.video,
-                                      label: cs.localVideoEnabled
-                                          ? l.callCameraOff
-                                          : l.callCameraOn,
-                                      color: cs.localVideoEnabled
-                                          ? const Color(0xFF22C55E).withValues(alpha: 0.25)
-                                          : AppColors.isDark(context)
-                                          ? Colors.white.withValues(alpha: 0.2)
-                                          : Colors.black.withValues(alpha: 0.05),
-                                      isLoading: _isTogglingCamera,
-                                      onTap: _handleCameraToggle,
-                                    ),
-                                    _ControlButton(
-                                      icon: FontAwesomeIcons.volumeHigh,
-                                      label: l.callSpeaker,
-                                      color: cs.isSpeaker
-                                          ? const Color(
-                                              0xFF22C55E,
-                                            ).withValues(alpha: 0.25)
-                                          : AppColors.isDark(context)
-                                          ? Colors.white.withValues(alpha: 0.2)
-                                          : Colors.black.withValues(
-                                              alpha: 0.05,
-                                            ),
-                                      onTap: () => CallService.instance
-                                          .setSpeaker(!cs.isSpeaker),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                                const SizedBox(height: 24),
-                              ],
+
+                              // Row 1 (mic · kamera · hoparlör) — video modunda collapse edilebilir
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                                clipBehavior: Clip.hardEdge,
+                                child: (!isVideoMode || _isControlsExpanded) &&
+                                        cs.status == CallStatus.connected
+                                    ? Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceEvenly,
+                                            children: [
+                                              _ControlButton(
+                                                icon: cs.isMuted
+                                                    ? FontAwesomeIcons.microphoneSlash
+                                                    : FontAwesomeIcons.microphone,
+                                                label: cs.isMuted
+                                                    ? l.callUnmute
+                                                    : l.callMute,
+                                                color: AppColors.isDark(context)
+                                                    ? Colors.white.withValues(alpha: 0.2)
+                                                    : Colors.black.withValues(alpha: 0.05),
+                                                isLoading: _isTogglingMic,
+                                                onTap: _handleMicToggle,
+                                              ),
+                                              _ControlButton(
+                                                icon: cs.localVideoEnabled
+                                                    ? FontAwesomeIcons.videoSlash
+                                                    : FontAwesomeIcons.video,
+                                                label: cs.localVideoEnabled
+                                                    ? l.callCameraOff
+                                                    : l.callCameraOn,
+                                                color: cs.localVideoEnabled
+                                                    ? const Color(0xFF22C55E).withValues(alpha: 0.25)
+                                                    : AppColors.isDark(context)
+                                                    ? Colors.white.withValues(alpha: 0.2)
+                                                    : Colors.black.withValues(alpha: 0.05),
+                                                isLoading: _isTogglingCamera,
+                                                onTap: _handleCameraToggle,
+                                              ),
+                                              _ControlButton(
+                                                icon: FontAwesomeIcons.volumeHigh,
+                                                label: l.callSpeaker,
+                                                color: cs.isSpeaker
+                                                    ? const Color(0xFF22C55E).withValues(alpha: 0.25)
+                                                    : AppColors.isDark(context)
+                                                    ? Colors.white.withValues(alpha: 0.2)
+                                                    : Colors.black.withValues(alpha: 0.05),
+                                                onTap: () => CallService.instance
+                                                    .setSpeaker(!cs.isSpeaker),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 24),
+                                        ],
+                                      )
+                                    : const SizedBox(width: double.infinity),
+                              ),
 
                               // End call button row
                               Row(
