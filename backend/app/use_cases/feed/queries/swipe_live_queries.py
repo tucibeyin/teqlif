@@ -82,9 +82,9 @@ class SwipeLiveQueries:
         # 3. ClickHouse sinyalleri — paralel çek
         import asyncio
         ch_engagement, listing_engagement, listing_stream_corr = await asyncio.gather(
-            _fetch_ch_stream_engagement(user_id),
-            _fetch_ch_listing_engagement(user_id),
-            _fetch_listing_stream_correlation(user_id, interests),
+            self._fetch_ch_stream_engagement(user_id),
+            self._fetch_ch_listing_engagement(user_id),
+            self._fetch_listing_stream_correlation(user_id, interests),
         )
 
         # 4. ALS collaborative filtering skorları
@@ -128,7 +128,7 @@ class SwipeLiveQueries:
         seen_categories: dict[str, int] = {}
         scored = []
         for stream in streams:
-            score = _score_stream(
+            score = self._score_stream(
                 stream, interests, ch_engagement,
                 als_scores, seen_categories,
                 chat_rate=chat_rates.get(stream.id, 0.0),
@@ -141,7 +141,7 @@ class SwipeLiveQueries:
         ranked_streams = [s for _, s in scored]
 
         # 6. listings_per_group CTR'dan hesapla
-        lpg = _compute_listings_per_group(listing_engagement)
+        lpg = self._compute_listings_per_group(listing_engagement)
 
         # 7. Tercih edilen ilan kategorileri
         #    a) Listing-stream korelasyonu (SwipeLive içi davranış)
@@ -154,7 +154,7 @@ class SwipeLiveQueries:
             ]
 
         # Serialization
-        stream_dicts = [_stream_to_dict(s) for s in ranked_streams]
+        stream_dicts = [self._stream_to_dict(s) for s in ranked_streams]
 
         return {
             "streams": stream_dicts,
@@ -360,7 +360,7 @@ class SwipeLiveQueries:
 
             if not result.result_rows:
                 # Kullanıcı verisi yoksa global korelasyona bak
-                return await _fetch_global_listing_stream_correlation(interests)
+                return await self._fetch_global_listing_stream_correlation(interests)
 
             # stream_category affinity'si ile ağırlıklandırılmış listing skoru
             listing_scores: dict[str, float] = {}
