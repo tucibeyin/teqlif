@@ -654,10 +654,35 @@ class FeedQueries:
         user = await self.uow.session.scalar(select(User).where(User.id == user_id))
 
         if user is None or user.preference_embedding is None:
-            return await self._popular_feed(0, limit, exclude_user_id=user_id)
+            # K-Means cold start: onboarding kategorilerinden başlangıç embedding
+            cold_start_vec = None
+            try:
+                from app.services.ml.kmeans_service import get_cold_start_embedding
+                interests = await self.get_user_interests(user_id)
+                if interests:
+                    cold_start_vec = get_cold_start_embedding(interests)
+            except Exception as _exc:
+                logger.debug("[ForYou] K-Means cold start atlandı: %s", _exc)
 
-        # Session-içi drift: mevcut oturum vektörüyle preference_embedding'i harmanlayın
-        pref_vec = np.array(user.preference_embedding, dtype=np.float32)
+            if cold_start_vec is None:
+                return await self._popular_feed(0, limit, exclude_user_id=user_id)
+
+            # Cold-start embedding'i DB'ye yaz (bir sonraki istekte hazır olsun)
+            try:
+                from sqlalchemy import update as _sa_update
+                await self.uow.session.execute(
+                    _sa_update(User)
+                    .where(User.id == user_id)
+                    .values(preference_embedding=cold_start_vec)
+                )
+                await self.uow.session.commit()
+            except Exception:
+                pass  # yazma başarısız olursa bu istek yine de devam eder
+
+            pref_vec = np.array(cold_start_vec, dtype=np.float32)
+        else:
+            # Session-içi drift: mevcut oturum vektörüyle preference_embedding'i harmanlayın
+            pref_vec = np.array(user.preference_embedding, dtype=np.float32)
         try:
             session_b64 = await redis.get(f"feed:session:{user_id}")
         except Exception:
