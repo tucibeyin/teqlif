@@ -18,7 +18,6 @@ class DeviceService:
                 user = await uow.users.get_by_fcm_token(event.token)
                 if user:
                     user.fcm_token = None
-                    await uow.commit()
             logger.info("[DeviceService] FCM token başarıyla temizlendi.")
         except Exception as exc:
             logger.error("[DeviceService] Token temizleme hatası: %s", exc)
