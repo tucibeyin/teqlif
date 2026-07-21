@@ -142,11 +142,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Column(
           children: [
             Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'teqlif',
@@ -262,7 +261,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ],
                   ),
-                ),
               ),
             ),
             Padding(

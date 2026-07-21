@@ -96,6 +96,7 @@ class TeqTextField extends StatelessWidget {
           autocorrect: autocorrect,
           inputFormatters: inputFormatters,
           textInputAction: textInputAction,
+          scrollPadding: const EdgeInsets.only(bottom: 80),
           onChanged: onChanged,
           validator: validator,
           readOnly: readOnly,

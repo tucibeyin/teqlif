@@ -2261,6 +2261,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
     final l = AppLocalizations.of(context)!;
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
+      scrollable: true,
       title: Text(
         l.auctionStartTitle,
         style: const TextStyle(color: Colors.white, fontSize: 16),
