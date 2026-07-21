@@ -2894,6 +2894,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
           TeqButton.text(
             text: AppLocalizations.of(context)!.btnSave,
             onPressed: _saving ? null : _save,
+            isExpanded: false,
           ),
         ],
       ),
