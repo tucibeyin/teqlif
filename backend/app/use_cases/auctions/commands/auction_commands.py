@@ -589,7 +589,7 @@ class AuctionCommands:
                 raise BadRequestException("Açık artırma aktif değil")
             raise BadRequestException("Eş zamanlı teklif: teklifiniz geçildi, lütfen tekrar deneyin")
 
-        state = await get_auction_state(stream_id)
+        state = await GetAuctionStateQuery(self.uow).execute(stream_id)
         await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[TEKLİF] KAYDEDILDI+YAYINLANDI | stream_id=%s user=%s amount=%s | ws_hedef=%s",
@@ -702,7 +702,7 @@ class AuctionCommands:
         redis_data = await redis.hgetall(key)
         item_name = redis_data.get("item_name", "")
 
-        state = await get_auction_state(stream_id)
+        state = await GetAuctionStateQuery(self.uow).execute(stream_id)
         await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         await publish_auction(stream_id, {
             "type": WS.BUY_IT_NOW_REQUESTED,
@@ -947,7 +947,7 @@ class AuctionCommands:
         if buyer_id and buyer_id != '':
             await redis.set(f"bin_cooldown:{stream_id}:{buyer_id}", "1", ex=60)
 
-        state = await get_auction_state(stream_id)
+        state = await GetAuctionStateQuery(self.uow).execute(stream_id)
         await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         await publish_auction(stream_id, {
             "type": WS.BUY_IT_NOW_REJECTED,
