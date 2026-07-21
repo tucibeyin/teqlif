@@ -29,6 +29,7 @@ import 'messages_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/listing_detail_provider.dart';
 import '../models/enums.dart';
+import '../models/mass_notif_eligibility.dart';
 import 'ad_report_screen.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
@@ -73,11 +74,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   int? _campaignId;
 
-  // Toplu Kitle Bildirimi (Mass Notification)
-  bool _massNotificationSending = false;
-  bool _cooldownLoading = false;
-  int _cooldownSeconds = 0;
-  Timer? _cooldownTimer;
+  // Toplu Kitle Bildirimi — cooldown ve sending state'i ListingDetailNotifier'da yönetilir.
 
   // Scroll depth tracking
   late final ScrollController _scrollCtrl;
@@ -206,7 +203,6 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         _refreshCampaignStatus(token);
         final listingId = widget.listing['id'] as int?;
         if (listingId != null) {
-          setState(() => _cooldownLoading = true);
           _loadNotificationCooldown(listingId);
         }
       }
@@ -215,29 +211,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
   Future<void> _loadNotificationCooldown(int listingId) async {
     final secs = await AnalyticsService.getNotificationCooldown(listingId);
-    if (!mounted || !context.mounted) return;
-    setState(() {
-      _cooldownLoading = false;
-      _cooldownSeconds = secs > 0 ? secs : 0;
-    });
-    if (secs > 0) _startCooldownTimer();
-  }
-
-  void _startCooldownTimer() {
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || !context.mounted) {
-        _cooldownTimer?.cancel();
-        return;
-      }
-      setState(() {
-        if (_cooldownSeconds > 0) {
-          _cooldownSeconds--;
-        } else {
-          _cooldownTimer?.cancel();
-        }
-      });
-    });
+    if (!mounted) return;
+    ref.read(listingDetailProvider(listingId).notifier).startCooldown(secs);
   }
 
   String _formatCooldown(int totalSeconds) {
@@ -592,7 +567,6 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     }
     _heartAnimCtrl?.stop();
     _heartAnimCtrl?.dispose();
-    _cooldownTimer?.cancel();
     _chewieCtrl?.dispose();
     _videoCtrl?.dispose();
     _pageCtrl.dispose();
@@ -827,17 +801,16 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
   }
 
   Future<void> _sendMassNotification(BuildContext context) async {
-    setState(() => _massNotificationSending = true);
     final listingId = widget.listing['id'] as int;
+    final notifier = ref.read(listingDetailProvider(listingId).notifier);
+    notifier.setSending(true);
 
     // Hedef kitle büyüklüğünü çek
     final est = await AnalyticsService.estimateAudienceForListing(listingId);
     if (est == null || !mounted || !context.mounted) {
-      setState(() => _massNotificationSending = false);
+      notifier.setSending(false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.audienceCalcError),
-        ),
+        SnackBar(content: Text(AppLocalizations.of(context)!.audienceCalcError)),
       );
       return;
     }
@@ -845,11 +818,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final maxAudience = est['audience_size'] as int? ?? 0;
     if (maxAudience == 0) {
       if (!mounted || !context.mounted) return;
-      setState(() => _massNotificationSending = false);
+      notifier.setSending(false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.audienceNoPotentialFound),
-        ),
+        SnackBar(content: Text(AppLocalizations.of(context)!.audienceNoPotentialFound)),
       );
       return;
     }
@@ -857,7 +828,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     final creditsLeft = est['blast_credits_remaining'] as int? ?? 0;
     final perBlastCap = est['per_blast_cap'] as int? ?? maxAudience;
     final tuciBalance = est['tuci_balance'] as int? ?? 0;
-    setState(() => _massNotificationSending = false);
+    notifier.setSending(false);
 
     // Onay penceresi (Akıllı Modal)
     final result = await showDialog<Map<String, int>>(
@@ -872,28 +843,27 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
 
     if (result == null || !mounted || !context.mounted) return;
 
-    setState(() => _massNotificationSending = true);
+    notifier.setSending(true);
     final apiResult = await AnalyticsService.sendMassNotificationForListing(
       listingId: listingId,
       estimatedCost: result['cost']!,
       recipientCount: result['count']!,
     );
     if (!mounted || !context.mounted) return;
-    setState(() => _massNotificationSending = false);
 
     if (apiResult != null && apiResult['cooldown'] == true) {
       final secs = (apiResult['seconds_remaining'] as num?)?.toInt() ?? 86400;
-      setState(() => _cooldownSeconds = secs);
-      _startCooldownTimer();
+      notifier.startCooldown(secs);
       TeqSnackBar.show(context, message: _formatCooldown(secs), type: TeqSnackBarType.warning);
     } else if (apiResult != null && apiResult.containsKey('error')) {
+      notifier.setSending(false);
       TeqSnackBar.show(context, message: apiResult['error'] as String, type: TeqSnackBarType.error);
     } else if (apiResult != null) {
       CacheService.clearData('user_wallet_data');
-      setState(() => _cooldownSeconds = 86400);
-      _startCooldownTimer();
+      notifier.startCooldown(86400);
       TeqSnackBar.show(context, message: AppLocalizations.of(context)!.audienceMassSendSuccess, type: TeqSnackBarType.success);
     } else {
+      notifier.setSending(false);
       TeqSnackBar.show(context, message: AppLocalizations.of(context)!.audienceMassSendError, type: TeqSnackBarType.error);
     }
   }
@@ -1955,41 +1925,71 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                           return Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Blast butonu — aktif ilan: enabled, pasif ilan: disabled + sebep
-                              if (_isActive || _isPassive) ...[
-                                TeqButton(
-                                  onPressed: !_isActive
-                                      ? null
-                                      : (_massNotificationSending || _cooldownLoading)
-                                          ? null
-                                          : _cooldownSeconds > 0
-                                              ? () => _openMassNotificationReport(context)
-                                              : () => _sendMassNotification(context),
-                                  text: _cooldownSeconds > 0 && _isActive
-                                      ? l.btnViewNotificationReport
-                                      : '📢 ${l.btnSendMassNotification}',
-                                  type: TeqButtonType.primary,
-                                  size: TeqButtonSize.large,
-                                  customColor: const Color(0xFF14B8A6),
-                                  isLoading: _massNotificationSending || _cooldownLoading,
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 5),
-                                  child: Text(
-                                    _isPassive
-                                        ? l.massNotifUnavailableListingNotActive
-                                        : _cooldownSeconds > 0
-                                            ? _formatCooldown(_cooldownSeconds)
-                                            : '',
-                                    style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 11,
+                              // Blast butonu — massNotifEligibility ile type-safe exhaustive switch
+                              Builder(builder: (blastCtx) {
+                                final blastId = widget.listing['id'] as int? ?? 0;
+                                final eligibility = ref.watch(listingDetailProvider(blastId)).massNotifEligibility;
+                                final isSending = ref.watch(listingDetailProvider(blastId)).isMassNotifSending;
+                                return switch (eligibility) {
+                                  MassNotifAvailable() => Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        TeqButton(
+                                          onPressed: isSending ? null : () => _sendMassNotification(blastCtx),
+                                          text: '📢 ${l.btnSendMassNotification}',
+                                          type: TeqButtonType.primary,
+                                          size: TeqButtonSize.large,
+                                          customColor: const Color(0xFF14B8A6),
+                                          isLoading: isSending,
+                                        ),
+                                        const SizedBox(height: 8),
+                                      ],
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                              ],
+                                  MassNotifCooldownActive(:final secondsRemaining) => Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        TeqButton(
+                                          onPressed: isSending ? null : () => _openMassNotificationReport(blastCtx),
+                                          text: l.btnViewNotificationReport,
+                                          type: TeqButtonType.primary,
+                                          size: TeqButtonSize.large,
+                                          customColor: const Color(0xFF14B8A6),
+                                          isLoading: isSending,
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 5),
+                                          child: Text(
+                                            _formatCooldown(secondsRemaining),
+                                            style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                      ],
+                                    ),
+                                  MassNotifUnavailable() => Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        TeqButton(
+                                          onPressed: null,
+                                          text: '📢 ${l.btnSendMassNotification}',
+                                          type: TeqButtonType.primary,
+                                          size: TeqButtonSize.large,
+                                          customColor: const Color(0xFF14B8A6),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 5),
+                                          child: Text(
+                                            l.massNotifUnavailableListingNotActive,
+                                            style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                      ],
+                                    ),
+                                };
+                              }),
                               // Reklam butonu: performans raporu her zaman, başlat yalnızca aktif ilan için
                               if (_campaignId != null)
                                 TeqButton(
