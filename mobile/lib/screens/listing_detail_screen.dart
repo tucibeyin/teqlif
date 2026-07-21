@@ -120,11 +120,15 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       _images.add(imgUrl(widget.listing['image_url'] as String));
     }
 
-    // Provider'ı mevcut JSON verisiyle başlat — sync çağrı zorunlu,
-    // Future.microtask ile çağrılırsa ilk build default (active) state ile render edilir.
+    // StateNotifier build döngüsü içinde state değişikliğine izin vermez.
+    // isInitialized=false default'u first-frame flash'ı zaten önler; microtask güvenli.
     final listingId = widget.listing['id'] as int?;
     if (listingId != null) {
-      ref.read(listingDetailProvider(listingId).notifier).initFromData(widget.listing);
+      Future.microtask(() {
+        if (mounted) {
+          ref.read(listingDetailProvider(listingId).notifier).initFromData(widget.listing);
+        }
+      });
     }
 
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
@@ -1914,7 +1918,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         ),
       ),
       bottomNavigationBar: isMine
-          ? (_isListingInitialized && !_isActive && !_isPassive && _campaignId == null)
+          ? (!_isListingInitialized || (!_isActive && !_isPassive && _campaignId == null))
                 ? const SizedBox.shrink()
                 : SafeArea(
                     child: Padding(
