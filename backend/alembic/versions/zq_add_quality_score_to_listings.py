@@ -8,7 +8,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "zq_add_quality_score"
-down_revision = "zp_create_call_participants"
+down_revision = "000000000000"
 branch_labels = None
 depends_on = None
 
