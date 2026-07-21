@@ -580,7 +580,8 @@ async def get_raid_targets(
     """
     import math
     from app.core.hype_manager import hype_manager
-    from app.services.feed_service import get_user_interests
+    from app.use_cases.feed.queries.feed_queries import FeedQueries
+    from app.core.uow import SqlAlchemyUnitOfWork
     from app.utils.redis_client import get_redis
 
     result = await db.execute(
@@ -593,7 +594,9 @@ async def get_raid_targets(
         return []
 
     # Kullanıcı kategori ilgi skorları (kişiselleştirme)
-    interests: dict[str, float] = await get_user_interests(current_user.id, db)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    interests: dict[str, float] = await FeedQueries(uow).get_user_interests(current_user.id)
 
     # Redis'ten anlık izleyici sayılarını çek
     redis = await get_redis()
