@@ -640,7 +640,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
   }
 
   String _localizeTitle(String? type, String title, AppLocalizations l) {
-    final username = RegExp(r'^@(\w+)').firstMatch(title)?.group(1) ?? '';
+    final username = RegExp(r'@(\w+)').firstMatch(title)?.group(1) ?? '';
     return switch (type) {
       'message' => username.isNotEmpty ? l.notifMessage(username) : title,
       'follow' => username.isNotEmpty ? l.notifFollow(username) : title,
@@ -668,6 +668,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       'auction_ended' => l.notifAuctionEnded,
       'auction_cancelled' => l.notifAuctionCancelled,
       'referral' => l.notifReferralTitle,
+      'churn_airdrop' => l.notifChurnAirdropBuyer,
       'churn_airdrop_buyer' => l.notifChurnAirdropBuyer,
       'churn_airdrop_seller' => l.notifChurnAirdropSeller,
       _ => title,
@@ -750,9 +751,13 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         return body;
       case 'call_missed':
         return l.notifCallMissedBody;
+      case 'churn_airdrop':
       case 'churn_airdrop_buyer':
+        final amountB = int.tryParse(RegExp(r'\d+').firstMatch(body)?.group(0) ?? '');
+        return amountB != null ? l.notifChurnBodyBuyer(amountB) : body;
       case 'churn_airdrop_seller':
-        return body;
+        final amountS = int.tryParse(RegExp(r'\d+').firstMatch(body)?.group(0) ?? '');
+        return amountS != null ? l.notifChurnBodySeller(amountS) : body;
       default:
         return body;
     }
@@ -857,6 +862,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       case 'listing_deactivated':
       case 'auction_won':
       case 'price_drop_alert':
+      case 'churn_airdrop':
       case 'churn_airdrop_buyer':
       case 'churn_airdrop_seller':
         if (relatedId != null) {
