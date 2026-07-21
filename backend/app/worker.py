@@ -1116,6 +1116,26 @@ async def generate_listing_embedding_task(ctx: dict, listing_id: int) -> None:
 
 # ── Task: Embedding Backfill ─────────────────────────────────────────────────
 
+async def train_item2vec_task(ctx: dict) -> None:
+    """
+    Her Pazar 04:00'da çalışır.
+    Son 90 günlük kullanıcı oturumlarından Item2Vec modeli eğitir.
+    Eğitim bitti → top-20 benzerlik Redis'e yazılır (TTL 7 gün).
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services.ml.item2vec_service import train_item2vec
+
+        async with AsyncSessionLocal() as db:
+            n = await train_item2vec(db)
+
+        logger.info("[Worker] train_item2vec tamamlandı | oturum=%d", n)
+    except Exception as exc:
+        logger.error("[Worker] train_item2vec başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 async def compute_listing_quality_score_task(ctx: dict, listing_id: int) -> None:
     """
     İlan oluşturulduğunda/güncellendiğinde anında rule-based quality_score atar.
@@ -3046,6 +3066,7 @@ class WorkerSettings:
         train_feed_als_task,
         sync_swipelive_interests_task,
         backfill_listing_embeddings_task,
+        train_item2vec_task,
         compute_listing_quality_score_task,
         backfill_listing_quality_scores_task,
         train_listing_quality_model_task,
@@ -3136,6 +3157,8 @@ class WorkerSettings:
         cron(backfill_listing_quality_scores_task, minute=45),
         # Her Pazar 02:30 — listing kalite modeli haftalık eğitim
         cron(train_listing_quality_model_task, weekday=6, hour=2, minute=30),
+        # Her Pazar 04:00 — Item2Vec oturum tabanlı collaborative model
+        cron(train_item2vec_task, weekday=6, hour=4, minute=0),
         # Her 2 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
         # Her gün 06:00 — bid_hesitation → fiyat düşüş retarget bildirimi

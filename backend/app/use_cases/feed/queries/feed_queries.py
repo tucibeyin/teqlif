@@ -668,6 +668,52 @@ class FeedQueries:
             budget_clause = "AND (l.price IS NULL OR l.price <= :price_ceiling)"
             params["price_ceiling"] = user.max_budget * 1.2
 
+        # Item2Vec benzer ilanlar — kullanıcının son görüntülemelerinden
+        item2vec_pool_sql = ""
+        try:
+            from app.services.ml.item2vec_service import get_similar_from_redis
+            recent_rows = await self.uow.session.execute(
+                text("""
+                    SELECT item_id FROM analytics_events
+                    WHERE user_id = :uid
+                      AND event_type IN ('listing_view', 'detail_dwell')
+                      AND item_id IS NOT NULL
+                      AND created_at > NOW() - INTERVAL '7 days'
+                    GROUP BY item_id
+                    ORDER BY MAX(created_at) DESC
+                    LIMIT 5
+                """),
+                {"uid": user_id},
+            )
+            recent_viewed = [r[0] for r in recent_rows]
+            excl_set = set(excluded_ids)
+            i2v_ids: list[int] = []
+            seen_i2v: set[int] = set()
+            for lid in recent_viewed:
+                for sid in await get_similar_from_redis(lid):
+                    if sid not in seen_i2v and sid not in excl_set:
+                        i2v_ids.append(sid)
+                        seen_i2v.add(sid)
+                    if len(i2v_ids) >= 40:
+                        break
+                if len(i2v_ids) >= 40:
+                    break
+            if i2v_ids:
+                # ANY(ARRAY[...]) — IN yerine sabit değer listesi olarak gömülür
+                i2v_id_list = ",".join(str(i) for i in i2v_ids)
+                item2vec_pool_sql = f"""
+                    UNION ALL
+                    SELECT l.id, 0.35 AS sim_score
+                    FROM listings l
+                    WHERE l.id IN ({i2v_id_list})
+                      AND l.status = 'active'
+                      AND l.status != 'deleted'
+                      AND l.user_id != :uid
+                      {ni_filter}
+                """
+        except Exception as exc:
+            logger.debug("[ForYou] Item2Vec pool atlandı: %s", exc)
+
         # SQL: candidate pool + temel skorlama — diversity için limit*3 aday çek
         diverse_lim = limit * 3
         params["diverse_lim"] = diverse_lim
@@ -704,6 +750,7 @@ class FeedQueries:
                         SELECT id, sim_score FROM pgvec_pool
                         UNION ALL
                         SELECT id, sim_score FROM social_pool
+                        {item2vec_pool_sql}
                     ) combined
                     GROUP BY id
                 ),
