@@ -514,7 +514,7 @@ class FeedQueries:
 
     # ── For-You Feed (pgvector cosine distance) ──────────────────────────────────
 
-    FORYOU_CACHE_TTL = 3600   # 1 saat — badge tutarlılığı için mobile cache'den uzun
+    FORYOU_CACHE_TTL = 900    # 15 dakika — yeni etkileşimler daha hızlı yansısın
     FORYOU_POOL_SIZE = 100    # Önceden hesaplanan ID havuzu
 
 
@@ -757,6 +757,13 @@ class FeedQueries:
             logger.warning("[ForYou] ALS skorları alınamadı, atlanıyor: %s", exc)
             als_scores = {}
 
+        # Velocity trending boost — Redis'ten 30dk'lık sinyali çek
+        try:
+            trending_raw = await redis.smembers("trending:listings:velocity")
+            trending_velocity_ids: set[int] = {int(x) for x in trending_raw} if trending_raw else set()
+        except Exception:
+            trending_velocity_ids = set()
+
         if als_scores:
             sql_vals = list(sql_scores.values())
             sql_min, sql_max = min(sql_vals), max(sql_vals)
@@ -769,11 +776,18 @@ class FeedQueries:
             norm_als = {k: (v - als_min) / als_range for k, v in als_scores.items()}
 
             final_scores = {
-                lid: norm_sql.get(lid, 0.0) * 0.80 + norm_als.get(lid, 0.0) * 0.20
+                lid: (
+                    norm_sql.get(lid, 0.0) * 0.80
+                    + norm_als.get(lid, 0.0) * 0.20
+                    + (0.10 if lid in trending_velocity_ids else 0.0)
+                )
                 for lid in candidate_ids
             }
         else:
-            final_scores = sql_scores
+            final_scores = {
+                lid: sql_scores.get(lid, 0.0) + (0.10 if lid in trending_velocity_ids else 0.0)
+                for lid in candidate_ids
+            }
 
         # Greedy kategori çeşitliliği: her kategoriden max 4 ilan
         MAX_PER_CAT = 4
@@ -957,9 +971,10 @@ class FeedQueries:
     _INTEREST_SLOTS   = [5, 10, 15]   # ilgi enjeksiyonu pozisyonları (0-indexed, insert)
 
 
-    async def get_mixed_recent_feed(self, 
+    async def get_mixed_recent_feed(self,
         user_id: Optional[int],
         page: int,
+        exclude_ids: list[int] | None = None,
     ) -> list[dict]:
         """
         'Son İlanlar' karışık feed.
@@ -976,6 +991,11 @@ class FeedQueries:
             params["uid"] = user_id
             uid_clause = "AND l.user_id != :uid"
 
+        # for-you bölümünde zaten görünen ilanları tekrar gösterme
+        excl_clause = ""
+        if exclude_ids:
+            excl_clause = f"AND l.id NOT IN ({','.join(str(i) for i in exclude_ids)})"
+
         base_result = await self.uow.session.execute(
             text(f"""
                 SELECT l.id
@@ -983,6 +1003,7 @@ class FeedQueries:
                 WHERE l.status = 'active'
                   AND l.status != 'deleted'
                   {uid_clause}
+                  {excl_clause}
                 ORDER BY l.created_at DESC
                 LIMIT :lim OFFSET :off
             """),
@@ -1064,7 +1085,7 @@ class FeedQueries:
                   AND l.user_id != :uid
                   AND l.category = ANY(:cats)
                   {excl}
-                ORDER BY RANDOM()
+                ORDER BY l.created_at DESC
                 LIMIT :lim
             """),
             {"uid": user_id, "cats": categories, "lim": count},

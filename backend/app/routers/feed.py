@@ -85,15 +85,23 @@ async def mark_not_interested(
 @router.get("/recent")
 async def get_recent_mixed_feed(
     page: int = Query(default=0, ge=0, le=50),
+    exclude_ids: str = Query(default=""),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User | None = Depends(get_current_user_optional),
 ):
     """
     Son ilanlar + ilgi enjeksiyonu (pos 5,10,15) + sponsored (page 0, pos 2,7,12).
     Misafirler: sadece son ilanlar, enjeksiyon yok.
+    exclude_ids: virgülle ayrılmış ilan ID'leri (for-you bölümünde gösterilenleri tekrar gösterme).
     """
     user_id = current_user.id if current_user else None
-    return await FeedQueries(uow).get_mixed_recent_feed(user_id, page)
+    parsed_exclude = []
+    if exclude_ids:
+        try:
+            parsed_exclude = [int(x) for x in exclude_ids.split(",") if x.strip().isdigit()]
+        except (ValueError, AttributeError):
+            parsed_exclude = []
+    return await FeedQueries(uow).get_mixed_recent_feed(user_id, page, exclude_ids=parsed_exclude or None)
 
 
 @router.get("/for-you")

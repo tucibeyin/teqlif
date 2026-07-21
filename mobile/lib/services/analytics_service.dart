@@ -366,6 +366,37 @@ class AnalyticsService {
     } catch (_) {}
   }
 
+  /// Keşfet bölümü yüklendiğinde görünen ilanları toplu impression olarak loglar.
+  /// Fire-and-forget; ağ hatası sessizce görmezden gelinir.
+  static Future<void> logListingImpressions({
+    required List<int> listingIds,
+    required String section,
+  }) async {
+    if (listingIds.isEmpty) return;
+    try {
+      final myUserId = await StorageService.getCurrentUserId();
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final events = listingIds.map((id) => {
+        'item_id': id,
+        'item_type': 'listing',
+        'interaction_type': 'listing_impression',
+        'metadata': {'section': section},
+        if (myUserId != null) 'user_id': myUserId,
+      }).toList();
+      for (final body in events) {
+        http
+            .post(Uri.parse('$kBaseUrl/analytics/interaction'),
+                headers: headers, body: jsonEncode(body))
+            .catchError((_) => http.Response('', 500));
+      }
+    } catch (_) {}
+  }
+
   /// Arama sorgusu → `/api/analytics/track-search`. Fire-and-forget.
   static Future<void> trackSearch({
     required String query,

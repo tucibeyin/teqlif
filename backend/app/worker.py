@@ -596,7 +596,8 @@ async def compute_user_interests_task(ctx: dict) -> None:
                           'listing_offer_submit', 'listing_share',
                           'listing_favorite', 'listing_unfavorite',
                           'listing_chat_open', 'listing_like',
-                          'detail_dwell', 'listing_photo_fullscreen'
+                          'detail_dwell', 'listing_photo_fullscreen',
+                          'listing_impression'
                       )
                       AND event_metadata->>'category' IS NOT NULL
                 ),
@@ -619,6 +620,7 @@ async def compute_user_interests_task(ctx: dict) -> None:
                             WHEN event_type = 'detail_dwell'           THEN 2.5
                             WHEN event_type = 'listing_view' AND dwell_sec >= 10 THEN 2.0
                             WHEN event_type = 'listing_view'           THEN 1.0
+                            WHEN event_type = 'listing_impression'     THEN 0.3
                             ELSE 0.0
                         END) AS raw_score
                     FROM time_weight
@@ -803,6 +805,89 @@ async def compute_user_interests_task(ctx: dict) -> None:
         )
         capture_exception(exc)
         raise
+
+
+# ── Task: Trend İlanları Velocity (30 dk) ────────────────────────────────────
+
+async def compute_trending_listings_task(ctx: dict) -> None:
+    """
+    Her 30 dakikada çalışır.
+    Son 2 saatteki etkileşim (like + analytics impression/view) sayısını
+    önceki 2 saatle karşılaştırır. Velocity oranı yüksek ilanları
+    'trending:listings:velocity' Redis set'ine yazar; TTL: 30 dk.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.utils.redis_client import get_redis
+        from sqlalchemy import text as sql_text
+        import math
+
+        async with AsyncSessionLocal() as db:
+            rows = await db.execute(sql_text("""
+                WITH
+                    recent AS (
+                        SELECT ae.item_id                                        AS listing_id,
+                               COUNT(*)                                           AS cnt
+                        FROM analytics_events ae
+                        WHERE ae.item_type  = 'listing'
+                          AND ae.event_type IN ('listing_view', 'listing_like',
+                                                'listing_impression', 'detail_dwell')
+                          AND ae.created_at >= NOW() - INTERVAL '2 hours'
+                        GROUP BY ae.item_id
+                    ),
+                    prev AS (
+                        SELECT ae.item_id                                        AS listing_id,
+                               COUNT(*)                                           AS cnt
+                        FROM analytics_events ae
+                        WHERE ae.item_type  = 'listing'
+                          AND ae.event_type IN ('listing_view', 'listing_like',
+                                                'listing_impression', 'detail_dwell')
+                          AND ae.created_at >= NOW() - INTERVAL '4 hours'
+                          AND ae.created_at <  NOW() - INTERVAL '2 hours'
+                        GROUP BY ae.item_id
+                    ),
+                    like_recent AS (
+                        SELECT listing_id, COUNT(*) AS cnt
+                        FROM listing_likes
+                        WHERE created_at >= NOW() - INTERVAL '2 hours'
+                        GROUP BY listing_id
+                    ),
+                    like_prev AS (
+                        SELECT listing_id, COUNT(*) AS cnt
+                        FROM listing_likes
+                        WHERE created_at >= NOW() - INTERVAL '4 hours'
+                          AND created_at < NOW()  - INTERVAL '2 hours'
+                        GROUP BY listing_id
+                    )
+                SELECT r.listing_id
+                FROM recent r
+                INNER JOIN listings l ON l.id = r.listing_id AND l.status = 'active'
+                LEFT JOIN prev p ON p.listing_id = r.listing_id
+                LEFT JOIN like_recent lr ON lr.listing_id = r.listing_id
+                LEFT JOIN like_prev lp ON lp.listing_id = r.listing_id
+                WHERE r.cnt >= 3
+                  AND (
+                      p.listing_id IS NULL
+                      OR (r.cnt + COALESCE(lr.cnt, 0)) > (p.cnt + COALESCE(lp.cnt, 0)) * 2.0
+                  )
+                ORDER BY (r.cnt + COALESCE(lr.cnt, 0) * 2) DESC
+                LIMIT 50
+            """))
+            trending_ids = [row[0] for row in rows.fetchall()]
+
+        redis = await get_redis()
+        pipe = redis.pipeline()
+        pipe.delete("trending:listings:velocity")
+        if trending_ids:
+            pipe.sadd("trending:listings:velocity", *trending_ids)
+        pipe.expire("trending:listings:velocity", 1800)  # 30 dakika
+        await pipe.execute()
+
+        logger.info(
+            "[Worker] compute_trending_listings: %d trending ilan bulundu", len(trending_ids)
+        )
+    except Exception as exc:
+        logger.warning("[Worker] compute_trending_listings başarısız: %s", exc)
 
 
 # ── Task: Kullanıcı Tercih Embedding'i Güncelle ──────────────────────────────
@@ -2896,6 +2981,8 @@ class WorkerSettings:
         cron(compute_seller_badges_task, hour=1, minute=30),
         # Her 6 saatte — trend kategorileri hesapla (Redis cache)
         cron(compute_trending_categories_task, hour={0, 6, 12, 18}, minute=0),
+        # Her 30 dakikada — velocity tabanlı trend ilanları (Redis cache, TTL:30dk)
+        cron(compute_trending_listings_task, minute={0, 30}),
         # Her gece 03:15 — SwipeLive ALS collaborative filtering modeli eğit
         cron(train_swipe_live_als_task, hour=3, minute=15),
         # Her gece 03:45 — İlan feed ALS collaborative filtering modeli eğit

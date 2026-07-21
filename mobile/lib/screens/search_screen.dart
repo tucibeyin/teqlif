@@ -67,6 +67,8 @@ class SearchScreenState extends State<SearchScreen> {
   int _recentPage = 0;
   bool _recentExhausted = false;
   bool _recentLoadingMore = false;
+  // for-you bölümünde gösterilen ilan ID'leri — recent feed'de tekrar gösterme
+  final Set<int> _forYouIds = {};
   final ScrollController _scrollCtrl = ScrollController();
   final ScrollController _forYouScrollCtrl = ScrollController();
   StreamSubscription<List<StreamOut>>? _streamsSub;
@@ -201,6 +203,51 @@ class SearchScreenState extends State<SearchScreen> {
     _debounce = Timer(const Duration(milliseconds: 500), () => _search(q));
   }
 
+  Future<void> _markNotInterested(int listingId, String section) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/feed/not-interested/$listingId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 204 && mounted) {
+        setState(() {
+          if (section == 'for_you') {
+            _exploreListings.removeWhere((e) => (e as Map)['id'] == listingId);
+            _forYouIds.remove(listingId);
+          } else {
+            _recentListings.removeWhere((e) => (e as Map)['id'] == listingId);
+          }
+        });
+        final l = AppLocalizations.of(context)!;
+        TeqSnackBar.show(context, message: l.notInterestedConfirmed, type: TeqSnackBarType.info);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _showNotInterestedMenu(int listingId, String section) async {
+    final l = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.thumb_down_alt_outlined),
+              title: Text(l.notInterested),
+              onTap: () {
+                Navigator.pop(context);
+                _markNotInterested(listingId, section);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// SWR paralel yükleme: yayınlar + kişisel feed + son ilanlar aynı anda başlar.
   /// Her akış Hive'dan anında veri yayarsa _exploreLoading hemen kapanır.
   /// [bypassCache]: pull-to-refresh senaryosunda cache READ atlanır.
@@ -299,13 +346,27 @@ class SearchScreenState extends State<SearchScreen> {
       fromJson: (raw) => raw as List,
     ).listen((data) {
       if (!mounted) return;
+      final ids = data
+          .whereType<Map<String, dynamic>>()
+          .map((e) => e['id'])
+          .whereType<int>()
+          .toSet();
       setState(() {
         _exploreListings = data;
+        _forYouIds
+          ..clear()
+          ..addAll(ids);
         if (loggedIn) {
           _forYouPage = 1;
           _forYouExhausted = data.length < 20;
         }
       });
+      if (loggedIn && ids.isNotEmpty) {
+        AnalyticsService.logListingImpressions(
+          listingIds: ids.take(10).toList(),
+          section: 'for_you',
+        );
+      }
       onData();
     }, onError: (_) {
       if (mounted) setState(() => _exploreNetworkError = true);
@@ -330,6 +391,18 @@ class SearchScreenState extends State<SearchScreen> {
           _recentPage = 1;
           _recentExhausted = recent.length < 20;
         });
+        final recentIds = recent
+            .whereType<Map<String, dynamic>>()
+            .map((e) => e['id'])
+            .whereType<int>()
+            .take(10)
+            .toList();
+        if (recentIds.isNotEmpty) {
+          AnalyticsService.logListingImpressions(
+            listingIds: recentIds,
+            section: 'recent',
+          );
+        }
       }
       onData();
     }, onError: (_) {
@@ -344,8 +417,11 @@ class SearchScreenState extends State<SearchScreen> {
     try {
       final token = await StorageService.getToken();
       final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
+      final excludeParam = _forYouIds.isNotEmpty
+          ? '&exclude_ids=${_forYouIds.join(',')}'
+          : '';
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/feed/recent?page=$_recentPage'),
+        Uri.parse('$kBaseUrl/feed/recent?page=$_recentPage$excludeParam'),
         headers: headers,
       );
       if (!mounted) return;
@@ -1039,6 +1115,12 @@ class SearchScreenState extends State<SearchScreen> {
                               _exploreListings[i] as Map<String, dynamic>;
                           return _HorizontalListingCard(
                             listing: listing,
+                            onLongPress: () {
+                              final id = listing['id'] as int?;
+                              if (id != null && _isLoggedIn) {
+                                _showNotInterestedMenu(id, 'for_you');
+                              }
+                            },
                             onTap: () {
                               final id = listing['id'] as int?;
                               final ownerId =
@@ -1119,6 +1201,12 @@ class SearchScreenState extends State<SearchScreen> {
                   final listing = _recentListings[i] as Map<String, dynamic>;
                   return _ListingTile(
                     listing: listing,
+                    onLongPress: () {
+                      final id = listing['id'] as int?;
+                      if (id != null && _isLoggedIn) {
+                        _showNotInterestedMenu(id, 'recent');
+                      }
+                    },
                     onTap: () => Navigator.push(
                       ctx,
                       MaterialPageRoute(
@@ -1346,8 +1434,9 @@ class _StreamCard extends StatelessWidget {
 class _HorizontalListingCard extends StatefulWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
-  const _HorizontalListingCard({required this.listing, required this.onTap});
+  const _HorizontalListingCard({required this.listing, required this.onTap, this.onLongPress});
 
   @override
   State<_HorizontalListingCard> createState() => _HorizontalListingCardState();
@@ -1418,6 +1507,7 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
     final price = _fmt(widget.listing['price']);
 
     return GestureDetector(
+      onLongPress: widget.onLongPress,
       onTap: () {
         final lid = widget.listing['id'];
         if (lid != null) {
@@ -1606,8 +1696,9 @@ class _HorizontalListingCardState extends State<_HorizontalListingCard>
 class _ListingTile extends StatelessWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
-  const _ListingTile({required this.listing, required this.onTap});
+  const _ListingTile({required this.listing, required this.onTap, this.onLongPress});
 
   String _fmt(dynamic price) {
     if (price == null) return '';
@@ -1632,6 +1723,7 @@ class _ListingTile extends StatelessWidget {
     return RepaintBoundary(
       child: GestureDetector(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Stack(
           fit: StackFit.expand,
           children: [

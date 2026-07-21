@@ -395,19 +395,31 @@ async def get_suggested_streamers(
     """
     from sqlalchemy import text as sa_text
 
-    # Kullanıcının top-3 ilgi kategorisini çek
+    # Kullanıcının top-3 ilgi kategorisini skor ile birlikte çek
     interest_result = await db.execute(
         sa_text("""
-            SELECT category FROM user_interests
+            SELECT category, score FROM user_interests
             WHERE user_id = :uid
             ORDER BY score DESC
             LIMIT 3
         """),
         {"uid": current_user.id},
     )
-    top_cats = [r[0] for r in interest_result.fetchall()]
-    # PostgreSQL ANY() için array literal
-    cats_literal = "ARRAY[" + ",".join(f"'{c}'" for c in top_cats) + "]" if top_cats else "ARRAY[]::text[]"
+    interest_rows = interest_result.fetchall()
+    top_cat_scores = [(r[0], float(r[1])) for r in interest_rows]
+
+    # Normalize: en yüksek skoru 1.0'a çek, diğerleri oransal
+    max_score = max((s for _, s in top_cat_scores), default=1.0) or 1.0
+
+    # Kategori affinitesini 0.0–1.0 aralığına normalize eden CASE ifadesi
+    if top_cat_scores:
+        cat_affinity_cases = " ".join(
+            f"WHEN category = '{cat}' THEN {score / max_score:.4f}"
+            for cat, score in top_cat_scores
+        )
+        cat_affinity_expr = f"CASE {cat_affinity_cases} ELSE 0.0 END"
+    else:
+        cat_affinity_expr = "0.0"
 
     base_query = f"""
         WITH streamer_stats AS (
@@ -423,8 +435,8 @@ async def get_suggested_streamers(
                 COALESCE(fol.follower_count, 0)                 AS follower_count,
                 -- Şu an canlı mı? (ended_at IS NULL = aktif yayın)
                 COALESCE(live_now.is_live, FALSE)               AS is_live,
-                -- Kullanıcının ilgi kategorileriyle eşleşme
-                COALESCE(cat_match.has_match, FALSE)            AS category_match
+                -- Kullanıcının ilgi kategorileriyle normalize edilmiş affinity skoru (0.0–1.0)
+                COALESCE(cat_match.cat_affinity_score, 0.0)     AS cat_affinity_score
             FROM users u
             INNER JOIN live_streams ls ON ls.host_id = u.id
                 AND ls.started_at >= NOW() - INTERVAL '90 days'
@@ -438,10 +450,11 @@ async def get_suggested_streamers(
                 WHERE ended_at IS NULL
             ) live_now ON live_now.host_id = u.id
             LEFT JOIN (
-                SELECT DISTINCT host_id, TRUE AS has_match
+                -- En iyi kategori eşleşmesinin affinitesini al (streamer birden fazla kategoride yayın yapabilir)
+                SELECT host_id, COALESCE(MAX({cat_affinity_expr}), 0.0) AS cat_affinity_score
                 FROM live_streams
                 WHERE started_at >= NOW() - INTERVAL '90 days'
-                  AND category = ANY({cats_literal})
+                GROUP BY host_id
             ) cat_match ON cat_match.host_id = u.id
             WHERE u.id != :uid
               AND u.status = 'active'
@@ -453,7 +466,7 @@ async def get_suggested_streamers(
             {{follow_filter}}
             GROUP BY u.id, u.username, u.full_name, u.profile_image_url,
                      u.email_verified, u.phone_verified, u.is_premium, fol.follower_count,
-                     live_now.is_live, cat_match.has_match
+                     live_now.is_live, cat_match.cat_affinity_score
             HAVING COUNT(ls.id) >= 1
         )
         SELECT
@@ -462,7 +475,7 @@ async def get_suggested_streamers(
             -- Kişiselleştirilmiş kompozit skor
             (
                 CASE WHEN is_live THEN 0.35 ELSE 0.0 END
-                + CASE WHEN category_match THEN 0.25 ELSE 0.0 END
+                + cat_affinity_score * 0.25
                 + LEAST(LOG(1.0 + avg_viewers) / LOG(51.0), 1.0) * 0.25
                 + LEAST(LOG(1.0 + follower_count) / LOG(1001.0), 1.0) * 0.15
                 + LEAST(LOG(1.0 + stream_count) / LOG(21.0), 1.0) * 0.10

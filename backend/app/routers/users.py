@@ -148,6 +148,7 @@ async def get_suggested_sellers(
         interests = {row.category: row.score for row in rows}
 
     top_cats = list(interests.keys())[:5] if interests else []
+    cold_start = not top_cats
 
     if top_cats:
         cat_cases = " ".join(
@@ -155,8 +156,21 @@ async def get_suggested_sellers(
             for cat, score in list(interests.items())[:5]
         )
         cat_score_expr = f"COALESCE(MAX(CASE {cat_cases} ELSE 0.0 END), 0.0)"
+        # Kişiselleştirilmiş sıralama: kategori affinitesi ağır
+        order_expr = f"""
+            {cat_score_expr} * 0.60
+            + LEAST(LOG(1.0 + COUNT(l.id)) / 4.0, 0.25)
+            + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.15)
+        """
     else:
+        # Cold start: kişisel ilgi yok — son 7 gün içinde en aktif satıcıları öne çıkar
         cat_score_expr = "0.0"
+        order_expr = """
+            LEAST(LOG(1.0 + COUNT(l.id)) / 4.0, 0.40)
+            + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.25)
+            + CASE WHEN MAX(l.created_at) > NOW() - INTERVAL '7 days' THEN 0.25 ELSE 0.0 END
+            + LEAST(LOG(1.0 + COUNT(CASE WHEN l.created_at > NOW() - INTERVAL '7 days' THEN 1 END)) / 3.0, 0.10)
+        """
 
     base_query = f"""
         SELECT
@@ -187,11 +201,7 @@ async def get_suggested_sellers(
         {{follow_filter}}
         GROUP BY u.id, u.username, u.full_name, u.profile_image_url, u.bio, u.email_verified, u.phone_verified, u.is_premium, fol.follower_count
         HAVING COUNT(l.id) >= 1
-        ORDER BY (
-            {cat_score_expr} * 0.60
-            + LEAST(LOG(1.0 + COUNT(l.id)) / 4.0, 0.25)
-            + LEAST(LOG(1.0 + COALESCE(fol.follower_count, 0)) / 8.0, 0.15)
-        ) DESC
+        ORDER BY ({order_expr}) DESC
         LIMIT :lim
     """
 
