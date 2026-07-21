@@ -2785,13 +2785,12 @@ class _FullScreenVideoPageState extends State<_FullScreenVideoPage> {
     super.initState();
     _vCtrl = VideoPlayerController.networkUrl(Uri.parse(widget.url))
       ..initialize().then((_) {
-        if (mounted) {
-          setState(() {
-            _initialized = true;
-          });
-        }
+        if (!mounted) return;
         _vCtrl.play();
-        setState(() => _playing = true);
+        setState(() {
+          _initialized = true;
+          _playing = true;
+        });
       });
     _vCtrl.addListener(() {
       if (mounted && _vCtrl.value.isPlaying != _playing) {
