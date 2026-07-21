@@ -45,6 +45,7 @@ class GetAuctionStateQuery:
                 "status": "idle",
                 "item_name": None,
                 "current_bid": 0.0,
+                "current_bidder": None,
                 "current_bidder_name": None,
                 "bid_count": 0,
                 "buy_it_now_price": None
@@ -54,6 +55,7 @@ class GetAuctionStateQuery:
             "status": data.get("status", "idle"),
             "item_name": data.get("item_name"),
             "current_bid": float(data.get("current_bid", 0)),
+            "current_bidder": data.get("current_bidder_name"),
             "current_bidder_name": data.get("current_bidder_name"),
             "bid_count": int(data.get("bid_count", 0)),
             "buy_it_now_price": float(data.get("buy_it_now_price")) if data.get("buy_it_now_price") else None
