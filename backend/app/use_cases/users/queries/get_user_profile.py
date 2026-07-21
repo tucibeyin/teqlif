@@ -41,6 +41,12 @@ class GetUserProfileQuery:
             "is_following": False,
             "is_blocked": False,
             "active_listings_count": 0,
+            "instagram_url": target.instagram_url,
+            "kick_url": target.kick_url,
+            "twitch_url": target.twitch_url,
+            "facebook_url": target.facebook_url,
+            "youtube_url": target.youtube_url,
+            "tiktok_url": target.tiktok_url,
         }
 
         if current_user:
