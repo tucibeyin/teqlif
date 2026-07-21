@@ -64,7 +64,7 @@ class SearchScreenState extends State<SearchScreen> {
   int _forYouPage = 0;
   bool _forYouExhausted = false;
   bool _forYouLoadingMore = false;
-  int _recentOffset = 0;
+  int _recentPage = 0;
   bool _recentExhausted = false;
   bool _recentLoadingMore = false;
   final ScrollController _scrollCtrl = ScrollController();
@@ -318,8 +318,8 @@ class SearchScreenState extends State<SearchScreen> {
     required VoidCallback onData,
   }) {
     ApiService.get<List<dynamic>>(
-      url: '$kBaseUrl/listings?limit=15&offset=0',
-      cacheKey: 'explore_listings_recent',
+      url: '$kBaseUrl/feed/recent?page=0',
+      cacheKey: 'explore_recent_feed',
       cacheTtl: const Duration(minutes: 5),
       bypassCache: bypassCache,
       fromJson: (raw) => raw as List,
@@ -327,8 +327,8 @@ class SearchScreenState extends State<SearchScreen> {
       if (mounted) {
         setState(() {
           _recentListings = recent;
-          _recentOffset = 15;
-          _recentExhausted = recent.length < 15;
+          _recentPage = 1;
+          _recentExhausted = recent.length < 20;
         });
       }
       onData();
@@ -343,9 +343,9 @@ class SearchScreenState extends State<SearchScreen> {
     setState(() => _recentLoadingMore = true);
     try {
       final token = await StorageService.getToken();
-      final headers = token != null ? {'Authorization': 'Bearer $token'} : null;
+      final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
       final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings?limit=15&offset=$_recentOffset'),
+        Uri.parse('$kBaseUrl/feed/recent?page=$_recentPage'),
         headers: headers,
       );
       if (!mounted) return;
@@ -353,8 +353,8 @@ class SearchScreenState extends State<SearchScreen> {
         final data = jsonDecode(resp.body) as List;
         setState(() {
           _recentListings.addAll(data);
-          _recentOffset += 15;
-          if (data.length < 15) _recentExhausted = true;
+          _recentPage++;
+          if (data.length < 20) _recentExhausted = true;
         });
       } else {
         setState(() => _recentExhausted = true);

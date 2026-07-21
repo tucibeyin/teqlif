@@ -971,6 +971,10 @@ class FeedQueries:
         """
         offset = page * self._RECENT_PAGE_SIZE
         params: dict = {"lim": self._RECENT_PAGE_SIZE, "off": offset}
+        uid_clause = ""
+        if user_id:
+            params["uid"] = user_id
+            uid_clause = "AND l.user_id != :uid"
 
         base_result = await self.uow.session.execute(
             text(f"""
@@ -978,6 +982,7 @@ class FeedQueries:
                 FROM listings l
                 WHERE l.status = 'active'
                   AND l.status != 'deleted'
+                  {uid_clause}
                 ORDER BY l.created_at DESC
                 LIMIT :lim OFFSET :off
             """),
@@ -1043,7 +1048,7 @@ class FeedQueries:
         return result
 
 
-    async def _fetch_interest_items(self, 
+    async def _fetch_interest_items(self,
         user_id: int,
         categories: list[str],
         exclude_ids: list[int],
@@ -1056,12 +1061,13 @@ class FeedQueries:
                 SELECT l.id FROM listings l
                 WHERE l.status = 'active'
                   AND l.status != 'deleted'
+                  AND l.user_id != :uid
                   AND l.category = ANY(:cats)
                   {excl}
                 ORDER BY RANDOM()
                 LIMIT :lim
             """),
-            {"cats": categories, "lim": count},
+            {"uid": user_id, "cats": categories, "lim": count},
         )
         ids = [r.id for r in res]
         if not ids:
