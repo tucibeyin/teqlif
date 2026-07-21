@@ -2612,7 +2612,7 @@
   "phoneVerifyDesc": "Yüksek tutarlı teklifler için telefon doğrulaması gerekiyor. Numaranızı girin, e-posta ile doğrulayın.",
   "bidBlockedTitle": "Teklif Verilemedi",
   "bidBlockedMuteBody": "Bu yayında şu an teklif verme yetkiniz bulunmuyor. Sorun yaşıyorsanız destek ekibimize ulaşabilirsiniz.",
-  "bidBlockedVerifyBody": "Bu tutarda teklif verebilmek için hesabınızı doğrulamanız gerekiyor. Telefon numaranızı ekleyerek birkaç saniyede tamamlayabilirsiniz.",
+  "bidBlockedVerifyBody": "Bu tutarda teklif verebilmek için e-posta ve telefon doğrulamanızın tamamlanmış olması gerekiyor. Bilgilerinizi güncellemek için profil sayfanıza yönlendirileceksiniz.",
   "bidBlockedVerifyAction": "Hesabı Doğrula",
   "bidBlockedDismiss": "Anladım",
   "btnRemovePin": "✕ Kaldır",

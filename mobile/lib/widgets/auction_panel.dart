@@ -22,6 +22,7 @@ import 'swipe_to_bid_button.dart';
 import 'phone_input_field.dart';
 import '../utils/bid_calculator.dart';
 import 'swipe_paginated_list.dart';
+import '../screens/profile_screen.dart';
 
 class AuctionPanel extends ConsumerStatefulWidget {
   final int streamId;
@@ -1642,7 +1643,11 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
         actionLabel: needsVerify ? l10n.bidBlockedVerifyAction : l10n.bidBlockedDismiss,
         onAction: () {
           Navigator.pop(sheetCtx);
-          if (needsVerify) _showPhoneVerificationSheet();
+          if (needsVerify) {
+            Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            );
+          }
         },
         showDismiss: needsVerify,
         dismissLabel: l10n.bidBlockedDismiss,

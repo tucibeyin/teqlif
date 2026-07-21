@@ -2649,7 +2649,7 @@
   "phoneVerifyDesc": "Phone verification is required for high-value bids. Enter your number and verify via email.",
   "bidBlockedTitle": "Bid Not Allowed",
   "bidBlockedMuteBody": "You are not allowed to place bids in this stream right now. Contact our support team if you believe this is a mistake.",
-  "bidBlockedVerifyBody": "You need to verify your account to place a bid at this amount. Add your phone number to complete verification in seconds.",
+  "bidBlockedVerifyBody": "To place a bid at this amount, both your email and phone must be verified. You will be taken to your profile to complete verification.",
   "bidBlockedVerifyAction": "Verify Account",
   "bidBlockedDismiss": "Got It",
   "btnRemovePin": "✕ Remove",
