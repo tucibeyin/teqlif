@@ -36,6 +36,9 @@ class SearchListingsQuery:
         )
         if user_id:
             q_stmt = q_stmt.where(Listing.user_id == user_id)
+        elif current_user_id:
+            # Genel listeleme: kullanıcının kendi ilanlarını gizle
+            q_stmt = q_stmt.where(Listing.user_id != current_user_id)
         if category:
             q_stmt = q_stmt.where(Listing.category == category)
         if location:

@@ -83,6 +83,7 @@ async def get_listings(
             q=q,
             limit=limit,
             offset=offset,
+            current_user_id=current_user.id if current_user else None,
         )
 
 
