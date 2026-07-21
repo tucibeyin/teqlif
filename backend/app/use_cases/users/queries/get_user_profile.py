@@ -6,6 +6,7 @@ from app.models.user import User
 from app.models.listing import Listing
 from app.models.enums import ListingStatus
 from app.models.block import UserBlock
+from app.use_cases.listings.queries.listing_utils import _fetch_seller_meta
 
 class GetUserProfileQuery:
     def __init__(self, uow: AbstractUnitOfWork):
@@ -16,16 +17,24 @@ class GetUserProfileQuery:
         if not target:
             raise NotFoundException("Kullanıcı bulunamadı")
 
+        badge_map, _, _, trust_map, influence_map = await _fetch_seller_meta([target.id])
+
         profile_data = {
             "id": target.id,
             "username": target.username,
             "full_name": target.full_name,
             "bio": target.bio,
+            "website_url": target.website_url,
             "avatar_url": target.profile_image_url,
             "profile_image_url": target.profile_image_url,
             "profile_image_thumb_url": target.profile_image_thumb_url,
             "is_premium": target.is_premium,
             "is_private": target.is_private,
+            "is_verified": target.is_verified,
+            "phone_verified": target.phone_verified,
+            "trust_score": trust_map.get(target.id),
+            "influence_rank": influence_map.get(target.id),
+            "badge": badge_map.get(target.id),
             "created_at": target.created_at,
             "follower_count": 0,
             "following_count": 0,
