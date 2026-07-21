@@ -270,12 +270,14 @@ async def _send_airdrop_notifications(recipients: list[dict], is_seller: bool = 
         "body_params": {"amount": _AIRDROP_AMOUNT},
     }
 
+    notif_type = "churn_airdrop_seller" if is_seller else "churn_airdrop_buyer"
+
     async def _notify(r: dict) -> None:
         try:
             await push_notification(
                 user_id=r["user_id"],
                 notif={
-                    "type": "churn_airdrop",
+                    "type": notif_type,
                     "i18n": _i18n,
                 },
                 pref_key=None,  # Cüzdan kredisi — tercih filtresi atlanır

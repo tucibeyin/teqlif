@@ -5014,6 +5014,23 @@ class AppLocalizationsRu extends AppLocalizations {
       'Подтверждение телефона требуется для крупных ставок. Введите номер и подтвердите через электронную почту.';
 
   @override
+  String get bidBlockedTitle => 'Ставка не принята';
+
+  @override
+  String get bidBlockedMuteBody =>
+      'Вам не разрешено делать ставки в этом стриме. Свяжитесь с нашей службой поддержки, если считаете это ошибкой.';
+
+  @override
+  String get bidBlockedVerifyBody =>
+      'Для ставки на эту сумму необходимо подтвердить email и телефон. Вы будете перенаправлены в профиль для завершения верификации.';
+
+  @override
+  String get bidBlockedVerifyAction => 'Подтвердить аккаунт';
+
+  @override
+  String get bidBlockedDismiss => 'Понятно';
+
+  @override
   String get btnRemovePin => '✕ Убрать';
 
   @override

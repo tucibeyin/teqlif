@@ -8964,6 +8964,36 @@ abstract class AppLocalizations {
   /// **'Yüksek tutarlı teklifler için telefon doğrulaması gerekiyor. Numaranızı girin, e-posta ile doğrulayın.'**
   String get phoneVerifyDesc;
 
+  /// No description provided for @bidBlockedTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif Verilemedi'**
+  String get bidBlockedTitle;
+
+  /// No description provided for @bidBlockedMuteBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu yayında şu an teklif verme yetkiniz bulunmuyor. Sorun yaşıyorsanız destek ekibimize ulaşabilirsiniz.'**
+  String get bidBlockedMuteBody;
+
+  /// No description provided for @bidBlockedVerifyBody.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu tutarda teklif verebilmek için e-posta ve telefon doğrulamanızın tamamlanmış olması gerekiyor. Bilgilerinizi güncellemek için profil sayfanıza yönlendirileceksiniz.'**
+  String get bidBlockedVerifyBody;
+
+  /// No description provided for @bidBlockedVerifyAction.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabı Doğrula'**
+  String get bidBlockedVerifyAction;
+
+  /// No description provided for @bidBlockedDismiss.
+  ///
+  /// In tr, this message translates to:
+  /// **'Anladım'**
+  String get bidBlockedDismiss;
+
   /// No description provided for @btnRemovePin.
   ///
   /// In tr, this message translates to:

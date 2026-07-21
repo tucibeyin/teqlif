@@ -4966,6 +4966,23 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yüksek tutarlı teklifler için telefon doğrulaması gerekiyor. Numaranızı girin, e-posta ile doğrulayın.';
 
   @override
+  String get bidBlockedTitle => 'Teklif Verilemedi';
+
+  @override
+  String get bidBlockedMuteBody =>
+      'Bu yayında şu an teklif verme yetkiniz bulunmuyor. Sorun yaşıyorsanız destek ekibimize ulaşabilirsiniz.';
+
+  @override
+  String get bidBlockedVerifyBody =>
+      'Bu tutarda teklif verebilmek için e-posta ve telefon doğrulamanızın tamamlanmış olması gerekiyor. Bilgilerinizi güncellemek için profil sayfanıza yönlendirileceksiniz.';
+
+  @override
+  String get bidBlockedVerifyAction => 'Hesabı Doğrula';
+
+  @override
+  String get bidBlockedDismiss => 'Anladım';
+
+  @override
   String get btnRemovePin => '✕ Kaldır';
 
   @override

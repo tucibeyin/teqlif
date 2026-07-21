@@ -4964,6 +4964,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Phone verification is required for high-value bids. Enter your number and verify via email.';
 
   @override
+  String get bidBlockedTitle => 'Bid Not Allowed';
+
+  @override
+  String get bidBlockedMuteBody =>
+      'You are not allowed to place bids in this stream right now. Contact our support team if you believe this is a mistake.';
+
+  @override
+  String get bidBlockedVerifyBody =>
+      'To place a bid at this amount, both your email and phone must be verified. You will be taken to your profile to complete verification.';
+
+  @override
+  String get bidBlockedVerifyAction => 'Verify Account';
+
+  @override
+  String get bidBlockedDismiss => 'Got It';
+
+  @override
   String get btnRemovePin => '✕ Remove';
 
   @override

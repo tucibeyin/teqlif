@@ -668,6 +668,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       'auction_ended' => l.notifAuctionEnded,
       'auction_cancelled' => l.notifAuctionCancelled,
       'referral' => l.notifReferralTitle,
+      'churn_airdrop_buyer' => l.notifChurnAirdropBuyer,
+      'churn_airdrop_seller' => l.notifChurnAirdropSeller,
       _ => title,
     };
   }
@@ -748,6 +750,9 @@ class _NotificationsTabState extends State<_NotificationsTab> {
         return body;
       case 'call_missed':
         return l.notifCallMissedBody;
+      case 'churn_airdrop_buyer':
+      case 'churn_airdrop_seller':
+        return body;
       default:
         return body;
     }
@@ -765,6 +770,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       'listing_deactivated' => Icons.pause_circle_rounded,
       'listing_deleted' => Icons.delete_outline_rounded,
       'call_missed' => Icons.phone_missed_rounded,
+      'churn_airdrop_buyer' => Icons.card_giftcard_rounded,
+      'churn_airdrop_seller' => Icons.card_giftcard_rounded,
       _ => Icons.notifications_rounded,
     };
   }
@@ -779,6 +786,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       'message' => const Color(0xFF0EA5E9),
       'smart_auction_alert' => const Color(0xFF8B5CF6),
       'call_missed' => const Color(0xFFEF4444),
+      'churn_airdrop_buyer' => const Color(0xFF16A34A),
+      'churn_airdrop_seller' => const Color(0xFF16A34A),
       _ => kPrimary,
     };
   }
@@ -848,6 +857,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
       case 'listing_deactivated':
       case 'auction_won':
       case 'price_drop_alert':
+      case 'churn_airdrop_buyer':
+      case 'churn_airdrop_seller':
         if (relatedId != null) {
           Navigator.push(
             context,

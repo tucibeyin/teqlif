@@ -4936,6 +4936,23 @@ class AppLocalizationsAr extends AppLocalizations {
       'التحقق من الهاتف مطلوب للعروض ذات القيمة العالية. أدخل رقمك وتحقق عبر البريد الإلكتروني.';
 
   @override
+  String get bidBlockedTitle => 'تعذّر تقديم العرض';
+
+  @override
+  String get bidBlockedMuteBody =>
+      'لا يُسمح لك بتقديم عروض في هذا البث حاليًا. تواصل مع فريق الدعم إذا كنت تعتقد أن هذا خطأ.';
+
+  @override
+  String get bidBlockedVerifyBody =>
+      'لتقديم عرض بهذا المبلغ، يجب التحقق من بريدك الإلكتروني ورقم هاتفك. سيتم توجيهك إلى صفحة ملفك الشخصي لإتمام التحقق.';
+
+  @override
+  String get bidBlockedVerifyAction => 'التحقق من الحساب';
+
+  @override
+  String get bidBlockedDismiss => 'فهمت';
+
+  @override
   String get btnRemovePin => '✕ إزالة';
 
   @override

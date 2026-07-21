@@ -259,7 +259,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       case 'auction_won':
       case 'search_alert':   // related_id = listing_id, sender_id olarak gelir
       case 'budget_match':   // related_id = listing_id, sender_id olarak gelir
-      case 'churn_airdrop':  // related_id = listing_id, sender_id olarak gelir
+      case 'churn_airdrop_buyer':  // related_id = listing_id
+      case 'churn_airdrop_seller': // related_id = listing_id
         final lid = listingId();
         if (lid != null) {
           _navigateToListing(lid);
