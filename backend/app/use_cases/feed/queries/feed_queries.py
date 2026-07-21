@@ -575,7 +575,7 @@ class FeedQueries:
         if page == 0:
             try:
                 ad_items = await self._get_sponsored_listings(user_id=user_id, exclude_user_id=user_id)
-                result = _inject_ads(result, ad_items)
+                result = self._inject_ads(result, ad_items)
             except Exception as exc:
                 logger.warning("[Feed] Sponsored enjeksiyonu atlandı: %s", exc)
 
@@ -993,10 +993,10 @@ class FeedQueries:
             interests = await self.get_user_interests(user_id)
             if interests:
                 top_cats = list(interests.keys())[:3]
-                interest_items = await _fetch_interest_items(
-                    user_id, top_cats, base_ids, len(_INTEREST_SLOTS), self.uow.session
+                interest_items = await self._fetch_interest_items(
+                    user_id, top_cats, base_ids, len(_INTEREST_SLOTS)
                 )
-                result = _inject_at_slots(result, interest_items, _INTEREST_SLOTS)
+                result = self._inject_at_slots(result, interest_items, _INTEREST_SLOTS)
 
         # Organik + interest ilan izlenimlerini kaydet (sponsored hariç)
         if user_id:
@@ -1011,7 +1011,7 @@ class FeedQueries:
         if page == 0:
             try:
                 ad_items = await self._get_sponsored_listings(user_id=user_id, exclude_user_id=user_id)
-                result = _inject_ads(result, ad_items)
+                result = self._inject_ads(result, ad_items)
             except Exception as exc:
                 logger.warning("[MixedRecent] Sponsored enjeksiyonu atlandı: %s", exc)
 
@@ -1023,7 +1023,6 @@ class FeedQueries:
         categories: list[str],
         exclude_ids: list[int],
         count: int,
-        db: AsyncSession,
     ) -> list[dict]:
         """Kullanıcının ilgi kategorilerinden, base listesinde olmayan ilanlar."""
         excl = f"AND l.id NOT IN ({','.join(str(i) for i in exclude_ids)})" if exclude_ids else ""
