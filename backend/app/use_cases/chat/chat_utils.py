@@ -62,22 +62,6 @@ async def moderation_pubsub_listener() -> None:
     await stream_listener(MOD_CHANNEL, _on_message)
 
 async def _dispatch_mod_event(data: dict) -> None:
-    event = data.get("event")
-    sid = data.get("stream_id")
+    sid = data.pop("_stream_id", None)
     if not sid: return
-    if event == "mute":
-        uid = data.get("user_id")
-        dur = data.get("duration")
-        await ws_manager.broadcast_local(f"chat:{sid}", {"type": WS.MOD_MUTE, "user_id": uid, "duration": dur})
-    elif event == "ban":
-        uid = data.get("user_id")
-        await ws_manager.broadcast_local(f"chat:{sid}", {"type": WS.MOD_BAN, "user_id": uid})
-    elif event == "message_deleted":
-        mid = data.get("message_id")
-        await ws_manager.broadcast_local(f"chat:{sid}", {"type": WS.MOD_MESSAGE_DELETED, "message_id": mid})
-    elif event == "new_mod":
-        uid = data.get("user_id")
-        await ws_manager.broadcast_local(f"chat:{sid}", {"type": WS.MOD_PROMOTED, "user_id": uid})
-    elif event == "remove_mod":
-        uid = data.get("user_id")
-        await ws_manager.broadcast_local(f"chat:{sid}", {"type": WS.MOD_DEMOTED, "user_id": uid})
+    await ws_manager.broadcast_local(f"chat:{sid}", data)

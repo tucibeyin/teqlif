@@ -1143,7 +1143,17 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
       );
     }
     
-    if (widget.session.room == null) {
+    if (widget.session.error != null) {
+      final errStr = widget.session.error.toString().toLowerCase();
+      if (errStr.contains('403') || errStr.contains('kısıtlanmıştır') || errStr.contains('forbidden')) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handleKicked();
+        });
+        return const SizedBox(); // Ekranı boş bırak, dialog çıkacak ve kapanacak
+      }
+    }
+
+    if (widget.session.room == null && widget.session.error == null) {
       debugPrint('[${DateTime.now().toString()}] [EVENT: LIVE_UI_LOADING] Showing FullScreenLoading for stream: ${widget.stream.id}');
       return const Center(child: CircularProgressIndicator(color: Colors.white));
     }

@@ -28,6 +28,7 @@ class LiveSession extends ChangeNotifier {
   bool isConnected = false;
   bool streamEnded = false;
   bool isDisposed = false;
+  Object? error;
   
   LiveSession(this.streamId);
   
@@ -212,6 +213,7 @@ class StreamConnectionManager with WidgetsBindingObserver {
       
     } catch (e) {
       session.isConnecting = false;
+      session.error = e;
       session.update();
       debugPrint('[StreamConnectionManager] Connect failed for ${session.streamId}: $e');
     } finally {

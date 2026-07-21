@@ -23,6 +23,16 @@ class GetFollowedLiveStreamsQuery:
         result = await self.uow.session.execute(query)
         streams = result.scalars().all()
 
+        if current_user_id and streams:
+            from app.services.moderation_service import kick_key
+            from app.utils.redis_client import get_redis
+            redis = await get_redis()
+            pipe = redis.pipeline()
+            for s in streams:
+                pipe.sismember(kick_key(s.id), str(current_user_id))
+            kicked_results = await pipe.execute()
+            streams = [s for i, s in enumerate(streams) if not kicked_results[i]]
+
         await _fill_viewer_counts(streams, tag=f"followed user_id={current_user_id}")
 
         stream_ids = [s.id for s in streams]
@@ -48,6 +58,16 @@ class GetActiveStreamsQuery:
         
         result = await self.uow.session.execute(query)
         streams = result.scalars().all()
+
+        if current_user_id and streams:
+            from app.services.moderation_service import kick_key
+            from app.utils.redis_client import get_redis
+            redis = await get_redis()
+            pipe = redis.pipeline()
+            for s in streams:
+                pipe.sismember(kick_key(s.id), str(current_user_id))
+            kicked_results = await pipe.execute()
+            streams = [s for i, s in enumerate(streams) if not kicked_results[i]]
 
         await _fill_viewer_counts(streams, tag="active_streams")
         
