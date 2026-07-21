@@ -51,61 +51,69 @@ def auction_key(stream_id: int) -> str:
 
 class AuctionConnectionManager:
     def __init__(self):
-        self.active_connections: dict[int, set[WebSocket]] = {}
+        self._conns = {}
 
-    def connect(self, ws: WebSocket, stream_id: int):
-        if stream_id not in self.active_connections:
-            self.active_connections[stream_id] = set()
-        self.active_connections[stream_id].add(ws)
+    def connect(self, ws, stream_id: int):
+        self._conns.setdefault(stream_id, set()).add(ws)
+        import logging
+        logging.getLogger(__name__).info("[WS] BAĞLANDI | stream_id=%s | bu_worker=%s bağlı", stream_id, len(self._conns[stream_id]))
 
-    def disconnect(self, ws: WebSocket, stream_id: int):
-        if stream_id in self.active_connections:
-            self.active_connections[stream_id].discard(ws)
-            if not self.active_connections[stream_id]:
-                del self.active_connections[stream_id]
+    def disconnect(self, ws, stream_id: int):
+        s = self._conns.get(stream_id)
+        if s is not None:
+            s.discard(ws)
+            if not s:
+                del self._conns[stream_id]
 
     async def local_broadcast(self, stream_id: int, payload: dict):
-        if stream_id not in self.active_connections:
+        targets = list(self._conns.get(stream_id, set()))
+        if not targets:
             return
         
-        async def _send(ws: WebSocket) -> bool:
+        async def _send(ws):
             try:
                 await ws.send_json(payload)
                 return True
-            except WebSocketDisconnect:
-                return False
-            except Exception as e:
-                logger.warning("local_broadcast: %s", e)
+            except Exception:
                 return False
 
         import asyncio
-        tasks = [_send(ws) for ws in list(self.active_connections[stream_id])]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for ws, res in zip(list(self.active_connections[stream_id]), results):
-            if res is False or isinstance(res, Exception):
-                self.disconnect(ws, stream_id)
+        results = await asyncio.gather(*[_send(ws) for ws in targets], return_exceptions=True)
+        dead = {ws for ws, ok in zip(targets, results) if ok is not True}
+        if dead:
+            s = self._conns.get(stream_id)
+            if s is not None:
+                s -= dead
+                if not s:
+                    del self._conns[stream_id]
 
     def conn_count(self, stream_id: int) -> int:
-        return len(self.active_connections.get(stream_id, []))
+        return len(self._conns.get(stream_id, set()))
 
     def total_conns(self) -> int:
-        return sum(len(c) for c in self.active_connections.values())
+        return sum(len(v) for v in self._conns.values())
 
 manager = AuctionConnectionManager()
+_PUBSUB_CHANNEL = "auction_broadcast"
 
 async def pubsub_listener():
-    from app.core.ws_manager import ws_manager
+    from app.core.stream_listener import stream_listener
     async def _on_message(data: dict) -> None:
-        sid = data.get("stream_id")
-        if sid:
-            await manager.local_broadcast(sid, data)
-    await ws_manager.subscribe("auction_broadcast", _on_message)
+        stream_id = data.pop("_stream_id", None)
+        if stream_id:
+            await manager.local_broadcast(stream_id, data)
+    await stream_listener(_PUBSUB_CHANNEL, _on_message)
 
 async def publish_auction(stream_id: int, payload: dict):
-    from app.core.ws_manager import ws_manager
-    payload["stream_id"] = stream_id
-    await manager.local_broadcast(stream_id, payload)
-    await ws_manager.publish("auction_broadcast", "global", payload)
+    from app.core.auction_outbox import outbox_publish
+    from app.core.stream_listener import STREAM_MAXLEN
+    from app.utils.redis_client import get_redis
+    import json
+    redis = await get_redis()
+    data = json.dumps({"_stream_id": stream_id, **payload})
+    await redis.xadd(_PUBSUB_CHANNEL, {"data": data}, maxlen=STREAM_MAXLEN, approximate=True)
+    await outbox_publish(stream_id, {"type": payload.get("type", "state"), **payload})
+
 
 async def _require_host(uow, stream_id: int, user: User) -> LiveStream:
     stream = await uow.session.scalar(select(LiveStream).where(LiveStream.id == stream_id))

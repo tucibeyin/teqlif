@@ -121,86 +121,7 @@ def auction_key(stream_id: int) -> str:
 
 
 # ── WebSocket bağlantı yöneticisi (her worker'a özel) ───────────────────────
-class _Manager:
-    def __init__(self):
-        self._conns: Dict[int, Set[WebSocket]] = {}
 
-    def connect(self, ws: WebSocket, stream_id: int):
-        self._conns.setdefault(stream_id, set()).add(ws)
-        total = len(self._conns[stream_id])
-        origin = ws.headers.get("origin", "native/mobile")
-        logger.info(
-            "[WS] BAĞLANDI | stream_id=%s origin=%s | bu_worker=%s bağlı",
-            stream_id, origin, total,
-        )
-
-    def disconnect(self, ws: WebSocket, stream_id: int):
-        s = self._conns.get(stream_id)
-        if s is not None:
-            s.discard(ws)
-            if not s:
-                del self._conns[stream_id]
-        total = len(self._conns.get(stream_id, set()))
-        logger.info("[WS] AYRILDI | stream_id=%s | bu_worker=%s bağlı", stream_id, total)
-
-    async def local_broadcast(self, stream_id: int, payload: dict):
-        """Sadece bu worker'daki WS bağlantılarına paralel fan-out."""
-        targets = list(self._conns.get(stream_id, set()))
-        if not targets:
-            return
-
-        async def _send(ws: WebSocket) -> bool:
-            try:
-                await ws.send_json(payload)
-                return True
-            except Exception as exc:
-                logger.error("[WS] SEND HATA | stream_id=%s | %s", stream_id, exc)
-                return False
-
-        results = await asyncio.gather(*[_send(ws) for ws in targets], return_exceptions=True)
-        dead = {ws for ws, ok in zip(targets, results) if ok is not True}
-        if dead:
-            logger.info("[WS] %s ölü bağlantı temizlendi | stream_id=%s", len(dead), stream_id)
-            s = self._conns.get(stream_id)
-            if s is not None:
-                s -= dead
-                if not s:
-                    del self._conns[stream_id]
-
-    def conn_count(self, stream_id: int) -> int:
-        return len(self._conns.get(stream_id, set()))
-
-    def total_conns(self) -> int:
-        return sum(len(v) for v in self._conns.values())
-
-
-manager = _Manager()
-
-
-async def pubsub_listener():
-    """Her worker için tek seferlik başlatılan arka plan görevi (Redis Stream)."""
-    from app.core.stream_listener import stream_listener
-
-    async def _on_message(data: dict) -> None:
-        stream_id = data.pop("_stream_id")
-        await manager.local_broadcast(stream_id, data)
-
-    await stream_listener(_PUBSUB_CHANNEL, _on_message)
-
-
-async def publish_auction(stream_id: int, payload: dict):
-    """Tüm worker'lara Redis Stream üzerinden yayınla + client replay için outbox'a yaz."""
-    from app.core.auction_outbox import outbox_publish
-    from app.core.stream_listener import STREAM_MAXLEN
-    redis = await get_redis()
-    data = json.dumps({"_stream_id": stream_id, **payload})
-    await redis.xadd(_PUBSUB_CHANNEL, {"data": data}, maxlen=STREAM_MAXLEN, approximate=True)
-    # Outbox: WebSocket reconnect'te client-side replay için ayrı per-auction stream
-    await outbox_publish(stream_id, {"type": WS.AUCTION_STATE, **payload})
-    logger.info(
-        "[PUBSUB] YAYINLANDI | stream_id=%s status=%s | bu_worker_ws=%s",
-        stream_id, payload.get("status"), manager.conn_count(stream_id),
-    )
 
 
 async def get_bids(stream_id: int, db: AsyncSession, limit: int = 50) -> list:
@@ -457,16 +378,13 @@ class AuctionCommands:
     ):
         from app.utils.redis_client import get_redis
         redis = await get_redis()
-        key = f"auction:state:{stream_id}"
-        state_data = await redis.get(key)
+        key = auction_key(stream_id)
+        data = await redis.hgetall(key)
         
-        if not state_data:
+        if not data:
             if system_end:
                 return  # Sistem çağırdıysa sessizce dön
             raise BadRequestException("Aktif açık artırma yok")
-            
-        import json
-        data = json.loads(state_data)
 
         winner_id_str = data.get("current_bidder_id", "")
         final_price = float(data["current_bid"]) if data.get("current_bid") else float(data.get("start_price", 0))
