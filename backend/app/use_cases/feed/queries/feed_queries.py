@@ -283,32 +283,60 @@ class FeedQueries:
             budget_clause = "AND (l.price IS NULL OR l.price <= :price_ceiling)"
             params["price_ceiling"] = max_budget * 1.2
 
-        # pgvector desteği — embedding varsa pool + scoring terimi eklenir
+        # pgvector / FAISS desteği — embedding varsa pool + scoring terimi eklenir
         pgvec_pool_sql = ""
         pgvec_score_term = "0.0"
         if user_embedding:
             vec_str = "[" + ",".join(f"{x:.8f}" for x in user_embedding) + "]"
             params["vec"] = vec_str
-            pgvec_pool_sql = f"""
-                UNION
-                -- pgvector pool: semantik benzerlik (embedding tabanlı)
-                (
-                    SELECT l.id
-                    FROM listings l
-                    WHERE l.status = 'active'
-                      AND l.status != 'deleted'
-                      AND l.embedding IS NOT NULL
-                      AND l.user_id != :uid
-                      {ni_filter}
-                      {budget_clause}
-                    ORDER BY l.embedding <=> CAST(:vec AS vector)
-                    LIMIT 80
-                )
-            """
             pgvec_score_term = (
                 "CASE WHEN l.embedding IS NOT NULL "
                 "THEN (1.0 - (l.embedding <=> CAST(:vec AS vector))) * 0.20 ELSE 0.0 END"
             )
+            # FAISS → pgvector SQL taramasını bypass et
+            _faiss_used = False
+            try:
+                from app.services.ml.faiss_service import faiss_search
+                import numpy as _np
+                _fvec = _np.array(user_embedding, dtype=_np.float32)
+                faiss_ids_score = await faiss_search(_fvec, k=80)
+                if faiss_ids_score:
+                    faiss_ids_str = ",".join(str(i) for i in faiss_ids_score)
+                    pgvec_pool_sql = f"""
+                        UNION
+                        -- FAISS pool: in-memory ANN (pgvector taraması bypass)
+                        (
+                            SELECT l.id
+                            FROM listings l
+                            WHERE l.id IN ({faiss_ids_str})
+                              AND l.status = 'active'
+                              AND l.status != 'deleted'
+                              AND l.user_id != :uid
+                              {ni_filter}
+                              {budget_clause}
+                        )
+                    """
+                    _faiss_used = True
+            except Exception as _exc:
+                logger.debug("[Score&Rank] FAISS atlandı, pgvector fallback: %s", _exc)
+
+            if not _faiss_used:
+                pgvec_pool_sql = f"""
+                    UNION
+                    -- pgvector pool: semantik benzerlik (embedding tabanlı)
+                    (
+                        SELECT l.id
+                        FROM listings l
+                        WHERE l.status = 'active'
+                          AND l.status != 'deleted'
+                          AND l.embedding IS NOT NULL
+                          AND l.user_id != :uid
+                          {ni_filter}
+                          {budget_clause}
+                        ORDER BY l.embedding <=> CAST(:vec AS vector)
+                        LIMIT 80
+                    )
+                """
 
         sql = text(f"""
             WITH candidates AS (
@@ -714,6 +742,42 @@ class FeedQueries:
         except Exception as exc:
             logger.debug("[ForYou] Item2Vec pool atlandı: %s", exc)
 
+        # FAISS candidate retrieval — pgvector SQL taramasını bypass eder
+        # FAISS: in-memory ANN, ~1ms vs pgvector ~50-200ms for full scan
+        pgvec_pool_clause = f"""
+            SELECT l.id,
+                   (1.0 - (l.embedding <=> CAST(:vec AS vector))) AS sim_score
+            FROM listings l
+            WHERE l.status = 'active'
+              AND l.status != 'deleted'
+              AND l.embedding IS NOT NULL
+              AND l.user_id != :uid
+              {ni_filter}
+              {budget_clause}
+            ORDER BY l.embedding <=> CAST(:vec AS vector)
+            LIMIT :pgvec_lim
+        """
+        try:
+            from app.services.ml.faiss_service import faiss_search
+            faiss_ids = await faiss_search(pref_vec, k=limit * 2)
+            if faiss_ids:
+                faiss_ids_str = ",".join(str(i) for i in faiss_ids)
+                # FAISS verdi → pgvec taraması yok, sadece bu ID'ler üzerinde
+                # pgvector similarity score hesapla (mevcut scoring formülü bozulmaz)
+                pgvec_pool_clause = f"""
+                    SELECT l.id,
+                           (1.0 - (l.embedding <=> CAST(:vec AS vector))) AS sim_score
+                    FROM listings l
+                    WHERE l.id IN ({faiss_ids_str})
+                      AND l.status = 'active'
+                      AND l.status != 'deleted'
+                      AND l.user_id != :uid
+                      {ni_filter}
+                      {budget_clause}
+                """
+        except Exception as exc:
+            logger.debug("[ForYou] FAISS atlandı, pgvector fallback: %s", exc)
+
         # SQL: candidate pool + temel skorlama — diversity için limit*3 aday çek
         diverse_lim = limit * 3
         params["diverse_lim"] = diverse_lim
@@ -721,17 +785,7 @@ class FeedQueries:
         result = await self.uow.session.execute(
             text(f"""
                 WITH pgvec_pool AS (
-                    SELECT l.id,
-                           (1.0 - (l.embedding <=> CAST(:vec AS vector))) AS sim_score
-                    FROM listings l
-                    WHERE l.status = 'active'
-                      AND l.status != 'deleted'
-                      AND l.embedding IS NOT NULL
-                      AND l.user_id != :uid
-                      {ni_filter}
-                      {budget_clause}
-                    ORDER BY l.embedding <=> CAST(:vec AS vector)
-                    LIMIT :pgvec_lim
+                    {pgvec_pool_clause}
                 ),
                 social_pool AS (
                     SELECT l.id, 0.0 AS sim_score
