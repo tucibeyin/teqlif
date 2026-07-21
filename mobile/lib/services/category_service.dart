@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../core/logger_service.dart';
+import '../l10n/app_localizations.dart';
 
 // Categories valid only for live streams, excluded from listing creation
 const _listingExcluded = {'sohbet'};
@@ -111,4 +112,21 @@ class CategoryService {
   }
 
   static void clearCache() => _cache.clear();
+
+  /// ARB cat_* key'lerini kullanarak emoji içermeyen lokalize kategori adı döner.
+  /// Cihaz dilini AppLocalizations üzerinden otomatik yansıtır.
+  static String localizedLabelFor(AppLocalizations l, String key) {
+    return switch (key) {
+      'elektronik' => l.cat_elektronik,
+      'giyim'      => l.cat_giyim,
+      'ev'         => l.cat_ev,
+      'vasita'     => l.cat_vasita,
+      'spor'       => l.cat_spor,
+      'kitap'      => l.cat_kitap,
+      'emlak'      => l.cat_emlak,
+      'diger'      => l.cat_diger,
+      'sohbet'     => l.cat_sohbet,
+      _            => key,
+    };
+  }
 }

@@ -17,6 +17,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/listing_offer.dart';
 import '../services/cache_service.dart';
+import '../services/category_service.dart';
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
@@ -1577,7 +1578,12 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                   const SizedBox(height: 12),
                   if (isMine && _isListingInitialized)
                     _statusChipRow(l.listingStatusLabel, _isActive),
-                  _infoRow('Kategori', listing['category'] ?? '-'),
+                  _infoRow(
+                    l.categoryLabel,
+                    CategoryService.localizedLabelFor(
+                      l, listing['category'] as String? ?? '',
+                    ),
+                  ),
                   if (listing['location'] != null)
                     _infoRow('Konum', listing['location']),
                 ],
