@@ -509,9 +509,9 @@ class FeedQueries:
         if cached:
             all_ids = json.loads(cached)
         else:
-            all_ids = await self._compute_foryou_ids(user_id, limit=FORYOU_POOL_SIZE)
+            all_ids = await self._compute_foryou_ids(user_id, limit=self.FORYOU_POOL_SIZE)
             if all_ids:
-                await redis.setex(cache_key, FORYOU_CACHE_TTL, json.dumps(all_ids))
+                await redis.setex(cache_key, self.FORYOU_CACHE_TTL, json.dumps(all_ids))
 
         start = page * PAGE_SIZE
         listing_ids = all_ids[start: start + PAGE_SIZE]
@@ -946,8 +946,8 @@ class FeedQueries:
           - pos 5, 10, 15 → kullanıcı ilgi kategorilerinden birer ilan
           - pos 2, 7, 12  → sponsored (yalnızca page 0, mevcut _inject_ads mantığıyla)
         """
-        offset = page * _RECENT_PAGE_SIZE
-        params: dict = {"lim": _RECENT_PAGE_SIZE, "off": offset}
+        offset = page * self._RECENT_PAGE_SIZE
+        params: dict = {"lim": self._RECENT_PAGE_SIZE, "off": offset}
 
         base_result = await self.uow.session.execute(
             text(f"""

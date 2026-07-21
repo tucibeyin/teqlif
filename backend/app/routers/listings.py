@@ -7,7 +7,7 @@ from sqlalchemy.sql import text
 
 from app.database import get_db
 from app.models.user import User
-from app.utils.auth import get_current_user, bearer_scheme, decode_token
+from app.utils.auth import get_current_user, get_current_user_optional, bearer_scheme, decode_token
 from app.use_cases.listings.commands.create_listing import CreateListingCommand
 from app.use_cases.listings.commands.update_listing import UpdateListingCommand
 from app.use_cases.listings.commands.delete_listing import DeleteListingCommand
@@ -50,7 +50,7 @@ async def get_listings(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     # SearchListingsQuery / GetMyListingsQuery yönlendirmesi
     uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
@@ -74,8 +74,9 @@ async def get_listings(
         )
     else:
         # Genel arama
-        query_handler = SearchListingsQuery(uow)
+        query_handler = SearchListingsQuery()
         return await query_handler.execute(
+            db_session=db,
             user_id=user_id,
             category=category,
             location=location,
