@@ -108,7 +108,7 @@ def _row_dict(
         "is_sponsored": is_sponsored,
         "campaign_id": campaign_id,
         "is_trending": is_trending,
-        "seller": {
+        "user": {
             "id": user.id,
             "username": user.username,
             "full_name": user.full_name,
