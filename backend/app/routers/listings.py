@@ -326,6 +326,67 @@ async def notification_cooldown(
 
 # ── Audience Estimate ─────────────────────────────────────────────────────────
 
+async def _build_listing_audience(
+    listing_id: int,
+    listing_category: str,
+    owner_id: int,
+    db: AsyncSession,
+    cap: int = 500,
+) -> list[int]:
+    """
+    İlan için potansiyel hedef kitleyi iki sinyalden oluşturur:
+    1. Doğrudan görüntüleyenler  — ClickHouse user_events → listing_impressions fallback
+    2. Kategori ilgisi olanlar   — user_interests WHERE category = listing.category AND score >= 0.3
+
+    İkisi birleştirilip (union) owner_id filtresi uygulanır.
+    """
+    audience: set[int] = set()
+
+    # ── Sinyal 1: Doğrudan görüntüleyenler ───────────────────────────────────
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        vid_result = await ch.query("""
+            SELECT DISTINCT user_id
+            FROM user_events
+            WHERE item_id = %(lid)s
+              AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
+              AND timestamp >= now() - INTERVAL 30 DAY
+              AND user_id != %(uid)s
+              AND user_id != 0
+            LIMIT 500
+        """, parameters={"lid": listing_id, "uid": owner_id})
+        audience.update(int(r[0]) for r in vid_result.result_rows)
+    except Exception as exc:
+        logging.getLogger(__name__).warning("[AudienceEstimate] ClickHouse başarısız: %s", exc)
+        # ClickHouse yoksa listing_impressions'dan doğrudan görüntüleyenleri al
+        rows = await db.execute(
+            text("SELECT DISTINCT user_id FROM listing_impressions WHERE listing_id = :lid AND user_id != :uid LIMIT 500"),
+            {"lid": listing_id, "uid": owner_id},
+        )
+        audience.update(r[0] for r in rows.fetchall())
+
+    # ── Sinyal 2: Kategori ilgisi olan potansiyel kullanıcılar ───────────────
+    # user_interests: bu kategoriyle ilgilenen (score >= 0.3) kullanıcılar
+    try:
+        interest_rows = await db.execute(
+            text("""
+                SELECT DISTINCT user_id
+                FROM user_interests
+                WHERE category = :cat
+                  AND score >= 0.3
+                  AND user_id != :uid
+                LIMIT :lim
+            """),
+            {"cat": listing_category, "uid": owner_id, "lim": cap},
+        )
+        audience.update(r[0] for r in interest_rows.fetchall())
+    except Exception as exc:
+        logging.getLogger(__name__).warning("[AudienceEstimate] user_interests sorgusu başarısız: %s", exc)
+
+    return list(audience)[:cap]
+
+
 @router.get("/{listing_id}/audience-estimate")
 async def audience_estimate(
     listing_id: int,
@@ -350,38 +411,21 @@ async def audience_estimate(
     used  = await _get_blast_used(current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
-    # ClickHouse ile görüntüleyenleri çek, başarısız olursa listing_impressions'a düş
-    viewer_ids: list[int] = []
-    try:
-        from app.database_clickhouse import get_clickhouse_client
-        ch = await get_clickhouse_client()
-        vid_result = await ch.query("""
-            SELECT DISTINCT user_id
-            FROM user_events
-            WHERE item_id = %(lid)s
-              AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
-              AND timestamp >= now() - INTERVAL 30 DAY
-              AND user_id != %(uid)s
-              AND user_id != 0
-            LIMIT 500
-        """, parameters={"lid": listing_id, "uid": current_user.id})
-        viewer_ids = [int(r[0]) for r in vid_result.result_rows]
-    except Exception as exc:
-        logging.getLogger(__name__).warning("[AudienceEstimate] ClickHouse başarısız, listing_impressions'a düşüyorum: %s", exc)
-        rows = await db.execute(
-            text("SELECT DISTINCT user_id FROM listing_impressions WHERE listing_id = :lid AND user_id != :uid LIMIT 500"),
-            {"lid": listing_id, "uid": current_user.id},
-        )
-        viewer_ids = [r[0] for r in rows.fetchall()]
+    candidate_ids = await _build_listing_audience(
+        listing_id=listing_id,
+        listing_category=listing.category or "",
+        owner_id=current_user.id,
+        db=db,
+    )
 
     reachable = 0
-    if viewer_ids:
+    if candidate_ids:
         token_count = await db.scalar(text("""
             SELECT COUNT(*) FROM users
             WHERE id = ANY(:ids)
               AND fcm_token IS NOT NULL AND fcm_token != ''
               AND id NOT IN (SELECT follower_id FROM follows WHERE followed_id = :me)
-        """), {"ids": viewer_ids, "me": current_user.id})
+        """), {"ids": candidate_ids, "me": current_user.id})
         reachable = int(token_count or 0)
 
     actual_cap     = min(reachable, cap)
@@ -457,32 +501,17 @@ async def send_mass_notification(
     if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
         raise HTTPException(402, f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance}, Gerekli: {tuci_cost}")
 
-    # Hedef kullanıcıları ClickHouse veya listing_impressions'dan çek
-    viewer_ids: list[int] = []
-    try:
-        from app.database_clickhouse import get_clickhouse_client
-        ch = await get_clickhouse_client()
-        result = await ch.query("""
-            SELECT DISTINCT user_id
-            FROM user_events
-            WHERE item_id = %(lid)s
-              AND event_type IN ('view', 'dwell', 'detail_dwell', 'click')
-              AND timestamp >= now() - INTERVAL 30 DAY
-              AND user_id != %(uid)s
-              AND user_id != 0
-            LIMIT 500
-        """, parameters={"lid": listing_id, "uid": current_user.id})
-        viewer_ids = [int(r[0]) for r in result.result_rows]
-    except Exception as exc:
-        logging.getLogger(__name__).warning("[MassNotif] ClickHouse başarısız: %s", exc)
-        rows = await db.execute(
-            text("SELECT DISTINCT user_id FROM listing_impressions WHERE listing_id = :lid AND user_id != :uid LIMIT 500"),
-            {"lid": listing_id, "uid": current_user.id},
-        )
-        viewer_ids = [r[0] for r in rows.fetchall()]
+    # Hedef kitleyi oluştur: doğrudan görüntüleyenler + kategori ilgisi olanlar
+    candidate_ids = await _build_listing_audience(
+        listing_id=listing_id,
+        listing_category=listing.category or "",
+        owner_id=current_user.id,
+        db=db,
+        cap=min(cap * 3, 1500),
+    )
 
-    if not viewer_ids:
-        return {"sent": 0, "spent": 0, "message": "Henüz yeterli izleyici verisi yok."}
+    if not candidate_ids:
+        return {"sent": 0, "spent": 0, "message": "Henüz yeterli kitle verisi yok."}
 
     token_rows = (await db.execute(text("""
         SELECT fcm_token FROM users
@@ -490,7 +519,7 @@ async def send_mass_notification(
           AND fcm_token IS NOT NULL AND fcm_token != ''
           AND id NOT IN (SELECT follower_id FROM follows WHERE followed_id = :me)
         LIMIT :cap
-    """), {"ids": viewer_ids, "me": current_user.id, "cap": actual_count})).fetchall()
+    """), {"ids": candidate_ids, "me": current_user.id, "cap": actual_count})).fetchall()
     fcm_tokens = [r[0] for r in token_rows]
 
     if not fcm_tokens:
