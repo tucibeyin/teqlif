@@ -126,7 +126,7 @@ class FeedQueries:
         )
         rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
 
-        counts, liked_set = await LikeService.batch_listing_likes( listing_ids, user_id)
+        counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, listing_ids, user_id)
 
         # Eğer kullanıcının kendi ilanı denk geldiyse impression_count çek
         impression_map: dict[int, int] = {}
@@ -528,7 +528,7 @@ class FeedQueries:
             )
         )
         rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
-        counts, liked_set = await LikeService.batch_listing_likes( listing_ids, user_id)
+        counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, listing_ids, user_id)
 
         # Kendi ilanıysa impression_count al
         impression_map: dict[int, int] = {}
@@ -972,7 +972,7 @@ class FeedQueries:
             )
         )
         rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
-        counts, liked_set = await LikeService.batch_listing_likes( base_ids, user_id)
+        counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, base_ids, user_id)
 
         recent_uids = list({rows[lid][1].id for lid in base_ids if lid in rows})
         badge_map_r, trending_cats_r, trending_lids_r, trust_map_r, influence_map_r = await _fetch_seller_meta(recent_uids)
@@ -1053,7 +1053,7 @@ class FeedQueries:
             )
         )
         rows = {listing.id: (listing, user) for listing, user in rows_result.all()}
-        counts, liked_set = await LikeService.batch_listing_likes( ids, user_id)
+        counts, liked_set = await LikeService.batch_listing_likes(self.uow.session, ids, user_id)
 
         interest_uids = list({rows[lid][1].id for lid in ids if lid in rows})
         badge_map_i, trending_cats_i, trending_lids_i, trust_map_i, influence_map_i = await _fetch_seller_meta(interest_uids)
