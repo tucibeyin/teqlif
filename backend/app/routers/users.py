@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, text as sa_text
 
 from app.models.enums import UserStatus
-from app.database import get_db
+from app.database import get_db, get_uow
 from app.models.user import User
 from app.models.referral import Referral
 from app.schemas.block import BlockedUserOut, BlockStatusOut
@@ -57,9 +57,8 @@ async def _optional_user(
 @router.get("/blocked", response_model=List[BlockedUserOut])
 async def list_blocked_users(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
     return await GetBlockedUsersQuery(uow).execute(current_user)
 
 
@@ -67,10 +66,9 @@ async def list_blocked_users(
 async def block_user(
     username: str,
     current_user: User = Depends(get_current_user),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    from app.core.uow import SqlAlchemyUnitOfWork
     from app.use_cases.users.block_user_use_case import BlockUserUseCase
-    uow = SqlAlchemyUnitOfWork()
     return await BlockUserUseCase(uow).execute(username, current_user)
 
 
@@ -78,9 +76,8 @@ async def block_user(
 async def unblock_user(
     username: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
     return await UnblockUserCommand(uow).execute(username, current_user)
 
 
@@ -260,7 +257,6 @@ async def get_suggested_sellers(
 async def get_user_profile(
     username: str,
     current_user: Optional[User] = Depends(_optional_user),
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
     return await GetUserProfileQuery(uow).execute(username, current_user)

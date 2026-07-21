@@ -113,8 +113,6 @@ class ToggleListingCommand:
                 delete(ListingImpression).where(ListingImpression.listing_id == listing_id)
             )
 
-            await self.uow.commit()
-            
         try:
             from app.utils.listing_cleanup import cleanup_listing_redis
             asyncio.create_task(cleanup_listing_redis(listing_id))

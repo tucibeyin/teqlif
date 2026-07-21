@@ -2,19 +2,18 @@
 Açık artırma router — Clean Router Pattern.
 
 Her endpoint sadece:
-  1. Bağımlılıkları (auth, db, rate-limit) alır
-  2. AuctionService'i instantiate eder
-  3. Uygun servis metodunu çağırır ve sonucu döner
+  1. Bağımlılıkları (auth, uow, rate-limit) alır
+  2. Command/Query'yi çağırır ve sonucu döner
 
 İş mantığı, DB sorguları, Redis işlemleri ve WS yayınları tamamen
-app.services.auction_service.AuctionService'e taşınmıştır.
+AuctionCommands ve ilgili Query sınıflarına taşınmıştır.
 """
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import asyncio
 
-from app.database import get_db
+from app.database import get_uow
+from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.user import User
 from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut, BidOut, EndAuctionIn, AcceptBidIn
 from app.utils.auth import get_current_user, decode_token
@@ -27,13 +26,12 @@ from app.database_clickhouse import buffer_user_event
 from app.use_cases.auctions.commands.auction_commands import AuctionCommands
 from app.use_cases.auctions.queries.auction_queries import GetBidsQuery, GetAuctionStateQuery
 from app.use_cases.auctions.auction_utils import manager, pubsub_listener
-from app.core.uow import SqlAlchemyUnitOfWork
 
 from app.constants import ws_types as WS
 
-_WS_AUTH_TIMEOUT_SECS    = 5.0   # ilk auth mesajı için bekleme süresi
-_WS_RECEIVE_TIMEOUT_SECS = 40.0  # ping timeout
-_WS_CODE_SESSION_LIMIT   = 4008  # eş zamanlı oturum limiti aşıldı
+_WS_AUTH_TIMEOUT_SECS    = 5.0
+_WS_RECEIVE_TIMEOUT_SECS = 40.0
+_WS_CODE_SESSION_LIMIT   = 4008
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auction", tags=["auction"])
@@ -43,18 +41,16 @@ router = APIRouter(prefix="/api/auction", tags=["auction"])
 
 @router.get("/{stream_id}", response_model=AuctionStateOut)
 async def get_auction_state_endpoint(stream_id: int):
-    return await GetAuctionStateQuery(SqlAlchemyUnitOfWork(session_factory=lambda: None)).execute(stream_id)
+    # Redis-only query: DB session gerekmez
+    return await GetAuctionStateQuery().execute(stream_id)
 
 
 @router.get("/{stream_id}/bids", response_model=list[BidOut])
 async def get_auction_bids(
     stream_id: int,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    """Stream'in teklif geçmişini döner (en yeniden eskiye, max 50)."""
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await GetBidsQuery(uow).execute(stream_id)
 
 
@@ -63,34 +59,28 @@ async def start_auction(
     request: Request,
     stream_id: int,
     data: AuctionStart,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
     host_ip = request.client.host if request.client else None
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await AuctionCommands(uow).start(stream_id, data, current_user, host_ip=host_ip)
 
 
 @router.post("/{stream_id}/pause", response_model=AuctionStateOut)
 async def pause_auction(
     stream_id: int,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await AuctionCommands(uow).pause(stream_id, current_user)
 
 
 @router.post("/{stream_id}/resume", response_model=AuctionStateOut)
 async def resume_auction(
     stream_id: int,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await AuctionCommands(uow).resume(stream_id, current_user)
 
 
@@ -98,12 +88,10 @@ async def resume_auction(
 async def end_auction(
     stream_id: int,
     data: Optional[EndAuctionIn] = None,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
     proof_image_url = data.proof_image_url if data else None
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await AuctionCommands(uow).end_auction(stream_id, current_user, proof_image_url=proof_image_url)
 
 
@@ -113,13 +101,11 @@ async def place_bid(
     request: Request,
     stream_id: int,
     data: BidIn,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
     _idem=Depends(idempotency_key("bid", ttl=30)),
 ):
     bidder_ip = request.client.host if request.client else None
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     result = await AuctionCommands(uow).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
     asyncio.create_task(buffer_user_event(
         event_type="bid_placed",
@@ -137,12 +123,9 @@ async def place_bid(
 async def buy_it_now_request(
     request: Request,
     stream_id: int,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    """Viewer Hemen Al talebi gönderir. Host onayına kadar bekler."""
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await AuctionCommands(uow).request_buy_it_now(stream_id, current_user)
 
 
@@ -150,25 +133,19 @@ async def buy_it_now_request(
 async def buy_it_now_accept(
     stream_id: int,
     data: Optional[EndAuctionIn] = None,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    """Host Hemen Al talebini kabul eder. Satın alma tamamlanır."""
     proof_image_url = data.proof_image_url if data else None
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await AuctionCommands(uow).accept_buy_it_now(stream_id, current_user, proof_image_url=proof_image_url)
 
 
 @router.post("/{stream_id}/buy-it-now/reject", response_model=AuctionStateOut)
 async def buy_it_now_reject(
     stream_id: int,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
-    """Host Hemen Al talebini reddeder. Artırma kaldığı yerden devam eder."""
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await AuctionCommands(uow).reject_buy_it_now(stream_id, current_user)
 
 
@@ -176,12 +153,10 @@ async def buy_it_now_reject(
 async def accept_bid(
     stream_id: int,
     data: Optional[AcceptBidIn] = None,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
     proof_image_url = data.proof_image_url if data else None
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await AuctionCommands(uow).accept_bid(stream_id, current_user, proof_image_url=proof_image_url)
 
 
@@ -191,7 +166,6 @@ async def accept_bid(
 async def auction_ws(stream_id: int, websocket: WebSocket):
     await websocket.accept()
 
-    # ── Soft auth: token varsa doğrula, yoksa anonim izle ───────────────────
     user_id: int | None = None
     try:
         raw = await asyncio.wait_for(websocket.receive_json(), timeout=_WS_AUTH_TIMEOUT_SECS)
@@ -199,9 +173,8 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
         if token:
             user_id = decode_token(token)
     except (asyncio.TimeoutError, Exception):
-        pass  # Token gelmedi veya geçersiz — anonim devam
+        pass
 
-    # Authenticated kullanıcılar için concurrent session koruması
     if user_id:
         session_count = await register_ws_session(user_id)
         if session_count > MAX_CONCURRENT_SESSIONS:
@@ -214,27 +187,19 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
             return
 
     manager.connect(websocket, stream_id)
-    logger.info(
-        "[AUCTION WS] BAĞLANDI | stream_id=%s user_id=%s",
-        stream_id, user_id or "anonim",
-    )
+    logger.info("[AUCTION WS] BAĞLANDI | stream_id=%s user_id=%s", stream_id, user_id or "anonim")
     try:
-        state = await GetAuctionStateQuery(SqlAlchemyUnitOfWork(session_factory=lambda: None)).execute(stream_id)
-        logger.info(
-            "[WS] İLK STATE GÖNDERİLDİ | stream_id=%s status=%s",
-            stream_id, state.get("status"),
-        )
+        state = await GetAuctionStateQuery().execute(stream_id)
+        logger.info("[WS] İLK STATE GÖNDERİLDİ | stream_id=%s status=%s", stream_id, state.get("status"))
         await websocket.send_json({"type": WS.AUCTION_STATE, **state})
 
-        # Outbox replay: bağlantı kesintisinde kaçırılan son eventleri gönder
         missed = await outbox_replay(stream_id, count=10)
-        for event in reversed(missed):  # eskiden yeniye sırayla
+        for event in reversed(missed):
             try:
                 await websocket.send_json({**event, "replayed": True})
             except Exception:
                 break
 
-        # Bağlantıyı açık tut; client'tan gelen ping mesajlarını yoksay
         while True:
             try:
                 msg = await asyncio.wait_for(websocket.receive(), timeout=_WS_RECEIVE_TIMEOUT_SECS)

@@ -46,3 +46,22 @@ async def get_db():
             yield session
         finally:
             await session.close()
+
+
+async def get_uow():
+    """
+    FastAPI Depends helper'ı — router endpoint'lerine hazır UoW enjekte eder.
+
+    Session yaşam döngüsü get_db ile aynıdır; UoW yalnızca repository
+    erişimi ve hata yönetimini sağlar. Kullanım:
+        async def my_endpoint(uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """
+    from app.core.uow import SqlAlchemyUnitOfWork
+    async with AsyncSessionLocal() as session:
+        try:
+            yield SqlAlchemyUnitOfWork.from_session(session)
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()

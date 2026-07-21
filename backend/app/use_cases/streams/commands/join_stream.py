@@ -39,7 +39,6 @@ class JoinStreamCommand:
                 .values(stream_id=stream_id, user_id=user.id)
                 .on_conflict_do_nothing()
             )
-            await self.uow.commit()
 
             return JoinTokenOut(
                 stream_id=stream.id,

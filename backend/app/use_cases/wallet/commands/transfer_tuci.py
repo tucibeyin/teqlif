@@ -32,11 +32,7 @@ class TransferTuciCommand:
             await self.uow.transactions.create(obj_in=t1_data) # Stub implementation
             await self.uow.transactions.create(obj_in=t2_data) # Stub implementation
             
-            from app.core.event_bus import event_bus
-            from app.core.events import DomainEvent
-            
-            # TODO: TuciTransferredEvent fırlat (Notifier için)
-            await self.uow.commit()
+            # TODO: TuciTransferredEvent fırlat (Notifier için) — commit'ten sonra event_bus.publish()
 
         logger.info("[TransferTuciCommand] Başarılı | sender=%s receiver=%s amount=%s", sender_id, receiver_id, amount)
         return {"status": "success", "amount": amount}

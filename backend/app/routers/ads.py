@@ -19,7 +19,8 @@ from sqlalchemy import select
 from sqlalchemy import text as sql_text
 
 from app.models.enums import ListingStatus
-from app.database import get_db
+from app.database import get_db, get_uow
+from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
 from app.models.tuci_transaction import TuciTransaction
@@ -338,15 +339,14 @@ async def record_impression(
 
 @router.get("/sponsored")
 async def get_sponsored_listings(
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
     """
     Aktif kampanyalardan sponsorlu ilanları döndürür.
     Web feed'ine enjekte etmek için kullanılır.
     """
     from app.use_cases.feed.queries.feed_queries import FeedQueries
-    from app.core.uow import SqlAlchemyUnitOfWork
-    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db))._get_sponsored_listings()
+    return await FeedQueries(uow)._get_sponsored_listings()
 
 
 # ── Kampanya Performans Raporu ─────────────────────────────────────────────────

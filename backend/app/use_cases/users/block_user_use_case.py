@@ -35,7 +35,6 @@ class BlockUserUseCase:
                     raise BadRequestException("Kendinizi engelleyemezsiniz")
 
                 await self.uow.users.add_block(current_user.id, target.id)
-                await self.uow.commit()
 
         except IntegrityError:
             # SQLAlchemy UoW exception yakaladığında rollback otomatik yapılır.

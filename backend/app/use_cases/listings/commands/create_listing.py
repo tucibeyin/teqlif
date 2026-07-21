@@ -61,20 +61,19 @@ class CreateListingCommand:
                 "image_url": image_url,
                 "image_urls": json.dumps(image_urls or [])
             }
-            
-            new_listing = await self.uow.listings.create(obj_in=listing_data)
-            await self.uow.commit()
 
-            # 3. CQRS: Diğer sistemlere (Projector, Notifier) haber ver
-            event_bus.publish(
-                ListingCreatedEvent(
-                    listing_id=new_listing.id,
-                    user_id=user_id,
-                    title=_title,
-                    category=cat,
-                    price=price
-                )
+            new_listing = await self.uow.listings.create(obj_in=listing_data)
+
+        # 3. CQRS: Diğer sistemlere (Projector, Notifier) haber ver — commit'ten sonra
+        event_bus.publish(
+            ListingCreatedEvent(
+                listing_id=new_listing.id,
+                user_id=user_id,
+                title=_title,
+                category=cat,
+                price=price
             )
+        )
 
         logger.info("[CreateListingCommand] Başarılı | listing_id=%s", new_listing.id)
         return {"id": new_listing.id, "status": "created"}

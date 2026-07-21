@@ -31,7 +31,6 @@ class BlockUserCommand:
 
             block_rec = UserBlock(blocker_id=current_user.id, blocked_id=target.id)
             self.uow.session.add(block_rec)
-            await self.uow.commit()
 
         logger.info("[USER] Kullanıcı engellendi | blocker=%s blocked=%s", current_user.username, username)
         
@@ -63,7 +62,6 @@ class UnblockUserCommand:
                 return BlockStatusOut(target_username=username, is_blocked=False)
 
             await self.uow.session.delete(existing)
-            await self.uow.commit()
 
         logger.info("[USER] Kullanıcı engeli kaldırıldı | blocker=%s blocked=%s", current_user.username, username)
         

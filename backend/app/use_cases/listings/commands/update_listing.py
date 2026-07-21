@@ -48,7 +48,6 @@ class UpdateListingCommand:
                 listing.price = price
 
             # TODO: EventBus publish ListingUpdatedEvent
-            await self.uow.commit()
 
         logger.info("[UpdateListingCommand] Başarılı | listing_id=%s", listing_id)
         return {"id": listing_id, "status": "updated"}

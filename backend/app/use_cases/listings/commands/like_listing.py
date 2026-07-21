@@ -43,6 +43,5 @@ class LikeListingCommand:
                 logger.info("[LikeListingCommand] Favoriye eklendi | listing_id=%s", listing_id)
 
             # TODO: EventBus publish ListingLikedEvent
-            await self.uow.commit()
 
         return {"id": listing_id, "action": action}

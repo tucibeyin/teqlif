@@ -25,7 +25,6 @@ class DeleteListingCommand:
 
             listing.status = ListingStatus.DELETED
             # TODO: EventBus publish ListingDeletedEvent
-            await self.uow.commit()
 
         logger.info("[DeleteListingCommand] Başarılı | listing_id=%s", listing_id)
         return {"id": listing_id, "status": "deleted"}

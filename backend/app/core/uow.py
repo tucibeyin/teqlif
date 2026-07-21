@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import AsyncSessionLocal
-from app.repositories.user_repository import UserRepository, user_repository
+from app.repositories.user_repository import UserRepository
 from app.core.exceptions import DatabaseException, AppException
 from app.core.logger import get_logger, capture_exception
 
@@ -11,10 +11,6 @@ logger = get_logger(__name__)
 
 
 class AbstractUnitOfWork(abc.ABC):
-    """
-    Unit of Work (UoW) için temel soyut sınıf.
-    Repository'lere erişimi merkezi hale getirir ve transaction'ları yönetir.
-    """
     users: UserRepository
 
     async def __aenter__(self):
@@ -23,18 +19,15 @@ class AbstractUnitOfWork(abc.ABC):
     async def __aexit__(self, exc_type, exc_val, traceback):
         if exc_type is not None:
             await self.rollback()
-            # Eğer hata bilinen bir AppException ise onu olduğu gibi yukarı bırak.
             if issubclass(exc_type, AppException):
-                return False  # Hatayı yutma, yeniden fırlat
-            # Eğer SQLAlchemy / veritabanı kaynaklı bir hataysa logla ve DatabaseException fırlat
+                return False
             if issubclass(exc_type, SQLAlchemyError):
                 logger.error("[UoW] Database transaction failed: %s", exc_val, exc_info=(exc_type, exc_val, traceback))
                 capture_exception(exc_val)
                 raise DatabaseException("Veritabanı işlemi sırasında beklenmeyen bir hata oluştu")
-            # Diğer hatalar için (örn. KeyError, ValueError vs.)
             logger.error("[UoW] Unexpected transaction error: %s", exc_val, exc_info=(exc_type, exc_val, traceback))
             capture_exception(exc_val)
-            return False  # Yeniden fırlat
+            return False
         else:
             await self.commit()
 
@@ -48,16 +41,15 @@ class AbstractUnitOfWork(abc.ABC):
 
 
 class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
-    """
-    SQLAlchemy'nin AsyncSession'ını sarmalayan somut UoW sınıfı.
-    """
     def __init__(self, session_factory=AsyncSessionLocal):
         self.session_factory = session_factory
         self.session: AsyncSession = None
+        self._owns_session = True  # __aexit__ session'ı kapatır
 
-    async def __aenter__(self):
-        self.session = self.session_factory()
-        
+    # ── Repository binding ────────────────────────────────────────────────────
+
+    def _bind_repos(self):
+        """Mevcut session'a tüm repository'leri bağlar."""
         from app.repositories.listing_repository import ListingRepository
         from app.repositories.stream_repository import StreamRepository
         from app.repositories.message_repository import MessageRepository
@@ -71,7 +63,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         from app.repositories.block_repository import BlockRepository
         from app.repositories.story_repository import StoryRepository
         from app.repositories.ad_campaign_repository import AdCampaignRepository
-        
+
         self.listings = ListingRepository(self.session)
         self.streams = StreamRepository(self.session)
         self.messages = MessageRepository(self.session)
@@ -85,7 +77,27 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self.blocks = BlockRepository(self.session)
         self.stories = StoryRepository(self.session)
         self.ads = AdCampaignRepository(self.session)
-        
+
+    @classmethod
+    def from_session(cls, session: AsyncSession) -> "SqlAlchemyUnitOfWork":
+        """
+        Router'dan enjekte edilen mevcut bir session'ı sarar.
+
+        Session yaşam döngüsü (commit/close) get_uow tarafından yönetilir;
+        bu UoW yalnızca repository erişimi sağlar. __aexit__ session'ı kapatmaz.
+        """
+        uow = object.__new__(cls)
+        uow.session = session
+        uow.session_factory = lambda: session
+        uow._owns_session = False  # session get_uow tarafından kapatılır
+        uow._bind_repos()
+        return uow
+
+    # ── Context manager ───────────────────────────────────────────────────────
+
+    async def __aenter__(self):
+        self.session = self.session_factory()
+        self._bind_repos()
         await super().__aenter__()
         return self
 
@@ -93,7 +105,8 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         try:
             await super().__aexit__(exc_type, exc_val, traceback)
         finally:
-            await self.session.close()
+            if self._owns_session:
+                await self.session.close()
 
     async def commit(self):
         await self.session.commit()

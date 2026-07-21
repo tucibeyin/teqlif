@@ -39,14 +39,12 @@ class EndStreamCommand:
                 except Exception:
                     pass
 
-                await self.uow.commit()
-
-                try:
-                    await publish_chat(stream_id, {"type": WS.STREAM_ENDED})
-                    from app.core.ws_manager import ws_manager
-                    await ws_manager.publish("chat_broadcast", "global", {"type": WS.STREAM_ENDED, "stream_id": stream_id})
-                except Exception:
-                    pass
+        try:
+            await publish_chat(stream_id, {"type": WS.STREAM_ENDED})
+            from app.core.ws_manager import ws_manager
+            await ws_manager.publish("chat_broadcast", "global", {"type": WS.STREAM_ENDED, "stream_id": stream_id})
+        except Exception:
+            pass
 
         return {"message": "Yayın sonlandırıldı"}
 
@@ -80,6 +78,5 @@ class UpdateThumbnailCommand:
             thumbnail_url = storage.upload_bytes(filename, data, _CONTENT_TYPES[ext])
 
             stream.thumbnail_url = thumbnail_url
-            await self.uow.commit()
 
         return {"thumbnail_url": thumbnail_url}

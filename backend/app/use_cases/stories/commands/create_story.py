@@ -25,9 +25,7 @@ class CreateStoryCommand:
             }
             
             new_story = await self.uow.stories.create(obj_in=story_data)
-            
             # TODO: EventBus publish StoryCreatedEvent
-            await self.uow.commit()
 
         logger.info("[CreateStoryCommand] Başarılı | story_id=%s", new_story.id)
         return {"id": new_story.id, "status": "created"}

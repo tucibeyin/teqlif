@@ -11,35 +11,33 @@ class GetBidsQuery:
         self.uow = uow
 
     async def execute(self, stream_id: int, limit: int = 50) -> list:
-        async with self.uow:
-            query = (
-                select(Bid, User)
-                .join(User, User.id == Bid.bidder_id)
-                .where(Bid.stream_id == stream_id)
-                .order_by(Bid.created_at.desc())
-                .limit(limit)
-            )
-            res = await self.uow.session.execute(query)
-            out = []
-            for bid, u in res.all():
-                out.append({
-                    "id": bid.id,
-                    "bidder_id": u.id,
-                    "bidder_username": u.username,
-                    "bid_amount": bid.amount,
-                    "created_at": bid.created_at.isoformat() if bid.created_at else None,
-                })
-            return out
+        query = (
+            select(Bid, User)
+            .join(User, User.id == Bid.bidder_id)
+            .where(Bid.stream_id == stream_id)
+            .order_by(Bid.created_at.desc())
+            .limit(limit)
+        )
+        res = await self.uow.session.execute(query)
+        out = []
+        for bid, u in res.all():
+            out.append({
+                "id": bid.id,
+                "bidder_id": u.id,
+                "bidder_username": u.username,
+                "bid_amount": bid.amount,
+                "created_at": bid.created_at.isoformat() if bid.created_at else None,
+            })
+        return out
 
 class GetAuctionStateQuery:
-    def __init__(self, uow: AbstractUnitOfWork):
-        self.uow = uow
+    """Redis-only query — DB session gerekmez."""
 
     async def execute(self, stream_id: int) -> dict:
         redis = await get_redis()
         key = auction_key(stream_id)
         data = await redis.hgetall(key)
-        
+
         if not data:
             return {
                 "status": "idle",

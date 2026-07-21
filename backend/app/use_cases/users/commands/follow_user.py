@@ -40,6 +40,5 @@ class FollowUserCommand:
                 logger.info("[FollowUserCommand] Takip edildi | follower=%s followed=%s", follower_id, followed_id)
 
             # TODO: EventBus publish UserFollowedEvent
-            await self.uow.commit()
 
         return {"followed_id": followed_id, "action": action}

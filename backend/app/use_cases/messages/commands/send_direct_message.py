@@ -43,21 +43,17 @@ class SendDirectMessageCommand:
                 "content": content,
                 "content_type": content_type
             }
-            # dict veya kwargs ile create metodu
             new_message = await self.uow.messages.create(obj_in=msg_data)
-            
-            # Commit
-            await self.uow.commit()
 
-            # Event fırlat (Okuma modellerinin (Queries/Projectors) haberdar olması için)
-            event_bus.publish(
-                DirectMessageCreatedEvent(
-                    message_id=new_message.id,
-                    sender_id=sender_id,
-                    receiver_id=receiver_id,
-                    content=content
-                )
+        # Event fırlat commit'ten sonra — projector/notifier kayıtlı veriyi okuyabilir
+        event_bus.publish(
+            DirectMessageCreatedEvent(
+                message_id=new_message.id,
+                sender_id=sender_id,
+                receiver_id=receiver_id,
+                content=content
             )
+        )
 
         logger.info("[SendDirectMessageCommand] Başarılı | message_id=%s", new_message.id)
         return {"id": new_message.id, "status": "sent"}

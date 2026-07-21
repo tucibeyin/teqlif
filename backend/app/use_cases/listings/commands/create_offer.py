@@ -35,10 +35,7 @@ class CreateListingOfferCommand:
                 amount=amount,
             )
             self.uow.session.add(offer)
-            await self.uow.commit()
-
-            # Refresh is typically needed to get the generated ID
-            await self.uow.session.refresh(offer)
+            await self.uow.session.flush()  # offer.id atanır, commit __aexit__'te yapılır
 
         logger.info(
             "[CreateListingOfferCommand] Teklif verildi | listing_id=%s user_id=%s amount=%s",

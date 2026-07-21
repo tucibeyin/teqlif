@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import numpy as np
 
-from app.database import get_db
+from app.database import get_db, get_uow
+from app.core.uow import SqlAlchemyUnitOfWork
 from app.utils.auth import get_current_user, get_current_user_optional
 from app.models.user import User
 from app.models.listing import Listing
 from app.use_cases.feed.queries.feed_queries import FeedQueries
-from app.core.uow import SqlAlchemyUnitOfWork
 from app.services.recommendation_service import (
     get_personalized_feed as get_ch_personalized_feed,
     get_user_category_affinity,
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/feed", tags=["feed"])
 async def get_feed(
     page: int = Query(default=0, ge=0, le=100),
     seed: str = Query(default="default", max_length=64),
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User | None = Depends(get_current_user_optional),
 ):
     """
@@ -38,8 +38,6 @@ async def get_feed(
     - seed: oturum başında üretilmeli, scroll boyunca aynı kalmalı
     """
     user_id = current_user.id if current_user else None
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await FeedQueries(uow).get_personalized_feed(user_id, page, seed)
 
 
@@ -81,13 +79,13 @@ async def mark_not_interested(
     redis = await get_redis()
     key = f"not_interested:{current_user.id}"
     await redis.sadd(key, listing_id)
-    await redis.expire(key, 7 * 86400)  # 7 gün
+    await redis.expire(key, 7 * 86400)
 
 
 @router.get("/recent")
 async def get_recent_mixed_feed(
     page: int = Query(default=0, ge=0, le=50),
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User | None = Depends(get_current_user_optional),
 ):
     """
@@ -95,15 +93,13 @@ async def get_recent_mixed_feed(
     Misafirler: sadece son ilanlar, enjeksiyon yok.
     """
     user_id = current_user.id if current_user else None
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await FeedQueries(uow).get_mixed_recent_feed(user_id, page)
 
 
 @router.get("/for-you")
 async def get_for_you_feed(
     page: int = Query(default=0, ge=0, le=4),
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -113,8 +109,6 @@ async def get_for_you_feed(
     - varsa pgvector cosine distance ile en yakın ilanlar
     - Sayfa başına 20 ilan, maks 5 sayfa (100 ilan havuzu Redis'te 5 dk önbelleklenir)
     """
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    uow.session = db
     return await FeedQueries(uow).get_foryou_feed(current_user.id, page)
 
 

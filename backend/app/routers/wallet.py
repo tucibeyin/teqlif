@@ -6,7 +6,8 @@ from sqlalchemy import select, desc, text as sql_text
 import json
 import logging
 from app.models.enums import ListingStatus
-from app.database import get_db
+from app.database import get_db, get_uow
+from app.core.uow import SqlAlchemyUnitOfWork
 from app.models.user import User
 from app.models.tuci_transaction import TuciTransaction
 from app.models.listing import Listing
@@ -93,19 +94,14 @@ async def get_balance(
 @router.post("/transfer")
 async def transfer_tuci(
     data: dict,
-    db: AsyncSession = Depends(get_db),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
     current_user: User = Depends(get_current_user),
 ):
     from app.use_cases.wallet.commands.transfer_tuci import TransferTuciCommand
-    from app.core.uow import SqlAlchemyUnitOfWork
-    
+
     recipient_id = data.get("recipient_id")
     amount = data.get("amount")
-    note = data.get("note", "")
-    
-    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-    cmd = TransferTuciCommand(uow)
-    return await cmd.execute(
+    return await TransferTuciCommand(uow).execute(
         sender_id=current_user.id,
         receiver_id=recipient_id,
         amount=amount

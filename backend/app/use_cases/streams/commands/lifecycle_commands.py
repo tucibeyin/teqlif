@@ -26,13 +26,6 @@ class ConfirmLiveCommand:
                 raise NotFoundException("Beklemedeki yayın bulunamadı")
 
             stream.is_live = True
-            try:
-                await self.uow.commit()
-            except Exception as exc:
-                await self.uow.session.rollback()
-                logger.error("[STREAMS] confirm_live hatası | stream_id=%s | %s", stream_id, exc)
-                capture_exception(exc)
-                raise DatabaseException("Yayın aktif duruma getirilemedi")
 
         from app.use_cases.streams.stream_utils import notify_followers_task
         background_tasks.add_task(
@@ -64,13 +57,6 @@ class CancelPendingStreamCommand:
             await delete_livekit_room(stream.room_name)
 
             await self.uow.session.delete(stream)
-            try:
-                await self.uow.commit()
-            except Exception as exc:
-                await self.uow.session.rollback()
-                logger.error("[STREAMS] cancel_pending hatası | stream_id=%s | %s", stream_id, exc)
-                capture_exception(exc)
-                raise DatabaseException("Yayın iptal edilemedi")
 
         logger.info("[STREAMS] Beklemedeki yayın iptal edildi | stream_id=%s", stream_id)
         return {"message": "Yayın iptal edildi"}

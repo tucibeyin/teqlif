@@ -27,7 +27,7 @@ class StartStreamCommand:
                 raise BadRequestException("Kullanıcı bulunamadı")
 
             room_name = f"stream_{user_id}_{uuid.uuid4().hex[:8]}"
-            
+
             stream_data = {
                 "room_name": room_name,
                 "host_id": user_id,
@@ -37,19 +37,17 @@ class StartStreamCommand:
                 "thumbnail_url": thumbnail_url
             }
             new_stream = await self.uow.streams.create(obj_in=stream_data)
-            
-            from app.core.event_bus import event_bus
-            from app.core.events import StreamStartedEvent
-            
-            event_bus.publish(
-                StreamStartedEvent(
-                    stream_id=new_stream.id,
-                    user_id=user_id,
-                    title=title
-                )
+
+        from app.core.event_bus import event_bus
+        from app.core.events import StreamStartedEvent
+
+        event_bus.publish(
+            StreamStartedEvent(
+                stream_id=new_stream.id,
+                user_id=user_id,
+                title=title
             )
-            
-            await self.uow.commit()
+        )
 
         token = make_livekit_token(room_name, user, can_publish=True)
         logger.info("[StartStreamCommand] Başarılı | stream_id=%s", new_stream.id)
