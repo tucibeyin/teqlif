@@ -904,7 +904,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _iconBtn(Icons.pause_rounded, Colors.amber, _pauseAuction),
-          if (state.currentBidder != null) ...[
+          if (state.currentBidder != null && state.bidCount > 0) ...[
             const SizedBox(width: 6),
             _acceptBtn(),
           ],
@@ -918,7 +918,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _iconBtn(Icons.play_arrow_rounded, Colors.green, _resumeAuction),
-          if (state.currentBidder != null) ...[
+          if (state.currentBidder != null && state.bidCount > 0) ...[
             const SizedBox(width: 6),
             _acceptBtn(),
           ],
