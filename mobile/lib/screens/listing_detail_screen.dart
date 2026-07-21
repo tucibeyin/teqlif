@@ -1948,50 +1948,55 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                           return Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              TeqButton(
-                                onPressed:
-                                    (_massNotificationSending ||
-                                        _cooldownLoading)
-                                    ? null
-                                    : _cooldownSeconds > 0
-                                    ? () => _openMassNotificationReport(context)
-                                    : () => _sendMassNotification(context),
-                                text: _cooldownSeconds > 0
-                                    ? l.btnViewNotificationReport
-                                    : '📢 ${l.btnSendMassNotification}',
-                                type: TeqButtonType.primary,
-                                size: TeqButtonSize.large,
-                                customColor: const Color(0xFF14B8A6),
-                                isLoading: _massNotificationSending || _cooldownLoading,
-                              ),
-                              if (_cooldownSeconds > 0)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 5),
-                                  child: Text(
-                                    _formatCooldown(_cooldownSeconds),
-                                    style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 11,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
+                              // Blast butonu — sadece aktif ilanlar için
+                              if (_isActive) ...[
+                                TeqButton(
+                                  onPressed:
+                                      (_massNotificationSending ||
+                                          _cooldownLoading)
+                                      ? null
+                                      : _cooldownSeconds > 0
+                                      ? () => _openMassNotificationReport(context)
+                                      : () => _sendMassNotification(context),
+                                  text: _cooldownSeconds > 0
+                                      ? l.btnViewNotificationReport
+                                      : '📢 ${l.btnSendMassNotification}',
+                                  type: TeqButtonType.primary,
+                                  size: TeqButtonSize.large,
+                                  customColor: const Color(0xFF14B8A6),
+                                  isLoading: _massNotificationSending || _cooldownLoading,
                                 ),
-                              const SizedBox(height: 8),
-                              _campaignId != null
-                                  ? TeqButton(
-                                      onPressed: () => _openAdReport(context),
-                                      text: '📊 ${l.boostBtnReport}',
-                                      type: TeqButtonType.primary,
-                                      size: TeqButtonSize.large,
-                                      customColor: const Color(0xFF6366F1),
-                                    )
-                                  : TeqButton(
-                                      onPressed: () => _boostListing(context),
-                                      text: '🔥 ${l.boostBtnStart}',
-                                      type: TeqButtonType.primary,
-                                      size: TeqButtonSize.large,
-                                      customColor: const Color(0xFFF97316),
+                                if (_cooldownSeconds > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 5),
+                                    child: Text(
+                                      _formatCooldown(_cooldownSeconds),
+                                      style: const TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 11,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
+                                  ),
+                                const SizedBox(height: 8),
+                              ],
+                              // Reklam butonu: performans raporu her zaman, başlat yalnızca aktif ilan için
+                              if (_campaignId != null)
+                                TeqButton(
+                                  onPressed: () => _openAdReport(context),
+                                  text: '📊 ${l.boostBtnReport}',
+                                  type: TeqButtonType.primary,
+                                  size: TeqButtonSize.large,
+                                  customColor: const Color(0xFF6366F1),
+                                )
+                              else if (_isActive)
+                                TeqButton(
+                                  onPressed: () => _boostListing(context),
+                                  text: '🔥 ${l.boostBtnStart}',
+                                  type: TeqButtonType.primary,
+                                  size: TeqButtonSize.large,
+                                  customColor: const Color(0xFFF97316),
+                                ),
                             ],
                           );
                         },
