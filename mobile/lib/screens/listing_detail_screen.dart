@@ -1605,22 +1605,30 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          CircleAvatar(
-                            radius: 24,
-                            backgroundColor: AppColors.primaryBg(context),
-                            child: Text(
-                              ((user['full_name'] as String?) ??
-                                      (user['username'] as String?) ??
-                                      '?')
-                                  .substring(0, 1)
-                                  .toUpperCase(),
-                              style: const TextStyle(
-                                color: kPrimary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ),
+                          Builder(builder: (ctx) {
+                            final rawImg = user['profile_image_thumb_url'] as String?
+                                ?? user['profile_image_url'] as String?;
+                            final photoUrl = rawImg != null ? imgUrl(rawImg) : null;
+                            return CircleAvatar(
+                              radius: 24,
+                              backgroundColor: AppColors.primaryBg(context),
+                              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                              child: photoUrl == null
+                                  ? Text(
+                                      ((user['full_name'] as String?) ??
+                                              (user['username'] as String?) ??
+                                              '?')
+                                          .substring(0, 1)
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                        color: kPrimary,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 18,
+                                      ),
+                                    )
+                                  : null,
+                            );
+                          }),
                           if (user['is_premium'] == true)
                             Positioned(
                               bottom: 0,

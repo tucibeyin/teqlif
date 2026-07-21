@@ -116,6 +116,7 @@ def _row_dict(
             "profile_image_url": user.profile_image_url,
             "profile_image_thumb_url": user.profile_image_thumb_url,
             "is_premium": user.is_premium,
+            "is_verified": user.is_verified,
             "badge": seller_badge,
             "trust_score": seller_trust_score,
             "influence_rank": seller_influence_rank,
