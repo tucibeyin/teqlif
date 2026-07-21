@@ -157,6 +157,11 @@ async def track_interaction(
         # Sıcak ilan spike dedektörü: 24 saat içinde 3. bid_hesitation → satıcıya bildirim
         if payload.interaction_type == "bid_hesitation" and payload.item_type == "listing":
             try:
+                # Feed geri beslemesi: bu ilan tekrar feed'de gösterilmeli (seen_decay sıfırla)
+                hes_key = f"hesitated:{user_id}"
+                await redis.sadd(hes_key, str(payload.item_id))
+                await redis.expire(hes_key, 7 * 86400)  # 7 gün TTL
+
                 spike_key = f"hes_spike:{payload.item_id}"
                 spike_count = await redis.incr(spike_key)
                 if spike_count == 1:

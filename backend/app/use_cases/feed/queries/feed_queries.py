@@ -106,7 +106,7 @@ class FeedQueries:
             _user = await self.uow.session.scalar(select(User).where(User.id == user_id))
             user_embedding = _user.preference_embedding if _user else None
             max_budget = _user.max_budget if _user else None
-            listing_ids = await _score_and_rank(
+            listing_ids = await self._score_and_rank(
                 user_id, interests, offset, PAGE_SIZE, seed,
                 excluded_ids=excluded_ids,
                 user_embedding=user_embedding,
@@ -177,13 +177,12 @@ class FeedQueries:
         return result
 
 
-    async def _score_and_rank(self, 
+    async def _score_and_rank(self,
         user_id: int,
         interests: dict[str, float],
         offset: int,
         limit: int,
         seed: str,
-        db: AsyncSession,
         excluded_ids: list[int] | None = None,
         user_embedding: list[float] | None = None,
         max_budget: float | None = None,
@@ -208,6 +207,12 @@ class FeedQueries:
         """
         if not interests:
             return await self._popular_feed(offset, limit, exclude_user_id=user_id)
+
+        # Hesitation sinyali: kullanıcının teklif tereddüdü olan ilanlar
+        # Bu ilanlar için seen_decay cezası sıfırlanır (tekrar göster)
+        redis = await get_redis()
+        hes_raw = await redis.smembers(f"hesitated:{user_id}")
+        hesitated_ids: set[int] = {int(x) for x in hes_raw} if hes_raw else set()
 
         # ── Saat dilimi bağlam sinyali ────────────────────────────────────────────
         hour = datetime.now().hour
@@ -259,14 +264,20 @@ class FeedQueries:
 
         # Filtreler
         ni_filter = f"AND l.id NOT IN ({','.join(str(i) for i in excluded_ids)})" if excluded_ids else ""
+        hesitated_sql = (
+            f"({','.join(str(i) for i in hesitated_ids)})"
+            if hesitated_ids else "(0)"
+        )
+
+        # Python greedy diversity için yeterli aday havuzu çek
+        pool_size = min((limit + offset) * 4, 400)
 
         budget_clause = ""
         params: dict = {
             "uid": user_id,
             "top_cats": tuple(top_cat_names),
             "seed": seed,
-            "lim": limit,
-            "off": offset,
+            "pool_lim": pool_size,
         }
         if max_budget is not None:
             budget_clause = "AND (l.price IS NULL OR l.price <= :price_ceiling)"
@@ -384,11 +395,14 @@ class FeedQueries:
                         + COALESCE(soc.is_followed, 0.0) * {social_w}
                         + ({exploration_expr}) * {explore_w}
                         + (ABS(HASHTEXT(l.id::text || :seed)::float / 2147483647.0)) * 0.02
-                        - COALESCE(imp.seen_decay, 0.0) * {seen_w}
+                        - (CASE WHEN l.id IN {hesitated_sql} THEN 0.0
+                               ELSE COALESCE(imp.seen_decay, 0.0)
+                           END) * {seen_w}
                         + COALESCE(hq.quality, 0.0) * {host_w}
                         + COALESCE(sc.conv_rate, 0.0) * {conv_w}
                         + COALESCE(si.boost, 0.0) * {influence_w}
-                    ) AS feed_score
+                    ) AS feed_score,
+                    l.category
                 FROM candidates c
                 INNER JOIN listings l ON l.id = c.id
                 LEFT JOIN (
@@ -411,22 +425,34 @@ class FeedQueries:
                 LEFT JOIN host_quality hq ON hq.host_id = l.user_id
                 LEFT JOIN seller_conv sc ON sc.seller_id = l.user_id
                 LEFT JOIN seller_influence si ON si.seller_id = l.user_id
-            ),
-            -- Çeşitlilik kısıtı: bir kategoriden maksimum 3 ilan
-            diversified AS (
-                SELECT id, feed_score,
-                       ROW_NUMBER() OVER (PARTITION BY category ORDER BY feed_score DESC) AS cat_rank
-                FROM scored
             )
-            SELECT id
-            FROM diversified
-            WHERE cat_rank <= 3
+            SELECT id, category, feed_score
+            FROM scored
             ORDER BY feed_score DESC
-            LIMIT :lim OFFSET :off
+            LIMIT :pool_lim
         """)
 
-        result = await self.uow.session.execute(sql, params)
-        return [row.id for row in result]
+        rows = (await self.uow.session.execute(sql, params)).all()
+
+        # Greedy kategori çeşitliliği: her kategoriden max 4 ilan (ForYou ile tutarlı)
+        MAX_PER_CAT = 4
+        cat_counts: dict[str, int] = {}
+        diverse_ids: list[int] = []
+        overflow_ids: list[int] = []
+        for row in rows:
+            cat = row.category or ""
+            if cat_counts.get(cat, 0) < MAX_PER_CAT:
+                diverse_ids.append(row.id)
+                cat_counts[cat] = cat_counts.get(cat, 0) + 1
+            else:
+                overflow_ids.append(row.id)
+            if len(diverse_ids) >= limit + offset:
+                break
+
+        if len(diverse_ids) < limit + offset:
+            diverse_ids.extend(overflow_ids[: limit + offset - len(diverse_ids)])
+
+        return diverse_ids[offset : offset + limit]
 
 
     async def _popular_feed(self, offset: int, limit: int, exclude_user_id: int | None = None) -> list[int]:
