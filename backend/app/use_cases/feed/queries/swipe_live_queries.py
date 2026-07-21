@@ -74,12 +74,10 @@ class SwipeLiveQueries:
     async def _build_config(self, user_id: int,) -> dict:
         # 1. Aktif yayınlar
         from app.use_cases.streams.queries.misc_queries import GetActiveStreamsQuery
-        from app.core.uow import SqlAlchemyUnitOfWork
-        uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
-        streams = await GetActiveStreamsQuery(uow).execute(user_id)
+        streams = await GetActiveStreamsQuery(self.uow).execute(user_id)
 
         # 2. Kategori ilgi skorları
-        interests: dict[str, float] = await get_user_interests(user_id)
+        interests: dict[str, float] = await FeedQueries(self.uow).get_user_interests(user_id)
 
         # 3. ClickHouse sinyalleri — paralel çek
         import asyncio

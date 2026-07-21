@@ -525,6 +525,7 @@ async def get_followed_live_streams(
     db: AsyncSession = Depends(get_db),
 ):
     uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
     return await GetFollowedLiveStreamsQuery(uow).execute(current_user.id)
 
 
@@ -535,6 +536,7 @@ async def get_recommended_streams(
 ):
     """Category affinity'ye göre kişiselleştirilmiş aktif yayınlar (max 8)."""
     uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
     return await GetActiveStreamsQuery(uow).execute(current_user.id)
 
 
@@ -548,7 +550,9 @@ async def swipe_live_config(
     Yayınları kullanıcı ilgi + ClickHouse davranış skoruna göre sıralar,
     listings_per_group ve tercih edilen ilan kategorilerini döndürür.
     """
-    return await SwipeLiveQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_swipe_live_config(current_user.id)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await SwipeLiveQueries(uow).get_swipe_live_config(current_user.id)
 
 
 @router.get("/active", response_model=list[StreamOut])
@@ -557,6 +561,7 @@ async def get_active_streams(
     db: AsyncSession = Depends(get_db),
 ):
     uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
     return await GetActiveStreamsQuery(uow).execute(current_user_id)
 
 
