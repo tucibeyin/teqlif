@@ -1,3 +1,4 @@
+from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
 
 from app.core.uow import AbstractUnitOfWork
 from app.use_cases.auctions.auction_utils import manager, _log_fraud_attempt, fmt_price, auction_key, publish_auction, _require_host
