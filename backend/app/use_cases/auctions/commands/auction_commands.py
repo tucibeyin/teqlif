@@ -368,6 +368,90 @@ class AuctionCommands:
         return stream
 
     # ── Durum ────────────────────────────────────────────────────────────────
+
+    # ── Başlat ───────────────────────────────────────────────────────────────
+    async def start(self, stream_id: int, data: AuctionStart, user: User, host_ip: str | None = None) -> dict:
+        from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
+        await self._require_host(stream_id, user)
+        redis = await get_redis()
+        key = auction_key(stream_id)
+
+        existing_status = await redis.hget(key, "status")
+        if existing_status == "active":
+            raise BadRequestException("Zaten aktif bir açık artırma var")
+
+        listing_id_val = data.listing_id
+        start_price = float(data.start_price)
+        if listing_id_val:
+            listing = await self.uow.session.scalar(
+                select(Listing).where(Listing.id == listing_id_val, Listing.status != ListingStatus.DELETED)
+            )
+            if not listing:
+                raise NotFoundException("İlan bulunamadı")
+            item_name = listing.title
+        else:
+            item_name = data.item_name
+            listing_id_val = None
+
+        bin_price = float(data.buy_it_now_price) if data.buy_it_now_price else None
+        await redis.hset(key, mapping={
+            "status": "active",
+            "item_name": item_name,
+            "start_price": str(start_price),
+            "buy_it_now_price": str(bin_price) if bin_price else "",
+            "current_bid": str(start_price),
+            "current_bidder_id": "",
+            "current_bidder_name": "",
+            "bid_count": "0",
+            "host_id": str(user.id),
+            "host_ip": host_ip or "",
+            "stream_id": str(stream_id),
+            "listing_id": str(listing_id_val) if listing_id_val else "",
+        })
+        await redis.expire(key, 24 * 3600)
+
+        state = await GetAuctionStateQuery(self.uow).execute(stream_id)
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
+        logger.info(
+            "[AÇIK ARTIRMA] BAŞLADI | stream_id=%s item=%r start_price=%s | ws_hedef=%s",
+            stream_id, data.item_name, data.start_price, manager.conn_count(stream_id),
+        )
+        return state
+
+    # ── Duraklat ─────────────────────────────────────────────────────────────
+    async def pause(self, stream_id: int, user: User) -> dict:
+        from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
+        await self._require_host(stream_id, user)
+        redis = await get_redis()
+        key = auction_key(stream_id)
+
+        if await redis.hget(key, "status") != "active":
+            raise BadRequestException("Açık artırma aktif değil")
+
+        await redis.hset(key, "status", "paused")
+        state = await GetAuctionStateQuery(self.uow).execute(stream_id)
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
+        logger.info("[AÇIK ARTIRMA] DURAKLATILDI | stream_id=%s | ws_hedef=%s",
+                    stream_id, manager.conn_count(stream_id))
+        return state
+
+    # ── Devam Ettir ──────────────────────────────────────────────────────────
+    async def resume(self, stream_id: int, user: User) -> dict:
+        from app.use_cases.auctions.queries.auction_queries import GetAuctionStateQuery
+        await self._require_host(stream_id, user)
+        redis = await get_redis()
+        key = auction_key(stream_id)
+
+        if await redis.hget(key, "status") != "paused":
+            raise BadRequestException("Açık artırma duraklatılmamış")
+
+        await redis.hset(key, "status", "active")
+        state = await GetAuctionStateQuery(self.uow).execute(stream_id)
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
+        logger.info("[AÇIK ARTIRMA] DEVAM ETTİ | stream_id=%s | ws_hedef=%s",
+                    stream_id, manager.conn_count(stream_id))
+        return state
+
     async def end_auction(
         self, stream_id: int, user: User, proof_image_url: Optional[str] = None, system_end: bool = False
     ):
