@@ -49,6 +49,7 @@ class GetListingQuery:
                 AdCampaign.listing_id == listing.id,
                 AdCampaign.status.in_(["active", "paused"]),
             )
+            .limit(1)
         )
         cid = camp_result.scalar_one_or_none()
 
