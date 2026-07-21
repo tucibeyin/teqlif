@@ -807,8 +807,7 @@ class FeedQueries:
         return cats
 
 
-    async def _get_sponsored_listings(self, 
-        db: AsyncSession,
+    async def _get_sponsored_listings(self,
         user_id: int | None = None,
         exclude_user_id: int | None = None,
     ) -> list[dict]:
