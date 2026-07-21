@@ -59,6 +59,18 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
     return ref.watch(listingDetailProvider(id)).canReceiveOffers;
   }
 
+  bool get _isPassive {
+    final id = widget.listing['id'] as int?;
+    if (id == null) return false;
+    return ref.watch(listingDetailProvider(id)).isPassive;
+  }
+
+  bool get _isListingInitialized {
+    final id = widget.listing['id'] as int?;
+    if (id == null) return true;
+    return ref.watch(listingDetailProvider(id)).isInitialized;
+  }
+
   int? _campaignId;
 
   // Toplu Kitle Bildirimi (Mass Notification)
@@ -111,16 +123,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       _images.add(imgUrl(widget.listing['image_url'] as String));
     }
 
-    // Provider'ı mevcut JSON verisiyle başlat
+    // Provider'ı mevcut JSON verisiyle başlat — sync çağrı zorunlu,
+    // Future.microtask ile çağrılırsa ilk build default (active) state ile render edilir.
     final listingId = widget.listing['id'] as int?;
     if (listingId != null) {
-      Future.microtask(() {
-        if (mounted) {
-          ref
-              .read(listingDetailProvider(listingId).notifier)
-              .initFromData(widget.listing);
-        }
-      });
+      ref.read(listingDetailProvider(listingId).notifier).initFromData(widget.listing);
     }
 
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
@@ -1937,7 +1944,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         ),
       ),
       bottomNavigationBar: isMine
-          ? (!_isActive && _campaignId == null)
+          ? (_isListingInitialized && !_isActive && !_isPassive && _campaignId == null)
                 ? const SizedBox.shrink()
                 : SafeArea(
                     child: Padding(
@@ -1948,17 +1955,17 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                           return Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Blast butonu — sadece aktif ilanlar için
-                              if (_isActive) ...[
+                              // Blast butonu — aktif ilan: enabled, pasif ilan: disabled + sebep
+                              if (_isActive || _isPassive) ...[
                                 TeqButton(
-                                  onPressed:
-                                      (_massNotificationSending ||
-                                          _cooldownLoading)
+                                  onPressed: !_isActive
                                       ? null
-                                      : _cooldownSeconds > 0
-                                      ? () => _openMassNotificationReport(context)
-                                      : () => _sendMassNotification(context),
-                                  text: _cooldownSeconds > 0
+                                      : (_massNotificationSending || _cooldownLoading)
+                                          ? null
+                                          : _cooldownSeconds > 0
+                                              ? () => _openMassNotificationReport(context)
+                                              : () => _sendMassNotification(context),
+                                  text: _cooldownSeconds > 0 && _isActive
                                       ? l.btnViewNotificationReport
                                       : '📢 ${l.btnSendMassNotification}',
                                   type: TeqButtonType.primary,
@@ -1966,18 +1973,21 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                   customColor: const Color(0xFF14B8A6),
                                   isLoading: _massNotificationSending || _cooldownLoading,
                                 ),
-                                if (_cooldownSeconds > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 5),
-                                    child: Text(
-                                      _formatCooldown(_cooldownSeconds),
-                                      style: const TextStyle(
-                                        color: Colors.white54,
-                                        fontSize: 11,
-                                      ),
-                                      textAlign: TextAlign.center,
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 5),
+                                  child: Text(
+                                    _isPassive
+                                        ? l.massNotifUnavailableListingNotActive
+                                        : _cooldownSeconds > 0
+                                            ? _formatCooldown(_cooldownSeconds)
+                                            : '',
+                                    style: const TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 11,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
+                                ),
                                 const SizedBox(height: 8),
                               ],
                               // Reklam butonu: performans raporu her zaman, başlat yalnızca aktif ilan için

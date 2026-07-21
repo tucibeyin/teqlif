@@ -405,6 +405,8 @@ async def audience_estimate(
     )
     if not listing:
         raise HTTPException(404, "İlan bulunamadı")
+    if listing.status != ListingStatus.ACTIVE:
+        raise HTTPException(422, detail={"code": "LISTING_NOT_ACTIVE", "status": listing.status.value})
 
     cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
@@ -485,6 +487,8 @@ async def send_mass_notification(
     )
     if not listing:
         raise HTTPException(404, "İlan bulunamadı")
+    if listing.status != ListingStatus.ACTIVE:
+        raise HTTPException(422, detail={"code": "LISTING_NOT_ACTIVE", "status": listing.status.value})
 
     cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD

@@ -2174,6 +2174,7 @@
     }
   },
   "massNotifPerListingInfo": "Her ilan için 24 saatte bir toplu bildirim gönderilebilir.",
+  "massNotifUnavailableListingNotActive": "İlan pasif olduğu için bu özellik kullanılamaz.",
   "btnShare": "Paylaş",
   "shareListingText": "{title} — teqlif'te incele",
   "shareLiveText": "{title} — teqlif'te canlı izle",

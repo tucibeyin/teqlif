@@ -4373,6 +4373,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Массовое уведомление можно отправлять раз в 24 часа для каждого объявления.';
 
   @override
+  String get massNotifUnavailableListingNotActive =>
+      'Эта функция недоступна, так как объявление неактивно.';
+
+  @override
   String get btnShare => 'Поделиться';
 
   @override

@@ -4298,6 +4298,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'يمكن إرسال إشعار جماعي مرة واحدة كل 24 ساعة لكل إعلان.';
 
   @override
+  String get massNotifUnavailableListingNotActive =>
+      'هذه الميزة غير متاحة لأن الإعلان غير نشط.';
+
+  @override
   String get btnShare => 'مشاركة';
 
   @override

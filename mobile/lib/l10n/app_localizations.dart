@@ -7926,6 +7926,12 @@ abstract class AppLocalizations {
   /// **'Her ilan için 24 saatte bir toplu bildirim gönderilebilir.'**
   String get massNotifPerListingInfo;
 
+  /// No description provided for @massNotifUnavailableListingNotActive.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan pasif olduğu için bu özellik kullanılamaz.'**
+  String get massNotifUnavailableListingNotActive;
+
   /// No description provided for @btnShare.
   ///
   /// In tr, this message translates to:

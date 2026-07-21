@@ -2176,6 +2176,7 @@
     }
   },
   "massNotifPerListingInfo": "Массовое уведомление можно отправлять раз в 24 часа для каждого объявления.",
+  "massNotifUnavailableListingNotActive": "Эта функция недоступна, так как объявление неактивно.",
   "btnShare": "Поделиться",
   "shareListingText": "{title} — посмотрите на teqlif",
   "shareLiveText": "{title} — смотрите в прямом эфире на teqlif",

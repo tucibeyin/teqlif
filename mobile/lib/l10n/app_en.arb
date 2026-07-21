@@ -2175,6 +2175,7 @@
     }
   },
   "massNotifPerListingInfo": "A mass notification can be sent once every 24 hours per listing.",
+  "massNotifUnavailableListingNotActive": "This feature is unavailable because the listing is inactive.",
   "btnShare": "Share",
   "shareListingText": "{title} — check it out on teqlif",
   "shareLiveText": "{title} — watch live on teqlif",

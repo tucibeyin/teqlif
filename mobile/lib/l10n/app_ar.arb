@@ -2155,6 +2155,7 @@
     }
   },
   "massNotifPerListingInfo": "يمكن إرسال إشعار جماعي مرة واحدة كل 24 ساعة لكل إعلان.",
+  "massNotifUnavailableListingNotActive": "هذه الميزة غير متاحة لأن الإعلان غير نشط.",
   "btnShare": "مشاركة",
   "shareListingText": "{title} — تحقق منه على teqlif",
   "shareLiveText": "{title} — شاهد مباشرة على teqlif",

@@ -4328,6 +4328,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Her ilan için 24 saatte bir toplu bildirim gönderilebilir.';
 
   @override
+  String get massNotifUnavailableListingNotActive =>
+      'İlan pasif olduğu için bu özellik kullanılamaz.';
+
+  @override
   String get btnShare => 'Paylaş';
 
   @override

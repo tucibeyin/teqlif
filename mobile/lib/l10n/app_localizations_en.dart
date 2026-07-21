@@ -4323,6 +4323,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'A mass notification can be sent once every 24 hours per listing.';
 
   @override
+  String get massNotifUnavailableListingNotActive =>
+      'This feature is unavailable because the listing is inactive.';
+
+  @override
   String get btnShare => 'Share';
 
   @override
