@@ -185,7 +185,7 @@ class LeaveCohostCommand:
                     pass
 
             await publish_chat(stream_id, {
-                "type": WS.COHOST_LEFT,
+                "type": WS.COHOST_REMOVED,
                 "username": current_user.username,
             })
             return {"message": "Sahneden inildi, izleyici konumundasınız."}
