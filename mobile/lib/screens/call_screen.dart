@@ -527,7 +527,7 @@ class _CallScreenState extends State<CallScreen> {
                                   child: Padding(
                                     padding: const EdgeInsets.only(bottom: 10),
                                     child: AnimatedRotation(
-                                      turns: _isControlsExpanded ? 0.5 : 0.0,
+                                      turns: _isControlsExpanded ? 0.0 : 0.5,
                                       duration: const Duration(milliseconds: 300),
                                       curve: Curves.easeInOut,
                                       child: Icon(
