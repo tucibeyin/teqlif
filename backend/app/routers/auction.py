@@ -53,7 +53,9 @@ async def get_auction_bids(
     current_user: User = Depends(get_current_user),
 ):
     """Stream'in teklif geçmişini döner (en yeniden eskiye, max 50)."""
-    return await GetBidsQuery(SqlAlchemyUnitOfWork(session_factory=lambda: db)).execute(stream_id)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await GetBidsQuery(uow).execute(stream_id)
 
 
 @router.post("/{stream_id}/start", response_model=AuctionStateOut)
@@ -65,7 +67,9 @@ async def start_auction(
     current_user: User = Depends(get_current_user),
 ):
     host_ip = request.client.host if request.client else None
-    return await AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db)).start(stream_id, data, current_user, host_ip=host_ip)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await AuctionCommands(uow).start(stream_id, data, current_user, host_ip=host_ip)
 
 
 @router.post("/{stream_id}/pause", response_model=AuctionStateOut)
@@ -74,7 +78,9 @@ async def pause_auction(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db)).pause(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await AuctionCommands(uow).pause(stream_id, current_user)
 
 
 @router.post("/{stream_id}/resume", response_model=AuctionStateOut)
@@ -83,7 +89,9 @@ async def resume_auction(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db)).resume(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await AuctionCommands(uow).resume(stream_id, current_user)
 
 
 @router.post("/{stream_id}/end", response_model=AuctionStateOut)
@@ -94,7 +102,9 @@ async def end_auction(
     current_user: User = Depends(get_current_user),
 ):
     proof_image_url = data.proof_image_url if data else None
-    return await AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db)).end_auction(stream_id, current_user, proof_image_url=proof_image_url)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await AuctionCommands(uow).end_auction(stream_id, current_user, proof_image_url=proof_image_url)
 
 
 @router.post("/{stream_id}/bid", response_model=AuctionStateOut)
@@ -108,7 +118,9 @@ async def place_bid(
     _idem=Depends(idempotency_key("bid", ttl=30)),
 ):
     bidder_ip = request.client.host if request.client else None
-    result = await AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db)).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    result = await AuctionCommands(uow).place_bid(stream_id, data, current_user, bidder_ip=bidder_ip)
     asyncio.create_task(buffer_user_event(
         event_type="bid_placed",
         item_id=result.get("listing_id") or stream_id,
@@ -129,7 +141,9 @@ async def buy_it_now_request(
     current_user: User = Depends(get_current_user),
 ):
     """Viewer Hemen Al talebi gönderir. Host onayına kadar bekler."""
-    return await AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db)).request_buy_it_now(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await AuctionCommands(uow).request_buy_it_now(stream_id, current_user)
 
 
 @router.post("/{stream_id}/buy-it-now/accept", response_model=AuctionStateOut)
@@ -141,7 +155,9 @@ async def buy_it_now_accept(
 ):
     """Host Hemen Al talebini kabul eder. Satın alma tamamlanır."""
     proof_image_url = data.proof_image_url if data else None
-    return await AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db)).accept_buy_it_now(stream_id, current_user, proof_image_url=proof_image_url)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await AuctionCommands(uow).accept_buy_it_now(stream_id, current_user, proof_image_url=proof_image_url)
 
 
 @router.post("/{stream_id}/buy-it-now/reject", response_model=AuctionStateOut)
@@ -151,7 +167,9 @@ async def buy_it_now_reject(
     current_user: User = Depends(get_current_user),
 ):
     """Host Hemen Al talebini reddeder. Artırma kaldığı yerden devam eder."""
-    return await AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db)).reject_buy_it_now(stream_id, current_user)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await AuctionCommands(uow).reject_buy_it_now(stream_id, current_user)
 
 
 @router.post("/{stream_id}/accept", response_model=AuctionStateOut)
@@ -162,7 +180,9 @@ async def accept_bid(
     current_user: User = Depends(get_current_user),
 ):
     proof_image_url = data.proof_image_url if data else None
-    return await AuctionCommands(SqlAlchemyUnitOfWork(session_factory=lambda: db)).accept_bid(stream_id, current_user, proof_image_url=proof_image_url)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await AuctionCommands(uow).accept_bid(stream_id, current_user, proof_image_url=proof_image_url)
 
 
 # ── WebSocket endpoint ────────────────────────────────────────────────────────
