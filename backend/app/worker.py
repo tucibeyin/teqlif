@@ -450,6 +450,44 @@ async def flush_interactions_to_db(ctx: dict) -> None:
                         _job_id=f"pref_emb:{uid}",
                     )
 
+        # Thompson Sampling: kategori Beta parametrelerini toplu güncelle
+        try:
+            from app.services.ml.thompson_sampling import record_events_batch
+            from app.database import AsyncSessionLocal
+            from sqlalchemy import text as _sql_text
+
+            listing_events = [
+                r for r in rows
+                if r["user_id"] is not None
+                and r["item_type"] == "listing"
+                and r["interaction_type"] in (
+                    "listing_offer_submit", "listing_chat_open", "listing_favorite",
+                    "listing_share", "listing_like", "detail_dwell",
+                    "listing_view", "listing_impression", "listing_skip",
+                    "listing_unfavorite",
+                )
+            ]
+            if listing_events:
+                item_ids = list({r["item_id"] for r in listing_events})
+                async with AsyncSessionLocal() as _db:
+                    cat_rows = await _db.execute(
+                        _sql_text(
+                            "SELECT id, category FROM listings WHERE id = ANY(:ids)"
+                        ),
+                        {"ids": item_ids},
+                    )
+                    cat_map = {r[0]: r[1] for r in cat_rows if r[1]}
+
+                ts_events = [
+                    (r["user_id"], cat_map.get(r["item_id"], ""), r["interaction_type"])
+                    for r in listing_events
+                    if cat_map.get(r["item_id"])
+                ]
+                if ts_events:
+                    await record_events_batch(ts_events)
+        except Exception as _ts_exc:
+            logger.debug("[Worker] Thompson Sampling güncelleme atlandı: %s", _ts_exc)
+
     except Exception as exc:
         logger.error(
             "[Worker] flush_interactions_to_db başarısız | %s", str(exc), exc_info=True

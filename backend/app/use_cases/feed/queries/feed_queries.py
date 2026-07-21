@@ -917,22 +917,35 @@ class FeedQueries:
                 for lid in candidate_ids
             }
 
-        # Greedy kategori çeşitliliği: her kategoriden max 4 ilan
-        MAX_PER_CAT = 4
+        # Thompson Sampling: her kategori için dinamik slot sayısı
+        # Keşifçi kategoriler (düşük β) daha az slot, kanıtlanmış kategoriler daha fazla
+        all_cats = list({cat_map.get(lid, "") for lid in candidate_ids} - {""})
+        ts_scores: dict[str, float] = {}
+        try:
+            from app.services.ml.thompson_sampling import sample_category_priorities
+            ts_scores = await sample_category_priorities(user_id, all_cats)
+        except Exception as _ts_exc:
+            logger.debug("[ForYou] Thompson Sampling atlandı: %s", _ts_exc)
+
+        # Dinamik MAX_PER_CAT: [2, 6] arasında Thompson Sample'a göre ölçeklenir
+        # ts_score yüksek (güvenilir) → 6 slot, düşük (keşif) → 2 slot
+        def _max_slots(cat: str) -> int:
+            score = ts_scores.get(cat, 0.5)  # varsayılan: belirsiz
+            return max(2, min(6, round(2 + score * 4)))
+
         sorted_ids = sorted(candidate_ids, key=lambda lid: final_scores[lid], reverse=True)
         cat_counts: dict[str, int] = {}
         diverse_ids: list[int] = []
         overflow_ids: list[int] = []
         for lid in sorted_ids:
             cat = cat_map.get(lid, "")
-            if cat_counts.get(cat, 0) < MAX_PER_CAT:
+            if cat_counts.get(cat, 0) < _max_slots(cat):
                 diverse_ids.append(lid)
                 cat_counts[cat] = cat_counts.get(cat, 0) + 1
             else:
                 overflow_ids.append(lid)
             if len(diverse_ids) >= limit:
                 break
-        # Yeterli çeşitli ilan bulunamazsa skoru yüksek overflow'dan tamamla
         if len(diverse_ids) < limit:
             diverse_ids.extend(overflow_ids[: limit - len(diverse_ids)])
 
