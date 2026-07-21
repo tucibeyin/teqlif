@@ -1575,6 +1575,8 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
+                  if (isMine && _isListingInitialized)
+                    _statusChipRow(l.listingStatusLabel, _isActive),
                   _infoRow('Kategori', listing['category'] ?? '-'),
                   if (listing['location'] != null)
                     _infoRow('Konum', listing['location']),
@@ -2298,6 +2300,46 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
         ],
       ),
     ),
+  );
+
+  Widget _statusChipRow(String label, bool isActive) => Builder(
+    builder: (context) {
+      final l = AppLocalizations.of(context)!;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 90,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFF9CA3AF),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                isActive ? l.listingStatusActive : l.listingStatusPassive,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
   );
 
   Widget _buildOfferRow(BuildContext context, ListingOffer offer) {

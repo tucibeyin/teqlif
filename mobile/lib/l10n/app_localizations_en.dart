@@ -995,6 +995,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listingInfo => 'Listing Details';
 
   @override
+  String get listingStatusLabel => 'Status';
+
+  @override
+  String get listingStatusActive => 'Active';
+
+  @override
+  String get listingStatusPassive => 'Inactive';
+
+  @override
   String get listingLocationLabel => 'Location';
 
   @override

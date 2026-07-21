@@ -998,6 +998,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listingInfo => 'İlan Bilgileri';
 
   @override
+  String get listingStatusLabel => 'Durum';
+
+  @override
+  String get listingStatusActive => 'Aktif';
+
+  @override
+  String get listingStatusPassive => 'Pasif';
+
+  @override
   String get listingLocationLabel => 'Konum';
 
   @override

@@ -1008,6 +1008,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get listingInfo => 'Детали листинга';
 
   @override
+  String get listingStatusLabel => 'Статус';
+
+  @override
+  String get listingStatusActive => 'Активное';
+
+  @override
+  String get listingStatusPassive => 'Неактивное';
+
+  @override
   String get listingLocationLabel => 'Местоположение';
 
   @override

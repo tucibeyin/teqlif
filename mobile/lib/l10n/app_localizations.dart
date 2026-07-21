@@ -1998,6 +1998,24 @@ abstract class AppLocalizations {
   /// **'İlan Bilgileri'**
   String get listingInfo;
 
+  /// No description provided for @listingStatusLabel.
+  ///
+  /// In tr, this message translates to:
+  /// **'Durum'**
+  String get listingStatusLabel;
+
+  /// No description provided for @listingStatusActive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aktif'**
+  String get listingStatusActive;
+
+  /// No description provided for @listingStatusPassive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pasif'**
+  String get listingStatusPassive;
+
   /// No description provided for @listingLocationLabel.
   ///
   /// In tr, this message translates to:

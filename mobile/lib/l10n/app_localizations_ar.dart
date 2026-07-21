@@ -991,6 +991,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listingInfo => 'معلومات الإعلان';
 
   @override
+  String get listingStatusLabel => 'الحالة';
+
+  @override
+  String get listingStatusActive => 'نشط';
+
+  @override
+  String get listingStatusPassive => 'غير نشط';
+
+  @override
   String get listingLocationLabel => 'الموقع';
 
   @override
