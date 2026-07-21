@@ -52,10 +52,12 @@ class GetUserProfileQuery:
         if current_user:
             if current_user.id != target.id:
                 from app.models.follow import Follow
-                is_following = await self.uow.session.scalar(
+                follow_row = await self.uow.session.scalar(
                     select(Follow).where(Follow.follower_id == current_user.id, Follow.followed_id == target.id)
                 )
-                profile_data["is_following"] = is_following is not None
+                follow_status = follow_row.status if follow_row else "none"
+                profile_data["follow_status"] = follow_status
+                profile_data["is_following"] = follow_status == "accepted"
 
                 is_blocked = await self.uow.session.scalar(
                     select(UserBlock).where(UserBlock.blocker_id == current_user.id, UserBlock.blocked_id == target.id)

@@ -1602,103 +1602,55 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: AppColors.primaryBg(context),
-                        child: Text(
-                          ((user['full_name'] as String?) ??
-                                  (user['username'] as String?) ??
-                                  '?')
-                              .substring(0, 1)
-                              .toUpperCase(),
-                          style: const TextStyle(
-                            color: kPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: AppColors.primaryBg(context),
+                            child: Text(
+                              ((user['full_name'] as String?) ??
+                                      (user['username'] as String?) ??
+                                      '?')
+                                  .substring(0, 1)
+                                  .toUpperCase(),
+                              style: const TextStyle(
+                                color: kPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 18,
+                              ),
+                            ),
                           ),
-                        ),
+                          if (user['is_premium'] == true)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF0891B2), Color(0xFF06B6D4)],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.surface(context),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const FaIcon(
+                                  FontAwesomeIcons.crown,
+                                  size: 10,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if ((user['is_verified'] as bool? ?? false) ||
-                                (user['is_premium'] as bool? ?? false)) ...[
-                              Wrap(
-                                spacing: 4,
-                                children: [
-                                  if (user['is_verified'] == true)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 5,
-                                        vertical: 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF2563EB),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const FaIcon(
-                                            FontAwesomeIcons.circleCheck,
-                                            size: 8,
-                                            color: Colors.white,
-                                          ),
-                                          const SizedBox(width: 3),
-                                          Text(
-                                            AppLocalizations.of(
-                                              context,
-                                            )!.badgeVerified,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  if (user['is_premium'] == true)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 5,
-                                        vertical: 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            Color(0xFF0891B2),
-                                            Color(0xFF06B6D4),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          FaIcon(
-                                            FontAwesomeIcons.crown,
-                                            size: 8,
-                                            color: Colors.white,
-                                          ),
-                                          SizedBox(width: 3),
-                                          Text(
-                                            'PRO',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                            ],
                             Text(
                               user['full_name'] ?? user['username'] ?? '',
                               style: const TextStyle(
@@ -1706,12 +1658,24 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                                 fontSize: 14,
                               ),
                             ),
-                            Text(
-                              '@${user['username'] ?? ''}',
-                              style: TextStyle(
-                                color: AppColors.textSecondary(context),
-                                fontSize: 12,
-                              ),
+                            Row(
+                              children: [
+                                Text(
+                                  '@${user['username'] ?? ''}',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(context),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                if (user['is_verified'] == true) ...[
+                                  const SizedBox(width: 4),
+                                  const FaIcon(
+                                    FontAwesomeIcons.circleCheck,
+                                    size: 11,
+                                    color: Color(0xFF2563EB),
+                                  ),
+                                ],
+                              ],
                             ),
                             _SellerTrustRow(user: user),
                           ],
