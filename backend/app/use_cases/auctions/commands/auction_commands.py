@@ -164,13 +164,19 @@ local amount = tonumber(ARGV[1])
 local status = redis.call('hget', key, 'status')
 if status ~= 'active' then return {0, 'not_active'} end
 local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
+local bid_count = tonumber(redis.call('hget', key, 'bid_count')) or 0
 
-local increment = 1
-if current >= 1000 then increment = 50
-elseif current >= 500 then increment = 25
-elseif current >= 100 then increment = 10 end
+if bid_count == 0 then
+    if amount < current then return {0, 'too_low'} end
+else
+    local increment = 1
+    if current >= 1000 then increment = 50
+    elseif current >= 500 then increment = 25
+    elseif current >= 100 then increment = 10 end
 
-if amount < current + increment then return {0, 'too_low'} end
+    if amount < current + increment then return {0, 'too_low'} end
+end
+
 return {1, tostring(current)}
 """
 
@@ -186,12 +192,18 @@ local status = redis.call('hget', key, 'status')
 if status ~= 'active' then return {0, 'not_active'} end
 
 local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
-local increment = 1
-if current >= 1000 then increment = 50
-elseif current >= 500 then increment = 25
-elseif current >= 100 then increment = 10 end
+local bid_count = tonumber(redis.call('hget', key, 'bid_count')) or 0
 
-if amount < current + increment then return {0, 'too_low'} end
+if bid_count == 0 then
+    if amount < current then return {0, 'too_low'} end
+else
+    local increment = 1
+    if current >= 1000 then increment = 50
+    elseif current >= 500 then increment = 25
+    elseif current >= 100 then increment = 10 end
+
+    if amount < current + increment then return {0, 'too_low'} end
+end
 
 redis.call('hset', key,
     'current_bid', tostring(amount),
