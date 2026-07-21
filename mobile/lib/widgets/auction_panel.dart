@@ -1554,7 +1554,6 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   bool _loading = false;
   int _selectedBid = 0;
   // Shill bidding tespit edildiğinde 3s kırmızı buton gösterimi
-  bool _fraudDetected = false;
 
   @override
   void initState() {
@@ -1598,7 +1597,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
       _customBidCtrl.clear();
       _setMsg(AppLocalizations.of(context)!.auctionBidReceived(_fmt(amount)));
     } on AppException catch (e) {
-      _handleBidError(e.message, messenger: messenger);
+      _handleBidError(e, messenger: messenger);
     } catch (e, st) {
       LoggerService.instance.captureException(
         e,
@@ -1609,63 +1608,46 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
       final msg = s.startsWith('Exception: ')
           ? s.substring('Exception: '.length)
           : s;
-      _handleBidError(msg, messenger: messenger);
+      _handleBidError(AppException(msg), messenger: messenger);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _handleBidError(String message, {ScaffoldMessengerState? messenger}) {
+  void _handleBidError(AppException e, {ScaffoldMessengerState? messenger}) {
     if (!mounted || !context.mounted) return;
-    final sm = messenger ?? ScaffoldMessenger.of(context);
 
-    // Shill Bidding: "Aynı ağ üzerinden..." → 3s kırmızı buton + SnackBar
-    if (message.contains('Aynı ağ') ||
-        message.contains('shill') ||
-        message.contains('fraud')) {
-      setState(() => _fraudDetected = true);
-      sm.showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.white,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  message,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.red.shade800,
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-      // 3 saniye sonra normal renge dön
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) setState(() => _fraudDetected = false);
-      });
-      return;
-    }
-
-    // Troll Teklif: "telefon numaranızı doğrulayın" → modal bottom sheet
-    if (message.contains('telefon') || message.contains('doğrulayın')) {
-      _showPhoneVerificationSheet();
+    // Semantik kod bazlı yönlendirme — string matching yok
+    if (e.code == 'BID_BLOCKED_MUTE' || e.code == 'BID_BLOCKED_VERIFY') {
+      _showBidBlockedSheet(e.code);
       return;
     }
 
     // Diğer hatalar → mevcut hata kutusu
-    _setMsg(message, error: true);
+    _setMsg(e.message, error: true);
+  }
+
+  void _showBidBlockedSheet(String code) {
+    if (!mounted || !context.mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final needsVerify = code == 'BID_BLOCKED_VERIFY';
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetCtx) => _BidBlockedSheet(
+        title: l10n.bidBlockedTitle,
+        body: needsVerify ? l10n.bidBlockedVerifyBody : l10n.bidBlockedMuteBody,
+        actionLabel: needsVerify ? l10n.bidBlockedVerifyAction : l10n.bidBlockedDismiss,
+        onAction: () {
+          Navigator.pop(sheetCtx);
+          if (needsVerify) _showPhoneVerificationSheet();
+        },
+        showDismiss: needsVerify,
+        dismissLabel: l10n.bidBlockedDismiss,
+      ),
+    );
   }
 
   Future<void> _showPhoneVerificationSheet() async {
@@ -2006,14 +1988,13 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 ? l.auctionSwipeToBid('₺${_fmt(_selectedBid.toDouble())}')
                 : l.auctionSwipeToBidNoPrice,
             isLoading: _loading,
-            isInvalid: _fraudDetected,
+            isInvalid: false,
             itemId: liveState.listingId,
             pricePoint: _selectedBid > 0
                 ? _selectedBid.toDouble()
                 : (liveState.currentBid ?? liveState.startPrice),
             onSwipeComplete: () {
-              if (_selectedBid > 0 && !_fraudDetected)
-                _placeBid(_selectedBid.toDouble());
+              if (_selectedBid > 0) _placeBid(_selectedBid.toDouble());
             },
           ),
           // Hemen Al butonu — buyItNowPrice varsa ve currentBid < buyItNowPrice ise göster
@@ -2634,6 +2615,126 @@ class _PhoneVerifySheet extends StatefulWidget {
 
   @override
   State<_PhoneVerifySheet> createState() => _PhoneVerifySheetState();
+}
+
+// ── Bid Blocked Bottom Sheet ───────────────────────────────────────────────
+class _BidBlockedSheet extends StatelessWidget {
+  final String title;
+  final String body;
+  final String actionLabel;
+  final VoidCallback onAction;
+  final bool showDismiss;
+  final String dismissLabel;
+
+  const _BidBlockedSheet({
+    required this.title,
+    required this.body,
+    required this.actionLabel,
+    required this.onAction,
+    this.showDismiss = false,
+    this.dismissLabel = 'Anladım',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 32,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white24 : Colors.black12,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // İkon
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E40AF).withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.shield_outlined,
+              color: Color(0xFF3B82F6),
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Başlık
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          // Açıklama
+          Text(
+            body,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 28),
+          // Ana buton
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: onAction,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF3B82F6),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                actionLabel,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+          // İkincil "Anladım" — sadece verify case'de göster
+          if (showDismiss) ...[
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                dismissLabel,
+                style: TextStyle(
+                  color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _PhoneVerifySheetState extends State<_PhoneVerifySheet> {

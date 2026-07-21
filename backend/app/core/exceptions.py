@@ -44,8 +44,8 @@ class NotFoundException(AppException):
 class ForbiddenException(AppException):
     """403 — Yetki hatası."""
 
-    def __init__(self, message: str = "Bu işlem için yetkiniz yok"):
-        super().__init__(status_code=403, message=message, code="FORBIDDEN")
+    def __init__(self, message: str = "Bu işlem için yetkiniz yok", code: str = "FORBIDDEN"):
+        super().__init__(status_code=403, message=message, code=code)
 
 
 class EmailNotVerifiedException(AppException):

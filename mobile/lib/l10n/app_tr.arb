@@ -2610,6 +2610,11 @@
   "phoneVerifyEmailSentDesc": "Kayıtlı e-posta adresinize doğrulama bağlantısı gönderdik. Lütfen gelen kutunuzu kontrol edin.",
   "phoneVerifyTitle": "Telefon Doğrulaması",
   "phoneVerifyDesc": "Yüksek tutarlı teklifler için telefon doğrulaması gerekiyor. Numaranızı girin, e-posta ile doğrulayın.",
+  "bidBlockedTitle": "Teklif Verilemedi",
+  "bidBlockedMuteBody": "Bu yayında şu an teklif verme yetkiniz bulunmuyor. Sorun yaşıyorsanız destek ekibimize ulaşabilirsiniz.",
+  "bidBlockedVerifyBody": "Bu tutarda teklif verebilmek için hesabınızı doğrulamanız gerekiyor. Telefon numaranızı ekleyerek birkaç saniyede tamamlayabilirsiniz.",
+  "bidBlockedVerifyAction": "Hesabı Doğrula",
+  "bidBlockedDismiss": "Anladım",
   "btnRemovePin": "✕ Kaldır",
   "blastSent": "🎯 {count} kişiye bildirim gönderildi!",
   "@blastSent": {

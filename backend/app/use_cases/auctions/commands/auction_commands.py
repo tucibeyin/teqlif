@@ -527,7 +527,7 @@ class AuctionCommands:
 
         # Mute kontrolü
         if await redis.sismember(mute_key(stream_id), str(user.id)):
-            raise ForbiddenException("Bu yayında susturuldunuz. Teklif veremezsiniz.")
+            raise ForbiddenException("Bu yayında teklif veremiyorsunuz.", code="BID_BLOCKED_MUTE")
 
         # Önceki teklif sahibini kaydet (outbid bildirimi için)
         prev_data = await redis.hgetall(auction_key(stream_id))
@@ -566,7 +566,7 @@ class AuctionCommands:
 
             if shill_score >= _SHILL_THRESHOLD_MUTE:
                 await redis.sadd(mute_key(stream_id), str(user.id))
-                raise ForbiddenException("Şüpheli aktivite tespit edildi. Bu yayında teklif veremezsiniz.")
+                raise ForbiddenException("Bu yayında teklif veremiyorsunuz.", code="BID_BLOCKED_MUTE")
             elif shill_score >= _SHILL_THRESHOLD_WARN:
                 await redis.incr(shill_counter_key)
                 await redis.expire(shill_counter_key, _SHILL_COUNTER_TTL)
@@ -593,7 +593,8 @@ class AuctionCommands:
                 extra={"amount": float(data.amount), "current_bid": current_bid, "is_verified": user.is_verified},
             )
             raise ForbiddenException(
-                "Yüksek tutarlı teklifler için lütfen Profilinizden telefon numaranızı doğrulayın."
+                "Bu yayında teklif veremiyorsunuz.",
+                code="BID_BLOCKED_VERIFY",
             )
 
         # Fiyat & durum doğrulama (read-only, Redis değişmez)

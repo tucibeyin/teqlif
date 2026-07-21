@@ -2647,6 +2647,11 @@
   "phoneVerifyEmailSentDesc": "We sent a verification link to your registered email address. Please check your inbox.",
   "phoneVerifyTitle": "Phone Verification",
   "phoneVerifyDesc": "Phone verification is required for high-value bids. Enter your number and verify via email.",
+  "bidBlockedTitle": "Bid Not Allowed",
+  "bidBlockedMuteBody": "You are not allowed to place bids in this stream right now. Contact our support team if you believe this is a mistake.",
+  "bidBlockedVerifyBody": "You need to verify your account to place a bid at this amount. Add your phone number to complete verification in seconds.",
+  "bidBlockedVerifyAction": "Verify Account",
+  "bidBlockedDismiss": "Got It",
   "btnRemovePin": "✕ Remove",
   "blastSent": "🎯 Notification sent to {count} people!",
   "@blastSent": {
