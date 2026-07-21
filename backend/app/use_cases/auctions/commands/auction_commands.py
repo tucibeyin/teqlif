@@ -58,10 +58,23 @@ _PUBSUB_CHANNEL = "auction_broadcast"
 
 # Telefon doğrulaması gerektiren mutlak teklif eşiği (TL)
 _HIGH_BID_THRESHOLD_TL = 10_000
+# Doğrulanmamış hesaplar için daha düşük eşik
+_HIGH_BID_THRESHOLD_UNVERIFIED = 5_000
 # Katlama kontrolü: mevcut teklif bu değerin üzerindeyken geçerli
 _MULTIPLIER_MIN_BASE_TL = 500
-# Mevcut fiyatın kaç katını aşarsa yüksek teklif sayılır (sadece base >= 500 TL)
+# Mevcut fiyatın kaç katını aşarsa yüksek teklif sayılır — verified hesaplar
 _HIGH_BID_MULTIPLIER = 10
+# Mevcut fiyatın kaç katını aşarsa yüksek teklif sayılır — unverified hesaplar
+_HIGH_BID_MULTIPLIER_UNVERIFIED = 7
+
+# Shill bidding sinyal skorları
+_SHILL_SCORE_IP_MATCH     = 40  # IP eşleşmesi (temel sinyal)
+_SHILL_SCORE_UNVERIFIED   = 30  # Hesap email+telefon doğrulanmamış
+_SHILL_SCORE_NEW_ACCOUNT  = 20  # Hesap 7 günden genç
+_SHILL_SCORE_REPEAT       = 15  # Aynı stream'de önceki sinyal başına (max 2x)
+_SHILL_THRESHOLD_MUTE     = 70  # Bu skoru aşarsa: stream boyunca mute + teklif bloke
+_SHILL_THRESHOLD_WARN     = 40  # Bu skoru aşarsa: sayaç artır, teklif geçer
+_SHILL_COUNTER_TTL        = 86_400  # Sinyal sayacı 24 saat canlı kalır
 
 
 async def _log_fraud_attempt(
@@ -521,27 +534,54 @@ class AuctionCommands:
         prev_bidder_id_str = prev_data.get("current_bidder_id", "")
         prev_item_name = prev_data.get("item_name", "")
 
-        # ── Shill Bidding Sinyali (IP Eşleşme) ───────────────────────────────
-        # Aynı IP'den host ve farklı kullanıcı teklif verebilir (paylaşımlı ağ,
-        # ev/ofis ortamı). Hard-block yerine sadece sinyal kaydedilir.
+        # ── Shill Bidding (Çok Sinyal Skoru) ─────────────────────────────────
+        # IP eşleşmesi tek başına yeterli değil (aynı ev/ofis meşru olabilir).
+        # Birden fazla sinyal birikmesi gerekir: IP + hesap yaşı + doğrulama durumu.
         host_ip_stored = prev_data.get("host_ip", "")
         if bidder_ip and host_ip_stored and bidder_ip == host_ip_stored:
+            shill_score = _SHILL_SCORE_IP_MATCH
+
+            if not user.is_verified:
+                shill_score += _SHILL_SCORE_UNVERIFIED
+
+            created_at = user.created_at
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            account_age_days = (datetime.now(timezone.utc) - created_at).days
+            if account_age_days < 7:
+                shill_score += _SHILL_SCORE_NEW_ACCOUNT
+
+            shill_counter_key = f"shill_cnt:{stream_id}:{user.id}"
+            prior_raw = await redis.get(shill_counter_key)
+            prior_count = int(prior_raw) if prior_raw else 0
+            shill_score += min(prior_count * _SHILL_SCORE_REPEAT, _SHILL_SCORE_REPEAT * 2)
+
             await _log_fraud_attempt(
                 "shill_bidding",
                 stream_id=stream_id,
                 user_id=user.id,
                 username=user.username,
-                extra={"bidder_ip": bidder_ip, "amount": float(data.amount)},
+                extra={"bidder_ip": bidder_ip, "amount": float(data.amount), "shill_score": shill_score},
             )
 
-        # ── Troll Teklif Koruması (Telefon Doğrulama) ────────────────────────
+            if shill_score >= _SHILL_THRESHOLD_MUTE:
+                await redis.sadd(mute_key(stream_id), str(user.id))
+                raise ForbiddenException("Şüpheli aktivite tespit edildi. Bu yayında teklif veremezsiniz.")
+            elif shill_score >= _SHILL_THRESHOLD_WARN:
+                await redis.incr(shill_counter_key)
+                await redis.expire(shill_counter_key, _SHILL_COUNTER_TTL)
+
+        # ── Troll Teklif Koruması (Telefon + Hesap Doğrulama) ────────────────
+        # Doğrulanmış hesaplar daha yüksek eşikten yararlanır.
         current_bid_raw = prev_data.get("current_bid")
         current_bid = float(current_bid_raw) if current_bid_raw else 0.0
+        bid_threshold  = _HIGH_BID_THRESHOLD_TL        if user.is_verified else _HIGH_BID_THRESHOLD_UNVERIFIED
+        bid_multiplier = _HIGH_BID_MULTIPLIER           if user.is_verified else _HIGH_BID_MULTIPLIER_UNVERIFIED
         is_high_bid = (
-            float(data.amount) > _HIGH_BID_THRESHOLD_TL
+            float(data.amount) > bid_threshold
             or (
                 current_bid >= _MULTIPLIER_MIN_BASE_TL
-                and float(data.amount) > current_bid * _HIGH_BID_MULTIPLIER
+                and float(data.amount) > current_bid * bid_multiplier
             )
         )
         if is_high_bid and (not user.phone or not user.phone_verified):
@@ -550,7 +590,7 @@ class AuctionCommands:
                 stream_id=stream_id,
                 user_id=user.id,
                 username=user.username,
-                extra={"amount": float(data.amount), "current_bid": current_bid},
+                extra={"amount": float(data.amount), "current_bid": current_bid, "is_verified": user.is_verified},
             )
             raise ForbiddenException(
                 "Yüksek tutarlı teklifler için lütfen Profilinizden telefon numaranızı doğrulayın."
