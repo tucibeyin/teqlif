@@ -38,7 +38,9 @@ async def get_feed(
     - seed: oturum başında üretilmeli, scroll boyunca aynı kalmalı
     """
     user_id = current_user.id if current_user else None
-    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_personalized_feed(user_id, page, seed, db)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await FeedQueries(uow).get_personalized_feed(user_id, page, seed)
 
 
 @router.get("/personalized")
@@ -93,7 +95,9 @@ async def get_recent_mixed_feed(
     Misafirler: sadece son ilanlar, enjeksiyon yok.
     """
     user_id = current_user.id if current_user else None
-    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_mixed_recent_feed(user_id, page, db)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await FeedQueries(uow).get_mixed_recent_feed(user_id, page)
 
 
 @router.get("/for-you")
@@ -109,7 +113,9 @@ async def get_for_you_feed(
     - varsa pgvector cosine distance ile en yakın ilanlar
     - Sayfa başına 20 ilan, maks 5 sayfa (100 ilan havuzu Redis'te 5 dk önbelleklenir)
     """
-    return await FeedQueries(SqlAlchemyUnitOfWork(session_factory=lambda: db)).get_foryou_feed(current_user.id, page)
+    uow = SqlAlchemyUnitOfWork(session_factory=lambda: db)
+    uow.session = db
+    return await FeedQueries(uow).get_foryou_feed(current_user.id, page)
 
 
 class FeedSignalPayload(BaseModel):

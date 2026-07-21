@@ -79,7 +79,6 @@ class FeedQueries:
         user_id: Optional[int],
         page: int,
         seed: str,
-        db: AsyncSession,
     ) -> list[dict]:
         """
         Kişiselleştirilmiş feed döndürür.
@@ -936,7 +935,6 @@ class FeedQueries:
     async def get_mixed_recent_feed(self, 
         user_id: Optional[int],
         page: int,
-        db: AsyncSession,
     ) -> list[dict]:
         """
         'Son İlanlar' karışık feed.
@@ -996,7 +994,7 @@ class FeedQueries:
             if interests:
                 top_cats = list(interests.keys())[:3]
                 interest_items = await _fetch_interest_items(
-                    user_id, top_cats, base_ids, len(_INTEREST_SLOTS), db
+                    user_id, top_cats, base_ids, len(_INTEREST_SLOTS), self.uow.session
                 )
                 result = _inject_at_slots(result, interest_items, _INTEREST_SLOTS)
 
