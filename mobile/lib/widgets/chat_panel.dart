@@ -740,7 +740,10 @@ class ChatPanelState extends State<ChatPanel> {
           ),
           if (widget.pinDismissible)
             GestureDetector(
-              onTap: () => setState(() => _pinnedMessage = null),
+              onTap: () {
+                setState(() => _pinnedMessage = null);
+                sendHostPin('');
+              },
               child: const Padding(
                 padding: EdgeInsets.only(left: 6),
                 child: Icon(Icons.close, color: Colors.white38, size: 14),
