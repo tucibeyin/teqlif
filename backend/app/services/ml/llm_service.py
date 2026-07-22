@@ -2,10 +2,10 @@
 Ollama (Qwen2.5:3b) LLM Servisi — Hybrid Streaming
 
 Akış:
-  1. _build_prompt()  — kısa direktif + 2 few-shot örnek (kural listesi yerine).
-  2. stream + preamble detector — YZ açılış cümlelerini ilk 80 char'da yakala.
-  3. stop sequences — Ollama fiyat/teslimat token'ı üretirse durur.
-  4. _build_suffix() — fiyat/lokasyon deterministik şablon olarak eklenir.
+  1. _build_prompt()  — kısa direktif + condition-aware 2 few-shot örnek.
+  2. Sentence-boundary streaming — tüm tokenlar cümle tamponu üzerinden geçer;
+     nokta/ünlem gelince flush edilir, nokta gelmeden biten fragmanlar yutulur.
+  3. _build_suffix() — fiyat/lokasyon deterministik şablon olarak eklenir.
 
 Hybrid mantığı:
   LLM  → ürün gövdesi (3-4 cümle, yaratıcı)
@@ -45,12 +45,12 @@ _PRICE_AND_LOCATION: list[str] = [
 
 # ── Kategori ipuçları ─────────────────────────────────────────────────────────
 _CAT_HINTS: dict[str, str] = {
-    "elektronik": "Ekran, batarya ve genel çalışma durumunu belirt.",
+    "elektronik": "Ekran ve batarya durumunu belirt.",
     "vasita":     "Motor ve karoser durumunu dürüstçe belirt.",
     "emlak":      "Konumu ve krediye uygunluğunu kısaca belirt.",
-    "giyim":      "Neden sattığını (beden uymadı, tarz değişti vb.) belirt.",
-    "ev":         "Kırık/çizik varsa söyle, yoksa tertemiz olduğunu belirt.",
-    "spor":       "Ne sıklıkta kullandığını ve genel durumunu belirt.",
+    "giyim":      "Neden sattığını belirt.",
+    "ev":         "Kırık çizik varsa söyle.",
+    "spor":       "Kullanım sıklığını ve genel durumunu belirt.",
     "kitap":      "Kapak ve sayfa durumunu belirt.",
 }
 
@@ -62,52 +62,152 @@ _CONDITION_LABELS: dict[str, str] = {
     "damaged":   "Hasarlı veya arızalı",
 }
 
-# ── Few-shot örnekler (kategori → 2 örnek output) ────────────────────────────
-_FEW_SHOT: dict[str, list[str]] = {
-    "elektronik": [
-        "3 yıl kullandım, ekranında hiç çizik yok, bataryası sağlıklı. Orijinal kutusu ve şarj adaptörü mevcut. İhtiyaçtan satılık, alıcısına hayırlı olsun.",
-        "Ekran kırık, kamera çalışıyor ama dokunmatik kısmen hassas değil. Fiyata yansıttım, parça olarak da değerlendirebilirsiniz.",
-    ],
-    "vasita": [
-        "2019 model, 85.000 km'de, motoru ve şanzımanı sorunsuz. Bakımları zamanında yapıldı, servis defteri mevcut. Sahibinden, ihtiyaçtan satılık.",
-        "Kaporta hasarı var, motor çalışıyor fakat klima gaz istiyor. Fiyata yansıttım, ciddi alıcı beklerim.",
-    ],
-    "emlak": [
-        "3+1, 120 m², güney cepheli, asansörlü binada 3. kat. Mutfak ve banyosu yenilenmiş, masraf gerektirmiyor. Krediye uygun.",
-        "Köy içi, 500 m² arsa, imarlı. Tapu hazır, hemen devredebilirim.",
-    ],
-    "giyim": [
-        "1 kere giyildi, bedenim uymadığı için satıyorum. Etiketi hâlâ üzerinde, tertemiz.",
-        "Tarz değişikliğinden satıyorum, yırtık veya leke yok, temiz kullanıldı.",
-    ],
-    "ev": [
-        "3 yıl kullandım, kırık veya çizik yok, tertemiz. Taşınma nedeniyle satıyorum.",
-        "Koltuğun bir yerinde küçük bir çizik var, fiyata yansıttım. Genel durumu iyi.",
-    ],
-    "spor": [
-        "Ayda 2-3 kez kullandım, hasar yok, aksesuarları tam. İhtiyaçtan satılık.",
-        "Sporu bıraktığım için satıyorum, çok az kullandım, neredeyse sıfır gibi.",
-    ],
-    "kitap": [
-        "Bir kere okunduktan sonra rafta kaldı, sayfaları ve kapağı tertemiz.",
-        "Birkaç sayfasında not var, kapakta hafif yıpranma dışında sağlam.",
-    ],
-    "diger": [
-        "Temiz kullandım, yırtık veya kırık yok. İhtiyaç fazlası olduğu için satıyorum.",
-        "Az kullanılmış, genel durumu iyi. Alıcısına hayırlı olsun.",
-    ],
+# ── Condition-aware few-shot örnekler ─────────────────────────────────────────
+# (kategori, condition) → (birinci_örnek, ikinci_örnek)
+# Birinci örnek: verilen condition ile aynı. İkinci: genel kaliteli örnek.
+_FEW_SHOT: dict[tuple[str, str], tuple[str, str]] = {
+    ("elektronik", "new"): (
+        "Hiç açmadım, kutusunda duruyor, tüm aksesuarları tam. Hediye almıştım ama ihtiyacım olmadı, alıcısına hayırlı olsun.",
+        "3 yıl kullandım, ekranında hiç çizik yok, bataryası sağlıklı. Orijinal kutusu mevcut, ihtiyaçtan satılık.",
+    ),
+    ("elektronik", "like_new"): (
+        "Çok az kullandım, ekranında hiç çizik yok, bataryası gayet sağlıklı. Kutusunu ve şarj adaptörünü sakladım. İhtiyaçtan satılık.",
+        "Ekrana temperli cam yapıştırdım, kılıfla taşıdım, sıfır gibi duruyor. Almak isteyenler ulaşabilir.",
+    ),
+    ("elektronik", "used"): (
+        "2 yıl kullandım, ekranda küçük çizikler var ama çalışması tam. Bataryası hâlâ iyi, masraf çıkarmaz.",
+        "Eski telefon, genel olarak temiz kullandım. Ekranda hafif kullanım izleri var, fiyata yansıttım.",
+    ),
+    ("elektronik", "damaged"): (
+        "Ekran kırık, kamera çalışıyor ama dokunmatik kısmen hassas değil. Hasarı olduğu gibi söyledim, parça olarak da değerlendirilebilir.",
+        "Bataryası şişmiş, açılıyor ama uzun süre dayanmıyor. Fiyatı düşük tuttum, onarcak birine gider.",
+    ),
+    ("vasita", "new"): (
+        "0 km, hiç binmedim, depolama amaçlı aldım. Tüm belgeleri ve garantisi mevcut.",
+        "Sıfır kilometre, fabrika ayarlarında, anahtar teslim satıyorum.",
+    ),
+    ("vasita", "like_new"): (
+        "2021 model, 15.000 km'de, motoru ve şanzımanı sorunsuz, kazasız. Bakımları zamanında yapıldı.",
+        "Az kullanılmış, temiz bir araç. Kaporta hasarı yok, muayenesi yeni.",
+    ),
+    ("vasita", "used"): (
+        "2018 model, 95.000 km'de, motor ve şanzıman sağlam. Bakım geçmişi bende mevcut, ihtiyaçtan satılık.",
+        "Kullanılmış ama temiz araç. Küçük kaporta çizikleri var, fiyata yansıttım.",
+    ),
+    ("vasita", "damaged"): (
+        "Kaporta hasarı var, motor çalışıyor fakat klima gaz istiyor. Her şeyi olduğu gibi söyledim, ciddi alıcı beklerim.",
+        "Motor çalışıyor ama şanzımanda sorun var. Hasarını söyledim, fiyata yansıttım.",
+    ),
+    ("emlak", "new"): (
+        "Sıfır daire, hiç oturulmadı, tapu hazır. İnşaat firmasından alındı, masrafsız teslim.",
+        "Yeni bina, 2024 yapımı, asansörlü. Mutfak ve banyosu sıfır, hemen taşınılabilir.",
+    ),
+    ("emlak", "like_new"): (
+        "3 yıllık bina, 2+1, 80 m². Temiz kullandık, hiç tadilat yapmadan taşınabilirsiniz. Krediye uygun.",
+        "Az kullanılmış, iç mekanı temiz, masraf gerektirmiyor. Tapu bende mevcut.",
+    ),
+    ("emlak", "used"): (
+        "Eski bina ama sağlam yapı, 3+1, 110 m². Mutfak yenilendi, banyo eski ama çalışıyor. Fiyata yansıttım.",
+        "Satılık daire, tadilat istiyor ama fiyatı uygun. Tapu temiz, kredi kullanılabilir.",
+    ),
+    ("emlak", "damaged"): (
+        "Depremden etkilenmiş, hasar tespit raporu var. Arsası değerli, üstü yıkılarak yeniden yapılabilir.",
+        "Su basmış, zemin ve duvarlar rutubetli. Tadilat gerekiyor, fiyatı buna göre düşük tuttum.",
+    ),
+    ("giyim", "new"): (
+        "Hiç giymeden satıyorum, etiketi üzerinde. Hediye almıştım ama bedenim uymadı.",
+        "Sıfır, kutusunda duruyor. Beğendim ama bir daha giymeyeceğimi fark ettim.",
+    ),
+    ("giyim", "like_new"): (
+        "1-2 kere giydim, marka ürün, tertemiz. Bedenim değişti, bu yüzden satıyorum.",
+        "Çok az kullandım, yırtık veya leke yok. Tarz değişikliğinden satıyorum.",
+    ),
+    ("giyim", "used"): (
+        "Temiz kullandım, yırtık yok ama hafif solma var. Fiyata yansıttım.",
+        "Birkaç sezon giydim, genel olarak temiz. Küçük kullanım izleri var, fiyata göre ayarladım.",
+    ),
+    ("giyim", "damaged"): (
+        "Küçük yırtık var, dikişle onarılabilir. Hasarını söyledim, fiyatı düşük tutuyorum.",
+        "Leke var, temizleyemedim. Dürüstçe söyledim, fiyatı buna göre düşük.",
+    ),
+    ("ev", "new"): (
+        "Sıfır, hiç kullanmadım. Taşınırken aldım ama o odaya sığmadı, kutusunda duruyor.",
+        "Açılmamış paketinde, hasarsız, tüm parçaları tam.",
+    ),
+    ("ev", "like_new"): (
+        "Çok az kullandım, çizik veya hasar yok, sıfır gibi. Taşınma nedeniyle satıyorum.",
+        "1-2 kere kullandım, tertemiz, yeni gibi. Fazla olduğu için satıyorum.",
+    ),
+    ("ev", "used"): (
+        "2 yıl kullandım, çalışması tam, küçük çizikler var. Taşınma nedeniyle satıyorum.",
+        "Kullanılmış ama sağlam, masraf çıkarmaz. Fiyata yansıttım.",
+    ),
+    ("ev", "damaged"): (
+        "Bir köşesi kırık ama işlevselliği etkilemiyor. Hasarını söyledim, fiyatı uygun.",
+        "Çalışıyor ama yüzeyde hasar var. Fiyatı düşük tuttum.",
+    ),
+    ("spor", "new"): (
+        "Hiç kullanmadım, kutusunda duruyor. Spor yapmaya başlayamamıştım, ihtiyaç fazlası.",
+        "Sıfır, tüm aksesuarları tam. Hediye almıştım, aynısı var, satıyorum.",
+    ),
+    ("spor", "like_new"): (
+        "Çok az kullandım, hasar yok, aksesuarları tam. Sporu bıraktığım için satıyorum.",
+        "Ayda birkaç kez kullandım, neredeyse sıfır gibi. İhtiyaçtan satılık.",
+    ),
+    ("spor", "used"): (
+        "Düzenli kullandım, işlevsel ama kullanım izleri var. Masraf çıkarmaz.",
+        "Temiz kullandım, eskimiş ama sağlam çalışıyor.",
+    ),
+    ("spor", "damaged"): (
+        "Bir parçası kırık ama tamir edilebilir. Hasarını söyledim, fiyatı buna göre düşük.",
+        "Çalışıyor ama hasar var. Kendisi onaracak birine gider.",
+    ),
+    ("kitap", "new"): (
+        "Hiç okunmadı, yeni gibi. Almıştım ama okuyamadım.",
+        "Sıfır kitap, kapağı ve sayfaları tertemiz.",
+    ),
+    ("kitap", "like_new"): (
+        "Bir kere okundu, kapağı ve sayfaları tertemiz. Rafta yer kaplıyor.",
+        "Az okunmuş, not yok, çizik yok. İyi okumalar.",
+    ),
+    ("kitap", "used"): (
+        "Okunmuş, birkaç sayfada altı çizili notlar var. Kapağı sağlam.",
+        "Eski kitap, sayfaları sararmış ama okunabilir durumda.",
+    ),
+    ("kitap", "damaged"): (
+        "Kapağı yırtılmış ama sayfalar tam. Fiyatı düşük tutuyorum.",
+        "Su görmüş, sayfalar dalgalı ama okunuyor. Hasarını söyledim.",
+    ),
+    ("diger", "new"): (
+        "Sıfır, hiç kullanmadım. İhtiyaç fazlası, alıcısına hayırlı olsun.",
+        "Kullanılmamış, tüm parçaları tam, tertemiz.",
+    ),
+    ("diger", "like_new"): (
+        "Az kullandım, hasarsız ve temiz. İhtiyacım kalmadığı için satıyorum.",
+        "Neredeyse sıfır gibi, iyi durumda. Alıcısına hayırlı olsun.",
+    ),
+    ("diger", "used"): (
+        "Temiz kullandım, iyi durumda, masraf çıkarmaz. İhtiyaçtan satılık.",
+        "Kullanılmış ama sağlam. Alıcısına hayırlı olsun.",
+    ),
+    ("diger", "damaged"): (
+        "Hasarlı, olduğu gibi söyledim. Fiyatı buna göre düşük tuttum.",
+        "Arızalı, onarcak birine gider. Dürüstçe belirtiyorum.",
+    ),
 }
 
-# YZ/robot açılış kalıpları — preamble'da yakalanırsa atlanır
+# YZ açılış kalıpları — ilk cümlede tespit edilirse atlanır
 _RE_AI_OPENER = re.compile(
     r"^(üzgünüm\b|tabii\s+ki\b|elbette\b|merhaba\b|size\s+yardım|ürününüz\b|"
-    r"aşağıda\b|işte\s+ilan|evet[,\s]|anladım\b)",
+    r"aşağıda\b|işte\s+ilan|evet[,\s]|anladım\b|ilan\s+metni\b)",
     re.IGNORECASE,
 )
 
+# Cümle sonu karakterleri
+_SENTENCE_END = frozenset({".", "!", "?"})
+
 
 def _build_suffix(price: Optional[float], location: Optional[str]) -> str:
-    """Fiyat ve/veya lokasyondan deterministik şablon cümlesi üretir."""
     p = f"{int(price):,}".replace(",", ".") if price and price > 0 else None
     c = location.strip() if location else None
     if p and c:
@@ -119,30 +219,25 @@ def _build_suffix(price: Optional[float], location: Optional[str]) -> str:
     return ""
 
 
-def _build_prompt(
-    title: str,
-    category: str,
-    condition: Optional[str],
-) -> tuple[str, str]:
-    """
-    (system_prompt, user_prompt) döner.
-    Strateji: kural listesi yerine kısa direktif + 2 somut örnek.
-    3b model örnekleri taklit eder, kuralları analiz edemez.
-    """
+def _build_prompt(title: str, category: str, condition: Optional[str]) -> tuple[str, str]:
     cat = category.lower().strip()
-    cond_label = _CONDITION_LABELS.get(condition or "", "")
+    cond = condition or "used"
+    cond_label = _CONDITION_LABELS.get(cond, "")
     cat_hint = _CAT_HINTS.get(cat, "")
-    examples = _FEW_SHOT.get(cat, _FEW_SHOT["diger"])
+
+    key = (cat, cond)
+    fallback_key = ("diger", cond)
+    ex1, ex2 = _FEW_SHOT.get(key) or _FEW_SHOT.get(fallback_key) or _FEW_SHOT[("diger", "used")]
 
     system = (
         "Türkiye'de ikinci el ilan platformunda bireysel satıcısın. "
         "Sana ürün bilgisi verilecek, sen sadece kısa ilan metnini yazacaksın.\n"
         "- Birinci tekil şahısla yaz: 'kullandım', 'satıyorum', 'aldım' gibi.\n"
         "- Fiyat ve teslimat bilgisi YAZMA.\n"
-        "- Direkt metni yaz, özür veya açıklama cümlesi ekleme.\n"
+        "- Özür veya açıklama cümlesi ekleme, direkt metni yaz.\n"
         "- 3-4 cümle, sade Türkçe.\n\n"
-        f"Örnek:\n\"{examples[0]}\"\n\n"
-        f"Örnek:\n\"{examples[1]}\""
+        f"Örnek:\n\"{ex1}\"\n\n"
+        f"Örnek:\n\"{ex2}\""
     )
 
     user_lines = [
@@ -152,7 +247,6 @@ def _build_prompt(
         f"Not: {cat_hint}" if cat_hint else "",
     ]
     user = "\n".join(line for line in user_lines if line)
-
     return system, user
 
 
@@ -164,10 +258,11 @@ async def generate_listing_description_stream(
     location: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
-    LLM gövdesini stream eder, ardından suffix yield eder.
-    - Preamble buffer (ilk 80 char): YZ açılış cümlesi yakalanırsa atlanır.
-    - Stop sequences: Ollama fiyat/lokasyon yazmaya başlayınca durur.
-    - Hata: __LLM_ERROR__ sentinel yield eder.
+    Sentence-boundary streaming:
+    - Her cümleyi nokta/ünlem gelince flush eder.
+    - Nokta gelmeden biten dangling fragment'ı yutarak suffix'in
+      tam bir cümle olarak eklenmesini sağlar.
+    - İlk cümlede YZ açılışı tespiti yapar, varsa siler.
     """
     system_prompt, user_prompt = _build_prompt(title, category, condition)
 
@@ -176,18 +271,18 @@ async def generate_listing_description_stream(
         "system": system_prompt,
         "prompt": user_prompt,
         "stream": True,
-        "keep_alive": "10m",   # warm model — cold start önler
+        "keep_alive": "10m",
         "options": {
             "temperature": 0.5,
             "top_p": 0.85,
             "num_predict": 150,
-            "num_thread": 4,   # 6 → 4: tüm CPU'yu Ollama'ya vermek FastAPI ile çakışıyor
+            "num_thread": 4,
             "stop": [
-                # Fiyat token'ları — boşluklu ve boşluksuz her ikisi de
+                # Fiyat — boşluklu ve boşluksuz
                 "TL", " TL", "₺", "lira", " lira",
-                # Teslimat/lokasyon
+                # Teslimat
                 "elden", "kargo", "Kargo",
-                "Fiyat", "fiyat",
+                "Fiyat", "fiyat", "Ücret", "ücret",
             ],
         },
     }
@@ -195,11 +290,8 @@ async def generate_listing_description_stream(
     try:
         logger.info("[LLM] Stream isteği (%s) | title=%r", MODEL_NAME, title[:60])
 
-        # İlk cümle buffer — sadece ilk nokta/satırsonu gelene kadar biriktir,
-        # YZ açılış tespiti yap, sonra normal stream devam eder.
-        # Böylece kullanıcı ilk cümle teslim edilir edilmez metni görmeye başlar.
-        first_sentence_buf = ""
-        first_sentence_done = False
+        sentence_buf = ""   # mevcut cümle tamponu
+        is_first = True     # ilk cümle mi (opener tespiti için)
         total_chars = 0
 
         async with httpx.AsyncClient() as client:
@@ -223,27 +315,27 @@ async def generate_listing_description_stream(
                     if not token:
                         continue
 
-                    if not first_sentence_done:
-                        first_sentence_buf += token
-                        # İlk nokta, soru/ünlem veya satırsonu → cümle bitti
-                        if any(c in token for c in (".", "!", "?", "\n")):
-                            first_sentence_done = True
-                            clean = _RE_AI_OPENER.sub("", first_sentence_buf).lstrip()
-                            if clean != first_sentence_buf.lstrip():
-                                logger.warning("[LLM] YZ açılış cümlesi silindi")
-                            if clean:
-                                yield clean
-                                total_chars += len(clean)
-                    else:
-                        yield token
-                        total_chars += len(token)
+                    sentence_buf += token
 
-        # İlk nokta gelmeden stream bittiyse (çok kısa çıktı)
-        if not first_sentence_done and first_sentence_buf:
-            clean = _RE_AI_OPENER.sub("", first_sentence_buf).lstrip()
-            if clean:
-                yield clean
-                total_chars += len(clean)
+                    # Cümle bitti mi?
+                    if any(c in token for c in _SENTENCE_END):
+                        if is_first:
+                            is_first = False
+                            clean = _RE_AI_OPENER.sub("", sentence_buf).lstrip()
+                            if clean != sentence_buf.lstrip():
+                                logger.warning("[LLM] YZ açılış cümlesi silindi")
+                            sentence_buf = clean
+
+                        if sentence_buf.strip():
+                            yield sentence_buf
+                            total_chars += len(sentence_buf)
+
+                        sentence_buf = ""
+
+        # Stream bitti — tamponda nokta gelmemiş bir fragment varsa yut
+        # (stop sequence'ın kestiği yarım cümle burada temizlenir)
+        if sentence_buf.strip():
+            logger.info("[LLM] Dangling fragment yutuldu: %r", sentence_buf[:60])
 
         # Suffix — her zaman Python'dan gelir
         suffix = _build_suffix(price, location)
