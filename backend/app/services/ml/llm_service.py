@@ -33,11 +33,26 @@ _model = None
 _model_lock = threading.Lock()
 
 _SYSTEM_PROMPT = (
-    "Sen Türkiye'deki bir ikinci el pazaryeri uygulaması için ilan açıklaması yazan asistansın. "
-    "Verilen bilgilere göre kısa, samimi, çekici ve bilgilendirici Türkçe açıklamalar yazarsın. "
-    "Açıklama 3-5 cümle, 80-150 kelime olmalı. "
-    "Abartılı, yanıltıcı veya argo ifade kullanma. "
-    "Sadece açıklama metnini yaz, başlık veya etiket ekleme."
+    "You are a Turkish marketplace listing assistant. "
+    "Write a short, honest, clear Turkish product description based on the given details. "
+    "Rules: 2-4 sentences, 50-100 words, Turkish only, no hashtags, no bullet points, "
+    "no made-up features, no exaggeration. Output only the description text."
+)
+
+_FEW_SHOT_EXAMPLE = (
+    "Başlık: iPhone 13 Pro 256GB\n"
+    "Kategori: Telefon\n"
+    "Durum: Az Kullanılmış\n"
+    "Fiyat: 18.000 ₺\n"
+    "Konum: Ankara\n\n"
+    "Açıklama: "
+)
+
+_FEW_SHOT_ANSWER = (
+    "iPhone 13 Pro 256GB, az kullanılmış durumda satılıktır. "
+    "Ekranında veya kasasında çizik yoktur, tüm tuşlar sorunsuz çalışmaktadır. "
+    "Orijinal kutusu ve şarj kablosu ile birlikte teslim edilir. "
+    "Ankara içi elden teslim mümkündür, kargo seçeneği de mevcuttur."
 )
 
 _CONDITION_LABELS = {
@@ -107,18 +122,20 @@ def generate_listing_description(
     if location:
         parts.append(f"Konum: {location.strip()}")
 
-    user_message = "\n".join(parts) + "\n\nBu ürün için ilan açıklaması yaz."
+    user_message = "\n".join(parts) + "\n\nAçıklama: "
 
     try:
         output = model.create_chat_completion(
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": _FEW_SHOT_EXAMPLE},
+                {"role": "assistant", "content": _FEW_SHOT_ANSWER},
                 {"role": "user", "content": user_message},
             ],
-            max_tokens=250,
-            temperature=0.7,
-            top_p=0.9,
-            repeat_penalty=1.1,
+            max_tokens=200,
+            temperature=0.4,
+            top_p=0.85,
+            repeat_penalty=1.15,
         )
         text = output["choices"][0]["message"]["content"].strip()
         return text if text else None
