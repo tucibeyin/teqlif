@@ -1,27 +1,37 @@
 """
-Ollama (Qwen2.5:3b) LLM Servisi — Hybrid Streaming
+Groq (llama-3.3-70b) primary / Ollama (Qwen2.5:3b) fallback LLM Servisi
 
-Akış:
-  1. _build_prompt()  — kısa direktif + condition-aware 2 few-shot örnek.
-  2. Sentence-boundary streaming — tüm tokenlar cümle tamponu üzerinden geçer;
-     nokta/ünlem gelince flush edilir, nokta gelmeden biten fragmanlar yutulur.
-  3. _build_suffix() — fiyat/lokasyon deterministik şablon olarak eklenir.
+Provider seçimi:
+  1. Groq   — API key var ve günlük kota dolmamışsa (14,000 req/gün)
+  2. Ollama — Groq key yok, kota dolmuş veya hata
 
-Hybrid mantığı:
-  LLM  → ürün gövdesi (3-4 cümle, yaratıcı)
-  Python → fiyat + lokasyon (deterministik, asla kaybolmaz, asla çifte gelmez)
+Her iki path da aynı sentence-boundary streaming + Python-side suffix kullanır.
 """
 import json
 import logging
 import random
 import re
+from datetime import date
 from typing import AsyncGenerator, Optional
 import httpx
 
+from app.config import settings
+from app.utils.redis_client import get_redis
+
 logger = logging.getLogger(__name__)
 
-OLLAMA_API_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "qwen2.5:3b"
+# ── Sağlayıcı ayarları ────────────────────────────────────────────────────────
+OLLAMA_API_URL    = "http://localhost:11434/api/generate"
+OLLAMA_MODEL      = "qwen2.5:3b"
+GROQ_API_URL      = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL        = "llama-3.3-70b-versatile"
+_GROQ_DAILY_LIMIT = 14_000  # free tier: 14,400/gün, güvenli marjla
+
+_STOP_WORDS = [
+    "TL", " TL", "₺", "lira", " lira",
+    "elden", "kargo", "Kargo",
+    "Fiyat", "fiyat", "Ücret", "ücret",
+]
 
 # ── Fiyat + lokasyon şablonları ───────────────────────────────────────────────
 _PRICE_ONLY: list[str] = [
@@ -63,8 +73,6 @@ _CONDITION_LABELS: dict[str, str] = {
 }
 
 # ── Condition-aware few-shot örnekler ─────────────────────────────────────────
-# (kategori, condition) → (birinci_örnek, ikinci_örnek)
-# Birinci örnek: verilen condition ile aynı. İkinci: genel kaliteli örnek.
 _FEW_SHOT: dict[tuple[str, str], tuple[str, str]] = {
     ("elektronik", "new"): (
         "Hiç açmadım, kutusunda duruyor, tüm aksesuarları tam. Hediye almıştım ama ihtiyacım olmadı, alıcısına hayırlı olsun.",
@@ -203,10 +211,10 @@ _RE_AI_OPENER = re.compile(
     re.IGNORECASE,
 )
 
-# Cümle sonu karakterleri
 _SENTENCE_END = frozenset({".", "!", "?"})
 
 
+# ── Yardımcı fonksiyonlar ─────────────────────────────────────────────────────
 def _build_suffix(price: Optional[float], location: Optional[str]) -> str:
     p = f"{int(price):,}".replace(",", ".") if price and price > 0 else None
     c = location.strip() if location else None
@@ -226,8 +234,11 @@ def _build_prompt(title: str, category: str, condition: Optional[str]) -> tuple[
     cat_hint = _CAT_HINTS.get(cat, "")
 
     key = (cat, cond)
-    fallback_key = ("diger", cond)
-    ex1, ex2 = _FEW_SHOT.get(key) or _FEW_SHOT.get(fallback_key) or _FEW_SHOT[("diger", "used")]
+    ex1, ex2 = (
+        _FEW_SHOT.get(key)
+        or _FEW_SHOT.get(("diger", cond))
+        or _FEW_SHOT[("diger", "used")]
+    )
 
     system = (
         "Türkiye'de ikinci el ilan platformunda bireysel satıcısın. "
@@ -239,7 +250,6 @@ def _build_prompt(title: str, category: str, condition: Optional[str]) -> tuple[
         f"Örnek:\n\"{ex1}\"\n\n"
         f"Örnek:\n\"{ex2}\""
     )
-
     user_lines = [
         "Şu ürün için ilan metni yaz:",
         f"Ürün: {title}",
@@ -250,6 +260,133 @@ def _build_prompt(title: str, category: str, condition: Optional[str]) -> tuple[
     return system, user
 
 
+# ── Kota kontrolü ────────────────────────────────────────────────────────────
+async def _groq_quota_ok() -> bool:
+    """True dönerse Groq'u kullan; Redis hatasında da True (Groq'u dene)."""
+    try:
+        redis = await get_redis()
+        key = f"groq:calls:{date.today().isoformat()}"
+        count = await redis.incr(key)
+        if count == 1:
+            await redis.expire(key, 86_400)
+        if count > _GROQ_DAILY_LIMIT:
+            logger.warning("[LLM] Groq günlük kota doldu (%d req), Ollama'ya geçiliyor", count)
+            return False
+        return True
+    except Exception as exc:
+        logger.error("[LLM] Redis kota kontrolü başarısız: %s — Groq deneniyor", exc)
+        return True
+
+
+# ── Raw token async generatorlar ─────────────────────────────────────────────
+async def _tokens_groq(system: str, user: str) -> AsyncGenerator[str, None]:
+    headers = {
+        "Authorization": f"Bearer {settings.groq_api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": 0.5,
+        "max_tokens": 150,
+        "stop": _STOP_WORDS,
+        "stream": True,
+    }
+    async with httpx.AsyncClient() as client:
+        async with client.stream(
+            "POST", GROQ_API_URL, headers=headers, json=payload, timeout=60.0
+        ) as resp:
+            if resp.status_code != 200:
+                body = await resp.aread()
+                raise RuntimeError(f"Groq HTTP {resp.status_code}: {body[:200]}")
+            async for line in resp.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                raw = line[6:].strip()
+                if raw == "[DONE]":
+                    break
+                try:
+                    delta = json.loads(raw)["choices"][0]["delta"].get("content", "")
+                    if delta:
+                        yield delta
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
+
+
+async def _tokens_ollama(system: str, user: str) -> AsyncGenerator[str, None]:
+    payload = {
+        "model": OLLAMA_MODEL,
+        "system": system,
+        "prompt": user,
+        "stream": True,
+        "keep_alive": "10m",
+        "options": {
+            "temperature": 0.5,
+            "top_p": 0.85,
+            "num_predict": 150,
+            "num_thread": 4,
+            "stop": _STOP_WORDS,
+        },
+    }
+    async with httpx.AsyncClient() as client:
+        async with client.stream(
+            "POST", OLLAMA_API_URL, json=payload, timeout=120.0
+        ) as resp:
+            if resp.status_code != 200:
+                raise RuntimeError(f"Ollama HTTP {resp.status_code}")
+            async for line in resp.aiter_lines():
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    token = data.get("response", "")
+                    if token:
+                        yield token
+                except json.JSONDecodeError:
+                    continue
+
+
+# ── Sentence-boundary wrapper ─────────────────────────────────────────────────
+async def _sentence_stream(
+    token_gen: AsyncGenerator[str, None],
+    price: Optional[float],
+    location: Optional[str],
+    provider: str,
+) -> AsyncGenerator[str, None]:
+    """Token stream'ini cümle sınırlarında flush eder, suffix ekler."""
+    sentence_buf = ""
+    is_first = True
+    total_chars = 0
+
+    async for token in token_gen:
+        sentence_buf += token
+        if any(c in token for c in _SENTENCE_END):
+            if is_first:
+                is_first = False
+                clean = _RE_AI_OPENER.sub("", sentence_buf).lstrip()
+                if clean != sentence_buf.lstrip():
+                    logger.warning("[LLM] YZ açılış cümlesi silindi")
+                sentence_buf = clean
+            if sentence_buf.strip():
+                yield sentence_buf
+                total_chars += len(sentence_buf)
+            sentence_buf = ""
+
+    if sentence_buf.strip():
+        logger.info("[LLM] Dangling fragment yutuldu: %r", sentence_buf[:60])
+
+    suffix = _build_suffix(price, location)
+    if suffix:
+        yield " "
+        yield suffix
+
+    logger.info("[LLM] Tamamlandı | %s | %d char | suffix=%r", provider, total_chars, suffix or "─")
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
 async def generate_listing_description_stream(
     title: str,
     category: str,
@@ -258,93 +395,30 @@ async def generate_listing_description_stream(
     location: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
-    Sentence-boundary streaming:
-    - Her cümleyi nokta/ünlem gelince flush eder.
-    - Nokta gelmeden biten dangling fragment'ı yutarak suffix'in
-      tam bir cümle olarak eklenmesini sağlar.
-    - İlk cümlede YZ açılışı tespiti yapar, varsa siler.
+    Groq primary → Ollama fallback.
+    Sentence-boundary streaming: her cümleyi nokta/ünlem gelince flush eder.
     """
     system_prompt, user_prompt = _build_prompt(title, category, condition)
 
-    payload = {
-        "model": MODEL_NAME,
-        "system": system_prompt,
-        "prompt": user_prompt,
-        "stream": True,
-        "keep_alive": "10m",
-        "options": {
-            "temperature": 0.5,
-            "top_p": 0.85,
-            "num_predict": 150,
-            "num_thread": 4,
-            "stop": [
-                # Fiyat — boşluklu ve boşluksuz
-                "TL", " TL", "₺", "lira", " lira",
-                # Teslimat
-                "elden", "kargo", "Kargo",
-                "Fiyat", "fiyat", "Ücret", "ücret",
-            ],
-        },
-    }
+    # ── Groq path ─────────────────────────────────────────────────────────────
+    if settings.groq_api_key and await _groq_quota_ok():
+        try:
+            logger.info("[LLM] Groq | title=%r", title[:60])
+            async for chunk in _sentence_stream(
+                _tokens_groq(system_prompt, user_prompt), price, location, "groq"
+            ):
+                yield chunk
+            return
+        except Exception as exc:
+            logger.error("[LLM] Groq başarısız, Ollama'ya fallback: %s", exc)
 
+    # ── Ollama fallback ────────────────────────────────────────────────────────
     try:
-        logger.info("[LLM] Stream isteği (%s) | title=%r", MODEL_NAME, title[:60])
-
-        sentence_buf = ""   # mevcut cümle tamponu
-        is_first = True     # ilk cümle mi (opener tespiti için)
-        total_chars = 0
-
-        async with httpx.AsyncClient() as client:
-            async with client.stream(
-                "POST", OLLAMA_API_URL, json=payload, timeout=120.0
-            ) as response:
-                if response.status_code != 200:
-                    logger.error("[LLM] Ollama API hatası: %d", response.status_code)
-                    yield "__LLM_ERROR__"
-                    return
-
-                async for line in response.aiter_lines():
-                    if not line:
-                        continue
-                    try:
-                        data = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-
-                    token = data.get("response", "")
-                    if not token:
-                        continue
-
-                    sentence_buf += token
-
-                    # Cümle bitti mi?
-                    if any(c in token for c in _SENTENCE_END):
-                        if is_first:
-                            is_first = False
-                            clean = _RE_AI_OPENER.sub("", sentence_buf).lstrip()
-                            if clean != sentence_buf.lstrip():
-                                logger.warning("[LLM] YZ açılış cümlesi silindi")
-                            sentence_buf = clean
-
-                        if sentence_buf.strip():
-                            yield sentence_buf
-                            total_chars += len(sentence_buf)
-
-                        sentence_buf = ""
-
-        # Stream bitti — tamponda nokta gelmemiş bir fragment varsa yut
-        # (stop sequence'ın kestiği yarım cümle burada temizlenir)
-        if sentence_buf.strip():
-            logger.info("[LLM] Dangling fragment yutuldu: %r", sentence_buf[:60])
-
-        # Suffix — her zaman Python'dan gelir
-        suffix = _build_suffix(price, location)
-        if suffix:
-            yield " "
-            yield suffix
-
-        logger.info("[LLM] Tamamlandı | %d char | suffix=%r", total_chars, suffix or "─")
-
+        logger.info("[LLM] Ollama | title=%r", title[:60])
+        async for chunk in _sentence_stream(
+            _tokens_ollama(system_prompt, user_prompt), price, location, "ollama"
+        ):
+            yield chunk
     except Exception as exc:
-        logger.error("[LLM] Ollama bağlantı hatası: %s", exc)
+        logger.error("[LLM] Ollama hatası: %s", exc)
         yield "__LLM_ERROR__"

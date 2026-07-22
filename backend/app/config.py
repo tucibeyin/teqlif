@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     captcha_provider: str = "turnstile"
     captcha_secret_key: str = ""
     debug: bool = False  # True → localhost CORS origins eklenir (sadece geliştirme ortamı)
+    groq_api_key: str = ""
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     minio_endpoint: str = "localhost:9000"
