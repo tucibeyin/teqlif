@@ -262,6 +262,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   selection: TextSelection.collapsed(offset: newText.length),
                   composing: TextRange.empty,
                 );
+                
+                // [CRITICAL FIX]: Eğer Nginx/Cloudflare veya TCP Nagle algoritması birden fazla
+                // chunk'ı aynı anda gönderirse, Dart bunları tek bir Event Loop frame'inde işler.
+                // UI'ın (TextField'ın) ekrana kelimeleri çizebilmesi için rendering thread'e 
+                // nefes alma süresi (yield) vermemiz gerekiyor. Bu sayede daktilo efekti kesinlikle çalışır!
+                await Future.delayed(const Duration(milliseconds: 30));
               } else if (json.containsKey('done') && json['done'] == true) {
                 debugPrint('[AI Description] Stream FINISHED.');
                 final tuciSpent = (json['tuci_spent'] as num?)?.toInt() ?? 0;
