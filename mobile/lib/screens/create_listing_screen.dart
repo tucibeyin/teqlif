@@ -185,7 +185,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   Future<void> _fetchAiDescription() async {
     final title = _titleCtrl.text.trim();
-    final priceRaw = _priceCtrl.text.trim();
     final l = AppLocalizations.of(context)!;
     
     debugPrint('[AI Description] Checking validation...');
@@ -193,9 +192,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     debugPrint(' - Category: $_selectedCategory');
     debugPrint(' - City: $_selectedCity');
     debugPrint(' - Condition: $_selectedCondition');
-    debugPrint(' - Price Raw: "$priceRaw"');
 
-    if (title.isEmpty || _selectedCategory == null || _selectedCity == null || _selectedCondition == null || priceRaw.isEmpty) {
+    if (title.isEmpty || _selectedCategory == null || _selectedCity == null || _selectedCondition == null) {
       debugPrint('[AI Description] Validation Failed.');
       TeqSnackBar.show(context, message: l.createNeedAllFields, type: TeqSnackBarType.warning);
       return;
