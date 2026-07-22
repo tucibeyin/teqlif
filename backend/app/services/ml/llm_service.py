@@ -19,27 +19,22 @@ MODEL_NAME = "qwen2.5:3b"
 def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
     """Kategori ve duruma göre dinamik pazarlama kopyası kuralları üretir."""
     base_prompt = (
-        "Sen kendi ürününü satmaya çalışan bir satıcısın. Kendi ürünün için bir ilan açıklaması yazıyorsun. "
-        "Görevin, sana verilen bilgileri kullanarak alıcıların ilgisini çekecek, "
-        "samimi ve güven veren bir ürün açıklaması yazmaktır.\n\n"
-        "KESİN KURALLAR:\n"
-        "1. YALNIZCA TÜRKÇE yazacaksın. Çince, İngilizce veya başka hiçbir dil kullanma.\n"
-        "2. Asla yalan söyleme veya üründe olmayan bir özelliği uydurma. Sadece sana verilen bilgileri kullan.\n"
-        "3. Açıklama 2 kısa paragrafı geçmemelidir.\n"
-        "4. ASİSTAN GİBİ KONUŞMA ('şunu vurgulayabiliriz', 'kargo ücretlerini paylaşacağız', 'sizin için' vb). DOĞRUDAN SATICI GİBİ KONUŞ ('Cihazım çok temizdir', 'Elden teslim edeceğim', 'Sorunsuzdur').\n"
-        "5. Sana verilen talimat cümlelerini metnin içine kopyalama. O talimatların GEREĞİNİ YAP, kendisini yazma.\n"
+        "Sen ikinci el ilan platformunda kendi ürününü satan bir kullanıcısın. Aşağıda verilen bilgilere dayanarak KISA, DOĞRUDAN ve SAMİMİ bir ilan metni yaz.\n\n"
+        "KURALLAR:\n"
+        "1. Maksimum 3-4 cümle yaz. Uzun destanlar yazma.\n"
+        "2. Doğrudan satıcı ağzıyla yaz (Örn: 'Cihazım çok temizdir', 'Satıyorum').\n"
+        "3. 'Size yardımcı olabilirim', 'Vurgulayalım', 'Öneririm' gibi robotik/asistan cümleleri KESİNLİKLE kurma.\n"
+        "4. Uydurma bilgi ekleme.\n\n"
+        "ÖRNEK ÇIKTI:\n"
+        "'Telefonum hasarlıdır ancak kullanıma engel bir durumu yoktur. Parça niyetine veya tamir ettirip kullanmak isteyenler alabilir. Sadece Ankara içi elden teslim edebilirim. Alıcısına şimdiden hayırlı olsun.'\n"
     )
     
     cat_hints = []
     cat_lower = category.lower()
-    if "giyim" in cat_lower or "ayakkabı" in cat_lower:
-        cat_hints.append("Kumaş yapısından, kalıbından, rahatlığından ve tarzından kısaca bahset.")
-    elif "elektronik" in cat_lower or "telefon" in cat_lower or "bilgisayar" in cat_lower:
-        cat_hints.append("Çalışmayan hiçbir aksamı olmadığını ve teknik performansını birinci tekil şahıs ('cihazımın') olarak öne çıkar.")
+    if "elektronik" in cat_lower or "telefon" in cat_lower or "bilgisayar" in cat_lower:
+        cat_hints.append("Donanım veya kozmetik durumundan kısaca bahset.")
     elif "araç" in cat_lower or "vasıta" in cat_lower or "araba" in cat_lower:
-        cat_hints.append("Aracın motor durumuna, kazasızlığına veya varsa hasarına dürüstçe odaklan.")
-    else:
-        cat_hints.append("Ürünün kalitesini ve neden satın alınması gerektiğini satıcı gözünden vurgula.")
+        cat_hints.append("Motor veya kaporta durumundan dürüstçe bahset.")
         
     cond_hints = []
     if condition == "new":
@@ -103,7 +98,8 @@ async def generate_listing_description_stream(
         "stream": True,
         "options": {
             "temperature": 0.4,
-            "top_p": 0.85
+            "top_p": 0.85,
+            "num_predict": 100
         }
     }
     
