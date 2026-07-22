@@ -18,6 +18,7 @@ class FeedEventCreate(BaseModel):
     content_type: Literal["video", "photo"] = "video"
     slot_index: int = Field(default=0, ge=0)
     stream_category: str = Field(default="", max_length=64)
+    listing_condition: str = Field(default="", max_length=20)
 
 
 class FeedEventBatch(BaseModel):

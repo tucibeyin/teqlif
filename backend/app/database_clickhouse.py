@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS feed_analytics
     dwell_time_ms    UInt32,
     content_type     LowCardinality(String) DEFAULT '',
     slot_index       UInt32 DEFAULT 0,
-    stream_category  LowCardinality(String) DEFAULT ''
+    stream_category  LowCardinality(String) DEFAULT '',
+    listing_condition LowCardinality(String) DEFAULT ''
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
@@ -84,6 +85,7 @@ _ALTER_FEED_ANALYTICS = [
     "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS content_type LowCardinality(String) DEFAULT ''",
     "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS slot_index UInt32 DEFAULT 0",
     "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS stream_category LowCardinality(String) DEFAULT ''",
+    "ALTER TABLE feed_analytics ADD COLUMN IF NOT EXISTS listing_condition LowCardinality(String) DEFAULT ''",
 ]
 
 _CREATE_SEARCH_EVENTS_TABLE = """
@@ -108,23 +110,28 @@ _ALTER_SEARCH_EVENTS = [
 _CREATE_SWIPE_LIVE_EVENTS_TABLE = """
 CREATE TABLE IF NOT EXISTS swipe_live_events
 (
-    user_id          UInt32,
-    stream_id        UInt32        DEFAULT 0,
-    listing_id       UInt32        DEFAULT 0,
-    event_type       LowCardinality(String),
-    dwell_ms         UInt32        DEFAULT 0,
-    stream_category  LowCardinality(String) DEFAULT '',
-    listing_category LowCardinality(String) DEFAULT '',
-    listings_seen    UInt8         DEFAULT 0,
-    slot_index       UInt32        DEFAULT 0,
-    session_id       String        DEFAULT '',
-    timestamp        DateTime      DEFAULT now()
+    user_id           UInt32,
+    stream_id         UInt32        DEFAULT 0,
+    listing_id        UInt32        DEFAULT 0,
+    event_type        LowCardinality(String),
+    dwell_ms          UInt32        DEFAULT 0,
+    stream_category   LowCardinality(String) DEFAULT '',
+    listing_category  LowCardinality(String) DEFAULT '',
+    listing_condition LowCardinality(String) DEFAULT '',
+    listings_seen     UInt8         DEFAULT 0,
+    slot_index        UInt32        DEFAULT 0,
+    session_id        String        DEFAULT '',
+    timestamp         DateTime      DEFAULT now()
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (user_id, timestamp)
 SETTINGS index_granularity = 8192
 """
+
+_ALTER_SWIPE_LIVE_EVENTS = [
+    "ALTER TABLE swipe_live_events ADD COLUMN IF NOT EXISTS listing_condition LowCardinality(String) DEFAULT ''",
+]
 
 # ── Bağlantı ──────────────────────────────────────────────────────────────────
 
@@ -174,6 +181,8 @@ async def init_clickhouse() -> None:
         for stmt in _ALTER_SEARCH_EVENTS:
             await _client.command(stmt)
         await _client.command(_CREATE_SWIPE_LIVE_EVENTS_TABLE)
+        for stmt in _ALTER_SWIPE_LIVE_EVENTS:
+            await _client.command(stmt)
         logger.info("[ClickHouse] Bağlantı kuruldu, tablolar hazır.")
     except Exception as exc:
         logger.warning(
@@ -268,7 +277,8 @@ async def batch_insert_swipe_live_events(events: list[dict]) -> None:
         return
     cols = [
         "user_id", "stream_id", "listing_id", "event_type", "dwell_ms",
-        "stream_category", "listing_category", "listings_seen", "slot_index", "session_id",
+        "stream_category", "listing_category", "listing_condition",
+        "listings_seen", "slot_index", "session_id",
     ]
     rows = [
         [
@@ -279,6 +289,7 @@ async def batch_insert_swipe_live_events(events: list[dict]) -> None:
             e.get("dwell_ms", 0),
             e.get("stream_category", ""),
             e.get("listing_category", ""),
+            e.get("listing_condition", ""),
             e.get("listings_seen", 0),
             e.get("slot_index", 0),
             e.get("session_id", ""),

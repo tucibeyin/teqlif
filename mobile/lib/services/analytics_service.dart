@@ -142,6 +142,7 @@ class AnalyticsService {
     required String description,
     required String category,
     String city = '',
+    String condition = '',
     int? excludeListingId,
   }) async {
     try {
@@ -161,6 +162,7 @@ class AnalyticsService {
           'description': description,
           'category': category,
           'city': city,
+          if (condition.isNotEmpty) 'condition': condition,
           if (excludeListingId != null && excludeListingId > 0)
             'exclude_listing_id': excludeListingId,
         }),

@@ -865,6 +865,166 @@ async def compute_user_interests_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: Kullanıcı Condition Tercihlerini Hesapla ───────────────────────────
+
+async def compute_user_condition_preferences_task(ctx: dict) -> None:
+    """
+    Her 15 dakikada çalışır; son 30 günün etkileşim sinyallerinden
+    kullanıcı başına condition tercih skorlarını hesaplar ve
+    Redis'te condition_pref:{uid} olarak JSON formatında saklar (TTL: 25 dk).
+
+    Sinyal kaynakları (ağırlıklı):
+      mesaj gönderdi   × 10
+      favoriledi       × 5
+      beğendi          × 3
+      view/impression  × 1
+
+    Zaman ağırlığı:
+      son 7 gün   → 1.0×
+      7-14 gün    → 0.7×
+      14-30 gün   → 0.4×
+
+    Çıktı: {"new": 0.8, "like_new": 0.6, "used": 0.2, "damaged": 0.0}
+    Normalize edilmez — feed algoritması ham skoru okur.
+    """
+    try:
+        from sqlalchemy import text
+        from app.database import AsyncSessionLocal
+        from app.utils.redis_client import get_redis
+
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text("""
+                WITH like_signals AS (
+                    SELECT
+                        ll.user_id,
+                        l.condition,
+                        SUM(
+                            CASE
+                                WHEN ll.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN ll.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * 3.0
+                        ) AS score
+                    FROM listing_likes ll
+                    INNER JOIN listings l ON l.id = ll.listing_id
+                    WHERE ll.created_at > NOW() - INTERVAL '30 days'
+                      AND l.condition IS NOT NULL
+                    GROUP BY ll.user_id, l.condition
+                ),
+                fav_signals AS (
+                    SELECT
+                        f.user_id,
+                        l.condition,
+                        SUM(
+                            CASE
+                                WHEN f.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN f.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * 5.0
+                        ) AS score
+                    FROM favorites f
+                    INNER JOIN listings l ON l.id = f.listing_id
+                    WHERE f.created_at > NOW() - INTERVAL '30 days'
+                      AND l.condition IS NOT NULL
+                    GROUP BY f.user_id, l.condition
+                ),
+                msg_signals AS (
+                    SELECT
+                        dm.sender_id AS user_id,
+                        l.condition,
+                        SUM(
+                            CASE
+                                WHEN dm.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN dm.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * 10.0
+                        ) AS score
+                    FROM direct_messages dm
+                    INNER JOIN listings l ON l.id = dm.listing_id
+                    WHERE dm.created_at > NOW() - INTERVAL '30 days'
+                      AND l.condition IS NOT NULL
+                    GROUP BY dm.sender_id, l.condition
+                ),
+                view_signals AS (
+                    SELECT
+                        ae.user_id,
+                        l.condition,
+                        SUM(
+                            CASE
+                                WHEN ae.created_at > NOW() - INTERVAL '7 days'  THEN 1.0
+                                WHEN ae.created_at > NOW() - INTERVAL '14 days' THEN 0.7
+                                ELSE 0.4
+                            END * CASE
+                                WHEN ae.event_type IN ('listing_offer_submit', 'listing_chat_open') THEN 5.0
+                                WHEN ae.event_type IN ('listing_favorite', 'listing_share')         THEN 3.0
+                                WHEN ae.event_type = 'listing_like'                                 THEN 1.5
+                                WHEN ae.event_type = 'detail_dwell'                                 THEN 2.0
+                                WHEN ae.event_type = 'listing_view'                                 THEN 1.0
+                                WHEN ae.event_type = 'listing_impression'                           THEN 0.3
+                                ELSE 0.0
+                            END
+                        ) AS score
+                    FROM analytics_events ae
+                    INNER JOIN listings l ON l.id = (ae.event_metadata->>'listing_id')::int
+                    WHERE ae.user_id IS NOT NULL
+                      AND ae.created_at > NOW() - INTERVAL '30 days'
+                      AND ae.event_type IN (
+                          'listing_view', 'listing_impression', 'listing_offer_submit',
+                          'listing_chat_open', 'listing_favorite', 'listing_share',
+                          'listing_like', 'detail_dwell'
+                      )
+                      AND ae.event_metadata->>'listing_id' IS NOT NULL
+                      AND l.condition IS NOT NULL
+                    GROUP BY ae.user_id, l.condition
+                ),
+                combined AS (
+                    SELECT user_id, condition, score FROM like_signals
+                    UNION ALL
+                    SELECT user_id, condition, score FROM fav_signals
+                    UNION ALL
+                    SELECT user_id, condition, score FROM msg_signals
+                    UNION ALL
+                    SELECT user_id, condition, score FROM view_signals WHERE score > 0
+                )
+                SELECT user_id, condition, SUM(score) AS total_score
+                FROM combined
+                GROUP BY user_id, condition
+                HAVING SUM(score) > 0
+            """))
+            rows = result.all()
+
+        if not rows:
+            logger.info("[Worker] compute_user_condition_preferences: sinyal yok, atlanıyor")
+            return
+
+        # Kullanıcı bazlı dict oluştur
+        user_map: dict[int, dict[str, float]] = {}
+        for row in rows:
+            uid = row.user_id
+            cond = row.condition
+            score = float(row.total_score)
+            if uid not in user_map:
+                user_map[uid] = {}
+            user_map[uid][cond] = score
+
+        redis = await get_redis()
+        pipe = redis.pipeline()
+        for uid, scores in user_map.items():
+            pipe.set(f"condition_pref:{uid}", json.dumps(scores), ex=1500)  # 25 dk TTL
+        await pipe.execute()
+
+        logger.info(
+            "[Worker] compute_user_condition_preferences tamamlandı | kullanıcı=%d",
+            len(user_map),
+        )
+
+    except Exception as exc:
+        logger.error(
+            "[Worker] compute_user_condition_preferences başarısız | %s", str(exc), exc_info=True
+        )
+        capture_exception(exc)
+
+
 # ── Task: Trend İlanları Velocity (30 dk) ────────────────────────────────────
 
 async def compute_trending_listings_task(ctx: dict) -> None:
@@ -3213,6 +3373,7 @@ class WorkerSettings:
         cleanup_hidden_messages_task,
         cleanup_old_media_messages_task,
         compute_user_interests_task,
+        compute_user_condition_preferences_task,
         cleanup_old_impressions_task,
         generate_listing_embedding_task,
         generate_embedding_task,
@@ -3280,6 +3441,8 @@ class WorkerSettings:
         cron(cleanup_old_analytics_task, weekday=0, hour=4, minute=0),
         # Her 15 dakikada kullanıcı ilgi skorlarını güncelle
         cron(compute_user_interests_task, minute={0, 15, 30, 45}),
+        # Her 15 dakikada kullanıcı condition tercihlerini hesapla (Redis: condition_pref:{uid})
+        cron(compute_user_condition_preferences_task, minute={3, 18, 33, 48}),
         # Her 15 dakikada SwipeLive config cache'lerini sıfırla (yeni event gelenlerin)
         cron(invalidate_swipe_live_configs_task, minute={5, 20, 35, 50}),
         # Her gün 05:00 — eski listing impressionlarını temizle

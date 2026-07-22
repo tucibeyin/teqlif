@@ -524,6 +524,7 @@ class PriceEstimateRequest(BaseModel):
     description: str = Field(default="", max_length=2000)
     category: str = Field(default="")
     city: str = Field(default="")
+    condition: str = Field(default="")
     image_url: str = Field(default="")
     image_phash: str | None = Field(default=None)
     exclude_listing_id: int = Field(default=0)
@@ -600,7 +601,8 @@ async def price_estimate(
     ner_data = extract_ner(body.title, body.description, body.category)
     t_brand = ner_data.get("brand") or ""
     t_model = ner_data.get("model_name") or ""
-    t_condition = ner_data.get("condition") or ""
+    # Explicit condition field takes priority over NER-extracted one
+    t_condition = body.condition.strip() or ner_data.get("condition") or ""
 
     # 4. Fetch today's rate for inflation adjustment
     from datetime import date
@@ -1639,7 +1641,7 @@ async def ingest_feed_events(
 
     rows = [
         [now, uid, e.listing_id, e.event_type, e.dwell_time_ms,
-         e.content_type, e.slot_index, e.stream_category]
+         e.content_type, e.slot_index, e.stream_category, e.listing_condition]
         for e in batch.events
     ]
 
@@ -1648,7 +1650,7 @@ async def ingest_feed_events(
             "feed_analytics",
             rows,
             column_names=["timestamp", "user_id", "listing_id", "event_type", "dwell_time_ms",
-                          "content_type", "slot_index", "stream_category"],
+                          "content_type", "slot_index", "stream_category", "listing_condition"],
         )
         logger.debug("[feed-events] %d olay yazıldı | user_id=%s", len(rows), uid)
     except Exception as exc:
@@ -1664,6 +1666,7 @@ class SwipeLiveEventItem(BaseModel):
     dwell_ms: int = 0
     stream_category: str = Field(default="", max_length=30)
     listing_category: str = Field(default="", max_length=30)
+    listing_condition: str = Field(default="", max_length=20)
     listings_seen: int = 0
     slot_index: int = 0
     session_id: str = Field(default="", max_length=64)
@@ -1677,6 +1680,7 @@ class SwipeLiveEventBatch(BaseModel):
 async def ingest_swipe_live_events(
     batch: SwipeLiveEventBatch,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     SwipeLive'daki yayın ve ilan davranışlarını (dwell/skip/listing_tap/listing_impression)
@@ -1687,6 +1691,16 @@ async def ingest_swipe_live_events(
         return
 
     from app.database_clickhouse import batch_insert_swipe_live_events
+    from app.models.listing import Listing
+
+    # listing_condition'ı server-side resolve et (mobile her zaman bilmeyebilir)
+    listing_ids = {e.listing_id for e in batch.events if e.listing_id and not e.listing_condition}
+    condition_map: dict[int, str] = {}
+    if listing_ids:
+        rows_cond = await db.execute(
+            select(Listing.id, Listing.condition).where(Listing.id.in_(listing_ids))
+        )
+        condition_map = {r.id: (r.condition or "") for r in rows_cond}
 
     events = [
         {
@@ -1697,6 +1711,7 @@ async def ingest_swipe_live_events(
             "dwell_ms": e.dwell_ms,
             "stream_category": e.stream_category,
             "listing_category": e.listing_category,
+            "listing_condition": e.listing_condition or condition_map.get(e.listing_id, ""),
             "listings_seen": e.listings_seen,
             "slot_index": e.slot_index,
             "session_id": e.session_id,
