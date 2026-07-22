@@ -33,27 +33,36 @@ _model = None
 _model_lock = threading.Lock()
 
 _SYSTEM_PROMPT = (
-    "You are a Turkish marketplace listing assistant. "
-    "Write a short, honest, clear Turkish product description based on the given details. "
-    "Rules: 2-4 sentences, 50-100 words, Turkish only, no hashtags, no bullet points, "
-    "no made-up features, no exaggeration. Output only the description text."
+    "You write Turkish classified ad descriptions. "
+    "Only use facts from the input. Never invent features. "
+    "Output: 3 sentences in Turkish. No bullets. No hashtags. Plain text only."
 )
 
-_FEW_SHOT_EXAMPLE = (
-    "Başlık: iPhone 13 Pro 256GB\n"
-    "Kategori: Telefon\n"
-    "Durum: Az Kullanılmış\n"
-    "Fiyat: 18.000 ₺\n"
-    "Konum: Ankara\n\n"
-    "Açıklama: "
-)
-
-_FEW_SHOT_ANSWER = (
-    "iPhone 13 Pro 256GB, az kullanılmış durumda satılıktır. "
-    "Ekranında veya kasasında çizik yoktur, tüm tuşlar sorunsuz çalışmaktadır. "
-    "Orijinal kutusu ve şarj kablosu ile birlikte teslim edilir. "
-    "Ankara içi elden teslim mümkündür, kargo seçeneği de mevcuttur."
-)
+# İki farklı kategori örneği — modele format kalıbını göster
+_EXAMPLES = [
+    {
+        "user": (
+            "Başlık: Nike Air Max 90\nKategori: Ayakkabı\nDurum: İkinci El\n"
+            "Fiyat: 800 ₺\nKonum: Bursa\nAçıklama:"
+        ),
+        "assistant": (
+            "Nike Air Max 90 spor ayakkabı, ikinci el olup genel kullanım izleri mevcuttur. "
+            "Taban ve üst kısım sağlamdır, 42 numara. "
+            "Bursa içi elden teslim yapılır, kargo ile de gönderilebilir."
+        ),
+    },
+    {
+        "user": (
+            "Başlık: iPhone 13 Pro 256GB\nKategori: Telefon\nDurum: Az Kullanılmış\n"
+            "Fiyat: 18.000 ₺\nKonum: Ankara\nAçıklama:"
+        ),
+        "assistant": (
+            "iPhone 13 Pro 256GB, az kullanılmış ve iyi bakımlı durumdadır. "
+            "Ekranında ve kasasında belirgin çizik bulunmamaktadır, orijinal kutusuyla birlikte teslim edilir. "
+            "Ankara içi elden teslim tercih edilmektedir, anlaşmayla kargo da mümkündür."
+        ),
+    },
+]
 
 _CONDITION_LABELS = {
     "new": "Sıfır",
@@ -80,8 +89,8 @@ def _load_model():
             logger.info("[LLM] Phi-3.5-mini yükleniyor: %s", _MODEL_PATH)
             _model = Llama(
                 model_path=str(_MODEL_PATH),
-                n_ctx=2048,
-                n_threads=4,
+                n_ctx=1024,
+                n_threads=5,
                 n_gpu_layers=0,
                 verbose=False,
             )
@@ -122,20 +131,22 @@ def generate_listing_description(
     if location:
         parts.append(f"Konum: {location.strip()}")
 
-    user_message = "\n".join(parts) + "\n\nAçıklama: "
+    user_message = "\n".join(parts) + "\nAçıklama:"
+
+    messages = [{"role": "system", "content": _SYSTEM_PROMPT}]
+    for ex in _EXAMPLES:
+        messages.append({"role": "user", "content": ex["user"]})
+        messages.append({"role": "assistant", "content": ex["assistant"]})
+    messages.append({"role": "user", "content": user_message})
 
     try:
         output = model.create_chat_completion(
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": _FEW_SHOT_EXAMPLE},
-                {"role": "assistant", "content": _FEW_SHOT_ANSWER},
-                {"role": "user", "content": user_message},
-            ],
-            max_tokens=200,
-            temperature=0.4,
+            messages=messages,
+            max_tokens=130,
+            temperature=0.3,
             top_p=0.85,
-            repeat_penalty=1.15,
+            repeat_penalty=1.2,
+            stop=["\n\n", "Başlık:", "Kategori:"],
         )
         text = output["choices"][0]["message"]["content"].strip()
         return text if text else None
