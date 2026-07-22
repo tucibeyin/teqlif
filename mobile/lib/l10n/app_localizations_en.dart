@@ -147,7 +147,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldPriceHint => 'Enter price';
 
   @override
-  String get fieldLocation => 'Location (optional)';
+  String get fieldLocation => 'Location';
 
   @override
   String get fieldLocationHint => 'Select city';
@@ -5502,4 +5502,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get conditionDamaged => 'Damaged';
+
+  @override
+  String get validRequiredLocation => 'Please select a location';
+
+  @override
+  String get validRequiredPrice => 'Please enter a price';
+
+  @override
+  String get validRequiredCondition => 'Please select the condition';
+
+  @override
+  String get createNeedAllFields =>
+      'Please fill in all required fields for AI estimation.';
 }

@@ -43,6 +43,13 @@ class CreateListingCommand:
         if not _title:
             raise BadRequestException("İlan başlığı boş olamaz")
 
+        if price is None or price <= 0:
+            raise BadRequestException("Geçerli bir fiyat girilmelidir")
+
+        _loc = (location or "").strip()
+        if not _loc:
+            raise BadRequestException("Konum bilgisi zorunludur")
+
         if analyze_listing_text(_title, _desc):
             raise ContentPolicyException("Uygunsuz içerik tespit edildi")
 
@@ -50,8 +57,8 @@ class CreateListingCommand:
         if cat not in VALID_CATEGORIES:
             raise BadRequestException(f"Geçersiz kategori: {cat}")
 
-        cond = condition.strip().lower() if condition else None
-        if cond is not None and cond not in VALID_CONDITIONS:
+        cond = condition.strip().lower() if condition else ""
+        if not cond or cond not in VALID_CONDITIONS:
             raise BadRequestException(f"Geçersiz ürün durumu: {cond}")
 
         # 2. Veritabanı İşlemi (Write Model)

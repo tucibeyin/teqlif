@@ -148,7 +148,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fieldPriceHint => 'Введите цену';
 
   @override
-  String get fieldLocation => 'Местоположение (необязательно)';
+  String get fieldLocation => 'Местоположение';
 
   @override
   String get fieldLocationHint => 'Выберите город';
@@ -5552,4 +5552,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get conditionDamaged => 'Повреждён';
+
+  @override
+  String get validRequiredLocation => 'Пожалуйста, выберите местоположение';
+
+  @override
+  String get validRequiredPrice => 'Пожалуйста, введите цену';
+
+  @override
+  String get validRequiredCondition => 'Пожалуйста, выберите состояние';
+
+  @override
+  String get createNeedAllFields =>
+      'Пожалуйста, заполните все обязательные поля для ИИ.';
 }

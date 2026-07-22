@@ -786,7 +786,7 @@
   "fieldCategoryHint": "Выберите категорию",
   "fieldPrice": "Цена",
   "fieldPriceHint": "Введите цену",
-  "fieldLocation": "Местоположение (необязательно)",
+  "fieldLocation": "Местоположение",
   "fieldLocationHint": "Выберите город",
   "fieldDescription": "Описание",
   "fieldDescriptionHint": "Введите описание",
@@ -2968,5 +2968,9 @@
   "conditionLikeNew": "Почти новый",
   "conditionUsed": "Б/у",
   "conditionDamaged": "Повреждён",
-  "aiDescStreamError": "Соединение разорвано, попробуйте еще раз."
+  "aiDescStreamError": "Соединение разорвано, попробуйте еще раз.",
+  "validRequiredLocation": "Пожалуйста, выберите местоположение",
+  "validRequiredPrice": "Пожалуйста, введите цену",
+  "validRequiredCondition": "Пожалуйста, выберите состояние",
+  "createNeedAllFields": "Пожалуйста, заполните все обязательные поля для ИИ."
 }

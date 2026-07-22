@@ -45,7 +45,7 @@
   "fieldCategoryHint": "Select category",
   "fieldPrice": "Price",
   "fieldPriceHint": "Enter price",
-  "fieldLocation": "Location (optional)",
+  "fieldLocation": "Location",
   "fieldLocationHint": "Select city",
   "fieldDescription": "Description",
   "fieldDescriptionHint": "Enter description",
@@ -3003,5 +3003,9 @@
   "conditionLikeNew": "Like New",
   "conditionUsed": "Used",
   "conditionDamaged": "Damaged",
-  "aiDescStreamError": "Connection lost, please try again."
+  "aiDescStreamError": "Connection lost, please try again.",
+  "validRequiredLocation": "Please select a location",
+  "validRequiredPrice": "Please enter a price",
+  "validRequiredCondition": "Please select the condition",
+  "createNeedAllFields": "Please fill in all required fields for AI estimation."
 }

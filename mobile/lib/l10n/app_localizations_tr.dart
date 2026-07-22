@@ -147,7 +147,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get fieldPriceHint => 'Fiyat giriniz';
 
   @override
-  String get fieldLocation => 'Konum (isteğe bağlı)';
+  String get fieldLocation => 'Konum';
 
   @override
   String get fieldLocationHint => 'Şehir seçin';
@@ -5504,4 +5504,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get conditionDamaged => 'Hasarlı';
+
+  @override
+  String get validRequiredLocation => 'Lütfen konum seçiniz';
+
+  @override
+  String get validRequiredPrice => 'Lütfen fiyat giriniz';
+
+  @override
+  String get validRequiredCondition => 'Lütfen ürün durumu seçiniz';
+
+  @override
+  String get createNeedAllFields =>
+      'Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun.';
 }

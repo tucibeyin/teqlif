@@ -148,7 +148,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get fieldPriceHint => 'أدخل السعر';
 
   @override
-  String get fieldLocation => 'الموقع (اختياري)';
+  String get fieldLocation => 'الموقع';
 
   @override
   String get fieldLocationHint => 'اختر المدينة';
@@ -5472,4 +5472,17 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get conditionDamaged => 'تالف';
+
+  @override
+  String get validRequiredLocation => 'الرجاء تحديد الموقع';
+
+  @override
+  String get validRequiredPrice => 'الرجاء إدخال السعر';
+
+  @override
+  String get validRequiredCondition => 'الرجاء تحديد حالة المنتج';
+
+  @override
+  String get createNeedAllFields =>
+      'يرجى ملء جميع الحقول المطلوبة لتوقع الذكاء الاصطناعي.';
 }

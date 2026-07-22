@@ -126,10 +126,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   Future<void> _fetchAiPriceEstimate() async {
     final title = _titleCtrl.text.trim();
     final desc = _descCtrl.text.trim();
-    if (title.isEmpty) {
+    final l = AppLocalizations.of(context)!;
+    
+    if (title.isEmpty || _selectedCategory == null || _selectedCity == null || _selectedCondition == null) {
       TeqSnackBar.show(
         context,
-        message: AppLocalizations.of(context)!.createNeedTitle,
+        message: l.createNeedAllFields,
         type: TeqSnackBarType.warning,
       );
       return;
@@ -147,7 +149,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (result == null) {
         TeqSnackBar.show(
           context,
-          message: AppLocalizations.of(context)!.aiPriceError,
+          message: l.aiPriceError,
           type: TeqSnackBarType.error,
         );
         return;
@@ -159,7 +161,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         _loadAiCredits();
         TeqSnackBar.show(
           context,
-          message: AppLocalizations.of(context)!.tuciSpent(tuciSpent),
+          message: l.tuciSpent(tuciSpent),
           type: TeqSnackBarType.success,
         );
       } else if (_aiCreditsRemaining != null && _aiCreditsRemaining! > 0) {
@@ -176,9 +178,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   Future<void> _fetchAiDescription() async {
     final title = _titleCtrl.text.trim();
+    final priceRaw = _priceCtrl.text.trim();
     final l = AppLocalizations.of(context)!;
-    if (title.isEmpty || _selectedCategory == null) {
-      TeqSnackBar.show(context, message: l.createNeedTitle, type: TeqSnackBarType.warning);
+    
+    if (title.isEmpty || _selectedCategory == null || _selectedCity == null || _selectedCondition == null || priceRaw.isEmpty) {
+      TeqSnackBar.show(context, message: l.createNeedAllFields, type: TeqSnackBarType.warning);
       return;
     }
     setState(() {
@@ -1096,6 +1100,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           (c) => DropdownMenuItem(value: c, child: Text(c)),
                         ),
                       ],
+                      validator: (v) => v == null || v.isEmpty ? l.validRequiredLocation : null,
                       onChanged: (v) => setState(() => _selectedCity = v),
                     ),
                     const SizedBox(height: 14),
@@ -1111,7 +1116,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
                         DropdownMenuItem(value: 'damaged', child: Text(l.conditionDamaged)),
                       ],
-                      validator: (v) => v == null ? l.fieldConditionHint : null,
+                      validator: (v) => v == null ? l.validRequiredCondition : null,
                       onChanged: (v) => setState(() => _selectedCondition = v),
                     ),
                   ],
@@ -1157,7 +1162,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       hintText: l.fieldPriceHint,
                       prefixText: '₺ ',
                       validator: (v) =>
-                          v == null || v.isEmpty ? l.fieldPriceHint : null,
+                          v == null || v.isEmpty ? l.validRequiredPrice : null,
                     ),
                     const SizedBox(height: 10),
                     _AiPriceButton(

@@ -45,7 +45,7 @@
   "fieldCategoryHint": "Kategori seçiniz",
   "fieldPrice": "Fiyat",
   "fieldPriceHint": "Fiyat giriniz",
-  "fieldLocation": "Konum (isteğe bağlı)",
+  "fieldLocation": "Konum",
   "fieldLocationHint": "Şehir seçin",
   "fieldDescription": "Açıklama",
   "fieldDescriptionHint": "Açıklama giriniz",
@@ -2966,5 +2966,9 @@
   "conditionNew": "Sıfır",
   "conditionLikeNew": "Az Kullanılmış",
   "conditionUsed": "İkinci El",
-  "conditionDamaged": "Hasarlı"
+  "conditionDamaged": "Hasarlı",
+  "validRequiredLocation": "Lütfen konum seçiniz",
+  "validRequiredPrice": "Lütfen fiyat giriniz",
+  "validRequiredCondition": "Lütfen ürün durumu seçiniz",
+  "createNeedAllFields": "Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun."
 }

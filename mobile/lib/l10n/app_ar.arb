@@ -45,7 +45,7 @@
   "fieldCategoryHint": "اختر الفئة",
   "fieldPrice": "السعر",
   "fieldPriceHint": "أدخل السعر",
-  "fieldLocation": "الموقع (اختياري)",
+  "fieldLocation": "الموقع",
   "fieldLocationHint": "اختر المدينة",
   "fieldDescription": "الوصف",
   "fieldDescriptionHint": "أدخل الوصف",
@@ -2967,5 +2967,9 @@
   "conditionLikeNew": "شبه جديد",
   "conditionUsed": "مستعمل",
   "conditionDamaged": "تالف",
-  "aiDescStreamError": "انقطع الاتصال، يرجى المحاولة مرة أخرى."
+  "aiDescStreamError": "انقطع الاتصال، يرجى المحاولة مرة أخرى.",
+  "validRequiredLocation": "الرجاء تحديد الموقع",
+  "validRequiredPrice": "الرجاء إدخال السعر",
+  "validRequiredCondition": "الرجاء تحديد حالة المنتج",
+  "createNeedAllFields": "يرجى ملء جميع الحقول المطلوبة لتوقع الذكاء الاصطناعي."
 }

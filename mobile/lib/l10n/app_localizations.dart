@@ -375,7 +375,7 @@ abstract class AppLocalizations {
   /// No description provided for @fieldLocation.
   ///
   /// In tr, this message translates to:
-  /// **'Konum (isteğe bağlı)'**
+  /// **'Konum'**
   String get fieldLocation;
 
   /// No description provided for @fieldLocationHint.
@@ -9911,6 +9911,30 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Hasarlı'**
   String get conditionDamaged;
+
+  /// No description provided for @validRequiredLocation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Lütfen konum seçiniz'**
+  String get validRequiredLocation;
+
+  /// No description provided for @validRequiredPrice.
+  ///
+  /// In tr, this message translates to:
+  /// **'Lütfen fiyat giriniz'**
+  String get validRequiredPrice;
+
+  /// No description provided for @validRequiredCondition.
+  ///
+  /// In tr, this message translates to:
+  /// **'Lütfen ürün durumu seçiniz'**
+  String get validRequiredCondition;
+
+  /// No description provided for @createNeedAllFields.
+  ///
+  /// In tr, this message translates to:
+  /// **'Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun.'**
+  String get createNeedAllFields;
 }
 
 class _AppLocalizationsDelegate
