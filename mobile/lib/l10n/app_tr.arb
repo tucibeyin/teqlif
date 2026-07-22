@@ -2970,7 +2970,7 @@
   "validRequiredLocation": "Lütfen konum seçiniz",
   "validRequiredPrice": "Lütfen fiyat giriniz",
   "validRequiredCondition": "Lütfen ürün durumu seçiniz",
-  "createNeedAllFields": "Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun.",
+  "createNeedAllFields": "Lütfen başlık, konum ve ürün durumu alanlarını doldurun.",
   "uploadErrorTooLarge": "Video dosyası çok büyük. Lütfen daha kısa bir video deneyin.",
   "uploadErrorServerBusy": "Sunucu şu an meşgul, lütfen daha sonra tekrar deneyin.",
   "uploadErrorAuthExpired": "Oturum süreniz doldu, lütfen tekrar giriş yapın.",

@@ -9933,7 +9933,7 @@ abstract class AppLocalizations {
   /// No description provided for @createNeedAllFields.
   ///
   /// In tr, this message translates to:
-  /// **'Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun.'**
+  /// **'Lütfen başlık, konum ve ürün durumu alanlarını doldurun.'**
   String get createNeedAllFields;
 
   /// No description provided for @uploadErrorTooLarge.

@@ -100,7 +100,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           _loadAiDescCredits();
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[CreateListing] _loadProStatus failed: $e');
+    }
   }
 
   Future<void> _loadAiCredits() async {
@@ -215,12 +217,13 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       _aiDescLoading = true;
       _descCtrl.text = ''; // Clear text before stream
     });
-    
+
+    http.Client? client;
     try {
       final token = await StorageService.getToken();
       final priceRaw = _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.');
       final price = double.tryParse(priceRaw);
-      
+
       debugPrint('[AI Description] Preparing request to backend...');
       final req = http.Request('POST', Uri.parse('$kBaseUrl/listings/generate-description'));
       req.headers['Content-Type'] = 'application/json';
@@ -234,8 +237,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       });
 
       debugPrint('[AI Description] Sending request (Timeout: 60s)...');
-      final client = http.Client();
-      final resp = await client.send(req).timeout(const Duration(seconds: 60)); // Artırıldı
+      client = http.Client();
+      final resp = await client.send(req).timeout(const Duration(seconds: 60));
 
       if (!mounted) return;
 
@@ -251,8 +254,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             try {
               final json = jsonDecode(dataStr) as Map<String, dynamic>;
               if (json.containsKey('error')) {
-                debugPrint('[AI Description] Error in stream payload: ${json['error']}');
-                TeqSnackBar.show(context, message: json['error'], type: TeqSnackBarType.error);
+                final rawErr = json['error'] as String? ?? '';
+                debugPrint('[AI Description] Error in stream payload: $rawErr');
+                TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
                 break;
               } else if (json.containsKey('text')) {
                 final textChunk = json['text'] as String;
@@ -313,6 +317,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (!mounted) return;
       TeqSnackBar.show(context, message: l.aiDescStreamError, type: TeqSnackBarType.error);
     } finally {
+      client?.close();
       if (mounted) setState(() => _aiDescLoading = false);
     }
   }
@@ -749,10 +754,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         } catch (e) {
           debugPrint('UPLOAD EXCEPTION: $e');
           if (mounted) {
-            final l = AppLocalizations.of(context)!;
             TeqSnackBar.show(
               context,
-              message: l.createListingPhotoUploadFailed(e.toString()),
+              message: _uploadError(e),
               type: TeqSnackBarType.error,
             );
           }
@@ -1195,7 +1199,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     const SizedBox(height: 10),
                     _AiDescButton(
                       loading: _aiDescLoading,
-                      enabled: _titleCtrl.text.trim().isNotEmpty && _selectedCategory != null,
+                      enabled: _titleCtrl.text.trim().isNotEmpty && _selectedCategory != null && _selectedCity != null && _selectedCondition != null,
                       isPro: _isPro,
                       creditsRemaining: _aiDescCreditsRemaining,
                       onTap: _fetchAiDescription,

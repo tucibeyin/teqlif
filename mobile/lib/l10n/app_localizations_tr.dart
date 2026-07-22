@@ -5516,7 +5516,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get createNeedAllFields =>
-      'Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun.';
+      'Lütfen başlık, konum ve ürün durumu alanlarını doldurun.';
 
   @override
   String get uploadErrorTooLarge =>
