@@ -625,13 +625,12 @@ async def generate_description(
                     raise msg["error"]
                 elif msg["type"] == "chunk":
                     chunk = msg["data"]
+                    if chunk == "__LLM_ERROR__":
+                        yield f"data: {json.dumps({'error': 'AI_SERVICE_ERROR'}, ensure_ascii=False)}\n\n"
+                        return
                     if not text_generated:
                         logger.info(f"[API] First chunk received from Ollama for user_id={current_user.id}")
                     text_generated = True
-                    
-                    # Nginx ve Cloudflare'in kelimeleri (chunk) buffer'da bekletmesini engellemek için
-                    # Her kelimenin başına SSE yorum satırı olarak 8KB boşluk (padding) ekliyoruz.
-                    # Nginx ve özellikle Cloudflare'in 8KB'lık buffer sınırını aşarak veriyi anında telefona itmesini zorluyoruz.
                     chunk_payload = json.dumps({'text': chunk}, ensure_ascii=False)
                     padding = ' ' * 8192
                     yield f": {padding}\ndata: {chunk_payload}\n\n"

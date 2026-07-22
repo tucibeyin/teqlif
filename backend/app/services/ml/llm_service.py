@@ -1,13 +1,19 @@
 """
-Ollama (Qwen2.5:3b) LLM Servisi (API üzerinden Streaming)
+Ollama (Qwen2.5:3b) LLM Servisi — Hybrid Streaming
 
 Akış:
-  1. _generate_system_prompt() — Kombinasyonlara göre sistem komutunu (copywriting kurallarını) hazırlar.
-  2. _generate_user_prompt() — Kullanıcının girdiği ilan verilerini hazırlar.
-  3. generate_listing_description_stream() — Ollama API'sine istek atar ve sonucu stream eder.
+  1. _generate_system_prompt()  — slug-based kategori/durum kuralları.
+  2. _generate_user_prompt()    — sadece ürün gövdesi (fiyat/lokasyon YOK).
+  3. generate_listing_description_stream() — Ollama'yı stream eder,
+     bitince _build_suffix() ile fiyat/lokasyon şablonunu yield eder.
+
+Hybrid mantığı:
+  - LLM → ürün tanıtım gövdesi  (yaratıcı, hallüsinasyon riski kabul edilebilir)
+  - Şablon → fiyat + lokasyon cümlesi  (deterministik, asla kaybolmaz)
 """
 import json
 import logging
+import random
 from typing import AsyncGenerator, Optional
 import httpx
 
@@ -16,71 +22,122 @@ logger = logging.getLogger(__name__)
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "qwen2.5:3b"
 
+# ── Kategori ipuçları (slug → hint) ──────────────────────────────────────────
+_CAT_HINTS: dict[str, str] = {
+    "elektronik": "Çalışmayan aksam olmadığını veya kozmetik durumunu (çizik, baret vb.) kısaca belirt.",
+    "vasita":     "Motorunda veya karoserinde sıkıntı olup olmadığını dürüstçe belirt.",
+    "emlak":      "Konumundan veya krediye uygunluğundan samimi bir dille bahset.",
+    "giyim":      "Bedeninin uymadığı için ya da tarz değişikliğinden sattığını belirt.",
+    "ev":         "Kırık veya çizik olmadığını ya da evde yer açmak için sattığını belirt.",
+    "spor":       "Kullanım sıklığını ve genel durumunu kısaca belirt.",
+    "kitap":      "Kapak veya sayfa durumunu belirt.",
+}
+
+# ── Ürün durumu etiketleri ─────────────────────────────────────────────────────
+_CONDITION_LABELS: dict[str, str] = {
+    "new":       "Sıfır (kutusunda, hiç açılmamış)",
+    "like_new":  "Az kullanılmış (adeta sıfır)",
+    "used":      "Kullanılmış",
+    "damaged":   "Hasarlı / Arızalı",
+}
+
+# ── Fiyat şablonları ───────────────────────────────────────────────────────────
+_PRICE_ONLY: list[str] = [
+    "{price} TL'ye satıyorum, pazarlık payı var.",
+    "Fiyatım {price} TL, ciddi alıcı beklerim.",
+    "{price} TL istiyorum, fiyat konuşulur.",
+    "{price} TL, sabit fiyat.",
+]
+
+# ── Lokasyon şablonları ────────────────────────────────────────────────────────
+_LOCATION_ONLY: list[str] = [
+    "Sadece {city} içi elden teslim yapabilirim.",
+    "{city}'den elden teslim, kargoya bakmıyorum.",
+    "Elden {city}'den verebilirim.",
+    "{city} içinden elden teslim tercihim.",
+]
+
+# ── Fiyat + lokasyon birleşik şablonları ──────────────────────────────────────
+_PRICE_AND_LOCATION: list[str] = [
+    "{price} TL, sadece {city} içi elden teslim.",
+    "{price} TL'ye satıyorum, {city}'den elden verebilirim.",
+    "Fiyatım {price} TL. {city} içi elden teslim yapabilirim.",
+    "{price} TL istiyorum, {city}'den elden.",
+]
+
+
+def _build_suffix(price: Optional[float], location: Optional[str]) -> str:
+    """Fiyat ve/veya lokasyondan deterministik şablon cümlesi üretir."""
+    p = f"{int(price):,}".replace(",", ".") if price and price > 0 else None
+    c = location.strip() if location else None
+
+    if p and c:
+        return random.choice(_PRICE_AND_LOCATION).format(price=p, city=c)
+    if p:
+        return random.choice(_PRICE_ONLY).format(price=p)
+    if c:
+        return random.choice(_LOCATION_ONLY).format(city=c)
+    return ""
+
+
 def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
-    """Kategori ve duruma göre dinamik pazarlama kopyası kuralları üretir."""
-    base_prompt = (
-        "Sen bir yapay zeka değilsin. Sen Türkiye'de ikinci el ilan platformunda (Letgo, Sahibinden gibi) kendi şahsi ürününü satan normal bir vatandaşsın. Sadece doğrudan ilan açıklamasını yaz.\n\n"
+    """Slug-based kategori ve duruma göre dinamik system prompt üretir."""
+    base = (
+        "Sen bir yapay zeka değilsin. Türkiye'de ikinci el ilan platformunda kendi ürününü satan "
+        "sıradan bir vatandaşsın. Sadece ürün tanıtım metnini yaz.\n\n"
         "KESİN KURALLAR:\n"
         "1. Metnin başına veya sonuna ASLA tırnak işareti (' veya \") koyma.\n"
-        "2. ASLA 'Size yardımcı olabilirim', 'Vurgulayalım', 'Öneririm', 'Merhaba' gibi yapay zeka veya müşteri temsilcisi kelimeleri kullanma.\n"
-        "3. Doğrudan 1. tekil şahıs (Ben) ağzıyla yaz (Örn: 'Satıyorum', 'Kullandım').\n"
-        "4. En fazla 3-4 cümle kur. Samimi ol. 'Alıcısına hayırlı olsun', 'Pazarlık payı vardır', 'İhtiyaçtan satılık' gibi gerçekçi Türk satıcı jargonları kullan.\n"
-        "5. Cümleleri çok karmaşık kurma, günlük konuşma dilini kullan.\n"
-        "6. ASLA 'sepetimize eklendi', 'mağazamızda', 'hizmetler sunabilirim', 'özel hizmetler' gibi e-ticaret/kurumsal firma ağzı kullanma. Sen bireysel bir satıcısın.\n"
-        "7. ASLA 'müşteri' veya 'müşteriler' kelimesini kullanma. Bunun yerine 'alıcı' veya 'yeni sahibi' de.\n"
-        "8. METNİ KESİNLİKLE 1. TEKİL ŞAHIS (Ben) AĞZIYLA YAZ. Karşında konuştuğun biri YOK. 'Ürününüz', 'Fiyatınız', 'Sizin için' gibi Sen/Siz (2. şahıs) hitaplarını KESİNLİKLE KULLANMA.\n"
-        "9. Eğer ürün durumu (Condition) ile başlık çelişiyorsa, HER ZAMAN durumu (Condition) baz al ve hasarı/arızayı dürüstçe belirt.\n"
-        "10. 'Tıbbi olarak temiz', 'bana dikkat etmeyin', 'durulamaz', 'unutmayın' gibi devrik, saçma veya çeviri kokan absürt kelimeler KESİNLİKLE kullanma. Sadece son derece sade, normal bir Türkçe kullan.\n"
+        "2. ASLA 'Merhaba', 'Size yardımcı olabilirim', 'Vurgulayalım' gibi YZ veya müşteri "
+        "temsilcisi ifadeleri kullanma.\n"
+        "3. 1. tekil şahıs (Ben) ağzıyla yaz: 'Satıyorum', 'Kullandım' gibi.\n"
+        "4. En fazla 3 cümle. Samimi ol. 'Alıcısına hayırlı olsun', 'Pazarlık payı var', "
+        "'İhtiyaçtan satılık' gibi gerçekçi satıcı jargonları kullanabilirsin.\n"
+        "5. Günlük konuşma dilini kullan, cümleleri karmaşık kurma.\n"
+        "6. ASLA kurumsal veya e-ticaret dili kullanma ('mağazamız', 'müşteri', 'hizmetlerimiz').\n"
+        "7. 'Müşteri' yerine 'alıcı' veya 'yeni sahibi' de.\n"
+        "8. KESİNLİKLE 1. tekil şahıs yaz. 'Ürününüz', 'Sizin için' gibi 2. şahıs hitapları YASAK.\n"
+        "9. Başlık ile ürün durumu çelişiyorsa HER ZAMAN durumu esas al, hasarı dürüstçe belirt.\n"
+        "10. Devrik, absürt veya çeviri kokan ifadeler kullanma; sade doğal Türkçe yaz.\n"
+        "11. FİYAT VE TESLİMAT BİLGİSİ YAZMA. Sadece ürünü ve durumunu anlat; "
+        "fiyat ve şehir bilgisi ayrıca eklenecek.\n"
     )
-    
-    cat_hints = []
-    cat_lower = category.lower()
-    if "elektronik" in cat_lower or "telefon" in cat_lower or "bilgisayar" in cat_lower:
-        cat_hints.append("Çalışmayan aksamı olmadığını veya kozmetik durumunu (çizik vs.) kısaca belirt.")
-    elif "araç" in cat_lower or "vasıta" in cat_lower or "araba" in cat_lower:
-        cat_hints.append("Yürüründe veya motorunda sıkıntı olup olmadığını dürüstçe belirt.")
-    elif "emlak" in cat_lower or "ev" in cat_lower or "arsa" in cat_lower:
-        cat_hints.append("Masrafsız olduğunu, konumunu veya krediye uygunluğunu samimi bir dille belirt.")
-    elif "giyim" in cat_lower or "ayakkabı" in cat_lower:
-        cat_hints.append("Bedeninin uymadığı için veya tarz değişikliğinden dolayı sattığını belirt.")
-    elif "mobilya" in cat_lower or "eşya" in cat_lower:
-        cat_hints.append("Kırık/çizik olmadığını veya evde yer açmak için sattığını belirt. (Çamur vb. saçma kelimeler kullanma).")
-        
-    cond_hints = []
-    if condition == "new":
-        cond_hints.append("Ürünün kutusunda, hiç açılmamış sıfır ürün olduğunu belirt.")
-    elif condition == "like_new":
-        cond_hints.append("Çok az kullanıldığını, adeta sıfır ayarında tertemiz olduğunu belirt.")
-    elif condition == "used":
-        cond_hints.append("Temiz kullanıldığını ve yeni sahibine masraf çıkarmayacağını söyle.")
-    elif condition == "damaged":
-        cond_hints.append("Üründe hasar/arızalar olduğunu SAKLAMA. Kesinlikle 'Hasarlıdır' veya 'Arızalıdır' diye belirt.")
 
-    hints = "Özel Tavsiyeler:\n" + "\n".join(f"- {h}" for h in cat_hints + cond_hints)
-    
-    return base_prompt + "\n" + hints
+    hints: list[str] = []
+
+    cat_hint = _CAT_HINTS.get(category.lower().strip())
+    if cat_hint:
+        hints.append(cat_hint)
+
+    if condition == "new":
+        hints.append("Ürünün kutusunda, hiç açılmamış sıfır ürün olduğunu belirt.")
+    elif condition == "like_new":
+        hints.append("Çok az kullanıldığını, adeta sıfır ayarında tertemiz olduğunu belirt.")
+    elif condition == "used":
+        hints.append("Temiz kullanıldığını ve yeni sahibine masraf çıkarmayacağını söyle.")
+    elif condition == "damaged":
+        hints.append("Üründe hasar/arıza olduğunu SAKLAMA; 'Hasarlıdır' veya 'Arızalıdır' diye açıkça belirt.")
+
+    if hints:
+        base += "\nÖzel Tavsiyeler:\n" + "\n".join(f"- {h}" for h in hints)
+
+    return base
+
 
 def _generate_user_prompt(
     title: str,
     category: str,
     condition: Optional[str],
-    price: Optional[float],
-    location: Optional[str],
 ) -> str:
-    """Kullanıcının verilerini LLM'e sunar."""
+    """Kullanıcı girdilerini XML etiketlerle LLM'e sunar (injection koruması)."""
+    cond_label = _CONDITION_LABELS.get(condition or "", condition or "")
     lines = [
-        "Aşağıdaki bilgileri kullanarak sadece ilan metnini oluştur (Fazladan giriş/çıkış cümlesi yazma):",
-        f"- Ürün: {title}",
+        "Aşağıdaki bilgileri kullanarak sadece ürün tanıtım metnini oluştur "
+        "(fiyat ve teslimat bilgisi YAZMA, fazladan giriş/çıkış cümlesi de ekleme):",
+        f"<urun>{title}</urun>",
+        f"<kategori>{category}</kategori>",
     ]
-    
-    if price and price > 0:
-        lines.append(f"- Fiyat: {int(price)} TL (Bu fiyatı metnin içine doğalca yedir, örn: '{int(price)} TL yazıyorum' veya '{int(price)} TL istiyorum')")
-        
-    if location:
-        lines.append(f"- Teslimat: Sadece {location} (Örn: 'Sadece {location} içi elden teslim yapabilirim' yaz ve metni bitir)")
-    else:
-        lines.append("- Teslimat: Kargo veya elden teslim yapabilirim.")
-        
+    if cond_label:
+        lines.append(f"<durum>{cond_label}</durum>")
     return "\n".join(lines)
 
 
@@ -92,11 +149,12 @@ async def generate_listing_description_stream(
     location: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
-    Ollama API'sine bağlanıp üretilen metni stream eder (yield chunk).
+    LLM gövdesini stream eder, ardından fiyat/lokasyon şablonunu yield eder.
+    Hata durumunda __LLM_ERROR__ sentinel'i yield eder.
     """
     system_prompt = _generate_system_prompt(category, condition)
-    user_prompt = _generate_user_prompt(title, category, condition, price, location)
-    
+    user_prompt = _generate_user_prompt(title, category, condition)
+
     payload = {
         "model": MODEL_NAME,
         "system": system_prompt,
@@ -105,30 +163,39 @@ async def generate_listing_description_stream(
         "options": {
             "temperature": 0.4,
             "top_p": 0.85,
-            "num_predict": 100,
-            "num_thread": 4
-        }
+            "num_predict": 150,
+            "num_thread": 4,
+        },
     }
-    
+
     try:
-        logger.info(f"[LLM] Sending stream request to Ollama ({MODEL_NAME}). Timeout=120.0s")
+        logger.info("[LLM] Stream isteği gönderiliyor (%s) | title=%r", MODEL_NAME, title[:60])
         async with httpx.AsyncClient() as client:
-            async with client.stream("POST", OLLAMA_API_URL, json=payload, timeout=120.0) as response:
-                logger.info(f"[LLM] Ollama response status: {response.status_code}")
+            async with client.stream(
+                "POST", OLLAMA_API_URL, json=payload, timeout=120.0
+            ) as response:
                 if response.status_code != 200:
-                    logger.error(f"[LLM] Ollama API Error: {response.status_code}")
-                    yield "Yapay zeka sunucusu şu an meşgul. Lütfen daha sonra tekrar deneyin."
+                    logger.error("[LLM] Ollama API hatası: %d", response.status_code)
+                    yield "__LLM_ERROR__"
                     return
-                
+
                 async for line in response.aiter_lines():
                     if not line:
                         continue
                     try:
                         data = json.loads(line)
-                        if "response" in data:
-                            yield data["response"]
+                        token = data.get("response", "")
+                        if token:
+                            yield token
                     except json.JSONDecodeError:
                         continue
+
+        # Gövde bitti — deterministik fiyat/lokasyon şablonunu ekle
+        suffix = _build_suffix(price, location)
+        if suffix:
+            yield " "
+            yield suffix
+
     except Exception as exc:
-        logger.error(f"[LLM] Ollama bağlantı hatası: {exc}")
-        yield "Yapay zeka sistemine şu an ulaşılamıyor. (Lütfen Ollama'nın kurulu olduğundan emin olun)."
+        logger.error("[LLM] Ollama bağlantı hatası: %s", exc)
+        yield "__LLM_ERROR__"
