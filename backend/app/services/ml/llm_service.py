@@ -33,33 +33,24 @@ _model = None
 _model_lock = threading.Lock()
 
 _SYSTEM_PROMPT = (
-    "You write Turkish classified ad descriptions. "
-    "Only use facts from the input. Never invent features. "
-    "Output: 3 sentences in Turkish. No bullets. No hashtags. Plain text only."
+    "Sen Türkçe ilan açıklaması yazan bir asistansın. "
+    "KURAL: Yalnızca kullanıcının verdiği bilgileri kullan. "
+    "Hiçbir özellik, teknik bilgi veya garanti UYDURMA. "
+    "3 cümle yaz: (1) ürün adı ve durumu, (2) fiyat ve genel değerlendirme, (3) teslim bilgisi. "
+    "Yalnızca Türkçe. Madde işareti yok. Hashtag yok."
 )
 
-# İki farklı kategori örneği — modele format kalıbını göster
+# Tek örnek — kısa context için
 _EXAMPLES = [
     {
         "user": (
-            "Başlık: Nike Air Max 90\nKategori: Ayakkabı\nDurum: İkinci El\n"
+            "Ürün: Nike Air Max 90\nKategori: Ayakkabı\nDurum: İkinci El\n"
             "Fiyat: 800 ₺\nKonum: Bursa\nAçıklama:"
         ),
         "assistant": (
-            "Nike Air Max 90 spor ayakkabı, ikinci el olup genel kullanım izleri mevcuttur. "
-            "Taban ve üst kısım sağlamdır, 42 numara. "
-            "Bursa içi elden teslim yapılır, kargo ile de gönderilebilir."
-        ),
-    },
-    {
-        "user": (
-            "Başlık: iPhone 13 Pro 256GB\nKategori: Telefon\nDurum: Az Kullanılmış\n"
-            "Fiyat: 18.000 ₺\nKonum: Ankara\nAçıklama:"
-        ),
-        "assistant": (
-            "iPhone 13 Pro 256GB, az kullanılmış ve iyi bakımlı durumdadır. "
-            "Ekranında ve kasasında belirgin çizik bulunmamaktadır, orijinal kutusuyla birlikte teslim edilir. "
-            "Ankara içi elden teslim tercih edilmektedir, anlaşmayla kargo da mümkündür."
+            "Nike Air Max 90 spor ayakkabı ikinci el satışa çıkarılmıştır. "
+            "800 ₺ fiyatıyla uygun bir seçenek arayanlar için değerlendirilebilir. "
+            "Bursa içinde elden teslim yapılır."
         ),
     },
 ]
@@ -122,7 +113,7 @@ def generate_listing_description(
     if model is None:
         return None
 
-    parts = [f"Ürün başlığı: {title.strip()}", f"Kategori: {category.strip()}"]
+    parts = [f"Ürün: {title.strip()}", f"Kategori: {category.strip()}"]
     if condition:
         label = _CONDITION_LABELS.get(condition, condition)
         parts.append(f"Durum: {label}")
@@ -142,11 +133,11 @@ def generate_listing_description(
     try:
         output = model.create_chat_completion(
             messages=messages,
-            max_tokens=130,
-            temperature=0.3,
-            top_p=0.85,
-            repeat_penalty=1.2,
-            stop=["\n\n", "Başlık:", "Kategori:"],
+            max_tokens=120,
+            temperature=0.2,
+            top_p=0.9,
+            repeat_penalty=1.15,
+            stop=["\n\n", "Ürün:", "Kategori:", "4."],
         )
         text = output["choices"][0]["message"]["content"].strip()
         return text if text else None
