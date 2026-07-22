@@ -104,9 +104,9 @@ async def generate_listing_description_stream(
     }
     
     try:
-        logger.info(f"[LLM] Sending stream request to Ollama ({MODEL_NAME}). Timeout=60.0s")
+        logger.info(f"[LLM] Sending stream request to Ollama ({MODEL_NAME}). Timeout=120.0s")
         async with httpx.AsyncClient() as client:
-            async with client.stream("POST", OLLAMA_API_URL, json=payload, timeout=60.0) as response:
+            async with client.stream("POST", OLLAMA_API_URL, json=payload, timeout=120.0) as response:
                 logger.info(f"[LLM] Ollama response status: {response.status_code}")
                 if response.status_code != 200:
                     logger.error(f"[LLM] Ollama API Error: {response.status_code}")

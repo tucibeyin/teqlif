@@ -589,19 +589,43 @@ async def generate_description(
     async def event_generator():
         logger.info(f"[API] event_generator started for user_id={current_user.id}")
         text_generated = False
+        queue = asyncio.Queue()
+
+        async def producer():
+            try:
+                async for chunk in generate_listing_description_stream(
+                    title=body.title,
+                    category=body.category,
+                    condition=body.condition,
+                    price=body.price,
+                    location=body.location,
+                ):
+                    await queue.put({"type": "chunk", "data": chunk})
+                await queue.put({"type": "done"})
+            except Exception as e:
+                await queue.put({"type": "error", "error": e})
+
+        producer_task = asyncio.create_task(producer())
+
         try:
-            async for chunk in generate_listing_description_stream(
-                title=body.title,
-                category=body.category,
-                condition=body.condition,
-                price=body.price,
-                location=body.location,
-            ):
-                if not text_generated:
-                    logger.info(f"[API] First chunk received from Ollama for user_id={current_user.id}")
-                text_generated = True
-                # SSE format (JSON payload within data event)
-                yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+            while True:
+                try:
+                    # Nginx proxy_read_timeout is usually 60s. We send a ping every 15s.
+                    msg = await asyncio.wait_for(queue.get(), timeout=15.0)
+                except asyncio.TimeoutError:
+                    yield f"data: {json.dumps({'keep_alive': True})}\n\n"
+                    continue
+
+                if msg["type"] == "done":
+                    break
+                elif msg["type"] == "error":
+                    raise msg["error"]
+                elif msg["type"] == "chunk":
+                    chunk = msg["data"]
+                    if not text_generated:
+                        logger.info(f"[API] First chunk received from Ollama for user_id={current_user.id}")
+                    text_generated = True
+                    yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
             
             if text_generated:
                 logger.info(f"[API] Stream finished for user_id={current_user.id}. Charging TUCi...")
@@ -630,7 +654,9 @@ async def generate_description(
                 yield f"data: {json.dumps({'done': True, 'tuci_spent': tuci_spent}, ensure_ascii=False)}\n\n"
         except Exception as e:
             logger.error(f"[LLM] Stream generator error: {e}")
-            yield f"data: {json.dumps({'error': 'Bir hata oluştu.'}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'error': 'AI_SERVICE_ERROR'}, ensure_ascii=False)}\n\n"
+        finally:
+            producer_task.cancel()
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
