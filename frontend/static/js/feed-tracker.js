@@ -17,7 +17,7 @@ window.FeedTracker = (function () {
     const _timers = new Map();       // listing_id → { enterTime, category }
 
     function _hasConsent() {
-        return localStorage.getItem('teqlif_cookie_consent') === 'accepted';
+        return _storage.getItem('teqlif_cookie_consent') === 'accepted';
     }
 
     function _track(eventType, metadata) {

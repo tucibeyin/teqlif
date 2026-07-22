@@ -154,7 +154,7 @@
             if (window.Sentry) Sentry.captureException(err);
         }
 
-        // Güncel kullanıcı verisini localStorage'a yaz (profil fotosu değişmişse)
+        // Güncel kullanıcı verisini _storage'a yaz (profil fotosu değişmişse)
         if (freshMe) {
             try { Auth.saveUser(freshMe); } catch (_) {}
         }
@@ -925,11 +925,11 @@
     }
 
 
-    let _listingView = localStorage.getItem('listingView') || 'grid';
+    let _listingView = _storage.getItem('listingView') || 'grid';
 
     function setListingView(mode) {
         _listingView = mode;
-        localStorage.setItem('listingView', mode);
+        _storage.setItem('listingView', mode);
         const list = document.getElementById('listingList');
         list.classList.toggle('view-grid', mode === 'grid');
         document.getElementById('btnViewList').classList.toggle('active', mode === 'list');

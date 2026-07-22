@@ -113,12 +113,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ── Onboarding Turu (Driver.js) ──────────────────────────────────────────────
 function restartTeqlifTour() {
-    localStorage.removeItem('teqlif_tour_seen');
+    _storage.removeItem('teqlif_tour_seen');
     window.location.href = '/index.html';
 }
 
 function initTeqlifTour() {
-    if (localStorage.getItem('teqlif_tour_seen')) return;
+    if (_storage.getItem('teqlif_tour_seen')) return;
 
     // YENİ EKLENEN GÜVENLİK KONTROLÜ: 
     // Eğer driver kütüphanesi bu sayfada yüklü değilse (örn: support.html), hata verme, sessizce çık.
@@ -134,7 +134,7 @@ function initTeqlifTour() {
         prevBtnText: '← Geri',
         doneBtnText: 'Başlayalım! 🚀',
         onDestroyed: () => {
-            localStorage.setItem('teqlif_tour_seen', 'true');
+            _storage.setItem('teqlif_tour_seen', 'true');
         },
         steps: [
             {

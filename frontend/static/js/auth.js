@@ -3,7 +3,7 @@
 let _initCtxPromise = null;
 
 const Auth = (() => {
-    // Access token artık yalnızca bellekte (_memToken) tutulur — localStorage/sessionStorage'a yazılmaz.
+    // Access token artık yalnızca bellekte (_memToken) tutulur — _storage/sessionStorage'a yazılmaz.
     // XSS bu değişkeni okuyamaz. Sayfa yenilenince Auth.ready promise'i üzerinden restore edilir.
     const USER_KEY     = 'teqlif_user';
     const _TOKEN_KEY   = 'teqlif_token';    // eski key — temizlik için tutuldu
@@ -14,10 +14,10 @@ const Auth = (() => {
     // Sonraki sayfa yüklemelerinde _memToken null olur; Auth.ready tryRefresh ile restore eder.
     let _memToken = (() => {
         const ss = sessionStorage.getItem(_SS_TOKEN);
-        const ls = localStorage.getItem(_TOKEN_KEY);
+        const ls = _storage.getItem(_TOKEN_KEY);
         sessionStorage.removeItem(_SS_TOKEN);
-        localStorage.removeItem(_TOKEN_KEY);
-        localStorage.removeItem(_REFRESH_KEY);
+        _storage.removeItem(_TOKEN_KEY);
+        _storage.removeItem(_REFRESH_KEY);
         const t = (ss && ss !== 'undefined') ? ss : (ls && ls !== 'undefined' ? ls : null);
         return t;
     })();
@@ -29,18 +29,18 @@ const Auth = (() => {
     const _USER_TTL_MS = 24 * 60 * 60 * 1000; // 24 saat
 
     function saveUser(user) {
-        try { localStorage.setItem(USER_KEY, JSON.stringify({ _d: Date.now(), u: user })); } catch (_) {}
+        try { _storage.setItem(USER_KEY, JSON.stringify({ _d: Date.now(), u: user })); } catch (_) {}
     }
 
     function getUser() {
         try {
-            const raw = localStorage.getItem(USER_KEY);
+            const raw = _storage.getItem(USER_KEY);
             if (!raw || raw === 'undefined') return null;
             const parsed = JSON.parse(raw);
             // Eski format (TTL sarması olmayan düz obje) — geçerliyse döndür, sil
             if (!parsed._d) return parsed;
             if (Date.now() - parsed._d > _USER_TTL_MS) {
-                localStorage.removeItem(USER_KEY);
+                _storage.removeItem(USER_KEY);
                 return null;
             }
             return parsed.u;
@@ -57,10 +57,10 @@ const Auth = (() => {
 
     async function logout() {
         _memToken = null;
-        localStorage.removeItem(USER_KEY);
+        _storage.removeItem(USER_KEY);
         // Eski depolama anahtarlarını temizle
-        localStorage.removeItem(_TOKEN_KEY);
-        localStorage.removeItem(_REFRESH_KEY);
+        _storage.removeItem(_TOKEN_KEY);
+        _storage.removeItem(_REFRESH_KEY);
         sessionStorage.removeItem(_SS_TOKEN);
         try {
             await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
@@ -240,7 +240,7 @@ function updateNav() {
             const lbl = document.getElementById('navWalletLabel');
             if (lbl && ctx.wallet_balance != null) lbl.textContent = `Cüzdan · ${ctx.wallet_balance} T`;
             _updateNavBadge((ctx.notifications_unread || 0) + (ctx.messages_unread || 0));
-            if (ctx.user) localStorage.setItem('teqlif_user', JSON.stringify(ctx.user));
+            if (ctx.user) _storage.setItem('teqlif_user', JSON.stringify(ctx.user));
         }).catch(() => {});
 
         // Refresh unread count every 60s (only 2 lightweight calls, not on page load).

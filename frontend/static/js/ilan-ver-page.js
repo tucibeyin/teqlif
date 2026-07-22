@@ -1,6 +1,6 @@
     // Giriş yapılmamışsa yönlendir
     (function () {
-        const user = localStorage.getItem('teqlif_user');
+        const user = _storage.getItem('teqlif_user');
         if (!user) {
             window.location.href = '/giris.html?next=/ilan-ver.html';
         }

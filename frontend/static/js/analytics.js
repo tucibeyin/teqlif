@@ -4,8 +4,8 @@
     const TRACKING_URL = '/api/analytics/track';
     
     // Rastgele Kullanıcı/Cihaz ID'si 
-    let sessionId = localStorage.getItem('teqlif_session_id');
-    const cookieConsent = localStorage.getItem('teqlif_cookie_consent');
+    let sessionId = _storage.getItem('teqlif_session_id');
+    const cookieConsent = _storage.getItem('teqlif_cookie_consent');
 
     function generateUUID() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -16,7 +16,7 @@
 
     if (!sessionId) {
         sessionId = generateUUID();
-        localStorage.setItem('teqlif_session_id', sessionId);
+        _storage.setItem('teqlif_session_id', sessionId);
     }
 
     // --- UTM & Referrer Parsing ---
@@ -35,7 +35,7 @@
     let maxScrollDepth = 0;
 
     window.teqlifTrackEvent = function (eventType, metadata = {}) {
-        if (localStorage.getItem('teqlif_cookie_consent') !== 'accepted') return;
+        if (_storage.getItem('teqlif_cookie_consent') !== 'accepted') return;
 
         const payload = {
             session_id: sessionId,
@@ -78,7 +78,7 @@
     }
 
     function init() {
-        if (localStorage.getItem('teqlif_cookie_consent') === 'accepted') {
+        if (_storage.getItem('teqlif_cookie_consent') === 'accepted') {
             const utm = getUTMParams();
             teqlifTrackEvent('page_view', utm);
 
@@ -97,7 +97,7 @@
             const el = e.target.closest('button, a.btn, a[href]');
             if (!el) return;
             // Sadece tıklama takibi izni varsa
-            if (localStorage.getItem('teqlif_cookie_consent') === 'accepted') {
+            if (_storage.getItem('teqlif_cookie_consent') === 'accepted') {
                 const action = el.innerText ? el.innerText.trim() : el.id || 'click';
                 if (action) {
                     teqlifTrackEvent('click', { target: el.tagName, action: action, id: el.id, classes: el.className });
@@ -152,13 +152,13 @@
         document.body.insertAdjacentHTML('beforeend', bannerStr);
 
         document.getElementById('cookie-accept').addEventListener('click', () => {
-            localStorage.setItem('teqlif_cookie_consent', 'accepted');
+            _storage.setItem('teqlif_cookie_consent', 'accepted');
             document.getElementById('teqlif-cookie-banner').remove();
             init(); 
         });
 
         document.getElementById('cookie-reject').addEventListener('click', () => {
-            localStorage.setItem('teqlif_cookie_consent', 'rejected');
+            _storage.setItem('teqlif_cookie_consent', 'rejected');
             document.getElementById('teqlif-cookie-banner').remove();
         });
     }

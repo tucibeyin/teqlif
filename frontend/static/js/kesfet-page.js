@@ -48,7 +48,7 @@
     }
 
     function track(eventType, metadata) {
-        if (localStorage.getItem('teqlif_cookie_consent') !== 'accepted') return;
+        if (_storage.getItem('teqlif_cookie_consent') !== 'accepted') return;
         if (typeof window.teqlifTrackEvent === 'function') {
             window.teqlifTrackEvent(eventType, metadata);
         }
