@@ -28,9 +28,9 @@ def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
         "5. Cümleleri çok karmaşık kurma, günlük konuşma dilini kullan.\n"
         "6. ASLA 'sepetimize eklendi', 'mağazamızda', 'hizmetler sunabilirim', 'özel hizmetler' gibi e-ticaret/kurumsal firma ağzı kullanma. Sen bireysel bir satıcısın.\n"
         "7. ASLA 'müşteri' veya 'müşteriler' kelimesini kullanma. Bunun yerine 'alıcı' veya 'yeni sahibi' de.\n"
-        "8. METNİ KESİNLİKLE 1. TEKİL ŞAHIS (Ben) AĞZIYLA YAZ. 'Ürününüz' deme 'Ürünüm' veya 'Cihazım' de. 'Bıraktığını unutmayın' deme, 'Bıraktım' de.\n"
+        "8. METNİ KESİNLİKLE 1. TEKİL ŞAHIS (Ben) AĞZIYLA YAZ. 'Ürününüz' veya 'Fiyatınıza' deme 'Ürünüm' veya 'Cihazım' de. 'Bıraktığını unutmayın' deme, 'Bıraktım' de.\n"
         "9. Eğer ürün durumu (Condition) ile başlık çelişiyorsa, HER ZAMAN durumu (Condition) baz al ve hasarı/arızayı dürüstçe belirt.\n"
-        "10. 'Tıbbi olarak temiz', 'bana dikkat etmeyin', 'durulamaz' gibi devrik, saçma veya çeviri kokan absürt cümleler KESİNLİKLE kurma. Sadece son derece sade, normal bir Türkçe kullan.\n"
+        "10. 'Tıbbi olarak temiz', 'bana dikkat etmeyin', 'durulamaz', 'unutmayın' gibi devrik, saçma veya çeviri kokan absürt kelimeler KESİNLİKLE kullanma. Sadece son derece sade, normal bir Türkçe kullan.\n"
     )
     
     cat_hints = []

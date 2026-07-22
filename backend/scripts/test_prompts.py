@@ -11,7 +11,7 @@ from app.services.ml.llm_service import generate_listing_description_stream
 
 CATEGORIES = ["elektronik", "giyim", "vasıta", "emlak", "mobilya", "hobi"]
 CONDITIONS = ["new", "like_new", "used", "damaged"]
-LOCATIONS = ["İstanbul", "Ankara", "İzmir", "Bursa", "Antalya", None]
+LOCATIONS = ["İstanbul", "Ankara", "İzmir", "Bursa", "Antalya", "Adana", "Gaziantep", "Trabzon"]
 
 async def main():
     print("==================================================")
