@@ -1,5 +1,5 @@
 """
-Phi-3.5-mini-instruct LLM Servisi (CPU inference via llama-cpp-python)
+Qwen2.5-1.5B-Instruct LLM Servisi (CPU inference via llama-cpp-python)
 
 Akış:
   1. _generate_template()  — anlık, her zaman doğru Türkçe şablon
@@ -7,11 +7,15 @@ Akış:
   3. generate_listing_description() — LLM başarılıysa zenginleştirilmiş,
                                       başarısızsa şablon döner
 
-Model: microsoft/Phi-3.5-mini-instruct (Q4_K_M GGUF ~2.3 GB)
+Model: Qwen/Qwen2.5-1.5B-Instruct (Q4_K_M GGUF ~1 GB)
 Çıkarım: llama-cpp-python (CPU, 5 thread)
-Beklenen süre: ~15-25 sn (paraphrase görevi, from-scratch üretimden hızlı)
+Beklenen süre: ~8-12 sn
 
-Depolama: .model_cache/phi35-mini-instruct-q4_k_m.gguf
+Depolama: .model_cache/qwen2.5-1.5b-instruct-q4_k_m.gguf
+İndirme:
+    huggingface-cli download Qwen/Qwen2.5-1.5B-Instruct-GGUF \\
+        qwen2.5-1.5b-instruct-q4_k_m.gguf \\
+        --local-dir /var/www/teqlif.com/backend/.model_cache
 """
 from __future__ import annotations
 
@@ -24,7 +28,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 _MODEL_DIR = Path(__file__).resolve().parents[3] / ".model_cache"
-_MODEL_PATH = _MODEL_DIR / "phi35-mini-instruct-q4_k_m.gguf"
+_MODEL_PATH = _MODEL_DIR / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
 
 _model = None
 _model_lock = threading.Lock()
@@ -122,15 +126,15 @@ def _enrich_with_llm(template: str, title: str) -> Optional[str]:
     if model is None:
         return None
 
-    # Raw completion + pre-fill: model "title," ile başlayan cümleyi tamamlar
+    # Qwen2.5 chat template + pre-fill
     prompt = (
-        "<|system|>\n"
+        "<|im_start|>system\n"
         "Türkçe ilan açıklamasını daha akıcı ve doğal bir dille yeniden yaz. "
-        "Hiçbir bilgi EKLEME veya ÇIKARMA — yalnızca ifadeyi güzelleştir.<|end|>\n"
-        "<|user|>\n"
+        "Hiçbir bilgi EKLEME veya ÇIKARMA — yalnızca ifadeyi güzelleştir.<|im_end|>\n"
+        "<|im_start|>user\n"
         f"Orijinal: {template}\n"
-        "Yeniden yaz:<|end|>\n"
-        "<|assistant|>\n"
+        "Yeniden yaz:<|im_end|>\n"
+        "<|im_start|>assistant\n"
         f"{title},"
     )
 
@@ -141,7 +145,7 @@ def _enrich_with_llm(template: str, title: str) -> Optional[str]:
             temperature=0.7,
             top_p=0.9,
             repeat_penalty=1.1,
-            stop=["<|end|>", "<|user|>", "\n\n", "Orijinal:"],
+            stop=["<|im_end|>", "<|im_start|>", "\n\n", "Orijinal:"],
         )
         completion = output["choices"][0]["text"].strip()
         enriched = f"{title},{completion}"
