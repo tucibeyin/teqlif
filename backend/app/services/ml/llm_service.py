@@ -25,6 +25,10 @@ GROQ_API_URL      = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL        = "llama-3.3-70b-versatile"
 _GROQ_DAILY_LIMIT = 14_000
 
+CEREBRAS_API_URL  = "https://api.cerebras.ai/v1/chat/completions"
+CEREBRAS_MODEL    = "llama-3.3-70b"
+_CEREBRAS_DAILY_LIMIT = 50_000  # rate-limited ama günlük hard limit yok; güvenli marj
+
 GEMINI_API_URL    = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent"
 _GEMINI_DAILY_LIMIT = 1_000  # günlük güvenli marj (free tier: 1500 req/gün)
 
@@ -318,6 +322,43 @@ async def _tokens_groq(system: str, user: str) -> AsyncGenerator[str, None]:
                     continue
 
 
+async def _tokens_cerebras(system: str, user: str) -> AsyncGenerator[str, None]:
+    headers = {
+        "Authorization": f"Bearer {settings.cerebras_api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": CEREBRAS_MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": 0.5,
+        "max_tokens": 250,
+        "stop": _STOP_WORDS,
+        "stream": True,
+    }
+    async with httpx.AsyncClient() as client:
+        async with client.stream(
+            "POST", CEREBRAS_API_URL, headers=headers, json=payload, timeout=60.0
+        ) as resp:
+            if resp.status_code != 200:
+                body = await resp.aread()
+                raise RuntimeError(f"Cerebras HTTP {resp.status_code}: {body[:200]}")
+            async for line in resp.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                raw = line[6:].strip()
+                if raw == "[DONE]":
+                    break
+                try:
+                    delta = json.loads(raw)["choices"][0]["delta"].get("content", "")
+                    if delta:
+                        yield delta
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
+
+
 async def _tokens_gemini(system: str, user: str) -> AsyncGenerator[str, None]:
     payload = {
         "system_instruction": {"parts": [{"text": system}]},
@@ -418,7 +459,19 @@ async def generate_listing_description_stream(
                 yield chunk
             return
         except Exception as exc:
-            logger.error("[LLM] Groq başarısız, Gemini'ye fallback: %s", exc)
+            logger.error("[LLM] Groq başarısız, Cerebras'a fallback: %s", exc)
+
+    # ── Cerebras fallback ─────────────────────────────────────────────────────
+    if settings.cerebras_api_key and await _quota_ok("cerebras", _CEREBRAS_DAILY_LIMIT):
+        try:
+            logger.info("[LLM] Cerebras | title=%r", title[:60])
+            async for chunk in _sentence_stream(
+                _tokens_cerebras(system_prompt, user_prompt), price, location, "cerebras"
+            ):
+                yield chunk
+            return
+        except Exception as exc:
+            logger.error("[LLM] Cerebras başarısız, Gemini'ye fallback: %s", exc)
 
     # ── Gemini fallback ────────────────────────────────────────────────────────
     if settings.gemini_api_key and await _quota_ok("gemini", _GEMINI_DAILY_LIMIT):
