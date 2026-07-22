@@ -128,7 +128,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     final desc = _descCtrl.text.trim();
     final l = AppLocalizations.of(context)!;
     
+    debugPrint('[AI Price Estimate] Checking validation...');
+    debugPrint(' - Title: "$title"');
+    debugPrint(' - Category: $_selectedCategory');
+    debugPrint(' - City: $_selectedCity');
+    debugPrint(' - Condition: $_selectedCondition');
+
     if (title.isEmpty || _selectedCategory == null || _selectedCity == null || _selectedCondition == null) {
+      debugPrint('[AI Price Estimate] Validation Failed.');
       TeqSnackBar.show(
         context,
         message: l.createNeedAllFields,
@@ -181,7 +188,15 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     final priceRaw = _priceCtrl.text.trim();
     final l = AppLocalizations.of(context)!;
     
+    debugPrint('[AI Description] Checking validation...');
+    debugPrint(' - Title: "$title"');
+    debugPrint(' - Category: $_selectedCategory');
+    debugPrint(' - City: $_selectedCity');
+    debugPrint(' - Condition: $_selectedCondition');
+    debugPrint(' - Price Raw: "$priceRaw"');
+
     if (title.isEmpty || _selectedCategory == null || _selectedCity == null || _selectedCondition == null || priceRaw.isEmpty) {
+      debugPrint('[AI Description] Validation Failed.');
       TeqSnackBar.show(context, message: l.createNeedAllFields, type: TeqSnackBarType.warning);
       return;
     }

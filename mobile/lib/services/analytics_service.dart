@@ -146,8 +146,12 @@ class AnalyticsService {
     int? excludeListingId,
   }) async {
     try {
+      debugPrint('[AnalyticsService] Sending getPriceEstimate request...');
       final token = await StorageService.getToken();
-      if (token == null) return null;
+      if (token == null) {
+        debugPrint('[AnalyticsService] Token is null');
+        return null;
+      }
       final prefs = await SharedPreferences.getInstance();
       final lang = prefs.getString('app_locale_language_code') ?? 'tr';
       final resp = await http.post(
@@ -167,6 +171,7 @@ class AnalyticsService {
             'exclude_listing_id': excludeListingId,
         }),
       );
+      debugPrint('[AnalyticsService] getPriceEstimate status code: ${resp.statusCode}');
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
@@ -174,9 +179,12 @@ class AnalyticsService {
         final detail = (await compute(jsonDecode, resp.body) as Map<String, dynamic>)['detail'] as String? ?? '';
         throw AiInsufficientTuciException(detail);
       }
+      debugPrint('[AnalyticsService] getPriceEstimate returned non-200/402: ${resp.body}');
     } on AiInsufficientTuciException {
       rethrow;
-    } catch (_) {}
+    } catch (e, stack) {
+      debugPrint('[AnalyticsService] getPriceEstimate Exception: $e\n$stack');
+    }
     return null;
   }
 
