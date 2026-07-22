@@ -393,7 +393,7 @@ async def test_gemini(key: str) -> bool:
 # ─────────────────────────────────────────────────────────────────────────────
 
 CEREBRAS_BASE  = "https://api.cerebras.ai/v1"
-CEREBRAS_MODEL = "gpt-oss-120b"
+CEREBRAS_MODEL = "gemma-4-31b"
 
 async def test_cerebras(key: str) -> bool:
     """Cerebras API testlerini çalıştırır. True → tüm testler geçti."""
