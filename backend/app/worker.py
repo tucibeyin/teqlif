@@ -1182,20 +1182,9 @@ async def generate_listing_description_task(
     price: float | None = None,
     location: str | None = None,
 ) -> str | None:
-    """
-    Phi-3.5-mini ile ilan açıklaması üretir.
-    ARQ job olarak çalışır — /api/listings/generate-description endpoint'inden tetiklenir.
-    """
-    import asyncio
+    """Şablon tabanlı Türkçe ilan açıklaması üretir."""
     from app.services.ml.llm_service import generate_listing_description
-
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(
-        None,
-        generate_listing_description,
-        title, category, condition, price, location,
-    )
-    return result
+    return generate_listing_description(title, category, condition, price, location)
 
 
 async def train_bpr_task(ctx: dict) -> None:
@@ -3296,14 +3285,6 @@ class WorkerSettings:
         import asyncio
         setup_logging()
         set_pool(ctx["redis"])
-        # LLM modelini arka planda önceden yükle (ilk istekte gecikme olmasın)
-        try:
-            from app.services.ml.llm_service import is_available, _load_model
-            if is_available():
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(None, _load_model)
-        except Exception as _e:
-            logger.debug("[Worker] LLM ön yükleme atlandı: %s", _e)
 
 
 class WorkerSettingsCritical:

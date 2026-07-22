@@ -32,11 +32,6 @@ _MODEL_PATH = _MODEL_DIR / "phi35-mini-instruct-q4_k_m.gguf"
 _model = None
 _model_lock = threading.Lock()
 
-_SYSTEM_PROMPT = (
-    "Sen Türkçe ikinci el ilan sitesi için açıklama yazan bir asistansın. "
-    "Yalnızca verilen bilgileri kullan. Hiçbir şey uydurma."
-)
-
 _CONDITION_LABELS = {
     "new": "Sıfır",
     "like_new": "Az Kullanılmış",
@@ -75,8 +70,29 @@ def _load_model():
 
 
 def is_available() -> bool:
-    """Model dosyası var mı ve yüklenebilir mi?"""
-    return _MODEL_PATH.exists()
+    """Açıklama üretme özelliği her zaman aktif (şablon tabanlı)."""
+    return True
+
+
+_CONDITION_VERBS = {
+    "new": "sıfır olup kutusunda satışa sunulmuştur",
+    "like_new": "az kullanılmış olarak satışa çıkarılmıştır",
+    "used": "ikinci el olarak satışa sunulmuştur",
+    "damaged": "hasarlı/onarım gerektiren durumda satışa çıkarılmıştır",
+}
+
+_CONDITION_ADJECTIVES = {
+    "new": "sıfır ürün arayanlar",
+    "like_new": "az kullanılmış ürün arayanlar",
+    "used": "uygun fiyatlı ikinci el arayanlar",
+    "damaged": "kendin onar veya parça arayanlar",
+}
+
+_DELIVERY_PHRASES = [
+    "{location}'da elden teslim yapılmaktadır.",
+    "{location} içinde elden teslim tercih edilmektedir.",
+    "{location}'dan elden teslim sağlanmaktadır.",
+]
 
 
 def generate_listing_description(
@@ -86,52 +102,32 @@ def generate_listing_description(
     price: Optional[float] = None,
     location: Optional[str] = None,
 ) -> Optional[str]:
-    """
-    İlan bilgilerinden Türkçe açıklama üretir.
+    """İlan bilgilerinden şablon tabanlı Türkçe açıklama üretir."""
+    import hashlib
 
-    Dönüş: üretilen metin (str) veya None (model yoksa / hata varsa)
-    """
-    model = _load_model()
-    if model is None:
-        return None
+    title = title.strip()
+    category = category.strip()
+    cond = condition or "used"
 
-    condition_label = _CONDITION_LABELS.get(condition or "", condition or "")
+    # Sentence 1: title + condition verb
+    verb = _CONDITION_VERBS.get(cond, "satışa sunulmuştur")
+    s1 = f"{title}, {verb}."
 
-    # Phi-3.5-mini chat template — raw completion with pre-filled sentence start
-    # Pre-filling forces the model to complete a sentence instead of generating from scratch
-    title_stripped = title.strip()
-    prompt = (
-        f"<|system|>\n{_SYSTEM_PROMPT}<|end|>\n"
-        f"<|user|>\n"
-        f"Başlık: {title_stripped}\n"
-        f"Kategori: {category.strip()}\n"
-    )
-    if condition_label:
-        prompt += f"Durum: {condition_label}\n"
+    # Sentence 2: price + audience or generic
+    adj = _CONDITION_ADJECTIVES.get(cond, "ilgilenenler")
     if price and price > 0:
-        prompt += f"Fiyat: {int(price):,} ₺\n".replace(",", ".")
-    if location:
-        prompt += f"Konum: {location.strip()}\n"
-    prompt += f"<|end|>\n<|assistant|>\n{title_stripped},"
+        price_str = f"{int(price):,}".replace(",", ".")
+        s2 = f"{price_str} ₺ fiyatıyla {category} kategorisinde {adj} için değerlendirilebilir."
+    else:
+        s2 = f"{category.capitalize()} kategorisinde {adj} için değerlendirilebilir."
 
-    try:
-        output = model.create_completion(
-            prompt=prompt,
-            max_tokens=110,
-            temperature=0.7,
-            top_p=0.9,
-            repeat_penalty=1.1,
-            stop=["<|end|>", "<|user|>", "\n\n", "Başlık:"],
-        )
-        completion = output["choices"][0]["text"].strip()
-        text = f"{title_stripped},{completion}"
-        # Trim to last complete sentence
-        for sep in (".", "!", "?"):
-            idx = text.rfind(sep)
-            if idx != -1 and idx > len(text) // 2:
-                text = text[: idx + 1]
-                break
-        return text if len(text) > 20 else None
-    except Exception as exc:
-        logger.error("[LLM] Üretim hatası: %s", exc)
-        return None
+    # Sentence 3: location or generic delivery
+    if location:
+        loc = location.strip()
+        # Deterministic rotation based on title hash so same listing always gets same phrase
+        idx = int(hashlib.md5(title.encode()).hexdigest(), 16) % len(_DELIVERY_PHRASES)
+        s3 = _DELIVERY_PHRASES[idx].format(location=loc)
+    else:
+        s3 = "Kargo veya elden teslim seçenekleri hakkında iletişime geçilebilir."
+
+    return f"{s1} {s2} {s3}"
