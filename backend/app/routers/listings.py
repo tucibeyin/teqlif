@@ -630,17 +630,15 @@ async def generate_description(
                     text_generated = True
                     
                     # Nginx ve Cloudflare'in kelimeleri (chunk) buffer'da bekletmesini engellemek için
-                    # her kelimenin başına SSE yorum satırı olarak 1KB boşluk (padding) ekliyoruz.
-                    # Bu sayede proxy'ler buffer'ı anında doldurup telefona (Flutter'a) fırlatmak zorunda kalır
-                    # ve kullanıcı kelimelerin "daktilo gibi" tek tek yazıldığını gerçek zamanlı görebilir.
+                    # Her kelimenin başına SSE yorum satırı olarak 8KB boşluk (padding) ekliyoruz.
+                    # Nginx ve özellikle Cloudflare'in 8KB'lık buffer sınırını aşarak veriyi anında telefona itmesini zorluyoruz.
                     chunk_payload = json.dumps({'text': chunk}, ensure_ascii=False)
-                    padding = ' ' * 1024
+                    padding = ' ' * 8192
                     yield f": {padding}\ndata: {chunk_payload}\n\n"
                     
                     # LLM (özellikle 3B gibi küçük modeller) bazen saniyede 100+ token üretecek kadar hızlı çalışır.
-                    # Eğer model RAM'de hazırsa, tüm metni 0.2 saniyede kusar ve bu da ekranda "tek seferde gelmiş" hissi yaratır.
-                    # İnsan gözünün o daktilo hissiyatını yakalayabilmesi için her kelime arasına 30 milisaniye yapay bir gecikme ekliyoruz.
-                    await asyncio.sleep(0.03)
+                    # İnsan gözünün o daktilo hissiyatını yakalayabilmesi için her kelime arasına 50 milisaniye yapay bir gecikme ekliyoruz.
+                    await asyncio.sleep(0.05)
             
             if text_generated:
                 logger.info(f"[API] Stream finished for user_id={current_user.id}. Charging TUCi...")
