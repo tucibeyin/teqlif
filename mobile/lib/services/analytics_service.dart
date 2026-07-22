@@ -282,6 +282,19 @@ class AnalyticsService {
     return null;
   }
 
+  static Future<Map<String, dynamic>?> getAiDescCredits() async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/ai-desc-credits'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
   static Future<Map<String, dynamic>?> getReactivationCredits() async {
     try {
       final token = await StorageService.getToken();

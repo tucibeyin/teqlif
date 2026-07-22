@@ -807,6 +807,8 @@
   "proCreditsBlastDesc": "İlanınızı potansiyel alıcılara özel bildirimle duyurarak satış hızınızı artırır.",
   "proCreditsBoostDesc": "İlanınızı listelemelerde en üste taşıyarak daha fazla görüntülenme almanızı sağlar.",
   "proCreditsAiDesc": "Yapay Zeka destekli algoritma ile ilanlarınıza en doğru piyasa fiyatı analizini yapar.",
+  "proCreditsAiDescName": "AI Açıklama Yazarı",
+  "proCreditsAiDescDesc": "İlan başlığı, kategori ve durum bilgilerinizden otomatik Türkçe açıklama oluşturur.",
   "proCreditsReactivationDesc": "Süresi dolmuş veya askıya alınmış ilanlarınızı ücretsiz olarak tekrar yayına almanızı sağlar.",
   "proCreditsUsedFormat": "{used} kullanıldı, {remaining} kaldı",
   "@proCreditsUsedFormat": {

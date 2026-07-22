@@ -808,6 +808,8 @@
   "proCreditsBlastDesc": "Notifies potential buyers about your listing via push notifications, increasing sales speed.",
   "proCreditsBoostDesc": "Moves your listing to the top of search results to get more views.",
   "proCreditsAiDesc": "Analyzes the market using AI to recommend the most accurate pricing for your listing.",
+  "proCreditsAiDescName": "AI Description Writer",
+  "proCreditsAiDescDesc": "Automatically generates a listing description from your title, category, and condition.",
   "proCreditsReactivationDesc": "Allows you to republish expired or suspended listings for free.",
   "proCreditsUsedFormat": "{used} used, {remaining} remaining",
   "@proCreditsUsedFormat": {

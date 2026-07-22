@@ -1,6 +1,7 @@
 import asyncio
+import calendar as _calendar
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date as _date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Query as FastApiQuery
@@ -35,6 +36,7 @@ from app.schemas.listing import ListingOfferCreate
 from app.core.task_queue import get_pool
 from app.core.rate_limit import limiter
 from app.core.read_cache import cache_get, cache_set, invalidate_cache
+from app.utils.redis_client import get_redis
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
@@ -445,6 +447,68 @@ async def audience_estimate(
     }
 
 
+# ── AI Listing Description — TUCi & PRO krediler ─────────────────────────────
+
+AI_DESC_COST      = 5   # TUCi (standart kullanıcılar ve PRO limit aşınca)
+AI_DESC_LIMIT_PRO = 6   # PRO kullanıcılar ayda 6 ücretsiz sorgu
+
+
+def _ai_desc_billing_start(premium_since: datetime) -> _date:
+    """PRO fatura dönemi başlangıcı (premium_since günü, her ay)."""
+    today = _date.today()
+    day = premium_since.day
+    if today.day >= day:
+        return _date(today.year, today.month, min(day, _calendar.monthrange(today.year, today.month)[1]))
+    if today.month == 1:
+        return _date(today.year - 1, 12, min(day, 31))
+    pm = today.month - 1
+    return _date(today.year, pm, min(day, _calendar.monthrange(today.year, pm)[1]))
+
+
+def _ai_desc_next_billing(premium_since: datetime) -> _date:
+    """Bir sonraki PRO fatura tarihi."""
+    p = _ai_desc_billing_start(premium_since)
+    nm = p.month + 1 if p.month < 12 else 1
+    ny = p.year if p.month < 12 else p.year + 1
+    return _date(ny, nm, min(p.day, _calendar.monthrange(ny, nm)[1]))
+
+
+def _ai_desc_redis_key(user_id: int, premium_since: datetime | None = None) -> str:
+    if premium_since:
+        period = _ai_desc_billing_start(premium_since)
+        return f"ai_desc_credits:{user_id}:{period.isoformat()}"
+    month = datetime.now().strftime("%Y-%m")
+    return f"ai_desc_credits:{user_id}:{month}"
+
+
+async def _get_ai_desc_used(user_id: int, premium_since: datetime | None = None) -> int:
+    try:
+        redis = await get_redis()
+        val = await redis.get(_ai_desc_redis_key(user_id, premium_since))
+        return int(val) if val else 0
+    except Exception:
+        return 0
+
+
+async def _increment_ai_desc_atomic(user_id: int, premium_since: datetime | None = None) -> int:
+    try:
+        redis = await get_redis()
+        key   = _ai_desc_redis_key(user_id, premium_since)
+        count = await redis.incr(key)
+        if count == 1:
+            now = datetime.now()
+            if premium_since:
+                nxt    = _ai_desc_next_billing(premium_since)
+                end_dt = datetime(nxt.year, nxt.month, nxt.day)
+            else:
+                last_day = _calendar.monthrange(now.year, now.month)[1]
+                end_dt   = datetime(now.year, now.month, last_day, 23, 59, 59)
+            await redis.expire(key, int((end_dt - now).total_seconds()) + 1)
+        return count
+    except Exception:
+        return 0
+
+
 # ── AI Listing Description ────────────────────────────────────────────────────
 
 class GenerateDescriptionRequest(BaseModel):
@@ -455,25 +519,54 @@ class GenerateDescriptionRequest(BaseModel):
     location: Optional[str] = Field(default=None)
 
 
+@router.get("/ai-desc-credits")
+async def ai_desc_credits(current_user: User = Depends(get_current_user)):
+    """PRO kullanıcının bu ayki AI açıklama yazarı kredi durumunu döndürür."""
+    if not current_user.is_premium:
+        return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False, "renewal_date": None}
+    used = await _get_ai_desc_used(current_user.id, current_user.premium_since)
+    remaining = max(0, AI_DESC_LIMIT_PRO - used)
+    renewal_date: str | None = None
+    if current_user.premium_since:
+        renewal_date = _ai_desc_next_billing(current_user.premium_since).isoformat()
+    return {
+        "used": used,
+        "limit": AI_DESC_LIMIT_PRO,
+        "remaining": remaining,
+        "is_premium": True,
+        "renewal_date": renewal_date,
+    }
+
+
 @router.post("/generate-description")
 @limiter.limit("10/minute")
 async def generate_description(
     request: Request,
     body: GenerateDescriptionRequest,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Phi-3.5-mini ile ilan açıklaması üretir.
-    ARQ worker'da çalışır (CPU inference ~10-20 sn).
-    Model dosyası yoksa 503 döner.
+    Qwen2.5-1.5B ile ilan açıklaması üretir.
+    PRO: ayda 6 ücretsiz, sonrası 5 TUCi. Standart: her seferinde 5 TUCi.
     """
-    from app.services.ml.llm_service import is_available
-
-    if not is_available():
-        raise HTTPException(
-            status_code=503,
-            detail="Açıklama üretim servisi şu an aktif değil.",
-        )
+    # ── TUCi / PRO kredi ön kontrolü ──────────────────────────────────────────
+    if current_user.is_premium:
+        ai_used = await _get_ai_desc_used(current_user.id, current_user.premium_since)
+        if ai_used >= AI_DESC_LIMIT_PRO and current_user.tuci_balance < AI_DESC_COST:
+            raise HTTPException(
+                status_code=402,
+                detail=f"Bu ay {AI_DESC_LIMIT_PRO} ücretsiz hakkınızı kullandınız. "
+                       f"Ücretli devam için {AI_DESC_COST} TUCi gerekmekte, "
+                       f"bakiyeniz: {current_user.tuci_balance} TUCi.",
+            )
+    else:
+        if current_user.tuci_balance < AI_DESC_COST:
+            raise HTTPException(
+                status_code=402,
+                detail=f"Yetersiz TUCi bakiyesi. Gerekli: {AI_DESC_COST} TUCi, "
+                       f"Mevcut: {current_user.tuci_balance} TUCi.",
+            )
 
     pool = get_pool()
     if not pool:
@@ -504,7 +597,36 @@ async def generate_description(
             detail="Açıklama üretilemedi. Lütfen tekrar deneyin.",
         )
 
-    return {"description": result}
+    # ── TUCi düş + sayaç güncelle ─────────────────────────────────────────────
+    tuci_spent = 0
+    if current_user.is_premium:
+        ai_used_new = await _increment_ai_desc_atomic(current_user.id, current_user.premium_since)
+        if ai_used_new > AI_DESC_LIMIT_PRO:
+            await db.execute(
+                text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                {"cost": AI_DESC_COST, "uid": current_user.id},
+            )
+            db.add(TuciTransaction(
+                user_id=current_user.id,
+                amount=-AI_DESC_COST,
+                transaction_type="spend_ai",
+            ))
+            await db.commit()
+            tuci_spent = AI_DESC_COST
+    else:
+        await db.execute(
+            text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+            {"cost": AI_DESC_COST, "uid": current_user.id},
+        )
+        db.add(TuciTransaction(
+            user_id=current_user.id,
+            amount=-AI_DESC_COST,
+            transaction_type="spend_ai",
+        ))
+        await db.commit()
+        tuci_spent = AI_DESC_COST
+
+    return {"description": result, "tuci_spent": tuci_spent}
 
 
 # ── Send Mass Notification ────────────────────────────────────────────────────

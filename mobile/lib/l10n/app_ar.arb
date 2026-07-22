@@ -807,6 +807,8 @@
   "proCreditsBlastDesc": "يُخطر المشترين المحتملين بإعلانك عبر إشعارات الدفع، مما يزيد من سرعة المبيعات.",
   "proCreditsBoostDesc": "ينقل إعلانك إلى أعلى نتائج البحث للحصول على مزيد من المشاهدات.",
   "proCreditsAiDesc": "يحلل السوق باستخدام الذكاء الاصطناعي للتوصية بالتسعير الأكثر دقة لإعلانك.",
+  "proCreditsAiDescName": "كاتب وصف بالذكاء الاصطناعي",
+  "proCreditsAiDescDesc": "ينشئ وصفاً تلقائياً للإعلان من العنوان والفئة والحالة.",
   "proCreditsReactivationDesc": "يسمح لك بإعادة نشر الإعلانات منتهية الصلاحية أو المعلقة مجاناً.",
   "proCreditsUsedFormat": "تم استخدام {used}، {remaining} متبقٍ",
   "@proCreditsUsedFormat": {

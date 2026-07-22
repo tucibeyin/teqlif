@@ -30,6 +30,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
   Map<String, dynamic>? _credits;
   Map<String, dynamic>? _boostCredits;
   Map<String, dynamic>? _aiCredits;
+  Map<String, dynamic>? _aiDescCredits;
   Map<String, dynamic>? _reactivationCredits;
   bool _isLoading = true;
   bool _isPremium = false;
@@ -84,6 +85,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
       AnalyticsService.getBlastCredits(),
       AnalyticsService.getBoostCredits(),
       AnalyticsService.getAiPriceCredits(),
+      AnalyticsService.getAiDescCredits(),
       AnalyticsService.getReactivationCredits(),
     ]);
 
@@ -92,7 +94,8 @@ class _ProHubScreenState extends State<ProHubScreen> {
         _credits             = results[0];
         _boostCredits        = results[1];
         _aiCredits           = results[2];
-        _reactivationCredits = results[3];
+        _aiDescCredits       = results[3];
+        _reactivationCredits = results[4];
         _isLoading           = false;
       });
     }
@@ -121,6 +124,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
             blastCredits: _credits,
             boostCredits: _boostCredits,
             aiCredits: _aiCredits,
+            aiDescCredits: _aiDescCredits,
             reactivationCredits: _reactivationCredits,
             isPremium: isPremium,
             isLoading: _isLoading,
@@ -740,6 +744,7 @@ class _CreditsSummaryCard extends StatelessWidget {
   final Map<String, dynamic>? blastCredits;
   final Map<String, dynamic>? boostCredits;
   final Map<String, dynamic>? aiCredits;
+  final Map<String, dynamic>? aiDescCredits;
   final Map<String, dynamic>? reactivationCredits;
   final bool isPremium;
   final bool isLoading;
@@ -748,6 +753,7 @@ class _CreditsSummaryCard extends StatelessWidget {
     required this.blastCredits,
     required this.boostCredits,
     required this.aiCredits,
+    required this.aiDescCredits,
     required this.reactivationCredits,
     required this.isPremium,
     required this.isLoading,
@@ -815,6 +821,15 @@ class _CreditsSummaryCard extends StatelessWidget {
         descBuilder: (l) => l.proCreditsAiDesc,
         data: aiCredits,
         defaultPremiumLimit: 20,
+        defaultFreeLimit: 0,
+      ),
+      CreditItemModel(
+        icon: Icons.edit_note_outlined,
+        iconColor: const Color(0xFF8B5CF6),
+        titleBuilder: (l) => l.proCreditsAiDescName,
+        descBuilder: (l) => l.proCreditsAiDescDesc,
+        data: aiDescCredits,
+        defaultPremiumLimit: 6,
         defaultFreeLimit: 0,
       ),
       CreditItemModel(

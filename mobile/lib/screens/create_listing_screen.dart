@@ -48,6 +48,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   bool _isPro = false;
   String? _selectedCondition;
   int? _aiCreditsRemaining;
+  int? _aiDescCreditsRemaining;
   final List<File> _images = [];
   final _picker = ImagePicker();
   File? _video;
@@ -94,7 +95,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final isPro = data['is_premium'] == true;
         setState(() => _isPro = isPro);
-        if (isPro) _loadAiCredits();
+        if (isPro) {
+          _loadAiCredits();
+          _loadAiDescCredits();
+        }
       }
     } catch (_) {}
   }
@@ -102,10 +106,13 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   Future<void> _loadAiCredits() async {
     final credits = await AnalyticsService.getAiPriceCredits();
     if (!mounted) return;
-    setState(
-      () =>
-          _aiCreditsRemaining = (credits?['remaining'] as num?)?.toInt() ?? 20,
-    );
+    setState(() => _aiCreditsRemaining = (credits?['remaining'] as num?)?.toInt() ?? 20);
+  }
+
+  Future<void> _loadAiDescCredits() async {
+    final credits = await AnalyticsService.getAiDescCredits();
+    if (!mounted) return;
+    setState(() => _aiDescCreditsRemaining = (credits?['remaining'] as num?)?.toInt() ?? 6);
   }
 
   @override
@@ -170,11 +177,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     final title = _titleCtrl.text.trim();
     final l = AppLocalizations.of(context)!;
     if (title.isEmpty || _selectedCategory == null) {
-      TeqSnackBar.show(
-        context,
-        message: l.createNeedTitle,
-        type: TeqSnackBarType.warning,
-      );
+      TeqSnackBar.show(context, message: l.createNeedTitle, type: TeqSnackBarType.warning);
       return;
     }
     setState(() => _aiDescLoading = true);
@@ -194,20 +197,30 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               'category': _selectedCategory,
               if (_selectedCondition != null) 'condition': _selectedCondition,
               if (price != null && price > 0) 'price': price,
-              if (_selectedCity != null && _selectedCity!.isNotEmpty)
-                'location': _selectedCity,
+              if (_selectedCity != null && _selectedCity!.isNotEmpty) 'location': _selectedCity,
             }),
           )
-          .timeout(const Duration(seconds: 50));
+          .timeout(const Duration(seconds: 60));
       if (!mounted) return;
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final desc = data['description'] as String? ?? '';
+        final tuciSpent = (data['tuci_spent'] as num?)?.toInt() ?? 0;
         if (desc.isNotEmpty) {
           _descCtrl.text = desc;
         } else {
           TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
         }
+        if (tuciSpent > 0) {
+          CacheService.clearData('user_wallet_data');
+          _loadAiDescCredits();
+          TeqSnackBar.show(context, message: l.tuciSpent(tuciSpent), type: TeqSnackBarType.success);
+        } else if (_aiDescCreditsRemaining != null && _aiDescCreditsRemaining! > 0) {
+          setState(() => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
+        }
+      } else if (resp.statusCode == 402) {
+        final detail = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? l.aiDescError;
+        TeqSnackBar.show(context, message: detail, type: TeqSnackBarType.error);
       } else if (resp.statusCode == 503) {
         TeqSnackBar.show(context, message: l.aiDescUnavailable, type: TeqSnackBarType.warning);
       } else {
@@ -215,11 +228,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       }
     } catch (_) {
       if (!mounted) return;
-      TeqSnackBar.show(
-        context,
-        message: AppLocalizations.of(context)!.aiDescError,
-        type: TeqSnackBarType.error,
-      );
+      TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
     } finally {
       if (mounted) setState(() => _aiDescLoading = false);
     }
