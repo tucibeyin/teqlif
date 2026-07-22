@@ -26,7 +26,7 @@ GROQ_MODEL        = "llama-3.3-70b-versatile"
 _GROQ_DAILY_LIMIT = 14_000
 
 CEREBRAS_API_URL  = "https://api.cerebras.ai/v1/chat/completions"
-CEREBRAS_MODEL    = "llama-3.3-70b"
+CEREBRAS_MODEL    = "gpt-oss-120b"
 _CEREBRAS_DAILY_LIMIT = 50_000  # rate-limited ama günlük hard limit yok; güvenli marj
 
 GEMINI_API_URL    = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent"
