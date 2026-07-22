@@ -33,27 +33,9 @@ _model = None
 _model_lock = threading.Lock()
 
 _SYSTEM_PROMPT = (
-    "Sen Türkçe ilan açıklaması yazan bir asistansın. "
-    "KURAL: Yalnızca kullanıcının verdiği bilgileri kullan. "
-    "Hiçbir özellik, teknik bilgi veya garanti UYDURMA. "
-    "3 cümle yaz: (1) ürün adı ve durumu, (2) fiyat ve genel değerlendirme, (3) teslim bilgisi. "
-    "Yalnızca Türkçe. Madde işareti yok. Hashtag yok."
+    "Sen Türkçe ikinci el ilan sitesi için açıklama yazan bir asistansın. "
+    "Yalnızca verilen bilgileri kullan. Hiçbir şey uydurma."
 )
-
-# Tek örnek — kısa context için
-_EXAMPLES = [
-    {
-        "user": (
-            "Ürün: Nike Air Max 90\nKategori: Ayakkabı\nDurum: İkinci El\n"
-            "Fiyat: 800 ₺\nKonum: Bursa\nAçıklama:"
-        ),
-        "assistant": (
-            "Nike Air Max 90 spor ayakkabı ikinci el satışa çıkarılmıştır. "
-            "800 ₺ fiyatıyla uygun bir seçenek arayanlar için değerlendirilebilir. "
-            "Bursa içinde elden teslim yapılır."
-        ),
-    },
-]
 
 _CONDITION_LABELS = {
     "new": "Sıfır",
@@ -113,34 +95,43 @@ def generate_listing_description(
     if model is None:
         return None
 
-    parts = [f"Ürün: {title.strip()}", f"Kategori: {category.strip()}"]
-    if condition:
-        label = _CONDITION_LABELS.get(condition, condition)
-        parts.append(f"Durum: {label}")
+    condition_label = _CONDITION_LABELS.get(condition or "", condition or "")
+
+    # Phi-3.5-mini chat template — raw completion with pre-filled sentence start
+    # Pre-filling forces the model to complete a sentence instead of generating from scratch
+    title_stripped = title.strip()
+    prompt = (
+        f"<|system|>\n{_SYSTEM_PROMPT}<|end|>\n"
+        f"<|user|>\n"
+        f"Başlık: {title_stripped}\n"
+        f"Kategori: {category.strip()}\n"
+    )
+    if condition_label:
+        prompt += f"Durum: {condition_label}\n"
     if price and price > 0:
-        parts.append(f"Fiyat: {int(price):,} ₺".replace(",", "."))
+        prompt += f"Fiyat: {int(price):,} ₺\n".replace(",", ".")
     if location:
-        parts.append(f"Konum: {location.strip()}")
-
-    user_message = "\n".join(parts) + "\nAçıklama:"
-
-    messages = [{"role": "system", "content": _SYSTEM_PROMPT}]
-    for ex in _EXAMPLES:
-        messages.append({"role": "user", "content": ex["user"]})
-        messages.append({"role": "assistant", "content": ex["assistant"]})
-    messages.append({"role": "user", "content": user_message})
+        prompt += f"Konum: {location.strip()}\n"
+    prompt += f"<|end|>\n<|assistant|>\n{title_stripped},"
 
     try:
-        output = model.create_chat_completion(
-            messages=messages,
-            max_tokens=120,
-            temperature=0.2,
+        output = model.create_completion(
+            prompt=prompt,
+            max_tokens=110,
+            temperature=0.7,
             top_p=0.9,
-            repeat_penalty=1.15,
-            stop=["\n\n", "Ürün:", "Kategori:", "4."],
+            repeat_penalty=1.1,
+            stop=["<|end|>", "<|user|>", "\n\n", "Başlık:"],
         )
-        text = output["choices"][0]["message"]["content"].strip()
-        return text if text else None
+        completion = output["choices"][0]["text"].strip()
+        text = f"{title_stripped},{completion}"
+        # Trim to last complete sentence
+        for sep in (".", "!", "?"):
+            idx = text.rfind(sep)
+            if idx != -1 and idx > len(text) // 2:
+                text = text[: idx + 1]
+                break
+        return text if len(text) > 20 else None
     except Exception as exc:
         logger.error("[LLM] Üretim hatası: %s", exc)
         return None
