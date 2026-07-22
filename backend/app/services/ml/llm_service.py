@@ -29,12 +29,13 @@ def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
         "6. ASLA 'sepetimize eklendi', 'mağazamızda', 'stoklarımızda' gibi e-ticaret/kurumsal firma ağzı kullanma. Sen bireysel bir satıcısın.\n"
         "7. ASLA 'müşteriler' veya 'müşteri' kelimesini kullanma. Bunun yerine 'alıcı' veya 'yeni sahibi' de.\n"
         "8. Eğer ürün durumu (Condition) ile başlık çelişiyorsa (Örn: Başlıkta 'Temiz' yazıyor ama durum 'Hasarlı' ise), HER ZAMAN ürün durumunu (Condition) baz al ve hasarı/arızayı dürüstçe belirt.\n"
+        "9. 'Tıbbi olarak temiz', 'bana dikkat etmeyin' gibi devrik, saçma veya çeviri kokan absürt cümleler KESİNLİKLE kurma. Sadece son derece sade, normal bir Türkçe kullan.\n"
     )
     
     cat_hints = []
     cat_lower = category.lower()
     if "elektronik" in cat_lower or "telefon" in cat_lower or "bilgisayar" in cat_lower:
-        cat_hints.append("Çalışmayan aksamı olmadığını veya kozmetik durumunu kısaca belirt.")
+        cat_hints.append("Çalışmayan aksamı olmadığını veya kozmetik durumunu (çizik vs.) kısaca belirt.")
     elif "araç" in cat_lower or "vasıta" in cat_lower or "araba" in cat_lower:
         cat_hints.append("Yürüründe veya motorunda sıkıntı olup olmadığını dürüstçe belirt.")
     elif "emlak" in cat_lower or "ev" in cat_lower or "arsa" in cat_lower:
@@ -42,7 +43,7 @@ def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
     elif "giyim" in cat_lower or "ayakkabı" in cat_lower:
         cat_hints.append("Bedeninin uymadığı için veya tarz değişikliğinden dolayı sattığını belirt.")
     elif "mobilya" in cat_lower or "eşya" in cat_lower:
-        cat_hints.append("Kırık/çizik olmadığını veya evde yer açmak için sattığını belirt.")
+        cat_hints.append("Kırık/çizik olmadığını veya evde yer açmak için sattığını belirt. (Çamur vb. saçma kelimeler kullanma).")
         
     cond_hints = []
     if condition == "new":
@@ -72,10 +73,10 @@ def _generate_user_prompt(
     ]
     
     if price and price > 0:
-        lines.append(f"- Fiyat: {int(price)} TL (Bu fiyatı metnin içine doğalca yedir, örn: 'Fiyatı {int(price)} TL yazdım', '{int(price)} TL'ye bırakıyorum')")
+        lines.append(f"- Fiyat: {int(price)} TL (Bu fiyatı metnin içine doğalca yedir, örn: 'Fiyatını {int(price)} TL olarak uygun tuttum', '{int(price)} TL istiyorum')")
         
     if location:
-        lines.append(f"- Teslimat: Sadece {location} (Örn: 'Sadece {location} içi elden teslim edebilirim, kargoyla uğraşamam' gibi doğal bir cümle kur)")
+        lines.append(f"- Teslimat: Sadece {location} (Örn: 'Sadece {location} içi elden teslim yapabilirim' yaz ve metni bitir)")
     else:
         lines.append("- Teslimat: Kargo veya elden teslim yapabilirim.")
         
