@@ -1,11 +1,10 @@
 """
-Groq + Cerebras + Gemini API Bağlantı ve İşlevsellik Testi
+Groq + Gemini API Bağlantı ve İşlevsellik Testi
 
 Kullanım:
-  python scripts/test_llm_apis.py             # tüm API'ler
-  python scripts/test_llm_apis.py --groq      # sadece Groq
-  python scripts/test_llm_apis.py --cerebras  # sadece Cerebras
-  python scripts/test_llm_apis.py --gemini    # sadece Gemini
+  python scripts/test_llm_apis.py          # her iki API
+  python scripts/test_llm_apis.py --groq   # sadece Groq
+  python scripts/test_llm_apis.py --gemini # sadece Gemini
 """
 import sys
 import os
@@ -389,163 +388,10 @@ async def test_gemini(key: str) -> bool:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  CEREBRAS TESTLERİ
-# ─────────────────────────────────────────────────────────────────────────────
-
-CEREBRAS_BASE  = "https://api.cerebras.ai/v1"
-CEREBRAS_MODEL = "gemma-4-31b"
-
-async def test_cerebras(key: str) -> bool:
-    """Cerebras API testlerini çalıştırır. True → tüm testler geçti."""
-    header("CEREBRAS — llama-3.3-70b")
-    all_passed = True
-
-    # ── Test 1: API key format ────────────────────────────────────────────────
-    print(f"\n  Test 1: API key format kontrolü")
-    if key.startswith("csk-") and len(key) > 20:
-        ok(f"Format geçerli ({len(key)} karakter)")
-    else:
-        fail(f"Beklenmeyen format — 'csk_...' ile başlamalı (mevcut: '{key[:8]}...')")
-        warn("Cerebras testleri devam ediyor ama başarısız olabilir")
-        all_passed = False
-
-    # ── Test 2: Model listesi (auth + network) ────────────────────────────────
-    print(f"\n  Test 2: Bağlantı ve kimlik doğrulama (GET /models)")
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            t0 = time.perf_counter()
-            resp = await client.get(
-                f"{CEREBRAS_BASE}/models",
-                headers={"Authorization": f"Bearer {key}"},
-            )
-            latency = (time.perf_counter() - t0) * 1000
-
-        if resp.status_code == 200:
-            models = resp.json().get("data", [])
-            model_ids = [m["id"] for m in models]
-            ok(f"Bağlantı başarılı — {len(models)} model listelendi ({latency:.0f}ms)")
-            if CEREBRAS_MODEL in model_ids:
-                ok(f"{CEREBRAS_MODEL} mevcut")
-            else:
-                warn(f"{CEREBRAS_MODEL} listede yok — mevcut modeller: {model_ids[:5]}")
-                all_passed = False
-        elif resp.status_code == 401:
-            fail(f"401 Unauthorized — API key geçersiz")
-            return False
-        else:
-            fail(f"HTTP {resp.status_code} — {resp.text[:120]}")
-            all_passed = False
-    except httpx.ConnectError as e:
-        fail(f"Bağlantı hatası: {e}")
-        return False
-    except httpx.TimeoutException:
-        fail("Timeout — 10 saniye içinde yanıt gelmedi")
-        return False
-
-    # ── Test 3: Content generation (non-streaming) ────────────────────────────
-    print(f"\n  Test 3: İçerik üretimi (streaming=False)")
-    payload = {
-        "model": CEREBRAS_MODEL,
-        "messages": [
-            {"role": "system", "content": TEST_SYSTEM},
-            {"role": "user",   "content": TEST_USER},
-        ],
-        "temperature": 0.3,
-        "max_tokens": 80,
-        "stream": False,
-    }
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            t0 = time.perf_counter()
-            resp = await client.post(
-                f"{CEREBRAS_BASE}/chat/completions",
-                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                json=payload,
-            )
-            elapsed = time.perf_counter() - t0
-
-        if resp.status_code == 200:
-            data = resp.json()
-            try:
-                content = data["choices"][0]["message"]["content"]
-                usage = data.get("usage", {})
-                ok(f"Yanıt alındı ({elapsed:.2f}s)")
-                ok(f"Token: {usage.get('prompt_tokens',0)} giriş / "
-                   f"{usage.get('completion_tokens',0)} çıkış")
-                info(f"Çıktı: {content[:120]}")
-            except (KeyError, IndexError) as e:
-                fail(f"Yanıt parse hatası: {e}")
-                all_passed = False
-        elif resp.status_code == 429:
-            warn("429 Rate limit — biraz bekle ve tekrar dene")
-            all_passed = False
-        elif resp.status_code == 401:
-            fail("401 Unauthorized — API key geçersiz")
-            return False
-        else:
-            fail(f"HTTP {resp.status_code}: {resp.text[:200]}")
-            all_passed = False
-    except httpx.TimeoutException:
-        fail("Timeout — 30 saniye içinde yanıt gelmedi")
-        all_passed = False
-
-    # ── Test 4: Streaming ─────────────────────────────────────────────────────
-    print(f"\n  Test 4: Streaming (SSE)")
-    stream_payload = {**payload, "stream": True}
-    try:
-        chunks = []
-        first_token_t = None
-        t0 = time.perf_counter()
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            async with client.stream(
-                "POST",
-                f"{CEREBRAS_BASE}/chat/completions",
-                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                json=stream_payload,
-            ) as resp:
-                if resp.status_code != 200:
-                    body = await resp.aread()
-                    fail(f"HTTP {resp.status_code}: {body[:200]}")
-                    all_passed = False
-                else:
-                    async for line in resp.aiter_lines():
-                        if not line.startswith("data: "):
-                            continue
-                        raw = line[6:].strip()
-                        if raw == "[DONE]":
-                            break
-                        try:
-                            delta = json.loads(raw)["choices"][0]["delta"].get("content", "")
-                            if delta:
-                                if first_token_t is None:
-                                    first_token_t = time.perf_counter()
-                                chunks.append(delta)
-                        except (json.JSONDecodeError, KeyError, IndexError):
-                            pass
-
-        if chunks:
-            ttft = (first_token_t - t0) if first_token_t else 0
-            total = time.perf_counter() - t0
-            text = "".join(chunks)
-            ok(f"Stream başarılı — {len(chunks)} chunk, {len(text)} karakter")
-            ok(f"İlk token: {ttft:.2f}s | Toplam: {total:.2f}s")
-            info(f"Çıktı: {text[:120]}")
-        else:
-            fail("Stream'den içerik gelmedi")
-            all_passed = False
-    except httpx.TimeoutException:
-        fail("Streaming timeout")
-        all_passed = False
-
-    return all_passed
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 #  MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def main(run_groq: bool, run_cerebras: bool, run_gemini: bool) -> None:
+async def main(run_groq: bool, run_gemini: bool) -> None:
     results: dict[str, bool] = {}
 
     # ── Groq ──────────────────────────────────────────────────────────────────
@@ -557,16 +403,6 @@ async def main(run_groq: bool, run_cerebras: bool, run_gemini: bool) -> None:
             results["Groq"] = False
         else:
             results["Groq"] = await test_groq(groq_key)
-
-    # ── Cerebras ──────────────────────────────────────────────────────────────
-    if run_cerebras:
-        cerebras_key = os.environ.get("CEREBRAS_API_KEY", "")
-        if not cerebras_key:
-            header("CEREBRAS")
-            fail("CEREBRAS_API_KEY bulunamadı — .env dosyasını kontrol et")
-            results["Cerebras"] = False
-        else:
-            results["Cerebras"] = await test_cerebras(cerebras_key)
 
     # ── Gemini ────────────────────────────────────────────────────────────────
     if run_gemini:
@@ -585,7 +421,7 @@ async def main(run_groq: bool, run_cerebras: bool, run_gemini: bool) -> None:
     sep("═")
     for name, passed in results.items():
         status = f"{GREEN}BAŞARILI{RESET}" if passed else f"{RED}BAŞARISIZ{RESET}"
-        print(f"  {name:12s} → {status}")
+        print(f"  {name:10s} → {status}")
     sep("═")
     print()
 
@@ -594,15 +430,12 @@ async def main(run_groq: bool, run_cerebras: bool, run_gemini: bool) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Groq + Cerebras + Gemini API bağlantı testi")
-    parser.add_argument("--groq",      action="store_true", help="Sadece Groq test et")
-    parser.add_argument("--cerebras",  action="store_true", help="Sadece Cerebras test et")
-    parser.add_argument("--gemini",    action="store_true", help="Sadece Gemini test et")
+    parser = argparse.ArgumentParser(description="Groq + Gemini API bağlantı testi")
+    parser.add_argument("--groq",   action="store_true", help="Sadece Groq test et")
+    parser.add_argument("--gemini", action="store_true", help="Sadece Gemini test et")
     args = parser.parse_args()
 
-    any_flag = args.groq or args.cerebras or args.gemini
-    run_groq      = args.groq     or not any_flag
-    run_cerebras  = args.cerebras or not any_flag
-    run_gemini    = args.gemini   or not any_flag
+    run_groq   = args.groq   or (not args.groq and not args.gemini)
+    run_gemini = args.gemini or (not args.groq and not args.gemini)
 
-    asyncio.run(main(run_groq, run_cerebras, run_gemini))
+    asyncio.run(main(run_groq, run_gemini))
