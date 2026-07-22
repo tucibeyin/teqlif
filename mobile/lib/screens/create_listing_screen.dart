@@ -208,6 +208,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       final priceRaw = _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.');
       final price = double.tryParse(priceRaw);
       
+      debugPrint('[AI Description] Preparing request to backend...');
       final req = http.Request('POST', Uri.parse('$kBaseUrl/listings/generate-description'));
       req.headers['Content-Type'] = 'application/json';
       if (token != null) req.headers['Authorization'] = 'Bearer $token';
@@ -219,20 +220,25 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         if (_selectedCity != null && _selectedCity!.isNotEmpty) 'location': _selectedCity,
       });
 
+      debugPrint('[AI Description] Sending request (Timeout: 60s)...');
       final client = http.Client();
-      final resp = await client.send(req).timeout(const Duration(seconds: 15)); // Connect timeout
+      final resp = await client.send(req).timeout(const Duration(seconds: 60)); // Artırıldı
 
       if (!mounted) return;
 
+      debugPrint('[AI Description] Got response. Status code: ${resp.statusCode}');
       if (resp.statusCode == 200) {
+        debugPrint('[AI Description] Stream started, waiting for chunks...');
         final stream = resp.stream.transform(utf8.decoder).transform(const LineSplitter());
         await for (final line in stream) {
           if (!mounted) break;
           if (line.startsWith('data: ')) {
             final dataStr = line.substring(6);
+            debugPrint('[AI Description] Received chunk: $dataStr');
             try {
               final json = jsonDecode(dataStr) as Map<String, dynamic>;
               if (json.containsKey('error')) {
+                debugPrint('[AI Description] Error in stream payload: ${json['error']}');
                 TeqSnackBar.show(context, message: json['error'], type: TeqSnackBarType.error);
                 break;
               } else if (json.containsKey('text')) {
@@ -244,6 +250,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   composing: TextRange.empty,
                 );
               } else if (json.containsKey('done') && json['done'] == true) {
+                debugPrint('[AI Description] Stream FINISHED.');
                 final tuciSpent = (json['tuci_spent'] as num?)?.toInt() ?? 0;
                 if (tuciSpent > 0) {
                   CacheService.clearData('user_wallet_data');
@@ -253,11 +260,15 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   setState(() => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
                 }
               }
-            } catch (_) {}
+            } catch (jsonErr) {
+               debugPrint('[AI Description] JSON Parse error on chunk: $jsonErr');
+            }
           }
         }
+        debugPrint('[AI Description] Stream loop exited.');
       } else {
         final errBody = await resp.stream.bytesToString();
+        debugPrint('[AI Description] Server returned HTTP ${resp.statusCode}. Body: $errBody');
         if (!mounted) return;
         if (resp.statusCode == 402) {
           try {
@@ -272,7 +283,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
         }
       }
-    } catch (_) {
+    } catch (e, stack) {
+      debugPrint('[AI Description] FATAL EXCEPTION: $e\n$stack');
       if (!mounted) return;
       TeqSnackBar.show(context, message: l.aiDescStreamError, type: TeqSnackBarType.error);
     } finally {
