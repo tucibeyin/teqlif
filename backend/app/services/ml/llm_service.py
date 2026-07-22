@@ -26,6 +26,7 @@ def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
         "3. Doğrudan 1. tekil şahıs (Ben) ağzıyla yaz (Örn: 'Satıyorum', 'Kullandım').\n"
         "4. En fazla 3-4 cümle kur. Samimi ol. 'Alıcısına hayırlı olsun', 'Pazarlık payı vardır', 'İhtiyaçtan satılık' gibi gerçekçi Türk satıcı jargonları kullan.\n"
         "5. Cümleleri çok karmaşık kurma, günlük konuşma dilini kullan.\n"
+        "6. ASLA 'sepetimize eklendi', 'mağazamızda', 'stoklarımızda' gibi e-ticaret/kurumsal firma ağzı kullanma. Sen bireysel bir satıcısın.\n"
     )
     
     cat_hints = []
@@ -34,6 +35,12 @@ def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
         cat_hints.append("Çalışmayan aksamı olmadığını veya kozmetik durumunu kısaca belirt.")
     elif "araç" in cat_lower or "vasıta" in cat_lower or "araba" in cat_lower:
         cat_hints.append("Yürüründe veya motorunda sıkıntı olup olmadığını dürüstçe belirt.")
+    elif "emlak" in cat_lower or "ev" in cat_lower or "arsa" in cat_lower:
+        cat_hints.append("Masrafsız olduğunu, konumunu veya krediye uygunluğunu samimi bir dille belirt.")
+    elif "giyim" in cat_lower or "ayakkabı" in cat_lower:
+        cat_hints.append("Bedeninin uymadığı için veya tarz değişikliğinden dolayı sattığını belirt.")
+    elif "mobilya" in cat_lower or "eşya" in cat_lower:
+        cat_hints.append("Kırık/çizik olmadığını veya evde yer açmak için sattığını belirt.")
         
     cond_hints = []
     if condition == "new":
