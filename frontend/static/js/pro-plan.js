@@ -46,17 +46,22 @@
             document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺600/yıl';
             document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '60 reaktivasyon × 10 TL<br>= 600 TL tasarruf';
 
+            /* tablo: aidesc */
+            document.querySelector('tr[data-key="aidesc"] .td-pro span').textContent = '⚡ 240 adet / yıl';
+            document.querySelector('tr[data-key="aidesc"] .val-amount').textContent = '~₺720/yıl';
+            document.querySelector('tr[data-key="aidesc"] .val-desc').innerHTML = '240 kullanım × 3 TL<br>= 720 TL tasarruf';
+
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺3.960+ değer</span>';
+                tfootValueText.innerHTML = '₺1.990 yatır,<br><span style="color:var(--green);font-weight:700;">₺4.680+ değer</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺3.960+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + AI danışman (₺360) + Toplu Duyuru (~₺1.200) + Reaktivasyon (₺600) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺1.990 ödeyip ₺4.680+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺1.800) + AI danışman (₺360) + Toplu Duyuru (~₺1.200) + Reaktivasyon (₺600) + Yapay Zeka açıklama (₺720) haklarını yıllık kullandığında maliyet kendini fazlasıyla karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺3.960+';
+            if (totalVal) totalVal.textContent = '₺4.680+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'yıllık avantaj değeri';
             var roiPill = document.getElementById('roiPill');
@@ -89,17 +94,22 @@
             document.querySelector('tr[data-key="reactivation"] .val-amount').textContent = '₺50/ay';
             document.querySelector('tr[data-key="reactivation"] .val-desc').innerHTML = '5 reaktivasyon × 10 TL<br>= 50 TL tasarruf';
 
+            /* tablo: aidesc */
+            document.querySelector('tr[data-key="aidesc"] .td-pro span').textContent = '⚡ 20 adet / ay';
+            document.querySelector('tr[data-key="aidesc"] .val-amount').textContent = '~₺60/ay';
+            document.querySelector('tr[data-key="aidesc"] .val-desc').innerHTML = '20 kullanım × 3 TL<br>= 60 TL tasarruf';
+
             /* tfoot değer metni */
             var tfootValueText = document.getElementById('tfootValueText');
             if (tfootValueText) {
-                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺330+ değer</span>';
+                tfootValueText.innerHTML = '₺199 yatır,<br><span style="color:var(--green);font-weight:700;">₺390+ değer</span>';
             }
 
             /* banner */
             var bannerText = document.getElementById('totalBannerText');
-            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺330+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + AI danışman (₺30) + Toplu Duyuru (~₺100) + Reaktivasyon (₺50) haklarını kullandığında her ay kazancın maliyeti karşılar.</span>';
+            if (bannerText) bannerText.innerHTML = '<strong>₺199 ödeyip ₺390+ değer elde et</strong><br><span style="color:var(--text-dim);font-size:.74rem;">Boost (₺150) + AI danışman (₺30) + Toplu Duyuru (~₺100) + Reaktivasyon (₺50) + Yapay Zeka açıklama (₺60) haklarını kullandığında her ay kazancın maliyeti karşılar.</span>';
             var totalVal = document.getElementById('totalVal');
-            if (totalVal) totalVal.textContent = '₺330+';
+            if (totalVal) totalVal.textContent = '₺390+';
             var totalSub = document.getElementById('totalSub');
             if (totalSub) totalSub.textContent = 'aylık avantaj değeri';
             var roiPill = document.getElementById('roiPill');
