@@ -8,6 +8,7 @@ from app.core.auto_mod import analyze_listing_text
 logger = get_logger(__name__)
 
 VALID_CATEGORIES = {"elektronik", "moda", "ev_yasam", "diger"}
+VALID_CONDITIONS = {"new", "like_new", "used", "damaged"}
 
 class CreateListingCommand:
     """
@@ -20,12 +21,13 @@ class CreateListingCommand:
         self.uow = uow
 
     async def execute(
-        self, 
-        user_id: int, 
-        title: str, 
-        description: Optional[str] = None, 
+        self,
+        user_id: int,
+        title: str,
+        description: Optional[str] = None,
         price: Optional[float] = None,
         category: str = "diger",
+        condition: Optional[str] = None,
         location: Optional[str] = None,
         image_url: Optional[str] = None,
         image_urls: list = None
@@ -46,6 +48,10 @@ class CreateListingCommand:
         if cat not in VALID_CATEGORIES:
             raise BadRequestException(f"Geçersiz kategori: {cat}")
 
+        cond = condition.strip().lower() if condition else None
+        if cond is not None and cond not in VALID_CONDITIONS:
+            raise BadRequestException(f"Geçersiz ürün durumu: {cond}")
+
         # 2. Veritabanı İşlemi (Write Model)
         from app.core.event_bus import event_bus
         from app.core.events import ListingCreatedEvent
@@ -57,6 +63,7 @@ class CreateListingCommand:
                 "description": _desc,
                 "price": price,
                 "category": cat,
+                "condition": cond,
                 "location": location,
                 "image_url": image_url,
                 "image_urls": json.dumps(image_urls or [])

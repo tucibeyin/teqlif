@@ -4736,7 +4736,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aiDescUnavailable => 'خدمة الوصف بالذكاء الاصطناعي غير متاحة حالياً.';
 
   @override
-  String get fieldCondition => 'حالة المنتج (اختياري)';
+  String get fieldCondition => 'حالة المنتج';
+
+  @override
+  String get fieldConditionHint => 'اختر حالة المنتج';
 
   @override
   String get conditionNew => 'جديد';

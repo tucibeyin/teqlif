@@ -2992,5 +2992,11 @@
   "callHistoryStatusNoAnswer": "No answer",
   "callHistoryStatusNotAnswered": "Not answered",
   "callHistoryStatusCancelled": "Cancelled",
-  "walletTxnChurnAirdrop": "Welcome Back Airdrop"
+  "walletTxnChurnAirdrop": "Welcome Back Airdrop",
+  "fieldCondition": "Item Condition",
+  "fieldConditionHint": "Select item condition",
+  "conditionNew": "Brand New",
+  "conditionLikeNew": "Like New",
+  "conditionUsed": "Used",
+  "conditionDamaged": "Damaged"
 }

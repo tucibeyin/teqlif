@@ -1584,6 +1584,11 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
                       l, listing['category'] as String? ?? '',
                     ),
                   ),
+                  if (listing['condition'] != null)
+                    _infoRow(
+                      l.fieldCondition,
+                      _localizeCondition(l, listing['condition'] as String),
+                    ),
                   if (listing['location'] != null)
                     _infoRow('Konum', listing['location']),
                 ],
@@ -2249,6 +2254,16 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       child: Icon(icon, color: Colors.white, size: 22),
     ),
   );
+
+  String _localizeCondition(AppLocalizations l, String condition) {
+    switch (condition) {
+      case 'new':       return l.conditionNew;
+      case 'like_new':  return l.conditionLikeNew;
+      case 'used':      return l.conditionUsed;
+      case 'damaged':   return l.conditionDamaged;
+      default:          return condition;
+    }
+  }
 
   Widget _infoRow(String label, String value) => Builder(
     builder: (context) => Padding(

@@ -156,6 +156,7 @@ async def create_listing(
         description=payload.get("description"),
         price=payload.get("price"),
         category=payload.get("category", "diger"),
+        condition=payload.get("condition"),
         location=payload.get("location"),
         image_url=payload.get("image_url"),
         image_urls=payload.get("image_urls"),

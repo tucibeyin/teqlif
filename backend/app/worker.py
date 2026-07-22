@@ -30,6 +30,26 @@ logger = get_logger(__name__)
 # ARQ worker için DI Container'ı başlat
 init_di()
 
+# Embedding metninde kullanılan Türkçe condition etiketleri
+_CONDITION_EMBED: dict[str, str] = {
+    "new":      "sıfır",
+    "like_new": "az kullanılmış",
+    "used":     "ikinci el",
+    "damaged":  "hasarlı",
+}
+
+
+def _listing_embed_text(listing) -> str:
+    """Tutarlı embedding metni — tüm üretim noktaları bu fonksiyonu kullanır."""
+    parts = [listing.title or ""]
+    if listing.description:
+        parts.append(listing.description)
+    if listing.category:
+        parts.append(listing.category)
+    if listing.condition:
+        parts.append(_CONDITION_EMBED.get(listing.condition, listing.condition))
+    return " ".join(parts).strip()
+
 
 # ── Task: E-posta Gönderimi ──────────────────────────────────────────────────
 
@@ -1122,13 +1142,7 @@ async def generate_listing_embedding_task(ctx: dict, listing_id: int) -> None:
                 )
                 return
 
-            parts = [listing.title or ""]
-            if listing.description:
-                parts.append(listing.description)
-            if listing.category:
-                parts.append(listing.category)
-            text = " ".join(parts).strip()
-
+            text = _listing_embed_text(listing)
             embedding = generate_embedding(text)
 
             await db.execute(
@@ -1360,6 +1374,66 @@ async def train_listing_quality_model_task(ctx: dict) -> None:
         raise
 
 
+async def reembed_condition_listings_task(ctx: dict) -> None:
+    """
+    Tek seferlik görev: condition set edilmiş ama embedding'i eski (condition'sız)
+    olan aktif ilanları yeniden embed eder.
+    Batch 30, her çalışmada bir sonraki sayfaya geçer (Redis cursor ile).
+    """
+    try:
+        from sqlalchemy import select, update as sa_update, text as _text
+        from app.database import AsyncSessionLocal
+        from app.models.listing import Listing
+        from app.services.ml.ml_service import generate_embedding
+        from app.utils.redis_client import get_redis
+
+        CURSOR_KEY = "reembed_condition:last_id"
+        BATCH = 30
+
+        redis = await get_redis()
+        last_id_raw = await redis.get(CURSOR_KEY)
+        last_id = int(last_id_raw) if last_id_raw else 0
+
+        async with AsyncSessionLocal() as db:
+            rows = (await db.scalars(
+                select(Listing)
+                .where(
+                    Listing.condition.isnot(None),
+                    Listing.status != "deleted",
+                    Listing.id > last_id,
+                )
+                .order_by(Listing.id)
+                .limit(BATCH)
+            )).all()
+
+            if not rows:
+                await redis.delete(CURSOR_KEY)
+                logger.info("[Worker] reembed_condition_listings: tamamlandı, cursor sıfırlandı")
+                return
+
+            count = 0
+            for listing in rows:
+                text = _listing_embed_text(listing)
+                if not text:
+                    continue
+                try:
+                    emb = generate_embedding(text)
+                    await db.execute(
+                        sa_update(Listing).where(Listing.id == listing.id).values(embedding=emb)
+                    )
+                    count += 1
+                except Exception as e:
+                    logger.warning("[Worker] reembed_condition: id=%d hata: %s", listing.id, e)
+
+            await db.commit()
+            await redis.set(CURSOR_KEY, rows[-1].id, ex=7 * 24 * 3600)
+            logger.info("[Worker] reembed_condition_listings: %d ilan yeniden embed edildi | son_id=%d", count, rows[-1].id)
+
+    except Exception as exc:
+        logger.error("[Worker] reembed_condition_listings başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+
+
 async def backfill_listing_embeddings_task(ctx: dict) -> None:
     """
     Her saat çalışır; embedding'i NULL olan aktif ilanlar için
@@ -1385,12 +1459,7 @@ async def backfill_listing_embeddings_task(ctx: dict) -> None:
 
             count = 0
             for listing in rows:
-                parts = [listing.title or ""]
-                if listing.description:
-                    parts.append(listing.description)
-                if listing.category:
-                    parts.append(listing.category)
-                text = " ".join(parts).strip()
+                text = _listing_embed_text(listing)
                 if not text:
                     continue
                 try:
@@ -3164,6 +3233,7 @@ class WorkerSettings:
         train_feed_als_task,
         sync_swipelive_interests_task,
         backfill_listing_embeddings_task,
+        reembed_condition_listings_task,
         train_kmeans_cold_start_task,
         train_item2vec_task,
         train_bpr_task,

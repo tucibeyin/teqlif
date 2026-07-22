@@ -2956,5 +2956,11 @@
   "callHistoryStatusNoAnswer": "لا يوجد رد",
   "callHistoryStatusNotAnswered": "لم يتم الرد",
   "callHistoryStatusCancelled": "ألغيت",
-  "walletTxnChurnAirdrop": "هدية العودة"
+  "walletTxnChurnAirdrop": "هدية العودة",
+  "fieldCondition": "حالة المنتج",
+  "fieldConditionHint": "اختر حالة المنتج",
+  "conditionNew": "جديد",
+  "conditionLikeNew": "شبه جديد",
+  "conditionUsed": "مستعمل",
+  "conditionDamaged": "تالف"
 }

@@ -4813,7 +4813,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aiDescUnavailable => 'Сервис ИИ описания временно недоступен.';
 
   @override
-  String get fieldCondition => 'Состояние товара (необязательно)';
+  String get fieldCondition => 'Состояние товара';
+
+  @override
+  String get fieldConditionHint => 'Выберите состояние товара';
 
   @override
   String get conditionNew => 'Новый';

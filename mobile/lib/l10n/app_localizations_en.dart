@@ -4763,7 +4763,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiDescUnavailable => 'AI description service is not available right now.';
 
   @override
-  String get fieldCondition => 'Item Condition (optional)';
+  String get fieldCondition => 'Item Condition';
+
+  @override
+  String get fieldConditionHint => 'Select item condition';
 
   @override
   String get conditionNew => 'Brand New';

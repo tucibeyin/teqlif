@@ -2957,5 +2957,11 @@
   "callHistoryStatusNoAnswer": "Нет ответа",
   "callHistoryStatusNotAnswered": "Не отвечено",
   "callHistoryStatusCancelled": "Отменено",
-  "walletTxnChurnAirdrop": "Подарок за возвращение"
+  "walletTxnChurnAirdrop": "Подарок за возвращение",
+  "fieldCondition": "Состояние товара",
+  "fieldConditionHint": "Выберите состояние товара",
+  "conditionNew": "Новый",
+  "conditionLikeNew": "Почти новый",
+  "conditionUsed": "Б/у",
+  "conditionDamaged": "Повреждён"
 }

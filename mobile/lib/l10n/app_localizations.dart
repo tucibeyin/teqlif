@@ -8613,6 +8613,9 @@ abstract class AppLocalizations {
   /// No description provided for @fieldCondition.
   String get fieldCondition;
 
+  /// No description provided for @fieldConditionHint.
+  String get fieldConditionHint;
+
   /// No description provided for @conditionNew.
   String get conditionNew;
 

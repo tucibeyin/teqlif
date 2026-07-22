@@ -4766,7 +4766,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get aiDescUnavailable => 'AI açıklama servisi şu an aktif değil.';
 
   @override
-  String get fieldCondition => 'Ürün Durumu (isteğe bağlı)';
+  String get fieldCondition => 'Ürün Durumu';
+
+  @override
+  String get fieldConditionHint => 'Ürün durumunu seçiniz';
 
   @override
   String get conditionNew => 'Sıfır';

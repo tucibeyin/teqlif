@@ -2955,5 +2955,11 @@
   "callHistoryStatusNoAnswer": "Cevap yok",
   "callHistoryStatusNotAnswered": "Cevaplanmadı",
   "callHistoryStatusCancelled": "İptal edildi",
-  "walletTxnChurnAirdrop": "Geri Dönüş Hediyesi"
+  "walletTxnChurnAirdrop": "Geri Dönüş Hediyesi",
+  "fieldCondition": "Ürün Durumu",
+  "fieldConditionHint": "Ürün durumunu seçiniz",
+  "conditionNew": "Sıfır",
+  "conditionLikeNew": "Az Kullanılmış",
+  "conditionUsed": "İkinci El",
+  "conditionDamaged": "Hasarlı"
 }

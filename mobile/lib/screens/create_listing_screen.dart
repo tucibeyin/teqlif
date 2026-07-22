@@ -195,7 +195,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             body: jsonEncode({
               'title': title,
               'category': _selectedCategory,
-              if (_selectedCondition != null) 'condition': _selectedCondition,
+              'condition': _selectedCondition,
               if (price != null && price > 0) 'price': price,
               if (_selectedCity != null && _selectedCity!.isNotEmpty) 'location': _selectedCity,
             }),
@@ -1077,14 +1077,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       // ignore: deprecated_member_use
                       value: _selectedCondition,
                       decoration: InputDecoration(labelText: l.fieldCondition),
-                      hint: Text(l.fieldCondition),
+                      hint: Text(l.fieldConditionHint),
                       items: [
-                        DropdownMenuItem(value: null, child: Text('-- ${l.fieldCondition} --')),
                         DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
                         DropdownMenuItem(value: 'like_new', child: Text(l.conditionLikeNew)),
                         DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
                         DropdownMenuItem(value: 'damaged', child: Text(l.conditionDamaged)),
                       ],
+                      validator: (v) => v == null ? l.fieldConditionHint : null,
                       onChanged: (v) => setState(() => _selectedCondition = v),
                     ),
                   ],
