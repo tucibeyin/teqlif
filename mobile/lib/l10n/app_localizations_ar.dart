@@ -4731,18 +4731,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aiPriceButton => 'تحديد السعر بالذكاء الاصطناعي';
 
   @override
-  String get aiDescButton => 'كتابة الوصف بالذكاء الاصطناعي';
-
-  @override
-  String get aiDescGenerating => 'جارٍ إنشاء الوصف...';
-
-  @override
-  String get aiDescError => 'فشل إنشاء الوصف. حاول مجدداً.';
-
-  @override
-  String get aiDescUnavailable => 'خدمة وصف الذكاء الاصطناعي غير متاحة حالياً.';
-
-  @override
   String get aiCreditsLeftSuffix => 'رصيد متبقٍ';
 
   @override
@@ -5451,6 +5439,18 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get walletTxnChurnAirdrop => 'هدية العودة';
+
+  @override
+  String get aiDescButton => 'كتابة الوصف بالذكاء الاصطناعي';
+
+  @override
+  String get aiDescGenerating => 'جارٍ إنشاء الوصف...';
+
+  @override
+  String get aiDescError => 'فشل إنشاء الوصف. حاول مجدداً.';
+
+  @override
+  String get aiDescUnavailable => 'خدمة وصف الذكاء الاصطناعي غير متاحة حالياً.';
 
   @override
   String get fieldCondition => 'حالة المنتج';

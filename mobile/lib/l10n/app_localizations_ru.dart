@@ -4808,18 +4808,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aiPriceButton => 'Определить цену с помощью ИИ';
 
   @override
-  String get aiDescButton => 'Написать описание с ИИ';
-
-  @override
-  String get aiDescGenerating => 'Генерация описания...';
-
-  @override
-  String get aiDescError => 'Не удалось создать описание. Попробуйте снова.';
-
-  @override
-  String get aiDescUnavailable => 'Сервис AI-описаний временно недоступен.';
-
-  @override
   String get aiCreditsLeftSuffix => 'осталось';
 
   @override
@@ -5531,6 +5519,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get walletTxnChurnAirdrop => 'Подарок за возвращение';
+
+  @override
+  String get aiDescButton => 'Написать описание с ИИ';
+
+  @override
+  String get aiDescGenerating => 'Генерация описания...';
+
+  @override
+  String get aiDescError => 'Не удалось создать описание. Попробуйте снова.';
+
+  @override
+  String get aiDescUnavailable => 'Сервис AI-описаний временно недоступен.';
 
   @override
   String get fieldCondition => 'Состояние товара';

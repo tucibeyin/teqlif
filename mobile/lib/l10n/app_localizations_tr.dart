@@ -4761,18 +4761,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get aiPriceButton => 'Yapay Zeka ile Fiyat Belirle';
 
   @override
-  String get aiDescButton => 'AI ile Açıklama Yaz';
-
-  @override
-  String get aiDescGenerating => 'Açıklama oluşturuluyor...';
-
-  @override
-  String get aiDescError => 'Açıklama oluşturulamadı. Tekrar deneyin.';
-
-  @override
-  String get aiDescUnavailable => 'AI açıklama servisi şu an aktif değil.';
-
-  @override
   String get aiCreditsLeftSuffix => 'hak kaldı';
 
   @override
@@ -5483,6 +5471,18 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get walletTxnChurnAirdrop => 'Geri Dönüş Hediyesi';
+
+  @override
+  String get aiDescButton => 'AI ile Açıklama Yaz';
+
+  @override
+  String get aiDescGenerating => 'Açıklama oluşturuluyor...';
+
+  @override
+  String get aiDescError => 'Açıklama oluşturulamadı. Tekrar deneyin.';
+
+  @override
+  String get aiDescUnavailable => 'AI açıklama servisi şu an aktif değil.';
 
   @override
   String get fieldCondition => 'Ürün Durumu';

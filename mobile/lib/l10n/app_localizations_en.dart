@@ -4758,18 +4758,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiPriceButton => 'Set Price with AI';
 
   @override
-  String get aiDescButton => 'Write Description with AI';
-
-  @override
-  String get aiDescGenerating => 'Generating description...';
-
-  @override
-  String get aiDescError => 'Failed to generate description. Please try again.';
-
-  @override
-  String get aiDescUnavailable => 'AI description service is currently unavailable.';
-
-  @override
   String get aiCreditsLeftSuffix => 'credits left';
 
   @override
@@ -5480,6 +5468,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletTxnChurnAirdrop => 'Welcome Back Airdrop';
+
+  @override
+  String get aiDescButton => 'Write Description with AI';
+
+  @override
+  String get aiDescGenerating => 'Generating description...';
+
+  @override
+  String get aiDescError => 'Failed to generate description. Please try again.';
+
+  @override
+  String get aiDescUnavailable =>
+      'AI description service is currently unavailable.';
 
   @override
   String get fieldCondition => 'Item Condition';

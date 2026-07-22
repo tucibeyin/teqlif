@@ -8610,18 +8610,6 @@ abstract class AppLocalizations {
   /// **'Yapay Zeka ile Fiyat Belirle'**
   String get aiPriceButton;
 
-  /// No description provided for @aiDescButton.
-  String get aiDescButton;
-
-  /// No description provided for @aiDescGenerating.
-  String get aiDescGenerating;
-
-  /// No description provided for @aiDescError.
-  String get aiDescError;
-
-  /// No description provided for @aiDescUnavailable.
-  String get aiDescUnavailable;
-
   /// No description provided for @aiCreditsLeftSuffix.
   ///
   /// In tr, this message translates to:
@@ -9857,6 +9845,30 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Geri Dönüş Hediyesi'**
   String get walletTxnChurnAirdrop;
+
+  /// No description provided for @aiDescButton.
+  ///
+  /// In tr, this message translates to:
+  /// **'AI ile Açıklama Yaz'**
+  String get aiDescButton;
+
+  /// No description provided for @aiDescGenerating.
+  ///
+  /// In tr, this message translates to:
+  /// **'Açıklama oluşturuluyor...'**
+  String get aiDescGenerating;
+
+  /// No description provided for @aiDescError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Açıklama oluşturulamadı. Tekrar deneyin.'**
+  String get aiDescError;
+
+  /// No description provided for @aiDescUnavailable.
+  ///
+  /// In tr, this message translates to:
+  /// **'AI açıklama servisi şu an aktif değil.'**
+  String get aiDescUnavailable;
 
   /// No description provided for @fieldCondition.
   ///
