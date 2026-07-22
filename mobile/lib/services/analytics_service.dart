@@ -175,11 +175,21 @@ class AnalyticsService {
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
-      if (resp.statusCode == 402) {
-        final detail = (await compute(jsonDecode, resp.body) as Map<String, dynamic>)['detail'] as String? ?? '';
-        throw AiInsufficientTuciException(detail);
+      if (resp.statusCode != 200) {
+        debugPrint('[AnalyticsService] getPriceEstimate returned non-200: ${resp.statusCode} ${resp.body}');
+        final bodyJson = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
+        final detail = bodyJson['detail'];
+        if (resp.statusCode == 402 || resp.statusCode == 500 || resp.statusCode == 504 || resp.statusCode == 422) {
+          // Eğer detail bir liste ise (ör. 422 validation hatası), string'e çevir veya ilk öğeyi al
+          String detailStr = '';
+          if (detail is List && detail.isNotEmpty) {
+             detailStr = detail.first['msg'] ?? 'VALIDATION_ERROR';
+          } else if (detail is String) {
+             detailStr = detail;
+          }
+          throw AiInsufficientTuciException(detailStr);
+        }
       }
-      debugPrint('[AnalyticsService] getPriceEstimate returned non-200/402: ${resp.body}');
     } on AiInsufficientTuciException {
       rethrow;
     } catch (e, stack) {

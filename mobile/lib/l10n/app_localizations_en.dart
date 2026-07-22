@@ -5515,4 +5515,37 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get createNeedAllFields =>
       'Please fill in all required fields for AI estimation.';
+
+  @override
+  String get uploadErrorTooLarge =>
+      'Video file is too large. Please try a shorter video.';
+
+  @override
+  String get uploadErrorServerBusy =>
+      'Server is currently busy, please try again later.';
+
+  @override
+  String get uploadErrorAuthExpired =>
+      'Your session has expired, please log in again.';
+
+  @override
+  String get uploadErrorGeneric =>
+      'Media could not be uploaded, please try again.';
+
+  @override
+  String apiErrorInsufficientFundsPro(int cost) {
+    return 'You have reached your free AI limit for this month. You need at least $cost TUCi in your account to continue.';
+  }
+
+  @override
+  String apiErrorInsufficientFundsStd(int cost) {
+    return 'Insufficient TUCi balance. You need at least $cost TUCi in your account for this action.';
+  }
+
+  @override
+  String get apiErrorAiServiceBusy =>
+      'AI service is currently busy. Please try again.';
+
+  @override
+  String get apiErrorAiServiceTimeout => 'AI service timed out.';
 }

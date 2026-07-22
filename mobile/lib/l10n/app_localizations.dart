@@ -9935,6 +9935,54 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun.'**
   String get createNeedAllFields;
+
+  /// No description provided for @uploadErrorTooLarge.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video dosyası çok büyük. Lütfen daha kısa bir video deneyin.'**
+  String get uploadErrorTooLarge;
+
+  /// No description provided for @uploadErrorServerBusy.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sunucu şu an meşgul, lütfen daha sonra tekrar deneyin.'**
+  String get uploadErrorServerBusy;
+
+  /// No description provided for @uploadErrorAuthExpired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Oturum süreniz doldu, lütfen tekrar giriş yapın.'**
+  String get uploadErrorAuthExpired;
+
+  /// No description provided for @uploadErrorGeneric.
+  ///
+  /// In tr, this message translates to:
+  /// **'Medya yüklenemedi, lütfen tekrar deneyin.'**
+  String get uploadErrorGeneric;
+
+  /// No description provided for @apiErrorInsufficientFundsPro.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ayki ücretsiz yapay zeka limitinizi doldurdunuz. Devam etmek için hesabınızda en az {cost} TUCi bulunmalıdır.'**
+  String apiErrorInsufficientFundsPro(int cost);
+
+  /// No description provided for @apiErrorInsufficientFundsStd.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yetersiz TUCi bakiyesi. Bu işlem için hesabınızda en az {cost} TUCi bulunmalıdır.'**
+  String apiErrorInsufficientFundsStd(int cost);
+
+  /// No description provided for @apiErrorAiServiceBusy.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay zeka servisi şu anda meşgul. Lütfen tekrar deneyin.'**
+  String get apiErrorAiServiceBusy;
+
+  /// No description provided for @apiErrorAiServiceTimeout.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yapay zeka servisi zaman aşımına uğradı.'**
+  String get apiErrorAiServiceTimeout;
 }
 
 class _AppLocalizationsDelegate

@@ -5517,4 +5517,37 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get createNeedAllFields =>
       'Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun.';
+
+  @override
+  String get uploadErrorTooLarge =>
+      'Video dosyası çok büyük. Lütfen daha kısa bir video deneyin.';
+
+  @override
+  String get uploadErrorServerBusy =>
+      'Sunucu şu an meşgul, lütfen daha sonra tekrar deneyin.';
+
+  @override
+  String get uploadErrorAuthExpired =>
+      'Oturum süreniz doldu, lütfen tekrar giriş yapın.';
+
+  @override
+  String get uploadErrorGeneric => 'Medya yüklenemedi, lütfen tekrar deneyin.';
+
+  @override
+  String apiErrorInsufficientFundsPro(int cost) {
+    return 'Bu ayki ücretsiz yapay zeka limitinizi doldurdunuz. Devam etmek için hesabınızda en az $cost TUCi bulunmalıdır.';
+  }
+
+  @override
+  String apiErrorInsufficientFundsStd(int cost) {
+    return 'Yetersiz TUCi bakiyesi. Bu işlem için hesabınızda en az $cost TUCi bulunmalıdır.';
+  }
+
+  @override
+  String get apiErrorAiServiceBusy =>
+      'Yapay zeka servisi şu anda meşgul. Lütfen tekrar deneyin.';
+
+  @override
+  String get apiErrorAiServiceTimeout =>
+      'Yapay zeka servisi zaman aşımına uğradı.';
 }

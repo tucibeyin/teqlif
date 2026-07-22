@@ -5565,4 +5565,37 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get createNeedAllFields =>
       'Пожалуйста, заполните все обязательные поля для ИИ.';
+
+  @override
+  String get uploadErrorTooLarge =>
+      'Видеофайл слишком большой. Пожалуйста, попробуйте более короткое видео.';
+
+  @override
+  String get uploadErrorServerBusy =>
+      'Сервер в настоящее время занят, пожалуйста, повторите попытку позже.';
+
+  @override
+  String get uploadErrorAuthExpired =>
+      'Срок действия вашего сеанса истек, пожалуйста, войдите снова.';
+
+  @override
+  String get uploadErrorGeneric =>
+      'Не удалось загрузить медиа, пожалуйста, повторите попытку.';
+
+  @override
+  String apiErrorInsufficientFundsPro(int cost) {
+    return 'Вы исчерпали свой бесплатный лимит ИИ на этот месяц. Для продолжения на вашем счете должно быть не менее $cost TUCi.';
+  }
+
+  @override
+  String apiErrorInsufficientFundsStd(int cost) {
+    return 'Недостаточный баланс TUCi. Для этого действия на вашем счете должно быть не менее $cost TUCi.';
+  }
+
+  @override
+  String get apiErrorAiServiceBusy =>
+      'Служба ИИ в настоящее время занята. Пожалуйста, повторите попытку.';
+
+  @override
+  String get apiErrorAiServiceTimeout => 'Время ожидания службы ИИ истекло.';
 }

@@ -2972,5 +2972,27 @@
   "validRequiredLocation": "Пожалуйста, выберите местоположение",
   "validRequiredPrice": "Пожалуйста, введите цену",
   "validRequiredCondition": "Пожалуйста, выберите состояние",
-  "createNeedAllFields": "Пожалуйста, заполните все обязательные поля для ИИ."
+  "createNeedAllFields": "Пожалуйста, заполните все обязательные поля для ИИ.",
+  "uploadErrorTooLarge": "Видеофайл слишком большой. Пожалуйста, попробуйте более короткое видео.",
+  "uploadErrorServerBusy": "Сервер в настоящее время занят, пожалуйста, повторите попытку позже.",
+  "uploadErrorAuthExpired": "Срок действия вашего сеанса истек, пожалуйста, войдите снова.",
+  "uploadErrorGeneric": "Не удалось загрузить медиа, пожалуйста, повторите попытку.",
+  "apiErrorInsufficientFundsPro": "Вы исчерпали свой бесплатный лимит ИИ на этот месяц. Для продолжения на вашем счете должно быть не менее {cost} TUCi.",
+  "@apiErrorInsufficientFundsPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorInsufficientFundsStd": "Недостаточный баланс TUCi. Для этого действия на вашем счете должно быть не менее {cost} TUCi.",
+  "@apiErrorInsufficientFundsStd": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorAiServiceBusy": "Служба ИИ в настоящее время занята. Пожалуйста, повторите попытку.",
+  "apiErrorAiServiceTimeout": "Время ожидания службы ИИ истекло."
 }

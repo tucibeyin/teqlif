@@ -2971,5 +2971,27 @@
   "validRequiredLocation": "الرجاء تحديد الموقع",
   "validRequiredPrice": "الرجاء إدخال السعر",
   "validRequiredCondition": "الرجاء تحديد حالة المنتج",
-  "createNeedAllFields": "يرجى ملء جميع الحقول المطلوبة لتوقع الذكاء الاصطناعي."
+  "createNeedAllFields": "يرجى ملء جميع الحقول المطلوبة لتوقع الذكاء الاصطناعي.",
+  "uploadErrorTooLarge": "ملف الفيديو كبير جداً. يرجى محاولة فيديو أقصر.",
+  "uploadErrorServerBusy": "الخادم مشغول حالياً، يرجى المحاولة مرة أخرى لاحقاً.",
+  "uploadErrorAuthExpired": "انتهت صلاحية جلستك، يرجى تسجيل الدخول مرة أخرى.",
+  "uploadErrorGeneric": "تعذر تحميل الوسائط، يرجى المحاولة مرة أخرى.",
+  "apiErrorInsufficientFundsPro": "لقد وصلت إلى حد الذكاء الاصطناعي المجاني لهذا الشهر. تحتاج إلى {cost} TUCi على الأقل في حسابك للمتابعة.",
+  "@apiErrorInsufficientFundsPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorInsufficientFundsStd": "رصيد TUCi غير كافٍ. تحتاج إلى {cost} TUCi على الأقل في حسابك لهذا الإجراء.",
+  "@apiErrorInsufficientFundsStd": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorAiServiceBusy": "خدمة الذكاء الاصطناعي مشغولة حالياً. يرجى المحاولة مرة أخرى.",
+  "apiErrorAiServiceTimeout": "انتهت مهلة خدمة الذكاء الاصطناعي."
 }

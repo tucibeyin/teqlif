@@ -3007,5 +3007,27 @@
   "validRequiredLocation": "Please select a location",
   "validRequiredPrice": "Please enter a price",
   "validRequiredCondition": "Please select the condition",
-  "createNeedAllFields": "Please fill in all required fields for AI estimation."
+  "createNeedAllFields": "Please fill in all required fields for AI estimation.",
+  "uploadErrorTooLarge": "Video file is too large. Please try a shorter video.",
+  "uploadErrorServerBusy": "Server is currently busy, please try again later.",
+  "uploadErrorAuthExpired": "Your session has expired, please log in again.",
+  "uploadErrorGeneric": "Media could not be uploaded, please try again.",
+  "apiErrorInsufficientFundsPro": "You have reached your free AI limit for this month. You need at least {cost} TUCi in your account to continue.",
+  "@apiErrorInsufficientFundsPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorInsufficientFundsStd": "Insufficient TUCi balance. You need at least {cost} TUCi in your account for this action.",
+  "@apiErrorInsufficientFundsStd": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorAiServiceBusy": "AI service is currently busy. Please try again.",
+  "apiErrorAiServiceTimeout": "AI service timed out."
 }

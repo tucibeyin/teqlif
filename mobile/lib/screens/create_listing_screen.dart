@@ -177,7 +177,20 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       _showPriceEstimateSheet(result);
     } on AiInsufficientTuciException catch (e) {
       if (!mounted) return;
-      TeqSnackBar.show(context, message: e.detail, type: TeqSnackBarType.error);
+      final l = AppLocalizations.of(context)!;
+      String msg = e.detail;
+      if (msg == 'INSUFFICIENT_FUNDS_PRO') {
+         msg = l.apiErrorInsufficientFundsPro(5);
+      } else if (msg == 'INSUFFICIENT_FUNDS_STD') {
+         msg = l.apiErrorInsufficientFundsStd(5);
+      } else if (msg == 'AI_SERVICE_BUSY') {
+         msg = l.apiErrorAiServiceBusy;
+      } else if (msg == 'AI_SERVICE_TIMEOUT') {
+         msg = l.apiErrorAiServiceTimeout;
+      } else if (msg == 'VALIDATION_ERROR') {
+         msg = l.createNeedAllFields;
+      }
+      TeqSnackBar.show(context, message: msg, type: TeqSnackBarType.error);
     } finally {
       if (mounted) setState(() => _aiLoading = false);
     }
@@ -273,7 +286,13 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         if (resp.statusCode == 402) {
           try {
              final detail = (jsonDecode(errBody) as Map<String, dynamic>)['detail'] as String? ?? l.aiDescError;
-             TeqSnackBar.show(context, message: detail, type: TeqSnackBarType.error);
+             String msg = detail;
+             if (detail == 'INSUFFICIENT_FUNDS_PRO') {
+                msg = l.apiErrorInsufficientFundsPro(5);
+             } else if (detail == 'INSUFFICIENT_FUNDS_STD') {
+                msg = l.apiErrorInsufficientFundsStd(5);
+             }
+             TeqSnackBar.show(context, message: msg, type: TeqSnackBarType.error);
           } catch (_) {
              TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
           }
@@ -800,23 +819,23 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     }
   }
 
-  /// Upload hatalarını kullanıcı dostu Türkçe mesaja çevirir.
+  /// Upload hatalarını kullanıcı dostu ARB mesajına çevirir.
   String _uploadError(Object e) {
     final s = e.toString();
-    if (s.contains('HTTP 413'))
-      return 'Video dosyası çok büyük. Daha kısa bir video deneyin.';
+    final l = AppLocalizations.of(context)!;
+    if (s.contains('HTTP 413')) return l.uploadErrorTooLarge;
     if (s.contains('HTTP 502') ||
         s.contains('HTTP 503') ||
         s.contains('HTTP 504')) {
-      return 'Sunucu şu an meşgul, lütfen tekrar deneyin.';
+      return l.uploadErrorServerBusy;
     }
     if (s.contains('HTTP 401') || s.contains('HTTP 403')) {
-      return 'Oturum süreniz dolmuş, lütfen tekrar giriş yapın.';
+      return l.uploadErrorAuthExpired;
     }
     if (e is NetworkException) {
-      return AppLocalizations.of(context)!.errorNetworkMessage;
+      return l.errorNetworkMessage;
     }
-    return 'Video yüklenemedi, lütfen tekrar deneyin.';
+    return l.uploadErrorGeneric;
   }
 
   /// 403/429 hata kodlarını kullanıcı dostu mesaja çevirir.

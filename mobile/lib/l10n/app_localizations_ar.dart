@@ -5485,4 +5485,37 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get createNeedAllFields =>
       'يرجى ملء جميع الحقول المطلوبة لتوقع الذكاء الاصطناعي.';
+
+  @override
+  String get uploadErrorTooLarge =>
+      'ملف الفيديو كبير جداً. يرجى محاولة فيديو أقصر.';
+
+  @override
+  String get uploadErrorServerBusy =>
+      'الخادم مشغول حالياً، يرجى المحاولة مرة أخرى لاحقاً.';
+
+  @override
+  String get uploadErrorAuthExpired =>
+      'انتهت صلاحية جلستك، يرجى تسجيل الدخول مرة أخرى.';
+
+  @override
+  String get uploadErrorGeneric =>
+      'تعذر تحميل الوسائط، يرجى المحاولة مرة أخرى.';
+
+  @override
+  String apiErrorInsufficientFundsPro(int cost) {
+    return 'لقد وصلت إلى حد الذكاء الاصطناعي المجاني لهذا الشهر. تحتاج إلى $cost TUCi على الأقل في حسابك للمتابعة.';
+  }
+
+  @override
+  String apiErrorInsufficientFundsStd(int cost) {
+    return 'رصيد TUCi غير كافٍ. تحتاج إلى $cost TUCi على الأقل في حسابك لهذا الإجراء.';
+  }
+
+  @override
+  String get apiErrorAiServiceBusy =>
+      'خدمة الذكاء الاصطناعي مشغولة حالياً. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get apiErrorAiServiceTimeout => 'انتهت مهلة خدمة الذكاء الاصطناعي.';
 }

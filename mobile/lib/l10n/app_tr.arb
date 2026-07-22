@@ -2970,5 +2970,27 @@
   "validRequiredLocation": "Lütfen konum seçiniz",
   "validRequiredPrice": "Lütfen fiyat giriniz",
   "validRequiredCondition": "Lütfen ürün durumu seçiniz",
-  "createNeedAllFields": "Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun."
+  "createNeedAllFields": "Lütfen AI tahmini için tüm alanları (Konum, Durum, Fiyat) doldurun.",
+  "uploadErrorTooLarge": "Video dosyası çok büyük. Lütfen daha kısa bir video deneyin.",
+  "uploadErrorServerBusy": "Sunucu şu an meşgul, lütfen daha sonra tekrar deneyin.",
+  "uploadErrorAuthExpired": "Oturum süreniz doldu, lütfen tekrar giriş yapın.",
+  "uploadErrorGeneric": "Medya yüklenemedi, lütfen tekrar deneyin.",
+  "apiErrorInsufficientFundsPro": "Bu ayki ücretsiz yapay zeka limitinizi doldurdunuz. Devam etmek için hesabınızda en az {cost} TUCi bulunmalıdır.",
+  "@apiErrorInsufficientFundsPro": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorInsufficientFundsStd": "Yetersiz TUCi bakiyesi. Bu işlem için hesabınızda en az {cost} TUCi bulunmalıdır.",
+  "@apiErrorInsufficientFundsStd": {
+    "placeholders": {
+      "cost": {
+        "type": "int"
+      }
+    }
+  },
+  "apiErrorAiServiceBusy": "Yapay zeka servisi şu anda meşgul. Lütfen tekrar deneyin.",
+  "apiErrorAiServiceTimeout": "Yapay zeka servisi zaman aşımına uğradı."
 }

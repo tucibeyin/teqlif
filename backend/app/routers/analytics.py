@@ -552,14 +552,13 @@ async def price_estimate(
         if ai_used >= AI_PRICE_LIMIT_PRO and current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
             raise HTTPException(
                 status_code=402,
-                detail=f"Bu ay {AI_PRICE_LIMIT_PRO} ücretsiz hakkınızı kullandınız. "
-                       f"Ücretli devam için {AI_PRICE_ESTIMATE_COST} TUCi gerekmekte, bakiyeniz: {current_user.tuci_balance} TUCi.",
+                detail="INSUFFICIENT_FUNDS_PRO",
             )
     else:
         if current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
             raise HTTPException(
                 status_code=402,
-                detail=f"Yetersiz TUCi bakiyesi. Gerekli: {AI_PRICE_ESTIMATE_COST} TUCi, Mevcut: {current_user.tuci_balance} TUCi",
+                detail="INSUFFICIENT_FUNDS_STD",
             )
 
     from app.services.ml.ml_service import generate_embedding
@@ -583,13 +582,13 @@ async def price_estimate(
         # FastAPI'nin bloklanmaması için işlemi ARQ worker'a atıyoruz.
         job = await request.app.state.arq_pool.enqueue_job("generate_embedding_task", combined)
         if not job:
-            raise HTTPException(status_code=500, detail="Yapay zeka servisi şu anda meşgul. Lütfen tekrar deneyin.")
+            raise HTTPException(status_code=500, detail="AI_SERVICE_BUSY")
         
         try:
             # Worker'dan sonucu en fazla 15 saniye bekliyoruz.
             embedding: list[float] = await job.result(timeout=15.0)
         except Exception:
-            raise HTTPException(status_code=504, detail="Yapay zeka servisi zaman aşımına uğradı.")
+            raise HTTPException(status_code=504, detail="AI_SERVICE_TIMEOUT")
         
         emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
         await redis.setex(emb_cache_key, 7 * 24 * 3600, emb_str)  # 7 gün cache

@@ -574,17 +574,14 @@ async def generate_description(
             logger.warning(f"[API] User {current_user.id} has insufficient TUCi (PRO limit reached).")
             raise HTTPException(
                 status_code=402,
-                detail=f"Bu ay {AI_DESC_LIMIT_PRO} ücretsiz hakkınızı kullandınız. "
-                       f"Ücretli devam için {AI_DESC_COST} TUCi gerekmekte, "
-                       f"bakiyeniz: {current_user.tuci_balance} TUCi.",
+                detail="INSUFFICIENT_FUNDS_PRO",
             )
     else:
         if current_user.tuci_balance < AI_DESC_COST:
             logger.warning(f"[API] User {current_user.id} has insufficient TUCi.")
             raise HTTPException(
                 status_code=402,
-                detail=f"Yetersiz TUCi bakiyesi. Gerekli: {AI_DESC_COST} TUCi, "
-                       f"Mevcut: {current_user.tuci_balance} TUCi.",
+                detail="INSUFFICIENT_FUNDS_STD",
             )
 
     async def event_generator():
