@@ -232,11 +232,11 @@ async def test_gemini(key: str) -> bool:
 
     # ── Test 1: API key format ────────────────────────────────────────────────
     print(f"\n  Test 1: API key format kontrolü")
-    if key.startswith("AIza") and len(key) > 20:
+    # Google API key formatları: eski → AIza..., yeni → AQ.Ab8R...
+    if len(key) > 20:
         ok(f"Format geçerli ({len(key)} karakter)")
     else:
-        fail(f"Beklenmeyen format — 'AIza...' ile başlamalı (mevcut: '{key[:8]}...')")
-        warn("Gemini testleri devam ediyor ama başarısız olabilir")
+        fail(f"Key çok kısa ({len(key)} karakter) — Google AI Studio'dan tekrar al")
         all_passed = False
 
     # ── Test 2: Model listesi (auth + network) ────────────────────────────────
