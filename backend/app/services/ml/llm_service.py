@@ -1,9 +1,9 @@
 """
-Groq (llama-3.3-70b) primary / Ollama (Qwen2.5:3b) fallback LLM Servisi
+Groq (llama-3.3-70b) primary / Gemini (gemini-2.0-flash) fallback LLM Servisi
 
 Provider seçimi:
   1. Groq   — API key var ve günlük kota dolmamışsa (14,000 req/gün)
-  2. Ollama — Groq key yok, kota dolmuş veya hata
+  2. Gemini — Groq key yok, kota dolmuş veya hata (1,000 req/gün güvenli marj)
 
 Her iki path da aynı sentence-boundary streaming + Python-side suffix kullanır.
 """
@@ -21,19 +21,15 @@ from app.utils.redis_client import get_redis
 logger = logging.getLogger(__name__)
 
 # ── Sağlayıcı ayarları ────────────────────────────────────────────────────────
-OLLAMA_API_URL    = "http://localhost:11434/api/generate"
-OLLAMA_MODEL      = "qwen2.5:3b"
 GROQ_API_URL      = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL        = "llama-3.3-70b-versatile"
-_GROQ_DAILY_LIMIT = 14_000  # free tier: 14,400/gün, güvenli marjla
+_GROQ_DAILY_LIMIT = 14_000
 
-_STOP_WORDS = [
-    "TL", " TL", "₺", "lira", " lira",
-    "elden", "kargo", "Kargo",
-    "Fiyat", "fiyat", "Ücret", "ücret",
-]
-# Groq max 4 stop word kabul eder
-_GROQ_STOP_WORDS = ["TL", "₺", "elden", "kargo"]
+GEMINI_API_URL    = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent"
+_GEMINI_DAILY_LIMIT = 1_000  # günlük güvenli marj (free tier: 1500 req/gün)
+
+# Groq max 4 stop word kabul eder; Gemini 5'e kadar
+_STOP_WORDS = ["TL", "₺", "elden", "kargo"]
 
 # ── Fiyat + lokasyon şablonları ───────────────────────────────────────────────
 _PRICE_ONLY: list[str] = [
@@ -75,134 +71,136 @@ _CONDITION_LABELS: dict[str, str] = {
 }
 
 # ── Condition-aware few-shot örnekler ─────────────────────────────────────────
+# ex1 → ürün durumu/özellikleri paragrafı örneği
+# ex2 → satış nedeni/alıcıya not paragrafı örneği
 _FEW_SHOT: dict[tuple[str, str], tuple[str, str]] = {
     ("elektronik", "new"): (
-        "Hiç açmadım, kutusunda duruyor, tüm aksesuarları tam. Hediye almıştım ama ihtiyacım olmadı, alıcısına hayırlı olsun.",
-        "3 yıl kullandım, ekranında hiç çizik yok, bataryası sağlıklı. Orijinal kutusu mevcut, ihtiyaçtan satılık.",
+        "Hiç açmadım, kutusunda duruyor, tüm aksesuarları tam. Ekranında çizik yok, fabrika ayarlarında.",
+        "Hediye almıştım ama ihtiyacım olmadı. Alıcısına hayırlı olsun.",
     ),
     ("elektronik", "like_new"): (
-        "Çok az kullandım, ekranında hiç çizik yok, bataryası gayet sağlıklı. Kutusunu ve şarj adaptörünü sakladım. İhtiyaçtan satılık.",
-        "Ekrana temperli cam yapıştırdım, kılıfla taşıdım, sıfır gibi duruyor. Almak isteyenler ulaşabilir.",
+        "Çok az kullandım, ekranında hiç çizik yok, bataryası gayet sağlıklı. Kutusunu ve şarj adaptörünü sakladım.",
+        "İhtiyaçtan satıyorum. Almak isteyenler ulaşabilir.",
     ),
     ("elektronik", "used"): (
         "2 yıl kullandım, ekranda küçük çizikler var ama çalışması tam. Bataryası hâlâ iyi, masraf çıkarmaz.",
-        "Eski telefon, genel olarak temiz kullandım. Ekranda hafif kullanım izleri var, fiyata yansıttım.",
+        "Yeni telefon aldığım için satıyorum. Fiyata yansıttım.",
     ),
     ("elektronik", "damaged"): (
-        "Ekran kırık, kamera çalışıyor ama dokunmatik kısmen hassas değil. Hasarı olduğu gibi söyledim, parça olarak da değerlendirilebilir.",
-        "Bataryası şişmiş, açılıyor ama uzun süre dayanmıyor. Fiyatı düşük tuttum, onarcak birine gider.",
+        "Ekran kırık, kamera çalışıyor ama dokunmatik kısmen hassas değil. Hasarı olduğu gibi söylüyorum.",
+        "Parça olarak da değerlendirilebilir. Ciddi alıcı beklerim.",
     ),
     ("vasita", "new"): (
-        "0 km, hiç binmedim, depolama amaçlı aldım. Tüm belgeleri ve garantisi mevcut.",
-        "Sıfır kilometre, fabrika ayarlarında, anahtar teslim satıyorum.",
+        "0 km, hiç binmedim, fabrika ayarlarında. Tüm belgeleri ve garantisi mevcut.",
+        "Depolama amaçlı almıştım, ihtiyacım kalmadı. Anahtar teslim satıyorum.",
     ),
     ("vasita", "like_new"): (
         "2021 model, 15.000 km'de, motoru ve şanzımanı sorunsuz, kazasız. Bakımları zamanında yapıldı.",
-        "Az kullanılmış, temiz bir araç. Kaporta hasarı yok, muayenesi yeni.",
+        "İhtiyaçtan satıyorum. Kaporta hasarı yok, muayenesi yeni.",
     ),
     ("vasita", "used"): (
-        "2018 model, 95.000 km'de, motor ve şanzıman sağlam. Bakım geçmişi bende mevcut, ihtiyaçtan satılık.",
-        "Kullanılmış ama temiz araç. Küçük kaporta çizikleri var, fiyata yansıttım.",
+        "2018 model, 95.000 km'de, motor ve şanzıman sağlam. Bakım geçmişi bende mevcut.",
+        "İhtiyaçtan satılık. Küçük kaporta çizikleri var, fiyata yansıttım.",
     ),
     ("vasita", "damaged"): (
-        "Kaporta hasarı var, motor çalışıyor fakat klima gaz istiyor. Her şeyi olduğu gibi söyledim, ciddi alıcı beklerim.",
-        "Motor çalışıyor ama şanzımanda sorun var. Hasarını söyledim, fiyata yansıttım.",
+        "Kaporta hasarı var, motor çalışıyor fakat klima gaz istiyor. Her şeyi olduğu gibi söylüyorum.",
+        "Ciddi alıcı beklerim. Fiyatı hasara göre düşük tuttum.",
     ),
     ("emlak", "new"): (
         "Sıfır daire, hiç oturulmadı, tapu hazır. İnşaat firmasından alındı, masrafsız teslim.",
-        "Yeni bina, 2024 yapımı, asansörlü. Mutfak ve banyosu sıfır, hemen taşınılabilir.",
+        "Yeni bina, 2024 yapımı, asansörlü. Hemen taşınılabilir.",
     ),
     ("emlak", "like_new"): (
-        "3 yıllık bina, 2+1, 80 m². Temiz kullandık, hiç tadilat yapmadan taşınabilirsiniz. Krediye uygun.",
-        "Az kullanılmış, iç mekanı temiz, masraf gerektirmiyor. Tapu bende mevcut.",
+        "3 yıllık bina, 2+1, 80 m². Temiz kullandık, hiç tadilat yapmadan taşınabilirsiniz.",
+        "Şehir dışına taşındığımız için satıyoruz. Krediye uygun, tapu bende mevcut.",
     ),
     ("emlak", "used"): (
-        "Eski bina ama sağlam yapı, 3+1, 110 m². Mutfak yenilendi, banyo eski ama çalışıyor. Fiyata yansıttım.",
-        "Satılık daire, tadilat istiyor ama fiyatı uygun. Tapu temiz, kredi kullanılabilir.",
+        "Eski bina ama sağlam yapı, 3+1, 110 m². Mutfak yenilendi, banyo eski ama çalışıyor.",
+        "İhtiyaçtan satılık. Fiyatı tadilat ihtiyacına göre düşük tuttum.",
     ),
     ("emlak", "damaged"): (
-        "Depremden etkilenmiş, hasar tespit raporu var. Arsası değerli, üstü yıkılarak yeniden yapılabilir.",
-        "Su basmış, zemin ve duvarlar rutubetli. Tadilat gerekiyor, fiyatı buna göre düşük tuttum.",
+        "Depremden etkilenmiş, hasar tespit raporu var. Arsası değerli.",
+        "Üstü yıkılarak yeniden yapılabilir. Fiyatı buna göre ayarladım.",
     ),
     ("giyim", "new"): (
-        "Hiç giymeden satıyorum, etiketi üzerinde. Hediye almıştım ama bedenim uymadı.",
-        "Sıfır, kutusunda duruyor. Beğendim ama bir daha giymeyeceğimi fark ettim.",
+        "Hiç giymeden satıyorum, etiketi üzerinde. Marka ürün, tertemiz.",
+        "Hediye almıştım ama bedenim uymadı. Alıcısına hayırlı olsun.",
     ),
     ("giyim", "like_new"): (
-        "1-2 kere giydim, marka ürün, tertemiz. Bedenim değişti, bu yüzden satıyorum.",
-        "Çok az kullandım, yırtık veya leke yok. Tarz değişikliğinden satıyorum.",
+        "1-2 kere giydim, yırtık veya leke yok, sıfır gibi duruyor.",
+        "Bedenim değişti, bu yüzden satıyorum. Tarz değişikliğinden de olabilir.",
     ),
     ("giyim", "used"): (
-        "Temiz kullandım, yırtık yok ama hafif solma var. Fiyata yansıttım.",
-        "Birkaç sezon giydim, genel olarak temiz. Küçük kullanım izleri var, fiyata göre ayarladım.",
+        "Temiz kullandım, yırtık yok ama hafif solma var.",
+        "Birkaç sezon giydim, ihtiyaçtan satıyorum. Fiyata yansıttım.",
     ),
     ("giyim", "damaged"): (
-        "Küçük yırtık var, dikişle onarılabilir. Hasarını söyledim, fiyatı düşük tutuyorum.",
-        "Leke var, temizleyemedim. Dürüstçe söyledim, fiyatı buna göre düşük.",
+        "Küçük yırtık var, dikişle onarılabilir. Leke yoktur.",
+        "Hasarını söyledim, fiyatı düşük tutuyorum. Alıcısına hayırlı olsun.",
     ),
     ("ev", "new"): (
-        "Sıfır, hiç kullanmadım. Taşınırken aldım ama o odaya sığmadı, kutusunda duruyor.",
-        "Açılmamış paketinde, hasarsız, tüm parçaları tam.",
+        "Sıfır, hiç kullanmadım, açılmamış paketinde. Tüm parçaları tam.",
+        "Taşınırken aldım ama o odaya sığmadı. İhtiyaç fazlası.",
     ),
     ("ev", "like_new"): (
-        "Çok az kullandım, çizik veya hasar yok, sıfır gibi. Taşınma nedeniyle satıyorum.",
-        "1-2 kere kullandım, tertemiz, yeni gibi. Fazla olduğu için satıyorum.",
+        "Çok az kullandım, çizik veya hasar yok, sıfır gibi duruyor.",
+        "Taşınma nedeniyle satıyorum. Almak isteyene hayırlı olsun.",
     ),
     ("ev", "used"): (
-        "2 yıl kullandım, çalışması tam, küçük çizikler var. Taşınma nedeniyle satıyorum.",
-        "Kullanılmış ama sağlam, masraf çıkarmaz. Fiyata yansıttım.",
+        "2 yıl kullandım, çalışması tam, küçük çizikler var.",
+        "Taşınma nedeniyle satıyorum. Masraf çıkarmaz.",
     ),
     ("ev", "damaged"): (
-        "Bir köşesi kırık ama işlevselliği etkilemiyor. Hasarını söyledim, fiyatı uygun.",
-        "Çalışıyor ama yüzeyde hasar var. Fiyatı düşük tuttum.",
+        "Çalışıyor ama yüzeyde hasar var. Bir köşesi kırık, işlevselliği etkilemiyor.",
+        "Hasarını söyledim, fiyatı buna göre düşük tuttum.",
     ),
     ("spor", "new"): (
-        "Hiç kullanmadım, kutusunda duruyor. Spor yapmaya başlayamamıştım, ihtiyaç fazlası.",
-        "Sıfır, tüm aksesuarları tam. Hediye almıştım, aynısı var, satıyorum.",
+        "Hiç kullanmadım, kutusunda duruyor. Tüm aksesuarları tam.",
+        "Spor yapmaya başlayamamıştım, ihtiyaç fazlası. Alıcısına hayırlı olsun.",
     ),
     ("spor", "like_new"): (
-        "Çok az kullandım, hasar yok, aksesuarları tam. Sporu bıraktığım için satıyorum.",
-        "Ayda birkaç kez kullandım, neredeyse sıfır gibi. İhtiyaçtan satılık.",
+        "Çok az kullandım, hasar yok, aksesuarları tam.",
+        "Sporu bıraktığım için satıyorum. İhtiyacı olana hayırlı olsun.",
     ),
     ("spor", "used"): (
-        "Düzenli kullandım, işlevsel ama kullanım izleri var. Masraf çıkarmaz.",
-        "Temiz kullandım, eskimiş ama sağlam çalışıyor.",
+        "Düzenli kullandım, işlevsel ama kullanım izleri var.",
+        "Yeni ekipman aldığım için satıyorum. Masraf çıkarmaz.",
     ),
     ("spor", "damaged"): (
-        "Bir parçası kırık ama tamir edilebilir. Hasarını söyledim, fiyatı buna göre düşük.",
-        "Çalışıyor ama hasar var. Kendisi onaracak birine gider.",
+        "Çalışıyor ama hasar var. Bir parçası kırık, tamir edilebilir.",
+        "Kendisi onaracak birine gider. Fiyatı buna göre düşük.",
     ),
     ("kitap", "new"): (
-        "Hiç okunmadı, yeni gibi. Almıştım ama okuyamadım.",
-        "Sıfır kitap, kapağı ve sayfaları tertemiz.",
+        "Hiç okunmadı, kapağı ve sayfaları tertemiz, yeni gibi.",
+        "Almıştım ama okuyamadım. Alıcısına iyi okumalar.",
     ),
     ("kitap", "like_new"): (
-        "Bir kere okundu, kapağı ve sayfaları tertemiz. Rafta yer kaplıyor.",
-        "Az okunmuş, not yok, çizik yok. İyi okumalar.",
+        "Bir kere okundu, kapağı ve sayfaları tertemiz, not yok.",
+        "Rafta yer kaplıyor, satıyorum. İyi okumalar.",
     ),
     ("kitap", "used"): (
         "Okunmuş, birkaç sayfada altı çizili notlar var. Kapağı sağlam.",
-        "Eski kitap, sayfaları sararmış ama okunabilir durumda.",
+        "Kitaplığımı düzenliyorum, ihtiyaçtan satıyorum.",
     ),
     ("kitap", "damaged"): (
-        "Kapağı yırtılmış ama sayfalar tam. Fiyatı düşük tutuyorum.",
-        "Su görmüş, sayfalar dalgalı ama okunuyor. Hasarını söyledim.",
+        "Kapağı yırtılmış ama sayfalar tam, okunabilir durumda.",
+        "Hasarını söyledim, fiyatı düşük tutuyorum.",
     ),
     ("diger", "new"): (
-        "Sıfır, hiç kullanmadım. İhtiyaç fazlası, alıcısına hayırlı olsun.",
-        "Kullanılmamış, tüm parçaları tam, tertemiz.",
+        "Sıfır, hiç kullanmadım, tüm parçaları tam.",
+        "İhtiyaç fazlası, alıcısına hayırlı olsun.",
     ),
     ("diger", "like_new"): (
-        "Az kullandım, hasarsız ve temiz. İhtiyacım kalmadığı için satıyorum.",
-        "Neredeyse sıfır gibi, iyi durumda. Alıcısına hayırlı olsun.",
+        "Az kullandım, hasarsız ve temiz, sıfır gibi duruyor.",
+        "İhtiyacım kalmadığı için satıyorum.",
     ),
     ("diger", "used"): (
-        "Temiz kullandım, iyi durumda, masraf çıkarmaz. İhtiyaçtan satılık.",
-        "Kullanılmış ama sağlam. Alıcısına hayırlı olsun.",
+        "Temiz kullandım, iyi durumda, masraf çıkarmaz.",
+        "İhtiyaçtan satılık. Alıcısına hayırlı olsun.",
     ),
     ("diger", "damaged"): (
-        "Hasarlı, olduğu gibi söyledim. Fiyatı buna göre düşük tuttum.",
-        "Arızalı, onarcak birine gider. Dürüstçe belirtiyorum.",
+        "Hasarlı, olduğu gibi söylüyorum.",
+        "Fiyatı buna göre düşük tuttum. Onarcak birine gider.",
     ),
 }
 
@@ -244,13 +242,16 @@ def _build_prompt(title: str, category: str, condition: Optional[str]) -> tuple[
 
     system = (
         "Türkiye'de ikinci el ilan platformunda bireysel satıcısın. "
-        "Sana ürün bilgisi verilecek, sen sadece kısa ilan metnini yazacaksın.\n"
+        "Sana ürün bilgisi verilecek, sen sadece ilan metnini yazacaksın.\n"
         "- Birinci tekil şahısla yaz: 'kullandım', 'satıyorum', 'aldım' gibi.\n"
+        "- TAM OLARAK İKİ PARAGRAF yaz, aralarına boş satır bırak.\n"
+        "  1. paragraf: ürünün durumu ve özellikleri (2-3 cümle).\n"
+        "  2. paragraf: neden sattığın veya alıcıya kısa not (1-2 cümle).\n"
         "- Fiyat ve teslimat bilgisi YAZMA.\n"
         "- Özür veya açıklama cümlesi ekleme, direkt metni yaz.\n"
-        "- 3-4 cümle, sade Türkçe.\n\n"
-        f"Örnek:\n\"{ex1}\"\n\n"
-        f"Örnek:\n\"{ex2}\""
+        "- Sade Türkçe, tırnak işareti kullanma.\n\n"
+        f"Örnek 1. paragraf:\n{ex1}\n\n"
+        f"Örnek 2. paragraf:\n{ex2}"
     )
     user_lines = [
         "Şu ürün için ilan metni yaz:",
@@ -263,20 +264,19 @@ def _build_prompt(title: str, category: str, condition: Optional[str]) -> tuple[
 
 
 # ── Kota kontrolü ────────────────────────────────────────────────────────────
-async def _groq_quota_ok() -> bool:
-    """True dönerse Groq'u kullan; Redis hatasında da True (Groq'u dene)."""
+async def _quota_ok(provider: str, daily_limit: int) -> bool:
     try:
         redis = await get_redis()
-        key = f"groq:calls:{date.today().isoformat()}"
+        key = f"{provider}:calls:{date.today().isoformat()}"
         count = await redis.incr(key)
         if count == 1:
             await redis.expire(key, 86_400)
-        if count > _GROQ_DAILY_LIMIT:
-            logger.warning("[LLM] Groq günlük kota doldu (%d req), Ollama'ya geçiliyor", count)
+        if count > daily_limit:
+            logger.warning("[LLM] %s günlük kota doldu (%d req)", provider, count)
             return False
         return True
     except Exception as exc:
-        logger.error("[LLM] Redis kota kontrolü başarısız: %s — Groq deneniyor", exc)
+        logger.error("[LLM] Redis kota kontrolü başarısız (%s): %s — deneniyor", provider, exc)
         return True
 
 
@@ -293,8 +293,8 @@ async def _tokens_groq(system: str, user: str) -> AsyncGenerator[str, None]:
             {"role": "user", "content": user},
         ],
         "temperature": 0.5,
-        "max_tokens": 150,
-        "stop": _GROQ_STOP_WORDS,
+        "max_tokens": 250,
+        "stop": _STOP_WORDS,
         "stream": True,
     }
     async with httpx.AsyncClient() as client:
@@ -318,36 +318,42 @@ async def _tokens_groq(system: str, user: str) -> AsyncGenerator[str, None]:
                     continue
 
 
-async def _tokens_ollama(system: str, user: str) -> AsyncGenerator[str, None]:
+async def _tokens_gemini(system: str, user: str) -> AsyncGenerator[str, None]:
     payload = {
-        "model": OLLAMA_MODEL,
-        "system": system,
-        "prompt": user,
-        "stream": True,
-        "keep_alive": "10m",
-        "options": {
+        "system_instruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": user}]}],
+        "generationConfig": {
             "temperature": 0.5,
-            "top_p": 0.85,
-            "num_predict": 150,
-            "num_thread": 4,
-            "stop": _STOP_WORDS,
+            "maxOutputTokens": 250,
+            "stopSequences": _STOP_WORDS,
         },
     }
     async with httpx.AsyncClient() as client:
         async with client.stream(
-            "POST", OLLAMA_API_URL, json=payload, timeout=120.0
+            "POST",
+            GEMINI_API_URL,
+            params={"key": settings.gemini_api_key, "alt": "sse"},
+            json=payload,
+            timeout=60.0,
         ) as resp:
             if resp.status_code != 200:
-                raise RuntimeError(f"Ollama HTTP {resp.status_code}")
+                body = await resp.aread()
+                raise RuntimeError(f"Gemini HTTP {resp.status_code}: {body[:200]}")
             async for line in resp.aiter_lines():
-                if not line:
+                if not line.startswith("data: "):
                     continue
+                raw = line[6:].strip()
                 try:
-                    data = json.loads(line)
-                    token = data.get("response", "")
-                    if token:
-                        yield token
-                except json.JSONDecodeError:
+                    data = json.loads(raw)
+                    text = (
+                        data.get("candidates", [{}])[0]
+                            .get("content", {})
+                            .get("parts", [{}])[0]
+                            .get("text", "")
+                    )
+                    if text:
+                        yield text
+                except (json.JSONDecodeError, KeyError, IndexError):
                     continue
 
 
@@ -382,7 +388,7 @@ async def _sentence_stream(
 
     suffix = _build_suffix(price, location)
     if suffix:
-        yield " "
+        yield "\n\n"
         yield suffix
 
     logger.info("[LLM] Tamamlandı | %s | %d char | suffix=%r", provider, total_chars, suffix or "─")
@@ -397,13 +403,13 @@ async def generate_listing_description_stream(
     location: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
-    Groq primary → Ollama fallback.
+    Groq primary → Gemini fallback.
     Sentence-boundary streaming: her cümleyi nokta/ünlem gelince flush eder.
     """
     system_prompt, user_prompt = _build_prompt(title, category, condition)
 
     # ── Groq path ─────────────────────────────────────────────────────────────
-    if settings.groq_api_key and await _groq_quota_ok():
+    if settings.groq_api_key and await _quota_ok("groq", _GROQ_DAILY_LIMIT):
         try:
             logger.info("[LLM] Groq | title=%r", title[:60])
             async for chunk in _sentence_stream(
@@ -412,15 +418,19 @@ async def generate_listing_description_stream(
                 yield chunk
             return
         except Exception as exc:
-            logger.error("[LLM] Groq başarısız, Ollama'ya fallback: %s", exc)
+            logger.error("[LLM] Groq başarısız, Gemini'ye fallback: %s", exc)
 
-    # ── Ollama fallback ────────────────────────────────────────────────────────
-    try:
-        logger.info("[LLM] Ollama | title=%r", title[:60])
-        async for chunk in _sentence_stream(
-            _tokens_ollama(system_prompt, user_prompt), price, location, "ollama"
-        ):
-            yield chunk
-    except Exception as exc:
-        logger.error("[LLM] Ollama hatası: %s", exc)
-        yield "__LLM_ERROR__"
+    # ── Gemini fallback ────────────────────────────────────────────────────────
+    if settings.gemini_api_key and await _quota_ok("gemini", _GEMINI_DAILY_LIMIT):
+        try:
+            logger.info("[LLM] Gemini | title=%r", title[:60])
+            async for chunk in _sentence_stream(
+                _tokens_gemini(system_prompt, user_prompt), price, location, "gemini"
+            ):
+                yield chunk
+            return
+        except Exception as exc:
+            logger.error("[LLM] Gemini başarısız: %s", exc)
+
+    logger.error("[LLM] Tüm providerlar başarısız | title=%r", title[:60])
+    yield "__LLM_ERROR__"
