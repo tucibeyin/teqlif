@@ -27,6 +27,8 @@ def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
         "4. En fazla 3-4 cümle kur. Samimi ol. 'Alıcısına hayırlı olsun', 'Pazarlık payı vardır', 'İhtiyaçtan satılık' gibi gerçekçi Türk satıcı jargonları kullan.\n"
         "5. Cümleleri çok karmaşık kurma, günlük konuşma dilini kullan.\n"
         "6. ASLA 'sepetimize eklendi', 'mağazamızda', 'stoklarımızda' gibi e-ticaret/kurumsal firma ağzı kullanma. Sen bireysel bir satıcısın.\n"
+        "7. ASLA 'müşteriler' veya 'müşteri' kelimesini kullanma. Bunun yerine 'alıcı' veya 'yeni sahibi' de.\n"
+        "8. Eğer ürün durumu (Condition) ile başlık çelişiyorsa (Örn: Başlıkta 'Temiz' yazıyor ama durum 'Hasarlı' ise), HER ZAMAN ürün durumunu (Condition) baz al ve hasarı/arızayı dürüstçe belirt.\n"
     )
     
     cat_hints = []
