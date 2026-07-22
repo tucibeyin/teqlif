@@ -2959,7 +2959,7 @@
   "callHistoryStatusCancelled": "Отменено",
   "walletTxnChurnAirdrop": "Подарок за возвращение",
   "aiDescButton": "Написать описание с ИИ",
-  "aiDescGenerating": "Генерация описания...",
+  "aiDescGenerating": "ИИ пишет ваше описание...",
   "aiDescError": "Не удалось создать описание. Попробуйте снова.",
   "aiDescUnavailable": "Сервис AI-описаний временно недоступен.",
   "fieldCondition": "Состояние товара",
@@ -2967,5 +2967,6 @@
   "conditionNew": "Новый",
   "conditionLikeNew": "Почти новый",
   "conditionUsed": "Б/у",
-  "conditionDamaged": "Повреждён"
+  "conditionDamaged": "Повреждён",
+  "aiDescStreamError": "Соединение разорвано, попробуйте еще раз."
 }

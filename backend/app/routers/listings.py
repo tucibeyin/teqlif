@@ -550,6 +550,10 @@ async def ai_desc_credits(current_user: User = Depends(get_current_user)):
     }
 
 
+from fastapi.responses import StreamingResponse
+import json
+from app.services.ml.llm_service import generate_listing_description_stream
+
 @router.post("/generate-description")
 @limiter.limit("10/minute")
 async def generate_description(
@@ -559,7 +563,7 @@ async def generate_description(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Qwen2.5-1.5B ile ilan açıklaması üretir.
+    Ollama (Qwen2.5:3b) ile ilan açıklaması üretir ve metni stream eder (SSE).
     PRO: ayda 6 ücretsiz, sonrası 5 TUCi. Standart: her seferinde 5 TUCi.
     """
     # ── TUCi / PRO kredi ön kontrolü ──────────────────────────────────────────
@@ -580,65 +584,49 @@ async def generate_description(
                        f"Mevcut: {current_user.tuci_balance} TUCi.",
             )
 
-    pool = get_pool()
-    if not pool:
-        raise HTTPException(status_code=503, detail="İş kuyruğu hazır değil.")
+    async def event_generator():
+        text_generated = False
+        try:
+            async for chunk in generate_listing_description_stream(
+                title=body.title,
+                category=body.category,
+                condition=body.condition,
+                price=body.price,
+                location=body.location,
+            ):
+                text_generated = True
+                # SSE format (JSON payload within data event)
+                yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+            
+            if text_generated:
+                # Üretim bittikten sonra TUCi kesintisi yap
+                tuci_spent = 0
+                if current_user.is_premium:
+                    ai_used_new = await _increment_ai_desc_atomic(current_user.id, current_user.premium_since)
+                    if ai_used_new > AI_DESC_LIMIT_PRO:
+                        await db.execute(
+                            text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                            {"cost": AI_DESC_COST, "uid": current_user.id},
+                        )
+                        db.add(TuciTransaction(user_id=current_user.id, amount=-AI_DESC_COST, transaction_type="spend_ai"))
+                        await db.commit()
+                        tuci_spent = AI_DESC_COST
+                else:
+                    await db.execute(
+                        text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
+                        {"cost": AI_DESC_COST, "uid": current_user.id},
+                    )
+                    db.add(TuciTransaction(user_id=current_user.id, amount=-AI_DESC_COST, transaction_type="spend_ai"))
+                    await db.commit()
+                    tuci_spent = AI_DESC_COST
+                
+                # Bitiş sinyali ve harcanan TUCi
+                yield f"data: {json.dumps({'done': True, 'tuci_spent': tuci_spent}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logger.error(f"[LLM] Stream generator error: {e}")
+            yield f"data: {json.dumps({'error': 'Bir hata oluştu.'}, ensure_ascii=False)}\n\n"
 
-    job = await pool.enqueue_job(
-        "generate_listing_description_task",
-        body.title,
-        body.category,
-        body.condition,
-        body.price,
-        body.location,
-    )
-    if not job:
-        raise HTTPException(status_code=503, detail="Görev kuyruğa eklenemedi.")
-
-    try:
-        result: str | None = await job.result(timeout=90.0)
-    except Exception:
-        raise HTTPException(
-            status_code=504,
-            detail="Açıklama üretimi zaman aşımına uğradı. Lütfen tekrar deneyin.",
-        )
-
-    if not result:
-        raise HTTPException(
-            status_code=500,
-            detail="Açıklama üretilemedi. Lütfen tekrar deneyin.",
-        )
-
-    # ── TUCi düş + sayaç güncelle ─────────────────────────────────────────────
-    tuci_spent = 0
-    if current_user.is_premium:
-        ai_used_new = await _increment_ai_desc_atomic(current_user.id, current_user.premium_since)
-        if ai_used_new > AI_DESC_LIMIT_PRO:
-            await db.execute(
-                text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                {"cost": AI_DESC_COST, "uid": current_user.id},
-            )
-            db.add(TuciTransaction(
-                user_id=current_user.id,
-                amount=-AI_DESC_COST,
-                transaction_type="spend_ai",
-            ))
-            await db.commit()
-            tuci_spent = AI_DESC_COST
-    else:
-        await db.execute(
-            text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-            {"cost": AI_DESC_COST, "uid": current_user.id},
-        )
-        db.add(TuciTransaction(
-            user_id=current_user.id,
-            amount=-AI_DESC_COST,
-            transaction_type="spend_ai",
-        ))
-        await db.commit()
-        tuci_spent = AI_DESC_COST
-
-    return {"description": result, "tuci_spent": tuci_spent}
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 # ── Send Mass Notification ────────────────────────────────────────────────────

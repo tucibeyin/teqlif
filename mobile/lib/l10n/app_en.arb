@@ -2994,7 +2994,7 @@
   "callHistoryStatusCancelled": "Cancelled",
   "walletTxnChurnAirdrop": "Welcome Back Airdrop",
   "aiDescButton": "Write Description with AI",
-  "aiDescGenerating": "Generating description...",
+  "aiDescGenerating": "AI is writing your description...",
   "aiDescError": "Failed to generate description. Please try again.",
   "aiDescUnavailable": "AI description service is currently unavailable.",
   "fieldCondition": "Item Condition",
@@ -3002,5 +3002,6 @@
   "conditionNew": "Brand New",
   "conditionLikeNew": "Like New",
   "conditionUsed": "Used",
-  "conditionDamaged": "Damaged"
+  "conditionDamaged": "Damaged",
+  "aiDescStreamError": "Connection lost, please try again."
 }

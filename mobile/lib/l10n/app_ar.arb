@@ -2958,7 +2958,7 @@
   "callHistoryStatusCancelled": "ألغيت",
   "walletTxnChurnAirdrop": "هدية العودة",
   "aiDescButton": "كتابة الوصف بالذكاء الاصطناعي",
-  "aiDescGenerating": "جارٍ إنشاء الوصف...",
+  "aiDescGenerating": "الذكاء الاصطناعي يكتب الوصف...",
   "aiDescError": "فشل إنشاء الوصف. حاول مجدداً.",
   "aiDescUnavailable": "خدمة وصف الذكاء الاصطناعي غير متاحة حالياً.",
   "fieldCondition": "حالة المنتج",
@@ -2966,5 +2966,6 @@
   "conditionNew": "جديد",
   "conditionLikeNew": "شبه جديد",
   "conditionUsed": "مستعمل",
-  "conditionDamaged": "تالف"
+  "conditionDamaged": "تالف",
+  "aiDescStreamError": "انقطع الاتصال، يرجى المحاولة مرة أخرى."
 }

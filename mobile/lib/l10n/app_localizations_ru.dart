@@ -5524,10 +5524,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aiDescButton => 'Написать описание с ИИ';
 
   @override
-  String get aiDescGenerating => 'Генерация описания...';
+  String get aiDescGenerating => 'ИИ пишет ваше описание...';
 
   @override
   String get aiDescError => 'Не удалось создать описание. Попробуйте снова.';
+
+  @override
+  String get aiDescStreamError => 'Соединение разорвано, попробуйте еще раз.';
 
   @override
   String get aiDescUnavailable => 'Сервис AI-описаний временно недоступен.';

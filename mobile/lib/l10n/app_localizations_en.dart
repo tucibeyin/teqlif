@@ -5473,10 +5473,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiDescButton => 'Write Description with AI';
 
   @override
-  String get aiDescGenerating => 'Generating description...';
+  String get aiDescGenerating => 'AI is writing your description...';
 
   @override
   String get aiDescError => 'Failed to generate description. Please try again.';
+
+  @override
+  String get aiDescStreamError => 'Connection lost, please try again.';
 
   @override
   String get aiDescUnavailable =>

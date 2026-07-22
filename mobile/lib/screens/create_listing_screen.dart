@@ -181,55 +181,79 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       TeqSnackBar.show(context, message: l.createNeedTitle, type: TeqSnackBarType.warning);
       return;
     }
-    setState(() => _aiDescLoading = true);
+    setState(() {
+      _aiDescLoading = true;
+      _descCtrl.text = ''; // Clear text before stream
+    });
+    
     try {
       final token = await StorageService.getToken();
       final priceRaw = _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.');
       final price = double.tryParse(priceRaw);
-      final resp = await http
-          .post(
-            Uri.parse('$kBaseUrl/listings/generate-description'),
-            headers: {
-              'Content-Type': 'application/json',
-              if (token != null) 'Authorization': 'Bearer $token',
-            },
-            body: jsonEncode({
-              'title': title,
-              'category': _selectedCategory,
-              'condition': _selectedCondition,
-              if (price != null && price > 0) 'price': price,
-              if (_selectedCity != null && _selectedCity!.isNotEmpty) 'location': _selectedCity,
-            }),
-          )
-          .timeout(const Duration(seconds: 60));
+      
+      final req = http.Request('POST', Uri.parse('$kBaseUrl/listings/generate-description'));
+      req.headers['Content-Type'] = 'application/json';
+      if (token != null) req.headers['Authorization'] = 'Bearer $token';
+      req.body = jsonEncode({
+        'title': title,
+        'category': _selectedCategory,
+        'condition': _selectedCondition,
+        if (price != null && price > 0) 'price': price,
+        if (_selectedCity != null && _selectedCity!.isNotEmpty) 'location': _selectedCity,
+      });
+
+      final client = http.Client();
+      final resp = await client.send(req).timeout(const Duration(seconds: 15)); // Connect timeout
+
       if (!mounted) return;
+
       if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final desc = data['description'] as String? ?? '';
-        final tuciSpent = (data['tuci_spent'] as num?)?.toInt() ?? 0;
-        if (desc.isNotEmpty) {
-          _descCtrl.text = desc;
+        final stream = resp.stream.transform(utf8.decoder).transform(const LineSplitter());
+        await for (final line in stream) {
+          if (!mounted) break;
+          if (line.startsWith('data: ')) {
+            final dataStr = line.substring(6);
+            try {
+              final json = jsonDecode(dataStr) as Map<String, dynamic>;
+              if (json.containsKey('error')) {
+                TeqSnackBar.show(context, message: json['error'], type: TeqSnackBarType.error);
+                break;
+              } else if (json.containsKey('text')) {
+                setState(() {
+                  _descCtrl.text += json['text'] as String;
+                });
+              } else if (json.containsKey('done') && json['done'] == true) {
+                final tuciSpent = (json['tuci_spent'] as num?)?.toInt() ?? 0;
+                if (tuciSpent > 0) {
+                  CacheService.clearData('user_wallet_data');
+                  _loadAiDescCredits();
+                  TeqSnackBar.show(context, message: l.tuciSpent(tuciSpent), type: TeqSnackBarType.success);
+                } else if (_aiDescCreditsRemaining != null && _aiDescCreditsRemaining! > 0) {
+                  setState(() => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
+                }
+              }
+            } catch (_) {}
+          }
+        }
+      } else {
+        final errBody = await resp.stream.bytesToString();
+        if (!mounted) return;
+        if (resp.statusCode == 402) {
+          try {
+             final detail = (jsonDecode(errBody) as Map<String, dynamic>)['detail'] as String? ?? l.aiDescError;
+             TeqSnackBar.show(context, message: detail, type: TeqSnackBarType.error);
+          } catch (_) {
+             TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
+          }
+        } else if (resp.statusCode == 503) {
+          TeqSnackBar.show(context, message: l.aiDescUnavailable, type: TeqSnackBarType.warning);
         } else {
           TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
         }
-        if (tuciSpent > 0) {
-          CacheService.clearData('user_wallet_data');
-          _loadAiDescCredits();
-          TeqSnackBar.show(context, message: l.tuciSpent(tuciSpent), type: TeqSnackBarType.success);
-        } else if (_aiDescCreditsRemaining != null && _aiDescCreditsRemaining! > 0) {
-          setState(() => _aiDescCreditsRemaining = _aiDescCreditsRemaining! - 1);
-        }
-      } else if (resp.statusCode == 402) {
-        final detail = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] as String? ?? l.aiDescError;
-        TeqSnackBar.show(context, message: detail, type: TeqSnackBarType.error);
-      } else if (resp.statusCode == 503) {
-        TeqSnackBar.show(context, message: l.aiDescUnavailable, type: TeqSnackBarType.warning);
-      } else {
-        TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
       }
     } catch (_) {
       if (!mounted) return;
-      TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
+      TeqSnackBar.show(context, message: l.aiDescStreamError, type: TeqSnackBarType.error);
     } finally {
       if (mounted) setState(() => _aiDescLoading = false);
     }

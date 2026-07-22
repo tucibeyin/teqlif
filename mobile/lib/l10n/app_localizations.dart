@@ -9855,7 +9855,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiDescGenerating.
   ///
   /// In tr, this message translates to:
-  /// **'Açıklama oluşturuluyor...'**
+  /// **'Yapay Zeka metni yazıyor...'**
   String get aiDescGenerating;
 
   /// No description provided for @aiDescError.
@@ -9863,6 +9863,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Açıklama oluşturulamadı. Tekrar deneyin.'**
   String get aiDescError;
+
+  /// No description provided for @aiDescStreamError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bağlantı koptu, tekrar deneyin.'**
+  String get aiDescStreamError;
 
   /// No description provided for @aiDescUnavailable.
   ///

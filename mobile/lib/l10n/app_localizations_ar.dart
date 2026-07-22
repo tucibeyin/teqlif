@@ -5444,10 +5444,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aiDescButton => 'كتابة الوصف بالذكاء الاصطناعي';
 
   @override
-  String get aiDescGenerating => 'جارٍ إنشاء الوصف...';
+  String get aiDescGenerating => 'الذكاء الاصطناعي يكتب الوصف...';
 
   @override
   String get aiDescError => 'فشل إنشاء الوصف. حاول مجدداً.';
+
+  @override
+  String get aiDescStreamError => 'انقطع الاتصال، يرجى المحاولة مرة أخرى.';
 
   @override
   String get aiDescUnavailable => 'خدمة وصف الذكاء الاصطناعي غير متاحة حالياً.';

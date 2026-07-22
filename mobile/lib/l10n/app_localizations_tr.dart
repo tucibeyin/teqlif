@@ -5476,10 +5476,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get aiDescButton => 'AI ile Açıklama Yaz';
 
   @override
-  String get aiDescGenerating => 'Açıklama oluşturuluyor...';
+  String get aiDescGenerating => 'Yapay Zeka metni yazıyor...';
 
   @override
   String get aiDescError => 'Açıklama oluşturulamadı. Tekrar deneyin.';
+
+  @override
+  String get aiDescStreamError => 'Bağlantı koptu, tekrar deneyin.';
 
   @override
   String get aiDescUnavailable => 'AI açıklama servisi şu an aktif değil.';
