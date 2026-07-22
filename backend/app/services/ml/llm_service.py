@@ -94,7 +94,8 @@ async def generate_listing_description_stream(
         "options": {
             "temperature": 0.4,
             "top_p": 0.85,
-            "num_predict": 100
+            "num_predict": 100,
+            "num_thread": 4
         }
     }
     
