@@ -331,6 +331,8 @@ async def test_gemini(key: str) -> bool:
 
     # ── Test 4: Streaming (SSE) ───────────────────────────────────────────────
     print(f"\n  Test 4: Streaming (SSE)")
+    info("3 saniye bekleniyor (rate limit koruması)...")
+    await asyncio.sleep(3)
     stream_endpoint = f"{GEMINI_BASE}/models/{GEMINI_MODEL}:streamGenerateContent"
     try:
         chunks = []
