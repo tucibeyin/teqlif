@@ -884,25 +884,25 @@ async def compute_trending_listings_task(ctx: dict) -> None:
             rows = await db.execute(sql_text("""
                 WITH
                     recent AS (
-                        SELECT ae.item_id                                        AS listing_id,
+                        SELECT ui.item_id                                        AS listing_id,
                                COUNT(*)                                           AS cnt
-                        FROM analytics_events ae
-                        WHERE ae.item_type  = 'listing'
-                          AND ae.event_type IN ('listing_view', 'listing_like',
-                                                'listing_impression', 'detail_dwell')
-                          AND ae.created_at >= NOW() - INTERVAL '2 hours'
-                        GROUP BY ae.item_id
+                        FROM user_interactions ui
+                        WHERE ui.item_type       = 'listing'
+                          AND ui.interaction_type IN ('listing_view', 'listing_like',
+                                                      'listing_impression', 'detail_dwell')
+                          AND ui.created_at >= NOW() - INTERVAL '2 hours'
+                        GROUP BY ui.item_id
                     ),
                     prev AS (
-                        SELECT ae.item_id                                        AS listing_id,
+                        SELECT ui.item_id                                        AS listing_id,
                                COUNT(*)                                           AS cnt
-                        FROM analytics_events ae
-                        WHERE ae.item_type  = 'listing'
-                          AND ae.event_type IN ('listing_view', 'listing_like',
-                                                'listing_impression', 'detail_dwell')
-                          AND ae.created_at >= NOW() - INTERVAL '4 hours'
-                          AND ae.created_at <  NOW() - INTERVAL '2 hours'
-                        GROUP BY ae.item_id
+                        FROM user_interactions ui
+                        WHERE ui.item_type       = 'listing'
+                          AND ui.interaction_type IN ('listing_view', 'listing_like',
+                                                      'listing_impression', 'detail_dwell')
+                          AND ui.created_at >= NOW() - INTERVAL '4 hours'
+                          AND ui.created_at <  NOW() - INTERVAL '2 hours'
+                        GROUP BY ui.item_id
                     ),
                     like_recent AS (
                         SELECT listing_id, COUNT(*) AS cnt
