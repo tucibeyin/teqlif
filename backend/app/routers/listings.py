@@ -613,7 +613,9 @@ async def generate_description(
                     # Nginx proxy_read_timeout is usually 60s. We send a ping every 15s.
                     msg = await asyncio.wait_for(queue.get(), timeout=15.0)
                 except asyncio.TimeoutError:
-                    yield f"data: {json.dumps({'keep_alive': True})}\n\n"
+                    logger.info(f"[API] Sending SSE keep-alive ping for user_id={current_user.id}")
+                    # 1024 karakterlik boşluk (padding) ekleyerek inatçı proxy/buffer'ları (Cloudflare vb.) deliyoruz
+                    yield f": keep-alive {' ' * 1024}\n\n"
                     continue
 
                 if msg["type"] == "done":
