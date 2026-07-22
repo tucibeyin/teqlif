@@ -1950,6 +1950,13 @@ class AppLocalizationsRu extends AppLocalizations {
       'Анализирует рынок с помощью искусственного интеллекта, чтобы рекомендовать наиболее точную цену для вашего объявления.';
 
   @override
+  String get proCreditsAiDescName => 'AI Создание описания';
+
+  @override
+  String get proCreditsAiDescDesc =>
+      'Автоматически создаёт описание объявления из заголовка, категории и состояния товара.';
+
+  @override
   String get proCreditsReactivationDesc =>
       'Позволяет бесплатно повторно публиковать просроченные или приостановленные списки.';
 
@@ -4801,34 +4808,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aiPriceButton => 'Определить цену с помощью ИИ';
 
   @override
-  String get aiDescButton => 'Написать описание с помощью ИИ';
+  String get aiDescButton => 'Написать описание с ИИ';
 
   @override
-  String get aiDescGenerating => 'Генерация описания…';
+  String get aiDescGenerating => 'Генерация описания...';
 
   @override
-  String get aiDescError => 'Не удалось создать описание. Попробуйте ещё раз.';
+  String get aiDescError => 'Не удалось создать описание. Попробуйте снова.';
 
   @override
-  String get aiDescUnavailable => 'Сервис ИИ описания временно недоступен.';
-
-  @override
-  String get fieldCondition => 'Состояние товара';
-
-  @override
-  String get fieldConditionHint => 'Выберите состояние товара';
-
-  @override
-  String get conditionNew => 'Новый';
-
-  @override
-  String get conditionLikeNew => 'Почти новый';
-
-  @override
-  String get conditionUsed => 'Б/у';
-
-  @override
-  String get conditionDamaged => 'Повреждён';
+  String get aiDescUnavailable => 'Сервис AI-описаний временно недоступен.';
 
   @override
   String get aiCreditsLeftSuffix => 'осталось';
@@ -5542,4 +5531,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get walletTxnChurnAirdrop => 'Подарок за возвращение';
+
+  @override
+  String get fieldCondition => 'Состояние товара';
+
+  @override
+  String get fieldConditionHint => 'Выберите состояние товара';
+
+  @override
+  String get conditionNew => 'Новый';
+
+  @override
+  String get conditionLikeNew => 'Почти новый';
+
+  @override
+  String get conditionUsed => 'Б/у';
+
+  @override
+  String get conditionDamaged => 'Повреждён';
 }

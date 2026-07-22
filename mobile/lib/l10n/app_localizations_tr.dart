@@ -1928,6 +1928,13 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yapay Zeka destekli algoritma ile ilanlarınıza en doğru piyasa fiyatı analizini yapar.';
 
   @override
+  String get proCreditsAiDescName => 'AI Açıklama Yazarı';
+
+  @override
+  String get proCreditsAiDescDesc =>
+      'İlan başlığı, kategori ve durum bilgilerinizden otomatik Türkçe açıklama oluşturur.';
+
+  @override
   String get proCreditsReactivationDesc =>
       'Süresi dolmuş veya askıya alınmış ilanlarınızı ücretsiz olarak tekrar yayına almanızı sağlar.';
 
@@ -4754,34 +4761,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get aiPriceButton => 'Yapay Zeka ile Fiyat Belirle';
 
   @override
-  String get aiDescButton => 'Yapay Zeka ile Açıklama Yaz';
+  String get aiDescButton => 'AI ile Açıklama Yaz';
 
   @override
-  String get aiDescGenerating => 'Açıklama üretiliyor…';
+  String get aiDescGenerating => 'Açıklama oluşturuluyor...';
 
   @override
-  String get aiDescError => 'Açıklama üretilemedi. Lütfen tekrar deneyin.';
+  String get aiDescError => 'Açıklama oluşturulamadı. Tekrar deneyin.';
 
   @override
   String get aiDescUnavailable => 'AI açıklama servisi şu an aktif değil.';
-
-  @override
-  String get fieldCondition => 'Ürün Durumu';
-
-  @override
-  String get fieldConditionHint => 'Ürün durumunu seçiniz';
-
-  @override
-  String get conditionNew => 'Sıfır';
-
-  @override
-  String get conditionLikeNew => 'Az Kullanılmış';
-
-  @override
-  String get conditionUsed => 'İkinci El';
-
-  @override
-  String get conditionDamaged => 'Hasarlı';
 
   @override
   String get aiCreditsLeftSuffix => 'hak kaldı';
@@ -5494,4 +5483,22 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get walletTxnChurnAirdrop => 'Geri Dönüş Hediyesi';
+
+  @override
+  String get fieldCondition => 'Ürün Durumu';
+
+  @override
+  String get fieldConditionHint => 'Ürün durumunu seçiniz';
+
+  @override
+  String get conditionNew => 'Sıfır';
+
+  @override
+  String get conditionLikeNew => 'Az Kullanılmış';
+
+  @override
+  String get conditionUsed => 'İkinci El';
+
+  @override
+  String get conditionDamaged => 'Hasarlı';
 }

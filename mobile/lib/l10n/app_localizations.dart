@@ -3732,6 +3732,18 @@ abstract class AppLocalizations {
   /// **'Yapay Zeka destekli algoritma ile ilanlarınıza en doğru piyasa fiyatı analizini yapar.'**
   String get proCreditsAiDesc;
 
+  /// No description provided for @proCreditsAiDescName.
+  ///
+  /// In tr, this message translates to:
+  /// **'AI Açıklama Yazarı'**
+  String get proCreditsAiDescName;
+
+  /// No description provided for @proCreditsAiDescDesc.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlan başlığı, kategori ve durum bilgilerinizden otomatik Türkçe açıklama oluşturur.'**
+  String get proCreditsAiDescDesc;
+
   /// No description provided for @proCreditsReactivationDesc.
   ///
   /// In tr, this message translates to:
@@ -8610,24 +8622,6 @@ abstract class AppLocalizations {
   /// No description provided for @aiDescUnavailable.
   String get aiDescUnavailable;
 
-  /// No description provided for @fieldCondition.
-  String get fieldCondition;
-
-  /// No description provided for @fieldConditionHint.
-  String get fieldConditionHint;
-
-  /// No description provided for @conditionNew.
-  String get conditionNew;
-
-  /// No description provided for @conditionLikeNew.
-  String get conditionLikeNew;
-
-  /// No description provided for @conditionUsed.
-  String get conditionUsed;
-
-  /// No description provided for @conditionDamaged.
-  String get conditionDamaged;
-
   /// No description provided for @aiCreditsLeftSuffix.
   ///
   /// In tr, this message translates to:
@@ -9863,6 +9857,42 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Geri Dönüş Hediyesi'**
   String get walletTxnChurnAirdrop;
+
+  /// No description provided for @fieldCondition.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ürün Durumu'**
+  String get fieldCondition;
+
+  /// No description provided for @fieldConditionHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ürün durumunu seçiniz'**
+  String get fieldConditionHint;
+
+  /// No description provided for @conditionNew.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sıfır'**
+  String get conditionNew;
+
+  /// No description provided for @conditionLikeNew.
+  ///
+  /// In tr, this message translates to:
+  /// **'Az Kullanılmış'**
+  String get conditionLikeNew;
+
+  /// No description provided for @conditionUsed.
+  ///
+  /// In tr, this message translates to:
+  /// **'İkinci El'**
+  String get conditionUsed;
+
+  /// No description provided for @conditionDamaged.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hasarlı'**
+  String get conditionDamaged;
 }
 
 class _AppLocalizationsDelegate

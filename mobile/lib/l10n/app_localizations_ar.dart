@@ -1912,6 +1912,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'يحلل السوق باستخدام الذكاء الاصطناعي للتوصية بالتسعير الأكثر دقة لإعلانك.';
 
   @override
+  String get proCreditsAiDescName => 'كاتب وصف بالذكاء الاصطناعي';
+
+  @override
+  String get proCreditsAiDescDesc =>
+      'ينشئ وصفاً تلقائياً للإعلان من العنوان والفئة والحالة.';
+
+  @override
   String get proCreditsReactivationDesc =>
       'يسمح لك بإعادة نشر الإعلانات منتهية الصلاحية أو المعلقة مجاناً.';
 
@@ -4727,31 +4734,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aiDescButton => 'كتابة الوصف بالذكاء الاصطناعي';
 
   @override
-  String get aiDescGenerating => 'جارٍ إنشاء الوصف…';
+  String get aiDescGenerating => 'جارٍ إنشاء الوصف...';
 
   @override
-  String get aiDescError => 'تعذّر إنشاء الوصف. يرجى المحاولة مجدداً.';
+  String get aiDescError => 'فشل إنشاء الوصف. حاول مجدداً.';
 
   @override
-  String get aiDescUnavailable => 'خدمة الوصف بالذكاء الاصطناعي غير متاحة حالياً.';
-
-  @override
-  String get fieldCondition => 'حالة المنتج';
-
-  @override
-  String get fieldConditionHint => 'اختر حالة المنتج';
-
-  @override
-  String get conditionNew => 'جديد';
-
-  @override
-  String get conditionLikeNew => 'شبه جديد';
-
-  @override
-  String get conditionUsed => 'مستعمل';
-
-  @override
-  String get conditionDamaged => 'تالف';
+  String get aiDescUnavailable => 'خدمة وصف الذكاء الاصطناعي غير متاحة حالياً.';
 
   @override
   String get aiCreditsLeftSuffix => 'رصيد متبقٍ';
@@ -5462,4 +5451,22 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get walletTxnChurnAirdrop => 'هدية العودة';
+
+  @override
+  String get fieldCondition => 'حالة المنتج';
+
+  @override
+  String get fieldConditionHint => 'اختر حالة المنتج';
+
+  @override
+  String get conditionNew => 'جديد';
+
+  @override
+  String get conditionLikeNew => 'شبه جديد';
+
+  @override
+  String get conditionUsed => 'مستعمل';
+
+  @override
+  String get conditionDamaged => 'تالف';
 }

@@ -1927,6 +1927,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Analyzes the market using AI to recommend the most accurate pricing for your listing.';
 
   @override
+  String get proCreditsAiDescName => 'AI Description Writer';
+
+  @override
+  String get proCreditsAiDescDesc =>
+      'Automatically generates a listing description from your title, category, and condition.';
+
+  @override
   String get proCreditsReactivationDesc =>
       'Allows you to republish expired or suspended listings for free.';
 
@@ -4754,31 +4761,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiDescButton => 'Write Description with AI';
 
   @override
-  String get aiDescGenerating => 'Generating description…';
+  String get aiDescGenerating => 'Generating description...';
 
   @override
-  String get aiDescError => 'Could not generate description. Please try again.';
+  String get aiDescError => 'Failed to generate description. Please try again.';
 
   @override
-  String get aiDescUnavailable => 'AI description service is not available right now.';
-
-  @override
-  String get fieldCondition => 'Item Condition';
-
-  @override
-  String get fieldConditionHint => 'Select item condition';
-
-  @override
-  String get conditionNew => 'Brand New';
-
-  @override
-  String get conditionLikeNew => 'Like New';
-
-  @override
-  String get conditionUsed => 'Used';
-
-  @override
-  String get conditionDamaged => 'Damaged';
+  String get aiDescUnavailable => 'AI description service is currently unavailable.';
 
   @override
   String get aiCreditsLeftSuffix => 'credits left';
@@ -5491,4 +5480,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletTxnChurnAirdrop => 'Welcome Back Airdrop';
+
+  @override
+  String get fieldCondition => 'Item Condition';
+
+  @override
+  String get fieldConditionHint => 'Select item condition';
+
+  @override
+  String get conditionNew => 'Brand New';
+
+  @override
+  String get conditionLikeNew => 'Like New';
+
+  @override
+  String get conditionUsed => 'Used';
+
+  @override
+  String get conditionDamaged => 'Damaged';
 }
