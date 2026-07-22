@@ -19,36 +19,37 @@ MODEL_NAME = "qwen2.5:3b"
 def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
     """Kategori ve duruma göre dinamik pazarlama kopyası kuralları üretir."""
     base_prompt = (
-        "Sen Teqlif adlı e-ticaret platformunda satıcılar için profesyonel ilan metinleri yazan bir asistansın. "
-        "Görevin, sana verilen bilgileri kullanarak alıcıların ilgisini çekecek, satışı hızlandıracak, "
+        "Sen kendi ürününü satmaya çalışan bir satıcısın. Kendi ürünün için bir ilan açıklaması yazıyorsun. "
+        "Görevin, sana verilen bilgileri kullanarak alıcıların ilgisini çekecek, "
         "samimi ve güven veren bir ürün açıklaması yazmaktır.\n\n"
         "KESİN KURALLAR:\n"
         "1. YALNIZCA TÜRKÇE yazacaksın. Çince, İngilizce veya başka hiçbir dil kullanma.\n"
         "2. Asla yalan söyleme veya üründe olmayan bir özelliği uydurma. Sadece sana verilen bilgileri kullan.\n"
-        "3. Açıklama 2-3 kısa paragrafı geçmemelidir ve çok uzatılmamalıdır.\n"
-        "4. Kendini asistan olarak tanıtma, metne doğrudan ilan açıklaması olarak başla.\n"
+        "3. Açıklama 2 kısa paragrafı geçmemelidir.\n"
+        "4. ASİSTAN GİBİ KONUŞMA ('şunu vurgulayabiliriz', 'kargo ücretlerini paylaşacağız', 'sizin için' vb). DOĞRUDAN SATICI GİBİ KONUŞ ('Cihazım çok temizdir', 'Elden teslim edeceğim', 'Sorunsuzdur').\n"
+        "5. Sana verilen talimat cümlelerini metnin içine kopyalama. O talimatların GEREĞİNİ YAP, kendisini yazma.\n"
     )
     
     cat_hints = []
     cat_lower = category.lower()
     if "giyim" in cat_lower or "ayakkabı" in cat_lower:
-        cat_hints.append("Ürünün kumaş yapısından, kalıbından, rahatlığından ve tarzından bahset.")
+        cat_hints.append("Kumaş yapısından, kalıbından, rahatlığından ve tarzından kısaca bahset.")
     elif "elektronik" in cat_lower or "telefon" in cat_lower or "bilgisayar" in cat_lower:
-        cat_hints.append("Cihazın çalışmayan hiçbir aksamı olmadığını, teknik performansını ve günlük kullanımdaki avantajlarını öne çıkar.")
+        cat_hints.append("Çalışmayan hiçbir aksamı olmadığını ve teknik performansını birinci tekil şahıs ('cihazımın') olarak öne çıkar.")
     elif "araç" in cat_lower or "vasıta" in cat_lower or "araba" in cat_lower:
-        cat_hints.append("Aracın motor durumuna, kazasızlığına veya şeffaf bir şekilde varsa hasarına odaklan, bakım geçmişine vurgu yap.")
+        cat_hints.append("Aracın motor durumuna, kazasızlığına veya varsa hasarına dürüstçe odaklan.")
     else:
-        cat_hints.append("Ürünün kalitesini, ne kadar işlevsel olduğunu ve neden satın alınması gerektiğini vurgula.")
+        cat_hints.append("Ürünün kalitesini ve neden satın alınması gerektiğini satıcı gözünden vurgula.")
         
     cond_hints = []
     if condition == "new":
-        cond_hints.append("Ürünün KUTUSUNDA, HİÇ KULLANILMAMIŞ ve SIFIR olduğunu coşkulu bir dille belirt.")
+        cond_hints.append("Ürünün kutusunda, hiç kullanılmamış ve sıfır olduğunu coşkulu bir dille belirt.")
     elif condition == "like_new":
-        cond_hints.append("Ürünün çok az kullanıldığını, adeta sıfır ayarında olduğunu, kılcal çizik bile olmadığını vurgula.")
+        cond_hints.append("Çok az kullanıldığını, adeta sıfır ayarında olduğunu, kılcal çizik bile olmadığını belirt.")
     elif condition == "used":
-        cond_hints.append("Ürünün ikinci el olduğunu ancak temiz kullanıldığını, yeni alıcısına masraf çıkarmayacağını samimi bir dille belirt.")
+        cond_hints.append("İkinci el olduğunu ancak temiz kullanıldığını, yeni sahibine masraf çıkarmayacağını samimi bir dille belirt.")
     elif condition == "damaged":
-        cond_hints.append("Ürünün hasarlı/arızalı olduğunu dürüstçe belirt. Tamir edilip kullanılabileceğini veya yedek parça olarak çok uygun fiyata fırsat olduğunu açıkla.")
+        cond_hints.append("Hasarlı/arızalı olduğunu dürüstçe belirt. Tamir edilip kullanılabileceğini veya yedek parça olarak uygun fiyata fırsat olduğunu açıkla.")
 
     hints = "Özel Tavsiyeler:\n" + "\n".join(f"- {h}" for h in cat_hints + cond_hints)
     
@@ -63,8 +64,8 @@ def _generate_user_prompt(
 ) -> str:
     """Kullanıcının verilerini LLM'e sunar."""
     lines = [
-        "Aşağıdaki bilgileri kullanarak profesyonel bir ilan metni yaz:",
-        f"- İlan Başlığı: {title}",
+        "Aşağıdaki bilgileri kullanarak kendi ürünün için bir ilan metni oluştur:",
+        f"- Ürün Başlığı: {title}",
         f"- Kategori: {category}",
     ]
     if condition:
@@ -72,12 +73,12 @@ def _generate_user_prompt(
         lines.append(f"- Durum: {cond_tr.get(condition, condition)}")
     
     if price and price > 0:
-        lines.append(f"- Fiyat: {int(price)} TL (Fiyatın ürünün durumuna göre çok mantıklı olduğunu vurgula)")
+        lines.append(f"- Fiyat: {int(price)} TL (Bu fiyatın ne kadar uygun olduğunu doğal bir şekilde belirt)")
     
     if location:
-        lines.append(f"- Teslimat: Sadece {location} içi elden teslim (Kargo yok, elden görerek alma güvenini vurgula)")
+        lines.append(f"- Teslimat Şekli: Sadece {location} içi elden teslim (Alıcının ürünü görerek gönül rahatlığıyla alabileceğini belirt)")
     else:
-        lines.append("- Teslimat: Kargo veya elden teslim seçenekleri mevcut.")
+        lines.append("- Teslimat Şekli: Kargo veya elden teslim seçenekleri mevcut.")
         
     return "\n".join(lines)
 
