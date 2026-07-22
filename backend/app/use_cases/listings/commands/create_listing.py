@@ -30,7 +30,9 @@ class CreateListingCommand:
         condition: Optional[str] = None,
         location: Optional[str] = None,
         image_url: Optional[str] = None,
-        image_urls: list = None
+        image_urls: list = None,
+        thumbnail_url: Optional[str] = None,
+        video_url: Optional[str] = None,
     ) -> dict:
         logger.info("[CreateListingCommand] İşlem başlatıldı | user_id=%s", user_id)
 
@@ -66,7 +68,9 @@ class CreateListingCommand:
                 "condition": cond,
                 "location": location,
                 "image_url": image_url,
-                "image_urls": json.dumps(image_urls or [])
+                "image_urls": json.dumps(image_urls or []),
+                "thumbnail_url": thumbnail_url,
+                "video_url": video_url,
             }
 
             new_listing = await self.uow.listings.create(obj_in=listing_data)

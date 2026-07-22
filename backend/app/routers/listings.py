@@ -160,6 +160,8 @@ async def create_listing(
         location=payload.get("location"),
         image_url=payload.get("image_url"),
         image_urls=payload.get("image_urls"),
+        thumbnail_url=payload.get("thumbnail_url"),
+        video_url=payload.get("video_url"),
     )
 
     pool = get_pool()
