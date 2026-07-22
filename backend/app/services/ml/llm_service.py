@@ -136,14 +136,13 @@ def _build_prompt(
 
     system = (
         "Türkiye'de ikinci el ilan platformunda bireysel satıcısın. "
-        "Sana ürün bilgisi verilecek, sen sadece kısa ilan metnini yazacaksın. "
-        "Kurallar: 1. tekil şahıs kullan (Ben/Satıyorum). "
-        "Fiyat ve teslimat bilgisi YAZMA. "
-        "YZ gibi 'Merhaba' veya 'Tabii ki' ile başlama. "
-        "Özür veya açıklama cümlesi ekleme, direkt ilan metnini yaz. "
-        "3-4 cümle, sade Türkçe.\n\n"
-        f"İyi örnek:\n\"{examples[0]}\"\n\n"
-        f"İyi örnek:\n\"{examples[1]}\""
+        "Sana ürün bilgisi verilecek, sen sadece kısa ilan metnini yazacaksın.\n"
+        "- Birinci tekil şahısla yaz: 'kullandım', 'satıyorum', 'aldım' gibi.\n"
+        "- Fiyat ve teslimat bilgisi YAZMA.\n"
+        "- Direkt metni yaz, özür veya açıklama cümlesi ekleme.\n"
+        "- 3-4 cümle, sade Türkçe.\n\n"
+        f"Örnek:\n\"{examples[0]}\"\n\n"
+        f"Örnek:\n\"{examples[1]}\""
     )
 
     user_lines = [
@@ -182,14 +181,13 @@ async def generate_listing_description_stream(
             "temperature": 0.5,
             "top_p": 0.85,
             "num_predict": 150,
-            "num_thread": 6,
+            "num_thread": 4,   # 6 → 4: tüm CPU'yu Ollama'ya vermek FastAPI ile çakışıyor
             "stop": [
-                # Fiyat/lokasyon cümlesi başlamadan önce durdur
-                " TL", " lira", "₺",
-                "elden teslim", "Elden teslim",
-                "kargo", "Kargo",
+                # Fiyat token'ları — boşluklu ve boşluksuz her ikisi de
+                "TL", " TL", "₺", "lira", " lira",
+                # Teslimat/lokasyon
+                "elden", "kargo", "Kargo",
                 "Fiyat", "fiyat",
-                "Ücret", "ücret",
             ],
         },
     }
@@ -197,10 +195,11 @@ async def generate_listing_description_stream(
     try:
         logger.info("[LLM] Stream isteği (%s) | title=%r", MODEL_NAME, title[:60])
 
-        # Preamble buffer — ilk 80 char'da YZ açılış tespiti
-        _PREAMBLE_LEN = 80
-        preamble_buf = ""
-        preamble_done = False
+        # İlk cümle buffer — sadece ilk nokta/satırsonu gelene kadar biriktir,
+        # YZ açılış tespiti yap, sonra normal stream devam eder.
+        # Böylece kullanıcı ilk cümle teslim edilir edilmez metni görmeye başlar.
+        first_sentence_buf = ""
+        first_sentence_done = False
         total_chars = 0
 
         async with httpx.AsyncClient() as client:
@@ -224,27 +223,27 @@ async def generate_listing_description_stream(
                     if not token:
                         continue
 
-                    if not preamble_done:
-                        preamble_buf += token
-                        if len(preamble_buf) >= _PREAMBLE_LEN:
-                            preamble_done = True
-                            # YZ açılış cümlesini sil
-                            clean_start = _RE_AI_OPENER.sub("", preamble_buf).lstrip()
-                            if clean_start != preamble_buf.lstrip():
-                                logger.warning("[LLM] YZ açılış cümlesi tespit edildi ve silindi")
-                            if clean_start:
-                                yield clean_start
-                                total_chars += len(clean_start)
+                    if not first_sentence_done:
+                        first_sentence_buf += token
+                        # İlk nokta, soru/ünlem veya satırsonu → cümle bitti
+                        if any(c in token for c in (".", "!", "?", "\n")):
+                            first_sentence_done = True
+                            clean = _RE_AI_OPENER.sub("", first_sentence_buf).lstrip()
+                            if clean != first_sentence_buf.lstrip():
+                                logger.warning("[LLM] YZ açılış cümlesi silindi")
+                            if clean:
+                                yield clean
+                                total_chars += len(clean)
                     else:
                         yield token
                         total_chars += len(token)
 
-        # Preamble dolmadan stream bittiyse (çok kısa çıktı) — onu da yield et
-        if not preamble_done and preamble_buf:
-            clean_start = _RE_AI_OPENER.sub("", preamble_buf).lstrip()
-            if clean_start:
-                yield clean_start
-                total_chars += len(clean_start)
+        # İlk nokta gelmeden stream bittiyse (çok kısa çıktı)
+        if not first_sentence_done and first_sentence_buf:
+            clean = _RE_AI_OPENER.sub("", first_sentence_buf).lstrip()
+            if clean:
+                yield clean
+                total_chars += len(clean)
 
         # Suffix — her zaman Python'dan gelir
         suffix = _build_suffix(price, location)
