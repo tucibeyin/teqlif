@@ -969,6 +969,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                             icon: Icons.videocam_outlined,
                             text: l.btnAdd,
                             type: TeqButtonType.text,
+                            isExpanded: false,
                           ),
                       ],
                     ),
