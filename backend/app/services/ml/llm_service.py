@@ -32,6 +32,8 @@ _STOP_WORDS = [
     "elden", "kargo", "Kargo",
     "Fiyat", "fiyat", "Ücret", "ücret",
 ]
+# Groq max 4 stop word kabul eder
+_GROQ_STOP_WORDS = ["TL", "₺", "elden", "kargo"]
 
 # ── Fiyat + lokasyon şablonları ───────────────────────────────────────────────
 _PRICE_ONLY: list[str] = [
@@ -292,7 +294,7 @@ async def _tokens_groq(system: str, user: str) -> AsyncGenerator[str, None]:
         ],
         "temperature": 0.5,
         "max_tokens": 150,
-        "stop": _STOP_WORDS,
+        "stop": _GROQ_STOP_WORDS,
         "stream": True,
     }
     async with httpx.AsyncClient() as client:
