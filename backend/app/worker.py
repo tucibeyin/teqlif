@@ -1182,9 +1182,16 @@ async def generate_listing_description_task(
     price: float | None = None,
     location: str | None = None,
 ) -> str | None:
-    """Şablon tabanlı Türkçe ilan açıklaması üretir."""
+    """Şablon + LLM zenginleştirme ile Türkçe ilan açıklaması üretir."""
+    import asyncio
     from app.services.ml.llm_service import generate_listing_description
-    return generate_listing_description(title, category, condition, price, location)
+
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        None,
+        generate_listing_description,
+        title, category, condition, price, location,
+    )
 
 
 async def train_bpr_task(ctx: dict) -> None:
@@ -3285,6 +3292,14 @@ class WorkerSettings:
         import asyncio
         setup_logging()
         set_pool(ctx["redis"])
+        # LLM modelini ön yükle — ilk istek gecikmesin
+        try:
+            from app.services.ml.llm_service import _load_model, _MODEL_PATH
+            if _MODEL_PATH.exists():
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, _load_model)
+        except Exception as _e:
+            logger.debug("[Worker] LLM ön yükleme atlandı: %s", _e)
 
 
 class WorkerSettingsCritical:
