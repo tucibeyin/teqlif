@@ -19,36 +19,35 @@ MODEL_NAME = "qwen2.5:3b"
 def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
     """Kategori ve duruma göre dinamik pazarlama kopyası kuralları üretir."""
     base_prompt = (
-        "Sen ikinci el ilan platformunda kendi ürününü satan bir kullanıcısın. Aşağıda verilen bilgilere dayanarak KISA, DOĞRUDAN ve SAMİMİ bir ilan metni yaz.\n\n"
-        "KURALLAR:\n"
-        "1. Maksimum 3-4 cümle yaz. Uzun destanlar yazma.\n"
-        "2. Doğrudan satıcı ağzıyla yaz (Örn: 'Cihazım çok temizdir', 'Satıyorum').\n"
-        "3. 'Size yardımcı olabilirim', 'Vurgulayalım', 'Öneririm' gibi robotik/asistan cümleleri KESİNLİKLE kurma.\n"
-        "4. Uydurma bilgi ekleme.\n\n"
-        "ÖRNEK ÇIKTI:\n"
-        "'Telefonum hasarlıdır ancak kullanıma engel bir durumu yoktur. Parça niyetine veya tamir ettirip kullanmak isteyenler alabilir. Sadece Ankara içi elden teslim edebilirim. Alıcısına şimdiden hayırlı olsun.'\n"
+        "Sen bir yapay zeka değilsin. Sen Türkiye'de ikinci el ilan platformunda (Letgo, Sahibinden gibi) kendi şahsi ürününü satan normal bir vatandaşsın. Sadece doğrudan ilan açıklamasını yaz.\n\n"
+        "KESİN KURALLAR:\n"
+        "1. Metnin başına veya sonuna ASLA tırnak işareti (' veya \") koyma.\n"
+        "2. ASLA 'Size yardımcı olabilirim', 'Vurgulayalım', 'Öneririm', 'Merhaba' gibi yapay zeka veya müşteri temsilcisi kelimeleri kullanma.\n"
+        "3. Doğrudan 1. tekil şahıs (Ben) ağzıyla yaz (Örn: 'Satıyorum', 'Kullandım').\n"
+        "4. En fazla 3-4 cümle kur. Samimi ol. 'Alıcısına hayırlı olsun', 'Pazarlık payı vardır', 'İhtiyaçtan satılık' gibi gerçekçi Türk satıcı jargonları kullan.\n"
+        "5. Cümleleri çok karmaşık kurma, günlük konuşma dilini kullan.\n"
     )
     
     cat_hints = []
     cat_lower = category.lower()
     if "elektronik" in cat_lower or "telefon" in cat_lower or "bilgisayar" in cat_lower:
-        cat_hints.append("Donanım veya kozmetik durumundan kısaca bahset.")
+        cat_hints.append("Çalışmayan aksamı olmadığını veya kozmetik durumunu kısaca belirt.")
     elif "araç" in cat_lower or "vasıta" in cat_lower or "araba" in cat_lower:
-        cat_hints.append("Motor veya kaporta durumundan dürüstçe bahset.")
+        cat_hints.append("Yürüründe veya motorunda sıkıntı olup olmadığını dürüstçe belirt.")
         
     cond_hints = []
     if condition == "new":
-        cond_hints.append("Ürünün kutusunda, hiç kullanılmamış ve sıfır olduğunu coşkulu bir dille belirt.")
+        cond_hints.append("Ürünün kutusunda, hiç açılmamış sıfır ürün olduğunu belirt.")
     elif condition == "like_new":
-        cond_hints.append("Çok az kullanıldığını, adeta sıfır ayarında olduğunu, kılcal çizik bile olmadığını belirt.")
+        cond_hints.append("Çok az kullanıldığını, adeta sıfır ayarında tertemiz olduğunu belirt.")
     elif condition == "used":
-        cond_hints.append("İkinci el olduğunu ancak temiz kullanıldığını, yeni sahibine masraf çıkarmayacağını samimi bir dille belirt.")
+        cond_hints.append("Temiz kullanıldığını ve yeni sahibine masraf çıkarmayacağını söyle.")
     elif condition == "damaged":
-        cond_hints.append("Hasarlı/arızalı olduğunu dürüstçe belirt. Tamir edilip kullanılabileceğini veya yedek parça olarak uygun fiyata fırsat olduğunu açıkla.")
+        cond_hints.append("Üründe hasar/arızalar olduğunu saklama. Yedek parça veya tamirlik alanlar için uygun fiyata bıraktığını söyle.")
 
     hints = "Özel Tavsiyeler:\n" + "\n".join(f"- {h}" for h in cat_hints + cond_hints)
     
-    return base_prompt + "\n\n" + hints
+    return base_prompt + "\n" + hints
 
 def _generate_user_prompt(
     title: str,
@@ -59,21 +58,17 @@ def _generate_user_prompt(
 ) -> str:
     """Kullanıcının verilerini LLM'e sunar."""
     lines = [
-        "Aşağıdaki gerçek bilgileri kullanarak kendi ürünün için bir ilan metni oluştur:",
-        f"- Ürün Başlığı: {title}",
-        f"- Kategori: {category}",
+        "Aşağıdaki bilgileri kullanarak sadece ilan metnini oluştur (Fazladan giriş/çıkış cümlesi yazma):",
+        f"- Ürün: {title}",
     ]
-    if condition:
-        cond_tr = {"new": "Sıfır", "like_new": "Yeni Gibi", "used": "İkinci El", "damaged": "Hasarlı"}
-        lines.append(f"- Durum: {cond_tr.get(condition, condition)}")
-        
+    
     if price and price > 0:
-        lines.append(f"- Fiyat: {int(price)} TL (Bunu cümleye 'Fiyatı {int(price)} TL olarak uygun tuttum', '{int(price)} TL'ye bırakıyorum' gibi farklı ve doğal satıcı ağzıyla yedir)")
+        lines.append(f"- Fiyat: {int(price)} TL (Bu fiyatı metnin içine doğalca yedir, örn: 'Fiyatı {int(price)} TL yazdım', '{int(price)} TL'ye bırakıyorum')")
         
     if location:
-        lines.append(f"- Teslimat Şekli: Sadece {location} içi elden teslim (Bunu 'Sadece {location} içinden gelip alabilirsiniz', 'Kargo yok, {location} elden teslim' gibi her defasında farklı ama net bir cümleyle belirt)")
+        lines.append(f"- Teslimat: Sadece {location} (Örn: 'Sadece {location} içi elden teslim edebilirim, kargoyla uğraşamam' gibi doğal bir cümle kur)")
     else:
-        lines.append("- Teslimat Şekli: Kargo veya elden teslim seçenekleri mevcut. (Bunu cümleye doğal bir şekilde yedir)")
+        lines.append("- Teslimat: Kargo veya elden teslim yapabilirim.")
         
     return "\n".join(lines)
 
