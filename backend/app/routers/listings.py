@@ -491,7 +491,7 @@ async def generate_description(
         raise HTTPException(status_code=503, detail="Görev kuyruğa eklenemedi.")
 
     try:
-        result: str | None = await job.result(timeout=45.0)
+        result: str | None = await job.result(timeout=90.0)
     except Exception:
         raise HTTPException(
             status_code=504,

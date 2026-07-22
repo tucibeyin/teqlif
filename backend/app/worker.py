@@ -3293,8 +3293,17 @@ class WorkerSettings:
     async def on_startup(ctx: dict) -> None:
         from app.logging_config import setup_logging
         from app.core.task_queue import set_pool
+        import asyncio
         setup_logging()
         set_pool(ctx["redis"])
+        # LLM modelini arka planda önceden yükle (ilk istekte gecikme olmasın)
+        try:
+            from app.services.ml.llm_service import is_available, _load_model
+            if is_available():
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, _load_model)
+        except Exception as _e:
+            logger.debug("[Worker] LLM ön yükleme atlandı: %s", _e)
 
 
 class WorkerSettingsCritical:
