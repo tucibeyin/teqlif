@@ -566,10 +566,12 @@ async def generate_description(
     Ollama (Qwen2.5:3b) ile ilan açıklaması üretir ve metni stream eder (SSE).
     PRO: ayda 6 ücretsiz, sonrası 5 TUCi. Standart: her seferinde 5 TUCi.
     """
+    logger.info(f"[API] /generate-description called by user_id={current_user.id} | title='{body.title}'")
     # ── TUCi / PRO kredi ön kontrolü ──────────────────────────────────────────
     if current_user.is_premium:
         ai_used = await _get_ai_desc_used(current_user.id, current_user.premium_since)
         if ai_used >= AI_DESC_LIMIT_PRO and current_user.tuci_balance < AI_DESC_COST:
+            logger.warning(f"[API] User {current_user.id} has insufficient TUCi (PRO limit reached).")
             raise HTTPException(
                 status_code=402,
                 detail=f"Bu ay {AI_DESC_LIMIT_PRO} ücretsiz hakkınızı kullandınız. "
@@ -578,6 +580,7 @@ async def generate_description(
             )
     else:
         if current_user.tuci_balance < AI_DESC_COST:
+            logger.warning(f"[API] User {current_user.id} has insufficient TUCi.")
             raise HTTPException(
                 status_code=402,
                 detail=f"Yetersiz TUCi bakiyesi. Gerekli: {AI_DESC_COST} TUCi, "
@@ -585,6 +588,7 @@ async def generate_description(
             )
 
     async def event_generator():
+        logger.info(f"[API] event_generator started for user_id={current_user.id}")
         text_generated = False
         try:
             async for chunk in generate_listing_description_stream(
@@ -594,11 +598,14 @@ async def generate_description(
                 price=body.price,
                 location=body.location,
             ):
+                if not text_generated:
+                    logger.info(f"[API] First chunk received from Ollama for user_id={current_user.id}")
                 text_generated = True
                 # SSE format (JSON payload within data event)
                 yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
             
             if text_generated:
+                logger.info(f"[API] Stream finished for user_id={current_user.id}. Charging TUCi...")
                 # Üretim bittikten sonra TUCi kesintisi yap
                 tuci_spent = 0
                 if current_user.is_premium:
