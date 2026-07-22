@@ -628,7 +628,14 @@ async def generate_description(
                     if not text_generated:
                         logger.info(f"[API] First chunk received from Ollama for user_id={current_user.id}")
                     text_generated = True
-                    yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+                    
+                    # Nginx ve Cloudflare'in kelimeleri (chunk) buffer'da bekletmesini engellemek için
+                    # her kelimenin başına SSE yorum satırı olarak 1KB boşluk (padding) ekliyoruz.
+                    # Bu sayede proxy'ler buffer'ı anında doldurup telefona (Flutter'a) fırlatmak zorunda kalır
+                    # ve kullanıcı kelimelerin "daktilo gibi" tek tek yazıldığını gerçek zamanlı görebilir.
+                    chunk_payload = json.dumps({'text': chunk}, ensure_ascii=False)
+                    padding = ' ' * 1024
+                    yield f": {padding}\ndata: {chunk_payload}\n\n"
             
             if text_generated:
                 logger.info(f"[API] Stream finished for user_id={current_user.id}. Charging TUCi...")
