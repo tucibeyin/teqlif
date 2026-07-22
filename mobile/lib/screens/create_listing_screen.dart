@@ -809,6 +809,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                             icon: Icons.add_photo_alternate_outlined,
                             text: l.btnAdd,
                             type: TeqButtonType.text,
+                            isExpanded: false,
                           ),
                       ],
                     ),
