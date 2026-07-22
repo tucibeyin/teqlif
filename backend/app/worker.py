@@ -2083,14 +2083,18 @@ async def cleanup_ghost_calls_task(ctx: dict) -> None:
 
 async def apns_feedback_cleanup_task(ctx: dict) -> None:
     """
-    APNs Feedback Service: Apple'ın geri bildirdiği geçersiz VoIP token'larını DB'den siler.
-    Her gün 07:00'da çalışır.
+    APNs Legacy Binary Feedback Service — DEVRE DIŞI.
 
-    Apple, teslim edilemeyen APNs push'ları için Feedback Service'e token + timestamp yazar.
-    Token, feedback timestamp'inden ÖNCE güncellenmediyse geçersiz kabul edilir ve silinir.
-    Bu sayede VoIP push denemesi yapılmaz → pil + sunucu yükü düşer.
+    Apple bu servisi (feedback.push.apple.com:2196) Kasım 2020'de kapattı.
+    Geçersiz VoIP token temizliği artık APNs HTTP/2 push yanıtındaki
+    'Unregistered' (410) hatasına göre anlık yapılmalı.
+    Cron'dan kaldırıldı; kod referans için korunuyor.
     """
-    from app.config import settings
+    # Legacy binary APNs Feedback Service kapatıldı (Apple, Kasım 2020).
+    logger.info("[CALL_PROCESS][APNS] apns_feedback_cleanup_task skipped — legacy feedback service deprecated")
+    return
+
+    from app.config import settings  # noqa: unreachable
 
     if not settings.apns_cert_path:
         logger.info("[CALL_PROCESS][APNS] apns_feedback_cleanup_task skipped — apns_cert_path not configured")
@@ -3475,8 +3479,7 @@ class WorkerSettings:
         cron(optimize_notification_timing_task, hour=4, minute=0),
         # Her gece 04:30 — CLIP görsel embedding backfill (30 ilan/çalıştırma)
         cron(clip_visual_backfill_task, hour=4, minute=30),
-        # Her gün 07:00 — APNs Feedback Service: geçersiz VoIP token temizliği
-        cron(apns_feedback_cleanup_task, hour=7, minute=0),
+        # APNs Feedback Service cron'u kaldırıldı — Apple legacy endpoint'i Kasım 2020'de kapattı
         # Her gece 05:15 — NSFW backfill (20 ilan/çalıştırma)
         cron(nsfw_backfill_task, hour=5, minute=15),
         # Her gece 05:30 — pHash backfill (50 ilan/çalıştırma)
