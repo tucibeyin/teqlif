@@ -4754,6 +4754,33 @@ class AppLocalizationsTr extends AppLocalizations {
   String get aiPriceButton => 'Yapay Zeka ile Fiyat Belirle';
 
   @override
+  String get aiDescButton => 'Yapay Zeka ile Açıklama Yaz';
+
+  @override
+  String get aiDescGenerating => 'Açıklama üretiliyor…';
+
+  @override
+  String get aiDescError => 'Açıklama üretilemedi. Lütfen tekrar deneyin.';
+
+  @override
+  String get aiDescUnavailable => 'AI açıklama servisi şu an aktif değil.';
+
+  @override
+  String get fieldCondition => 'Ürün Durumu (isteğe bağlı)';
+
+  @override
+  String get conditionNew => 'Sıfır';
+
+  @override
+  String get conditionLikeNew => 'Az Kullanılmış';
+
+  @override
+  String get conditionUsed => 'İkinci El';
+
+  @override
+  String get conditionDamaged => 'Hasarlı';
+
+  @override
   String get aiCreditsLeftSuffix => 'hak kaldı';
 
   @override

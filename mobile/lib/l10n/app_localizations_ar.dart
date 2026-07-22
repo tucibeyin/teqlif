@@ -4724,6 +4724,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aiPriceButton => 'تحديد السعر بالذكاء الاصطناعي';
 
   @override
+  String get aiDescButton => 'كتابة الوصف بالذكاء الاصطناعي';
+
+  @override
+  String get aiDescGenerating => 'جارٍ إنشاء الوصف…';
+
+  @override
+  String get aiDescError => 'تعذّر إنشاء الوصف. يرجى المحاولة مجدداً.';
+
+  @override
+  String get aiDescUnavailable => 'خدمة الوصف بالذكاء الاصطناعي غير متاحة حالياً.';
+
+  @override
+  String get fieldCondition => 'حالة المنتج (اختياري)';
+
+  @override
+  String get conditionNew => 'جديد';
+
+  @override
+  String get conditionLikeNew => 'شبه جديد';
+
+  @override
+  String get conditionUsed => 'مستعمل';
+
+  @override
+  String get conditionDamaged => 'تالف';
+
+  @override
   String get aiCreditsLeftSuffix => 'رصيد متبقٍ';
 
   @override

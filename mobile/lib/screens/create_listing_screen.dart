@@ -44,7 +44,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   List<String> _cities = [];
   bool _submitting = false;
   bool _aiLoading = false;
+  bool _aiDescLoading = false;
   bool _isPro = false;
+  String? _selectedCondition;
   int? _aiCreditsRemaining;
   final List<File> _images = [];
   final _picker = ImagePicker();
@@ -58,6 +60,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   @override
   void initState() {
     super.initState();
+    _titleCtrl.addListener(() => setState(() {}));
     AnalyticsService.trackEvent('listing_create_start', {});
     SharedPreferences.getInstance().then((prefs) {
       final locale = prefs.getString('app_locale_language_code') ?? 'tr';
@@ -160,6 +163,65 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       TeqSnackBar.show(context, message: e.detail, type: TeqSnackBarType.error);
     } finally {
       if (mounted) setState(() => _aiLoading = false);
+    }
+  }
+
+  Future<void> _fetchAiDescription() async {
+    final title = _titleCtrl.text.trim();
+    final l = AppLocalizations.of(context)!;
+    if (title.isEmpty || _selectedCategory == null) {
+      TeqSnackBar.show(
+        context,
+        message: l.createNeedTitle,
+        type: TeqSnackBarType.warning,
+      );
+      return;
+    }
+    setState(() => _aiDescLoading = true);
+    try {
+      final token = await StorageService.getToken();
+      final priceRaw = _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.');
+      final price = double.tryParse(priceRaw);
+      final resp = await http
+          .post(
+            Uri.parse('$kBaseUrl/listings/generate-description'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'title': title,
+              'category': _selectedCategory,
+              if (_selectedCondition != null) 'condition': _selectedCondition,
+              if (price != null && price > 0) 'price': price,
+              if (_selectedCity != null && _selectedCity!.isNotEmpty)
+                'location': _selectedCity,
+            }),
+          )
+          .timeout(const Duration(seconds: 50));
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final desc = data['description'] as String? ?? '';
+        if (desc.isNotEmpty) {
+          _descCtrl.text = desc;
+        } else {
+          TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
+        }
+      } else if (resp.statusCode == 503) {
+        TeqSnackBar.show(context, message: l.aiDescUnavailable, type: TeqSnackBarType.warning);
+      } else {
+        TeqSnackBar.show(context, message: l.aiDescError, type: TeqSnackBarType.error);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      TeqSnackBar.show(
+        context,
+        message: AppLocalizations.of(context)!.aiDescError,
+        type: TeqSnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _aiDescLoading = false);
     }
   }
 
@@ -626,6 +688,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.'),
             ),
             'category': _selectedCategory,
+            if (_selectedCondition != null) 'condition': _selectedCondition,
             if (_selectedCity != null && _selectedCity!.isNotEmpty)
               'location': _selectedCity,
             'image_urls': imageUrls,
@@ -999,6 +1062,22 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       ],
                       onChanged: (v) => setState(() => _selectedCity = v),
                     ),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      key: const Key('create_listing_select_durum'),
+                      // ignore: deprecated_member_use
+                      value: _selectedCondition,
+                      decoration: InputDecoration(labelText: l.fieldCondition),
+                      hint: Text(l.fieldCondition),
+                      items: [
+                        DropdownMenuItem(value: null, child: Text('-- ${l.fieldCondition} --')),
+                        DropdownMenuItem(value: 'new', child: Text(l.conditionNew)),
+                        DropdownMenuItem(value: 'like_new', child: Text(l.conditionLikeNew)),
+                        DropdownMenuItem(value: 'used', child: Text(l.conditionUsed)),
+                        DropdownMenuItem(value: 'damaged', child: Text(l.conditionDamaged)),
+                      ],
+                      onChanged: (v) => setState(() => _selectedCondition = v),
+                    ),
                   ],
                 ),
               ),
@@ -1017,6 +1096,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       validator: (v) => v == null || v.isEmpty
                           ? l.fieldDescriptionHint
                           : null,
+                    ),
+                    const SizedBox(height: 10),
+                    _AiDescButton(
+                      loading: _aiDescLoading,
+                      enabled: _titleCtrl.text.trim().isNotEmpty && _selectedCategory != null,
+                      onTap: _fetchAiDescription,
                     ),
                   ],
                 ),
@@ -1213,6 +1298,83 @@ class _AiPriceButton extends StatelessWidget {
                     ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+// ── AI Açıklama Butonu ───────────────────────────────────────────────────────
+
+class _AiDescButton extends StatelessWidget {
+  final bool loading;
+  final bool enabled;
+  final VoidCallback onTap;
+  const _AiDescButton({
+    required this.loading,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final active = enabled && !loading;
+    return GestureDetector(
+      onTap: active ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: active
+              ? const LinearGradient(
+                  colors: [Color(0xFF0EA5E9), Color(0xFF6366F1)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
+              : null,
+          color: active ? null : const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: active
+                ? const Color(0xFF6366F1).withValues(alpha: 0.5)
+                : const Color(0xFF334155),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: loading
+              ? [
+                  const SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Color(0xFF6366F1)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    l.aiDescGenerating,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ]
+              : [
+                  const Text('✍️', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 8),
+                  Text(
+                    l.aiDescButton,
+                    style: TextStyle(
+                      color: active ? Colors.white : const Color(0xFF475569),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
         ),
       ),
     );

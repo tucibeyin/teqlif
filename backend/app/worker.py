@@ -1174,6 +1174,30 @@ async def train_kmeans_cold_start_task(ctx: dict) -> None:
         raise
 
 
+async def generate_listing_description_task(
+    ctx: dict,
+    title: str,
+    category: str,
+    condition: str | None = None,
+    price: float | None = None,
+    location: str | None = None,
+) -> str | None:
+    """
+    Phi-3.5-mini ile ilan açıklaması üretir.
+    ARQ job olarak çalışır — /api/listings/generate-description endpoint'inden tetiklenir.
+    """
+    import asyncio
+    from app.services.ml.llm_service import generate_listing_description
+
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        generate_listing_description,
+        title, category, condition, price, location,
+    )
+    return result
+
+
 async def train_bpr_task(ctx: dict) -> None:
     """
     Her Cumartesi 03:00'da çalışır.
@@ -3147,6 +3171,7 @@ class WorkerSettings:
         train_kmeans_cold_start_task,
         train_item2vec_task,
         train_bpr_task,
+        generate_listing_description_task,
         compute_listing_quality_score_task,
         backfill_listing_quality_scores_task,
         train_listing_quality_model_task,

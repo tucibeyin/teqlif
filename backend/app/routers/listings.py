@@ -445,6 +445,68 @@ async def audience_estimate(
     }
 
 
+# ── AI Listing Description ────────────────────────────────────────────────────
+
+class GenerateDescriptionRequest(BaseModel):
+    title: str = Field(..., min_length=2, max_length=200)
+    category: str = Field(..., min_length=1, max_length=50)
+    condition: Optional[str] = Field(default=None)
+    price: Optional[float] = Field(default=None, ge=0)
+    location: Optional[str] = Field(default=None)
+
+
+@router.post("/generate-description")
+@limiter.limit("10/minute")
+async def generate_description(
+    request: Request,
+    body: GenerateDescriptionRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Phi-3.5-mini ile ilan açıklaması üretir.
+    ARQ worker'da çalışır (CPU inference ~10-20 sn).
+    Model dosyası yoksa 503 döner.
+    """
+    from app.services.ml.llm_service import is_available
+
+    if not is_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Açıklama üretim servisi şu an aktif değil.",
+        )
+
+    pool = get_pool()
+    if not pool:
+        raise HTTPException(status_code=503, detail="İş kuyruğu hazır değil.")
+
+    job = await pool.enqueue_job(
+        "generate_listing_description_task",
+        body.title,
+        body.category,
+        body.condition,
+        body.price,
+        body.location,
+    )
+    if not job:
+        raise HTTPException(status_code=503, detail="Görev kuyruğa eklenemedi.")
+
+    try:
+        result: str | None = await job.result(timeout=45.0)
+    except Exception:
+        raise HTTPException(
+            status_code=504,
+            detail="Açıklama üretimi zaman aşımına uğradı. Lütfen tekrar deneyin.",
+        )
+
+    if not result:
+        raise HTTPException(
+            status_code=500,
+            detail="Açıklama üretilemedi. Lütfen tekrar deneyin.",
+        )
+
+    return {"description": result}
+
+
 # ── Send Mass Notification ────────────────────────────────────────────────────
 
 class MassNotificationRequest(BaseModel):

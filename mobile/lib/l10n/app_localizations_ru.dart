@@ -4801,6 +4801,33 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aiPriceButton => 'Определить цену с помощью ИИ';
 
   @override
+  String get aiDescButton => 'Написать описание с помощью ИИ';
+
+  @override
+  String get aiDescGenerating => 'Генерация описания…';
+
+  @override
+  String get aiDescError => 'Не удалось создать описание. Попробуйте ещё раз.';
+
+  @override
+  String get aiDescUnavailable => 'Сервис ИИ описания временно недоступен.';
+
+  @override
+  String get fieldCondition => 'Состояние товара (необязательно)';
+
+  @override
+  String get conditionNew => 'Новый';
+
+  @override
+  String get conditionLikeNew => 'Почти новый';
+
+  @override
+  String get conditionUsed => 'Б/у';
+
+  @override
+  String get conditionDamaged => 'Повреждён';
+
+  @override
   String get aiCreditsLeftSuffix => 'осталось';
 
   @override

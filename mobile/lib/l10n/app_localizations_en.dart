@@ -4751,6 +4751,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiPriceButton => 'Set Price with AI';
 
   @override
+  String get aiDescButton => 'Write Description with AI';
+
+  @override
+  String get aiDescGenerating => 'Generating description…';
+
+  @override
+  String get aiDescError => 'Could not generate description. Please try again.';
+
+  @override
+  String get aiDescUnavailable => 'AI description service is not available right now.';
+
+  @override
+  String get fieldCondition => 'Item Condition (optional)';
+
+  @override
+  String get conditionNew => 'Brand New';
+
+  @override
+  String get conditionLikeNew => 'Like New';
+
+  @override
+  String get conditionUsed => 'Used';
+
+  @override
+  String get conditionDamaged => 'Damaged';
+
+  @override
   String get aiCreditsLeftSuffix => 'credits left';
 
   @override

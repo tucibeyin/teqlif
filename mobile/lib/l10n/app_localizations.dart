@@ -8598,6 +8598,33 @@ abstract class AppLocalizations {
   /// **'Yapay Zeka ile Fiyat Belirle'**
   String get aiPriceButton;
 
+  /// No description provided for @aiDescButton.
+  String get aiDescButton;
+
+  /// No description provided for @aiDescGenerating.
+  String get aiDescGenerating;
+
+  /// No description provided for @aiDescError.
+  String get aiDescError;
+
+  /// No description provided for @aiDescUnavailable.
+  String get aiDescUnavailable;
+
+  /// No description provided for @fieldCondition.
+  String get fieldCondition;
+
+  /// No description provided for @conditionNew.
+  String get conditionNew;
+
+  /// No description provided for @conditionLikeNew.
+  String get conditionLikeNew;
+
+  /// No description provided for @conditionUsed.
+  String get conditionUsed;
+
+  /// No description provided for @conditionDamaged.
+  String get conditionDamaged;
+
   /// No description provided for @aiCreditsLeftSuffix.
   ///
   /// In tr, this message translates to:
