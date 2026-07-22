@@ -1174,6 +1174,26 @@ async def train_kmeans_cold_start_task(ctx: dict) -> None:
         raise
 
 
+async def train_bpr_task(ctx: dict) -> None:
+    """
+    Her Cumartesi 03:00'da çalışır.
+    Son 120 günlük etkileşim verisinden BPR collaborative filtering modeli eğitir.
+    Eğitim bitti → tüm aktif kullanıcıların top-20 önerisi Redis'e yazılır (TTL 7 gün).
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services.ml.bpr_service import train_bpr
+
+        async with AsyncSessionLocal() as db:
+            cached = await train_bpr(db)
+
+        logger.info("[Worker] train_bpr tamamlandı | önbelleklenen_kullanıcı=%d", cached)
+    except Exception as exc:
+        logger.error("[Worker] train_bpr başarısız | %s", str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 async def train_item2vec_task(ctx: dict) -> None:
     """
     Her Pazar 04:00'da çalışır.
@@ -3126,6 +3146,7 @@ class WorkerSettings:
         backfill_listing_embeddings_task,
         train_kmeans_cold_start_task,
         train_item2vec_task,
+        train_bpr_task,
         compute_listing_quality_score_task,
         backfill_listing_quality_scores_task,
         train_listing_quality_model_task,
@@ -3220,6 +3241,8 @@ class WorkerSettings:
         cron(train_item2vec_task, weekday=6, hour=4, minute=0),
         # Her Pazar 05:00 — K-Means cold start clustering (yeni kullanıcılar)
         cron(train_kmeans_cold_start_task, weekday=6, hour=5, minute=0),
+        # Her Cumartesi 03:00 — BPR collaborative filtering (implicit feedback)
+        cron(train_bpr_task, weekday=5, hour=3, minute=0),
         # Her 2 dakikada — LiveKit'te odası kapanmış hayalet yayınları kapat
         cron(cleanup_stale_streams_task, minute=set(range(0, 60, 2))),
         # Her gün 06:00 — bid_hesitation → fiyat düşüş retarget bildirimi

@@ -767,6 +767,27 @@ class FeedQueries:
         except Exception as exc:
             logger.debug("[ForYou] Item2Vec pool atlandı: %s", exc)
 
+        # BPR collaborative filtering önerileri (Redis önbelleğinden)
+        bpr_pool_sql = ""
+        try:
+            from app.services.ml.bpr_service import get_bpr_recommendations
+            bpr_ids_raw = await get_bpr_recommendations(user_id)
+            bpr_ids = [i for i in bpr_ids_raw if i not in set(excluded_ids)][:25]
+            if bpr_ids:
+                bpr_id_list = ",".join(str(i) for i in bpr_ids)
+                bpr_pool_sql = f"""
+                    UNION ALL
+                    SELECT l.id, 0.40 AS sim_score
+                    FROM listings l
+                    WHERE l.id IN ({bpr_id_list})
+                      AND l.status = 'active'
+                      AND l.status != 'deleted'
+                      AND l.user_id != :uid
+                      {ni_filter}
+                """
+        except Exception as exc:
+            logger.debug("[ForYou] BPR pool atlandı: %s", exc)
+
         # FAISS candidate retrieval — pgvector SQL taramasını bypass eder
         # FAISS: in-memory ANN, ~1ms vs pgvector ~50-200ms for full scan
         pgvec_pool_clause = f"""
@@ -830,6 +851,7 @@ class FeedQueries:
                         UNION ALL
                         SELECT id, sim_score FROM social_pool
                         {item2vec_pool_sql}
+                        {bpr_pool_sql}
                     ) combined
                     GROUP BY id
                 ),
