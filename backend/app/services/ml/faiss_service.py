@@ -40,7 +40,8 @@ def _load_index_sync():
         if not os.path.exists(_INDEX_PATH) or not os.path.exists(_ID_MAP_PATH):
             return None
         idx = faiss.read_index(_INDEX_PATH)
-        idx.nprobe = _NPROBE
+        if hasattr(idx, "nprobe"):  # IVFFlat only — IndexFlatIP has no nprobe
+            idx.nprobe = _NPROBE
         ids = np.load(_ID_MAP_PATH)
         logger.info("[FAISS] Index yüklendi | ntotal=%d", idx.ntotal)
         return idx, ids
@@ -152,7 +153,8 @@ async def rebuild_index() -> None:
     faiss.write_index(index, _INDEX_PATH)
     np.save(_ID_MAP_PATH, listing_ids)
 
-    index.nprobe = _NPROBE
+    if hasattr(index, "nprobe"):  # IVFFlat only — IndexFlatIP has no nprobe
+        index.nprobe = _NPROBE
     _index = index
     _id_map = listing_ids
     _index_mtime = os.path.getmtime(_INDEX_PATH)

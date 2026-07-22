@@ -51,7 +51,7 @@ async def generate_visual_embedding(image_url: str) -> Optional[list[float]]:
     from PIL import Image  # type: ignore
 
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             resp = await client.get(image_url)
             resp.raise_for_status()
             img_bytes = resp.content

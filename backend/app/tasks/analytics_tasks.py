@@ -147,7 +147,7 @@ async def _fetch_risky_user_ids() -> tuple[set[int], set[int]]:
 
         # ML tahminini heuristik sonuçlarına ekle
         try:
-            from app.services import churn_ml_service
+            from app.services.ml import churn_ml_service
             ml_user_ids, ml_features = await churn_ml_service.fetch_candidate_features()
             if ml_features:
                 probs = churn_ml_service.predict_churn_risk(ml_features)

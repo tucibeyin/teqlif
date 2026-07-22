@@ -131,7 +131,7 @@ async def get_my_listings(
     )
 
 
-@router.get("/{listing_id}")
+@router.get("/{listing_id:int}")
 async def get_listing(
     request: Request,
     listing_id: int,
