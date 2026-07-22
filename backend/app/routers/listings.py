@@ -597,22 +597,11 @@ async def generate_description(
                     title=body.title,
                     category=body.category,
                     condition=body.condition,
+                    price=body.price,
+                    location=body.location,
                 ):
                     await queue.put({"type": "chunk", "data": chunk})
                 
-                # LLM üretimi bittikten sonra, PRICE ve LOCATION bilgilerini statik şablon olarak ekliyoruz
-                # Böylece LLM bu bilgileri yorumlarken halüsinasyon görmez ve daha az token (CPU) harcar.
-                static_text = "\n\n"
-                
-                if body.price and body.price > 0:
-                    static_text += f"💰 İhtiyaçtan dolayı fiyatı {int(body.price)} TL olarak çok uygun tutulmuştur.\n"
-                    
-                if body.location:
-                    static_text += f"📍 Teslimat sadece {body.location} içi elden yapılacaktır. Ürünü bizzat görerek, gönül rahatlığıyla alabilirsiniz."
-                else:
-                    static_text += "📦 Kargo veya elden teslim seçenekleri mevcuttur."
-                    
-                await queue.put({"type": "chunk", "data": static_text})
                 await queue.put({"type": "done"})
             except Exception as e:
                 await queue.put({"type": "error", "error": e})

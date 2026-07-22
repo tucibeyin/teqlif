@@ -54,16 +54,26 @@ def _generate_user_prompt(
     title: str,
     category: str,
     condition: Optional[str],
+    price: Optional[float],
+    location: Optional[str],
 ) -> str:
     """Kullanıcının verilerini LLM'e sunar."""
     lines = [
-        "Aşağıdaki bilgileri kullanarak kendi ürünün için bir ilan metni oluştur:",
+        "Aşağıdaki gerçek bilgileri kullanarak kendi ürünün için bir ilan metni oluştur:",
         f"- Ürün Başlığı: {title}",
         f"- Kategori: {category}",
     ]
     if condition:
         cond_tr = {"new": "Sıfır", "like_new": "Yeni Gibi", "used": "İkinci El", "damaged": "Hasarlı"}
         lines.append(f"- Durum: {cond_tr.get(condition, condition)}")
+        
+    if price and price > 0:
+        lines.append(f"- Fiyat: {int(price)} TL (Bunu cümleye 'Fiyatı {int(price)} TL olarak uygun tuttum', '{int(price)} TL'ye bırakıyorum' gibi farklı ve doğal satıcı ağzıyla yedir)")
+        
+    if location:
+        lines.append(f"- Teslimat Şekli: Sadece {location} içi elden teslim (Bunu 'Sadece {location} içinden gelip alabilirsiniz', 'Kargo yok, {location} elden teslim' gibi her defasında farklı ama net bir cümleyle belirt)")
+    else:
+        lines.append("- Teslimat Şekli: Kargo veya elden teslim seçenekleri mevcut. (Bunu cümleye doğal bir şekilde yedir)")
         
     return "\n".join(lines)
 
@@ -72,12 +82,14 @@ async def generate_listing_description_stream(
     title: str,
     category: str,
     condition: Optional[str] = None,
+    price: Optional[float] = None,
+    location: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
     Ollama API'sine bağlanıp üretilen metni stream eder (yield chunk).
     """
     system_prompt = _generate_system_prompt(category, condition)
-    user_prompt = _generate_user_prompt(title, category, condition)
+    user_prompt = _generate_user_prompt(title, category, condition, price, location)
     
     payload = {
         "model": MODEL_NAME,
