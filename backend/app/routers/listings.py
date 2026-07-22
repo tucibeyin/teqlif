@@ -38,6 +38,8 @@ from app.core.rate_limit import limiter
 from app.core.read_cache import cache_get, cache_set, invalidate_cache
 from app.utils.redis_client import get_redis
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
 # ── Opsiyonel token çözümleyici ─────────────────────────────────────────────
