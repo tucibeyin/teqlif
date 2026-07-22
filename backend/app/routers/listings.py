@@ -270,6 +270,7 @@ async def similar_listings(
     limit: int = 10,
     db: AsyncSession = Depends(get_db),
 ):
+    from sqlalchemy import case as sa_case
     listing = await db.scalar(
         select(Listing).where(Listing.id == listing_id)
     )
@@ -282,7 +283,14 @@ async def similar_listings(
             Listing.category == listing.category,
             Listing.status == ListingStatus.ACTIVE,
         )
-        .order_by(Listing.created_at.desc())
+        .order_by(
+            # Aynı condition → önce göster; condition yoksa nötr
+            sa_case(
+                (Listing.condition == listing.condition, 0),
+                else_=1,
+            ),
+            Listing.created_at.desc(),
+        )
         .limit(limit)
     )
     items = result.scalars().all()
@@ -295,6 +303,7 @@ async def similar_listings(
             "image_urls": _parse_image_urls(item.image_urls),
             "thumbnail_url": item.thumbnail_url,
             "category": item.category,
+            "condition": item.condition,
             "location": item.location,
             "status": item.status.value if hasattr(item.status, "value") else str(item.status),
         }

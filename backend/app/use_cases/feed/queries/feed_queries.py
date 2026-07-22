@@ -72,6 +72,32 @@ class FeedQueries:
             await redis.setex(cache_key, INTEREST_CACHE_TTL, json.dumps(interests))
         return interests
 
+    async def _get_condition_pref_expr(self, user_id: int) -> str:
+        """
+        Redis'teki condition_pref:{uid} verisinden normalize edilmiş SQL CASE ifadesi üretir.
+        Veri yoksa veya hata olursa '0.0' döner — feed skoru etkilenmez.
+        Normalize: max_score = 1.0, diğerleri orantılı [0, 1].
+        """
+        try:
+            redis = await get_redis()
+            raw = await redis.get(f"condition_pref:{user_id}")
+            if not raw:
+                return "0.0"
+            prefs: dict[str, float] = json.loads(raw)
+            max_score = max(prefs.values(), default=0.0)
+            if max_score <= 0.0:
+                return "0.0"
+            # Sadece bilinen condition değerlerine izin ver (SQL injection koruması)
+            allowed = {"new", "like_new", "used", "damaged"}
+            cases = " ".join(
+                f"WHEN l.condition = '{cond}' THEN {min(score / max_score, 1.0):.4f}"
+                for cond, score in prefs.items()
+                if score > 0 and cond in allowed
+            )
+            return f"CASE {cases} ELSE 0.0 END" if cases else "0.0"
+        except Exception:
+            return "0.0"
+
 
     # ── Ana feed sorgusu ──────────────────────────────────────────────────────────
 
@@ -224,6 +250,10 @@ class FeedQueries:
             freshness_w = 0.28 if 6 <= hour <= 10 else 0.20
             social_w    = 0.14 if 19 <= hour <= 23 else 0.10
             cat_w, quality_w, content_quality_w, explore_w, host_w, conv_w, seen_w = 0.40, 0.18, 0.08, 0.05, 0.05, 0.08, 0.30
+
+        # Condition tercih terimi (Redis → normalize edilmiş SQL CASE)
+        cond_expr = await self._get_condition_pref_expr(user_id)
+        cond_w = 0.05
 
         # Top-5 kategori ve skorları
         top_cats = sorted(interests.items(), key=lambda x: x[1], reverse=True)[:5]
@@ -430,6 +460,7 @@ class FeedQueries:
                         + COALESCE(hq.quality, 0.0) * {host_w}
                         + COALESCE(sc.conv_rate, 0.0) * {conv_w}
                         + COALESCE(si.boost, 0.0) * {influence_w}
+                        + ({cond_expr}) * {cond_w}
                     ) AS feed_score,
                     l.category
                 FROM candidates c
@@ -704,6 +735,9 @@ class FeedQueries:
 
         vec_str = "[" + ",".join(f"{x:.8f}" for x in pref_vec.tolist()) + "]"
 
+        # Condition tercih terimi (Redis → normalize edilmiş SQL CASE)
+        cond_expr_fy = await self._get_condition_pref_expr(user_id)
+
         # not_interested filtresi (Redis)
         excluded_raw = await redis.smembers(f"not_interested:{user_id}")
         excluded_ids = [int(x) for x in excluded_raw] if excluded_raw else []
@@ -865,6 +899,7 @@ class FeedQueries:
                         + LEAST(LOG(1.0 + COALESCE(lk.like_count, 0)) / 5.0, 1.0) * 0.07
                         + COALESCE(l.quality_score, 0.5) * 0.08
                         - COALESCE(imp.seen_decay, 0.0) * 0.20
+                        + ({cond_expr_fy}) * 0.05
                         AS sql_score
                     FROM all_candidates c
                     INNER JOIN listings l ON l.id = c.id
