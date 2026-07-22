@@ -756,15 +756,16 @@ class FeedQueries:
             params["price_ceiling"] = user.max_budget * 1.2
 
         # Item2Vec benzer ilanlar — kullanıcının son görüntülemelerinden
+        # NOT: item_id kolonu user_interactions'da, analytics_events'te değil
         item2vec_pool_sql = ""
         try:
             from app.services.ml.item2vec_service import get_similar_from_redis
             recent_rows = await self.uow.session.execute(
                 text("""
-                    SELECT item_id FROM analytics_events
+                    SELECT item_id FROM user_interactions
                     WHERE user_id = :uid
-                      AND event_type IN ('listing_view', 'detail_dwell')
-                      AND item_id IS NOT NULL
+                      AND item_type = 'listing'
+                      AND interaction_type IN ('listing_view', 'detail_dwell')
                       AND created_at > NOW() - INTERVAL '7 days'
                     GROUP BY item_id
                     ORDER BY MAX(created_at) DESC
