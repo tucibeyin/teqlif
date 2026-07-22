@@ -1112,6 +1112,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     _AiDescButton(
                       loading: _aiDescLoading,
                       enabled: _titleCtrl.text.trim().isNotEmpty && _selectedCategory != null,
+                      isPro: _isPro,
+                      creditsRemaining: _aiDescCreditsRemaining,
                       onTap: _fetchAiDescription,
                     ),
                   ],
@@ -1320,11 +1322,15 @@ class _AiPriceButton extends StatelessWidget {
 class _AiDescButton extends StatelessWidget {
   final bool loading;
   final bool enabled;
+  final bool isPro;
+  final int? creditsRemaining;
   final VoidCallback onTap;
   const _AiDescButton({
     required this.loading,
     required this.enabled,
     required this.onTap,
+    this.isPro = false,
+    this.creditsRemaining,
   });
 
   @override
@@ -1335,7 +1341,7 @@ class _AiDescButton extends StatelessWidget {
       onTap: active ? onTap : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
           gradient: active
               ? const LinearGradient(
@@ -1352,40 +1358,86 @@ class _AiDescButton extends StatelessWidget {
                 : const Color(0xFF334155),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: loading
-              ? [
-                  const SizedBox(
-                    width: 15,
-                    height: 15,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(Color(0xFF6366F1)),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    l.aiDescGenerating,
-                    style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ]
-              : [
-                  const Text('✍️', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 8),
-                  Text(
-                    l.aiDescButton,
-                    style: TextStyle(
-                      color: active ? Colors.white : const Color(0xFF475569),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+        child: Builder(
+          builder: (context) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: loading
+                  ? [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Color(0xFF6366F1)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        l.aiDescGenerating,
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ]
+                  : [
+                      const Text('✍️', style: TextStyle(fontSize: 15)),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          l.aiDescButton,
+                          style: TextStyle(
+                            color: active ? Colors.white : const Color(0xFF475569),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isPro) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FaIcon(
+                                FontAwesomeIcons.crown,
+                                size: 10,
+                                color: (creditsRemaining == null || creditsRemaining! > 0)
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0xFFF59E0B),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                creditsRemaining == null || creditsRemaining! > 0
+                                    ? '${creditsRemaining ?? '…'} ${l.aiCreditsLeftSuffix}'
+                                    : '5 TUCi',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: (creditsRemaining == null || creditsRemaining! > 0)
+                                      ? const Color(0xFF34D399)
+                                      : const Color(0xFFF59E0B),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+            );
+          },
         ),
       ),
     );
