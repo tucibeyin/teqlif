@@ -236,9 +236,13 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 TeqSnackBar.show(context, message: json['error'], type: TeqSnackBarType.error);
                 break;
               } else if (json.containsKey('text')) {
-                setState(() {
-                  _descCtrl.text += json['text'] as String;
-                });
+                final textChunk = json['text'] as String;
+                final newText = _descCtrl.text + textChunk;
+                _descCtrl.value = _descCtrl.value.copyWith(
+                  text: newText,
+                  selection: TextSelection.collapsed(offset: newText.length),
+                  composing: TextRange.empty,
+                );
               } else if (json.containsKey('done') && json['done'] == true) {
                 final tuciSpent = (json['tuci_spent'] as num?)?.toInt() ?? 0;
                 if (tuciSpent > 0) {
