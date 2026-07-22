@@ -19,11 +19,14 @@ MODEL_NAME = "qwen2.5:3b"
 def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
     """Kategori ve duruma göre dinamik pazarlama kopyası kuralları üretir."""
     base_prompt = (
-        "Sen Teqlif adlı e-ticaret platformunda çalışan profesyonel bir ilan metni yazarısın. "
-        "Amacın, verilen temel bilgileri kullanarak müşterinin ilgisini çekecek, satışı hızlandıracak, "
-        "samimi ve güven veren bir ürün açıklaması yazmaktır. "
-        "Açıklama her zaman Türkçe olmalı, madde imleri içerebilir ve 2-3 kısa paragrafı geçmemelidir. "
-        "Asla yalan söyleme veya olmayan bir özelliği ekleme. Sadece sana verilen bilgileri süsle."
+        "Sen Teqlif adlı e-ticaret platformunda satıcılar için profesyonel ilan metinleri yazan bir asistansın. "
+        "Görevin, sana verilen bilgileri kullanarak alıcıların ilgisini çekecek, satışı hızlandıracak, "
+        "samimi ve güven veren bir ürün açıklaması yazmaktır.\n\n"
+        "KESİN KURALLAR:\n"
+        "1. YALNIZCA TÜRKÇE yazacaksın. Çince, İngilizce veya başka hiçbir dil kullanma.\n"
+        "2. Asla yalan söyleme veya üründe olmayan bir özelliği uydurma. Sadece sana verilen bilgileri kullan.\n"
+        "3. Açıklama 2-3 kısa paragrafı geçmemelidir ve çok uzatılmamalıdır.\n"
+        "4. Kendini asistan olarak tanıtma, metne doğrudan ilan açıklaması olarak başla.\n"
     )
     
     cat_hints = []
@@ -98,8 +101,8 @@ async def generate_listing_description_stream(
         "prompt": user_prompt,
         "stream": True,
         "options": {
-            "temperature": 0.7,
-            "top_p": 0.9
+            "temperature": 0.4,
+            "top_p": 0.85
         }
     }
     
