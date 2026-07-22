@@ -3291,7 +3291,6 @@ class WorkerSettings:
         train_kmeans_cold_start_task,
         train_item2vec_task,
         train_bpr_task,
-        generate_listing_description_task,
         compute_listing_quality_score_task,
         backfill_listing_quality_scores_task,
         train_listing_quality_model_task,
