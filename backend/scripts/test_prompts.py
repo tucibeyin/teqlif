@@ -17,8 +17,7 @@ sys.path.append(parent_dir)
 
 from app.services.ml.llm_service import (
     generate_listing_description_stream,
-    _generate_system_prompt,
-    _generate_user_prompt,
+    _build_prompt,
     _build_suffix,
 )
 
@@ -99,12 +98,11 @@ async def _run_one(
     _sep()
 
     if debug:
-        sys_p = _generate_system_prompt(category, condition)
-        usr_p = _generate_user_prompt(title, category, condition)
+        sys_p, usr_p = _build_prompt(title, category, condition)
         suffix = _build_suffix(price, location)
-        print("\n[DEBUG] SYSTEM PROMPT:")
+        print("\n[DEBUG] SYSTEM PROMPT (few-shot dahil):")
         print(sys_p)
-        print("\n[DEBUG] USER PROMPT (LLM'e giden):")
+        print("\n[DEBUG] USER PROMPT (LLM'e giden — fiyat/lokasyon YOK):")
         print(usr_p)
         print(f"\n[DEBUG] SUFFIX ŞABLON (Python'dan eklenen): {suffix or '─'}")
         _sep("·")

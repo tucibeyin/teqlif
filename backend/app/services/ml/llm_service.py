@@ -2,18 +2,19 @@
 Ollama (Qwen2.5:3b) LLM Servisi — Hybrid Streaming
 
 Akış:
-  1. _generate_system_prompt()  — slug-based kategori/durum kuralları.
-  2. _generate_user_prompt()    — sadece ürün gövdesi (fiyat/lokasyon YOK).
-  3. generate_listing_description_stream() — Ollama'yı stream eder,
-     bitince _build_suffix() ile fiyat/lokasyon şablonunu yield eder.
+  1. _build_prompt()  — kısa direktif + 2 few-shot örnek (kural listesi yerine).
+  2. stream + preamble detector — YZ açılış cümlelerini ilk 80 char'da yakala.
+  3. stop sequences — Ollama fiyat/teslimat token'ı üretirse durur.
+  4. _build_suffix() — fiyat/lokasyon deterministik şablon olarak eklenir.
 
 Hybrid mantığı:
-  - LLM → ürün tanıtım gövdesi  (yaratıcı, hallüsinasyon riski kabul edilebilir)
-  - Şablon → fiyat + lokasyon cümlesi  (deterministik, asla kaybolmaz)
+  LLM  → ürün gövdesi (3-4 cümle, yaratıcı)
+  Python → fiyat + lokasyon (deterministik, asla kaybolmaz, asla çifte gelmez)
 """
 import json
 import logging
 import random
+import re
 from typing import AsyncGenerator, Optional
 import httpx
 
@@ -22,42 +23,19 @@ logger = logging.getLogger(__name__)
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "qwen2.5:3b"
 
-# ── Kategori ipuçları (slug → hint) ──────────────────────────────────────────
-_CAT_HINTS: dict[str, str] = {
-    "elektronik": "Çalışmayan aksam olmadığını veya kozmetik durumunu (çizik, baret vb.) kısaca belirt.",
-    "vasita":     "Motorunda veya karoserinde sıkıntı olup olmadığını dürüstçe belirt.",
-    "emlak":      "Konumundan veya krediye uygunluğundan samimi bir dille bahset.",
-    "giyim":      "Bedeninin uymadığı için ya da tarz değişikliğinden sattığını belirt.",
-    "ev":         "Kırık veya çizik olmadığını ya da evde yer açmak için sattığını belirt.",
-    "spor":       "Kullanım sıklığını ve genel durumunu kısaca belirt.",
-    "kitap":      "Kapak veya sayfa durumunu belirt.",
-}
-
-# ── Ürün durumu etiketleri ─────────────────────────────────────────────────────
-_CONDITION_LABELS: dict[str, str] = {
-    "new":       "Sıfır (kutusunda, hiç açılmamış)",
-    "like_new":  "Az kullanılmış (adeta sıfır)",
-    "used":      "Kullanılmış",
-    "damaged":   "Hasarlı / Arızalı",
-}
-
-# ── Fiyat şablonları ───────────────────────────────────────────────────────────
+# ── Fiyat + lokasyon şablonları ───────────────────────────────────────────────
 _PRICE_ONLY: list[str] = [
     "{price} TL'ye satıyorum, pazarlık payı var.",
     "Fiyatım {price} TL, ciddi alıcı beklerim.",
     "{price} TL istiyorum, fiyat konuşulur.",
     "{price} TL, sabit fiyat.",
 ]
-
-# ── Lokasyon şablonları ────────────────────────────────────────────────────────
 _LOCATION_ONLY: list[str] = [
     "Sadece {city} içi elden teslim yapabilirim.",
     "{city}'den elden teslim, kargoya bakmıyorum.",
     "Elden {city}'den verebilirim.",
     "{city} içinden elden teslim tercihim.",
 ]
-
-# ── Fiyat + lokasyon birleşik şablonları ──────────────────────────────────────
 _PRICE_AND_LOCATION: list[str] = [
     "{price} TL, sadece {city} içi elden teslim.",
     "{price} TL'ye satıyorum, {city}'den elden verebilirim.",
@@ -65,12 +43,73 @@ _PRICE_AND_LOCATION: list[str] = [
     "{price} TL istiyorum, {city}'den elden.",
 ]
 
+# ── Kategori ipuçları ─────────────────────────────────────────────────────────
+_CAT_HINTS: dict[str, str] = {
+    "elektronik": "Ekran, batarya ve genel çalışma durumunu belirt.",
+    "vasita":     "Motor ve karoser durumunu dürüstçe belirt.",
+    "emlak":      "Konumu ve krediye uygunluğunu kısaca belirt.",
+    "giyim":      "Neden sattığını (beden uymadı, tarz değişti vb.) belirt.",
+    "ev":         "Kırık/çizik varsa söyle, yoksa tertemiz olduğunu belirt.",
+    "spor":       "Ne sıklıkta kullandığını ve genel durumunu belirt.",
+    "kitap":      "Kapak ve sayfa durumunu belirt.",
+}
+
+# ── Ürün durumu etiketleri ────────────────────────────────────────────────────
+_CONDITION_LABELS: dict[str, str] = {
+    "new":       "Sıfır, kutusunda hiç açılmamış",
+    "like_new":  "Az kullanılmış, adeta sıfır",
+    "used":      "Kullanılmış, temiz",
+    "damaged":   "Hasarlı veya arızalı",
+}
+
+# ── Few-shot örnekler (kategori → 2 örnek output) ────────────────────────────
+_FEW_SHOT: dict[str, list[str]] = {
+    "elektronik": [
+        "3 yıl kullandım, ekranında hiç çizik yok, bataryası sağlıklı. Orijinal kutusu ve şarj adaptörü mevcut. İhtiyaçtan satılık, alıcısına hayırlı olsun.",
+        "Ekran kırık, kamera çalışıyor ama dokunmatik kısmen hassas değil. Fiyata yansıttım, parça olarak da değerlendirebilirsiniz.",
+    ],
+    "vasita": [
+        "2019 model, 85.000 km'de, motoru ve şanzımanı sorunsuz. Bakımları zamanında yapıldı, servis defteri mevcut. Sahibinden, ihtiyaçtan satılık.",
+        "Kaporta hasarı var, motor çalışıyor fakat klima gaz istiyor. Fiyata yansıttım, ciddi alıcı beklerim.",
+    ],
+    "emlak": [
+        "3+1, 120 m², güney cepheli, asansörlü binada 3. kat. Mutfak ve banyosu yenilenmiş, masraf gerektirmiyor. Krediye uygun.",
+        "Köy içi, 500 m² arsa, imarlı. Tapu hazır, hemen devredebilirim.",
+    ],
+    "giyim": [
+        "1 kere giyildi, bedenim uymadığı için satıyorum. Etiketi hâlâ üzerinde, tertemiz.",
+        "Tarz değişikliğinden satıyorum, yırtık veya leke yok, temiz kullanıldı.",
+    ],
+    "ev": [
+        "3 yıl kullandım, kırık veya çizik yok, tertemiz. Taşınma nedeniyle satıyorum.",
+        "Koltuğun bir yerinde küçük bir çizik var, fiyata yansıttım. Genel durumu iyi.",
+    ],
+    "spor": [
+        "Ayda 2-3 kez kullandım, hasar yok, aksesuarları tam. İhtiyaçtan satılık.",
+        "Sporu bıraktığım için satıyorum, çok az kullandım, neredeyse sıfır gibi.",
+    ],
+    "kitap": [
+        "Bir kere okunduktan sonra rafta kaldı, sayfaları ve kapağı tertemiz.",
+        "Birkaç sayfasında not var, kapakta hafif yıpranma dışında sağlam.",
+    ],
+    "diger": [
+        "Temiz kullandım, yırtık veya kırık yok. İhtiyaç fazlası olduğu için satıyorum.",
+        "Az kullanılmış, genel durumu iyi. Alıcısına hayırlı olsun.",
+    ],
+}
+
+# YZ/robot açılış kalıpları — preamble'da yakalanırsa atlanır
+_RE_AI_OPENER = re.compile(
+    r"^(üzgünüm\b|tabii\s+ki\b|elbette\b|merhaba\b|size\s+yardım|ürününüz\b|"
+    r"aşağıda\b|işte\s+ilan|evet[,\s]|anladım\b)",
+    re.IGNORECASE,
+)
+
 
 def _build_suffix(price: Optional[float], location: Optional[str]) -> str:
     """Fiyat ve/veya lokasyondan deterministik şablon cümlesi üretir."""
     p = f"{int(price):,}".replace(",", ".") if price and price > 0 else None
     c = location.strip() if location else None
-
     if p and c:
         return random.choice(_PRICE_AND_LOCATION).format(price=p, city=c)
     if p:
@@ -80,65 +119,42 @@ def _build_suffix(price: Optional[float], location: Optional[str]) -> str:
     return ""
 
 
-def _generate_system_prompt(category: str, condition: Optional[str]) -> str:
-    """Slug-based kategori ve duruma göre dinamik system prompt üretir."""
-    base = (
-        "Sen bir yapay zeka değilsin. Türkiye'de ikinci el ilan platformunda kendi ürününü satan "
-        "sıradan bir vatandaşsın. Sadece ürün tanıtım metnini yaz.\n\n"
-        "KESİN KURALLAR:\n"
-        "1. Metnin başına veya sonuna ASLA tırnak işareti (' veya \") koyma.\n"
-        "2. ASLA 'Merhaba', 'Size yardımcı olabilirim', 'Vurgulayalım' gibi YZ veya müşteri "
-        "temsilcisi ifadeleri kullanma.\n"
-        "3. 1. tekil şahıs (Ben) ağzıyla yaz: 'Satıyorum', 'Kullandım' gibi.\n"
-        "4. En fazla 3 cümle. Samimi ol. 'Alıcısına hayırlı olsun', 'Pazarlık payı var', "
-        "'İhtiyaçtan satılık' gibi gerçekçi satıcı jargonları kullanabilirsin.\n"
-        "5. Günlük konuşma dilini kullan, cümleleri karmaşık kurma.\n"
-        "6. ASLA kurumsal veya e-ticaret dili kullanma ('mağazamız', 'müşteri', 'hizmetlerimiz').\n"
-        "7. 'Müşteri' yerine 'alıcı' veya 'yeni sahibi' de.\n"
-        "8. KESİNLİKLE 1. tekil şahıs yaz. 'Ürününüz', 'Sizin için' gibi 2. şahıs hitapları YASAK.\n"
-        "9. Başlık ile ürün durumu çelişiyorsa HER ZAMAN durumu esas al, hasarı dürüstçe belirt.\n"
-        "10. Devrik, absürt veya çeviri kokan ifadeler kullanma; sade doğal Türkçe yaz.\n"
-        "11. FİYAT VE TESLİMAT BİLGİSİ YAZMA. Sadece ürünü ve durumunu anlat; "
-        "fiyat ve şehir bilgisi ayrıca eklenecek.\n"
-    )
-
-    hints: list[str] = []
-
-    cat_hint = _CAT_HINTS.get(category.lower().strip())
-    if cat_hint:
-        hints.append(cat_hint)
-
-    if condition == "new":
-        hints.append("Ürünün kutusunda, hiç açılmamış sıfır ürün olduğunu belirt.")
-    elif condition == "like_new":
-        hints.append("Çok az kullanıldığını, adeta sıfır ayarında tertemiz olduğunu belirt.")
-    elif condition == "used":
-        hints.append("Temiz kullanıldığını ve yeni sahibine masraf çıkarmayacağını söyle.")
-    elif condition == "damaged":
-        hints.append("Üründe hasar/arıza olduğunu SAKLAMA; 'Hasarlıdır' veya 'Arızalıdır' diye açıkça belirt.")
-
-    if hints:
-        base += "\nÖzel Tavsiyeler:\n" + "\n".join(f"- {h}" for h in hints)
-
-    return base
-
-
-def _generate_user_prompt(
+def _build_prompt(
     title: str,
     category: str,
     condition: Optional[str],
-) -> str:
-    """Kullanıcı girdilerini XML etiketlerle LLM'e sunar (injection koruması)."""
-    cond_label = _CONDITION_LABELS.get(condition or "", condition or "")
-    lines = [
-        "Aşağıdaki bilgileri kullanarak sadece ürün tanıtım metnini oluştur "
-        "(fiyat ve teslimat bilgisi YAZMA, fazladan giriş/çıkış cümlesi de ekleme):",
-        f"<urun>{title}</urun>",
-        f"<kategori>{category}</kategori>",
+) -> tuple[str, str]:
+    """
+    (system_prompt, user_prompt) döner.
+    Strateji: kural listesi yerine kısa direktif + 2 somut örnek.
+    3b model örnekleri taklit eder, kuralları analiz edemez.
+    """
+    cat = category.lower().strip()
+    cond_label = _CONDITION_LABELS.get(condition or "", "")
+    cat_hint = _CAT_HINTS.get(cat, "")
+    examples = _FEW_SHOT.get(cat, _FEW_SHOT["diger"])
+
+    system = (
+        "Türkiye'de ikinci el ilan platformunda bireysel satıcısın. "
+        "Sana ürün bilgisi verilecek, sen sadece kısa ilan metnini yazacaksın. "
+        "Kurallar: 1. tekil şahıs kullan (Ben/Satıyorum). "
+        "Fiyat ve teslimat bilgisi YAZMA. "
+        "YZ gibi 'Merhaba' veya 'Tabii ki' ile başlama. "
+        "Özür veya açıklama cümlesi ekleme, direkt ilan metnini yaz. "
+        "3-4 cümle, sade Türkçe.\n\n"
+        f"İyi örnek:\n\"{examples[0]}\"\n\n"
+        f"İyi örnek:\n\"{examples[1]}\""
+    )
+
+    user_lines = [
+        "Şu ürün için ilan metni yaz:",
+        f"Ürün: {title}",
+        f"Durum: {cond_label}" if cond_label else "",
+        f"Not: {cat_hint}" if cat_hint else "",
     ]
-    if cond_label:
-        lines.append(f"<durum>{cond_label}</durum>")
-    return "\n".join(lines)
+    user = "\n".join(line for line in user_lines if line)
+
+    return system, user
 
 
 async def generate_listing_description_stream(
@@ -149,27 +165,44 @@ async def generate_listing_description_stream(
     location: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
-    LLM gövdesini stream eder, ardından fiyat/lokasyon şablonunu yield eder.
-    Hata durumunda __LLM_ERROR__ sentinel'i yield eder.
+    LLM gövdesini stream eder, ardından suffix yield eder.
+    - Preamble buffer (ilk 80 char): YZ açılış cümlesi yakalanırsa atlanır.
+    - Stop sequences: Ollama fiyat/lokasyon yazmaya başlayınca durur.
+    - Hata: __LLM_ERROR__ sentinel yield eder.
     """
-    system_prompt = _generate_system_prompt(category, condition)
-    user_prompt = _generate_user_prompt(title, category, condition)
+    system_prompt, user_prompt = _build_prompt(title, category, condition)
 
     payload = {
         "model": MODEL_NAME,
         "system": system_prompt,
         "prompt": user_prompt,
         "stream": True,
+        "keep_alive": "10m",   # warm model — cold start önler
         "options": {
-            "temperature": 0.4,
+            "temperature": 0.5,
             "top_p": 0.85,
             "num_predict": 150,
-            "num_thread": 4,
+            "num_thread": 6,
+            "stop": [
+                # Fiyat/lokasyon cümlesi başlamadan önce durdur
+                " TL", " lira", "₺",
+                "elden teslim", "Elden teslim",
+                "kargo", "Kargo",
+                "Fiyat", "fiyat",
+                "Ücret", "ücret",
+            ],
         },
     }
 
     try:
-        logger.info("[LLM] Stream isteği gönderiliyor (%s) | title=%r", MODEL_NAME, title[:60])
+        logger.info("[LLM] Stream isteği (%s) | title=%r", MODEL_NAME, title[:60])
+
+        # Preamble buffer — ilk 80 char'da YZ açılış tespiti
+        _PREAMBLE_LEN = 80
+        preamble_buf = ""
+        preamble_done = False
+        total_chars = 0
+
         async with httpx.AsyncClient() as client:
             async with client.stream(
                 "POST", OLLAMA_API_URL, json=payload, timeout=120.0
@@ -184,17 +217,42 @@ async def generate_listing_description_stream(
                         continue
                     try:
                         data = json.loads(line)
-                        token = data.get("response", "")
-                        if token:
-                            yield token
                     except json.JSONDecodeError:
                         continue
 
-        # Gövde bitti — deterministik fiyat/lokasyon şablonunu ekle
+                    token = data.get("response", "")
+                    if not token:
+                        continue
+
+                    if not preamble_done:
+                        preamble_buf += token
+                        if len(preamble_buf) >= _PREAMBLE_LEN:
+                            preamble_done = True
+                            # YZ açılış cümlesini sil
+                            clean_start = _RE_AI_OPENER.sub("", preamble_buf).lstrip()
+                            if clean_start != preamble_buf.lstrip():
+                                logger.warning("[LLM] YZ açılış cümlesi tespit edildi ve silindi")
+                            if clean_start:
+                                yield clean_start
+                                total_chars += len(clean_start)
+                    else:
+                        yield token
+                        total_chars += len(token)
+
+        # Preamble dolmadan stream bittiyse (çok kısa çıktı) — onu da yield et
+        if not preamble_done and preamble_buf:
+            clean_start = _RE_AI_OPENER.sub("", preamble_buf).lstrip()
+            if clean_start:
+                yield clean_start
+                total_chars += len(clean_start)
+
+        # Suffix — her zaman Python'dan gelir
         suffix = _build_suffix(price, location)
         if suffix:
             yield " "
             yield suffix
+
+        logger.info("[LLM] Tamamlandı | %d char | suffix=%r", total_chars, suffix or "─")
 
     except Exception as exc:
         logger.error("[LLM] Ollama bağlantı hatası: %s", exc)
