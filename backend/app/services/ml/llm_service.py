@@ -126,7 +126,7 @@ def _enrich_with_llm(template: str, title: str) -> Optional[str]:
     if model is None:
         return None
 
-    # Qwen2.5 chat template + pre-fill
+    # Qwen2.5 chat template — no pre-fill, full paraphrase
     prompt = (
         "<|im_start|>system\n"
         "Türkçe ilan açıklamasını daha akıcı ve doğal bir dille yeniden yaz. "
@@ -135,7 +135,6 @@ def _enrich_with_llm(template: str, title: str) -> Optional[str]:
         f"Orijinal: {template}\n"
         "Yeniden yaz:<|im_end|>\n"
         "<|im_start|>assistant\n"
-        f"{title},"
     )
 
     try:
@@ -148,7 +147,7 @@ def _enrich_with_llm(template: str, title: str) -> Optional[str]:
             stop=["<|im_end|>", "<|im_start|>", "\n\n", "Orijinal:"],
         )
         completion = output["choices"][0]["text"].strip()
-        enriched = f"{title},{completion}"
+        enriched = completion
 
         # Son tam cümleye kırp
         for sep in (".", "!", "?"):
