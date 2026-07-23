@@ -106,11 +106,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     final locale = prefs.getString('app_locale_language_code') ?? 'tr';
     final cats = await CategoryService.getCategories(locale: locale);
     if (!mounted) return;
-    setState(() {
-      _categories = cats;
-      if (cats.isNotEmpty) _selectedCategory = cats.first.$1;
-      _updateSubcategories(cats.first.$1);
-    });
+    setState(() => _categories = cats);
   }
 
   void _updateSubcategories(String categoryKey) {
@@ -1126,6 +1122,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             value: _selectedCategory,
             decoration: InputDecoration(
                 labelText: l.fieldCategory, hintText: l.fieldCategoryHint),
+            hint: Text(l.fieldCategoryHint),
             items: _categories
                 .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                 .toList(),
@@ -1361,12 +1358,16 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         break;
 
       case ExtraFieldType.number:
+        final isYil = f.key == 'yil';
         field = TeqTextField(
           controller: _extraCtrlMap[f.key],
           labelText: displayLabel,
           floatingLabel: true,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            if (isYil) LengthLimitingTextInputFormatter(4),
+          ],
           suffixIcon: f.unit != null
               ? Padding(
                   padding: const EdgeInsets.only(right: 12),
@@ -1376,9 +1377,17 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           fontSize: 13)),
                 )
               : null,
-          validator: f.optional
-              ? null
-              : (v) => (v == null || v.isEmpty) ? displayLabel : null,
+          validator: (v) {
+            if (!f.optional && (v == null || v.isEmpty)) return displayLabel;
+            if (isYil && v != null && v.isNotEmpty) {
+              final year = int.tryParse(v);
+              final maxYear = DateTime.now().year;
+              if (year != null && year > maxYear) {
+                return 'Yıl $maxYear\'dan büyük olamaz';
+              }
+            }
+            return null;
+          },
         );
         break;
 

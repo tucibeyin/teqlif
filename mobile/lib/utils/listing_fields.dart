@@ -126,7 +126,6 @@ const _vites = [
   FieldOption('manuel', 'Manuel'),
   FieldOption('otomatik', 'Otomatik'),
   FieldOption('yari_otomatik', 'Yarı Otomatik'),
-  FieldOption('cvt', 'CVT'),
 ];
 
 const _vitesManuelDefault = [
@@ -1572,7 +1571,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _yakitTipi),
     ExtraFieldDef(key: 'vites', labelKey: 'extraField_vites', type: ExtraFieldType.dropdown, options: _vites),
     ExtraFieldDef(key: 'kasa_tipi', labelKey: 'extraField_kasa_tipi', type: ExtraFieldType.dropdown, options: _kasaTipi),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
     ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
   'motosiklet': [
@@ -1590,7 +1589,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'menzil_km', labelKey: 'extraField_menzil', type: ExtraFieldType.number, optional: true, unit: 'km'),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
     ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
   'kamyonet_minibus': [
@@ -1646,7 +1645,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerTelefon),
     ExtraFieldDef(key: 'depolama', labelKey: 'extraField_depolama', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
     ExtraFieldDef(key: 'ram', labelKey: 'extraField_ram', type: ExtraFieldType.dropdown, options: _ram, optional: true),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
   'bilgisayar_laptop': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaBilgisayar),
@@ -1738,32 +1737,32 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   // ── Giyim ─────────────────────────────────────────────────────────────────
   'kadin_giyim': [
     ExtraFieldDef(key: 'beden', labelKey: 'extraField_beden', type: ExtraFieldType.dropdown, options: _bedenKadin),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
   'erkek_giyim': [
     ExtraFieldDef(key: 'beden', labelKey: 'extraField_beden', type: ExtraFieldType.dropdown, options: _bedenKadin),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
   'cocuk_giyim': [
     ExtraFieldDef(key: 'beden', labelKey: 'extraField_beden', type: ExtraFieldType.dropdown, options: _bedenCocuk),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
   'ayakkabi': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
     ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _ayakkabiTip),
     ExtraFieldDef(key: 'numara', labelKey: 'extraField_numara', type: ExtraFieldType.dropdown, options: _numara),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
   'canta': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.text, optional: true),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
     ExtraFieldDef(key: 'malzeme', labelKey: 'extraField_malzeme', type: ExtraFieldType.dropdown, options: _cantaMalzeme, optional: true),
   ],
   'taki_mucevher': [
     ExtraFieldDef(key: 'malzeme', labelKey: 'extraField_malzeme', type: ExtraFieldType.dropdown, options: _takiMalzeme),
     ExtraFieldDef(key: 'altin_ayar', labelKey: 'extraField_altin_ayar', type: ExtraFieldType.dropdown, options: _altinAyar, optional: true),
     ExtraFieldDef(key: 'gumus_ayar', labelKey: 'extraField_gumus_ayar', type: ExtraFieldType.dropdown, options: _gumusAyar, optional: true),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
   'saat_giyim': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaSaat),
@@ -1771,24 +1770,24 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'cinsiyet', labelKey: 'extraField_cinsiyet', type: ExtraFieldType.dropdown, options: _saatCinsiyet),
   ],
   'sapka_kemer_aksesuar': [
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
 
   // ── Ev & Yaşam ────────────────────────────────────────────────────────────
   'mobilya': [
     ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _mobilyaTip),
     ExtraFieldDef(key: 'malzeme', labelKey: 'extraField_malzeme', type: ExtraFieldType.dropdown, options: _mobilyaMalzeme, optional: true),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
   'mutfak_gerecleri': [],
   'temizlik_ekipmani': [],
   'ev_tekstil': [
     ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _evTekstilTip),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
   'aydinlatma': [
     ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _aydinlatmaTip),
-    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk),
   ],
   'bahce_dis_mekan': [],
   'antika_koleksiyon': [
