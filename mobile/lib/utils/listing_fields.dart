@@ -1582,6 +1582,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'motor_cc', labelKey: 'extraField_motor_cc', type: ExtraFieldType.number, optional: true, unit: 'cc'),
+    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
   'elektrikli_arac': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaElektrikli),
@@ -1590,6 +1591,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'menzil_km', labelKey: 'extraField_menzil', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
+    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
   'kamyonet_minibus': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaKamyon),
@@ -1598,6 +1600,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _yakitTipi),
     ExtraFieldDef(key: 'vites', labelKey: 'extraField_vites', type: ExtraFieldType.dropdown, options: _vitesManuelDefault),
+    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
   'kamyon_tir': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaKamyon),
@@ -1606,6 +1609,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _yakitTipi),
     ExtraFieldDef(key: 'vites', labelKey: 'extraField_vites', type: ExtraFieldType.dropdown, options: _vitesManuelDefault),
+    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
   'traktor': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaTaktor),
@@ -1613,6 +1617,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'calisma_saati', labelKey: 'extraField_calisma_saati', type: ExtraFieldType.number, optional: true, unit: 'saat'),
+    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
   'tekne_su_araci': [
     ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _tekneTip),
@@ -1627,6 +1632,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number, optional: true),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
+    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
   'yedek_parca': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaArac),
