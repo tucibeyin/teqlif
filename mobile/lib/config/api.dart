@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../core/app_error.dart';
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
+import '../core/result.dart';
 import '../services/auth_service.dart' show AuthService, RefreshOutcome;
 
 const String kBaseUrl = 'https://www.teqlif.com/api';
@@ -161,6 +163,38 @@ Future<Map<String, dynamic>> apiCall(
       code: 'NETWORK_ERROR',
       statusCode: 0,
     );
+  }
+}
+
+/// [apiCall] etrafındaki Result<T> sarıcısı.
+///
+/// Exception fırlatmak yerine [Ok] veya [Err] döndürür.
+/// F3/F4 migration ile yeni servis ve ekranlar bu fonksiyonu kullanır.
+/// ```dart
+/// final result = await apiCallResult(() => http.post(...));
+/// switch (result) {
+///   case Ok(:final value): ...
+///   case Err(:final error): ErrorDisplay.show(context, error);
+/// }
+/// ```
+Future<Result<Map<String, dynamic>>> apiCallResult(
+  Future<http.Response> Function() request,
+) async {
+  try {
+    return Ok(await apiCall(request));
+  } on AppException catch (e) {
+    return Err(AppError.from(e));
+  }
+}
+
+/// [apiCallList] etrafındaki Result<T> sarıcısı.
+Future<Result<List<dynamic>>> apiCallListResult(
+  Future<http.Response> Function() request,
+) async {
+  try {
+    return Ok(await apiCallList(request));
+  } on AppException catch (e) {
+    return Err(AppError.from(e));
   }
 }
 
