@@ -84,7 +84,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   @override
   void initState() {
     super.initState();
-    _titleCtrl.addListener(() => setState(() {}));
     AnalyticsService.trackEvent('listing_create_start', {});
     _loadCategories();
     CityService.getCities().then((c) {
@@ -1076,37 +1075,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     final extraFields = _selectedSubcategory != null
         ? (kSubcategoryFields[_selectedSubcategory!] ?? <ExtraFieldDef>[])
         : <ExtraFieldDef>[];
-    final titlePreview = _titleCtrl.text.trim();
 
     return TeqCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row: section label + live title preview
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                l.sectionListingDetails,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-              ),
-              if (titlePreview.isNotEmpty)
-                Flexible(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Text(
-                      titlePreview,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary(context)),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                      textAlign: TextAlign.end,
-                    ),
-                  ),
-                ),
-            ],
+          Text(
+            l.sectionListingDetails,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
           ),
           const SizedBox(height: 14),
 
