@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
 from sqlalchemy import String, Float, DateTime, ForeignKey, Boolean, Text, Index, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
@@ -16,18 +17,25 @@ class Listing(Base):
         Index('ix_listings_embedding_hnsw', 'embedding', postgresql_using='hnsw', postgresql_with={'m': 16, 'ef_construction': 64}, postgresql_ops={'embedding': 'vector_cosine_ops'}),
         Index('ix_listings_feed_organic', 'category', 'status', text('created_at DESC')),
         Index('ix_listings_feed_recent', 'status', text('created_at DESC')),
+        Index('ix_listings_subcategory', 'subcategory'),
+        Index('ix_listings_province', 'province'),
+        Index('ix_listings_extra_fields_gin', 'extra_fields', postgresql_using='gin'),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
-    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    title: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    subcategory: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     brand: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
     model_name: Mapped[Optional[str]] = mapped_column(String(150), nullable=True, index=True)
     condition: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
+    province: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    district: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     location: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    extra_fields: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     image_urls: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of URLs
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
