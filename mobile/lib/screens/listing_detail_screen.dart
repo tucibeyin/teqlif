@@ -2262,8 +2262,9 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
       case 'new':       return l.conditionNew;
       case 'like_new':  return l.conditionLikeNew;
       case 'used':      return l.conditionUsed;
-      case 'damaged':   return l.conditionDamaged;
-      default:          return condition;
+      case 'damaged':      return l.conditionDamaged;
+      case 'refurbished':  return l.conditionRefurbished;
+      default:             return condition;
     }
   }
 
