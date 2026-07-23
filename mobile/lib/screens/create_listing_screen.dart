@@ -24,6 +24,7 @@ import '../utils/error_helper.dart';
 import '../utils/listing_fields.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
+import '../ui_library/components/inputs/teq_multi_select.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/cards/teq_card.dart';
 import '../ui_library/components/buttons/teq_button.dart';
@@ -64,6 +65,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   // Server-driven field schema
   List<ExtraFieldDef> _currentFields = [];
   bool _fieldsLoading = false;
+
+  // Multiselect values: key → selected values
+  final Map<String, Set<String>> _extraMultiValues = {};
 
   // AI / Pro
   bool _isPro = false;
@@ -124,6 +128,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       _fieldsLoading = true;
       _currentFields = [];
       _extraValues.clear();
+      _extraMultiValues.clear();
       _disposeExtraCtrls();
     });
 
@@ -754,7 +759,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       if (_selectedSubcategory != null) {
         final fields = _currentFields;
         for (final f in fields) {
-          if (f.type == ExtraFieldType.dropdown) {
+          if (f.type == ExtraFieldType.multiselect) {
+            final vals = _extraMultiValues[f.key];
+            if (vals != null && vals.isNotEmpty) extraFields[f.key] = vals.toList();
+          } else if (f.type == ExtraFieldType.dropdown) {
             final v = _extraValues[f.key];
             if (v != null && v.isNotEmpty) extraFields[f.key] = v;
           } else {
@@ -1384,6 +1392,27 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               : (v) => (v == null || v.isEmpty) ? displayLabel : null,
         );
         break;
+
+      case ExtraFieldType.multiselect:
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: TeqMultiSelect(
+            label: displayLabel,
+            options: f.options
+                .map((o) => TeqMultiSelectOption(
+                      value: o.value,
+                      label: o.label,
+                      isExclusive: o.isExclusive,
+                    ))
+                .toList(),
+            selected: _extraMultiValues[f.key] ?? const {},
+            optional: f.optional,
+            validator: f.optional
+                ? null
+                : (s) => s.isEmpty ? displayLabel : null,
+            onChanged: (vals) => setState(() => _extraMultiValues[f.key] = vals),
+          ),
+        );
     }
 
     return Padding(

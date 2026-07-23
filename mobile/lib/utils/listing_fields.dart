@@ -6,20 +6,27 @@
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-enum ExtraFieldType { text, number, dropdown }
+enum ExtraFieldType { text, number, dropdown, multiselect }
 
 class FieldOption {
   final String value;
   final String label;
   final String? parentOptionValue;
+  // true = selecting this clears all other multiselect selections
+  final bool isExclusive;
 
-  const FieldOption(this.value, this.label, [this.parentOptionValue]);
+  const FieldOption(this.value, this.label, [this.parentOptionValue, this.isExclusive = false]);
 
-  factory FieldOption.fromJson(Map<String, dynamic> j) => FieldOption(
-        j['value'] as String,
-        j['label'] as String,
-        j['parent_option_value'] as String?,
-      );
+  factory FieldOption.fromJson(Map<String, dynamic> j) {
+    final pov = j['parent_option_value'] as String?;
+    final exclusive = pov == '__excl__';
+    return FieldOption(
+      j['value'] as String,
+      j['label'] as String,
+      exclusive ? null : pov,
+      exclusive,
+    );
+  }
 }
 
 class ExtraFieldDef {
@@ -46,15 +53,18 @@ class ExtraFieldDef {
   factory ExtraFieldDef.fromJson(Map<String, dynamic> j) {
     final typeStr = j['type'] as String? ?? 'text';
     final type = switch (typeStr) {
-      'number' => ExtraFieldType.number,
-      'dropdown' => ExtraFieldType.dropdown,
-      _ => ExtraFieldType.text,
+      'number'      => ExtraFieldType.number,
+      'dropdown'    => ExtraFieldType.dropdown,
+      'multiselect' => ExtraFieldType.multiselect,
+      _             => ExtraFieldType.text,
     };
 
     final allOptions = (j['options'] as List<dynamic>? ?? [])
         .map((o) => FieldOption.fromJson(o as Map<String, dynamic>))
         .toList();
 
+    // For multiselect, exclusive options (converted from '__excl__') have parentOptionValue=null
+    // so they're already included. For dropdown/text/number, same filter applies.
     final topOptions = allOptions.where((o) => o.parentOptionValue == null).toList();
 
     Map<String, List<FieldOption>>? conditionalOptions;
@@ -210,10 +220,11 @@ const _motoTip = [
 ];
 
 const _hasar = [
-  FieldOption('hasarsiz', 'Hasarsız'),
-  FieldOption('boyali', 'Boyalı'),
-  FieldOption('degisen', 'Değişen'),
-  FieldOption('hasarli', 'Hasarlı'),
+  FieldOption('boyali',             'Boyalı'),
+  FieldOption('kazali',             'Kazalı'),
+  FieldOption('hasar_kayitli',      'Hasar Kayıtlı'),
+  FieldOption('agir_hasar_kayitli', 'Ağır Hasar Kayıtlı'),
+  FieldOption('hatasiz',            'Hatasız', null, true), // exclusive
 ];
 
 const _markaKamyon = [
@@ -1557,7 +1568,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
     ExtraFieldDef(key: 'vites', labelKey: 'extraField_vites', type: ExtraFieldType.dropdown, options: _vites),
     ExtraFieldDef(key: 'kasa_tipi', labelKey: 'extraField_kasa_tipi', type: ExtraFieldType.dropdown, options: _kasaTipi),
     ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
-    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.dropdown, options: _hasar, optional: true),
+    ExtraFieldDef(key: 'hasar', labelKey: 'extraField_hasar', type: ExtraFieldType.multiselect, options: _hasar, optional: true),
   ],
   'motosiklet': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaMoto),
