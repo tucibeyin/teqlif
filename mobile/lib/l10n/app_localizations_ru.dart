@@ -5633,7 +5633,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fieldDistrictHint => 'Введите район';
 
   @override
-  String get sectionListingDetails => 'Детали объявления';
+  String get sectionListingDetails => 'Информация об объявлении';
 
   @override
   String get extraFieldOptional => '(Необязательно)';

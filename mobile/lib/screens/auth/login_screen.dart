@@ -86,7 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
         }
       } else if (mounted) {
-        ErrorDisplay.fromException(context, e);
+        ErrorDisplay.fromException(context, e as AppException);
       }
     } finally {
       if (mounted)

@@ -5585,7 +5585,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get fieldDistrictHint => 'İlçe giriniz';
 
   @override
-  String get sectionListingDetails => 'İlan Detayları';
+  String get sectionListingDetails => 'İlan Bilgileri';
 
   @override
   String get extraFieldOptional => '(İsteğe bağlı)';

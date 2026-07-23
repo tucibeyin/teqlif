@@ -3012,7 +3012,7 @@
   "fieldProvinceHint": "اختر المحافظة",
   "fieldDistrict": "المنطقة",
   "fieldDistrictHint": "أدخل المنطقة",
-  "sectionListingDetails": "تفاصيل الإعلان",
+  "sectionListingDetails": "معلومات الإعلان",
   "extraFieldOptional": "(اختياري)",
   "validRequiredSubcategory": "الرجاء اختيار الفئة الفرعية",
   "validRequiredProvince": "الرجاء اختيار المحافظة",

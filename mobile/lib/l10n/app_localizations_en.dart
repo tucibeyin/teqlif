@@ -5583,7 +5583,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldDistrictHint => 'Enter district';
 
   @override
-  String get sectionListingDetails => 'Listing Details';
+  String get sectionListingDetails => 'Listing Info';
 
   @override
   String get extraFieldOptional => '(Optional)';

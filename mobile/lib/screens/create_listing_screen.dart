@@ -864,11 +864,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               const SizedBox(height: 12),
               _buildMainInfoSection(l),
               const SizedBox(height: 12),
-              _buildLocationSection(l),
-              const SizedBox(height: 12),
               _buildConditionSection(l),
               const SizedBox(height: 12),
-              _buildExtraFieldsSection(l),
+              _buildLocationSection(l),
               const SizedBox(height: 12),
               _buildDescriptionSection(l),
               const SizedBox(height: 12),
@@ -1075,10 +1073,44 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Widget _buildMainInfoSection(AppLocalizations l) {
+    final extraFields = _selectedSubcategory != null
+        ? (kSubcategoryFields[_selectedSubcategory!] ?? <ExtraFieldDef>[])
+        : <ExtraFieldDef>[];
+    final titlePreview = _titleCtrl.text.trim();
+
     return TeqCard(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Başlık
+          // Header row: section label + live title preview
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                l.sectionListingDetails,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              ),
+              if (titlePreview.isNotEmpty)
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      titlePreview,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary(context)),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Title input
           TeqTextField(
             key: const Key('create_listing_input_baslik'),
             controller: _titleCtrl,
@@ -1089,7 +1121,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Kategori
+          // Category
           DropdownButtonFormField<String>(
             key: const Key('create_listing_select_kategori'),
             // ignore: deprecated_member_use
@@ -1097,8 +1129,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             decoration: InputDecoration(
                 labelText: l.fieldCategory, hintText: l.fieldCategoryHint),
             items: _categories
-                .map((c) =>
-                    DropdownMenuItem(value: c.$1, child: Text(c.$2)))
+                .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                 .toList(),
             onChanged: (v) {
               if (v == null) return;
@@ -1108,7 +1139,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             validator: (v) => v == null ? l.fieldCategoryHint : null,
           ),
 
-          // Alt Kategori — görünür sadece kategori seçilince ve subcategory listesi doluysa
+          // Subcategory (revealed after category selection)
           AnimatedSize(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
@@ -1137,6 +1168,21 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         validator: (v) =>
                             v == null ? l.validRequiredSubcategory : null,
                       ),
+                    ],
+                  ),
+          ),
+
+          // Extra fields merged in (revealed after subcategory selection)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeInOut,
+            child: extraFields.isEmpty
+                ? const SizedBox.shrink()
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 14),
+                      ...extraFields.map((f) => _buildExtraField(f, l)),
                     ],
                   ),
           ),
@@ -1232,35 +1278,45 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
-  Widget _buildExtraFieldsSection(AppLocalizations l) {
-    if (_selectedSubcategory == null) return const SizedBox.shrink();
-    final fields = kSubcategoryFields[_selectedSubcategory!] ?? [];
-    if (fields.isEmpty) return const SizedBox.shrink();
-
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeInOut,
-      child: TeqCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.sectionListingDetails,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w700, fontSize: 14),
-            ),
-            const SizedBox(height: 14),
-            ...fields.map((f) => _buildExtraField(f, l)),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildExtraField(ExtraFieldDef f, AppLocalizations l) {
     final label = _extraFieldLabel(f.labelKey, l);
     final optionalSuffix = f.optional ? '  ${l.extraFieldOptional}' : '';
     final displayLabel = '$label$optionalSuffix';
+
+    // Brand-dependent conditional dropdown (model fields)
+    if (f.dependsOn != null) {
+      final parentVal = _extraValues[f.dependsOn!];
+      final options = parentVal != null
+          ? (f.conditionalOptions?[parentVal] ?? <FieldOption>[])
+          : <FieldOption>[];
+      return AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        child: options.isEmpty
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
+                  value: _extraValues[f.key],
+                  decoration: InputDecoration(
+                      labelText: displayLabel, hintText: displayLabel),
+                  hint: Text(displayLabel),
+                  items: options
+                      .map((o) =>
+                          DropdownMenuItem(value: o.value, child: Text(o.label)))
+                      .toList(),
+                  onChanged: (v) => setState(() {
+                    if (v != null) _extraValues[f.key] = v;
+                  }),
+                  validator: f.optional
+                      ? null
+                      : (v) => v == null || v.isEmpty ? displayLabel : null,
+                ),
+              ),
+      );
+    }
 
     Widget field;
     switch (f.type) {
@@ -1277,7 +1333,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               .map((o) => DropdownMenuItem(value: o.value, child: Text(o.label)))
               .toList(),
           onChanged: (v) => setState(() {
-            if (v != null) _extraValues[f.key] = v;
+            if (v != null) {
+              _extraValues[f.key] = v;
+              // Clear any fields that depend on this one
+              for (final dep
+                  in (kSubcategoryFields[_selectedSubcategory!] ?? [])) {
+                if (dep.dependsOn == f.key) _extraValues.remove(dep.key);
+              }
+            }
           }),
           validator: f.optional
               ? null

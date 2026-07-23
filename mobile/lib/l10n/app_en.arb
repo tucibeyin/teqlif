@@ -3049,7 +3049,7 @@
   "fieldProvinceHint": "Select province",
   "fieldDistrict": "District",
   "fieldDistrictHint": "Enter district",
-  "sectionListingDetails": "Listing Details",
+  "sectionListingDetails": "Listing Info",
   "extraFieldOptional": "(Optional)",
 
   "validRequiredSubcategory": "Please select a subcategory",

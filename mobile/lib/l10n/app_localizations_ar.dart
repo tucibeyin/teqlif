@@ -5553,7 +5553,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get fieldDistrictHint => 'أدخل المنطقة';
 
   @override
-  String get sectionListingDetails => 'تفاصيل الإعلان';
+  String get sectionListingDetails => 'معلومات الإعلان';
 
   @override
   String get extraFieldOptional => '(اختياري)';

@@ -3012,7 +3012,7 @@
   "fieldProvinceHint": "İl seçiniz",
   "fieldDistrict": "İlçe",
   "fieldDistrictHint": "İlçe giriniz",
-  "sectionListingDetails": "İlan Detayları",
+  "sectionListingDetails": "İlan Bilgileri",
   "extraFieldOptional": "(İsteğe bağlı)",
 
   "validRequiredSubcategory": "Lütfen alt kategori seçiniz",

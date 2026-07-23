@@ -3013,7 +3013,7 @@
   "fieldProvinceHint": "Выберите провинцию",
   "fieldDistrict": "Район",
   "fieldDistrictHint": "Введите район",
-  "sectionListingDetails": "Детали объявления",
+  "sectionListingDetails": "Информация об объявлении",
   "extraFieldOptional": "(Необязательно)",
   "validRequiredSubcategory": "Пожалуйста, выберите подкатегорию",
   "validRequiredProvince": "Пожалуйста, выберите провинцию",

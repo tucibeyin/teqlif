@@ -10047,7 +10047,7 @@ abstract class AppLocalizations {
   /// No description provided for @sectionListingDetails.
   ///
   /// In tr, this message translates to:
-  /// **'İlan Detayları'**
+  /// **'İlan Bilgileri'**
   String get sectionListingDetails;
 
   /// No description provided for @extraFieldOptional.

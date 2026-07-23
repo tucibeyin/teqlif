@@ -16,11 +16,14 @@ class FieldOption {
 
 class ExtraFieldDef {
   final String key;
-  final String labelKey; // ARB key, e.g. "extraField_marka"
+  final String labelKey;
   final ExtraFieldType type;
   final bool optional;
-  final List<FieldOption> options; // only for dropdown
-  final String? unit; // displayed as suffix hint (e.g. "km", "m²")
+  final List<FieldOption> options;
+  final String? unit;
+  // Brand-dependent model dropdown support
+  final String? dependsOn;
+  final Map<String, List<FieldOption>>? conditionalOptions;
 
   const ExtraFieldDef({
     required this.key,
@@ -29,6 +32,8 @@ class ExtraFieldDef {
     this.optional = false,
     this.options = const [],
     this.unit,
+    this.dependsOn,
+    this.conditionalOptions,
   });
 }
 
@@ -445,7 +450,7 @@ const _ayakkabiTip = [
 const _cantaMalzeme = [
   FieldOption('deri', 'Deri'),
   FieldOption('suni_deri', 'Suni Deri'),
-  FieldOption('kumaş', 'Kumaş'),
+  FieldOption('kumas', 'Kumaş'),
   FieldOption('kanvas', 'Kanvas'),
   FieldOption('diger', 'Diğer'),
 ];
@@ -572,10 +577,9 @@ const _sporDali = [
   FieldOption('kosu', 'Koşu'),
   FieldOption('boks', 'Boks / Muay Thai'),
   FieldOption('yoga', 'Yoga / Pilates'),
-  FieldOption('doga_sporları', 'Doğa Sporları'),
+  FieldOption('doga_sporlari', 'Doğa Sporları'),
   FieldOption('diger', 'Diğer'),
 ];
-
 
 // Diğer
 const _evcilHayvanTip = [
@@ -607,6 +611,816 @@ const _fotoEkipmanTip = [
   FieldOption('diger', 'Diğer'),
 ];
 
+// ── Brand → model maps (conditionalOptions) ───────────────────────────────────
+
+const _modellerTelefon = <String, List<FieldOption>>{
+  'apple': [
+    FieldOption('iphone_13', 'iPhone 13'),
+    FieldOption('iphone_14', 'iPhone 14'),
+    FieldOption('iphone_15', 'iPhone 15'),
+    FieldOption('iphone_15_pro', 'iPhone 15 Pro'),
+    FieldOption('iphone_16', 'iPhone 16'),
+  ],
+  'samsung': [
+    FieldOption('galaxy_s23', 'Galaxy S23'),
+    FieldOption('galaxy_s24', 'Galaxy S24'),
+    FieldOption('galaxy_s24_ultra', 'Galaxy S24 Ultra'),
+    FieldOption('galaxy_a54', 'Galaxy A54'),
+    FieldOption('galaxy_a35', 'Galaxy A35'),
+  ],
+  'xiaomi': [
+    FieldOption('redmi_note_13', 'Redmi Note 13'),
+    FieldOption('poco_x6_pro', 'Poco X6 Pro'),
+    FieldOption('14t_pro', '14T Pro'),
+    FieldOption('redmi_12', 'Redmi 12'),
+    FieldOption('poco_m6_pro', 'Poco M6 Pro'),
+  ],
+  'huawei': [
+    FieldOption('p50', 'P50'),
+    FieldOption('p60_pro', 'P60 Pro'),
+    FieldOption('nova_11', 'Nova 11'),
+    FieldOption('mate_60_pro', 'Mate 60 Pro'),
+    FieldOption('p40_lite', 'P40 Lite'),
+  ],
+  'oneplus': [
+    FieldOption('oneplus_12', 'OnePlus 12'),
+    FieldOption('oneplus_11', 'OnePlus 11'),
+    FieldOption('nord_3', 'Nord 3'),
+    FieldOption('oneplus_12r', 'OnePlus 12R'),
+    FieldOption('nord_ce3', 'Nord CE 3'),
+  ],
+  'google': [
+    FieldOption('pixel_7a', 'Pixel 7a'),
+    FieldOption('pixel_8', 'Pixel 8'),
+    FieldOption('pixel_8_pro', 'Pixel 8 Pro'),
+    FieldOption('pixel_9', 'Pixel 9'),
+    FieldOption('pixel_9_pro', 'Pixel 9 Pro'),
+  ],
+  'oppo': [
+    FieldOption('find_x7', 'Find X7'),
+    FieldOption('reno_11', 'Reno 11'),
+    FieldOption('a78', 'A78'),
+    FieldOption('find_x6', 'Find X6'),
+    FieldOption('reno_10_pro', 'Reno 10 Pro'),
+  ],
+  'realme': [
+    FieldOption('12_pro_plus', '12 Pro+'),
+    FieldOption('gt_5', 'GT 5'),
+    FieldOption('c67', 'C67'),
+    FieldOption('11_pro_plus', '11 Pro+'),
+    FieldOption('gt_neo_5', 'GT Neo 5'),
+  ],
+  'nokia': [
+    FieldOption('g42', 'G42'),
+    FieldOption('c32', 'C32'),
+    FieldOption('g21', 'G21'),
+    FieldOption('xr21', 'XR21'),
+    FieldOption('g60', 'G60'),
+  ],
+  'motorola': [
+    FieldOption('moto_g84', 'Moto G84'),
+    FieldOption('edge_40', 'Edge 40'),
+    FieldOption('moto_g54', 'Moto G54'),
+    FieldOption('edge_50_pro', 'Edge 50 Pro'),
+    FieldOption('razr_40', 'Razr 40'),
+  ],
+};
+
+const _modellerArac = <String, List<FieldOption>>{
+  'alfa_romeo': [
+    FieldOption('giulia', 'Giulia'),
+    FieldOption('stelvio', 'Stelvio'),
+    FieldOption('giulietta', 'Giulietta'),
+    FieldOption('tonale', 'Tonale'),
+    FieldOption('156', '156'),
+  ],
+  'audi': [
+    FieldOption('a3', 'A3'),
+    FieldOption('a4', 'A4'),
+    FieldOption('a6', 'A6'),
+    FieldOption('q3', 'Q3'),
+    FieldOption('q5', 'Q5'),
+  ],
+  'bmw': [
+    FieldOption('1_serisi', '1 Serisi'),
+    FieldOption('3_serisi', '3 Serisi'),
+    FieldOption('5_serisi', '5 Serisi'),
+    FieldOption('x3', 'X3'),
+    FieldOption('x5', 'X5'),
+  ],
+  'chevrolet': [
+    FieldOption('captiva', 'Captiva'),
+    FieldOption('malibu', 'Malibu'),
+    FieldOption('cruze', 'Cruze'),
+    FieldOption('spark', 'Spark'),
+    FieldOption('orlando', 'Orlando'),
+  ],
+  'citroen': [
+    FieldOption('c3', 'C3'),
+    FieldOption('c4', 'C4'),
+    FieldOption('c3_aircross', 'C3 Aircross'),
+    FieldOption('c5_aircross', 'C5 Aircross'),
+    FieldOption('berlingo', 'Berlingo'),
+  ],
+  'dacia': [
+    FieldOption('duster', 'Duster'),
+    FieldOption('sandero', 'Sandero'),
+    FieldOption('logan', 'Logan'),
+    FieldOption('jogger', 'Jogger'),
+    FieldOption('spring', 'Spring'),
+  ],
+  'fiat': [
+    FieldOption('egea', 'Egea'),
+    FieldOption('panda', 'Panda'),
+    FieldOption('500', '500'),
+    FieldOption('tipo', 'Tipo'),
+    FieldOption('doblo', 'Doblò'),
+  ],
+  'ford': [
+    FieldOption('focus', 'Focus'),
+    FieldOption('fiesta', 'Fiesta'),
+    FieldOption('kuga', 'Kuga'),
+    FieldOption('puma', 'Puma'),
+    FieldOption('transit_custom', 'Transit Custom'),
+  ],
+  'honda': [
+    FieldOption('civic', 'Civic'),
+    FieldOption('cr_v', 'CR-V'),
+    FieldOption('hr_v', 'HR-V'),
+    FieldOption('jazz', 'Jazz'),
+    FieldOption('accord', 'Accord'),
+  ],
+  'hyundai': [
+    FieldOption('i20', 'i20'),
+    FieldOption('i30', 'i30'),
+    FieldOption('tucson', 'Tucson'),
+    FieldOption('kona', 'Kona'),
+    FieldOption('santa_fe', 'Santa Fe'),
+  ],
+  'jeep': [
+    FieldOption('renegade', 'Renegade'),
+    FieldOption('compass', 'Compass'),
+    FieldOption('wrangler', 'Wrangler'),
+    FieldOption('cherokee', 'Cherokee'),
+    FieldOption('grand_cherokee', 'Grand Cherokee'),
+  ],
+  'kia': [
+    FieldOption('sportage', 'Sportage'),
+    FieldOption('ceed', 'Ceed'),
+    FieldOption('stonic', 'Stonic'),
+    FieldOption('rio', 'Rio'),
+    FieldOption('sorento', 'Sorento'),
+  ],
+  'land_rover': [
+    FieldOption('defender', 'Defender'),
+    FieldOption('discovery', 'Discovery'),
+    FieldOption('range_rover', 'Range Rover'),
+    FieldOption('discovery_sport', 'Discovery Sport'),
+    FieldOption('range_rover_sport', 'Range Rover Sport'),
+  ],
+  'mazda': [
+    FieldOption('cx_5', 'CX-5'),
+    FieldOption('mazda3', 'Mazda3'),
+    FieldOption('cx_30', 'CX-30'),
+    FieldOption('mazda6', 'Mazda6'),
+    FieldOption('mx_5', 'MX-5'),
+  ],
+  'mercedes': [
+    FieldOption('a_serisi', 'A Serisi'),
+    FieldOption('c_serisi', 'C Serisi'),
+    FieldOption('e_serisi', 'E Serisi'),
+    FieldOption('glc', 'GLC'),
+    FieldOption('gle', 'GLE'),
+  ],
+  'mitsubishi': [
+    FieldOption('outlander', 'Outlander'),
+    FieldOption('eclipse_cross', 'Eclipse Cross'),
+    FieldOption('asx', 'ASX'),
+    FieldOption('l200', 'L200'),
+    FieldOption('pajero', 'Pajero'),
+  ],
+  'nissan': [
+    FieldOption('qashqai', 'Qashqai'),
+    FieldOption('juke', 'Juke'),
+    FieldOption('micra', 'Micra'),
+    FieldOption('x_trail', 'X-Trail'),
+    FieldOption('leaf', 'Leaf'),
+  ],
+  'opel': [
+    FieldOption('astra', 'Astra'),
+    FieldOption('corsa', 'Corsa'),
+    FieldOption('mokka', 'Mokka'),
+    FieldOption('crossland', 'Crossland'),
+    FieldOption('grandland', 'Grandland'),
+  ],
+  'peugeot': [
+    FieldOption('208', '208'),
+    FieldOption('308', '308'),
+    FieldOption('2008', '2008'),
+    FieldOption('3008', '3008'),
+    FieldOption('508', '508'),
+  ],
+  'porsche': [
+    FieldOption('911', '911'),
+    FieldOption('cayenne', 'Cayenne'),
+    FieldOption('macan', 'Macan'),
+    FieldOption('panamera', 'Panamera'),
+    FieldOption('taycan', 'Taycan'),
+  ],
+  'renault': [
+    FieldOption('clio', 'Clio'),
+    FieldOption('megane', 'Megane'),
+    FieldOption('duster', 'Duster'),
+    FieldOption('kadjar', 'Kadjar'),
+    FieldOption('symbol', 'Symbol'),
+  ],
+  'seat': [
+    FieldOption('ibiza', 'Ibiza'),
+    FieldOption('leon', 'Leon'),
+    FieldOption('arona', 'Arona'),
+    FieldOption('ateca', 'Ateca'),
+    FieldOption('tarraco', 'Tarraco'),
+  ],
+  'skoda': [
+    FieldOption('fabia', 'Fabia'),
+    FieldOption('octavia', 'Octavia'),
+    FieldOption('karoq', 'Karoq'),
+    FieldOption('kodiaq', 'Kodiaq'),
+    FieldOption('superb', 'Superb'),
+  ],
+  'subaru': [
+    FieldOption('forester', 'Forester'),
+    FieldOption('outback', 'Outback'),
+    FieldOption('xv', 'XV'),
+    FieldOption('impreza', 'Impreza'),
+    FieldOption('legacy', 'Legacy'),
+  ],
+  'tesla': [
+    FieldOption('model_3', 'Model 3'),
+    FieldOption('model_y', 'Model Y'),
+    FieldOption('model_s', 'Model S'),
+    FieldOption('model_x', 'Model X'),
+    FieldOption('cybertruck', 'Cybertruck'),
+  ],
+  'togg': [
+    FieldOption('t10x', 'T10X'),
+    FieldOption('t10f', 'T10F'),
+  ],
+  'toyota': [
+    FieldOption('corolla', 'Corolla'),
+    FieldOption('yaris', 'Yaris'),
+    FieldOption('yaris_cross', 'Yaris Cross'),
+    FieldOption('rav4', 'RAV4'),
+    FieldOption('c_hr', 'C-HR'),
+  ],
+  'volkswagen': [
+    FieldOption('golf', 'Golf'),
+    FieldOption('passat', 'Passat'),
+    FieldOption('polo', 'Polo'),
+    FieldOption('tiguan', 'Tiguan'),
+    FieldOption('t_roc', 'T-Roc'),
+  ],
+  'volvo': [
+    FieldOption('xc40', 'XC40'),
+    FieldOption('xc60', 'XC60'),
+    FieldOption('xc90', 'XC90'),
+    FieldOption('s60', 'S60'),
+    FieldOption('v60', 'V60'),
+  ],
+};
+
+const _modellerElektrikli = <String, List<FieldOption>>{
+  'tesla': [
+    FieldOption('model_3', 'Model 3'),
+    FieldOption('model_y', 'Model Y'),
+    FieldOption('model_s', 'Model S'),
+    FieldOption('model_x', 'Model X'),
+    FieldOption('cybertruck', 'Cybertruck'),
+  ],
+  'togg': [
+    FieldOption('t10x', 'T10X'),
+    FieldOption('t10f', 'T10F'),
+  ],
+  'bmw': [
+    FieldOption('i4', 'i4'),
+    FieldOption('ix', 'iX'),
+    FieldOption('ix1', 'iX1'),
+    FieldOption('i5', 'i5'),
+    FieldOption('i3', 'i3'),
+  ],
+  'audi': [
+    FieldOption('q4_etron', 'Q4 e-tron'),
+    FieldOption('etron_gt', 'e-tron GT'),
+    FieldOption('q8_etron', 'Q8 e-tron'),
+    FieldOption('a6_etron', 'A6 e-tron'),
+    FieldOption('q6_etron', 'Q6 e-tron'),
+  ],
+  'hyundai': [
+    FieldOption('ioniq5', 'IONIQ 5'),
+    FieldOption('ioniq6', 'IONIQ 6'),
+    FieldOption('kona_electric', 'Kona Electric'),
+    FieldOption('tucson_phev', 'Tucson PHEV'),
+    FieldOption('santa_fe_phev', 'Santa Fe PHEV'),
+  ],
+  'kia': [
+    FieldOption('ev6', 'EV6'),
+    FieldOption('ev9', 'EV9'),
+    FieldOption('niro_ev', 'Niro EV'),
+    FieldOption('sportage_phev', 'Sportage PHEV'),
+    FieldOption('ev3', 'EV3'),
+  ],
+  'volkswagen': [
+    FieldOption('id4', 'ID.4'),
+    FieldOption('id3', 'ID.3'),
+    FieldOption('id7', 'ID.7'),
+    FieldOption('id5', 'ID.5'),
+    FieldOption('id_buzz', 'ID. Buzz'),
+  ],
+  'nissan': [
+    FieldOption('leaf', 'Leaf'),
+    FieldOption('ariya', 'Ariya'),
+    FieldOption('leaf_eplus', 'Leaf e+'),
+    FieldOption('townstar_ev', 'Townstar EV'),
+    FieldOption('qashqai_epower', 'Qashqai e-POWER'),
+  ],
+  'renault': [
+    FieldOption('megane_etech', 'Megane E-Tech'),
+    FieldOption('zoe', 'Zoe'),
+    FieldOption('twingo_electric', 'Twingo Electric'),
+    FieldOption('scenic_etech', 'Scenic E-Tech'),
+    FieldOption('5_etech', '5 E-Tech'),
+  ],
+  'porsche': [
+    FieldOption('taycan', 'Taycan'),
+    FieldOption('taycan_st', 'Taycan Sport Turismo'),
+    FieldOption('taycan_ct', 'Taycan Cross Turismo'),
+    FieldOption('cayenne_e_hybrid', 'Cayenne E-Hybrid'),
+    FieldOption('panamera_e_hybrid', 'Panamera E-Hybrid'),
+  ],
+  'mercedes': [
+    FieldOption('eqa', 'EQA'),
+    FieldOption('eqb', 'EQB'),
+    FieldOption('eqc', 'EQC'),
+    FieldOption('eqs', 'EQS'),
+    FieldOption('eqe', 'EQE'),
+  ],
+  'peugeot': [
+    FieldOption('e208', 'e-208'),
+    FieldOption('e2008', 'e-2008'),
+    FieldOption('e308', 'e-308'),
+    FieldOption('e3008', 'e-3008'),
+    FieldOption('e_expert', 'e-Expert'),
+  ],
+};
+
+const _modellerMoto = <String, List<FieldOption>>{
+  'honda': [
+    FieldOption('cb650r', 'CB650R'),
+    FieldOption('cbr600rr', 'CBR600RR'),
+    FieldOption('cb500f', 'CB500F'),
+    FieldOption('africa_twin', 'Africa Twin'),
+    FieldOption('cb125r', 'CB125R'),
+  ],
+  'yamaha': [
+    FieldOption('mt_07', 'MT-07'),
+    FieldOption('yzf_r1', 'YZF-R1'),
+    FieldOption('yzf_r3', 'YZF-R3'),
+    FieldOption('mt_09', 'MT-09'),
+    FieldOption('tracer_9', 'Tracer 9'),
+  ],
+  'kawasaki': [
+    FieldOption('z900', 'Z900'),
+    FieldOption('ninja_400', 'Ninja 400'),
+    FieldOption('z650', 'Z650'),
+    FieldOption('versys_650', 'Versys 650'),
+    FieldOption('ninja_zx10r', 'Ninja ZX-10R'),
+  ],
+  'suzuki': [
+    FieldOption('gsx_r750', 'GSX-R750'),
+    FieldOption('vstrom_650', 'V-Strom 650'),
+    FieldOption('sv650', 'SV650'),
+    FieldOption('gsx_s750', 'GSX-S750'),
+    FieldOption('burgman_400', 'Burgman 400'),
+  ],
+  'bmw': [
+    FieldOption('r1250gs', 'R 1250 GS'),
+    FieldOption('s1000rr', 'S 1000 RR'),
+    FieldOption('f800gs', 'F 800 GS'),
+    FieldOption('r_ninet', 'R nineT'),
+    FieldOption('s1000xr', 'S 1000 XR'),
+  ],
+  'ducati': [
+    FieldOption('panigale_v4', 'Panigale V4'),
+    FieldOption('monster', 'Monster'),
+    FieldOption('streetfighter_v4', 'Streetfighter V4'),
+    FieldOption('multistrada_v4', 'Multistrada V4'),
+    FieldOption('supersport_950', 'SuperSport 950'),
+  ],
+  'harley': [
+    FieldOption('sportster_s', 'Sportster S'),
+    FieldOption('iron_883', 'Iron 883'),
+    FieldOption('fat_boy', 'Fat Boy'),
+    FieldOption('road_king', 'Road King'),
+    FieldOption('pan_america', 'Pan America 1250'),
+  ],
+  'royal_enfield': [
+    FieldOption('himalayan', 'Himalayan'),
+    FieldOption('meteor_350', 'Meteor 350'),
+    FieldOption('classic_350', 'Classic 350'),
+    FieldOption('interceptor_650', 'Interceptor 650'),
+    FieldOption('hunter_350', 'Hunter 350'),
+  ],
+  'ktm': [
+    FieldOption('duke_390', 'Duke 390'),
+    FieldOption('adventure_890', 'Adventure 890'),
+    FieldOption('duke_790', 'Duke 790'),
+    FieldOption('rc_390', 'RC 390'),
+    FieldOption('super_duke_r', '1290 Super Duke R'),
+  ],
+  'triumph': [
+    FieldOption('bonneville_t120', 'Bonneville T120'),
+    FieldOption('tiger_900', 'Tiger 900'),
+    FieldOption('trident_660', 'Trident 660'),
+    FieldOption('street_twin', 'Street Twin'),
+    FieldOption('tiger_1200', 'Tiger 1200'),
+  ],
+  'aprilia': [
+    FieldOption('rs_660', 'RS 660'),
+    FieldOption('tuono_660', 'Tuono 660'),
+    FieldOption('rsv4', 'RSV4'),
+    FieldOption('dorsoduro_900', 'Dorsoduro 900'),
+    FieldOption('sr_gt', 'SR GT'),
+  ],
+};
+
+const _modellerKamyon = <String, List<FieldOption>>{
+  'ford': [
+    FieldOption('transit_custom', 'Transit Custom'),
+    FieldOption('transit', 'Transit'),
+    FieldOption('transit_connect', 'Transit Connect'),
+    FieldOption('transit_courier', 'Transit Courier'),
+    FieldOption('tourneo', 'Tourneo'),
+  ],
+  'fiat': [
+    FieldOption('fiorino', 'Fiorino'),
+    FieldOption('doblo', 'Doblò'),
+    FieldOption('ducato', 'Ducato'),
+    FieldOption('scudo', 'Scudo'),
+    FieldOption('talento', 'Talento'),
+  ],
+  'volkswagen': [
+    FieldOption('caddy', 'Caddy'),
+    FieldOption('transporter', 'Transporter'),
+    FieldOption('crafter', 'Crafter'),
+    FieldOption('multivan', 'Multivan'),
+    FieldOption('california', 'California'),
+  ],
+  'mercedes': [
+    FieldOption('sprinter', 'Sprinter'),
+    FieldOption('vito', 'Vito'),
+    FieldOption('viano', 'Viano'),
+    FieldOption('v_klasse', 'V-Klasse'),
+    FieldOption('citan', 'Citan'),
+  ],
+  'renault': [
+    FieldOption('master', 'Master'),
+    FieldOption('trafic', 'Trafic'),
+    FieldOption('kangoo', 'Kangoo'),
+    FieldOption('express', 'Express'),
+    FieldOption('rapid', 'Rapid'),
+  ],
+  'opel': [
+    FieldOption('vivaro', 'Vivaro'),
+    FieldOption('movano', 'Movano'),
+    FieldOption('combo', 'Combo'),
+    FieldOption('zafira_life', 'Zafira Life'),
+    FieldOption('crossland_cargo', 'Crossland Cargo'),
+  ],
+  'peugeot': [
+    FieldOption('expert', 'Expert'),
+    FieldOption('boxer', 'Boxer'),
+    FieldOption('partner', 'Partner'),
+    FieldOption('traveller', 'Traveller'),
+    FieldOption('e_expert', 'e-Expert'),
+  ],
+  'isuzu': [
+    FieldOption('d_max', 'D-Max'),
+    FieldOption('n_series', 'N-Series'),
+    FieldOption('f_series', 'F-Series'),
+    FieldOption('mu_x', 'MU-X'),
+    FieldOption('elf', 'Elf'),
+  ],
+  'iveco': [
+    FieldOption('daily', 'Daily'),
+    FieldOption('eurocargo', 'Eurocargo'),
+    FieldOption('stralis', 'Stralis'),
+    FieldOption('s_way', 'S-Way'),
+    FieldOption('hi_way', 'Hi-Way'),
+  ],
+  'man': [
+    FieldOption('tge', 'TGE'),
+    FieldOption('tgl', 'TGL'),
+    FieldOption('tgm', 'TGM'),
+    FieldOption('tgs', 'TGS'),
+    FieldOption('tgx', 'TGX'),
+  ],
+  'daf': [
+    FieldOption('xf', 'XF'),
+    FieldOption('xg', 'XG'),
+    FieldOption('cf', 'CF'),
+    FieldOption('lf', 'LF'),
+    FieldOption('xg_plus', 'XG+'),
+  ],
+  'volvo': [
+    FieldOption('fh', 'FH'),
+    FieldOption('fm', 'FM'),
+    FieldOption('fmx', 'FMX'),
+    FieldOption('fl', 'FL'),
+    FieldOption('fe', 'FE'),
+  ],
+  'scania': [
+    FieldOption('r_serisi', 'R Serisi'),
+    FieldOption('s_serisi', 'S Serisi'),
+    FieldOption('p_serisi', 'P Serisi'),
+    FieldOption('g_serisi', 'G Serisi'),
+    FieldOption('l_serisi', 'L Serisi'),
+  ],
+};
+
+const _modellerTraktor = <String, List<FieldOption>>{
+  'new_holland': [
+    FieldOption('t5', 'T5'),
+    FieldOption('t6', 'T6'),
+    FieldOption('t7', 'T7'),
+    FieldOption('tk4', 'TK4'),
+    FieldOption('td5', 'TD5'),
+  ],
+  'john_deere': [
+    FieldOption('5075e', '5075E'),
+    FieldOption('5090r', '5090R'),
+    FieldOption('6110r', '6110R'),
+    FieldOption('6130r', '6130R'),
+    FieldOption('7r', '7R'),
+  ],
+  'massey_ferguson': [
+    FieldOption('mf4700', '4700 Serisi'),
+    FieldOption('mf5700', '5700 Serisi'),
+    FieldOption('mf6700', '6700 Serisi'),
+    FieldOption('mf7700', '7700 Serisi'),
+    FieldOption('mf8700', '8700 Serisi'),
+  ],
+  'kubota': [
+    FieldOption('b_serisi', 'B Serisi'),
+    FieldOption('l_serisi', 'L Serisi'),
+    FieldOption('m_serisi', 'M Serisi'),
+    FieldOption('mx_serisi', 'MX Serisi'),
+    FieldOption('st_serisi', 'ST Serisi'),
+  ],
+  'fendt': [
+    FieldOption('200_vario', '200 Vario'),
+    FieldOption('300_vario', '300 Vario'),
+    FieldOption('500_vario', '500 Vario'),
+    FieldOption('700_vario', '700 Vario'),
+    FieldOption('900_vario', '900 Vario'),
+  ],
+  'case': [
+    FieldOption('farmall_a', 'Farmall A'),
+    FieldOption('farmall_c', 'Farmall C'),
+    FieldOption('maxxum', 'Maxxum'),
+    FieldOption('puma', 'Puma'),
+    FieldOption('optum', 'Optum'),
+  ],
+  'tumosan': [
+    FieldOption('60hp', '60 HP'),
+    FieldOption('70hp', '70 HP'),
+    FieldOption('80hp', '80 HP'),
+    FieldOption('90hp', '90 HP'),
+    FieldOption('100hp', '100 HP'),
+  ],
+};
+
+const _modellerLaptop = <String, List<FieldOption>>{
+  'apple': [
+    FieldOption('macbook_air_m2', 'MacBook Air M2'),
+    FieldOption('macbook_air_m3', 'MacBook Air M3'),
+    FieldOption('macbook_pro_14_m3', 'MacBook Pro 14" M3'),
+    FieldOption('macbook_pro_16_m3', 'MacBook Pro 16" M3'),
+    FieldOption('macbook_air_15_m2', 'MacBook Air 15" M2'),
+  ],
+  'asus': [
+    FieldOption('zenbook_14', 'ZenBook 14 OLED'),
+    FieldOption('rog_strix_g15', 'ROG Strix G15'),
+    FieldOption('vivobook_15', 'VivoBook 15'),
+    FieldOption('tuf_gaming_a15', 'TUF Gaming A15'),
+    FieldOption('proart_studiobook', 'ProArt Studiobook'),
+  ],
+  'lenovo': [
+    FieldOption('thinkpad_e15', 'ThinkPad E15'),
+    FieldOption('ideapad_5', 'IdeaPad 5'),
+    FieldOption('legion_5', 'Legion 5'),
+    FieldOption('yoga_9i', 'Yoga 9i'),
+    FieldOption('thinkpad_x1_carbon', 'ThinkPad X1 Carbon'),
+  ],
+  'dell': [
+    FieldOption('xps_13', 'XPS 13'),
+    FieldOption('xps_15', 'XPS 15'),
+    FieldOption('inspiron_15', 'Inspiron 15'),
+    FieldOption('latitude_5440', 'Latitude 5440'),
+    FieldOption('g15_gaming', 'G15 Gaming'),
+  ],
+  'hp': [
+    FieldOption('pavilion_15', 'Pavilion 15'),
+    FieldOption('elitebook_840', 'EliteBook 840'),
+    FieldOption('victus_16', 'Victus 16'),
+    FieldOption('omen_16', 'Omen 16'),
+    FieldOption('probook_450', 'ProBook 450'),
+  ],
+  'msi': [
+    FieldOption('stealth_15', 'Stealth 15'),
+    FieldOption('creator_m16', 'Creator M16'),
+    FieldOption('katana_15', 'Katana 15'),
+    FieldOption('gf63_thin', 'GF63 Thin'),
+    FieldOption('stealth_16', 'Stealth 16'),
+  ],
+  'acer': [
+    FieldOption('swift_3', 'Swift 3'),
+    FieldOption('predator_helios', 'Predator Helios 300'),
+    FieldOption('aspire_5', 'Aspire 5'),
+    FieldOption('nitro_5', 'Nitro 5'),
+    FieldOption('swift_x', 'Swift X'),
+  ],
+  'toshiba': [
+    FieldOption('satellite_pro', 'Satellite Pro'),
+    FieldOption('tecra_a50', 'Tecra A50'),
+    FieldOption('portege_x30', 'Portégé X30'),
+    FieldOption('dynabook_e10', 'Dynabook E10'),
+    FieldOption('dynabook_cs50', 'Dynabook CS50'),
+  ],
+  'samsung': [
+    FieldOption('galaxy_book3', 'Galaxy Book3'),
+    FieldOption('galaxy_book3_pro', 'Galaxy Book3 Pro'),
+    FieldOption('galaxy_book3_ultra', 'Galaxy Book3 Ultra'),
+    FieldOption('galaxy_book3_360', 'Galaxy Book3 360'),
+    FieldOption('galaxy_book2_pro', 'Galaxy Book2 Pro'),
+  ],
+  'huawei': [
+    FieldOption('matebook_d15', 'MateBook D15'),
+    FieldOption('matebook_14', 'MateBook 14'),
+    FieldOption('matebook_x_pro', 'MateBook X Pro'),
+    FieldOption('matebook_d14', 'MateBook D14'),
+    FieldOption('matebook_e', 'MateBook E'),
+  ],
+};
+
+const _modellerTablet = <String, List<FieldOption>>{
+  'apple': [
+    FieldOption('ipad_air_m1', 'iPad Air M1'),
+    FieldOption('ipad_pro_11_m4', 'iPad Pro 11" M4'),
+    FieldOption('ipad_10', 'iPad 10. Nesil'),
+    FieldOption('ipad_mini_6', 'iPad Mini 6'),
+    FieldOption('ipad_pro_13_m4', 'iPad Pro 13" M4'),
+  ],
+  'samsung': [
+    FieldOption('tab_s9', 'Galaxy Tab S9'),
+    FieldOption('tab_a8', 'Galaxy Tab A8'),
+    FieldOption('tab_s8_plus', 'Galaxy Tab S8+'),
+    FieldOption('tab_s9_fe', 'Galaxy Tab S9 FE'),
+    FieldOption('tab_a9_plus', 'Galaxy Tab A9+'),
+  ],
+  'xiaomi': [
+    FieldOption('pad_6', 'Pad 6'),
+    FieldOption('redmi_pad_se', 'Redmi Pad SE'),
+    FieldOption('pad_6_pro', 'Pad 6 Pro'),
+    FieldOption('redmi_pad_2', 'Redmi Pad 2'),
+    FieldOption('pad_5', 'Pad 5'),
+  ],
+  'huawei': [
+    FieldOption('matepad_11', 'MatePad 11'),
+    FieldOption('matepad_pro_13', 'MatePad Pro 13.2"'),
+    FieldOption('matepad_t10s', 'MatePad T10s'),
+    FieldOption('matepad_se', 'MatePad SE'),
+    FieldOption('matepad_10_4', 'MatePad 10.4'),
+  ],
+  'oneplus': [
+    FieldOption('pad', 'OnePlus Pad'),
+    FieldOption('pad_go', 'OnePlus Pad Go'),
+    FieldOption('pad_2', 'OnePlus Pad 2'),
+    FieldOption('pad_pro', 'OnePlus Pad Pro'),
+    FieldOption('tab_r16', 'Tab R16'),
+  ],
+};
+
+const _modellerSaat = <String, List<FieldOption>>{
+  'rolex': [
+    FieldOption('submariner', 'Submariner'),
+    FieldOption('datejust', 'Datejust'),
+    FieldOption('day_date', 'Day-Date'),
+    FieldOption('gmt_master_ii', 'GMT-Master II'),
+    FieldOption('daytona', 'Daytona'),
+  ],
+  'omega': [
+    FieldOption('seamaster', 'Seamaster'),
+    FieldOption('speedmaster', 'Speedmaster'),
+    FieldOption('constellation', 'Constellation'),
+    FieldOption('de_ville', 'De Ville'),
+    FieldOption('aqua_terra', 'Aqua Terra'),
+  ],
+  'seiko': [
+    FieldOption('presage', 'Presage'),
+    FieldOption('prospex', 'Prospex'),
+    FieldOption('5_sports', '5 Sports'),
+    FieldOption('astron', 'Astron'),
+    FieldOption('alpinist', 'Alpinist'),
+  ],
+  'casio': [
+    FieldOption('g_shock', 'G-Shock'),
+    FieldOption('edifice', 'Edifice'),
+    FieldOption('pro_trek', 'Pro Trek'),
+    FieldOption('wave_ceptor', 'Wave Ceptor'),
+    FieldOption('baby_g', 'Baby-G'),
+  ],
+  'tissot': [
+    FieldOption('prx', 'PRX'),
+    FieldOption('t_race', 'T-Race'),
+    FieldOption('seastar', 'Seastar'),
+    FieldOption('le_locle', 'Le Locle'),
+    FieldOption('chemin_tourelles', 'Chemin des Tourelles'),
+  ],
+  'tag_heuer': [
+    FieldOption('carrera', 'Carrera'),
+    FieldOption('monaco', 'Monaco'),
+    FieldOption('aquaracer', 'Aquaracer'),
+    FieldOption('formula_1', 'Formula 1'),
+    FieldOption('link', 'Link'),
+  ],
+  'fossil': [
+    FieldOption('minimalist', 'Minimalist'),
+    FieldOption('carlyle', 'Carlyle'),
+    FieldOption('neutra', 'Neutra'),
+    FieldOption('fenmore', 'Fenmore'),
+    FieldOption('gen_6', 'Gen 6'),
+  ],
+  'swatch': [
+    FieldOption('big_bold', 'Big Bold'),
+    FieldOption('sistem51', 'Sistem51'),
+    FieldOption('skin', 'Skin'),
+    FieldOption('irony', 'Irony'),
+    FieldOption('gent', 'Gent'),
+  ],
+};
+
+const _modellerBisiklet = <String, List<FieldOption>>{
+  'giant': [
+    FieldOption('contend', 'Contend'),
+    FieldOption('defy', 'Defy'),
+    FieldOption('tcx', 'TCX'),
+    FieldOption('anthem', 'Anthem'),
+    FieldOption('trance', 'Trance'),
+  ],
+  'trek': [
+    FieldOption('fx', 'FX'),
+    FieldOption('marlin', 'Marlin'),
+    FieldOption('domane', 'Domane'),
+    FieldOption('emonda', 'Émonda'),
+    FieldOption('checkpoint', 'Checkpoint'),
+  ],
+  'specialized': [
+    FieldOption('allez', 'Allez'),
+    FieldOption('diverge', 'Diverge'),
+    FieldOption('stumpjumper', 'Stumpjumper'),
+    FieldOption('roubaix', 'Roubaix'),
+    FieldOption('rockhopper', 'Rockhopper'),
+  ],
+  'bianchi': [
+    FieldOption('c_sport', 'C-Sport'),
+    FieldOption('sprint', 'Sprint'),
+    FieldOption('oltre_xr4', 'Oltre XR4'),
+    FieldOption('infinito', 'Infinito'),
+    FieldOption('impulso', 'Impulso'),
+  ],
+  'scott': [
+    FieldOption('speedster', 'Speedster'),
+    FieldOption('sub_cross', 'Sub Cross'),
+    FieldOption('aspect', 'Aspect'),
+    FieldOption('contessa', 'Contessa'),
+    FieldOption('scale', 'Scale'),
+  ],
+  'merida': [
+    FieldOption('big_nine', 'Big Nine'),
+    FieldOption('one_twenty', 'One-Twenty'),
+    FieldOption('scultura', 'Scultura'),
+    FieldOption('speeder', 'Speeder'),
+    FieldOption('reacto', 'Reacto'),
+  ],
+  'cannondale': [
+    FieldOption('quick', 'Quick'),
+    FieldOption('trail', 'Trail'),
+    FieldOption('topstone', 'Topstone'),
+    FieldOption('supersix_evo', 'SuperSix EVO'),
+    FieldOption('synapse', 'Synapse'),
+  ],
+};
+
 // ── Subcategory definitions ───────────────────────────────────────────────────
 
 /// (key, label) pairs per main category key.
@@ -623,7 +1437,7 @@ const Map<String, List<(String, String)>> kSubcategories = {
     ('yedek_parca', 'Yedek Parça'),
   ],
   'elektronik': [
-    ('telefon', 'Telefon'),
+    ('cep_telefonu', 'Cep Telefonu'),
     ('bilgisayar_laptop', 'Bilgisayar & Laptop'),
     ('tablet', 'Tablet'),
     ('tv_monitor', 'TV & Monitör'),
@@ -694,7 +1508,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   // ── Vasıta ────────────────────────────────────────────────────────────────
   'otomobil': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaArac),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model'),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerArac),
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _yakitTipi),
@@ -706,14 +1520,14 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   'motosiklet': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaMoto),
     ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _motoTip),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model'),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerMoto),
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'motor_cc', labelKey: 'extraField_motor_cc', type: ExtraFieldType.number, optional: true, unit: 'cc'),
   ],
   'elektrikli_arac': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaElektrikli),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model'),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerElektrikli),
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'menzil_km', labelKey: 'extraField_menzil', type: ExtraFieldType.number, optional: true, unit: 'km'),
@@ -721,7 +1535,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   ],
   'kamyonet_minibus': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaKamyon),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model'),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerKamyon),
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _yakitTipi),
@@ -729,7 +1543,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   ],
   'kamyon_tir': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaKamyon),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model'),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerKamyon),
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'yakit', labelKey: 'extraField_yakit', type: ExtraFieldType.dropdown, options: _yakitTipi),
@@ -737,7 +1551,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   ],
   'traktor': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaTaktor),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model'),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerTraktor),
     ExtraFieldDef(key: 'yil', labelKey: 'extraField_yil', type: ExtraFieldType.number),
     ExtraFieldDef(key: 'km', labelKey: 'extraField_km', type: ExtraFieldType.number, optional: true, unit: 'km'),
     ExtraFieldDef(key: 'calisma_saati', labelKey: 'extraField_calisma_saati', type: ExtraFieldType.number, optional: true, unit: 'saat'),
@@ -763,16 +1577,16 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   ],
 
   // ── Elektronik ────────────────────────────────────────────────────────────
-  'telefon': [
+  'cep_telefonu': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaTelefon),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model'),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerTelefon),
     ExtraFieldDef(key: 'depolama', labelKey: 'extraField_depolama', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
     ExtraFieldDef(key: 'ram', labelKey: 'extraField_ram', type: ExtraFieldType.dropdown, options: _ram, optional: true),
     ExtraFieldDef(key: 'renk', labelKey: 'extraField_renk', type: ExtraFieldType.dropdown, options: _renk, optional: true),
   ],
   'bilgisayar_laptop': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaBilgisayar),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerLaptop, optional: true),
     ExtraFieldDef(key: 'islemci', labelKey: 'extraField_islemci', type: ExtraFieldType.dropdown, options: _islemci),
     ExtraFieldDef(key: 'ram', labelKey: 'extraField_ram', type: ExtraFieldType.dropdown, options: _ram),
     ExtraFieldDef(key: 'depolama', labelKey: 'extraField_depolama', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
@@ -780,7 +1594,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   ],
   'tablet': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaTelefon),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model'),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerTablet),
     ExtraFieldDef(key: 'depolama', labelKey: 'extraField_depolama', type: ExtraFieldType.dropdown, options: _depolamaKucuk),
     ExtraFieldDef(key: 'ram', labelKey: 'extraField_ram', type: ExtraFieldType.dropdown, options: _ram, optional: true),
   ],
@@ -889,7 +1703,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   ],
   'saat_giyim': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaSaat),
-    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', optional: true),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerSaat, optional: true),
     ExtraFieldDef(key: 'cinsiyet', labelKey: 'extraField_cinsiyet', type: ExtraFieldType.dropdown, options: _saatCinsiyet),
   ],
   'sapka_kemer_aksesuar': [
@@ -920,6 +1734,7 @@ const Map<String, List<ExtraFieldDef>> kSubcategoryFields = {
   // ── Spor ──────────────────────────────────────────────────────────────────
   'bisiklet': [
     ExtraFieldDef(key: 'marka', labelKey: 'extraField_marka', type: ExtraFieldType.dropdown, options: _markaBisiklet),
+    ExtraFieldDef(key: 'model', labelKey: 'extraField_model', type: ExtraFieldType.dropdown, dependsOn: 'marka', conditionalOptions: _modellerBisiklet, optional: true),
     ExtraFieldDef(key: 'tip', labelKey: 'extraField_tip', type: ExtraFieldType.dropdown, options: _bisikletTip),
     ExtraFieldDef(key: 'jant_boyutu', labelKey: 'extraField_jant_boyutu', type: ExtraFieldType.dropdown, options: _jantBoyutu, optional: true),
   ],
