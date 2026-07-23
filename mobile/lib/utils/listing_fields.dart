@@ -11,7 +11,15 @@ enum ExtraFieldType { text, number, dropdown }
 class FieldOption {
   final String value;
   final String label;
-  const FieldOption(this.value, this.label);
+  final String? parentOptionValue;
+
+  const FieldOption(this.value, this.label, [this.parentOptionValue]);
+
+  factory FieldOption.fromJson(Map<String, dynamic> j) => FieldOption(
+        j['value'] as String,
+        j['label'] as String,
+        j['parent_option_value'] as String?,
+      );
 }
 
 class ExtraFieldDef {
@@ -21,7 +29,6 @@ class ExtraFieldDef {
   final bool optional;
   final List<FieldOption> options;
   final String? unit;
-  // Brand-dependent model dropdown support
   final String? dependsOn;
   final Map<String, List<FieldOption>>? conditionalOptions;
 
@@ -35,6 +42,41 @@ class ExtraFieldDef {
     this.dependsOn,
     this.conditionalOptions,
   });
+
+  factory ExtraFieldDef.fromJson(Map<String, dynamic> j) {
+    final typeStr = j['type'] as String? ?? 'text';
+    final type = switch (typeStr) {
+      'number' => ExtraFieldType.number,
+      'dropdown' => ExtraFieldType.dropdown,
+      _ => ExtraFieldType.text,
+    };
+
+    final allOptions = (j['options'] as List<dynamic>? ?? [])
+        .map((o) => FieldOption.fromJson(o as Map<String, dynamic>))
+        .toList();
+
+    final topOptions = allOptions.where((o) => o.parentOptionValue == null).toList();
+
+    Map<String, List<FieldOption>>? conditionalOptions;
+    final condEntries = allOptions.where((o) => o.parentOptionValue != null);
+    if (condEntries.isNotEmpty) {
+      conditionalOptions = <String, List<FieldOption>>{};
+      for (final opt in condEntries) {
+        (conditionalOptions[opt.parentOptionValue!] ??= []).add(opt);
+      }
+    }
+
+    return ExtraFieldDef(
+      key: j['key'] as String,
+      labelKey: j['label_key'] as String,
+      type: type,
+      optional: !(j['required'] as bool? ?? true),
+      options: topOptions,
+      unit: j['unit'] as String?,
+      dependsOn: j['depends_on'] as String?,
+      conditionalOptions: conditionalOptions,
+    );
+  }
 }
 
 // ── Shared option lists ───────────────────────────────────────────────────────

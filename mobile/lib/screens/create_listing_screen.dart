@@ -16,6 +16,7 @@ import '../services/cache_service.dart';
 import '../services/captcha_service.dart';
 import '../services/category_service.dart';
 import '../services/city_service.dart';
+import '../services/field_config_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import '../l10n/app_localizations.dart';
@@ -59,6 +60,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   // Controllers for number/text extra fields
   final Map<String, TextEditingController> _extraCtrlMap = {};
+
+  // Server-driven field schema
+  List<ExtraFieldDef> _currentFields = [];
+  bool _fieldsLoading = false;
 
   // AI / Pro
   bool _isPro = false;
@@ -114,16 +119,26 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     });
   }
 
-  void _updateExtraFields(String subcategoryKey) {
-    _disposeExtraCtrls();
-    _extraValues.clear();
-    final fields = kSubcategoryFields[subcategoryKey] ?? [];
+  Future<void> _updateExtraFields(String subcategoryKey) async {
+    setState(() {
+      _fieldsLoading = true;
+      _currentFields = [];
+      _extraValues.clear();
+      _disposeExtraCtrls();
+    });
+
+    final fields = await FieldConfigService.getFields(subcategoryKey);
+
+    if (!mounted) return;
     for (final f in fields) {
       if (f.type == ExtraFieldType.text || f.type == ExtraFieldType.number) {
         _extraCtrlMap[f.key] = TextEditingController();
       }
     }
-    setState(() {});
+    setState(() {
+      _currentFields = fields;
+      _fieldsLoading = false;
+    });
   }
 
   Future<void> _fetchDistricts(String province) async {
@@ -737,7 +752,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       // Build extra_fields: merge controller values + dropdown values, skip blanks
       final Map<String, dynamic> extraFields = {};
       if (_selectedSubcategory != null) {
-        final fields = kSubcategoryFields[_selectedSubcategory!] ?? [];
+        final fields = _currentFields;
         for (final f in fields) {
           if (f.type == ExtraFieldType.dropdown) {
             final v = _extraValues[f.key];
@@ -1072,9 +1087,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Widget _buildMainInfoSection(AppLocalizations l) {
-    final extraFields = _selectedSubcategory != null
-        ? (kSubcategoryFields[_selectedSubcategory!] ?? <ExtraFieldDef>[])
-        : <ExtraFieldDef>[];
+    final extraFields = _currentFields;
 
     return TeqCard(
       child: Column(
@@ -1153,15 +1166,20 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           AnimatedSize(
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeInOut,
-            child: extraFields.isEmpty
-                ? const SizedBox.shrink()
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 14),
-                      ...extraFields.map((f) => _buildExtraField(f, l)),
-                    ],
-                  ),
+            child: _fieldsLoading
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  )
+                : extraFields.isEmpty
+                    ? const SizedBox.shrink()
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 14),
+                          ...extraFields.map((f) => _buildExtraField(f, l)),
+                        ],
+                      ),
           ),
         ],
       ),
@@ -1323,8 +1341,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             if (v != null) {
               _extraValues[f.key] = v;
               // Clear any fields that depend on this one
-              for (final dep
-                  in (kSubcategoryFields[_selectedSubcategory!] ?? [])) {
+              for (final dep in _currentFields) {
                 if (dep.dependsOn == f.key) _extraValues.remove(dep.key);
               }
             }
