@@ -7,6 +7,7 @@ import 'reset_password_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
+import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../core/app_exception.dart';
 import '../../core/error_display.dart';
 
@@ -47,7 +48,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         if (e is AppException) {
           ErrorDisplay.fromException(context, e);
         } else {
-          ErrorDisplay.fromException(context, AppException('Bir hata oluştu.', code: 'ERR_UNKNOWN'));
+          TeqToast.error(context, AppLocalizations.of(context)!.errorGenericRetry);
         }
       }
     } finally {

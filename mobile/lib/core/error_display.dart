@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:teqlif/core/app_error.dart';
 import 'package:teqlif/core/app_exception.dart';
+import 'package:teqlif/l10n/app_localizations.dart';
 import 'package:teqlif/services/auth_service.dart';
 import 'package:teqlif/ui_library/components/overlays/teq_toast.dart';
 
@@ -22,7 +23,7 @@ class ErrorDisplay {
       case NetworkError():
         TeqToast.warning(
           context,
-          'İnternet bağlantısı yok. Lütfen bağlantınızı kontrol edin.',
+          AppLocalizations.of(context)!.errorNetworkMessage,
         );
 
       case AuthError():

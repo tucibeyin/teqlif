@@ -183,6 +183,16 @@
   "saleEmptyState": "ليس لديك أي مبيعات حتى الآن.",
   "saleUnknownBuyer": "مشتري غير معروف",
   "errorListingsLoad": "تعذّر تحميل الإعلانات",
+  "errorOperationFailed": "تعذّر إتمام العملية.",
+  "errorCoHostDuringCall": "دعاك @{hostUsername} إلى المسرح، لكن تم الرفض لأنك في مكالمة.",
+  "@errorCoHostDuringCall": {
+    "placeholders": {
+      "hostUsername": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCallHistoryLoad": "تعذّر تحميل سجل المكالمات. يرجى المحاولة مرة أخرى.",
   "errorPhotoUpload": "تعذّر رفع الصورة. حاول مجدداً.",
   "errorCaptchaFailed": "فشل التحقق الأمني. يرجى المحاولة مجدداً.",
   "errorTooFast": "أنت تُجري العمليات بسرعة كبيرة. يرجى الانتظار قليلاً.",

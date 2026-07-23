@@ -160,6 +160,16 @@
   "errorNetworkTitle": "No connection",
   "errorNetworkMessage": "Check your internet connection and try again.",
   "errorListingsLoad": "Failed to load listings",
+  "errorOperationFailed": "Operation could not be completed.",
+  "errorCoHostDuringCall": "@{hostUsername} invited you to the stage, but it was declined because you're in a call.",
+  "@errorCoHostDuringCall": {
+    "placeholders": {
+      "hostUsername": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCallHistoryLoad": "Call history could not be loaded. Please try again.",
   "errorVideoProcessing": "Failed to process video. Please try again.",
   "giftSheetTitle": "🎁 Send Gift",
   "giftNameFire": "Fire",

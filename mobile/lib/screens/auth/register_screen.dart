@@ -13,6 +13,7 @@ import 'verify_screen.dart';
 import '../../ui_library/components/inputs/teq_text_field.dart';
 import '../../ui_library/components/buttons/teq_button.dart';
 import '../../ui_library/components/overlays/teq_snackbar.dart';
+import '../../ui_library/components/overlays/teq_toast.dart';
 import '../../core/app_exception.dart';
 import '../../core/error_display.dart';
 import '../../ui_library/components/overlays/teq_dialog.dart';
@@ -149,7 +150,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (e is AppException) {
           ErrorDisplay.fromException(context, e);
         } else {
-          ErrorDisplay.fromException(context, AppException('Kayıt sırasında bir hata oluştu.', code: 'ERR_UNKNOWN'));
+          TeqToast.error(context, AppLocalizations.of(context)!.errorGenericRetry);
         }
       }
     } finally {

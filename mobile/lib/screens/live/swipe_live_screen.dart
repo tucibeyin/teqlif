@@ -1000,7 +1000,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
         if (e is AppException) {
           ErrorDisplay.fromException(context, e);
         } else {
-          TeqToast.error(context, 'İşlem gerçekleştirilemedi.');
+          TeqToast.error(context, AppLocalizations.of(context)!.errorOperationFailed);
         }
       }
     }
@@ -1359,7 +1359,7 @@ class _SwipeLivePageState extends ConsumerState<_SwipeLivePage>
                       if (targetUsername == _myUsername) {
                         if (CallService.instance.hasActiveCall) {
                           debugPrint('[LIVE_SCREEN_CALL][${DateTime.now().toIso8601String()}] User invited to co-host but has active call. Auto-rejecting locally.');
-                          TeqToast.warning(context, '@$hostUsername sizi sahneye davet etti, ancak görüşmede olduğunuz için reddedildi.', duration: const Duration(seconds: 4));
+                          TeqToast.warning(context, AppLocalizations.of(context)!.errorCoHostDuringCall(hostUsername), duration: const Duration(seconds: 4));
                         } else {
                           _showCoHostInviteDialog(hostUsername);
                         }

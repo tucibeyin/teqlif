@@ -160,6 +160,16 @@
   "errorNetworkTitle": "Bağlantı yok",
   "errorNetworkMessage": "İnternet bağlantınızı kontrol edip tekrar deneyin.",
   "errorListingsLoad": "İlanlar yüklenemedi",
+  "errorOperationFailed": "İşlem gerçekleştirilemedi.",
+  "errorCoHostDuringCall": "@{hostUsername} sizi sahneye davet etti, ancak görüşmede olduğunuz için reddedildi.",
+  "@errorCoHostDuringCall": {
+    "placeholders": {
+      "hostUsername": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCallHistoryLoad": "Çağrı geçmişi yüklenemedi. Lütfen tekrar deneyin.",
   "errorPhotoUpload": "Fotoğraf yüklenemedi. Tekrar deneyin.",
   "errorCaptchaFailed": "Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.",
   "errorTooFast": "Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.",
