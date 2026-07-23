@@ -63,9 +63,13 @@ class ExtraFieldDef {
         .map((o) => FieldOption.fromJson(o as Map<String, dynamic>))
         .toList();
 
-    // For multiselect, exclusive options (converted from '__excl__') have parentOptionValue=null
-    // so they're already included. For dropdown/text/number, same filter applies.
-    final topOptions = allOptions.where((o) => o.parentOptionValue == null).toList();
+    // Include top-level options (null parent) and group-tagged options ('grp:' prefix).
+    // Conditional dropdown options (real parent value like 'bmw') are excluded here.
+    final topOptions = allOptions
+        .where((o) =>
+            o.parentOptionValue == null ||
+            (o.parentOptionValue?.startsWith('grp:') ?? false))
+        .toList();
 
     Map<String, List<FieldOption>>? conditionalOptions;
     final condEntries = allOptions.where((o) => o.parentOptionValue != null);
@@ -222,9 +226,10 @@ const _motoTip = [
 const _hasar = [
   FieldOption('boyali',             'Boyalı'),
   FieldOption('kazali',             'Kazalı'),
-  FieldOption('hasar_kayitli',      'Hasar Kayıtlı'),
-  FieldOption('agir_hasar_kayitli', 'Ağır Hasar Kayıtlı'),
-  FieldOption('hatasiz',            'Hatasız', null, true), // exclusive
+  // 'grp:hasar_seviyesi' → mutually exclusive with each other within this group
+  FieldOption('hasar_kayitli',      'Hasar Kayıtlı',      'grp:hasar_seviyesi'),
+  FieldOption('agir_hasar_kayitli', 'Ağır Hasar Kayıtlı', 'grp:hasar_seviyesi'),
+  FieldOption('hatasiz',            'Hatasız',             null, true), // exclusive: clears all
 ];
 
 const _markaKamyon = [

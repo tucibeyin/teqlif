@@ -26,22 +26,26 @@ class TeqMultiSelect extends StatelessWidget {
   final bool optional;
   final String? Function(Set<String>)? validator;
 
-  void _toggle(String value, bool isExclusive) {
-    final next = Set<String>.from(selected);
-    if (next.contains(value)) {
-      next.remove(value);
-    } else if (isExclusive) {
-      // Exclusive: select only this one
-      onChanged({value});
+  void _toggle(TeqMultiSelectOption opt) {
+    if (opt.isExclusive) {
+      onChanged({opt.value});
       return;
+    }
+    final next = Set<String>.from(selected);
+    if (next.contains(opt.value)) {
+      next.remove(opt.value);
     } else {
-      // Non-exclusive: remove any exclusive option first
-      final exclusiveValues = options
-          .where((o) => o.isExclusive)
-          .map((o) => o.value)
-          .toSet();
-      next.removeAll(exclusiveValues);
-      next.add(value);
+      // Remove exclusive options (e.g. Hatasız)
+      for (final o in options) {
+        if (o.isExclusive) next.remove(o.value);
+      }
+      // Remove options in the same mutual-exclusion group
+      if (opt.exclusionGroup != null) {
+        for (final o in options) {
+          if (o.exclusionGroup == opt.exclusionGroup) next.remove(o.value);
+        }
+      }
+      next.add(opt.value);
     }
     onChanged(next);
   }
@@ -74,7 +78,7 @@ class TeqMultiSelect extends StatelessWidget {
               children: options.map((opt) {
                 final isSelected = selected.contains(opt.value);
                 return GestureDetector(
-                  onTap: () => _toggle(opt.value, opt.isExclusive),
+                  onTap: () => _toggle(opt),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -132,9 +136,12 @@ class TeqMultiSelectOption {
     required this.value,
     required this.label,
     this.isExclusive = false,
+    this.exclusionGroup,
   });
 
   final String value;
   final String label;
   final bool isExclusive;
+  // Options sharing the same exclusionGroup are mutually exclusive with each other.
+  final String? exclusionGroup;
 }

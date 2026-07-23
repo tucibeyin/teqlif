@@ -1398,13 +1398,17 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           padding: const EdgeInsets.only(bottom: 14),
           child: TeqMultiSelect(
             label: displayLabel,
-            options: f.options
-                .map((o) => TeqMultiSelectOption(
-                      value: o.value,
-                      label: o.label,
-                      isExclusive: o.isExclusive,
-                    ))
-                .toList(),
+            options: f.options.map((o) {
+                  final pov = o.parentOptionValue;
+                  return TeqMultiSelectOption(
+                    value: o.value,
+                    label: o.label,
+                    isExclusive: o.isExclusive,
+                    exclusionGroup: (pov != null && pov.startsWith('grp:'))
+                        ? pov.substring(4)
+                        : null,
+                  );
+                }).toList(),
             selected: _extraMultiValues[f.key] ?? const {},
             optional: f.optional,
             validator: f.optional
