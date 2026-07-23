@@ -148,6 +148,10 @@ async def lifespan(app: FastAPI):
     from app.core.di import init_di
     from app.services import device_service as _device_service  # noqa: F401 — TokenInvalidatedEvent handler'ını event_bus'a kaydeder
 
+    # i18n locale dosyalarını yükle
+    from app.core.i18n import I18nService
+    I18nService.load_all()
+
     # DI Container'i başlat
     init_di()
     

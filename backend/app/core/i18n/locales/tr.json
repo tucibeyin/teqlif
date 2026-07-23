@@ -1,0 +1,19 @@
+{
+  "NOT_FOUND": "İstenen kayıt bulunamadı.",
+  "FORBIDDEN": "Bu işlem için yetkiniz yok.",
+  "PRO_REQUIRED": "Bu özellik yalnızca Pro hesaplara özeldir.",
+  "EMAIL_NOT_VERIFIED": "E-posta adresinizi doğrulamanız gerekiyor.",
+  "UNAUTHORIZED": "Kimlik doğrulama başarısız.",
+  "BAD_REQUEST": "Geçersiz istek.",
+  "CONTENT_POLICY_VIOLATION": "İçerik topluluk kurallarına aykırı.",
+  "CONFLICT": "Bu kayıt zaten mevcut.",
+  "DB_ERROR": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.",
+  "SERVICE_ERROR": "Servis geçici olarak kullanılamıyor. Lütfen tekrar deneyin.",
+  "RATE_LIMIT_EXCEEDED": "Çok fazla istek gönderildi. Lütfen bekleyin.",
+  "COOLDOWN": "Tekrar göndermek için {readable_time} beklemeniz gerekiyor.",
+  "LISTING_NOT_ACTIVE": "İlan şu an aktif değil.",
+  "INSUFFICIENT_FUNDS": "Bu işlem için yeterli TUCi bakiyeniz yok.",
+  "INSUFFICIENT_FUNDS_hint": "TUCi Cüzdan sayfasından bakiye yükleyebilirsiniz.",
+  "VALIDATION_ERROR": "Geçersiz istek verisi.",
+  "INTERNAL_SERVER_ERROR": "Sunucuda beklenmeyen bir hata oluştu."
+}

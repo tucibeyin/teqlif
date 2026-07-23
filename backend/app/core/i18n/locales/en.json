@@ -1,0 +1,19 @@
+{
+  "NOT_FOUND": "The requested record was not found.",
+  "FORBIDDEN": "You don't have permission to perform this action.",
+  "PRO_REQUIRED": "This feature is available for Pro accounts only.",
+  "EMAIL_NOT_VERIFIED": "Please verify your email address.",
+  "UNAUTHORIZED": "Authentication failed.",
+  "BAD_REQUEST": "Invalid request.",
+  "CONTENT_POLICY_VIOLATION": "Content violates community guidelines.",
+  "CONFLICT": "This record already exists.",
+  "DB_ERROR": "An unexpected error occurred. Please try again.",
+  "SERVICE_ERROR": "Service is temporarily unavailable. Please try again.",
+  "RATE_LIMIT_EXCEEDED": "Too many requests. Please wait a moment.",
+  "COOLDOWN": "Please wait {readable_time} before trying again.",
+  "LISTING_NOT_ACTIVE": "This listing is currently inactive.",
+  "INSUFFICIENT_FUNDS": "You don't have enough TUCi balance for this action.",
+  "INSUFFICIENT_FUNDS_hint": "You can top up your balance from the TUCi Wallet page.",
+  "VALIDATION_ERROR": "Invalid request data.",
+  "INTERNAL_SERVER_ERROR": "An unexpected server error occurred."
+}

@@ -5,6 +5,7 @@ from fastapi import Request, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from app.core.exceptions import AppException
+from app.core.i18n import I18nService
 from app.core.idempotency import _IdempotencyReplay
 from app.core.logger import capture_exception
 
@@ -24,26 +25,43 @@ def setup_exception_handlers(app: FastAPI):
         user = getattr(request.state, "user", None)
         user_id = getattr(user, "id", "guest") if user else "guest"
         req_id = getattr(request.state, "request_id", str(uuid.uuid4()))
-        
+
         log_level = logging.ERROR if exc.status_code >= 500 else logging.WARNING
         logger.log(
             log_level,
-            "[DomainError] %s | code=%s user=%s path=%s req_id=%s", 
-            exc.message, exc.error_code, user_id, request.url.path, req_id
+            "[DomainError] %s | code=%s user=%s path=%s req_id=%s",
+            exc.message, exc.error_code, user_id, request.url.path, req_id,
         )
-        
+
         headers = {}
         retry_after = getattr(exc, "retry_after", None)
         if retry_after:
             headers["Retry-After"] = str(retry_after)
-            
-        extra = {}
+
+        # ── i18n ─────────────────────────────────────────────────────────────
+        lang = I18nService.parse_accept_language(
+            request.headers.get("Accept-Language")
+        )
+        seconds_remaining = getattr(exc, "seconds_remaining", None)
+        resolve_kwargs: dict = {}
+        if seconds_remaining is not None:
+            resolve_kwargs["seconds_remaining"] = seconds_remaining
+
+        localized = I18nService.resolve(exc.error_code, lang, **resolve_kwargs)
+        message = localized if localized is not None else exc.message
+
+        localized_hint = I18nService.resolve_hint(exc.error_code, lang)
+        raw_hint = getattr(exc, "hint", None)
+        hint = localized_hint if localized_hint is not None else raw_hint
+        # ─────────────────────────────────────────────────────────────────────
+
+        extra: dict = {}
         if getattr(exc, "email", None):
             extra["email"] = exc.email
-        if getattr(exc, "hint", None):
-            extra["hint"] = exc.hint
-        if getattr(exc, "seconds_remaining", None) is not None:
-            extra["seconds_remaining"] = exc.seconds_remaining
+        if hint:
+            extra["hint"] = hint
+        if seconds_remaining is not None:
+            extra["seconds_remaining"] = seconds_remaining
 
         return JSONResponse(
             status_code=exc.status_code,
@@ -51,10 +69,10 @@ def setup_exception_handlers(app: FastAPI):
                 "success": False,
                 "error": {
                     "code": exc.error_code,
-                    "message": exc.message,
+                    "message": message,
                     "request_id": req_id,
                     **extra,
-                }
+                },
             },
             headers=headers or None,
         )
@@ -95,17 +113,21 @@ def setup_exception_handlers(app: FastAPI):
             "[ValidationError] path=%s req_id=%s errors=%s", 
             request.url.path, req_id, safe_errors
         )
+        lang = I18nService.parse_accept_language(
+            request.headers.get("Accept-Language")
+        )
+        val_msg = I18nService.resolve("VALIDATION_ERROR", lang) or "Geçersiz istek verisi"
         return JSONResponse(
             status_code=422,
             content={
                 "success": False,
                 "error": {
                     "code": "VALIDATION_ERROR",
-                    "message": "Geçersiz istek verisi",
+                    "message": val_msg,
                     "details": safe_errors,
-                    "request_id": req_id
-                }
-            }
+                    "request_id": req_id,
+                },
+            },
         )
 
     @app.exception_handler(Exception)
@@ -122,15 +144,22 @@ def setup_exception_handlers(app: FastAPI):
             str(exc), user_id, request.url.path, req_id, traceback.format_exc()
         )
         capture_exception(exc)
-        
+
+        lang = I18nService.parse_accept_language(
+            request.headers.get("Accept-Language")
+        )
+        srv_msg = (
+            I18nService.resolve("INTERNAL_SERVER_ERROR", lang)
+            or "Sunucuda beklenmeyen bir hata oluştu."
+        )
         return JSONResponse(
             status_code=500,
             content={
                 "success": False,
                 "error": {
                     "code": "INTERNAL_SERVER_ERROR",
-                    "message": "Sunucuda beklenmeyen bir hata oluştu.",
-                    "request_id": req_id
-                }
-            }
+                    "message": srv_msg,
+                    "request_id": req_id,
+                },
+            },
         )
