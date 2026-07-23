@@ -39,8 +39,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
-  final _districtCtrl = TextEditingController();
-
   // Category / subcategory
   String? _selectedCategory;
   String? _selectedSubcategory;
@@ -49,7 +47,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   // Location
   String? _selectedProvince;
+  String? _selectedDistrict;
   List<String> _provinces = [];
+  List<String> _districts = [];
 
   // Condition
   String? _selectedCondition;
@@ -127,6 +127,15 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     setState(() {});
   }
 
+  Future<void> _fetchDistricts(String province) async {
+    final districts = await CityService.getDistricts(province);
+    if (!mounted) return;
+    setState(() {
+      _districts = districts;
+      _selectedDistrict = null;
+    });
+  }
+
   void _disposeExtraCtrls() {
     for (final c in _extraCtrlMap.values) {
       c.dispose();
@@ -172,7 +181,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
-    _districtCtrl.dispose();
     _disposeExtraCtrls();
     super.dispose();
   }
@@ -770,8 +778,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               'subcategory': _selectedSubcategory,
             if (_selectedCondition != null) 'condition': _selectedCondition,
             if (_selectedProvince != null) 'province': _selectedProvince,
-            if (_districtCtrl.text.trim().isNotEmpty)
-              'district': _districtCtrl.text.trim(),
+            if (_selectedDistrict != null) 'district': _selectedDistrict,
             if (extraFields.isNotEmpty) 'extra_fields': extraFields,
             'image_urls': imageUrls,
             if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
@@ -1159,17 +1166,42 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             ],
             validator: (v) =>
                 v == null || v.isEmpty ? l.validRequiredProvince : null,
-            onChanged: (v) => setState(() => _selectedProvince = v),
+            onChanged: (v) {
+              setState(() {
+                _selectedProvince = v;
+                _districts = [];
+                _selectedDistrict = null;
+              });
+              if (v != null) _fetchDistricts(v);
+            },
           ),
-          const SizedBox(height: 14),
 
-          // İlçe
-          TeqTextField(
-            key: const Key('create_listing_input_ilce'),
-            controller: _districtCtrl,
-            labelText: l.fieldDistrict,
-            hintText: l.fieldDistrictHint,
-            helperText: l.extraFieldOptional,
+          // İlçe — sadece il seçildikten sonra ve ilçeler yüklendikten sonra açılır
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            child: _districts.isEmpty
+                ? const SizedBox.shrink()
+                : Column(
+                    children: [
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String>(
+                        key: const Key('create_listing_select_ilce'),
+                        // ignore: deprecated_member_use
+                        value: _selectedDistrict,
+                        decoration: InputDecoration(
+                            labelText: l.fieldDistrict,
+                            hintText: l.fieldDistrictHint),
+                        hint: Text(l.fieldDistrictHint),
+                        items: _districts
+                            .map((d) =>
+                                DropdownMenuItem(value: d, child: Text(d)))
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedDistrict = v),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),

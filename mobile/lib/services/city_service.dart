@@ -5,6 +5,7 @@ import '../core/logger_service.dart';
 
 class CityService {
   static List<String>? _cache;
+  static final Map<String, List<String>> _districtCache = {};
 
   static Future<List<String>> getCities() async {
     if (_cache != null) return _cache!;
@@ -17,6 +18,24 @@ class CityService {
       }
     } catch (e) {
       LoggerService.instance.warning('CityService', 'Şehirler alınamadı: $e');
+    }
+    return [];
+  }
+
+  static Future<List<String>> getDistricts(String province) async {
+    if (_districtCache.containsKey(province)) return _districtCache[province]!;
+    try {
+      final encoded = Uri.encodeComponent(province);
+      final resp =
+          await http.get(Uri.parse('$kBaseUrl/cities/$encoded/districts'));
+      if (resp.statusCode == 200) {
+        final list = jsonDecode(resp.body) as List;
+        _districtCache[province] = list.cast<String>();
+        return _districtCache[province]!;
+      }
+    } catch (e) {
+      LoggerService.instance
+          .warning('CityService', 'İlçeler alınamadı [$province]: $e');
     }
     return [];
   }
