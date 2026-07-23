@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api.dart';
+import '../core/app_exception.dart';
 import '../services/storage_service.dart';
 
 class AiInsufficientTuciException implements Exception {
@@ -124,10 +125,11 @@ class AnalyticsService {
       if (resp.statusCode == 202) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
-      // Yetersiz bütçe veya başka hata — mesajı döndür
       try {
         final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
-        return {'error': body['detail'] ?? 'Duyuru gönderilemedi.'};
+        final errMap = body['error'] as Map?;
+        final msg = errMap?['message'] as String? ?? body['detail'] as String? ?? 'Duyuru gönderilemedi.';
+        return {'error': msg};
       } catch (_) {}
       return {'error': 'Duyuru gönderilemedi.'};
     } catch (_) {}
@@ -135,7 +137,7 @@ class AnalyticsService {
   }
 
   /// Yapay Zeka fiyatlama tahmini → `POST /api/analytics/price-estimate`
-  /// Throws [AiInsufficientTuciException] on HTTP 402 (insufficient TUCi).
+  /// Throws [AiInsufficientTuciException] on HTTP 402 (INSUFFICIENT_FUNDS).
   /// Returns null on other errors.
   static Future<Map<String, dynamic>?> getPriceEstimate({
     required String title,
@@ -146,54 +148,34 @@ class AnalyticsService {
     int? excludeListingId,
   }) async {
     try {
-      debugPrint('[AnalyticsService] Sending getPriceEstimate request...');
       final token = await StorageService.getToken();
-      if (token == null) {
-        debugPrint('[AnalyticsService] Token is null');
-        return null;
-      }
+      if (token == null) return null;
       final prefs = await SharedPreferences.getInstance();
       final lang = prefs.getString('app_locale_language_code') ?? 'tr';
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/analytics/price-estimate'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'Accept-Language': lang,
-        },
-        body: jsonEncode({
-          'title': title,
-          'description': description,
-          'category': category,
-          'city': city,
-          if (condition.isNotEmpty) 'condition': condition,
-          if (excludeListingId != null && excludeListingId > 0)
-            'exclude_listing_id': excludeListingId,
-        }),
+      return await apiCall(
+        () => http.post(
+          Uri.parse('$kBaseUrl/analytics/price-estimate'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+            'Accept-Language': lang,
+          },
+          body: jsonEncode({
+            'title': title,
+            'description': description,
+            'category': category,
+            'city': city,
+            if (condition.isNotEmpty) 'condition': condition,
+            if (excludeListingId != null && excludeListingId > 0)
+              'exclude_listing_id': excludeListingId,
+          }),
+        ),
       );
-      debugPrint('[AnalyticsService] getPriceEstimate status code: ${resp.statusCode}');
-      if (resp.statusCode == 200) {
-        return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
+    } on AppException catch (e) {
+      if (e.code == 'INSUFFICIENT_FUNDS') {
+        throw AiInsufficientTuciException(e.message);
       }
-      if (resp.statusCode != 200) {
-        debugPrint('[AnalyticsService] getPriceEstimate returned non-200: ${resp.statusCode} ${resp.body}');
-        final bodyJson = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
-        final detail = bodyJson['detail'];
-        if (resp.statusCode == 402 || resp.statusCode == 500 || resp.statusCode == 504 || resp.statusCode == 422) {
-          // Eğer detail bir liste ise (ör. 422 validation hatası), string'e çevir veya ilk öğeyi al
-          String detailStr = '';
-          if (detail is List && detail.isNotEmpty) {
-             detailStr = detail.first['msg'] ?? 'VALIDATION_ERROR';
-          } else if (detail is String) {
-             detailStr = detail;
-          }
-          throw AiInsufficientTuciException(detailStr);
-        }
-      }
-    } on AiInsufficientTuciException {
-      rethrow;
-    } catch (e, stack) {
-      debugPrint('[AnalyticsService] getPriceEstimate Exception: $e\n$stack');
+      debugPrint('[AnalyticsService] getPriceEstimate hata: ${e.message}');
     }
     return null;
   }
@@ -671,7 +653,9 @@ class AnalyticsService {
       }
       try {
         final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
-        return {'error': body['detail'] ?? 'Blast gönderilemedi.'};
+        final errMap = body['error'] as Map?;
+        final msg = errMap?['message'] as String? ?? body['detail'] as String? ?? 'Blast gönderilemedi.';
+        return {'error': msg};
       } catch (_) {}
       return {'error': 'Blast gönderilemedi.'};
     } catch (_) {}
@@ -738,13 +722,15 @@ class AnalyticsService {
       }
       try {
         final body = await compute(jsonDecode, resp.body) as Map<String, dynamic>;
-        if (resp.statusCode == 429) {
-          final detail = body['detail'];
-          if (detail is Map && detail['code'] == 'cooldown') {
-            return {'cooldown': true, 'seconds_remaining': detail['seconds_remaining'] ?? 86400};
-          }
+        final errMap = body['error'] as Map?;
+        if (resp.statusCode == 429 && errMap?['code'] == 'COOLDOWN') {
+          return {
+            'cooldown': true,
+            'seconds_remaining': errMap?['seconds_remaining'] ?? 86400,
+          };
         }
-        return {'error': body['detail'] ?? 'Bildirim gönderilemedi.'};
+        final msg = errMap?['message'] as String? ?? body['detail'] as String? ?? 'Bildirim gönderilemedi.';
+        return {'error': msg};
       } catch (_) {}
       return {'error': 'Bildirim gönderilemedi.'};
     } catch (_) {}
@@ -753,19 +739,13 @@ class AnalyticsService {
 
   static Future<Map<String, dynamic>> getMassNotificationReport({int? listingId}) async {
     final token = await StorageService.getToken();
-    if (token == null) throw Exception('Yetkilendirme hatası' /* AppLocalizations handled in UI */);
+    if (token == null) throw const AppException('Oturumunuz sona ermiş.', code: 'UNAUTHORIZED', statusCode: 401);
 
     final uri = listingId != null
         ? Uri.parse('$kBaseUrl/leads/mass-notification-report?listing_id=$listingId')
         : Uri.parse('$kBaseUrl/leads/mass-notification-report');
 
-    final response = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Rapor alınamadı: ${response.body}');
-    }
+    return apiCall(() => http.get(uri, headers: {'Authorization': 'Bearer $token'}));
   }
   
   static Future<void> trackCampaignClick(int campaignId) async {
