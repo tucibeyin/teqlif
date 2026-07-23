@@ -760,7 +760,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             if (vals != null && vals.isNotEmpty) extraFields[f.key] = vals.toList();
           } else if (f.type == ExtraFieldType.dropdown) {
             final v = _extraValues[f.key];
-            if (v != null && v.isNotEmpty) extraFields[f.key] = v;
+            if (v != null && v.isNotEmpty) {
+              // yil is stored as integer for consistency with existing listings
+              final asInt = f.key == 'yil' ? int.tryParse(v) : null;
+              extraFields[f.key] = asInt ?? v;
+            }
           } else {
             final ctrl = _extraCtrlMap[f.key];
             final v = ctrl?.text.trim() ?? '';
@@ -1331,6 +1335,19 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     Widget field;
     switch (f.type) {
       case ExtraFieldType.dropdown:
+        // Year field: dynamically generated dropdown (always current)
+        final items = f.key == 'yil'
+            ? List.generate(
+                DateTime.now().year - 1899,
+                (i) {
+                  final y = (DateTime.now().year - i).toString();
+                  return DropdownMenuItem(value: y, child: Text(y));
+                },
+              )
+            : f.options
+                .map((o) => DropdownMenuItem(value: o.value, child: Text(o.label)))
+                .toList();
+
         field = DropdownButtonFormField<String>(
           // ignore: deprecated_member_use
           value: _extraValues[f.key],
@@ -1339,9 +1356,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               hintText: displayLabel,
               suffixText: f.unit),
           hint: Text(displayLabel),
-          items: f.options
-              .map((o) => DropdownMenuItem(value: o.value, child: Text(o.label)))
-              .toList(),
+          items: items,
           onChanged: (v) => setState(() {
             if (v != null) {
               _extraValues[f.key] = v;
@@ -1358,16 +1373,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         break;
 
       case ExtraFieldType.number:
-        final isYil = f.key == 'yil';
         field = TeqTextField(
           controller: _extraCtrlMap[f.key],
           labelText: displayLabel,
           floatingLabel: true,
           keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            if (isYil) LengthLimitingTextInputFormatter(4),
-          ],
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           suffixIcon: f.unit != null
               ? Padding(
                   padding: const EdgeInsets.only(right: 12),
@@ -1377,17 +1388,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           fontSize: 13)),
                 )
               : null,
-          validator: (v) {
-            if (!f.optional && (v == null || v.isEmpty)) return displayLabel;
-            if (isYil && v != null && v.isNotEmpty) {
-              final year = int.tryParse(v);
-              final maxYear = DateTime.now().year;
-              if (year != null && year > maxYear) {
-                return 'Yıl $maxYear\'dan büyük olamaz';
-              }
-            }
-            return null;
-          },
+          validator: f.optional
+              ? null
+              : (v) => (v == null || v.isEmpty) ? displayLabel : null,
         );
         break;
 
