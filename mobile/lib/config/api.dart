@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_error.dart';
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
@@ -17,6 +18,19 @@ String imgUrl(String? path) {
   if (path == null || path.isEmpty) return '';
   if (path.startsWith('http')) return path;
   return '$kBaseHost$path';
+}
+
+/// Authorization + Accept-Language header map'ini oluşturur.
+/// [token] null ise Authorization header eklenmez.
+/// [json] true ise Content-Type: application/json de eklenir.
+Future<Map<String, String>> buildApiHeaders(String? token, {bool json = false}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final lang = prefs.getString('app_locale_language_code') ?? 'tr';
+  return {
+    if (token != null) 'Authorization': 'Bearer $token',
+    'Accept-Language': lang,
+    if (json) 'Content-Type': 'application/json',
+  };
 }
 
 /// 429 yanıtındaki Retry-After başlığını okur, 1–5 saniye arasında bekler.

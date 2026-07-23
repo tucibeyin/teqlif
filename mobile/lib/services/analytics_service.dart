@@ -31,11 +31,6 @@ class AnalyticsService {
     return '${hex(8)}-${hex(4)}-4${hex(3)}-a${hex(3)}-${hex(12)}';
   }
 
-  static Future<String> _lang() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('app_locale_language_code') ?? 'tr';
-  }
-
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     
@@ -150,16 +145,11 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final prefs = await SharedPreferences.getInstance();
-      final lang = prefs.getString('app_locale_language_code') ?? 'tr';
+      final headers = await buildApiHeaders(token, json: true);
       return await apiCall(
         () => http.post(
           Uri.parse('$kBaseUrl/analytics/price-estimate'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-            'Accept-Language': lang,
-          },
+          headers: headers,
           body: jsonEncode({
             'title': title,
             'description': description,
@@ -185,20 +175,13 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final prefs = await SharedPreferences.getInstance();
-      final lang = prefs.getString('app_locale_language_code') ?? 'tr';
+      final headers = await buildApiHeaders(token);
       var url = '$kBaseUrl/analytics/pro-insights';
       final params = <String>[];
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (params.isNotEmpty) url += '?${params.join('&')}';
-      final resp = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept-Language': lang,
-        },
-      );
+      final resp = await http.get(Uri.parse(url), headers: headers);
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
       }
@@ -211,10 +194,9 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       final resp = await http.get(
         Uri.parse('$kBaseUrl/analytics/pro/metrics'),
-        headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
+        headers: await buildApiHeaders(token),
       );
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -228,14 +210,9 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       final resp = await http.get(
         Uri.parse('$kBaseUrl/analytics/market-trends'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'Accept-Language': lang,
-        },
+        headers: await buildApiHeaders(token, json: true),
       );
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -329,14 +306,9 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       final resp = await http.get(
         Uri.parse('$kBaseUrl/analytics/seller-report/$streamId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-          'Accept-Language': lang,
-        },
+        headers: await buildApiHeaders(token, json: true),
       );
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
@@ -493,14 +465,13 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       var url = '$kBaseUrl/analytics/video-roi';
       final params = <String>[];
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (category != null && category.isNotEmpty) params.add('category=$category');
       if (params.isNotEmpty) url += '?${params.join('&')}';
-      final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang});
+      final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
@@ -510,14 +481,13 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       var url = '$kBaseUrl/analytics/gallery-stats';
       final params = <String>[];
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (category != null && category.isNotEmpty) params.add('category=$category');
       if (params.isNotEmpty) url += '?${params.join('&')}';
-      final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang});
+      final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
@@ -527,14 +497,13 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       var url = '$kBaseUrl/analytics/video-performance';
       final params = <String>[];
       if (startDate != null) params.add('start_date=$startDate');
       if (endDate != null) params.add('end_date=$endDate');
       if (category != null && category.isNotEmpty) params.add('category=$category');
       if (params.isNotEmpty) url += '?${params.join('&')}';
-      final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang});
+      final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
@@ -544,10 +513,9 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       final resp = await http.get(
         Uri.parse('$kBaseUrl/analytics/demand-radar?days=$days'),
-        headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
+        headers: await buildApiHeaders(token),
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
@@ -586,10 +554,9 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       final resp = await http.get(
         Uri.parse('$kBaseUrl/analytics/competitor-radar/$listingId'),
-        headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
+        headers: await buildApiHeaders(token),
       );
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
@@ -601,10 +568,9 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       var url = '$kBaseUrl/analytics/category-velocity?category=${Uri.encodeComponent(category)}';
       if (listingId != null) url += '&listing_id=$listingId';
-      final resp = await http.get(Uri.parse(url), headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang});
+      final resp = await http.get(Uri.parse(url), headers: await buildApiHeaders(token));
       if (resp.statusCode == 200) return await compute(jsonDecode, resp.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
@@ -768,10 +734,9 @@ class AnalyticsService {
     try {
       final token = await StorageService.getToken();
       if (token == null) return null;
-      final lang = await _lang();
       final resp = await http.get(
         Uri.parse('$kBaseUrl/analytics/demand-trends?weeks=$weeks'),
-        headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
+        headers: await buildApiHeaders(token),
       );
       if (resp.statusCode == 200) {
         return await compute(jsonDecode, resp.body) as Map<String, dynamic>;

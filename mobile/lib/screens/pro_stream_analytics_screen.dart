@@ -2,24 +2,18 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 
-Future<String> _appLang() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getString('app_locale_language_code') ?? 'tr';
-}
-
 Future<Map<String, dynamic>> _fetchBestStreamTime() async {
   final token = await StorageService.getToken();
-  final lang = await _appLang();
   final resp = await http.get(
     Uri.parse('$kBaseUrl/analytics/pro/best-stream-time'),
-    headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
+    headers: await buildApiHeaders(token),
   );
   if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
   throw Exception('Veri alınamadı');
@@ -27,10 +21,9 @@ Future<Map<String, dynamic>> _fetchBestStreamTime() async {
 
 Future<List<dynamic>> _fetchConversionBreakdown() async {
   final token = await StorageService.getToken();
-  final lang = await _appLang();
   final resp = await http.get(
     Uri.parse('$kBaseUrl/analytics/pro/conversion-breakdown'),
-    headers: {'Authorization': 'Bearer $token', 'Accept-Language': lang},
+    headers: await buildApiHeaders(token),
   );
   if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
   throw Exception('Veri alınamadı');
