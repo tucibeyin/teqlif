@@ -499,7 +499,7 @@ def upgrade() -> None:
         new_ef = _transform_extra_fields(ef)
         if new_ef != ef:
             conn.execute(
-                sa.text("UPDATE listings SET extra_fields = :ef::jsonb WHERE id = :id"),
+                sa.text("UPDATE listings SET extra_fields = CAST(:ef AS jsonb) WHERE id = :id"),
                 {"ef": json.dumps(new_ef, ensure_ascii=False), "id": lid},
             )
 
