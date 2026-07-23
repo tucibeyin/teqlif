@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import '../core/event_bus.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -35,6 +37,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
   bool _isLoading = true;
   bool _isPremium = false;
   String? _planType;
+  StreamSubscription<CreditsChangedEvent>? _creditsSub;
 
   @override
   void initState() {
@@ -44,6 +47,7 @@ class _ProHubScreenState extends State<ProHubScreen> {
     _verifyPremium();
     _loadLocalPlanType();
     AnalyticsService.trackEvent('pro_hub_view', {'is_premium': widget.isPremium});
+    _creditsSub = eventBus.on<CreditsChangedEvent>().listen((_) => _loadCredits());
   }
 
   Future<void> _loadLocalPlanType() async {
@@ -99,6 +103,12 @@ class _ProHubScreenState extends State<ProHubScreen> {
         _isLoading           = false;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _creditsSub?.cancel();
+    super.dispose();
   }
 
   @override

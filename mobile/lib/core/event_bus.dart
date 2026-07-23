@@ -40,3 +40,9 @@ class ValidationErrorEvent {
   final Map<String, dynamic> errors;
   ValidationErrorEvent(this.errors);
 }
+
+/// Herhangi bir işlem sonucunda Pro kredi sayıları değiştiğinde fırlatılır.
+/// ProHubScreen bu event'i dinleyerek _loadCredits() çağırır.
+class CreditsChangedEvent {
+  const CreditsChangedEvent();
+}

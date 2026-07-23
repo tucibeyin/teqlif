@@ -37,6 +37,7 @@ import '../ui_library/components/overlays/teq_snackbar.dart';
 import '../ui_library/components/overlays/teq_dialog.dart';
 import '../ui_library/components/inputs/teq_text_field.dart';
 import '../ui_library/components/buttons/teq_button.dart';
+import '../core/event_bus.dart';
 
 class ListingDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> listing;
@@ -501,6 +502,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen>
           message: newActive ? l.listingActivated : l.listingDeactivated,
           type: TeqSnackBarType.success,
         );
+        if (newActive) eventBus.fire(const CreditsChangedEvent());
       } else if (resp['statusCode'] == 402 && mounted) {
         TeqSnackBar.show(context, message: l.listingReactivateInsufficientBalance, type: TeqSnackBarType.error);
       }

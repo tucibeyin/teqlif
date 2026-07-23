@@ -15,24 +15,14 @@ from app.models.enums import StreamStatus
 from app.models.ad_campaign import AdCampaign
 from app.models.tuci_transaction import TuciTransaction
 from app.models.user import User
+from app.use_cases.listings.queries.get_reactivation_cost import (
+    _get_reactivation_used,
+    _increment_reactivation,
+    _REACTIVATION_FREE_MONTHLY,
+    _REACTIVATION_COST_TUCI,
+)
 
 logger = get_logger(__name__)
-
-# Reaktivasyon kuralları
-_REACTIVATION_FREE_MONTHLY = 3
-_REACTIVATION_COST_TUCI = 10.0
-
-async def _get_reactivation_used(user_id: int, premium_since: Optional[datetime], uow: AbstractUnitOfWork) -> int:
-    """Aylık ücretsiz reaktivasyon sayısını getirir (Redis)."""
-    if not premium_since:
-        return 0
-    # Burada normalde redis kullanılıyordu. Geçici olarak CQRS yapısında
-    # Redis mantığını basitleştirelim.
-    # Şimdilik 0 dönelim, ileride redis eklenecek.
-    return 0
-
-async def _increment_reactivation(user_id: int, premium_since: Optional[datetime], uow: AbstractUnitOfWork) -> None:
-    pass
 
 class ToggleListingCommand:
     """CQRS Command: Kullanıcı ilanını aktif veya pasif yapar."""
@@ -70,7 +60,7 @@ class ToggleListingCommand:
                     is_free_due_to_window = True
                 else:
                     if current_user.is_premium:
-                        used = await _get_reactivation_used(current_user.id, current_user.premium_since, self.uow)
+                        used = await _get_reactivation_used(current_user.id, current_user.premium_since)
                         is_free = used < _REACTIVATION_FREE_MONTHLY
 
                     if not is_free:
@@ -127,6 +117,6 @@ class ToggleListingCommand:
                 pass
 
         if reactivating and is_free and not is_free_due_to_window:
-            await _increment_reactivation(current_user.id, current_user.premium_since, self.uow)
+            await _increment_reactivation(current_user.id, current_user.premium_since)
 
         return {"status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status)}

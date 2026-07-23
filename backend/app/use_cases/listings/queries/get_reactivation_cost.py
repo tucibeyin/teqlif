@@ -1,3 +1,4 @@
+import calendar
 from datetime import datetime, timezone, timedelta, date
 from typing import Optional
 from sqlalchemy import select
@@ -39,11 +40,40 @@ def _reactivation_next_billing(premium_since: datetime) -> date:
     except ValueError:
         return date(y, m + 1, 1) - timedelta(days=1)
 
+def _reactivation_redis_key(user_id: int, premium_since: datetime) -> str:
+    period = _reactivation_billing_start(premium_since)
+    return f"reactivation_credits:{user_id}:{period.isoformat()}"
+
+
 async def _get_reactivation_used(user_id: int, premium_since: Optional[datetime], uow: "AbstractUnitOfWork | None" = None) -> int:
     if not premium_since:
         return 0
-    # Placeholder for Redis fetch
-    return 0
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        val = await redis.get(_reactivation_redis_key(user_id, premium_since))
+        return int(val) if val else 0
+    except Exception:
+        return 0
+
+
+async def _increment_reactivation(user_id: int, premium_since: Optional[datetime]) -> None:
+    if not premium_since:
+        return
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        key = _reactivation_redis_key(user_id, premium_since)
+        new_val = await redis.incr(key)
+        if new_val == 1:
+            # Dönemde ilk kullanım — bir sonraki fatura dönemine kadar TTL ayarla
+            now = datetime.now()
+            next_period = _reactivation_next_billing(premium_since)
+            end_dt = datetime(next_period.year, next_period.month, next_period.day)
+            ttl_secs = max(60, int((end_dt - now).total_seconds()))
+            await redis.expire(key, ttl_secs)
+    except Exception:
+        pass
 
 class GetReactivationCostQuery:
     def __init__(self, uow: AbstractUnitOfWork):
