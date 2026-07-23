@@ -20,6 +20,7 @@ from app.models.user import User
 from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch, SearchEventCreate
 from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
+from app.core.exceptions import AppException, InsufficientFundsException, ServiceException, ForbiddenException
 from app.database_clickhouse import get_clickhouse_client
 from app.models.market_index import ExchangeRates
 from app.services.ml.ner_service import extract_ner
@@ -550,16 +551,10 @@ async def price_estimate(
         # Ön kontrol (atomik değil ama sadece bilgilendirme amaçlı)
         ai_used = await _get_ai_used(current_user.id, current_user.premium_since)
         if ai_used >= AI_PRICE_LIMIT_PRO and current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
-            raise HTTPException(
-                status_code=402,
-                detail="INSUFFICIENT_FUNDS_PRO",
-            )
+            raise InsufficientFundsException("Aylık ücretsiz kullanım hakkınız doldu ve yeterli TUCi bakiyeniz yok.")
     else:
         if current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
-            raise HTTPException(
-                status_code=402,
-                detail="INSUFFICIENT_FUNDS_STD",
-            )
+            raise InsufficientFundsException()
 
     from app.services.ml.ml_service import generate_embedding
 
@@ -582,13 +577,13 @@ async def price_estimate(
         # FastAPI'nin bloklanmaması için işlemi ARQ worker'a atıyoruz.
         job = await request.app.state.arq_pool.enqueue_job("generate_embedding_task", combined)
         if not job:
-            raise HTTPException(status_code=500, detail="AI_SERVICE_BUSY")
-        
+            raise ServiceException("Yapay zeka servisi şu an meşgul. Lütfen tekrar deneyin.")
+
         try:
             # Worker'dan sonucu en fazla 15 saniye bekliyoruz.
             embedding: list[float] = await job.result(timeout=15.0)
         except Exception:
-            raise HTTPException(status_code=504, detail="AI_SERVICE_TIMEOUT")
+            raise ServiceException("Yapay zeka servisi yanıt vermedi. Lütfen tekrar deneyin.")
         
         emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
         await redis.setex(emb_cache_key, 7 * 24 * 3600, emb_str)  # 7 gün cache
@@ -2601,13 +2596,13 @@ async def demand_trends(
     Döner: kategori, haftalık arama sayısı, trend yönü, momentum, arz açığı oranı.
     """
     if not current_user.is_premium:
-        raise HTTPException(status_code=403, detail="Bu özellik PRO üyelere özeldir.")
+        raise ForbiddenException("Bu özellik PRO üyelere özeldir.", code="PRO_REQUIRED")
 
     try:
         from app.database_clickhouse import get_clickhouse_client
         ch = await get_clickhouse_client()
         if ch is None:
-            raise HTTPException(status_code=503, detail="Analitik servisi geçici olarak kullanılamıyor.")
+            raise ServiceException("Analitik servisi geçici olarak kullanılamıyor.")
 
         result = await ch.query(f"""
             SELECT
@@ -2666,8 +2661,8 @@ async def demand_trends(
         trends.sort(key=lambda x: abs(x["pct_change_8w"]), reverse=True)
         return {"weeks": weeks, "trends": trends}
 
-    except HTTPException:
+    except AppException:
         raise
     except Exception as exc:
         logger.warning("[DemandTrends] Hata: %s", exc)
-        raise HTTPException(status_code=500, detail="Talep verisi alınamadı.")
+        raise ServiceException("Talep verisi alınamadı.")

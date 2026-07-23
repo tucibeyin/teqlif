@@ -21,6 +21,7 @@ from sqlalchemy import text as sql_text
 from app.models.enums import ListingStatus
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
+from app.core.exceptions import ForbiddenException, InsufficientFundsException, NotFoundException, ConflictException
 from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
 from app.models.tuci_transaction import TuciTransaction
@@ -120,9 +121,9 @@ async def create_campaign(
     # Aylık boost kredi kontrolü
     boost_limit = _BOOST_LIMIT_PRO if current_user.is_premium else _BOOST_LIMIT_FREE
     if boost_limit == 0:
-        raise HTTPException(
-            status_code=403,
-            detail="İlan öne çıkarma yalnızca Pro hesaplara özeldir. Pro'ya geçerek ayda 3 boost hakkı kazanabilirsin.",
+        raise ForbiddenException(
+            "İlan öne çıkarma yalnızca Pro hesaplara özeldir.",
+            code="PRO_REQUIRED",
         )
     boost_used = await _get_boost_used(current_user.id, current_user.premium_since)
 
@@ -132,10 +133,7 @@ async def create_campaign(
     # Ücretli modda: TUCi bakiyesi yeterli mi?
     if not is_free:
         if current_user.tuci_balance < _BOOST_PAID_COST:
-            raise HTTPException(
-                status_code=402,
-                detail=f"Bu ay {boost_limit} ücretsiz boost hakkını kullandın. Ücretli boost için {_BOOST_PAID_COST} TUCi gerekmekte, ancak bakiyeniz: {current_user.tuci_balance} TUCi.",
-            )
+            raise InsufficientFundsException("Bu ay ücretsiz boost hakkınız doldu ve yeterli TUCi bakiyeniz yok.")
 
     # İlanın bu kullanıcıya ait olduğunu doğrula
     listing = await db.scalar(
@@ -146,7 +144,7 @@ async def create_campaign(
         )
     )
     if not listing:
-        raise HTTPException(status_code=404, detail="İlan bulunamadı veya size ait değil")
+        raise NotFoundException("İlan bulunamadı veya size ait değil.")
 
     # Zaten aktif/duraklatılmış bir kampanya varsa ikinci kampanya açılamaz
     existing = await db.scalar(
@@ -156,10 +154,7 @@ async def create_campaign(
         )
     )
     if existing:
-        raise HTTPException(
-            status_code=409,
-            detail="Bu ilan için zaten aktif bir kampanya var. Mevcut kampanya tamamlandıktan sonra tekrar öne çıkarabilirsin.",
-        )
+        raise ConflictException("Bu ilan için zaten aktif bir kampanya var.")
 
     campaign = AdCampaign(
         listing_id=body.listing_id,
@@ -373,7 +368,7 @@ async def get_campaign_report(
         )
     )
     if not campaign:
-        raise HTTPException(status_code=404, detail="Kampanya bulunamadı")
+        raise NotFoundException("Kampanya bulunamadı.")
 
     # Redis: aktif kampanya için gerçek zamanlı kalan bütçe
     remaining_budget = max(0.0, campaign.total_budget - campaign.spent_budget)

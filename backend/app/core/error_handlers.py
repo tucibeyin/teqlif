@@ -37,6 +37,14 @@ def setup_exception_handlers(app: FastAPI):
         if retry_after:
             headers["Retry-After"] = str(retry_after)
             
+        extra = {}
+        if getattr(exc, "email", None):
+            extra["email"] = exc.email
+        if getattr(exc, "hint", None):
+            extra["hint"] = exc.hint
+        if getattr(exc, "seconds_remaining", None) is not None:
+            extra["seconds_remaining"] = exc.seconds_remaining
+
         return JSONResponse(
             status_code=exc.status_code,
             content={
@@ -45,7 +53,7 @@ def setup_exception_handlers(app: FastAPI):
                     "code": exc.error_code,
                     "message": exc.message,
                     "request_id": req_id,
-                    **({"email": getattr(exc, "email")} if getattr(exc, "email", None) else {})
+                    **extra,
                 }
             },
             headers=headers or None,

@@ -116,3 +116,36 @@ class TooManyRequestsException(AppException):
     def __init__(self, message: str = "Çok fazla istek gönderildi. Lütfen bekleyin.", retry_after: int = 60):
         super().__init__(status_code=429, message=message, code="RATE_LIMIT_EXCEEDED")
         self.retry_after = retry_after
+
+
+class CooldownException(AppException):
+    """429 — Belirli bir aksiyon için bekleme süresi dolmadı (blast, mesaj vb.)."""
+
+    def __init__(self, seconds_remaining: int):
+        minutes, secs = divmod(seconds_remaining, 60)
+        if minutes > 0:
+            readable = f"{minutes} dakika {secs} saniye" if secs else f"{minutes} dakika"
+        else:
+            readable = f"{secs} saniye"
+        super().__init__(
+            status_code=429,
+            message=f"Tekrar göndermek için {readable} beklemeniz gerekiyor.",
+            code="COOLDOWN",
+        )
+        self.seconds_remaining = seconds_remaining
+        self.retry_after = seconds_remaining
+
+
+class ListingNotActiveException(AppException):
+    """409 — İlan aktif değil, işlem yapılamaz."""
+
+    def __init__(self, message: str = "İlan şu an aktif değil."):
+        super().__init__(status_code=409, message=message, code="LISTING_NOT_ACTIVE")
+
+
+class InsufficientFundsException(AppException):
+    """402 — Yetersiz TUCi bakiyesi."""
+
+    def __init__(self, message: str = "Bu işlem için yeterli TUCi bakiyeniz yok."):
+        super().__init__(status_code=402, message=message, code="INSUFFICIENT_FUNDS")
+        self.hint = "TUCi Cüzdan sayfasından bakiye yükleyebilirsiniz."

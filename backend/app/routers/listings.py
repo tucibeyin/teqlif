@@ -35,6 +35,12 @@ from app.services.like_service import LikeService
 from app.schemas.listing import ListingOfferCreate
 from app.core.task_queue import get_pool
 from app.core.rate_limit import limiter
+from app.core.exceptions import (
+    NotFoundException,
+    ListingNotActiveException,
+    InsufficientFundsException,
+    CooldownException,
+)
 from app.core.read_cache import cache_get, cache_set, invalidate_cache
 from app.utils.redis_client import get_redis
 
@@ -421,9 +427,9 @@ async def audience_estimate(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
     if not listing:
-        raise HTTPException(404, "İlan bulunamadı")
+        raise NotFoundException("İlan bulunamadı.")
     if listing.status != ListingStatus.ACTIVE:
-        raise HTTPException(422, detail={"code": "LISTING_NOT_ACTIVE", "status": listing.status.value})
+        raise ListingNotActiveException()
 
     cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
@@ -574,17 +580,11 @@ async def generate_description(
         ai_used = await _get_ai_desc_used(current_user.id, current_user.premium_since)
         if ai_used >= AI_DESC_LIMIT_PRO and current_user.tuci_balance < AI_DESC_COST:
             logger.warning(f"[API] User {current_user.id} has insufficient TUCi (PRO limit reached).")
-            raise HTTPException(
-                status_code=402,
-                detail="INSUFFICIENT_FUNDS_PRO",
-            )
+            raise InsufficientFundsException("Aylık ücretsiz kullanım hakkınız doldu ve yeterli TUCi bakiyeniz yok.")
     else:
         if current_user.tuci_balance < AI_DESC_COST:
             logger.warning(f"[API] User {current_user.id} has insufficient TUCi.")
-            raise HTTPException(
-                status_code=402,
-                detail="INSUFFICIENT_FUNDS_STD",
-            )
+            raise InsufficientFundsException()
 
     async def event_generator():
         logger.info(f"[API] event_generator started for user_id={current_user.id}")
@@ -717,15 +717,15 @@ async def send_mass_notification(
         elapsed = int((datetime.now(timezone.utc) - aware).total_seconds())
         remaining = max(0, _BLAST_COOLDOWN_SECS - elapsed)
         if remaining > 0:
-            raise HTTPException(429, detail={"code": "cooldown", "seconds_remaining": remaining})
+            raise CooldownException(seconds_remaining=remaining)
 
     listing = await db.scalar(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
     if not listing:
-        raise HTTPException(404, "İlan bulunamadı")
+        raise NotFoundException("İlan bulunamadı.")
     if listing.status != ListingStatus.ACTIVE:
-        raise HTTPException(422, detail={"code": "LISTING_NOT_ACTIVE", "status": listing.status.value})
+        raise ListingNotActiveException()
 
     cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
     limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
@@ -740,7 +740,7 @@ async def send_mass_notification(
     tuci_cost    = paid_count * COST_PER_PERSON
 
     if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
-        raise HTTPException(402, f"Yetersiz TUCi bakiyesi. Mevcut: {current_user.tuci_balance}, Gerekli: {tuci_cost}")
+        raise InsufficientFundsException()
 
     # Hedef kitleyi oluştur: doğrudan görüntüleyenler + kategori ilgisi olanlar
     candidate_ids = await _build_listing_audience(

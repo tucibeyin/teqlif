@@ -268,7 +268,7 @@ async def delete_notification(
     )
     n = result.scalar_one_or_none()
     if not n:
-        raise HTTPException(status_code=404, detail="Bildirim bulunamadı")
+        raise NotFoundException("Bildirim bulunamadı.")
     await db.delete(n)
     await db.commit()
     return {"ok": True}
