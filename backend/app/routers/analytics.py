@@ -21,13 +21,11 @@ from app.schemas.analytics import AnalyticsEventCreate, FeedEventBatch, SearchEv
 from app.utils.auth import decode_token, get_current_user
 from app.utils.redis_client import get_redis
 from app.core.exceptions import AppException, InsufficientFundsException, ServiceException, ForbiddenException, NotFoundException
+from app.services import credit_service
 from app.database_clickhouse import get_clickhouse_client
 from app.models.market_index import ExchangeRates
 from app.services.ml.ner_service import extract_ner
 from app.utils.i18n import _get_t, get_locale
-
-AI_PRICE_ESTIMATE_COST = 5   # TUCi (standart kullanıcılar ve PRO limit aşınca)
-AI_PRICE_LIMIT_PRO    = 6  # PRO kullanıcılar ayda 6 ücretsiz sorgu
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -386,77 +384,20 @@ async def get_seller_report(
     }
 
 
-# ── Yapay Zeka Fiyatlama Danışmanı ───────────────────────────────────────────
-
-import calendar as _calendar
-from datetime import datetime as _datetime, date as _date
-
-def _ai_billing_start(premium_since: _datetime) -> _date:
-    today = _date.today()
-    day   = premium_since.day
-    last_this = _calendar.monthrange(today.year, today.month)[1]
-    ann_this  = _date(today.year, today.month, min(day, last_this))
-    if today >= ann_this:
-        return ann_this
-    prev_m = today.month - 1 if today.month > 1 else 12
-    prev_y = today.year if today.month > 1 else today.year - 1
-    return _date(prev_y, prev_m, min(day, _calendar.monthrange(prev_y, prev_m)[1]))
-
-def _ai_next_billing(premium_since: _datetime) -> _date:
-    p   = _ai_billing_start(premium_since)
-    day = premium_since.day
-    nm  = p.month + 1 if p.month < 12 else 1
-    ny  = p.year if p.month < 12 else p.year + 1
-    return _date(ny, nm, min(day, _calendar.monthrange(ny, nm)[1]))
-
-def _ai_redis_key(user_id: int, premium_since: _datetime | None = None) -> str:
-    if premium_since:
-        period = _ai_billing_start(premium_since)
-        return f"ai_price_credits:{user_id}:{period.isoformat()}"
-    month = _datetime.now().strftime("%Y-%m")
-    return f"ai_price_credits:{user_id}:{month}"
-
-async def _get_ai_used(user_id: int, premium_since: _datetime | None = None) -> int:
-    try:
-        redis = await get_redis()
-        val = await redis.get(_ai_redis_key(user_id, premium_since))
-        return int(val) if val else 0
-    except Exception:
-        return 0
-
-async def _increment_ai_atomic(user_id: int, premium_since: _datetime | None = None) -> int:
-    try:
-        redis = await get_redis()
-        key   = _ai_redis_key(user_id, premium_since)
-        count = await redis.incr(key)
-        if count == 1:
-            now = _datetime.now()
-            if premium_since:
-                nxt      = _ai_next_billing(premium_since)
-                end_dt   = _datetime(nxt.year, nxt.month, nxt.day, 0, 0, 0)
-            else:
-                last_day = _calendar.monthrange(now.year, now.month)[1]
-                end_dt   = _datetime(now.year, now.month, last_day, 23, 59, 59)
-            ttl_secs = int((end_dt - now).total_seconds()) + 1
-            await redis.expire(key, ttl_secs)
-        return count
-    except Exception:
-        return 0
-
-
 @router.get("/ai-price-credits")
 async def ai_price_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki AI fiyat danışmanı kredi durumunu döndürür."""
     if not current_user.is_premium:
         return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False, "renewal_date": None}
-    used = await _get_ai_used(current_user.id, current_user.premium_since)
-    remaining = max(0, AI_PRICE_LIMIT_PRO - used)
+    used = await credit_service.get_used("ai_price", current_user.id, current_user.premium_since)
+    limit = credit_service.free_limit("ai_price", is_premium=True)
+    remaining = max(0, limit - used)
     renewal_date: str | None = None
     if current_user.premium_since:
-        renewal_date = _ai_next_billing(current_user.premium_since).isoformat()
+        renewal_date = credit_service.next_billing_date(current_user.premium_since).isoformat()
     return {
         "used": used,
-        "limit": AI_PRICE_LIMIT_PRO,
+        "limit": limit,
         "remaining": remaining,
         "is_premium": True,
         "renewal_date": renewal_date,
@@ -466,14 +407,8 @@ async def ai_price_credits(current_user: User = Depends(get_current_user)):
 @router.get("/reactivation-credits")
 async def reactivation_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki reaktivasyon kredi durumunu döndürür."""
-    from app.use_cases.listings.queries.get_reactivation_cost import (
-        _get_reactivation_used,
-        _reactivation_next_billing,
-        _REACTIVATION_FREE_MONTHLY,
-        _REACTIVATION_COST_TUCI,
-    )
+    reactivation_cost = credit_service.cost_tuci("reactivation")
     if not current_user.is_premium:
-        can_afford = current_user.tuci_balance >= _REACTIVATION_COST_TUCI
         return {
             "used": 0,
             "limit": 0,
@@ -481,21 +416,22 @@ async def reactivation_credits(current_user: User = Depends(get_current_user)):
             "free_remaining": 0,
             "is_premium": False,
             "renewal_date": None,
-            "cost": _REACTIVATION_COST_TUCI,
+            "cost": reactivation_cost,
             "balance": current_user.tuci_balance,
-            "can_afford": can_afford,
+            "can_afford": current_user.tuci_balance >= reactivation_cost,
         }
-    used      = await _get_reactivation_used(current_user.id, current_user.premium_since)
-    remaining = max(0, _REACTIVATION_FREE_MONTHLY - used)
+    used      = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
+    limit     = credit_service.free_limit("reactivation", is_premium=True)
+    remaining = max(0, limit - used)
     is_free   = remaining > 0
-    cost      = 0 if is_free else _REACTIVATION_COST_TUCI
-    can_afford = is_free or current_user.tuci_balance >= _REACTIVATION_COST_TUCI
+    cost      = 0 if is_free else reactivation_cost
+    can_afford = is_free or current_user.tuci_balance >= reactivation_cost
     renewal_date: str | None = None
     if current_user.premium_since:
-        renewal_date = _reactivation_next_billing(current_user.premium_since).isoformat()
+        renewal_date = credit_service.next_billing_date(current_user.premium_since).isoformat()
     return {
         "used": used,
-        "limit": _REACTIVATION_FREE_MONTHLY,
+        "limit": limit,
         "remaining": remaining,
         "free_remaining": remaining,
         "is_premium": True,
@@ -545,13 +481,14 @@ async def price_estimate(
 
     # ── Limit / bakiye kontrolü (Sadece bakiye yeterliliği test edilir) ──
     # Not: Limit düşümü işlemin sonunda atomik olarak yapılacak.
+    _ai_price_cost  = credit_service.cost_tuci("ai_price")
+    _ai_price_limit = credit_service.free_limit("ai_price", is_premium=True)
     if current_user.is_premium:
-        # Ön kontrol (atomik değil ama sadece bilgilendirme amaçlı)
-        ai_used = await _get_ai_used(current_user.id, current_user.premium_since)
-        if ai_used >= AI_PRICE_LIMIT_PRO and current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
+        ai_used = await credit_service.get_used("ai_price", current_user.id, current_user.premium_since)
+        if ai_used >= _ai_price_limit and current_user.tuci_balance < _ai_price_cost:
             raise InsufficientFundsException("Aylık ücretsiz kullanım hakkınız doldu ve yeterli TUCi bakiyeniz yok.")
     else:
-        if current_user.tuci_balance < AI_PRICE_ESTIMATE_COST:
+        if current_user.tuci_balance < _ai_price_cost:
             raise InsufficientFundsException()
 
     from app.services.ml.ml_service import generate_embedding
@@ -794,38 +731,38 @@ async def price_estimate(
 
     # ── TUCi düş + sayaç güncelle (Atomik) ────────────────────────────────────
     tuci_spent = 0
+    ref_id   = body.exclude_listing_id if body.exclude_listing_id else None
+    ref_type = "listing" if body.exclude_listing_id else None
     if current_user.is_premium:
-        ai_used_new = await _increment_ai_atomic(current_user.id, current_user.premium_since)
-        if ai_used_new <= AI_PRICE_LIMIT_PRO:
-            pass  # Limit içi, TUCi düşme
-        else:
+        ai_used_new = await credit_service.increment("ai_price", current_user.id, current_user.premium_since)
+        if ai_used_new > _ai_price_limit:
             await db.execute(
                 sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                {"cost": AI_PRICE_ESTIMATE_COST, "uid": current_user.id},
+                {"cost": _ai_price_cost, "uid": current_user.id},
             )
             db.add(TuciTransaction(
                 user_id=current_user.id,
-                amount=-AI_PRICE_ESTIMATE_COST,
+                amount=-_ai_price_cost,
                 transaction_type="spend_ai",
-                reference_id=body.exclude_listing_id if body.exclude_listing_id else None,
-                reference_type="listing" if body.exclude_listing_id else None,
+                reference_id=ref_id,
+                reference_type=ref_type,
             ))
             await db.commit()
-            tuci_spent = AI_PRICE_ESTIMATE_COST
+            tuci_spent = _ai_price_cost
     else:
         await db.execute(
             sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-            {"cost": AI_PRICE_ESTIMATE_COST, "uid": current_user.id},
+            {"cost": _ai_price_cost, "uid": current_user.id},
         )
         db.add(TuciTransaction(
             user_id=current_user.id,
-            amount=-AI_PRICE_ESTIMATE_COST,
+            amount=-_ai_price_cost,
             transaction_type="spend_ai",
-            reference_id=body.exclude_listing_id if body.exclude_listing_id else None,
-            reference_type="listing" if body.exclude_listing_id else None,
+            reference_id=ref_id,
+            reference_type=ref_type,
         ))
         await db.commit()
-        tuci_spent = AI_PRICE_ESTIMATE_COST
+        tuci_spent = _ai_price_cost
 
     return {
         "found_similar": cnt,

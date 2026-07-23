@@ -1,82 +1,14 @@
-import calendar
-from datetime import datetime, timezone, timedelta, date
-from typing import Optional
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from fastapi import HTTPException
 
-from app.core.uow import AbstractUnitOfWork
 from app.models.listing import Listing
 from app.models.user import User
+from app.services import credit_service
 
-_REACTIVATION_FREE_MONTHLY = 3
-_REACTIVATION_COST_TUCI = 10.0
-
-def _reactivation_billing_start(premium_since: datetime) -> date:
-    today = datetime.now(timezone.utc).date()
-    ps = premium_since.date()
-    if today.day >= ps.day:
-        try:
-            return date(today.year, today.month, ps.day)
-        except ValueError:
-            return date(today.year, today.month + 1, 1) - timedelta(days=1)
-    else:
-        if today.month == 1:
-            y, m = today.year - 1, 12
-        else:
-            y, m = today.year, today.month - 1
-        try:
-            return date(y, m, ps.day)
-        except ValueError:
-            return date(y, m + 1, 1) - timedelta(days=1)
-
-def _reactivation_next_billing(premium_since: datetime) -> date:
-    start = _reactivation_billing_start(premium_since)
-    if start.month == 12:
-        y, m = start.year + 1, 1
-    else:
-        y, m = start.year, start.month + 1
-    try:
-        return date(y, m, start.day)
-    except ValueError:
-        return date(y, m + 1, 1) - timedelta(days=1)
-
-def _reactivation_redis_key(user_id: int, premium_since: datetime) -> str:
-    period = _reactivation_billing_start(premium_since)
-    return f"reactivation_credits:{user_id}:{period.isoformat()}"
-
-
-async def _get_reactivation_used(user_id: int, premium_since: Optional[datetime], uow: "AbstractUnitOfWork | None" = None) -> int:
-    if not premium_since:
-        return 0
-    try:
-        from app.utils.redis_client import get_redis
-        redis = await get_redis()
-        val = await redis.get(_reactivation_redis_key(user_id, premium_since))
-        return int(val) if val else 0
-    except Exception:
-        return 0
-
-
-async def _increment_reactivation(user_id: int, premium_since: Optional[datetime]) -> None:
-    if not premium_since:
-        return
-    try:
-        from app.utils.redis_client import get_redis
-        redis = await get_redis()
-        key = _reactivation_redis_key(user_id, premium_since)
-        new_val = await redis.incr(key)
-        if new_val == 1:
-            # Dönemde ilk kullanım — bir sonraki fatura dönemine kadar TTL ayarla
-            now = datetime.now()
-            next_period = _reactivation_next_billing(premium_since)
-            end_dt = datetime(next_period.year, next_period.month, next_period.day)
-            ttl_secs = max(60, int((end_dt - now).total_seconds()))
-            await redis.expire(key, ttl_secs)
-    except Exception:
-        pass
 
 class GetReactivationCostQuery:
-    def __init__(self, uow: AbstractUnitOfWork):
+    def __init__(self, uow):
         self.uow = uow
 
     async def execute(self, listing_id: int, current_user: User) -> dict:
@@ -90,24 +22,29 @@ class GetReactivationCostQuery:
 
         within_window = created_at > (datetime.now(timezone.utc) - timedelta(days=30))
 
+        reactivation_cost = credit_service.cost_tuci("reactivation")
+
         if current_user.is_premium:
-            used = await _get_reactivation_used(current_user.id, current_user.premium_since, self.uow)
-            remaining = max(0, _REACTIVATION_FREE_MONTHLY - used)
-            renewal_date: str | None = None
-            if current_user.premium_since:
-                renewal_date = _reactivation_next_billing(current_user.premium_since).isoformat()
+            used = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
+            free_limit = credit_service.free_limit("reactivation", is_premium=True)
+            remaining = max(0, free_limit - used)
+            renewal_date: str | None = (
+                credit_service.next_billing_date(current_user.premium_since).isoformat()
+                if current_user.premium_since else None
+            )
         else:
+            free_limit = 0
             remaining = 0
             renewal_date = None
 
         is_free = within_window or (remaining > 0)
-        cost = 0 if is_free else _REACTIVATION_COST_TUCI
-        can_afford = is_free or current_user.tuci_balance >= _REACTIVATION_COST_TUCI
+        cost = 0 if is_free else reactivation_cost
+        can_afford = is_free or current_user.tuci_balance >= reactivation_cost
 
         return {
             "is_premium": current_user.is_premium,
             "free_remaining": remaining,
-            "free_limit": _REACTIVATION_FREE_MONTHLY,
+            "free_limit": free_limit,
             "cost": cost,
             "balance": current_user.tuci_balance,
             "can_afford": can_afford,

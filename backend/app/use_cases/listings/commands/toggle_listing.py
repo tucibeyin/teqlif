@@ -1,13 +1,12 @@
 import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import Optional
-from fastapi import HTTPException
 from sqlalchemy import select, delete
 from sqlalchemy.sql import text
 
 from app.core.uow import AbstractUnitOfWork
 from app.core.logger import get_logger, capture_exception
-from app.core.exceptions import NotFoundException, DatabaseException
+from app.core.exceptions import NotFoundException, DatabaseException, InsufficientFundsException
 from app.models.listing import Listing
 from app.models.enums import ListingStatus
 from app.models.listing_impression import ListingImpression
@@ -15,12 +14,7 @@ from app.models.enums import StreamStatus
 from app.models.ad_campaign import AdCampaign
 from app.models.tuci_transaction import TuciTransaction
 from app.models.user import User
-from app.use_cases.listings.queries.get_reactivation_cost import (
-    _get_reactivation_used,
-    _increment_reactivation,
-    _REACTIVATION_FREE_MONTHLY,
-    _REACTIVATION_COST_TUCI,
-)
+from app.services import credit_service
 
 logger = get_logger(__name__)
 
@@ -48,6 +42,7 @@ class ToggleListingCommand:
             reactivating = listing.status != ListingStatus.ACTIVE
             is_free = False
             is_free_due_to_window = False
+            reactivation_cost = credit_service.cost_tuci("reactivation")
 
             if reactivating:
                 created_at = listing.created_at
@@ -60,19 +55,12 @@ class ToggleListingCommand:
                     is_free_due_to_window = True
                 else:
                     if current_user.is_premium:
-                        used = await _get_reactivation_used(current_user.id, current_user.premium_since)
-                        is_free = used < _REACTIVATION_FREE_MONTHLY
+                        used = await credit_service.get_used("reactivation", current_user.id, current_user.premium_since)
+                        is_free = used < credit_service.free_limit("reactivation", is_premium=True)
 
                     if not is_free:
-                        if current_user.tuci_balance < _REACTIVATION_COST_TUCI:
-                            raise HTTPException(
-                                status_code=402,
-                                detail={
-                                    "code": "insufficient_balance",
-                                    "balance": current_user.tuci_balance,
-                                    "cost": _REACTIVATION_COST_TUCI,
-                                },
-                            )
+                        if current_user.tuci_balance < reactivation_cost:
+                            raise InsufficientFundsException(code="insufficient_balance")
 
                 listing.status = ListingStatus.ACTIVE
                 if not is_free_due_to_window:
@@ -84,11 +72,11 @@ class ToggleListingCommand:
             if reactivating and not is_free:
                 await self.uow.session.execute(
                     text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                    {"cost": _REACTIVATION_COST_TUCI, "uid": current_user.id},
+                    {"cost": reactivation_cost, "uid": current_user.id},
                 )
                 self.uow.session.add(TuciTransaction(
                     user_id=current_user.id,
-                    amount=-_REACTIVATION_COST_TUCI,
+                    amount=-reactivation_cost,
                     transaction_type="spend_reactivation",
                     reference_id=listing_id,
                     reference_type="listing",
@@ -117,6 +105,6 @@ class ToggleListingCommand:
                 pass
 
         if reactivating and is_free and not is_free_due_to_window:
-            await _increment_reactivation(current_user.id, current_user.premium_since)
+            await credit_service.increment("reactivation", current_user.id, current_user.premium_since)
 
         return {"status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status)}

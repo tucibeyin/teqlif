@@ -1,7 +1,6 @@
 import asyncio
-import calendar as _calendar
 import logging
-from datetime import datetime, timezone, date as _date
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Query as FastApiQuery
@@ -41,6 +40,7 @@ from app.core.exceptions import (
     InsufficientFundsException,
     CooldownException,
 )
+from app.services import credit_service
 from app.core.read_cache import cache_get, cache_set, invalidate_cache
 from app.utils.redis_client import get_redis
 
@@ -416,13 +416,6 @@ async def audience_estimate(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.routers.leads import (
-        _get_blast_used,
-        _PER_BLAST_CAP_PRO, _PER_BLAST_CAP_STANDARD,
-        _BLAST_LIMIT_PRO, _BLAST_LIMIT_STANDARD,
-        COST_PER_PERSON,
-    )
-
     listing = await db.scalar(
         select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id)
     )
@@ -431,9 +424,9 @@ async def audience_estimate(
     if listing.status != ListingStatus.ACTIVE:
         raise ListingNotActiveException()
 
-    cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
-    limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
-    used  = await _get_blast_used(current_user.id, current_user.premium_since)
+    cap   = credit_service.per_op_cap("blast", current_user.is_premium)
+    limit = credit_service.free_limit("blast", current_user.is_premium)
+    used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
     candidate_ids = await _build_listing_audience(
@@ -456,7 +449,7 @@ async def audience_estimate(
     actual_cap     = min(reachable, cap)
     free_used      = min(credits_remaining, actual_cap)
     paid_count     = actual_cap - free_used
-    estimated_cost = paid_count * COST_PER_PERSON
+    estimated_cost = paid_count * credit_service.cost_tuci("blast")
 
     return {
         "audience_size":           reachable,
@@ -465,68 +458,6 @@ async def audience_estimate(
         "tuci_balance":            current_user.tuci_balance,
         "estimated_cost":          estimated_cost,
     }
-
-
-# ── AI Listing Description — TUCi & PRO krediler ─────────────────────────────
-
-AI_DESC_COST      = 5   # TUCi (standart kullanıcılar ve PRO limit aşınca)
-AI_DESC_LIMIT_PRO = 6   # PRO kullanıcılar ayda 6 ücretsiz sorgu
-
-
-def _ai_desc_billing_start(premium_since: datetime) -> _date:
-    """PRO fatura dönemi başlangıcı (premium_since günü, her ay)."""
-    today = _date.today()
-    day = premium_since.day
-    if today.day >= day:
-        return _date(today.year, today.month, min(day, _calendar.monthrange(today.year, today.month)[1]))
-    if today.month == 1:
-        return _date(today.year - 1, 12, min(day, 31))
-    pm = today.month - 1
-    return _date(today.year, pm, min(day, _calendar.monthrange(today.year, pm)[1]))
-
-
-def _ai_desc_next_billing(premium_since: datetime) -> _date:
-    """Bir sonraki PRO fatura tarihi."""
-    p = _ai_desc_billing_start(premium_since)
-    nm = p.month + 1 if p.month < 12 else 1
-    ny = p.year if p.month < 12 else p.year + 1
-    return _date(ny, nm, min(p.day, _calendar.monthrange(ny, nm)[1]))
-
-
-def _ai_desc_redis_key(user_id: int, premium_since: datetime | None = None) -> str:
-    if premium_since:
-        period = _ai_desc_billing_start(premium_since)
-        return f"ai_desc_credits:{user_id}:{period.isoformat()}"
-    month = datetime.now().strftime("%Y-%m")
-    return f"ai_desc_credits:{user_id}:{month}"
-
-
-async def _get_ai_desc_used(user_id: int, premium_since: datetime | None = None) -> int:
-    try:
-        redis = await get_redis()
-        val = await redis.get(_ai_desc_redis_key(user_id, premium_since))
-        return int(val) if val else 0
-    except Exception:
-        return 0
-
-
-async def _increment_ai_desc_atomic(user_id: int, premium_since: datetime | None = None) -> int:
-    try:
-        redis = await get_redis()
-        key   = _ai_desc_redis_key(user_id, premium_since)
-        count = await redis.incr(key)
-        if count == 1:
-            now = datetime.now()
-            if premium_since:
-                nxt    = _ai_desc_next_billing(premium_since)
-                end_dt = datetime(nxt.year, nxt.month, nxt.day)
-            else:
-                last_day = _calendar.monthrange(now.year, now.month)[1]
-                end_dt   = datetime(now.year, now.month, last_day, 23, 59, 59)
-            await redis.expire(key, int((end_dt - now).total_seconds()) + 1)
-        return count
-    except Exception:
-        return 0
 
 
 # ── AI Listing Description ────────────────────────────────────────────────────
@@ -544,14 +475,15 @@ async def ai_desc_credits(current_user: User = Depends(get_current_user)):
     """PRO kullanıcının bu ayki AI açıklama yazarı kredi durumunu döndürür."""
     if not current_user.is_premium:
         return {"used": 0, "limit": 0, "remaining": 0, "is_premium": False, "renewal_date": None}
-    used = await _get_ai_desc_used(current_user.id, current_user.premium_since)
-    remaining = max(0, AI_DESC_LIMIT_PRO - used)
+    used  = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
+    limit = credit_service.free_limit("ai_desc", is_premium=True)
+    remaining = max(0, limit - used)
     renewal_date: str | None = None
     if current_user.premium_since:
-        renewal_date = _ai_desc_next_billing(current_user.premium_since).isoformat()
+        renewal_date = credit_service.next_billing_date(current_user.premium_since).isoformat()
     return {
         "used": used,
-        "limit": AI_DESC_LIMIT_PRO,
+        "limit": limit,
         "remaining": remaining,
         "is_premium": True,
         "renewal_date": renewal_date,
@@ -576,13 +508,15 @@ async def generate_description(
     """
     logger.info(f"[API] /generate-description called by user_id={current_user.id} | title='{body.title}'")
     # ── TUCi / PRO kredi ön kontrolü ──────────────────────────────────────────
+    _ai_desc_cost  = credit_service.cost_tuci("ai_desc")
+    _ai_desc_limit = credit_service.free_limit("ai_desc", is_premium=True)
     if current_user.is_premium:
-        ai_used = await _get_ai_desc_used(current_user.id, current_user.premium_since)
-        if ai_used >= AI_DESC_LIMIT_PRO and current_user.tuci_balance < AI_DESC_COST:
+        ai_used = await credit_service.get_used("ai_desc", current_user.id, current_user.premium_since)
+        if ai_used >= _ai_desc_limit and current_user.tuci_balance < _ai_desc_cost:
             logger.warning(f"[API] User {current_user.id} has insufficient TUCi (PRO limit reached).")
             raise InsufficientFundsException("Aylık ücretsiz kullanım hakkınız doldu ve yeterli TUCi bakiyeniz yok.")
     else:
-        if current_user.tuci_balance < AI_DESC_COST:
+        if current_user.tuci_balance < _ai_desc_cost:
             logger.warning(f"[API] User {current_user.id} has insufficient TUCi.")
             raise InsufficientFundsException()
 
@@ -644,23 +578,23 @@ async def generate_description(
                 # Üretim bittikten sonra TUCi kesintisi yap
                 tuci_spent = 0
                 if current_user.is_premium:
-                    ai_used_new = await _increment_ai_desc_atomic(current_user.id, current_user.premium_since)
-                    if ai_used_new > AI_DESC_LIMIT_PRO:
+                    ai_used_new = await credit_service.increment("ai_desc", current_user.id, current_user.premium_since)
+                    if ai_used_new > _ai_desc_limit:
                         await db.execute(
                             text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                            {"cost": AI_DESC_COST, "uid": current_user.id},
+                            {"cost": _ai_desc_cost, "uid": current_user.id},
                         )
-                        db.add(TuciTransaction(user_id=current_user.id, amount=-AI_DESC_COST, transaction_type="spend_ai"))
+                        db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai"))
                         await db.commit()
-                        tuci_spent = AI_DESC_COST
+                        tuci_spent = _ai_desc_cost
                 else:
                     await db.execute(
                         text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
-                        {"cost": AI_DESC_COST, "uid": current_user.id},
+                        {"cost": _ai_desc_cost, "uid": current_user.id},
                     )
-                    db.add(TuciTransaction(user_id=current_user.id, amount=-AI_DESC_COST, transaction_type="spend_ai"))
+                    db.add(TuciTransaction(user_id=current_user.id, amount=-_ai_desc_cost, transaction_type="spend_ai"))
                     await db.commit()
-                    tuci_spent = AI_DESC_COST
+                    tuci_spent = _ai_desc_cost
                 
                 # Bitiş sinyali ve harcanan TUCi
                 yield f"data: {json.dumps({'done': True, 'tuci_spent': tuci_spent}, ensure_ascii=False)}\n\n"
@@ -695,13 +629,6 @@ async def send_mass_notification(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.routers.leads import (
-        _get_blast_used, _increment_blast,
-        _PER_BLAST_CAP_PRO, _PER_BLAST_CAP_STANDARD,
-        _BLAST_LIMIT_PRO, _BLAST_LIMIT_STANDARD,
-        COST_PER_PERSON,
-    )
-
     # Cooldown kontrolü
     last_sent = await db.scalar(
         select(MassNotificationCampaign.created_at)
@@ -727,17 +654,17 @@ async def send_mass_notification(
     if listing.status != ListingStatus.ACTIVE:
         raise ListingNotActiveException()
 
-    cap   = _PER_BLAST_CAP_PRO if current_user.is_premium else _PER_BLAST_CAP_STANDARD
-    limit = _BLAST_LIMIT_PRO if current_user.is_premium else _BLAST_LIMIT_STANDARD
-    used  = await _get_blast_used(current_user.id, current_user.premium_since)
+    cap   = credit_service.per_op_cap("blast", current_user.is_premium)
+    limit = credit_service.free_limit("blast", current_user.is_premium)
+    used  = await credit_service.get_used("blast", current_user.id, current_user.premium_since)
     credits_remaining = max(0, limit - used)
 
     desired = body.recipient_count or cap
-    max_paid_authorized = body.estimated_cost // COST_PER_PERSON
+    max_paid_authorized = body.estimated_cost // credit_service.cost_tuci("blast")
     actual_count = min(desired, credits_remaining + max_paid_authorized, cap)
     free_used    = min(credits_remaining, actual_count)
     paid_count   = actual_count - free_used
-    tuci_cost    = paid_count * COST_PER_PERSON
+    tuci_cost    = paid_count * credit_service.cost_tuci("blast")
 
     if tuci_cost > 0 and current_user.tuci_balance < tuci_cost:
         raise InsufficientFundsException()
@@ -815,7 +742,7 @@ async def send_mass_notification(
     await db.commit()
 
     if free_used > 0:
-        await _increment_blast(current_user.id, count=free_used, premium_since=current_user.premium_since)
+        await credit_service.increment("blast", current_user.id, current_user.premium_since, count=free_used)
 
     logging.getLogger(__name__).info(
         "[MassNotif] Gönderildi | seller=%d | listing=%d | sent=%d | free=%d | paid=%d | cost=%d TUCi",

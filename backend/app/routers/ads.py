@@ -7,9 +7,7 @@ POST /api/ads/impression/{campaign_id} — gösterim → ClickHouse'a log
 """
 from __future__ import annotations
 
-import calendar
 import logging
-from datetime import datetime, timezone, date
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -22,6 +20,7 @@ from app.models.enums import ListingStatus
 from app.database import get_db, get_uow
 from app.core.uow import SqlAlchemyUnitOfWork
 from app.core.exceptions import ForbiddenException, InsufficientFundsException, NotFoundException, ConflictException
+from app.services import credit_service
 from app.models.ad_campaign import AdCampaign
 from app.models.listing import Listing
 from app.models.tuci_transaction import TuciTransaction
@@ -33,62 +32,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ads", tags=["ads"])
 
-# ── Boost Kredi Sabitleri ─────────────────────────────────────────────────────
-
-_BOOST_LIMIT_FREE = 0   # Ücretsiz hesap: boost yapamaz
-_BOOST_LIMIT_PRO  = 3   # Pro hesap: ayda 3 boost
-
-
-def _boost_billing_start(premium_since: datetime) -> date:
-    today = date.today()
-    day   = premium_since.day
-    last_this = calendar.monthrange(today.year, today.month)[1]
-    ann_this  = date(today.year, today.month, min(day, last_this))
-    if today >= ann_this:
-        return ann_this
-    prev_m = today.month - 1 if today.month > 1 else 12
-    prev_y = today.year if today.month > 1 else today.year - 1
-    return date(prev_y, prev_m, min(day, calendar.monthrange(prev_y, prev_m)[1]))
-
-
-def _boost_next_billing(premium_since: datetime) -> date:
-    p   = _boost_billing_start(premium_since)
-    day = premium_since.day
-    nm  = p.month + 1 if p.month < 12 else 1
-    ny  = p.year if p.month < 12 else p.year + 1
-    return date(ny, nm, min(day, calendar.monthrange(ny, nm)[1]))
-
-
-def _boost_redis_key(user_id: int, premium_since: datetime | None = None) -> str:
-    if premium_since:
-        period = _boost_billing_start(premium_since)
-        return f"boost_credits:{user_id}:{period.isoformat()}"
-    month = datetime.now(timezone.utc).strftime("%Y-%m")
-    return f"boost_credits:{user_id}:{month}"
-
-
-async def _get_boost_used(user_id: int, premium_since: datetime | None = None) -> int:
-    redis = await get_redis()
-    val = await redis.get(_boost_redis_key(user_id, premium_since))
-    return int(val) if val else 0
-
-
-async def _increment_boost(user_id: int, premium_since: datetime | None = None) -> None:
-    redis = await get_redis()
-    key   = _boost_redis_key(user_id, premium_since)
-    count = await redis.incr(key)
-    if count == 1:
-        now = datetime.now(timezone.utc)
-        if premium_since:
-            nxt    = _boost_next_billing(premium_since)
-            end_dt = datetime(nxt.year, nxt.month, nxt.day, 0, 0, 0, tzinfo=timezone.utc)
-        else:
-            last_day  = calendar.monthrange(now.year, now.month)[1]
-            end_dt    = now.replace(day=last_day, hour=23, minute=59, second=59)
-        ttl = int((end_dt - now).total_seconds()) + 1
-        await redis.expire(key, ttl)
-
-
 # ── Şemalar ───────────────────────────────────────────────────────────────────
 
 class CampaignCreate(BaseModel):
@@ -98,9 +41,6 @@ class CampaignCreate(BaseModel):
 
 
 # ── Kampanya Oluştur ──────────────────────────────────────────────────────────
-
-_BOOST_PAID_COST = 50  # Aylık ücretsiz hak bitince ücretli boost maliyeti (TUCi)
-
 
 @router.post("/campaigns", status_code=201)
 async def create_campaign(
@@ -119,20 +59,20 @@ async def create_campaign(
     - Redis bütçe engine'ine yüklenir (anında aktif hale gelir).
     """
     # Aylık boost kredi kontrolü
-    boost_limit = _BOOST_LIMIT_PRO if current_user.is_premium else _BOOST_LIMIT_FREE
+    boost_limit = credit_service.free_limit("boost", current_user.is_premium)
     if boost_limit == 0:
         raise ForbiddenException(
             "İlan öne çıkarma yalnızca Pro hesaplara özeldir.",
             code="PRO_REQUIRED",
         )
-    boost_used = await _get_boost_used(current_user.id, current_user.premium_since)
+    boost_used = await credit_service.get_used("boost", current_user.id, current_user.premium_since)
 
     # Aylık ücretsiz hak kaldı mı?
     is_free = boost_used < boost_limit
 
     # Ücretli modda: TUCi bakiyesi yeterli mi?
     if not is_free:
-        if current_user.tuci_balance < _BOOST_PAID_COST:
+        if current_user.tuci_balance < credit_service.cost_tuci("boost"):
             raise InsufficientFundsException("Bu ay ücretsiz boost hakkınız doldu ve yeterli TUCi bakiyeniz yok.")
 
     # İlanın bu kullanıcıya ait olduğunu doğrula
@@ -169,7 +109,7 @@ async def create_campaign(
     # TUCi düşme: yalnızca ücretli modda
     tuci_cost = 0
     if not is_free:
-        tuci_cost = _BOOST_PAID_COST
+        tuci_cost = credit_service.cost_tuci("boost")
         await db.execute(
             sql_text("UPDATE users SET tuci_balance = GREATEST(0, tuci_balance - :cost) WHERE id = :uid"),
             {"cost": tuci_cost, "uid": current_user.id},
@@ -196,7 +136,7 @@ async def create_campaign(
 
     # Boost kredi sayacını artır (ücretsiz hak kullanıldıysa)
     if is_free:
-        await _increment_boost(current_user.id, current_user.premium_since)
+        await credit_service.increment("boost", current_user.id, current_user.premium_since)
 
     # Redis'e anında yükle — cron'u beklemeye gerek yok
     try:
@@ -223,12 +163,11 @@ async def create_campaign(
 @router.get("/boost-credits")
 async def boost_credits(current_user: User = Depends(get_current_user)):
     """Kullanıcının bu ayki boost kredi durumunu döndürür."""
-    limit = _BOOST_LIMIT_PRO if current_user.is_premium else _BOOST_LIMIT_FREE
-    used  = await _get_boost_used(current_user.id, current_user.premium_since)
+    limit = credit_service.free_limit("boost", current_user.is_premium)
+    used  = await credit_service.get_used("boost", current_user.id, current_user.premium_since)
     renewal_date: str | None = None
     if current_user.premium_since:
-        nxt = _boost_next_billing(current_user.premium_since)
-        renewal_date = nxt.isoformat()
+        renewal_date = credit_service.next_billing_date(current_user.premium_since).isoformat()
     return {
         "used": used,
         "limit": limit,
