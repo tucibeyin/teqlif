@@ -5753,4 +5753,181 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get extraField_breed => 'Breed / Type';
+
+  @override
+  String get subcat_automobile => 'Automobile';
+
+  @override
+  String get subcat_motorcycle => 'Motorcycle';
+
+  @override
+  String get subcat_electric_vehicle => 'Electric Vehicle';
+
+  @override
+  String get subcat_van_minibus => 'Van & Minibus';
+
+  @override
+  String get subcat_truck => 'Truck';
+
+  @override
+  String get subcat_tractor => 'Tractor';
+
+  @override
+  String get subcat_boat => 'Boat & Watercraft';
+
+  @override
+  String get subcat_caravan => 'Caravan';
+
+  @override
+  String get subcat_spare_parts => 'Spare Parts';
+
+  @override
+  String get subcat_mobile_phone => 'Mobile Phone';
+
+  @override
+  String get subcat_laptop => 'Laptop & Computer';
+
+  @override
+  String get subcat_tablet => 'Tablet';
+
+  @override
+  String get subcat_tv_monitor => 'TV & Monitor';
+
+  @override
+  String get subcat_camera => 'Camera';
+
+  @override
+  String get subcat_audio_system => 'Audio System';
+
+  @override
+  String get subcat_smartwatch => 'Smartwatch & Band';
+
+  @override
+  String get subcat_gaming_console => 'Gaming Console';
+
+  @override
+  String get subcat_other_electronics => 'Other Electronics';
+
+  @override
+  String get subcat_apartment => 'Apartment';
+
+  @override
+  String get subcat_house_villa => 'House & Villa';
+
+  @override
+  String get subcat_land => 'Land';
+
+  @override
+  String get subcat_field_garden => 'Field & Garden';
+
+  @override
+  String get subcat_office => 'Office & Workplace';
+
+  @override
+  String get subcat_warehouse => 'Warehouse & Factory';
+
+  @override
+  String get subcat_building => 'Building';
+
+  @override
+  String get subcat_womens_clothing => 'Women\'s Clothing';
+
+  @override
+  String get subcat_mens_clothing => 'Men\'s Clothing';
+
+  @override
+  String get subcat_kids_clothing => 'Kids\' Clothing';
+
+  @override
+  String get subcat_shoes => 'Shoes';
+
+  @override
+  String get subcat_bag => 'Bag';
+
+  @override
+  String get subcat_jewelry => 'Jewelry';
+
+  @override
+  String get subcat_watch => 'Watch';
+
+  @override
+  String get subcat_accessories => 'Accessories';
+
+  @override
+  String get subcat_furniture => 'Furniture';
+
+  @override
+  String get subcat_kitchen_equipment => 'Kitchen Equipment';
+
+  @override
+  String get subcat_cleaning_equipment => 'Cleaning Equipment';
+
+  @override
+  String get subcat_home_textile => 'Home Textile';
+
+  @override
+  String get subcat_lighting => 'Lighting';
+
+  @override
+  String get subcat_garden_outdoor => 'Garden & Outdoor';
+
+  @override
+  String get subcat_antique => 'Antique & Collectible';
+
+  @override
+  String get subcat_bicycle => 'Bicycle';
+
+  @override
+  String get subcat_fitness_equipment => 'Fitness Equipment';
+
+  @override
+  String get subcat_outdoor_camping => 'Outdoor & Camping';
+
+  @override
+  String get subcat_team_sports => 'Team Sports';
+
+  @override
+  String get subcat_outdoor_sports => 'Outdoor Sports';
+
+  @override
+  String get subcat_other_sports => 'Other Sports';
+
+  @override
+  String get subcat_fiction => 'Fiction';
+
+  @override
+  String get subcat_sci_fi => 'Sci-Fi & Fantasy';
+
+  @override
+  String get subcat_self_development => 'Self Development';
+
+  @override
+  String get subcat_kids_books => 'Kids\' Books';
+
+  @override
+  String get subcat_school_books => 'School Books';
+
+  @override
+  String get subcat_arts_books => 'Arts & Music Books';
+
+  @override
+  String get subcat_magazine => 'Magazine & Collectible';
+
+  @override
+  String get subcat_pet => 'Pet';
+
+  @override
+  String get subcat_baby_toys => 'Baby & Toys';
+
+  @override
+  String get subcat_musical_instrument => 'Musical Instrument';
+
+  @override
+  String get subcat_photo_video => 'Photo & Video';
+
+  @override
+  String get subcat_food_agriculture => 'Food & Agriculture';
+
+  @override
+  String get subcat_misc => 'Other';
 }

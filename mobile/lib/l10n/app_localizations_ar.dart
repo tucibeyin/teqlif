@@ -5723,4 +5723,181 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get extraField_breed => 'السلالة / النوع';
+
+  @override
+  String get subcat_automobile => 'سيارة';
+
+  @override
+  String get subcat_motorcycle => 'دراجة نارية';
+
+  @override
+  String get subcat_electric_vehicle => 'مركبة كهربائية';
+
+  @override
+  String get subcat_van_minibus => 'فان وميني باص';
+
+  @override
+  String get subcat_truck => 'شاحنة';
+
+  @override
+  String get subcat_tractor => 'جرار';
+
+  @override
+  String get subcat_boat => 'قارب';
+
+  @override
+  String get subcat_caravan => 'قافلة';
+
+  @override
+  String get subcat_spare_parts => 'قطع غيار';
+
+  @override
+  String get subcat_mobile_phone => 'هاتف محمول';
+
+  @override
+  String get subcat_laptop => 'حاسوب محمول';
+
+  @override
+  String get subcat_tablet => 'جهاز لوحي';
+
+  @override
+  String get subcat_tv_monitor => 'تلفزيون وشاشة';
+
+  @override
+  String get subcat_camera => 'كاميرا';
+
+  @override
+  String get subcat_audio_system => 'نظام صوتي';
+
+  @override
+  String get subcat_smartwatch => 'ساعة ذكية';
+
+  @override
+  String get subcat_gaming_console => 'وحدة ألعاب';
+
+  @override
+  String get subcat_other_electronics => 'إلكترونيات أخرى';
+
+  @override
+  String get subcat_apartment => 'شقة';
+
+  @override
+  String get subcat_house_villa => 'منزل وفيلا';
+
+  @override
+  String get subcat_land => 'أرض';
+
+  @override
+  String get subcat_field_garden => 'حقل وحديقة';
+
+  @override
+  String get subcat_office => 'مكتب';
+
+  @override
+  String get subcat_warehouse => 'مستودع';
+
+  @override
+  String get subcat_building => 'مبنى';
+
+  @override
+  String get subcat_womens_clothing => 'ملابس نسائية';
+
+  @override
+  String get subcat_mens_clothing => 'ملابس رجالية';
+
+  @override
+  String get subcat_kids_clothing => 'ملابس أطفال';
+
+  @override
+  String get subcat_shoes => 'أحذية';
+
+  @override
+  String get subcat_bag => 'حقيبة';
+
+  @override
+  String get subcat_jewelry => 'مجوهرات';
+
+  @override
+  String get subcat_watch => 'ساعة';
+
+  @override
+  String get subcat_accessories => 'إكسسوارات';
+
+  @override
+  String get subcat_furniture => 'أثاث';
+
+  @override
+  String get subcat_kitchen_equipment => 'أدوات المطبخ';
+
+  @override
+  String get subcat_cleaning_equipment => 'معدات التنظيف';
+
+  @override
+  String get subcat_home_textile => 'المنسوجات المنزلية';
+
+  @override
+  String get subcat_lighting => 'الإضاءة';
+
+  @override
+  String get subcat_garden_outdoor => 'حديقة وخارجي';
+
+  @override
+  String get subcat_antique => 'تحف وكوليكشن';
+
+  @override
+  String get subcat_bicycle => 'دراجة';
+
+  @override
+  String get subcat_fitness_equipment => 'معدات لياقة';
+
+  @override
+  String get subcat_outdoor_camping => 'التخييم والخارجي';
+
+  @override
+  String get subcat_team_sports => 'رياضات جماعية';
+
+  @override
+  String get subcat_outdoor_sports => 'رياضات خارجية';
+
+  @override
+  String get subcat_other_sports => 'رياضات أخرى';
+
+  @override
+  String get subcat_fiction => 'روايات';
+
+  @override
+  String get subcat_sci_fi => 'خيال علمي';
+
+  @override
+  String get subcat_self_development => 'تطوير الذات';
+
+  @override
+  String get subcat_kids_books => 'كتب أطفال';
+
+  @override
+  String get subcat_school_books => 'كتب مدرسية';
+
+  @override
+  String get subcat_arts_books => 'كتب فنية وموسيقية';
+
+  @override
+  String get subcat_magazine => 'مجلات وكوليكشن';
+
+  @override
+  String get subcat_pet => 'حيوان أليف';
+
+  @override
+  String get subcat_baby_toys => 'أطفال وألعاب';
+
+  @override
+  String get subcat_musical_instrument => 'آلة موسيقية';
+
+  @override
+  String get subcat_photo_video => 'معدات تصوير';
+
+  @override
+  String get subcat_food_agriculture => 'غذاء وزراعة';
+
+  @override
+  String get subcat_misc => 'أخرى';
 }

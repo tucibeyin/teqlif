@@ -21,6 +21,7 @@ import '../services/storage_service.dart';
 import '../services/upload_service.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/error_helper.dart';
+import '../utils/field_labels.dart';
 import '../utils/listing_fields.dart';
 
 import '../ui_library/components/overlays/teq_snackbar.dart';
@@ -1157,7 +1158,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         hint: Text(l.fieldSubcategoryHint),
                         items: _subcategories
                             .map((s) => DropdownMenuItem(
-                                value: s.$1, child: Text(s.$2)))
+                                value: s.$1, child: Text(subcatLabel(s.$1, l, fallback: s.$2))))
                             .toList(),
                         onChanged: (v) {
                           if (v == null) return;

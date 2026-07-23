@@ -5803,4 +5803,181 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get extraField_breed => 'Порода / Тип';
+
+  @override
+  String get subcat_automobile => 'Автомобиль';
+
+  @override
+  String get subcat_motorcycle => 'Мотоцикл';
+
+  @override
+  String get subcat_electric_vehicle => 'Электромобиль';
+
+  @override
+  String get subcat_van_minibus => 'Микроавтобус';
+
+  @override
+  String get subcat_truck => 'Грузовик';
+
+  @override
+  String get subcat_tractor => 'Трактор';
+
+  @override
+  String get subcat_boat => 'Лодка';
+
+  @override
+  String get subcat_caravan => 'Фургон';
+
+  @override
+  String get subcat_spare_parts => 'Запчасти';
+
+  @override
+  String get subcat_mobile_phone => 'Мобильный телефон';
+
+  @override
+  String get subcat_laptop => 'Ноутбук';
+
+  @override
+  String get subcat_tablet => 'Планшет';
+
+  @override
+  String get subcat_tv_monitor => 'ТВ и монитор';
+
+  @override
+  String get subcat_camera => 'Камера';
+
+  @override
+  String get subcat_audio_system => 'Аудиосистема';
+
+  @override
+  String get subcat_smartwatch => 'Умные часы';
+
+  @override
+  String get subcat_gaming_console => 'Игровая консоль';
+
+  @override
+  String get subcat_other_electronics => 'Другая электроника';
+
+  @override
+  String get subcat_apartment => 'Квартира';
+
+  @override
+  String get subcat_house_villa => 'Дом & Вилла';
+
+  @override
+  String get subcat_land => 'Земля';
+
+  @override
+  String get subcat_field_garden => 'Поле и сад';
+
+  @override
+  String get subcat_office => 'Офис';
+
+  @override
+  String get subcat_warehouse => 'Склад';
+
+  @override
+  String get subcat_building => 'Здание';
+
+  @override
+  String get subcat_womens_clothing => 'Женская одежда';
+
+  @override
+  String get subcat_mens_clothing => 'Мужская одежда';
+
+  @override
+  String get subcat_kids_clothing => 'Детская одежда';
+
+  @override
+  String get subcat_shoes => 'Обувь';
+
+  @override
+  String get subcat_bag => 'Сумка';
+
+  @override
+  String get subcat_jewelry => 'Украшения';
+
+  @override
+  String get subcat_watch => 'Часы';
+
+  @override
+  String get subcat_accessories => 'Аксессуары';
+
+  @override
+  String get subcat_furniture => 'Мебель';
+
+  @override
+  String get subcat_kitchen_equipment => 'Кухонное оборудование';
+
+  @override
+  String get subcat_cleaning_equipment => 'Уборочное оборудование';
+
+  @override
+  String get subcat_home_textile => 'Домашний текстиль';
+
+  @override
+  String get subcat_lighting => 'Освещение';
+
+  @override
+  String get subcat_garden_outdoor => 'Сад и улица';
+
+  @override
+  String get subcat_antique => 'Антиквариат';
+
+  @override
+  String get subcat_bicycle => 'Велосипед';
+
+  @override
+  String get subcat_fitness_equipment => 'Фитнес-оборудование';
+
+  @override
+  String get subcat_outdoor_camping => 'Кемпинг';
+
+  @override
+  String get subcat_team_sports => 'Командные виды спорта';
+
+  @override
+  String get subcat_outdoor_sports => 'Активный отдых';
+
+  @override
+  String get subcat_other_sports => 'Другой спорт';
+
+  @override
+  String get subcat_fiction => 'Художественная литература';
+
+  @override
+  String get subcat_sci_fi => 'Научная фантастика';
+
+  @override
+  String get subcat_self_development => 'Саморазвитие';
+
+  @override
+  String get subcat_kids_books => 'Детские книги';
+
+  @override
+  String get subcat_school_books => 'Учебники';
+
+  @override
+  String get subcat_arts_books => 'Книги об искусстве';
+
+  @override
+  String get subcat_magazine => 'Журналы';
+
+  @override
+  String get subcat_pet => 'Домашние животные';
+
+  @override
+  String get subcat_baby_toys => 'Игрушки';
+
+  @override
+  String get subcat_musical_instrument => 'Музыкальный инструмент';
+
+  @override
+  String get subcat_photo_video => 'Фото и видео';
+
+  @override
+  String get subcat_food_agriculture => 'Еда и сельское хозяйство';
+
+  @override
+  String get subcat_misc => 'Другое';
 }

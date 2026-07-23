@@ -5755,4 +5755,181 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get extraField_breed => 'Irk / Tür';
+
+  @override
+  String get subcat_automobile => 'Otomobil';
+
+  @override
+  String get subcat_motorcycle => 'Motosiklet';
+
+  @override
+  String get subcat_electric_vehicle => 'Elektrikli Araç';
+
+  @override
+  String get subcat_van_minibus => 'Kamyonet & Minibüs';
+
+  @override
+  String get subcat_truck => 'Kamyon & Tır';
+
+  @override
+  String get subcat_tractor => 'Traktör';
+
+  @override
+  String get subcat_boat => 'Tekne & Su Aracı';
+
+  @override
+  String get subcat_caravan => 'Karavan';
+
+  @override
+  String get subcat_spare_parts => 'Yedek Parça';
+
+  @override
+  String get subcat_mobile_phone => 'Cep Telefonu';
+
+  @override
+  String get subcat_laptop => 'Bilgisayar & Laptop';
+
+  @override
+  String get subcat_tablet => 'Tablet';
+
+  @override
+  String get subcat_tv_monitor => 'TV & Monitör';
+
+  @override
+  String get subcat_camera => 'Kamera';
+
+  @override
+  String get subcat_audio_system => 'Ses Sistemi';
+
+  @override
+  String get subcat_smartwatch => 'Akıllı Saat & Bileklik';
+
+  @override
+  String get subcat_gaming_console => 'Oyun Konsolu';
+
+  @override
+  String get subcat_other_electronics => 'Diğer Elektronik';
+
+  @override
+  String get subcat_apartment => 'Daire';
+
+  @override
+  String get subcat_house_villa => 'Müstakil Ev & Villa';
+
+  @override
+  String get subcat_land => 'Arsa';
+
+  @override
+  String get subcat_field_garden => 'Tarla & Bahçe';
+
+  @override
+  String get subcat_office => 'İş Yeri & Ofis';
+
+  @override
+  String get subcat_warehouse => 'Depo & Fabrika';
+
+  @override
+  String get subcat_building => 'Bina';
+
+  @override
+  String get subcat_womens_clothing => 'Kadın Giyim';
+
+  @override
+  String get subcat_mens_clothing => 'Erkek Giyim';
+
+  @override
+  String get subcat_kids_clothing => 'Çocuk Giyim';
+
+  @override
+  String get subcat_shoes => 'Ayakkabı';
+
+  @override
+  String get subcat_bag => 'Çanta';
+
+  @override
+  String get subcat_jewelry => 'Takı & Mücevher';
+
+  @override
+  String get subcat_watch => 'Saat';
+
+  @override
+  String get subcat_accessories => 'Aksesuar';
+
+  @override
+  String get subcat_furniture => 'Mobilya';
+
+  @override
+  String get subcat_kitchen_equipment => 'Mutfak Gereçleri';
+
+  @override
+  String get subcat_cleaning_equipment => 'Temizlik Ekipmanı';
+
+  @override
+  String get subcat_home_textile => 'Ev Tekstili';
+
+  @override
+  String get subcat_lighting => 'Aydınlatma';
+
+  @override
+  String get subcat_garden_outdoor => 'Bahçe & Dış Mekan';
+
+  @override
+  String get subcat_antique => 'Antika & Koleksiyon';
+
+  @override
+  String get subcat_bicycle => 'Bisiklet';
+
+  @override
+  String get subcat_fitness_equipment => 'Spor Aleti & Fitness';
+
+  @override
+  String get subcat_outdoor_camping => 'Outdoor & Kamp';
+
+  @override
+  String get subcat_team_sports => 'Top & Takım Sporları';
+
+  @override
+  String get subcat_outdoor_sports => 'Doğa Sporları';
+
+  @override
+  String get subcat_other_sports => 'Diğer Spor';
+
+  @override
+  String get subcat_fiction => 'Roman & Hikâye';
+
+  @override
+  String get subcat_sci_fi => 'Bilim Kurgu';
+
+  @override
+  String get subcat_self_development => 'Kişisel Gelişim';
+
+  @override
+  String get subcat_kids_books => 'Çocuk Kitapları';
+
+  @override
+  String get subcat_school_books => 'Ders & Okul';
+
+  @override
+  String get subcat_arts_books => 'Müzik & Sanat Kitabı';
+
+  @override
+  String get subcat_magazine => 'Koleksiyon & Dergi';
+
+  @override
+  String get subcat_pet => 'Evcil Hayvan';
+
+  @override
+  String get subcat_baby_toys => 'Bebek & Oyuncak';
+
+  @override
+  String get subcat_musical_instrument => 'Müzik Aleti';
+
+  @override
+  String get subcat_photo_video => 'Fotoğraf & Video Ekipmanı';
+
+  @override
+  String get subcat_food_agriculture => 'Yiyecek & Tarım';
+
+  @override
+  String get subcat_misc => 'Diğer';
 }

@@ -10385,6 +10385,360 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Irk / Tür'**
   String get extraField_breed;
+
+  /// No description provided for @subcat_automobile.
+  ///
+  /// In tr, this message translates to:
+  /// **'Otomobil'**
+  String get subcat_automobile;
+
+  /// No description provided for @subcat_motorcycle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Motosiklet'**
+  String get subcat_motorcycle;
+
+  /// No description provided for @subcat_electric_vehicle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Elektrikli Araç'**
+  String get subcat_electric_vehicle;
+
+  /// No description provided for @subcat_van_minibus.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kamyonet & Minibüs'**
+  String get subcat_van_minibus;
+
+  /// No description provided for @subcat_truck.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kamyon & Tır'**
+  String get subcat_truck;
+
+  /// No description provided for @subcat_tractor.
+  ///
+  /// In tr, this message translates to:
+  /// **'Traktör'**
+  String get subcat_tractor;
+
+  /// No description provided for @subcat_boat.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tekne & Su Aracı'**
+  String get subcat_boat;
+
+  /// No description provided for @subcat_caravan.
+  ///
+  /// In tr, this message translates to:
+  /// **'Karavan'**
+  String get subcat_caravan;
+
+  /// No description provided for @subcat_spare_parts.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yedek Parça'**
+  String get subcat_spare_parts;
+
+  /// No description provided for @subcat_mobile_phone.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cep Telefonu'**
+  String get subcat_mobile_phone;
+
+  /// No description provided for @subcat_laptop.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilgisayar & Laptop'**
+  String get subcat_laptop;
+
+  /// No description provided for @subcat_tablet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tablet'**
+  String get subcat_tablet;
+
+  /// No description provided for @subcat_tv_monitor.
+  ///
+  /// In tr, this message translates to:
+  /// **'TV & Monitör'**
+  String get subcat_tv_monitor;
+
+  /// No description provided for @subcat_camera.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kamera'**
+  String get subcat_camera;
+
+  /// No description provided for @subcat_audio_system.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ses Sistemi'**
+  String get subcat_audio_system;
+
+  /// No description provided for @subcat_smartwatch.
+  ///
+  /// In tr, this message translates to:
+  /// **'Akıllı Saat & Bileklik'**
+  String get subcat_smartwatch;
+
+  /// No description provided for @subcat_gaming_console.
+  ///
+  /// In tr, this message translates to:
+  /// **'Oyun Konsolu'**
+  String get subcat_gaming_console;
+
+  /// No description provided for @subcat_other_electronics.
+  ///
+  /// In tr, this message translates to:
+  /// **'Diğer Elektronik'**
+  String get subcat_other_electronics;
+
+  /// No description provided for @subcat_apartment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Daire'**
+  String get subcat_apartment;
+
+  /// No description provided for @subcat_house_villa.
+  ///
+  /// In tr, this message translates to:
+  /// **'Müstakil Ev & Villa'**
+  String get subcat_house_villa;
+
+  /// No description provided for @subcat_land.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arsa'**
+  String get subcat_land;
+
+  /// No description provided for @subcat_field_garden.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tarla & Bahçe'**
+  String get subcat_field_garden;
+
+  /// No description provided for @subcat_office.
+  ///
+  /// In tr, this message translates to:
+  /// **'İş Yeri & Ofis'**
+  String get subcat_office;
+
+  /// No description provided for @subcat_warehouse.
+  ///
+  /// In tr, this message translates to:
+  /// **'Depo & Fabrika'**
+  String get subcat_warehouse;
+
+  /// No description provided for @subcat_building.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bina'**
+  String get subcat_building;
+
+  /// No description provided for @subcat_womens_clothing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kadın Giyim'**
+  String get subcat_womens_clothing;
+
+  /// No description provided for @subcat_mens_clothing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Erkek Giyim'**
+  String get subcat_mens_clothing;
+
+  /// No description provided for @subcat_kids_clothing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çocuk Giyim'**
+  String get subcat_kids_clothing;
+
+  /// No description provided for @subcat_shoes.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ayakkabı'**
+  String get subcat_shoes;
+
+  /// No description provided for @subcat_bag.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çanta'**
+  String get subcat_bag;
+
+  /// No description provided for @subcat_jewelry.
+  ///
+  /// In tr, this message translates to:
+  /// **'Takı & Mücevher'**
+  String get subcat_jewelry;
+
+  /// No description provided for @subcat_watch.
+  ///
+  /// In tr, this message translates to:
+  /// **'Saat'**
+  String get subcat_watch;
+
+  /// No description provided for @subcat_accessories.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aksesuar'**
+  String get subcat_accessories;
+
+  /// No description provided for @subcat_furniture.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mobilya'**
+  String get subcat_furniture;
+
+  /// No description provided for @subcat_kitchen_equipment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Mutfak Gereçleri'**
+  String get subcat_kitchen_equipment;
+
+  /// No description provided for @subcat_cleaning_equipment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Temizlik Ekipmanı'**
+  String get subcat_cleaning_equipment;
+
+  /// No description provided for @subcat_home_textile.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ev Tekstili'**
+  String get subcat_home_textile;
+
+  /// No description provided for @subcat_lighting.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aydınlatma'**
+  String get subcat_lighting;
+
+  /// No description provided for @subcat_garden_outdoor.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bahçe & Dış Mekan'**
+  String get subcat_garden_outdoor;
+
+  /// No description provided for @subcat_antique.
+  ///
+  /// In tr, this message translates to:
+  /// **'Antika & Koleksiyon'**
+  String get subcat_antique;
+
+  /// No description provided for @subcat_bicycle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bisiklet'**
+  String get subcat_bicycle;
+
+  /// No description provided for @subcat_fitness_equipment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Spor Aleti & Fitness'**
+  String get subcat_fitness_equipment;
+
+  /// No description provided for @subcat_outdoor_camping.
+  ///
+  /// In tr, this message translates to:
+  /// **'Outdoor & Kamp'**
+  String get subcat_outdoor_camping;
+
+  /// No description provided for @subcat_team_sports.
+  ///
+  /// In tr, this message translates to:
+  /// **'Top & Takım Sporları'**
+  String get subcat_team_sports;
+
+  /// No description provided for @subcat_outdoor_sports.
+  ///
+  /// In tr, this message translates to:
+  /// **'Doğa Sporları'**
+  String get subcat_outdoor_sports;
+
+  /// No description provided for @subcat_other_sports.
+  ///
+  /// In tr, this message translates to:
+  /// **'Diğer Spor'**
+  String get subcat_other_sports;
+
+  /// No description provided for @subcat_fiction.
+  ///
+  /// In tr, this message translates to:
+  /// **'Roman & Hikâye'**
+  String get subcat_fiction;
+
+  /// No description provided for @subcat_sci_fi.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bilim Kurgu'**
+  String get subcat_sci_fi;
+
+  /// No description provided for @subcat_self_development.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kişisel Gelişim'**
+  String get subcat_self_development;
+
+  /// No description provided for @subcat_kids_books.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çocuk Kitapları'**
+  String get subcat_kids_books;
+
+  /// No description provided for @subcat_school_books.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ders & Okul'**
+  String get subcat_school_books;
+
+  /// No description provided for @subcat_arts_books.
+  ///
+  /// In tr, this message translates to:
+  /// **'Müzik & Sanat Kitabı'**
+  String get subcat_arts_books;
+
+  /// No description provided for @subcat_magazine.
+  ///
+  /// In tr, this message translates to:
+  /// **'Koleksiyon & Dergi'**
+  String get subcat_magazine;
+
+  /// No description provided for @subcat_pet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Evcil Hayvan'**
+  String get subcat_pet;
+
+  /// No description provided for @subcat_baby_toys.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bebek & Oyuncak'**
+  String get subcat_baby_toys;
+
+  /// No description provided for @subcat_musical_instrument.
+  ///
+  /// In tr, this message translates to:
+  /// **'Müzik Aleti'**
+  String get subcat_musical_instrument;
+
+  /// No description provided for @subcat_photo_video.
+  ///
+  /// In tr, this message translates to:
+  /// **'Fotoğraf & Video Ekipmanı'**
+  String get subcat_photo_video;
+
+  /// No description provided for @subcat_food_agriculture.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yiyecek & Tarım'**
+  String get subcat_food_agriculture;
+
+  /// No description provided for @subcat_misc.
+  ///
+  /// In tr, this message translates to:
+  /// **'Diğer'**
+  String get subcat_misc;
 }
 
 class _AppLocalizationsDelegate
