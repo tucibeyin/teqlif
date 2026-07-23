@@ -28,6 +28,7 @@ class TeqTextField extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final TextInputAction? textInputAction;
   final String? prefixText;
+  final bool floatingLabel;
 
   const TeqTextField({
     Key? key,
@@ -52,6 +53,7 @@ class TeqTextField extends StatelessWidget {
     this.inputFormatters,
     this.textInputAction,
     this.prefixText,
+    this.floatingLabel = false,
   }) : super(key: key);
 
   @override
@@ -70,85 +72,82 @@ class TeqTextField extends StatelessWidget {
         ? TeqColors.textPrimaryDark
         : TeqColors.textPrimaryLight;
 
+    final decoration = InputDecoration(
+      labelText: floatingLabel ? labelText : null,
+      hintText: hintText,
+      hintStyle: TeqTypography.bodyLarge.copyWith(color: hintColor),
+      errorText: errorText,
+      helperText: helperText,
+      helperStyle: TeqTypography.bodySmall.copyWith(color: hintColor),
+      errorStyle: TeqTypography.bodySmall.copyWith(color: TeqColors.error),
+      filled: true,
+      fillColor: bgColor,
+      prefixIcon: prefixIcon,
+      prefixText: prefixText,
+      prefixStyle: TextStyle(color: textColor, fontSize: 16),
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: TeqSpacing.m,
+        vertical: TeqSpacing.m,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
+        borderSide: BorderSide(color: borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
+        borderSide: BorderSide(color: borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
+        borderSide: const BorderSide(color: TeqColors.primary, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
+        borderSide: const BorderSide(color: TeqColors.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
+        borderSide: const BorderSide(color: TeqColors.error, width: 1.5),
+      ),
+    );
+
+    final field = TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      minLines: minLines,
+      maxLength: maxLength,
+      textCapitalization: textCapitalization,
+      autocorrect: autocorrect,
+      inputFormatters: inputFormatters,
+      textInputAction: textInputAction,
+      scrollPadding: const EdgeInsets.only(bottom: 80),
+      onChanged: onChanged,
+      validator: validator,
+      readOnly: readOnly,
+      onTap: onTap,
+      style: TeqTypography.bodyLarge.copyWith(color: textColor),
+      decoration: decoration,
+    );
+
+    if (floatingLabel || labelText == null) return field;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (labelText != null) ...[
-          Text(
-            labelText!,
-            style: TeqTypography.labelMedium.copyWith(
-              color: isDark
-                  ? TeqColors.textSecondaryDark
-                  : TeqColors.textSecondaryLight,
-            ),
-          ),
-          const SizedBox(height: TeqSpacing.xs),
-        ],
-        TextFormField(
-          controller: controller,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          minLines: minLines,
-          maxLength: maxLength,
-          textCapitalization: textCapitalization,
-          autocorrect: autocorrect,
-          inputFormatters: inputFormatters,
-          textInputAction: textInputAction,
-          scrollPadding: const EdgeInsets.only(bottom: 80),
-          onChanged: onChanged,
-          validator: validator,
-          readOnly: readOnly,
-          onTap: onTap,
-          style: TeqTypography.bodyLarge.copyWith(color: textColor),
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: TeqTypography.bodyLarge.copyWith(color: hintColor),
-            errorText: errorText,
-            helperText: helperText,
-            helperStyle: TeqTypography.bodySmall.copyWith(color: hintColor),
-            errorStyle: TeqTypography.bodySmall.copyWith(
-              color: TeqColors.error,
-            ),
-            filled: true,
-            fillColor: bgColor,
-            prefixIcon: prefixIcon,
-            prefixText: prefixText,
-            prefixStyle: TextStyle(
-              color: textColor,
-              fontSize: 16,
-            ),
-            suffixIcon: suffixIcon,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: TeqSpacing.m,
-              vertical: TeqSpacing.m,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
-              borderSide: BorderSide(color: borderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
-              borderSide: BorderSide(color: borderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
-              borderSide: const BorderSide(
-                color: TeqColors.primary,
-                width: 1.5,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
-              borderSide: const BorderSide(color: TeqColors.error),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(TeqSpacing.radiusM),
-              borderSide: const BorderSide(color: TeqColors.error, width: 1.5),
-            ),
+        Text(
+          labelText!,
+          style: TeqTypography.labelMedium.copyWith(
+            color: isDark
+                ? TeqColors.textSecondaryDark
+                : TeqColors.textSecondaryLight,
           ),
         ),
+        const SizedBox(height: TeqSpacing.xs),
+        field,
       ],
     );
   }

@@ -1092,6 +1092,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             controller: _titleCtrl,
             labelText: l.fieldListingTitle,
             hintText: l.fieldListingTitleHint,
+            floatingLabel: true,
             validator: (v) =>
                 v == null || v.isEmpty ? l.fieldListingTitleHint : null,
           ),
@@ -1328,7 +1329,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         field = TeqTextField(
           controller: _extraCtrlMap[f.key],
           labelText: displayLabel,
-          hintText: displayLabel,
+          floatingLabel: true,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           suffixIcon: f.unit != null
@@ -1350,7 +1351,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         field = TeqTextField(
           controller: _extraCtrlMap[f.key],
           labelText: displayLabel,
-          hintText: displayLabel,
+          floatingLabel: true,
           validator: f.optional
               ? null
               : (v) => (v == null || v.isEmpty) ? displayLabel : null,
